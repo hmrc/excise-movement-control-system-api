@@ -1,10 +1,10 @@
 openapi: 3.0.3
 info:
-  title: Excise Movement Control System API (Discovery/Proposal)
+  title: Excise Movement Control System API (Alpha)
   description: |-
-    This is a very rough draft of an idea for a potential replacement for the current [EMCS SOAP API](https://developer.service.hmrc.gov.uk/api-documentation/docs/api/xml/Excise%20Movement%20Control%20System)
+    This is a draft of an idea for a potential replacement for the current [EMCS SOAP API](https://developer.service.hmrc.gov.uk/api-documentation/docs/api/xml/Excise%20Movement%20Control%20System)
   contact: {}
-  version: "0.0.0"
+  version: "0.0.1"
 servers:
   - url: https://test-api.service.hmrc.gov.uk
     description: Sandbox
@@ -21,7 +21,7 @@ paths:
       tags:
         - Movements
       summary: Submit a new Draft Excise Movement
-      description: Submit a new Draft Excise Movement. </br></br>**Existing SOAP API equivalent:** SubmitDraftMovement </br></br>**Note:** You can only submit a Draft Excise Movement if the Consignor Id matches an Excise Number in the bearer token that you use for API authentication. Otherwise a 403 Forbidden error is thrown.
+      description: Submit a new Draft Excise Movement. </br></br>**Existing SOAP API equivalent:** SubmitDraftMovement </br></br>**Note:** You can only submit a Draft Excise Movement if the Consignor Id matches an Excise Reference Number (ERN) in the bearer token that you use for API authentication. Otherwise a 403 Forbidden error is thrown.
       operationId: submitMovement
       requestBody:
         required: true
@@ -43,8 +43,12 @@ paths:
             application/xml:
               schema:
                 $ref: '#/components/schemas/ExciseMovement'
+        '400':
+          description: The Submission of Draft Movement message has failed validation
         '403':
-          description: No ERN in authentication token
+          description: Consignor Id is not in Authorisation bearer token
+        '500':
+          description: Internal server error
       security:
         - userRestricted:
             - excise-movement-control-system
@@ -52,7 +56,7 @@ paths:
       tags:
         - Movements
       summary: Get Excise Movements
-      description: Get Excise Movements. </br></br>**Existing SOAP API equivalent:** GetMovementForTrader  </br></br>**Note:** You can only view an Excise Movement if the Consignor Id or Consignee Id matches an Excise Number in the bearer token that you use for API authentication. Otherwise a 403 Forbidden error is thrown.
+      description: Get Excise Movements. </br></br>**Existing SOAP API equivalent:** GetMovementForTrader  </br></br>**Note:** You can only view an Excise Movement if the Consignor Id or Consignee Id matches an Excise Reference Number (ERN) in the bearer token that you use for API authentication. Otherwise a 403 Forbidden error is thrown.
       operationId: getAllMovements
       parameters:
         - name: ERN
@@ -111,7 +115,9 @@ paths:
         + SubmitSplitMovement
         + SubmitReasonForShortage
         
-        **Note:** You can only submit a message for an Excise Movement if the Consignor Id or Consignee Id matches an Excise Number in the bearer token that you use for API authentication. Otherwise a 403 Forbidden error is thrown.
+        The **X-Message-Type** header **must** be the same as the message body e.g. for an **IE818 (Record of receipt) message** the **X-Message-Type** header also needs to be **IE818**
+        
+        **Note:** You can only submit a message for an Excise Movement if the Consignor Id or Consignee Id matches an Excise Reference Number (ERN) in the bearer token that you use for API authentication. Otherwise a 403 Forbidden error is thrown.
       operationId: postMessage
       parameters:
         - name: movementId
@@ -125,7 +131,7 @@ paths:
           description: The message type
           required: true
           schema:
-            $ref: '#/components/schemas/MessageType'
+            $ref: '#/components/schemas/IncomingMessageType'
       requestBody:
         required: true
         content:
@@ -160,10 +166,14 @@ paths:
       responses:
         '200':
           description: Successful operation
+        '400':
+          description: The submitted message has failed validation
         '403':
-          description: Consignor Id or Consignee Id is not in Authorisation bearer token.
+          description: Consignor Id or Consignee Id is not in Authorisation bearer token
         '404':
           description: Unknown Excise Movement Identifier
+        '500':
+          description: Internal server error
       security:
         - userRestricted:
             - excise-movement-control-system
@@ -171,7 +181,7 @@ paths:
       tags:
         - Movements
       summary: Get all messages for an Excise Movement using the movementId
-      description: Get all messages for a specific Excise Movement. </br></br>There could be filter query parameters applied here to filter on date range, message type etc.</br></br>**Existing SOAP API equivalent:** GetNewMessages  </br></br>**Note:** You can view messages for an Excise Movement if the Consignor Id or Consignee Id matches an Excise Number in the bearer token that you use for API authentication. Otherwise a 403 Forbidden error is thrown.
+      description: Get all messages for a specific Excise Movement. </br></br>There could be filter query parameters applied here to filter on date range, message type etc.</br></br>**Existing SOAP API equivalent:** GetNewMessages  </br></br>**Note:** You can view messages for an Excise Movement if the Consignor Id or Consignee Id matches an Excise Reference Number (ERN) in the bearer token that you use for API authentication. Otherwise a 403 Forbidden error is thrown.
       operationId: getAllMessages
       parameters:
         - name: movementId
@@ -183,55 +193,47 @@ paths:
       responses:
         '200':
           description: successful operation
-          # TODO put in response from acknowledge messages
-        '404':
-          description: Unknown Excise Movement Identifier
-      security:
-        - userRestricted:
-            - excise-movement-control-system
-  /customs/excise/movements/{movementId}/messages/acknowledge:
-    post:
-      tags:
-        - Movements
-      summary: Acknowledge receipt of latest messages
-      description: Get all messages for a specific Excise Movement. </br></br>**Existing SOAP API equivalent:** GetNewMessages  </br></br>**Note:** You can view messages for an excise movement only if your Excise Reference Number (ERN) matches the ERN that created the excise declaration for that movement. Your ERN number is part of the bearer token that you use for API authentication.
-      operationId: acknowledgeMessagesReceipt
-      parameters:
-        - name: movementId
-          in: path
-          description: The Excise Movement Identifier
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: successful operation
           content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Message'
             application/xml:
+              example: |
+                <?xml version="1.0" encoding="UTF-8"?>
+                <messages>
+                  <message>
+                    <id>1</id>
+                    <body>
+                      <IE815><!-- Example IE815 message --></IE815>
+                    </body>
+                    <type>IE815</type>
+                  </message>
+                  <message>
+                    <id>2</id>
+                    <body>
+                      <IE801><!-- Example IE801 message --></IE801>
+                    </body>
+                    <type>IE801</type>
+                  </message>
+                </messages>
               schema:
                 type: array
                 xml:
                   wrapped: true
+                  name: messages
                 items:
-                  $ref: '#/components/schemas/Message'
+                  $ref: '#/components/schemas/MessageWithType'
+        '403':
+          description: Consignor Id or Consignee Id is not in Authorisation bearer token
         '404':
           description: Unknown Excise Movement Identifier
       security:
         - userRestricted:
             - excise-movement-control-system
-          
   
   /customs/excise/traders:
     get:
       tags:
         - Traders
       summary: Get information relating to an Excise Trader
-      description: Get information relating to an Excise Trader. </br></br>**Existing SOAP API equivalent:** PreValidateTrader  </br></br>**Note:** ADD NOTE HERE
+      description: Get information relating to an Excise Trader. </br></br>**Existing SOAP API equivalent:** PreValidateTrader
       operationId: prevalidateTrader
       parameters:
         - name: traderId
@@ -267,19 +269,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/ExciseTrader'
         '404':
-          description: Unknown Excise Movement Identifier
+          description: Unknown Trader
       security:
         - userRestricted:
             - excise-movement-control-system
 components:
   schemas:
-    AdministrativeReferenceNumber:
+    AdministrativeReferenceCode:
       type: string
       pattern: '[0-9]{2}[A-Z]{2}[A-Z0-9]{16}[0-9]'
     LocalReferenceNumber:
       type: string
       pattern: '.{1,22}'
-    ExciseNumber:
+    ExciseReferenceNumber:
       type: string
       pattern: '[A-Z]{2}[a-zA-Z0-9]{11}'
     MovementStatus:
@@ -389,39 +391,56 @@ components:
           format: int64
           example: 1
         consignorId:
-          $ref: '#/components/schemas/ExciseNumber'
+          $ref: '#/components/schemas/ExciseReferenceNumber'
         localReferenceNumber:
           $ref: '#/components/schemas/LocalReferenceNumber'
-        administrativeReferenceNumber:
-          $ref: '#/components/schemas/AdministrativeReferenceNumber'
+        administrativeReferenceCode:
+          $ref: '#/components/schemas/AdministrativeReferenceCode'
         status:
           $ref: '#/components/schemas/MovementStatus'
       xml:
         name: exciseMovement
-    MessageType:
+    SubmitDraftMessageType:
       type: string
-      description: The type of message
+      description: The submit draft message type
+      enum:
+        - IE815
+      xml:
+        name: type
+    IncomingMessageType:
+      type: string
+      description: The type of incoming message
+      enum:
+        - IE810
+        - IE813
+        - IE818
+        - IE819
+        - IE825
+        - IE837
+        - IE871
+      xml:
+        name: type
+    OutgoingMessageType:
+      type: string
+      description: The type of outgoing message
       enum:
         - IE704
         - IE801
         - IE802
         - IE803
         - IE807
-        - IE810
-        - IE813
-        - IE815
-        - IE818
-        - IE819
-        - IE825
         - IE829
-        - IE837
         - IE839
         - IE840
-        - IE871
         - IE881
         - IE905
       xml:
         name: type
+    MessageType:
+      allOf:
+        - $ref: '#/components/schemas/SubmitDraftMessageType'
+        - $ref: '#/components/schemas/IncomingMessageType'
+        - $ref: '#/components/schemas/OutgoingMessageType'
     Message:
       required:
         - body
@@ -487,50 +506,4 @@ components:
           scopes:
             excise-movement-control-system: Access push-pull-notification box information
               via the EMCS API
-#openapi: "3.0.3"
-#
-#info:
-#  version: 1.0.0
-#  title: Hello World
-#
-#servers:
-#  - url: https://test-api.service.hmrc.gov.uk/hello-world
-#    description: Sandbox
-#  - url: https://api.service.hmrc.gov.uk/hello-world
-#    description: Production
-#
-#components:
-#  parameters:
-#    acceptHeader:
-#      name: Accept
-#      in: header
-#      schema:
-#        type: string
-#        enum: [
-#          "application/vnd.hmrc.1.0+json",
-#          "application/vnd.hmrc.1.0+xml"
-#        ]
-#      required: true
-#
-#paths:
-#  /hello-world:
-#    get:
-#      summary: Placeholder hello world endpoint
-#      description: |
-#        An endpoint that returns "Hello world"
-#      tags:
-#        - excise-movement-control-system-api
-#      parameters:
-#        - $ref: '#/components/parameters/acceptHeader'
-#      responses:
-#        200:
-#          description: "OK Response"
-#          content:
-#            application/json:
-#              schema:
-#                type: object
-#                properties:
-#                  message:
-#                    type: string
-#              example:
-#                "Hello world"
+
