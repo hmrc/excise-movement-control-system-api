@@ -1,47 +1,509 @@
-openapi: "3.0.3"
-
+openapi: 3.0.3
 info:
-  version: 1.0.0
-  title: Hello World
-
+  title: Excise Movement Control System API (Alpha)
+  description: |-
+    This is a draft of an idea for a potential replacement for the current [EMCS SOAP API](https://developer.service.hmrc.gov.uk/api-documentation/docs/api/xml/Excise%20Movement%20Control%20System)
+  contact: {}
+  version: "0.0.1"
 servers:
-  - url: https://test-api.service.hmrc.gov.uk/hello-world
+  - url: https://test-api.service.hmrc.gov.uk
     description: Sandbox
-  - url: https://api.service.hmrc.gov.uk/hello-world
+  - url: https://api.service.hmrc.gov.uk
     description: Production
-
-components:
-  parameters:
-    acceptHeader:
-      name: Accept
-      in: header
-      schema:
-        type: string
-        enum: [
-          "application/vnd.hmrc.1.0+json",
-          "application/vnd.hmrc.1.0+xml"
-        ]
-      required: true
-
+tags:
+  - name: Movements
+    description: Create, amend or cancel an Excise Movement
+  - name: Traders
+    description: Information relating to Excise Traders
 paths:
-  /hello-world:
-    get:
-      summary: Placeholder hello world endpoint
-      description: |
-        An endpoint that returns "Hello world"
+  /customs/excise/movements:
+    post:
       tags:
-        - excise-movement-control-system-api
-      parameters:
-        - $ref: '#/components/parameters/acceptHeader'
+        - Movements
+      summary: Submit a new Draft Excise Movement
+      description: Submit a new Draft Excise Movement. </br></br>**Existing SOAP API equivalent:** SubmitDraftMovement </br></br>**Note:** You can only submit a Draft Excise Movement if the Consignor Id matches an Excise Reference Number (ERN) in the bearer token that you use for API authentication. Otherwise a 403 Forbidden error is thrown.
+      operationId: submitMovement
+      requestBody:
+        required: true
+        content:
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/IE815'
+            examples:
+              submitDraftMovement:
+                summary: Submit draft movement (IE815)
+                value: '<IE815><!-- Example IE815 message --></IE815>'
       responses:
-        200:
-          description: "OK Response"
+        '202':
+          description: Accepted
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-              example:
-                "Hello world"
+                $ref: '#/components/schemas/ExciseMovement'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/ExciseMovement'
+        '400':
+          description: The Submission of Draft Movement message has failed validation
+        '403':
+          description: Consignor Id is not in Authorisation bearer token
+        '500':
+          description: Internal server error
+      security:
+        - userRestricted:
+            - excise-movement-control-system
+    get:
+      tags:
+        - Movements
+      summary: Get Excise Movements
+      description: Get Excise Movements. </br></br>**Existing SOAP API equivalent:** GetMovementForTrader  </br></br>**Note:** You can only view an Excise Movement if the Consignor Id or Consignee Id matches an Excise Reference Number (ERN) in the bearer token that you use for API authentication. Otherwise a 403 Forbidden error is thrown.
+      operationId: getAllMovements
+      parameters:
+        - name: ERN
+          in: query
+          description: Filter Excise Movements on Excise Reference Number (Consignor Id/Consignee Id). If you do not provide an Excise Reference Number (ERN) as a query parameter, you will get a list for all ERNs in your bearer token.
+          required: false
+          schema:
+            type: string
+        - name: ARC
+          in: query
+          description: Filter Excise Movements on Administrative Reference Code (ARC)
+          required: false
+          schema:
+            type: string
+        - name: LRN
+          in: query
+          description: Filter Excise Movements on Local Reference Number (LRN)
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExciseMovement'
+            application/xml:
+              schema:
+                type: array
+                xml:
+                  wrapped: true
+                  name: exciseMovements
+                items:
+                  $ref: '#/components/schemas/ExciseMovement'
+        '404':
+          description: No Excise Movements found for ERN
+      security:
+        - userRestricted:
+            - excise-movement-control-system
+  /customs/excise/movements/{movementId}/messages:
+    post:
+      tags:
+        - Movements
+      summary: Submit a message for an Excise Movement.
+      description: |
+        Submit a message for a specific Excise Movement. </br></br>
+        **Existing SOAP API equivalents:** 
+        + SubmitReportofReceipt
+        + SubmitExplainDelayToDelivery
+        + SubmitCancellation
+        + SubmitChangeOfDestination
+        + SubmitAlertOrRejectionMovement
+        + SubmitSplitMovement
+        + SubmitReasonForShortage
+        
+        The **X-Message-Type** header **must** be the same as the message body e.g. for an **IE818 (Record of receipt) message** the **X-Message-Type** header also needs to be **IE818**
+        
+        **Note:** You can only submit a message for an Excise Movement if the Consignor Id or Consignee Id matches an Excise Reference Number (ERN) in the bearer token that you use for API authentication. Otherwise a 403 Forbidden error is thrown.
+      operationId: postMessage
+      parameters:
+        - name: movementId
+          in: path
+          description: The Excise Movement Identifier
+          required: true
+          schema:
+            type: string
+        - name: X-Message-Type
+          in: header
+          description: The message type
+          required: true
+          schema:
+            $ref: '#/components/schemas/IncomingMessageType'
+      requestBody:
+        required: true
+        content:
+          application/xml:
+            schema:
+              # I tried to use a "oneOf" here but the examples didn't work so using a GenericXML object instead.
+              type: object
+              xml:
+                name: GenericXML
+            examples:
+              cancellation:
+                summary: Submit cancellation (IE810)
+                value: '<IE810><!-- Example IE810 message --></IE810>'
+              changeOfDestination:
+                summary: Submit change of destination (IE813)
+                value: '<IE813><!-- Example IE813 message --></IE813>'
+              reportOfReceipt:
+                summary: Submit report of receipt (IE818)
+                value: '<IE818><!-- Example IE818 message --></IE818>'
+              alertOrRejection:
+                summary: Submit alert or rejection (IE819)
+                value: '<IE819><!-- Example IE819 message --></IE819>'
+              split:
+                summary: Submit split movement (IE825)
+                value: '<IE825><!-- Example IE825 message --></IE825>'
+              explainDelayToDelivery:
+                summary: Submit explain delay to delivery (IE837)
+                value: '<IE837><!-- Example IE837 message --></IE837>'
+              reasonForShortage:
+                summary: Submit reason for shortage (IE871)
+                value: '<IE871><!-- Example IE871 message --></IE871>'
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: The submitted message has failed validation
+        '403':
+          description: Consignor Id or Consignee Id is not in Authorisation bearer token
+        '404':
+          description: Unknown Excise Movement Identifier
+        '500':
+          description: Internal server error
+      security:
+        - userRestricted:
+            - excise-movement-control-system
+    get:
+      tags:
+        - Movements
+      summary: Get all messages for an Excise Movement using the movementId
+      description: Get all messages for a specific Excise Movement. </br></br>There could be filter query parameters applied here to filter on date range, message type etc.</br></br>**Existing SOAP API equivalent:** GetNewMessages  </br></br>**Note:** You can view messages for an Excise Movement if the Consignor Id or Consignee Id matches an Excise Reference Number (ERN) in the bearer token that you use for API authentication. Otherwise a 403 Forbidden error is thrown.
+      operationId: getAllMessages
+      parameters:
+        - name: movementId
+          in: path
+          description: The Excise Movement Identifier
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/xml:
+              example: |
+                <?xml version="1.0" encoding="UTF-8"?>
+                <messages>
+                  <message>
+                    <id>1</id>
+                    <body>
+                      <IE815><!-- Example IE815 message --></IE815>
+                    </body>
+                    <type>IE815</type>
+                  </message>
+                  <message>
+                    <id>2</id>
+                    <body>
+                      <IE801><!-- Example IE801 message --></IE801>
+                    </body>
+                    <type>IE801</type>
+                  </message>
+                </messages>
+              schema:
+                type: array
+                xml:
+                  wrapped: true
+                  name: messages
+                items:
+                  $ref: '#/components/schemas/MessageWithType'
+        '403':
+          description: Consignor Id or Consignee Id is not in Authorisation bearer token
+        '404':
+          description: Unknown Excise Movement Identifier
+      security:
+        - userRestricted:
+            - excise-movement-control-system
+  
+  /customs/excise/traders:
+    get:
+      tags:
+        - Traders
+      summary: Get information relating to an Excise Trader
+      description: Get information relating to an Excise Trader. </br></br>**Existing SOAP API equivalent:** PreValidateTrader
+      operationId: prevalidateTrader
+      parameters:
+        - name: traderId
+          in: query
+          description: The Excise Reference Number of the trader
+          required: true
+          schema:
+            type: string
+        - name: traderType
+          in: query
+          description: The type of Excise Trader
+          required: true
+          schema:
+            $ref: '#/components/schemas/TraderType'
+        - name: exciseProductCode
+          in: query
+          description: The Excise Products Category Code
+          required: true
+          schema:
+            type: array
+            minItems: 1
+            maxItems: 10
+            items:
+              $ref: '#/components/schemas/ExciseProductCode'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExciseTrader'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/ExciseTrader'
+        '404':
+          description: Unknown Trader
+      security:
+        - userRestricted:
+            - excise-movement-control-system
+components:
+  schemas:
+    AdministrativeReferenceCode:
+      type: string
+      pattern: '[0-9]{2}[A-Z]{2}[A-Z0-9]{16}[0-9]'
+    LocalReferenceNumber:
+      type: string
+      pattern: '.{1,22}'
+    ExciseReferenceNumber:
+      type: string
+      pattern: '[A-Z]{2}[a-zA-Z0-9]{11}'
+    MovementStatus:
+      type: string
+      enum:
+        - Accepted
+        - Cancelled
+        - Delivered
+        - Diverted
+        - Rejected
+        - Replaced
+        - e-AD/e-SAD Manually Closed
+        - Refused
+        - None
+        - Partially Refused
+        - Exporting
+        - Accepted for Export
+        - Stopped
+    IE810:
+      type: object
+      description: Submit Cancellation
+      xml:
+        name: IE810
+    IE813:
+      type: object
+      description: Submit Change of Destination
+      xml:
+        name: IE813
+    IE815:
+      type: object
+      description: Submit Draft Movement
+      xml:
+        name: IE815
+    IE818:
+      type: object
+      description: Submit Report of Receipt
+      xml:
+        name: IE818
+    IE819:
+      type: object
+      description: Submit Alert or Rejection
+      xml:
+        name: IE819
+    IE825:
+      type: object
+      description: Submit Split Movement
+      xml:
+        name: IE825
+    IE837:
+      type: object
+      description: Submit Explanation for Delay
+      xml:
+        name: IE837
+    IE871:
+      type: object
+      description: Submit Reason for Shortage
+      xml:
+        name: IE871
+    TraderType:
+      type: string
+      description: The type of trader
+      enum:
+        - 'UK Record'
+        - 'EU Trader'
+        - 'EU Warehouse'
+        - 'EU Temp Authorisation'
+      xml:
+        name: TraderType
+    ExciseTrader:
+      type: object
+      description: Basic information relating to a trader
+      properties:
+        exciseId:
+          type: string
+          pattern: '[A-Z]{2}[a-zA-Z0-9]{11}'
+          xml:
+            attribute: true
+        validTrader:
+          type: boolean
+          xml:
+            attribute: true
+    ExciseProductCode:
+      type: string
+      description: The Excise Product Category Code
+      maxLength: 4
+      xml:
+        name: ExciseProductCode
+    Product:
+      type: object
+      properties:
+        exciseProductCode:
+          $ref: '#/components/schemas/ExciseProductCode'
+        valid:
+          type: boolean
+          xml:
+            name: Valid
+    ExciseMovement:
+      type: object
+      required:
+        - movementId
+        - consignorId
+        - localReferenceNumber
+        - status
+      properties:
+        movementId:
+          type: integer
+          format: int64
+          example: 1
+        consignorId:
+          $ref: '#/components/schemas/ExciseReferenceNumber'
+        localReferenceNumber:
+          $ref: '#/components/schemas/LocalReferenceNumber'
+        administrativeReferenceCode:
+          $ref: '#/components/schemas/AdministrativeReferenceCode'
+        status:
+          $ref: '#/components/schemas/MovementStatus'
+      xml:
+        name: exciseMovement
+    SubmitDraftMessageType:
+      type: string
+      description: The submit draft message type
+      enum:
+        - IE815
+      xml:
+        name: type
+    IncomingMessageType:
+      type: string
+      description: The type of incoming message
+      enum:
+        - IE810
+        - IE813
+        - IE818
+        - IE819
+        - IE825
+        - IE837
+        - IE871
+      xml:
+        name: type
+    OutgoingMessageType:
+      type: string
+      description: The type of outgoing message
+      enum:
+        - IE704
+        - IE801
+        - IE802
+        - IE803
+        - IE807
+        - IE829
+        - IE839
+        - IE840
+        - IE881
+        - IE905
+      xml:
+        name: type
+    MessageType:
+      allOf:
+        - $ref: '#/components/schemas/SubmitDraftMessageType'
+        - $ref: '#/components/schemas/IncomingMessageType'
+        - $ref: '#/components/schemas/OutgoingMessageType'
+    Message:
+      required:
+        - body
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+          xml:
+            name: id
+        body:
+          type: object
+          xml:
+            name: body
+      xml:
+        name: message
+    MessageWithType:
+      allOf:
+        - $ref: '#/components/schemas/Message'
+        - type: object
+          required:
+            - type
+          properties:
+            type:
+              $ref: '#/components/schemas/MessageType'
+  requestBodies:
+    MessageRequest:
+      description: Message that needs to be submitted for a specific Excise Movement
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Message'
+    MessageWithTypeRequest:
+      description: Message with specific type that needs to be submitted for a specific Excise Movement
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MessageWithType'
+  securitySchemes:
+    userRestricted:
+      type: oauth2
+      description: HMRC supports OAuth 2.0 for authenticating user restricted API
+        requests using an OAuth 2.0 Bearer Token in the AUTHORIZATION header. See
+        https://developer.service.hmrc.gov.uk/api-documentation/docs/authorisation/user-restricted-endpoints
+        for details.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://api.service.hmrc.gov.uk/oauth/authorize
+          tokenUrl: https://api.service.hmrc.gov.uk/oauth/token
+          refreshUrl: https://api.service.hmrc.gov.uk/oauth/refresh
+          scopes:
+            excise-movement-control-system: Access all aspects of EMCS API
+    applicationRestricted:
+      type: oauth2
+      description: HMRC supports OAuth 2.0 for authenticating application restricted
+        API  requests using an OAuth 2.0 Bearer Token in the AUTHORIZATION header.
+        See https://developer.service.hmrc.gov.uk/api-documentation/docs/authorisation/application-restricted-endpoints
+        for details.
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.service.hmrc.gov.uk/oauth/token
+          scopes:
+            excise-movement-control-system: Access push-pull-notification box information
+              via the EMCS API
+

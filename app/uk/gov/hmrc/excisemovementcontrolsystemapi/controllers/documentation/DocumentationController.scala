@@ -1,4 +1,4 @@
-package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
+package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.documentation
 
 import controllers.Assets
 import javax.inject.{Inject, Singleton}
