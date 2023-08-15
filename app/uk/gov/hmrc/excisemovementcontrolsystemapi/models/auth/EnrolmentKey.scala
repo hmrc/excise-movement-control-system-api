@@ -14,17 +14,9 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.actions
+package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth
 
-import org.scalatestplus.play.PlaySpec
-
-class AuthenticatorSpec extends PlaySpec {
-
- // private val authenticator = new AuthenticatorImpl(authConnector, mcc)
-
-  "Authenticator" should {
-    "return 401" in {
-
-    }
-  }
+object EnrolmentKey {
+  val EMCS_ENROLMENT = "HMRC-EMCS-ORG"
+  val ERN = "ExciseNumber"
 }
