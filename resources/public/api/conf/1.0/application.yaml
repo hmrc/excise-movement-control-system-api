@@ -23,10 +23,12 @@ paths:
       summary: Submit a new Draft Excise Movement
       description: Submit a new Draft Excise Movement. </br></br>**Existing SOAP API equivalent:** SubmitDraftMovement </br></br>**Note:** You can only submit a Draft Excise Movement if the Consignor Id matches an Excise Reference Number (ERN) in the bearer token that you use for API authentication. Otherwise a 403 Forbidden error is thrown.
       operationId: submitMovement
+      parameters:
+        - $ref: "#/components/parameters/AcceptHeader"
       requestBody:
         required: true
         content:
-          application/xml:
+          application/vnd.hmrc.1.0+xml:
             schema:
               $ref: '#/components/schemas/IE815'
             examples:
@@ -37,10 +39,10 @@ paths:
         '202':
           description: Accepted
           content:
-            application/json:
+            application/vnd.hmrc.1.0+json:
               schema:
                 $ref: '#/components/schemas/ExciseMovement'
-            application/xml:
+            application/vnd.hmrc.1.0+xml:
               schema:
                 $ref: '#/components/schemas/ExciseMovement'
         '400':
@@ -59,6 +61,7 @@ paths:
       description: Get Excise Movements. </br></br>**Existing SOAP API equivalent:** GetMovementForTrader  </br></br>**Note:** You can only view an Excise Movement if the Consignor Id or Consignee Id matches an Excise Reference Number (ERN) in the bearer token that you use for API authentication. Otherwise a 403 Forbidden error is thrown.
       operationId: getAllMovements
       parameters:
+        - $ref: "#/components/parameters/AcceptHeader"
         - name: ERN
           in: query
           description: Filter Excise Movements on Excise Reference Number (Consignor Id/Consignee Id). If you do not provide an Excise Reference Number (ERN) as a query parameter, you will get a list for all ERNs in your bearer token.
@@ -81,12 +84,12 @@ paths:
         '200':
           description: Successful operation
           content:
-            application/json:
+            application/vnd.hmrc.1.0+json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/ExciseMovement'
-            application/xml:
+            application/vnd.hmrc.1.0+xml:
               schema:
                 type: array
                 xml:
@@ -135,7 +138,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/xml:
+          application/vnd.hmrc.1.0+xml:
             schema:
               # I tried to use a "oneOf" here but the examples didn't work so using a GenericXML object instead.
               type: object
@@ -184,6 +187,7 @@ paths:
       description: Get all messages for a specific Excise Movement. </br></br>There could be filter query parameters applied here to filter on date range, message type etc.</br></br>**Existing SOAP API equivalent:** GetNewMessages  </br></br>**Note:** You can view messages for an Excise Movement if the Consignor Id or Consignee Id matches an Excise Reference Number (ERN) in the bearer token that you use for API authentication. Otherwise a 403 Forbidden error is thrown.
       operationId: getAllMessages
       parameters:
+        - $ref: "#/components/parameters/AcceptHeader"
         - name: movementId
           in: path
           description: The Excise Movement Identifier
@@ -194,7 +198,19 @@ paths:
         '200':
           description: successful operation
           content:
-            application/xml:
+            application/vnd.hmrc.1.0+json:
+              example:
+                - id: 1
+                  body: "<IE815><!-- Example IE815 message --></IE815>"
+                  type: IE815
+                - id: 2
+                  body: "<IE801><!-- Example IE815 message --></IE801>"
+                  type: IE801
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MessageWithType'
+            application/vnd.hmrc.1.0+xml:
               example: |
                 <?xml version="1.0" encoding="UTF-8"?>
                 <messages>
@@ -236,6 +252,7 @@ paths:
       description: Get information relating to an Excise Trader. </br></br>**Existing SOAP API equivalent:** PreValidateTrader
       operationId: prevalidateTrader
       parameters:
+        - $ref: "#/components/parameters/AcceptHeader"
         - name: traderId
           in: query
           description: The Excise Reference Number of the trader
@@ -262,10 +279,10 @@ paths:
         '200':
           description: successful operation
           content:
-            application/json:
+            application/vnd.hmrc.1.0+json:
               schema:
                 $ref: '#/components/schemas/ExciseTrader'
-            application/xml:
+            application/vnd.hmrc.1.0+xml:
               schema:
                 $ref: '#/components/schemas/ExciseTrader'
         '404':
@@ -274,6 +291,21 @@ paths:
         - userRestricted:
             - excise-movement-control-system
 components:
+  parameters:
+    AcceptHeader:
+      name: Accept
+      in: header
+      description: >-
+        Specifies the response format and the
+        [version](/api-documentation/docs/reference-guide#versioning) of the API
+        to be used.
+      required: true
+      schema:
+        type: string
+        enum: [
+          "application/vnd.hmrc.1.0+json",
+          "application/vnd.hmrc.1.0+xml"
+        ]
   schemas:
     AdministrativeReferenceCode:
       type: string
@@ -387,9 +419,8 @@ components:
         - status
       properties:
         movementId:
-          type: integer
-          format: int64
-          example: 1
+          type: string
+          format: uuid
         consignorId:
           $ref: '#/components/schemas/ExciseReferenceNumber'
         localReferenceNumber:
@@ -471,13 +502,13 @@ components:
     MessageRequest:
       description: Message that needs to be submitted for a specific Excise Movement
       content:
-        application/json:
+        application/vnd.hmrc.1.0+json:
           schema:
             $ref: '#/components/schemas/Message'
     MessageWithTypeRequest:
       description: Message with specific type that needs to be submitted for a specific Excise Movement
       content:
-        application/json:
+        application/vnd.hmrc.1.0+json:
           schema:
             $ref: '#/components/schemas/MessageWithType'
   securitySchemes:
