@@ -120,7 +120,7 @@ paths:
         
         The **X-Message-Type** header **must** be the same as the message body e.g. for an **IE818 (Record of receipt) message** the **X-Message-Type** header also needs to be **IE818**
         
-        **Note:**         **Note:** The consignor ID or consignee ID must match an excise reference number (ERN) in the bearer token that you use for API authentication. If it does not, a 403 Forbidden error will be thrown.
+        **Note:** The consignor ID or consignee ID must match an excise reference number (ERN) in the bearer token that you use for API authentication. If it does not, a 403 Forbidden error will be thrown.
       operationId: postMessage
       parameters:
         - name: movementId
