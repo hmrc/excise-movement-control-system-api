@@ -21,15 +21,24 @@ import org.scalatest.wordspec.AnyWordSpec
 import play.api.http.Status
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.Fixture.FakeAuthentication
 
-class MovementControllerSpec extends AnyWordSpec with Matchers {
+class MovementControllerSpec extends AnyWordSpec with FakeAuthentication with Matchers {
 
   private val fakeRequest = FakeRequest("GET", "/")
-  private val controller = new MovementController(Helpers.stubControllerComponents())
+
+  private val controller = new MovementController(FakeSuccessAuthentication, Helpers.stubControllerComponents())
 
   "GET /" should {
     "return 200" in {
-      val result = controller.hello()(fakeRequest)
+      val result = controller.hello("123")(fakeRequest)
+      status(result) shouldBe Status.OK
+    }
+  }
+
+  "submit" should {
+    "return 200" in {
+      val result = controller.submit(fakeRequest)
       status(result) shouldBe Status.OK
     }
   }
