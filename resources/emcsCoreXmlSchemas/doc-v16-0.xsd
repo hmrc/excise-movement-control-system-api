@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:doc="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:DOC:V3.01" targetNamespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:DOC:V3.01" version="16.0" elementFormDefault="qualified" attributeFormDefault="unqualified">
+  <xs:element name="description">
+    <xs:complexType>
+      <xs:attribute use="required" name="value" type="xs:token"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="rule">
+    <xs:complexType>
+      <xs:attribute use="required" name="name" type="xs:token"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="condition">
+    <xs:complexType>
+      <xs:attribute use="required" name="name" type="xs:token"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="codeList">
+    <xs:complexType>
+      <xs:attribute use="required" name="name" type="xs:token"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
