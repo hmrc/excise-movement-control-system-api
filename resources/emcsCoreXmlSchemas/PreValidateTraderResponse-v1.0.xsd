@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2008 rel. 2 (http://www.altova.com) by Cap Gemini UK Plc (Cap Gemini UK Plc) -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:pvtr="http://www.govtalk.gov.uk/taxation/EMCS/ExciseTraderValidationResponse" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:err="http://www.govtalk.gov.uk/CM/errorresponse" xmlns:ns1="http://www.govtalk.gov.uk/taxation/EMCS/PreValidateTraderResponse/1" targetNamespace="http://www.govtalk.gov.uk/taxation/EMCS/PreValidateTraderResponse/1" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:import namespace="http://www.govtalk.gov.uk/taxation/EMCS/ExciseTraderValidationResponse" schemaLocation="ExciseTraderValidationResponse.xsd"/>
+	<xs:import namespace="http://www.govtalk.gov.uk/CM/errorresponse" schemaLocation="PreValidateTrader/errorresponse-v2.0.xsd"/>
+	<xs:element name="PreValidateTraderResponse">
+		<xs:annotation>
+			<xs:documentation>A wrapper which can contain either a ExciseTraderValidationResponse response or an error response.</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:choice>
+				<xs:element ref="pvtr:ExciseTraderValidationResponse"/>
+				<xs:element ref="err:ErrorResponse"/>
+			</xs:choice>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>

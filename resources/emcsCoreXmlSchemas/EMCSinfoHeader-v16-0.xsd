@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:emcs-info-header="http://www.hmrc.gov.uk/ws/emcs-info-header/1" targetNamespace="http://www.hmrc.gov.uk/ws/emcs-info-header/1" xmlns:emcs="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:EMCS:V3.01" version="16.0" elementFormDefault="qualified" attributeFormDefault="unqualified">
+  <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:EMCS:V3.01" schemaLocation="types-v16-0.xsd"/>
+  <xs:element name="EMCSInfo">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="1" maxOccurs="1" name="ConsignorId">
+          <xs:simpleType>
+            <xs:restriction base="emcs:ExciseNumberType">
+              <xs:pattern value="\s*([Gg][Bb]|[Xx][Ii])([Ww][Kk]|[Rr][Cc]).*"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

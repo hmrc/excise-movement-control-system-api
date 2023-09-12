@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://www.govtalk.gov.uk/taxation/EMCS/ExciseTraderValidationResponse" xmlns:emcs="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:EMCS:V3.01" targetNamespace="http://www.govtalk.gov.uk/taxation/EMCS/ExciseTraderValidationResponse" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xsd:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:EMCS:V3.01" schemaLocation="PreValidateTrader/types-v16-0.xsd"/>
+	<xsd:element name="ExciseTraderValidationResponse">
+		<xsd:complexType>
+			<xsd:sequence>
+				<xsd:element name="ExciseTraderResponse">
+					<xsd:complexType>
+						<xsd:sequence>
+							<xsd:element name="ValidateDateTimeStamp"/>
+							<xsd:element name="ValidateProductAuthorisationResult" minOccurs="0">
+								<xsd:complexType>
+									<xsd:sequence>
+										<xsd:element name="Products">
+											<xsd:complexType>
+												<xsd:sequence>
+													<xsd:element name="Product" maxOccurs="unbounded">
+														<xsd:complexType>
+															<xsd:sequence>
+																<xsd:element name="ExciseProductCode" type="emcs:ExciseProductCodeType"/>
+																<xsd:element name="Valid" type="xsd:boolean"/>
+																<xsd:element name="ErrorCode" type="tns:ProductErrorCodeType" minOccurs="0"/>
+																<xsd:element name="ErrorText" type="xsd:string" minOccurs="0"/>
+															</xsd:sequence>
+														</xsd:complexType>
+													</xsd:element>
+												</xsd:sequence>
+											</xsd:complexType>
+										</xsd:element>
+									</xsd:sequence>
+								</xsd:complexType>
+							</xsd:element>
+						</xsd:sequence>
+						<xsd:attribute name="exciseID" type="emcs:ExciseNumberType" use="required"/>
+						<xsd:attribute name="validTrader" type="xsd:boolean" use="required"/>
+					</xsd:complexType>
+				</xsd:element>
+			</xsd:sequence>
+		</xsd:complexType>
+	</xsd:element>
+	<xsd:simpleType name="TraderErrorCodeType">
+		<xsd:annotation>
+			<xsd:documentation>For internal use only</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="1"/>
+			<xsd:enumeration value="2"/>
+			<xsd:enumeration value="3"/>
+			<xsd:enumeration value="4"/>
+			<xsd:enumeration value="5"/>
+			<xsd:enumeration value="6"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:simpleType name="LinkErrorCodeType">
+		<xsd:annotation>
+			<xsd:documentation>For internal use only</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="1"/>
+			<xsd:enumeration value="2"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:simpleType name="ProductErrorCodeType">
+		<xsd:annotation>
+			<xsd:documentation>For internal use only</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="1"/>
+			<xsd:enumeration value="2"/>
+			<xsd:enumeration value="3"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+</xsd:schema>

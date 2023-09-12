@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:gnmr="http://www.govtalk.gov.uk/taxation/EMCS/GetMovementForTraderResponse/3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gmft="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/MovementForTraderData/3" xmlns:err="http://www.govtalk.gov.uk/CM/errorresponse" targetNamespace="http://www.govtalk.gov.uk/taxation/EMCS/GetMovementForTraderResponse/3" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:import namespace="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/MovementForTraderData/3" schemaLocation="GetMovementForTrader/MovementForTraderData.xsd"/>
+	<xs:import namespace="http://www.govtalk.gov.uk/CM/errorresponse" schemaLocation="GetMovementForTrader/errorresponse-v2.0.xsd"/>
+	<xs:element name="GetMovementForTraderResponse">
+		<xs:annotation>
+			<xs:documentation>A wrapper which can contain either a MovementForTraderData response, or an error response.</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:choice>
+				<xs:element ref="gmft:MovementForTraderDataResponse"/>
+				<xs:element ref="err:ErrorResponse"/>
+			</xs:choice>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>

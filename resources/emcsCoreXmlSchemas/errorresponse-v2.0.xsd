@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<!-- Developed by Office of the e-Envoy, www.e-envoy.gov.uk. Conforms to w3c http://www.w3.org/TR/XMLSchema -->
+<xsd:schema targetNamespace="http://www.govtalk.gov.uk/CM/errorresponse" xmlns:err="http://www.govtalk.gov.uk/CM/errorresponse" xmlns:gt="http://www.govtalk.gov.uk/CM/core" xmlns:xsd="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified" version="2.0" id="Error-Response">
+  <xsd:annotation>
+    <xsd:documentation>This schema is used for errors returned by business systems. In these circumstances, the header contains a single Error element of type "business" and the Body contains further information.</xsd:documentation>
+    <xsd:appinfo>
+      <gt:KeyWords>business, error, response</gt:KeyWords>
+    </xsd:appinfo>
+  </xsd:annotation>
+  <xsd:element name="ErrorResponse">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element ref="err:Application" minOccurs="0"/>
+        <xsd:element name="Error" maxOccurs="unbounded">
+          <xsd:complexType>
+            <xsd:sequence>
+              <xsd:element name="RaisedBy" type="xsd:string"/>
+              <xsd:element name="Number" type="xsd:integer" minOccurs="0"/>
+              <xsd:element name="Type" type="xsd:string"/>
+              <xsd:element name="Text" type="xsd:string" minOccurs="0" maxOccurs="unbounded"/>
+              <xsd:element name="Location" type="xsd:string" minOccurs="0"/>
+              <xsd:element ref="err:Application" minOccurs="0"/>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+      </xsd:sequence>
+      <xsd:attribute name="SchemaVersion" use="required"/>
+    </xsd:complexType>
+  </xsd:element>
+  <xsd:element name="Application">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:any namespace="##any" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+      </xsd:sequence>
+      <xsd:anyAttribute namespace="##any"/>
+    </xsd:complexType>
+  </xsd:element>
+</xsd:schema>
