@@ -23,15 +23,10 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.Future
 
 @Singleton
-class MovementController @Inject()(
+class DraftExciseMovement @Inject()(
  authenticator: AuthAction,
  cc: ControllerComponents
 ) extends BackendController(cc) {
-
-  def hello(ern: String): Action[AnyContent] =
-    authenticator.async { implicit request =>
-      Future.successful(Ok("Hello world"))
-  }
 
   def submit: Action[AnyContent] =
     authenticator.async { implicit request =>

@@ -1,6 +1,8 @@
 import scoverage.ScoverageKeys
 import uk.gov.hmrc.DefaultBuildSettings.integrationTestSettings
 
+lazy val IntegrationTest = config("it") extend(Test)
+
 lazy val microservice = Project("excise-movement-control-system-api", file("."))
   .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
   .settings(

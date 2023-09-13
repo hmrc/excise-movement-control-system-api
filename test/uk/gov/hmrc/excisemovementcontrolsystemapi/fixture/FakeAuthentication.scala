@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.Fixture
+package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
 import play.api.mvc.{AnyContent, BodyParser, Request, Result}
 import play.api.test.Helpers.stubBodyParser
