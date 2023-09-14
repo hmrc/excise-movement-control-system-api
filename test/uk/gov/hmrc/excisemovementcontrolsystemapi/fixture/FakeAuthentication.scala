@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
+import play.api.mvc.Results.Forbidden
 import play.api.mvc.{AnyContent, BodyParser, Request, Result}
 import play.api.test.Helpers.stubBodyParser
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
@@ -31,6 +32,17 @@ trait FakeAuthentication {
 
     override def invokeBlock[A](request: Request[A], block: AuthorizedRequest[A] => Future[Result]): Future[Result] = {
       block(AuthorizedRequest(request, Set("testErn"), "testInternalId"))
+    }
+
+    override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global
+  }
+
+  object FakeForbiddenAuthentication extends AuthAction {
+
+    override def parser: BodyParser[AnyContent] = stubBodyParser()
+
+    override def invokeBlock[A](request: Request[A], block: AuthorizedRequest[A] => Future[Result]): Future[Result] = {
+      Future.successful(Forbidden("Invalid header parameters supplied"))
     }
 
     override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global

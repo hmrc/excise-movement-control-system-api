@@ -24,13 +24,14 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.Future
 
 @Singleton
-class DraftExciseMovement @Inject()(
- authenticator: AuthAction,
- cc: ControllerComponents
+class DraftExciseMovementController @Inject()(
+                                     authAction: AuthAction,
+                                     xmlParser: ParseIE815XmlAction,
+                                     cc: ControllerComponents
 ) extends BackendController(cc) {
 
   def submit: Action[AnyContent] =
-    authenticator.async { implicit request =>
+    (authAction andThen xmlParser).async { implicit request =>
       Future.successful(Ok("Hello world"))
     }
 }
