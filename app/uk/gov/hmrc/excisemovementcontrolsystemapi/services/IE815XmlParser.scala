@@ -17,27 +17,19 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.ImplementedBy
+import generated.IE815Type
 
 import javax.inject.Inject
 import scala.xml.{NodeSeq, SAXParseException}
-class EmcsXmlParser @Inject() extends Parser {
+class IE815XmlParser @Inject() extends XmlParser {
 
-  @throws(classOf[SAXParseException])
-  def getXmlContentFromString(strToParse: String, tags: String*): Option[String] = {
-    val xml: NodeSeq = scala.xml.NodeSeq.fromSeq(scala.xml.XML.loadString(strToParse))
-
-    getXmlContentFrom(xml, tags: _*)
+  override def fromXml(xml: NodeSeq): IE815Type = {
+    scalaxb.fromXML[IE815Type](xml)
   }
 
-  @throws(classOf[SAXParseException])
-  def getXmlContentFrom(xml: NodeSeq, tags: String*): Option[String] = {
-    val value = tags.flatMap(o => xml \ o).map(n => n.text.trim)
-    if(value.isEmpty) None else Some(value.mkString(","))
-  }
 }
 
-@ImplementedBy(classOf[EmcsXmlParser])
-trait Parser {
-  def getXmlContentFromString(strToParse: String, tags: String*): Option[String]
-  def getXmlContentFrom(xml: NodeSeq, tags: String*): Option[String]
+@ImplementedBy(classOf[IE815XmlParser])
+trait XmlParser {
+  def fromXml(xml: NodeSeq): IE815Type
 }
