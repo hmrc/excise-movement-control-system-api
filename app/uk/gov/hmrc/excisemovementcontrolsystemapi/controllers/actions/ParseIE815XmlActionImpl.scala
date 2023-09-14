@@ -22,11 +22,19 @@ import play.api.mvc.{ActionRefiner, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.XmlParser
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.XmlParser
+import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.play.bootstrap.backend.http.ErrorResponse
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 import scala.xml.NodeSeq
+class ParseIE815XmlActionImpl @Inject()
+(
+  xmlParser: XmlParser,
+  cc: ControllerComponents
+)(implicit val executionContext: ExecutionContext) extends BackendController(cc) with ParseIE815XmlAction {
 
 class ParseIE815XmlActionImpl @Inject()
 (
