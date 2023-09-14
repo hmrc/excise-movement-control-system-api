@@ -17,41 +17,31 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
 import com.google.inject.ImplementedBy
-import generated.IE815Type
 import play.api.Logging
-import play.api.libs.json.{JsError, JsSuccess, JsValue, Json, Reads}
-import play.api.mvc.Results.BadRequest
-import play.api.mvc.{Action, ActionRefiner, BodyParser, ControllerComponents, Result}
-import play.mvc.BodyParser.Text
+import play.api.mvc.{ActionRefiner, AnyContentAsXml, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{AuthorizedIE815Request, AuthorizedRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.XmlParser
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.play.bootstrap.backend.http.ErrorResponse
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
-import scala.xml.NodeSeq
 import scala.util.{Failure, Success, Try}
-
-import play.api.mvc.AnyContentAsXml
+import scala.xml.NodeSeq
 
 class ParseIE815XmlActionImpl @Inject()
 (
   xmlParser: XmlParser,
   cc: ControllerComponents
-)(implicit val executionContext: ExecutionContext) extends BackendController(cc) with ParseIE815XmlAction with Logging {
+)(implicit val executionContext: ExecutionContext) extends BackendController(cc)
+  with ParseIE815XmlAction
+  with Logging {
 
 
   override def refine[A](request: AuthorizedRequest[A]): Future[Either[Result, AuthorizedIE815Request[A]]] = {
 
-    println(s"XML received => : ${request.body}")
-
       request.body match {
-        case body: NodeSeq if body.nonEmpty =>
-          println("is NodeSeq")
-          Future.successful(Right(AuthorizedIE815Request(request, null, "request.internalId")))
-          parseXml(body, request)
-          // TODO: We should be dealing with NodeSeq, remove this hack
+        case body: NodeSeq if body.nonEmpty => parseXml(body, request)
+          // TODO:I think AnyContentAsXml can now be removed
         case body: AnyContentAsXml if body.xml.nonEmpty =>
           println("is AnyContentAsXml")
           parseXml(body.xml, request)

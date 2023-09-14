@@ -16,15 +16,17 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.data
 
+import scala.xml.Elem
+
 trait TestXml {
   // Can we use this in the test?
   // This isn't a string, it's an XML nodeSeq I think
   // I borrowed this idea from common-transit-traders
-  lazy val IE815 = <urn:IE815 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.01"
-                              xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
-                              xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
-                              xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
-                              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  lazy val IE815: Elem = <urn:IE815 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.01"
+                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
+                                    xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
+                                    xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
+                                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <urn:Header>
       <urn1:MessageSender>NDEA.GB</urn1:MessageSender>
       <urn1:MessageRecipient>NDEA.GB</urn1:MessageRecipient>

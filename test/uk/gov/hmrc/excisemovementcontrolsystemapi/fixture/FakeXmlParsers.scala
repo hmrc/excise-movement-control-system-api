@@ -32,7 +32,7 @@ trait FakeXmlParsers {
     override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global
   }
 
-  object FakeErrorIE815XMLParser extends ParseIE815XmlAction {
+  object FakeFailureIE815XMLParser extends ParseIE815XmlAction {
     override def refine[A](request: AuthorizedRequest[A]): Future[Either[Result, AuthorizedIE815Request[A]]] = {
       Future.successful(Left(BadRequest("Invalid xml supplied")))
     }

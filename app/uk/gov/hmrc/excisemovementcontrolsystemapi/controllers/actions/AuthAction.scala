@@ -106,14 +106,6 @@ class AuthActionImpl @Inject()
       Right(AuthorizedRequest(request, erns.map(_.value), internalId))
     }
   }
-
-  def predicate(ern: String*): Predicate = {
-    ern.map[Predicate](e =>
-      Enrolment(EnrolmentKey.EMCS_ENROLMENT)
-        .withIdentifier(EnrolmentKey.ERN, e)
-    ).reduce((a, b) => a or b)
-
-  }
 }
 
 @ImplementedBy(classOf[AuthActionImpl])

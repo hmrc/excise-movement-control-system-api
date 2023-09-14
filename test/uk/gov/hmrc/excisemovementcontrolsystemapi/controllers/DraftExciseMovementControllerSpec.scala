@@ -16,54 +16,77 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import dispatch.Future
-import generated.IE815Type
-import org.mockito.ArgumentMatchersSugar.any
-import org.mockito.MockitoSugar.when
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpec
-import org.scalatestplus.mockito.MockitoSugar.mock
-import play.api.http.Status
+
+import akka.actor.ActorSystem
+import org.scalatest.EitherValues
+import org.scalatestplus.play.PlaySpec
+import play.api.http.HeaderNames
 import play.api.test.Helpers._
-import play.api.test.{FakeRequest, Helpers}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{ParseIE815XmlAction, ParseIE815XmlActionImpl}
+import play.api.test.{FakeHeaders, FakeRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeXmlParsers}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.AuthorizedIE815Request
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.AuthorizedRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.XmlParser
 
+import scala.concurrent.ExecutionContext
+import scala.xml.Elem
 
+class DraftExciseMovementControllerSpec extends PlaySpec with FakeAuthentication with FakeXmlParsers with TestXml with EitherValues {
 
-class DraftExciseMovementControllerSpec extends AnyWordSpec with FakeAuthentication with FakeXmlParsers with Matchers {
+  implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
+  implicit val sys = ActorSystem("DraftExciseMovementControllerSpec")
 
-  private val fakeRequest = FakeRequest("GET", "/")
-
-  private val successController = new DraftExciseMovementController(FakeSuccessAuthentication, FakeSuccessIE815XMLParser, Helpers.stubControllerComponents())
-
-
-    "submit" should {
+  "submit" should {
       "return 200" in {
-        val result = successController.submit(fakeRequest)
-      status(result) shouldBe Status.OK
+        val result = createSuccessfulAuth.submit(createRequest(IE815))
+
+        status(result) mustBe OK
     }
 
       "return 400" when {
-        val xmlFailureController = new DraftExciseMovementController(FakeSuccessAuthentication, FakeErrorIE815XMLParser, Helpers.stubControllerComponents())
         "xml cannot be parsed" in {
-          val result = xmlFailureController.submit(fakeRequest)
+          val result = createFailingXmlParserAction.submit(createRequest(IE815))
 
-          status(result) shouldBe Status.BAD_REQUEST
+          status(result) mustBe BAD_REQUEST
         }
       }
 
       "return error" when {
-        val authActionForbiddenController = new DraftExciseMovementController(FakeForbiddenAuthentication, FakeSuccessIE815XMLParser, Helpers.stubControllerComponents())
         "authentication fails" in {
-          val result = authActionForbiddenController.submit(fakeRequest)
+          val result = createAuthActionFailure.submit(createRequest(IE815))
 
-          status(result) shouldBe Status.FORBIDDEN
+          status(result) mustBe FORBIDDEN
         }
       }
 
+  }
+
+  private def createAuthActionFailure = {
+    new DraftExciseMovementController(
+      FakeFailingAuthentication,
+      FakeSuccessIE815XMLParser,
+      stubControllerComponents()
+    )
+  }
+
+  private def createFailingXmlParserAction =
+    new DraftExciseMovementController(
+      FakeSuccessAuthentication,
+      FakeFailureIE815XMLParser,
+      stubControllerComponents()
+    )
+
+  private def createSuccessfulAuth =
+    new DraftExciseMovementController(
+      FakeSuccessAuthentication,
+      FakeSuccessIE815XMLParser,
+      stubControllerComponents()
+    )
+
+  private def createRequest(body: Elem) = {
+    FakeRequest(
+      method = "POST",
+      uri = "/foo",
+      headers = FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> "application/xml")),
+      body = body
+    )
   }
 }

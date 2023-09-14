@@ -16,22 +16,24 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.libs.json.Json
+import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseIE815XmlAction}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
+import scala.xml.NodeSeq
 
 @Singleton
 class DraftExciseMovementController @Inject()(
                                      authAction: AuthAction,
                                      xmlParser: ParseIE815XmlAction,
                                      cc: ControllerComponents
-) extends BackendController(cc) {
+) (implicit ec: ExecutionContext)extends BackendController(cc) {
 
-  def submit: Action[AnyContent] =
-    (authAction andThen xmlParser).async { implicit request =>
-      Future.successful(Ok("Hello world"))
+  def submit: Action[NodeSeq] =
+    (authAction andThen xmlParser).async(parse.xml) { implicit request =>
+      Future.successful(Ok(Json.parse("""{"name": "mauro"}""")))
     }
 }

@@ -20,7 +20,7 @@ import com.google.inject.ImplementedBy
 import generated.IE815Type
 
 import javax.inject.Inject
-import scala.xml.{NodeSeq, SAXParseException}
+import scala.xml.NodeSeq
 class IE815XmlParser @Inject() extends XmlParser {
 
   override def fromXml(xml: NodeSeq): IE815Type = {
