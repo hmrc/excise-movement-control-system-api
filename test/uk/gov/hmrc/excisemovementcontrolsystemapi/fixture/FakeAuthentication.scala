@@ -48,4 +48,15 @@ trait FakeAuthentication {
     override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global
   }
 
+  object FakeForbiddenAuthentication extends AuthAction {
+
+    override def parser: BodyParser[AnyContent] = stubBodyParser()
+
+    override def invokeBlock[A](request: Request[A], block: AuthorizedRequest[A] => Future[Result]): Future[Result] = {
+      Future.successful(Forbidden("Invalid header parameters supplied"))
+    }
+
+    override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global
+  }
+
 }

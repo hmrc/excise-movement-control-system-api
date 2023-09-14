@@ -46,13 +46,6 @@ class ParseIE815XmlActionSpec extends PlaySpec with EitherValues{
               |  <body>Don't forget me this weekend!</body>
               |</note>""".stripMargin
 
-  val xmlStr1 = """<note>
-                 |  <to>Tove</to>
-                 |  <from>Jani</from>
-                 |  <heading>Reminder</heading>
-                 |  <body>Don't forget me this weekend!</body>
-                 |</note>""".stripMargin
-
   "parseXML" should {
     "return 400 if no body supplied" in {
       val request = EnrolmentRequest(FakeRequest().withBody(None), Set.empty, "123")
@@ -90,22 +83,23 @@ class ParseIE815XmlActionSpec extends PlaySpec with EitherValues{
       result mustBe Right(AuthorizedIE815Request(request, obj, "123"))
     }
 
-    //todo: this need to be relooked at
-    "return a request with the IE815Types object hjk" in {
+    "return a Bad Request supplied XML Node Sequence that is not an IE815" in {
 
-      val json: JsValue = Json.parse(
-      """{"xml": "<note><to>Tove</to><from>Jani</from><heading>Reminder</heading><body>Don't forget me this weekend!</body></note>"}""")
-      val obj = mock[IE815Type]
-      when(xmlParser.fromXml(any)).thenReturn(obj)
+      when(xmlParser.fromXml(any)).thenThrow(new ParserFailure("Not valid"))
 
       val body = scala.xml.XML.loadString(xmlStr)
-      val fakeRequest = FakeRequest().withHeaders("Content-Type" -> "application/json").withBody(json);
+      val fakeRequest = FakeRequest().withBody(body)
       val request = AuthorizedRequest(fakeRequest, Set.empty, "123")
 
       val result = await(controller.refine(request))
+      result mustBe Left(BadRequest("Not valid IE815 message: Not valid"))
+    }
 
+    "return 400 if body supplied is a string" in {
+      val request = AuthorizedRequest(FakeRequest().withBody("<xml>asdasd</xml>"), Set.empty, "123")
+      val result = await(controller.refine(request))
 
-      result mustBe Right(AuthorizedIE815Request(request, obj, "123"))
+      result mustBe Left(BadRequest("Not valid XML or XML is empty"))
     }
 
     "return 400 if body supplied is a string" in {
