@@ -48,7 +48,7 @@ trait FakeAuthentication {
     override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global
   }
 
-  object FakeForbiddenAuthentication extends AuthAction {
+  object FakeFailingAuthentication extends AuthAction {
 
     override def parser: BodyParser[AnyContent] = stubBodyParser()
 

@@ -19,7 +19,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import akka.actor.ActorSystem
 import org.scalatest.EitherValues
-import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
 import play.api.test.Helpers._
@@ -27,6 +26,8 @@ import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateConsignorAction, FakeXmlParsers}
+import scala.concurrent.ExecutionContext
+import scala.xml.Elem
 
 import scala.concurrent.ExecutionContext
 import scala.xml.Elem
@@ -38,12 +39,9 @@ class DraftExciseMovementControllerSpec
     with FakeValidateConsignorAction
     with TestXml
     with EitherValues {
-
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val sys = ActorSystem("DraftExciseMovementControllerSpec")
-
   private val connector = mock[MovementMessageConnector]
-
   private val cc = stubControllerComponents()
 
   "submit" should {

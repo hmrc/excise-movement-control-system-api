@@ -75,7 +75,6 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
     "return Unsupported Media Type (415)" in {
       withAuthorizedTrader("GBWK002281023")
-
       postRequest(contentType = """application/json""").status mustBe UNSUPPORTED_MEDIA_TYPE
     }
 
@@ -98,7 +97,6 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       postRequest(IE815).status mustBe FORBIDDEN
     }
   }
-
   private def postRequest(xml: NodeSeq = IE815, contentType: String =  """application/vnd.hmrc.1.0+xml""") = {
     await(wsClient.url(url)
       .addHttpHeaders(
