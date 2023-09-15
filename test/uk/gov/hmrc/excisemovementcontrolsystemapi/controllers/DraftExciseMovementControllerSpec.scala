@@ -31,6 +31,11 @@ import scala.xml.Elem
 
 import scala.concurrent.ExecutionContext
 import scala.xml.Elem
+    with FakeAuthentication
+    with FakeXmlParsers
+    with FakeValidateConsignorAction
+    with TestXml
+    with EitherValues {
 
 class DraftExciseMovementControllerSpec
   extends PlaySpec
@@ -42,6 +47,8 @@ class DraftExciseMovementControllerSpec
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val sys = ActorSystem("DraftExciseMovementControllerSpec")
   private val connector = mock[MovementMessageConnector]
+  private val cc = stubControllerComponents()
+
   private val cc = stubControllerComponents()
 
   "submit" should {

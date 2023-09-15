@@ -97,6 +97,12 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
       postRequest(IE815).status mustBe FORBIDDEN
     }
+
+    "return forbidden (403) when consignor id cannot be validate" in {
+      withAuthorizedTrader("123")
+
+      postRequest(IE815).status mustBe FORBIDDEN
+    }
   }
   private def postRequest(xml: NodeSeq = IE815, contentType: String =  """application/vnd.hmrc.1.0+xml""") = {
     await(wsClient.url(url)
