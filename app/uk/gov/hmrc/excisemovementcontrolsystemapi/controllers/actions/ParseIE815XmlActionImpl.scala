@@ -41,10 +41,6 @@ class ParseIE815XmlActionImpl @Inject()
 
       request.body match {
         case body: NodeSeq if body.nonEmpty => parseXml(body, request)
-          // TODO:I think AnyContentAsXml can now be removed
-        case body: AnyContentAsXml if body.xml.nonEmpty =>
-          println("is AnyContentAsXml")
-          parseXml(body.xml, request)
         case _ =>
           logger.error("Not valid XML or XML is empty")
           Future.successful(Left(BadRequest("Not valid XML or XML is empty")))

@@ -50,7 +50,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
   "Draft Excise Movement" should {
     "return 200" in {
-      withAuthorizedTrader
+      withAuthorizedTrader("GBWK002281023")
 
       postRequest(IE815).status mustBe OK
     }
@@ -68,19 +68,19 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     }
 
     "return bad request (400) when xml cannot be parsed" in {
-      withAuthorizedTrader
+      withAuthorizedTrader("GBWK002281023")
 
       postRequest(<IE815></IE815>).status mustBe BAD_REQUEST
     }
 
     "return Unsupported Media Type (415)" in {
-      withAuthorizedTrader
+      withAuthorizedTrader("GBWK002281023")
 
       postRequest(contentType = """application/json""").status mustBe UNSUPPORTED_MEDIA_TYPE
     }
 
     "return bad request (400) when body is not xml" in {
-      withAuthorizedTrader
+      withAuthorizedTrader("GBWK002281023")
 
       val result = await(wsClient.url(url)
         .addHttpHeaders(
@@ -90,6 +90,12 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       )
 
       result.status mustBe BAD_REQUEST
+    }
+
+    "return forbidden (403) when consignor id cannot be validate" in {
+      withAuthorizedTrader("123")
+
+      postRequest(IE815).status mustBe FORBIDDEN
     }
   }
 

@@ -20,11 +20,11 @@ import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.when
 import org.scalatestplus.mockito.MockitoSugar.mock
-import uk.gov.hmrc.auth.core.{AffinityGroup, AuthConnector, Enrolment, Enrolments}
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{affinityGroup, authorisedEnrolments, credentials, internalId}
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
 import uk.gov.hmrc.auth.core.syntax.retrieved.authSyntaxForRetrieved
+import uk.gov.hmrc.auth.core.{AffinityGroup, AuthConnector, Enrolment, Enrolments}
 
 import scala.concurrent.Future
 
@@ -32,10 +32,10 @@ trait AuthTestSupport {
 
   lazy val authConnector = mock[AuthConnector]
   val authFetch = authorisedEnrolments and affinityGroup and credentials and internalId
-  val enrolmentWithERN = Enrolment("HMRC-EMCS-ORG").withIdentifier("ExciseNumber", "123")
+  val enrolment = Enrolment("HMRC-EMCS-ORG")
 
-  def withAuthorizedTrader: Unit = {
-    val retrieval = Enrolments(Set(enrolmentWithERN)) and
+  def withAuthorizedTrader(identifier: String): Unit = {
+    val retrieval = Enrolments(Set(enrolment.withIdentifier("ExciseNumber", identifier))) and
       Some(AffinityGroup.Organisation) and
       Some(Credentials("testProviderId", "testProviderType")) and
       Some("123")
@@ -44,7 +44,7 @@ trait AuthTestSupport {
   }
 
   def withUnAuthorizedERN: Unit = {
-    val retrieval = Enrolments(Set(Enrolment("HMRC-EMCS-ORG"))) and
+    val retrieval = Enrolments(Set(enrolment)) and
       Some(AffinityGroup.Organisation) and
       Some(Credentials("testProviderId", "testProviderType")) and
       Some("123")
@@ -62,4 +62,5 @@ trait AuthTestSupport {
 
   def withUnauthorizedTrader(error: Throwable): Unit =
     when(authConnector.authorise(any, any)(any, any)).thenReturn(Future.failed(error))
+
 }

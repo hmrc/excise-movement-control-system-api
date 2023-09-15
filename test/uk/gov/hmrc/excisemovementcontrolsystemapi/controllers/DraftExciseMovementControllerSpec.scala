@@ -24,64 +24,89 @@ import play.api.http.HeaderNames
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeXmlParsers}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateConsignorAction, FakeXmlParsers}
 
 import scala.concurrent.ExecutionContext
 import scala.xml.Elem
 
-class DraftExciseMovementControllerSpec extends PlaySpec with FakeAuthentication with FakeXmlParsers with TestXml with EitherValues {
+class DraftExciseMovementControllerSpec
+  extends PlaySpec
+    with FakeAuthentication
+    with FakeXmlParsers
+    with FakeValidateConsignorAction
+    with TestXml
+    with EitherValues {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val sys = ActorSystem("DraftExciseMovementControllerSpec")
 
-  "submit" should {
-      "return 200" in {
-        val result = createSuccessfulAuth.submit(createRequest(IE815))
+  private val cc = stubControllerComponents()
 
-        status(result) mustBe OK
+  "submit" should {
+    "return 200" in {
+      val result = createWithSuccessfulAuth.submit(createRequest(IE815))
+
+      status(result) mustBe OK
     }
 
-      "return 400" when {
-        "xml cannot be parsed" in {
-          val result = createFailingXmlParserAction.submit(createRequest(IE815))
+    "a validation parser error" when {
+      "xml cannot be parsed" in {
+        val result = createWithFailingXmlParserAction.submit(createRequest(IE815))
 
-          status(result) mustBe BAD_REQUEST
-        }
+        status(result) mustBe BAD_REQUEST
       }
+    }
 
-      "return error" when {
-        "authentication fails" in {
-          val result = createAuthActionFailure.submit(createRequest(IE815))
+    "return authentication error" when {
+      "authentication fails" in {
+        val result = createWithAuthActionFailure.submit(createRequest(IE815))
 
-          status(result) mustBe FORBIDDEN
-        }
+        status(result) mustBe FORBIDDEN
       }
+    }
 
+    "return a consignor validation error" when {
+      "consignor is not valid" in {
+        val result = createWithValidateConsignorActionFailure.submit(createRequest(IE815))
+
+        status(result) mustBe FORBIDDEN
+      }
+    }
   }
 
-  private def createAuthActionFailure = {
+  private def createWithAuthActionFailure =
     new DraftExciseMovementController(
       FakeFailingAuthentication,
       FakeSuccessIE815XMLParser,
-      stubControllerComponents()
+      FakeSuccessfulValidateConsignorAction,
+      cc
     )
-  }
 
-  private def createFailingXmlParserAction =
+  private def createWithFailingXmlParserAction =
     new DraftExciseMovementController(
       FakeSuccessAuthentication,
       FakeFailureIE815XMLParser,
-      stubControllerComponents()
+      FakeSuccessfulValidateConsignorAction,
+      cc
     )
 
-  private def createSuccessfulAuth =
+  private def createWithSuccessfulAuth =
     new DraftExciseMovementController(
       FakeSuccessAuthentication,
       FakeSuccessIE815XMLParser,
-      stubControllerComponents()
+      FakeSuccessfulValidateConsignorAction,
+      cc
     )
 
-  private def createRequest(body: Elem) = {
+  private def createWithValidateConsignorActionFailure =
+    new DraftExciseMovementController(
+      FakeSuccessAuthentication,
+      FakeSuccessIE815XMLParser,
+      FakeFailureValidateConsignorAction,
+      cc
+    )
+
+   private def createRequest(body: Elem): FakeRequest[Elem] = {
     FakeRequest(
       method = "POST",
       uri = "/foo",
