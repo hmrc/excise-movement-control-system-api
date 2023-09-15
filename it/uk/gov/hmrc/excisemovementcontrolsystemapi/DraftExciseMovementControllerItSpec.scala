@@ -20,7 +20,7 @@ import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.http.HeaderNames
-import play.api.http.Status.{FORBIDDEN, OK, UNAUTHORIZED}
+import play.api.http.Status.{BAD_REQUEST, FORBIDDEN, OK, UNAUTHORIZED, UNSUPPORTED_MEDIA_TYPE}
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
@@ -29,6 +29,8 @@ import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
 
+import scala.xml.NodeSeq
+
 
 class DraftExciseMovementControllerItSpec extends PlaySpec
   with GuiceOneServerPerSuite
@@ -36,6 +38,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   with TestXml {
 
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
+  private val url = s"http://localhost:$port/customs/excise/movements"
 
   override lazy val app: Application = {
     GuiceApplicationBuilder()
@@ -49,28 +52,53 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     "return 200" in {
       withAuthorizedTrader
 
-      postRequest.status mustBe OK
+      postRequest(IE815).status mustBe OK
     }
 
-    "return 403 when there are no authorized ERN" in {
+    "return forbidden (403) when there are no authorized ERN" in {
       withUnAuthorizedERN
 
-      postRequest.status mustBe FORBIDDEN
+      postRequest(IE815).status mustBe FORBIDDEN
     }
 
-    "return a 401 when no authorized trader" in {
+    "return a Unauthorized (401) when no authorized trader" in {
       withUnauthorizedTrader(InternalError("A general auth failure"))
 
-      postRequest.status mustBe UNAUTHORIZED
+      postRequest(IE815).status mustBe UNAUTHORIZED
+    }
+
+    "return bad request (400) when xml cannot be parsed" in {
+      withAuthorizedTrader
+
+      postRequest(<IE815></IE815>).status mustBe BAD_REQUEST
+    }
+
+    "return Unsupported Media Type (415)" in {
+      withAuthorizedTrader
+
+      postRequest(contentType = """application/json""").status mustBe UNSUPPORTED_MEDIA_TYPE
+    }
+
+    "return bad request (400) when body is not xml" in {
+      withAuthorizedTrader
+
+      val result = await(wsClient.url(url)
+        .addHttpHeaders(
+          HeaderNames.AUTHORIZATION -> "TOKEN",
+          HeaderNames.CONTENT_TYPE -> """application/vnd.hmrc.1.0+xml"""
+        ).post("test")
+      )
+
+      result.status mustBe BAD_REQUEST
     }
   }
 
-  private def postRequest = {
-    await(wsClient.url(s"http://localhost:$port/customs/excise/movements")
+  private def postRequest(xml: NodeSeq = IE815, contentType: String =  """application/vnd.hmrc.1.0+xml""") = {
+    await(wsClient.url(url)
       .addHttpHeaders(
         HeaderNames.AUTHORIZATION -> "TOKEN",
-        HeaderNames.CONTENT_TYPE -> """application/vnd.hmrc.1.0+xml"""
-      ).post(IE815)
+        HeaderNames.CONTENT_TYPE -> contentType
+      ).post(xml)
     )
   }
 }
