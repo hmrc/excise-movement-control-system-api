@@ -82,6 +82,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       withAuthorizedTrader("GBWK002281023")
 
       val result = await(wsClient.url(url)
+      val result = await(wsClient.url(url)
         .addHttpHeaders(
           HeaderNames.AUTHORIZATION -> "TOKEN",
           HeaderNames.CONTENT_TYPE -> """application/vnd.hmrc.1.0+xml"""
