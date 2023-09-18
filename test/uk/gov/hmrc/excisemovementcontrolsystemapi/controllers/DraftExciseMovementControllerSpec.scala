@@ -19,6 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import akka.actor.ActorSystem
 import org.scalatest.EitherValues
+import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
 import play.api.test.Helpers._
