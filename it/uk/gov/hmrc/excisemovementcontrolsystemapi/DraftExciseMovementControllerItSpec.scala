@@ -20,7 +20,7 @@ import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.http.HeaderNames
-import play.api.http.Status.{BAD_REQUEST, FORBIDDEN, OK, UNAUTHORIZED, UNSUPPORTED_MEDIA_TYPE}
+import play.api.http.Status._
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
@@ -28,9 +28,7 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
-import uk.gov.hmrc.play.bootstrap.http.DefaultHttpClient
 
-import java.net.http.HttpClient
 import scala.xml.NodeSeq
 
 
