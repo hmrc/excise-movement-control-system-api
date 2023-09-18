@@ -18,7 +18,9 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseIE815XmlAction, ValidateConsignorAction}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.AuthorizedIE815Request
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -27,14 +29,16 @@ import scala.xml.NodeSeq
 
 @Singleton
 class DraftExciseMovementController @Inject()(
-                                     authAction: AuthAction,
-                                     xmlParser: ParseIE815XmlAction,
-                                     consignorValidatorAction: ValidateConsignorAction,
-                                     cc: ControllerComponents
-) (implicit ec: ExecutionContext)extends BackendController(cc) {
+                                               authAction: AuthAction,
+                                               xmlParser: ParseIE815XmlAction,
+                                               consignorValidatorAction: ValidateConsignorAction,
+                                               movementMessageConnector: MovementMessageConnector,
+                                               cc: ControllerComponents
+                                             )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
   def submit: Action[NodeSeq] =
-    (authAction andThen xmlParser andThen consignorValidatorAction).async(parse.xml) { implicit request =>
+    (authAction andThen xmlParser andThen consignorValidatorAction).async(parse.xml) { implicit request: AuthorizedIE815Request[NodeSeq] =>
+      movementMessageConnector.post("test-message", "IE815")
       Future.successful(Ok(Json.parse("""{"name": "mauro"}""")))
     }
 }
