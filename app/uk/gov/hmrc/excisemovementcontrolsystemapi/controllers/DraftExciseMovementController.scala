@@ -39,7 +39,8 @@ class DraftExciseMovementController @Inject()(
   def submit: Action[NodeSeq] =
     (authAction andThen xmlParser andThen consignorValidatorAction).async(parse.xml) { implicit request: AuthorizedIE815Request[NodeSeq] =>
       // todo integrate controller
+      // todo store MovementDetails(LRN, ConsignorId, ConsigneeId) in mongodb
       // movementMessageConnector.post("test-message", "IE815")
-      Future.successful(Ok(Json.parse("""{"name": "mauro"}""")))
+      Future.successful(Ok(Json.parse("""{"message": "Draft Movement submitted successfully"}""")))
     }
 }
