@@ -33,7 +33,7 @@ import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{affinityGroup, authorisedEnrolments, credentials, internalId}
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
 import uk.gov.hmrc.auth.core.syntax.retrieved.authSyntaxForRetrieved
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.AuthorizedRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.play.bootstrap.tools.Stubs.stubMessagesControllerComponents
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -54,13 +54,13 @@ class AuthActionSpec extends PlaySpec with BeforeAndAfterEach with EitherValues 
     reset(authConnector)
   }
 
-  def block(authRequest: AuthorizedRequest[_]) =
+  def block(authRequest: EnrolmentRequest[_]) =
     Future.successful(Results.Ok)
 
   "authorisation" should {
 
     "authorised with a enrolment" in {
-      withAuthorizedTrader
+      withAuthorizedTrader()
 
       val result = await(authenticator.invokeBlock(FakeRequest(), block))
 
@@ -70,7 +70,7 @@ class AuthActionSpec extends PlaySpec with BeforeAndAfterEach with EitherValues 
 
     "return Unauthorized error" when {
       "have no internal id" in {
-        withUnAuthorizedInternalId
+        withUnAuthorizedInternalId()
 
         val result = await(authenticator.invokeBlock(FakeRequest(), block))
 
@@ -103,7 +103,7 @@ class AuthActionSpec extends PlaySpec with BeforeAndAfterEach with EitherValues 
 
       "has no credential" in {
 
-        withUnauthorizedCredential
+        withUnauthorizedCredential()
 
         val result = await(authenticator.invokeBlock(FakeRequest(), block))
 
@@ -138,7 +138,7 @@ class AuthActionSpec extends PlaySpec with BeforeAndAfterEach with EitherValues 
     }
 
     "auth return forbidden" in {
-      withUnAuthorizedERN
+      withUnAuthorizedERN()
 
       val result = await(authenticator.invokeBlock(FakeRequest(GET, "/get"), block))
 
@@ -146,7 +146,7 @@ class AuthActionSpec extends PlaySpec with BeforeAndAfterEach with EitherValues 
     }
   }
 
-  private def withAuthorizedTrader: Unit = {
+  private def withAuthorizedTrader(): Unit = {
     val retrieval = Enrolments(Set(enrolmentWithERN)) and
       Some(AffinityGroup.Organisation) and
       Some(Credentials("testProviderId", "testProviderType")) and
@@ -155,7 +155,7 @@ class AuthActionSpec extends PlaySpec with BeforeAndAfterEach with EitherValues 
     withAuthorization(retrieval)
   }
 
-  private def withUnAuthorizedInternalId: Unit = {
+  private def withUnAuthorizedInternalId(): Unit = {
     val retrieval = Enrolments(Set(enrolmentWithERN)) and
       Some(AffinityGroup.Organisation) and
       Some(Credentials("testProviderId", "testProviderType")) and
@@ -172,7 +172,7 @@ class AuthActionSpec extends PlaySpec with BeforeAndAfterEach with EitherValues 
     withAuthorization(retrieval)
   }
 
-  private def withUnauthorizedCredential: Unit = {
+  private def withUnauthorizedCredential(): Unit = {
     val retrieval = Enrolments(Set(enrolmentWithERN)) and
       Some(Organisation) and
       None and
@@ -181,7 +181,7 @@ class AuthActionSpec extends PlaySpec with BeforeAndAfterEach with EitherValues 
     withAuthorization(retrieval)
   }
 
-  private def withUnAuthorizedERN: Unit = {
+  private def withUnAuthorizedERN(): Unit = {
     val retrieval = Enrolments(Set(Enrolment("HMRC-EMCS-ORG"))) and
       Some(AffinityGroup.Organisation) and
       Some(Credentials("testProviderId", "testProviderType")) and

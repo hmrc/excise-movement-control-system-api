@@ -20,7 +20,7 @@ import com.google.inject.ImplementedBy
 import play.api.Logging
 import play.api.mvc.Results.Forbidden
 import play.api.mvc.{ActionRefiner, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.AuthorizedIE815Request
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -29,10 +29,10 @@ import scala.concurrent.{ExecutionContext, Future}
 class ValidateConsignorActionImpl @Inject()(implicit val executionContext: ExecutionContext)
   extends ValidateConsignorAction
     with Logging {
-  override def refine[A](request: AuthorizedIE815Request[A]): Future[Either[Result, AuthorizedIE815Request[A]]] = {
+  override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
 
     val consignorId = request.ie815Message.Body.SubmittedDraftOfEADESAD.ConsignorTrader.TraderExciseNumber
-    if(request.request.erns.contains(consignorId))
+    if(request.erns.contains(consignorId))
       Future.successful(Right(request))
     else {
       logger.error("[ValidateErnAction] - Invalid Excise Number")
@@ -42,6 +42,6 @@ class ValidateConsignorActionImpl @Inject()(implicit val executionContext: Execu
 }
 
 @ImplementedBy(classOf[ValidateConsignorActionImpl])
-trait ValidateConsignorAction extends ActionRefiner[AuthorizedIE815Request, AuthorizedIE815Request ]{
-  def refine[A](request: AuthorizedIE815Request[A]): Future[Either[Result, AuthorizedIE815Request[A]]]
+trait ValidateConsignorAction extends ActionRefiner[ParsedXmlRequest, ParsedXmlRequest ]{
+  def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]]
 }

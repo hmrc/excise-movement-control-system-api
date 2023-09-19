@@ -26,7 +26,7 @@ import play.api.mvc.Results.BadRequest
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import scalaxb.ParserFailure
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{AuthorizedIE815Request, AuthorizedRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{ParsedXmlRequest, EnrolmentRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.XmlParser
 import uk.gov.hmrc.play.bootstrap.tools.Stubs.stubMessagesControllerComponents
 
@@ -47,7 +47,7 @@ class ParseIE815XmlActionSpec extends PlaySpec with EitherValues{
 
   "parseXML" should {
     "return 400 if no body supplied" in {
-      val request = AuthorizedRequest(FakeRequest().withBody(None), Set.empty, "123")
+      val request = EnrolmentRequest(FakeRequest().withBody(None), Set.empty, "123")
       val result = await(controller.refine(request))
 
       result mustBe Left(BadRequest("Not valid XML or XML is empty"))
@@ -60,12 +60,12 @@ class ParseIE815XmlActionSpec extends PlaySpec with EitherValues{
 
       val body = scala.xml.XML.loadString(xmlStr)
       val fakeRequest = FakeRequest().withBody(body)
-      val request = AuthorizedRequest(fakeRequest, Set.empty, "123")
+      val request = EnrolmentRequest(fakeRequest, Set.empty, "123")
 
       val result = await(controller.refine(request))
 
       verify(xmlParser).fromXml(eqTo(body))
-      result mustBe Right(AuthorizedIE815Request(request, obj, "123"))
+      result mustBe Right(ParsedXmlRequest(request, obj, Set.empty, "123"))
     }
 
     "return a Bad Request supplied XML Node Sequence that is not an IE815" in {
@@ -74,14 +74,14 @@ class ParseIE815XmlActionSpec extends PlaySpec with EitherValues{
 
       val body = scala.xml.XML.loadString(xmlStr)
       val fakeRequest = FakeRequest().withBody(body)
-      val request = AuthorizedRequest(fakeRequest, Set.empty, "123")
+      val request = EnrolmentRequest(fakeRequest, Set.empty, "123")
 
       val result = await(controller.refine(request))
       result mustBe Left(BadRequest("Not valid IE815 message: Not valid"))
     }
 
     "return 400 if body supplied is a string" in {
-      val request = AuthorizedRequest(FakeRequest().withBody("<xml>asdasd</xml>"), Set.empty, "123")
+      val request = EnrolmentRequest(FakeRequest().withBody("<xml>asdasd</xml>"), Set.empty, "123")
       val result = await(controller.refine(request))
 
       result mustBe Left(BadRequest("Not valid XML or XML is empty"))

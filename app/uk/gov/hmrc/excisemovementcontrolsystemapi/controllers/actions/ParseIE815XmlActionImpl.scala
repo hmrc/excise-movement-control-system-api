@@ -18,8 +18,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
 import com.google.inject.ImplementedBy
 import play.api.Logging
-import play.api.mvc.{ActionRefiner, AnyContentAsXml, ControllerComponents, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{AuthorizedIE815Request, AuthorizedRequest}
+import play.api.mvc.{ActionRefiner, ControllerComponents, Result}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.XmlParser
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -37,7 +37,7 @@ class ParseIE815XmlActionImpl @Inject()
   with Logging {
 
 
-  override def refine[A](request: AuthorizedRequest[A]): Future[Either[Result, AuthorizedIE815Request[A]]] = {
+  override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
 
       request.body match {
         case body: NodeSeq if body.nonEmpty => parseXml(body, request)
@@ -47,10 +47,10 @@ class ParseIE815XmlActionImpl @Inject()
       }
   }
 
-  def parseXml[A](xmlBody: NodeSeq, request: AuthorizedRequest[A]) : Future[Either[Result, AuthorizedIE815Request[A]]] = {
+  def parseXml[A](xmlBody: NodeSeq, request: EnrolmentRequest[A]) : Future[Either[Result, ParsedXmlRequest[A]]] = {
 
     Try(xmlParser.fromXml(xmlBody)) match {
-      case Success(value) => Future.successful(Right(AuthorizedIE815Request(request, value, request.internalId)))
+      case Success(value) => Future.successful(Right(ParsedXmlRequest(request, value, request.erns, request.internalId)))
       case Failure(exception) =>
         logger.error(s"Not valid IE815 message: ${exception.getMessage}", exception)
         Future.successful(Left(BadRequest(s"Not valid IE815 message: ${exception.getMessage}")))
@@ -59,7 +59,7 @@ class ParseIE815XmlActionImpl @Inject()
 }
 
 @ImplementedBy(classOf[ParseIE815XmlActionImpl])
-trait ParseIE815XmlAction extends ActionRefiner[AuthorizedRequest, AuthorizedIE815Request] {
+trait ParseIE815XmlAction extends ActionRefiner[EnrolmentRequest, ParsedXmlRequest] {
 
-  def refine[A](request: AuthorizedRequest[A]): Future[Either[Result, AuthorizedIE815Request[A]]]
+  def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]]
 }

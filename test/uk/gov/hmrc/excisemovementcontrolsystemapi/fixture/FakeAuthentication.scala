@@ -20,7 +20,7 @@ import play.api.mvc.Results.Forbidden
 import play.api.mvc.{AnyContent, BodyParser, Request, Result}
 import play.api.test.Helpers.stubBodyParser
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.AuthorizedRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -30,8 +30,8 @@ trait FakeAuthentication {
 
     override def parser: BodyParser[AnyContent] = stubBodyParser()
 
-    override def invokeBlock[A](request: Request[A], block: AuthorizedRequest[A] => Future[Result]): Future[Result] = {
-      block(AuthorizedRequest(request, Set("testErn"), "testInternalId"))
+    override def invokeBlock[A](request: Request[A], block: EnrolmentRequest[A] => Future[Result]): Future[Result] = {
+      block(EnrolmentRequest(request, Set("testErn"), "testInternalId"))
     }
 
     override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global
@@ -41,7 +41,7 @@ trait FakeAuthentication {
 
     override def parser: BodyParser[AnyContent] = stubBodyParser()
 
-    override def invokeBlock[A](request: Request[A], block: AuthorizedRequest[A] => Future[Result]): Future[Result] = {
+    override def invokeBlock[A](request: Request[A], block: EnrolmentRequest[A] => Future[Result]): Future[Result] = {
       Future.successful(Forbidden("Invalid header parameters supplied"))
     }
 

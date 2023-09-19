@@ -19,13 +19,15 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth
 import generated.IE815Type
 import play.api.mvc.{Request, WrappedRequest}
 
-case class AuthorizedRequest[A](
+case class EnrolmentRequest[A](
   request: Request[A],
   erns: Set[String],
   internalId: String) extends WrappedRequest[A](request)
 
-case class AuthorizedIE815Request[A](
-  request: AuthorizedRequest[A],
+case class ParsedXmlRequest[A]
+(
+  request: EnrolmentRequest[A],
   ie815Message: IE815Type,
+  erns: Set[String],
   internalId: String
 ) extends WrappedRequest[A](request)

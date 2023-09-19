@@ -20,14 +20,14 @@ import play.api.mvc.Result
 import play.api.mvc.Results.Forbidden
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateConsignorAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.AuthorizedIE815Request
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 
 import scala.concurrent.{ExecutionContext, Future}
 
 trait FakeValidateConsignorAction {
 
   object FakeSuccessfulValidateConsignorAction extends ValidateConsignorAction with TestXml {
-    override def refine[A](request: AuthorizedIE815Request[A]): Future[Either[Result, AuthorizedIE815Request[A]]] = {
+    override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
       Future.successful(Right(request))
     }
 
@@ -35,7 +35,7 @@ trait FakeValidateConsignorAction {
   }
 
   object FakeFailureValidateConsignorAction extends ValidateConsignorAction with TestXml {
-    override def refine[A](request: AuthorizedIE815Request[A]): Future[Either[Result, AuthorizedIE815Request[A]]] = {
+    override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
       Future.successful(Left(Forbidden("Error")))
     }
 

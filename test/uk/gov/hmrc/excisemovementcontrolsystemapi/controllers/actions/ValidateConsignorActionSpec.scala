@@ -23,7 +23,7 @@ import play.api.mvc.Results.Forbidden
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{AuthorizedIE815Request, AuthorizedRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{ParsedXmlRequest, EnrolmentRequest}
 
 import scala.concurrent.ExecutionContext
 
@@ -38,8 +38,9 @@ class ValidateConsignorActionSpec extends PlaySpec with TestXml with EitherValue
     "return a request" in {
 
       val ie815Obj = scalaxb.fromXML[IE815Type](IE815)
-      val authorizedRequest = AuthorizedRequest(FakeRequest(), Set("GBWK002281023", "GBWK002181023", "GBWK002281022"), "123")
-      val request = AuthorizedIE815Request(authorizedRequest, ie815Obj, "123");
+      val erns = Set("GBWK002281023", "GBWK002181023", "GBWK002281022")
+      val authorizedRequest = EnrolmentRequest(FakeRequest(), erns, "123")
+      val request = ParsedXmlRequest(authorizedRequest, ie815Obj, erns, "123");
 
       val result = await(sut.refine(request))
 
@@ -49,8 +50,8 @@ class ValidateConsignorActionSpec extends PlaySpec with TestXml with EitherValue
     "an error" when {
       "ern does not must tye consignorId" in {
         val ie815Obj = scalaxb.fromXML[IE815Type](IE815)
-        val authorizedRequest = AuthorizedRequest(FakeRequest(), Set("12356"), "123")
-        val request = AuthorizedIE815Request(authorizedRequest, ie815Obj, "123");
+        val authorizedRequest = EnrolmentRequest(FakeRequest(), Set("12356"), "123")
+        val request = ParsedXmlRequest(authorizedRequest, ie815Obj, Set("12356"), "123");
 
         val result = await(sut.refine(request))
 

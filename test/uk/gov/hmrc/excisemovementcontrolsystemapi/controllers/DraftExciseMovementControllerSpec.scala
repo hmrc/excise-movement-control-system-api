@@ -18,8 +18,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 
 import akka.actor.ActorSystem
-import org.mockito.ArgumentMatchersSugar.{any, eqTo}
-import org.mockito.MockitoSugar.verify
 import org.scalatest.EitherValues
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
