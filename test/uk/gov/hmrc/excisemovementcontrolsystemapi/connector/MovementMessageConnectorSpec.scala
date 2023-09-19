@@ -24,9 +24,10 @@ import org.mockito.MockitoSugar.{reset, verify, when}
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.BAD_REQUEST
+import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, OK, SERVICE_UNAVAILABLE}
 import play.api.http.{ContentTypes, HeaderNames}
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json}
+import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
@@ -36,6 +37,7 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
 import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
+import scala.reflect.runtime.universe.typeOf
 
 class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with EitherValues{
 
@@ -61,6 +63,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
 
     when(eisUtils.getCurrentDateTimeString).thenReturn("2023-09-17T09:32:50.345Z")
     when(eisUtils.generateCorrelationId).thenReturn(emcsCorrelationId)
+    when(appConfig.emcsReceiverMessageUrl).thenReturn("/eis/path")
   }
 
   "post" should {
@@ -76,7 +79,6 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
     "use the right request parameters in http client" in {
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(Future.successful(HttpResponse(200, jsonResponse.toString())))
-      when(appConfig.emcsReceiverMessageUrl).thenReturn("/eis/path")
 
       val eisRequest = EISRequest(emcsCorrelationId, "2023-09-17T09:32:50.345Z", messageType, "APIP", "user1", message)
 
@@ -90,28 +92,69 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
       )(any, any, any, any)
     }
 
-    "return an error" in {
-      val errorResponse = Json.obj(
-        "dateTime" -> "2021-12-17T09:30:47Z",
-        "status" -> BAD_REQUEST,
-        "message" -> "any error",
-        "debugMessage" -> "error message",
-        "emcsCorrelationId" -> emcsCorrelationId
-      )
+    "return Bad request error" in {
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(Future.successful(HttpResponse(BAD_REQUEST, errorResponse.toString())))
-      when(appConfig.emcsReceiverMessageUrl).thenReturn("/eis/path")
 
       val result = await(connector.post(message, messageType))
 
-      result.left.value mustBe EISErrorResponse(
-        LocalDateTime.of(2021, 12, 17, 9,30,47),
-        BAD_REQUEST,
-        "any error",
-        "error message",
-        emcsCorrelationId
-      )
+      result.left.value mustBe BadRequest("any error")
     }
+
+    "return Not found error" in {
+      when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
+        .thenReturn(Future.successful(HttpResponse(NOT_FOUND, errorResponse.toString())))
+
+      val result = await(connector.post(message, messageType))
+
+      result.left.value mustBe NotFound("any error")
+    }
+
+    "return service unavailable error" in {
+      when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
+        .thenReturn(Future.successful(HttpResponse(SERVICE_UNAVAILABLE, errorResponse.toString())))
+
+      val result = await(connector.post(message, messageType))
+
+      result.left.value mustBe ServiceUnavailable("any error")
+    }
+
+    "return Internal service error error" in {
+      when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
+        .thenReturn(Future.successful(HttpResponse(INTERNAL_SERVER_ERROR, errorResponse.toString())))
+
+      val result = await(connector.post(message, messageType))
+
+      result.left.value mustBe InternalServerError("any error")
+    }
+
+    "return bad request if failing parsing the successful json" in {
+      when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
+        .thenReturn(Future.successful(HttpResponse(OK, "")))
+
+      val result = await(connector.post(message, messageType))
+
+      result.left.value mustBe InternalServerError(s"Response body could not be read as type ${typeOf[EISResponse]}")
+    }
+
+    "return bad request if failing parsing the error response to  json" in {
+      when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
+        .thenReturn(Future.successful(HttpResponse(NOT_FOUND, "")))
+
+      val result = await(connector.post(message, messageType))
+
+      result.left.value mustBe InternalServerError(s"Response body could not be read as type ${typeOf[EISErrorResponse]}")
+    }
+  }
+
+  private def errorResponse = {
+    Json.obj(
+      "dateTime" -> "2021-12-17T09:30:47Z",
+      "status" -> "BAD_REQUEST",
+      "message" -> "any error",
+      "debugMessage" -> "error message",
+      "emcsCorrelationId" -> emcsCorrelationId
+    )
   }
 
   def expectedHeader =

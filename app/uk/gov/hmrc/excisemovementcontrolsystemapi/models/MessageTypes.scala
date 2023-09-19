@@ -14,20 +14,10 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
+package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
-import play.api.libs.json.{Json, OFormat}
+object MessageTypes {
 
-import java.time.LocalDateTime
+  val IE815Message = "IE815"
 
-case class EISErrorResponse(
-  dateTime: LocalDateTime,
-  status: String,
-  message: String,
-  debugMessage: String,
-  emcsCorrelationId: String
-)
-
-object EISErrorResponse {
-  implicit def format: OFormat[EISErrorResponse] = Json.format[EISErrorResponse]
 }

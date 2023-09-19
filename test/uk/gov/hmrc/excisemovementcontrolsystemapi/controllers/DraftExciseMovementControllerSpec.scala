@@ -19,11 +19,12 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import akka.actor.ActorSystem
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
-import org.mockito.MockitoSugar.verify
-import org.scalatest.EitherValues
+import org.mockito.MockitoSugar.{reset, verify, when}
+import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
+import play.api.mvc.Results.NotFound
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
@@ -32,7 +33,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, F
 import scala.concurrent.ExecutionContext
 import scala.xml.Elem
 
-import scala.concurrent.ExecutionContext
+import java.time.LocalDateTime
+import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
     with FakeAuthentication
     with FakeXmlParsers
@@ -46,6 +48,7 @@ class DraftExciseMovementControllerSpec
     with FakeXmlParsers
     with FakeValidateConsignorAction
     with TestXml
+    with BeforeAndAfterEach
     with EitherValues {
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val sys = ActorSystem("DraftExciseMovementControllerSpec")
@@ -54,6 +57,13 @@ class DraftExciseMovementControllerSpec
 
   private val cc = stubControllerComponents()
 
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    reset(connector)
+
+    when(connector.post(any, any)(any)).thenReturn(Future.successful(Right(EISResponse("ok", "success", "123"))))
+  }
+
   "submit" should {
     "return 200" in {
       val result = createWithSuccessfulAuth.submit(createRequest(IE815))
@@ -61,10 +71,21 @@ class DraftExciseMovementControllerSpec
       status(result) mustBe OK
     }
 
-//    "send a request to EIS" in {
-//
-//      verify(connector).post(eqTo("<IE815></IE815>"), eqTo("IE815"))(any)
-//    }
+    "send a request to EIS" in {
+      await(createWithSuccessfulAuth.submit(createRequest(IE815)))
+
+      verify(connector).post(eqTo("<IE815></IE815>"), eqTo("IE815"))(any)
+    }
+
+    "return an error when EIS error" in {
+
+      when(connector.post(any, any)(any))
+        .thenReturn(Future.successful(Left(NotFound("not found"))))
+
+      val result = createWithSuccessfulAuth.submit(createRequest(IE815))
+
+      status(result) mustBe NOT_FOUND
+    }
 
     "a validation parser error" when {
       "xml cannot be parsed" in {

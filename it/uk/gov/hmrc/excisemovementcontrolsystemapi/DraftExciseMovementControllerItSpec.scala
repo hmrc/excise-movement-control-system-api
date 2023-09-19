@@ -16,6 +16,10 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi
 
+import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.client.WireMock
+import com.github.tomakehurst.wiremock.client.WireMock.{ok, post}
+import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -28,6 +32,9 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
+import play.api.libs.json.Json
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISResponse
 
 import scala.xml.NodeSeq
 
@@ -35,22 +42,44 @@ import scala.xml.NodeSeq
 class DraftExciseMovementControllerItSpec extends PlaySpec
   with GuiceOneServerPerSuite
   with AuthTestSupport
-  with TestXml {
+  with TestXml
+  with BeforeAndAfterAll {
 
+  private val wireHost = "localhost"
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
+  implicit lazy val wireMock: WireMockServer = new WireMockServer(options().dynamicPort())
   private val url = s"http://localhost:$port/customs/excise/movements"
 
   override lazy val app: Application = {
+    wireMock.start()
+    WireMock.configureFor(wireHost, wireMock.port())
     GuiceApplicationBuilder()
+      .configure(
+        Map(
+          "microservice.services.eis.host" -> wireHost,
+          "microservice.services.eis.port" -> wireMock.port())
+      )
       .overrides(
         bind[AuthConnector].to(authConnector),
       )
       .build()
   }
 
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    //wireMock.start()
+    wireMock.resetAll()
+  }
+
+  override def afterAll(): Unit = {
+    super.afterAll()
+    wireMock.stop()
+  }
+
   "Draft Excise Movement" should {
     "return 200" in {
       withAuthorizedTrader("GBWK002281023")
+      stubEISRequest
 
       postRequest(IE815).status mustBe OK
     }
@@ -110,6 +139,15 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         HeaderNames.AUTHORIZATION -> "TOKEN",
         HeaderNames.CONTENT_TYPE -> contentType
       ).post(xml)
+    )
+  }
+
+  private def stubEISRequest = {
+
+    val response = EISResponse("ok", "message", "123")
+    wireMock.stubFor(
+      post("/emcs-api-eis-stub/eis/receiver/v1/messages")
+        .willReturn(ok().withBody(Json.toJson(response).toString()))
     )
   }
 }

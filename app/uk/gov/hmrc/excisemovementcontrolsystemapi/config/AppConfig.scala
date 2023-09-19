@@ -28,8 +28,8 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   lazy val eisHost: String = servicesConfig.baseUrl("eis")
 
   def emcsReceiverMessageUrl: String = {
-    //todo: confirm string for stubs and EIS
+    //todo: get the right url for EIS
     //"http://localhost:9000/emcs-api-eis-stub/eis/receiver/v1/messages"
-    s"$eisHost/eis/receiver/v1/messages"
+    s"$eisHost/emcs-api-eis-stub/eis/receiver/v1/messages"
   }
 }

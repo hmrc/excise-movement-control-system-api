@@ -22,6 +22,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConn
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseIE815XmlAction, ValidateConsignorAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import views.html.defaultpages.notFound
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -38,9 +39,11 @@ class DraftExciseMovementController @Inject()(
 
   def submit: Action[NodeSeq] =
     (authAction andThen xmlParser andThen consignorValidatorAction).async(parse.xml) { implicit request: ParsedXmlRequest[NodeSeq] =>
-      // todo integrate controller
-      // todo store MovementDetails(LRN, ConsignorId, ConsigneeId) in mongodb
-      // movementMessageConnector.post("test-message", "IE815")
-      Future.successful(Ok(Json.parse("""{"message": "Draft Movement submitted successfully"}""")))
+
+      movementMessageConnector.post("<IE815></IE815>", MessageTypes.IE815Message).map {
+        case Right(response) => Ok(Json.parse("""{"name": "mauro"}"""))
+        case Left(error) => NotFound
+      }
+
     }
 }
