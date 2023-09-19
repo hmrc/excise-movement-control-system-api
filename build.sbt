@@ -32,7 +32,9 @@ lazy val scoverageSettings: Seq[Setting[_]] = Seq(
     "domain\\..*",
     "models\\..*",
     "metrics\\..*",
-    ".*(BuildInfo|Routes|Options).*"
+    ".*(BuildInfo|Routes|Options).*",
+    "generated\\..*",
+    "scalaxb\\..*"
   ).mkString(";"),
   coverageMinimumStmtTotal := 90,
   coverageFailOnMinimum := true,
