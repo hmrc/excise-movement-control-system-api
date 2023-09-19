@@ -16,35 +16,44 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
-import play.api.http.{ContentTypes, HeaderNames}
-import play.api.libs.json.{JsValue, Json}
+import play.api.Logging
+import play.api.http.Status.OK
+import play.api.libs.json.Json
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisUtils
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISRequest, EISResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISRequest, EISResponse, Header}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-class MovementMessageConnector @Inject()(http: HttpClient, eisUtils: EisUtils) {
+class MovementMessageConnector @Inject()
+(
+  httpClient: HttpClient,
+  eisUtils: EisUtils,
+  appConfig: AppConfig
+)(implicit ec: ExecutionContext) extends Logging {
 
-  def post(message: String, messageType: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[HttpResponse, EISResponse]] = {
+  def post(message: String, messageType: String)(implicit hc: HeaderCarrier): Future[Either[EISErrorResponse, EISResponse]] = {
 
+    //todo: add metrics
+    //todo: add retry
+    //todo: message need to be encode Base64
     val eisRequest = EISRequest(eisUtils.generateCorrelationId, eisUtils.getCurrentDateTimeString, messageType, "APIP", "user1", message)
-    val json: JsValue = Json.toJson(eisRequest)
 
-    http.POST[JsValue, EISResponse]("http://localhost:9000/emcs-api-eis-stub/eis/receiver/v1/messages", json, getJsonHeaders(eisRequest)(hc))
-      .map(
-        response => Right(response)
+    httpClient.POST[EISRequest, HttpResponse](
+      appConfig.emcsReceiverMessageUrl,
+      eisRequest,
+      Header.build(eisRequest.emcsCorrelationId, eisRequest.createdDateTime)
+    ).map(
+      response => {
+        response.status match {
+          case OK => Right(Json.parse(response.body).as[EISResponse])
+          case _ =>
+            val errorResponse = Json.parse(response.body).as[EISErrorResponse]
+            logger.error(s"EIS errorResponse. Status: ${errorResponse.status}, message: ${errorResponse.message} and correlationId: ${errorResponse.emcsCorrelationId}")
+            Left(errorResponse)
+        }}
       )
   }
-
-  protected def getJsonHeaders(eisRequest: EISRequest)(implicit hc: HeaderCarrier): Seq[(String, String)] = {
-    Seq(HeaderNames.ACCEPT -> ContentTypes.JSON,
-      HeaderNames.CONTENT_TYPE -> ContentTypes.JSON,
-      "dateTime" -> eisRequest.createdDateTime,
-      "x-correlation-id" -> eisRequest.emcsCorrelationId,
-      "x-forwarded-host" -> "",
-      "source" -> eisRequest.source)
-  }
-
 }

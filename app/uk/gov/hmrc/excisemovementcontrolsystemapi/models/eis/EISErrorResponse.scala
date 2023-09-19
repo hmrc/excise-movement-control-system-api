@@ -14,22 +14,20 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.config
+package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
-import javax.inject.{Inject, Singleton}
-import play.api.Configuration
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import play.api.libs.json.{Json, OFormat}
 
-@Singleton
-class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig) {
+import java.time.LocalDateTime
 
-  val appName: String = config.get[String]("appName")
+case class EISErrorResponse(
+  dateTime: LocalDateTime,
+  status: Int,
+  message: String,
+  debugMessage: String,
+  emcsCorrelationId: String
+)
 
-  lazy val eisHost: String = servicesConfig.baseUrl("eis")
-
-  def emcsReceiverMessageUrl: String = {
-    //todo: confirm string for stubs and EIS
-    //"http://localhost:9000/emcs-api-eis-stub/eis/receiver/v1/messages"
-    s"$eisHost/eis/receiver/v1/messages"
-  }
+object EISErrorResponse {
+  implicit def format: OFormat[EISErrorResponse] = Json.format[EISErrorResponse]
 }

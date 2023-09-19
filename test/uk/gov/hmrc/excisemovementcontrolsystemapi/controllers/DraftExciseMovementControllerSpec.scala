@@ -18,6 +18,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 
 import akka.actor.ActorSystem
+import org.mockito.ArgumentMatchersSugar.{any, eqTo}
+import org.mockito.MockitoSugar.verify
 import org.scalatest.EitherValues
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
@@ -41,7 +43,8 @@ class DraftExciseMovementControllerSpec
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val sys = ActorSystem("DraftExciseMovementControllerSpec")
-  val connector = mock[MovementMessageConnector]
+
+  private val connector = mock[MovementMessageConnector]
 
   private val cc = stubControllerComponents()
 
@@ -51,6 +54,11 @@ class DraftExciseMovementControllerSpec
 
       status(result) mustBe OK
     }
+
+//    "send a request to EIS" in {
+//
+//      verify(connector).post(eqTo("<IE815></IE815>"), eqTo("IE815"))(any)
+//    }
 
     "a validation parser error" when {
       "xml cannot be parsed" in {
