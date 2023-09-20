@@ -14,11 +14,22 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth
+package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-import play.api.mvc.{Request, WrappedRequest}
+import com.google.inject.ImplementedBy
+import generated.IE815Type
 
-case class AuthorizedRequest[A](
-  request: Request[A],
-  erns: Set[String],
-  internalId: String) extends WrappedRequest[A](request)
+import javax.inject.Inject
+import scala.xml.NodeSeq
+class IE815XmlParser @Inject() extends XmlParser {
+
+  override def fromXml(xml: NodeSeq): IE815Type = {
+    scalaxb.fromXML[IE815Type](xml)
+  }
+
+}
+
+@ImplementedBy(classOf[IE815XmlParser])
+trait XmlParser {
+  def fromXml(xml: NodeSeq): IE815Type
+}

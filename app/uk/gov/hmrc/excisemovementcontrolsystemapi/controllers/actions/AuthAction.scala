@@ -21,10 +21,9 @@ import play.api.Logging
 import play.api.mvc._
 import uk.gov.hmrc.auth.core.AffinityGroup.Organisation
 import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{affinityGroup, authorisedEnrolments, credentials, internalId}
 import uk.gov.hmrc.auth.core.retrieve.~
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{AuthorizedRequest, EnrolmentKey}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentKey, EnrolmentRequest}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.play.bootstrap.backend.http.ErrorResponse
@@ -45,7 +44,7 @@ class AuthActionImpl @Inject()
   protected val fetch = authorisedEnrolments and affinityGroup and credentials and internalId
   protected def executionContext = ec
 
-  override def invokeBlock[A](request: Request[A], block: AuthorizedRequest[A] => Future[Result]): Future[Result] = {
+  override def invokeBlock[A](request: Request[A], block: EnrolmentRequest[A] => Future[Result]): Future[Result] = {
 
     implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
     implicit val req = request
@@ -63,7 +62,7 @@ class AuthActionImpl @Inject()
       }
   }
 
-  def authorise[A](implicit hc: HeaderCarrier, request: Request[A]): Future[Either[ErrorResponse, AuthorizedRequest[A]]] = {
+  def authorise[A](implicit hc: HeaderCarrier, request: Request[A]): Future[Either[ErrorResponse, EnrolmentRequest[A]]] = {
     authorised(Enrolment(EnrolmentKey.EMCS_ENROLMENT))
       .retrieve(fetch) { retrievals =>
 
@@ -94,7 +93,7 @@ class AuthActionImpl @Inject()
     Left(ErrorResponse(status, msg))
   }
 
-  def checkErns[A](enrolments: Enrolments, internalId: String)(implicit request: Request[A]): Either[ErrorResponse, AuthorizedRequest[A]] = {
+  def checkErns[A](enrolments: Enrolments, internalId: String)(implicit request: Request[A]): Either[ErrorResponse, EnrolmentRequest[A]] = {
 
     val erns: Set[EnrolmentIdentifier] = enrolments.enrolments.flatMap(e => e.getIdentifier(EnrolmentKey.ERN))
 
@@ -103,20 +102,12 @@ class AuthActionImpl @Inject()
       Left(ErrorResponse(FORBIDDEN, s"Could not find ${EnrolmentKey.ERN}"))
     }
     else {
-      Right(AuthorizedRequest(request, erns.map(_.value), internalId))
+      Right(EnrolmentRequest(request, erns.map(_.value), internalId))
     }
-  }
-
-  def predicate(ern: String*): Predicate = {
-    ern.map[Predicate](e =>
-      Enrolment(EnrolmentKey.EMCS_ENROLMENT)
-        .withIdentifier(EnrolmentKey.ERN, e)
-    ).reduce((a, b) => a or b)
-
   }
 }
 
 @ImplementedBy(classOf[AuthActionImpl])
-trait AuthAction extends ActionBuilder[AuthorizedRequest, AnyContent] with ActionFunction[Request, AuthorizedRequest]
+trait AuthAction extends ActionBuilder[EnrolmentRequest, AnyContent] with ActionFunction[Request, EnrolmentRequest]
 
 

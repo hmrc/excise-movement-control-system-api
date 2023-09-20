@@ -1,4 +1,3 @@
 # microservice specific routes
 
-GET        /hello-world/:ern            uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.MovementController.hello(ern)
-POST       /hello-world                 uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.MovementController.submit
+POST       /customs/excise/movements                 uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.DraftExciseMovementController.submit

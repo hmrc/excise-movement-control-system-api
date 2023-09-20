@@ -14,22 +14,20 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.config
+package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth
 
-import javax.inject.{Inject, Singleton}
-import play.api.Configuration
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import generated.IE815Type
+import play.api.mvc.{Request, WrappedRequest}
 
-@Singleton
-class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig) {
+case class EnrolmentRequest[A](
+  request: Request[A],
+  erns: Set[String],
+  internalId: String) extends WrappedRequest[A](request)
 
-  val appName: String = config.get[String]("appName")
-
-  lazy val eisHost: String = servicesConfig.baseUrl("eis")
-
-  def emcsReceiverMessageUrl: String = {
-    //todo: confirm string for stubs and EIS
-    //"http://localhost:9000/emcs-api-eis-stub/eis/receiver/v1/messages"
-    s"$eisHost/eis/receiver/v1/messages"
-  }
-}
+case class ParsedXmlRequest[A]
+(
+  request: EnrolmentRequest[A],
+  ie815Message: IE815Type,
+  erns: Set[String],
+  internalId: String
+) extends WrappedRequest[A](request)
