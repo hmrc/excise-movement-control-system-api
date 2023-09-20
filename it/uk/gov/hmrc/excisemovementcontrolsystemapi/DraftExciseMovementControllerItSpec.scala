@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
-import com.github.tomakehurst.wiremock.client.WireMock.{ok, post}
+import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, equalTo, equalToJson, notFound, ok, post, urlEqualTo}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
@@ -28,14 +28,17 @@ import play.api.http.Status._
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.test.Helpers.{AUTHORIZATION, await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
 import play.api.libs.json.Json
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISResponse
+import play.mvc.Http.Status
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.WireMockServerSpec
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISResponse}
 
+import java.time.LocalDateTime
 import scala.xml.NodeSeq
 
 
@@ -43,22 +46,18 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   with GuiceOneServerPerSuite
   with AuthTestSupport
   with TestXml
+  with WireMockServerSpec
   with BeforeAndAfterAll {
 
-  private val wireHost = "localhost"
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
-  implicit lazy val wireMock: WireMockServer = new WireMockServer(options().dynamicPort())
   private val url = s"http://localhost:$port/customs/excise/movements"
+  private val eisUrl = "/emcs/digitalSubmitNewMessage/v1"
 
   override lazy val app: Application = {
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
     GuiceApplicationBuilder()
-      .configure(
-        Map(
-          "microservice.services.eis.host" -> wireHost,
-          "microservice.services.eis.port" -> wireMock.port())
-      )
+      .configure(configureServer)
       .overrides(
         bind[AuthConnector].to(authConnector),
       )
@@ -67,7 +66,6 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    //wireMock.start()
     wireMock.resetAll()
   }
 
@@ -79,9 +77,56 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   "Draft Excise Movement" should {
     "return 200" in {
       withAuthorizedTrader("GBWK002281023")
-      stubEISRequest
+      stubEISSuccessfulRequest
 
-      postRequest(IE815).status mustBe OK
+      val result = postRequest(IE815)
+
+      result.status mustBe OK
+    }
+
+    "return not found if EIS return not found" in {
+      withAuthorizedTrader("GBWK002281023")
+      stubEISErrorResponse(EISErrorResponse(
+        LocalDateTime.of(2023, 12, 5, 12, 5, 6),
+        "NOT_FOUND",
+        "not found",
+        "debug not found",
+        "123"
+      ), NOT_FOUND)
+
+      val result = postRequest(IE815)
+
+      result.status mustBe NOT_FOUND
+    }
+
+    "return bad request if EIS return BAD_REQUEST" in {
+      withAuthorizedTrader("GBWK002281023")
+      stubEISErrorResponse(EISErrorResponse(
+        LocalDateTime.of(2023, 12, 5, 12, 5, 6),
+        "BAD_REQUEST",
+        "bad request",
+        "debug bad request",
+        "123"
+      ), BAD_REQUEST)
+
+      val result = postRequest(IE815)
+
+      result.status mustBe BAD_REQUEST
+    }
+
+    "return 500 if EIS return 500" in {
+      withAuthorizedTrader("GBWK002281023")
+      stubEISErrorResponse(EISErrorResponse(
+        LocalDateTime.of(2023, 12, 5, 12, 5, 6),
+        "BAD_REQUEST",
+        "bad request",
+        "debug bad request",
+        "123"
+      ), INTERNAL_SERVER_ERROR)
+
+      val result = postRequest(IE815)
+
+      result.status mustBe INTERNAL_SERVER_ERROR
     }
 
     "return forbidden (403) when there are no authorized ERN" in {
@@ -142,12 +187,26 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     )
   }
 
-  private def stubEISRequest = {
+  private def stubEISSuccessfulRequest() = {
 
     val response = EISResponse("ok", "message", "123")
     wireMock.stubFor(
-      post("/emcs-api-eis-stub/eis/receiver/v1/messages")
+      post(eisUrl)
         .willReturn(ok().withBody(Json.toJson(response).toString()))
     )
+  }
+
+  private def stubEISErrorResponse(response: EISErrorResponse, status: Int) = {
+
+    wireMock.stubFor(
+      post(urlEqualTo(eisUrl))
+        .willReturn(
+          aResponse()
+            .withStatus(status)
+            .withBody(Json.toJson(response).toString())
+            .withHeader("Content-Type", "application/json")
+        )
+    )
+    //notFound().withBody(Json.toJson(response).toString()
   }
 }

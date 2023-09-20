@@ -30,6 +30,7 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   def emcsReceiverMessageUrl: String = {
     //todo: get the right url for EIS
     //"http://localhost:9000/emcs-api-eis-stub/eis/receiver/v1/messages"
-    s"$eisHost/emcs-api-eis-stub/eis/receiver/v1/messages"
+//    s"$eisHost/emcs-api-eis-stub/eis/receiver/v1/messages"
+    s"$eisHost/emcs/digitalSubmitNewMessage/v1"
   }
 }
