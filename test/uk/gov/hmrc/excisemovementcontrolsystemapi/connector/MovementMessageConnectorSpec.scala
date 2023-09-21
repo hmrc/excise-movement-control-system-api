@@ -32,8 +32,8 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisUtils
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISRequest, EISResponse}
-import uk.gov.hmrc.http.{BadRequestException, HeaderCarrier, HttpClient, HttpResponse, NotFoundException}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISRequest, EISResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.runtime.universe.typeOf
@@ -93,7 +93,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
 
     "return Bad request error" in {
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
-        .thenReturn(Future.successful(BadRequest("any error")))
+        .thenReturn(Future.successful(HttpResponse(BAD_REQUEST, "any error")))
 
       val result = await(connector.post(message, messageType))
 
@@ -102,7 +102,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
 
     "return Not found error" in {
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
-        .thenReturn(Future.successful(NotFound("error")))
+        .thenReturn(Future.successful(HttpResponse(NOT_FOUND,"error")))
 
       val result = await(connector.post(message, messageType))
 
@@ -134,15 +134,6 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
       val result = await(connector.post(message, messageType))
 
       result.left.value mustBe InternalServerError(s"Response body could not be read as type ${typeOf[EISResponse]}")
-    }
-
-    "return bad request if failing parsing the error response to  json" in {
-      when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
-        .thenReturn(Future.successful(HttpResponse(NOT_FOUND, "")))
-
-      val result = await(connector.post(message, messageType))
-
-      result.left.value mustBe InternalServerError(s"Response body could not be read as type ${typeOf[EISErrorResponse]}")
     }
   }
 

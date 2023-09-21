@@ -43,7 +43,7 @@ trait AuthTestSupport {
     withAuthorization(retrieval)
   }
 
-  def withUnAuthorizedERN: Unit = {
+  def withUnAuthorizedERN(): Unit = {
     val retrieval = Enrolments(Set(enrolment)) and
       Some(AffinityGroup.Organisation) and
       Some(Credentials("testProviderId", "testProviderType")) and

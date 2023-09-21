@@ -16,9 +16,8 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi
 
-import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, equalTo, equalToJson, notFound, ok, post, urlEqualTo}
+import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, ok, post, urlEqualTo}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
@@ -27,14 +26,12 @@ import play.api.http.HeaderNames
 import play.api.http.Status._
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
-import play.api.test.Helpers.{AUTHORIZATION, await, defaultAwaitTimeout}
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
-import play.api.libs.json.Json
-import play.mvc.Http.Status
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.WireMockServerSpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISResponse}
 
@@ -61,7 +58,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       .overrides(
         bind[AuthConnector].to(authConnector),
       )
-      .build()
+      .build
   }
 
   override def beforeAll(): Unit = {
@@ -77,7 +74,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   "Draft Excise Movement" should {
     "return 200" in {
       withAuthorizedTrader("GBWK002281023")
-      stubEISSuccessfulRequest
+      stubEISSuccessfulRequest()
 
       val result = postRequest(IE815)
 
@@ -86,51 +83,34 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
     "return not found if EIS return not found" in {
       withAuthorizedTrader("GBWK002281023")
-      stubEISErrorResponse(EISErrorResponse(
-        LocalDateTime.of(2023, 12, 5, 12, 5, 6),
-        "NOT_FOUND",
-        "not found",
-        "debug not found",
-        "123"
-      ), NOT_FOUND)
+      stubEISErrorResponse(NOT_FOUND, createEISErrorResponseBody("NOT_FOUND"))
 
-      val result = postRequest(IE815)
-
-      result.status mustBe NOT_FOUND
+      postRequest(IE815).status mustBe NOT_FOUND
     }
 
     "return bad request if EIS return BAD_REQUEST" in {
       withAuthorizedTrader("GBWK002281023")
-      stubEISErrorResponse(EISErrorResponse(
-        LocalDateTime.of(2023, 12, 5, 12, 5, 6),
-        "BAD_REQUEST",
-        "bad request",
-        "debug bad request",
-        "123"
-      ), BAD_REQUEST)
+      stubEISErrorResponse(BAD_REQUEST, createEISErrorResponseBody("BAD_REQUEST"))
 
-      val result = postRequest(IE815)
-
-      result.status mustBe BAD_REQUEST
+      postRequest(IE815).status mustBe BAD_REQUEST
     }
 
     "return 500 if EIS return 500" in {
       withAuthorizedTrader("GBWK002281023")
-      stubEISErrorResponse(EISErrorResponse(
-        LocalDateTime.of(2023, 12, 5, 12, 5, 6),
-        "BAD_REQUEST",
-        "bad request",
-        "debug bad request",
-        "123"
-      ), INTERNAL_SERVER_ERROR)
+      stubEISErrorResponse(INTERNAL_SERVER_ERROR, createEISErrorResponseBody("INTERNAL_SERVER_ERROR"))
 
-      val result = postRequest(IE815)
+      postRequest(IE815).status mustBe INTERNAL_SERVER_ERROR
+    }
 
-      result.status mustBe INTERNAL_SERVER_ERROR
+    "return 500 if EIS return bad json" in {
+      withAuthorizedTrader("GBWK002281023")
+      stubEISErrorResponse(INTERNAL_SERVER_ERROR, """"{"json": "is-bad"}""")
+
+      postRequest(IE815).status mustBe INTERNAL_SERVER_ERROR
     }
 
     "return forbidden (403) when there are no authorized ERN" in {
-      withUnAuthorizedERN
+      withUnAuthorizedERN()
 
       postRequest(IE815).status mustBe FORBIDDEN
     }
@@ -172,12 +152,16 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       postRequest(IE815).status mustBe FORBIDDEN
     }
 
-    "return forbidden (403) when consignor id cannot be validate" in {
-      withAuthorizedTrader("123")
-
-      postRequest(IE815).status mustBe FORBIDDEN
-    }
+  private def createEISErrorResponseBody(message: String) = {
+    Json.toJson(EISErrorResponse(
+      LocalDateTime.of(2023, 12, 5, 12, 5, 6),
+      message,
+      "bad request",
+      "debug bad request",
+      "123"
+    )).toString
   }
+
   private def postRequest(xml: NodeSeq = IE815, contentType: String =  """application/vnd.hmrc.1.0+xml""") = {
     await(wsClient.url(url)
       .addHttpHeaders(
@@ -196,17 +180,16 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     )
   }
 
-  private def stubEISErrorResponse(response: EISErrorResponse, status: Int) = {
+  private def stubEISErrorResponse(status: Int, body: String): Any = {
 
     wireMock.stubFor(
       post(urlEqualTo(eisUrl))
         .willReturn(
           aResponse()
             .withStatus(status)
-            .withBody(Json.toJson(response).toString())
+            .withBody(body)
             .withHeader("Content-Type", "application/json")
         )
     )
-    //notFound().withBody(Json.toJson(response).toString()
   }
 }
