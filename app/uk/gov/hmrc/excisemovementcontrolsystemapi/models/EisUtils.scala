@@ -21,11 +21,6 @@ import java.util.UUID
 
 class EisUtils {
 
-  def getCurrentDateTimeString: String = {
-    LocalDateTime.now().toString
-  }
-
-  def generateCorrelationId: String = {
-    UUID.randomUUID().toString
-  }
+  def getCurrentDateTimeString: String = LocalDateTime.now().toString
+  def generateCorrelationId: String = UUID.randomUUID().toString
 }

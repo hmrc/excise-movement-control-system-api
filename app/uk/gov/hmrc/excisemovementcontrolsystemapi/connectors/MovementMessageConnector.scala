@@ -16,85 +16,49 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
+import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
-import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, SERVICE_UNAVAILABLE}
-import play.api.libs.json.{Json, Reads}
 import play.api.mvc.Result
-import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
+import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.CustomHttpReader
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Header.EmcsSource
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISRequest, EISResponse, Header}
-import uk.gov.hmrc.http.HttpReads.is2xx
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
-import scala.reflect.runtime.universe.{TypeTag, typeOf}
-import scala.util.{Failure, Success, Try}
 
 class MovementMessageConnector @Inject()
 (
   httpClient: HttpClient,
   eisUtils: EisUtils,
-  appConfig: AppConfig
+  appConfig: AppConfig,
+  metrics: Metrics
 )(implicit ec: ExecutionContext) extends Logging {
 
 
   def post(message: String, messageType: String)(implicit hc: HeaderCarrier): Future[Either[Result, EISResponse]] = {
 
-    implicit val customResponseReads: HttpReads[HttpResponse] = CustomHttpReader
+    val timer = metrics.defaultRegistry.timer("emcs.eiscontroller.timer").time()
 
-    //todo: add metrics
     //todo: add retry
     //todo: message need to be encode Base64
     val correlationId = eisUtils.generateCorrelationId
     val createdDateTime = eisUtils.getCurrentDateTimeString
     val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", message)
 
-    httpClient.POST[EISRequest, HttpResponse](
-      appConfig.emcsReceiverMessageUrl,
-      eisRequest,
-      Header.build(correlationId, createdDateTime)
-    ).map(
-      response => {
-        val result = extractIfSuccessful[EISResponse](response)
-        result match {
-          case Right(eisResponse) => Right(eisResponse)
-          case Left(httpResponse: HttpResponse) => Left(handleErrorResponse(httpResponse.status, httpResponse.body, correlationId))
-        }
-      }
-    ).recover {
-      case ex: Throwable =>
-        logger.error(s"EIS error with message: ${ex.getMessage} and correlationId: $correlationId", ex)
-        Left(InternalServerError(ex.getMessage))
+      httpClient.POST[EISRequest, Either[Result, EISResponse]](
+        appConfig.emcsReceiverMessageUrl,
+        eisRequest,
+        Header.build(correlationId, createdDateTime)
+      )(EISRequest.format, EISHttpReader(correlationId), hc, ec)
+        .andThen { case _ => timer.stop() }
+        .recover {
+          case ex: Throwable =>
+            logger.error(s"EIS error with message: ${ex.getMessage} and correlationId: $correlationId", ex)
+            Left(InternalServerError(ex.getMessage))
     }
   }
-
-  private def jsonAs[T](body: String)(implicit reads: Reads[T],  tt: TypeTag[T]): T = {
-    Try(Json.parse(body).as[T]) match {
-      case Success(obj) => obj
-      case Failure(exception) => throw new RuntimeException(s"Response body could not be read as type ${typeOf[T]}", exception)
-    }
-  }
-
-  private def handleErrorResponse(
-    status: Int,
-    message: String,
-    correlationId: String
-  ): Result = {
-
-    logger.error(s"EIS error with message: $message, status: $status and correlationId: $correlationId")
-    status match {
-      case BAD_REQUEST => BadRequest(message)
-      case NOT_FOUND => NotFound(message)
-      case SERVICE_UNAVAILABLE => ServiceUnavailable(message)
-      case _ => InternalServerError(message)
-    }
-  }
-
-  protected def extractIfSuccessful[T](response: HttpResponse)(implicit reads: Reads[T], tt: TypeTag[T]): Either[HttpResponse, T] =
-    if (is2xx(response.status)) Right(jsonAs[T](response.body))
-    else Left(response)
 }
