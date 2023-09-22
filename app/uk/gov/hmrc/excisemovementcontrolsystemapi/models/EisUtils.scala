@@ -17,10 +17,11 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
 import java.time.LocalDateTime
-import java.util.UUID
+import java.util.{Base64, UUID}
 
 class EisUtils {
 
   def getCurrentDateTimeString: String = LocalDateTime.now().toString
   def generateCorrelationId: String = UUID.randomUUID().toString
+  def createEncoder: Base64.Encoder = Base64.getEncoder
 }

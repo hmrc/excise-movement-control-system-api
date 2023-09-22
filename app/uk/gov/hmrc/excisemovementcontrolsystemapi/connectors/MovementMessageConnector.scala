@@ -27,6 +27,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Header.EmcsSource
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISRequest, EISResponse, Header}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
+import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -44,10 +45,10 @@ class MovementMessageConnector @Inject()
     val timer = metrics.defaultRegistry.timer("emcs.eiscontroller.timer").time()
 
     //todo: add retry
-    //todo: message need to be encode Base64
     val correlationId = eisUtils.generateCorrelationId
     val createdDateTime = eisUtils.getCurrentDateTimeString
-    val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", message)
+    val encodedMessage = eisUtils.createEncoder.encodeToString(message.getBytes(StandardCharsets.UTF_8))
+    val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", encodedMessage)
 
       httpClient.POST[EISRequest, Either[Result, EISResponse]](
         appConfig.emcsReceiverMessageUrl,

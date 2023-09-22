@@ -39,6 +39,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISRequest, EISResponse}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
+import java.nio.charset.StandardCharsets
+import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
 class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with EitherValues{
@@ -62,6 +64,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
     "emcsCorrelationId" -> emcsCorrelationId
   )
 
+  private val encoder = Base64.getEncoder
   private val timerContext = mock[Timer.Context]
 
   override def beforeEach(): Unit = {
@@ -72,6 +75,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
     when(eisUtils.generateCorrelationId).thenReturn(emcsCorrelationId)
     when(appConfig.emcsReceiverMessageUrl).thenReturn("/eis/path")
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
+    when(eisUtils.createEncoder).thenReturn(encoder)
   }
 
   "post" should {
@@ -89,7 +93,8 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(Future.successful(Right(EISResponse("ok", "Success", emcsCorrelationId))))
 
-      val eisRequest = EISRequest(emcsCorrelationId, "2023-09-17T09:32:50.345Z", messageType, "APIP", "user1", message)
+      val encodeMessage = encoder.encodeToString(message.getBytes(StandardCharsets.UTF_8))
+      val eisRequest = EISRequest(emcsCorrelationId, "2023-09-17T09:32:50.345Z", messageType, "APIP", "user1", encodeMessage)
 
       await(connector.post(message, messageType))
 
@@ -159,6 +164,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
       verify(metrics.defaultRegistry.timer(eqTo("emcs.eiscontroller.timer"))).time()
       verify(timerContext).stop()
     }
+
   }
 
   def expectedHeader =
