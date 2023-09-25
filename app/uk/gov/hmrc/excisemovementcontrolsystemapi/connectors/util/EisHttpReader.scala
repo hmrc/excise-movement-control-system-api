@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util
 
-import generated.MessageBodyType
 import play.api.Logging
 import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, SERVICE_UNAVAILABLE}
 import play.api.libs.json.{Json, Reads}

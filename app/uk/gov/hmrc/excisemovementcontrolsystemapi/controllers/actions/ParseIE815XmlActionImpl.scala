@@ -22,21 +22,11 @@ import play.api.mvc.{ActionRefiner, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.XmlParser
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.XmlParser
-import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
-import scala.util.{Failure, Success, Try}
 import scala.xml.NodeSeq
-class ParseIE815XmlActionImpl @Inject()
-(
-  xmlParser: XmlParser,
-  cc: ControllerComponents
-)(implicit val executionContext: ExecutionContext) extends BackendController(cc)
-  with ParseIE815XmlAction
-  with Logging {
 
 class ParseIE815XmlActionImpl @Inject()
 (
@@ -61,13 +51,6 @@ class ParseIE815XmlActionImpl @Inject()
 
     Try(xmlParser.fromXml(xmlBody)) match {
       case Success(value) => Future.successful(Right(ParsedXmlRequest(request, value, request.erns, request.internalId)))
-      case Failure(exception) =>
-        logger.error(s"Not valid IE815 message: ${exception.getMessage}", exception)
-        Future.successful(Left(BadRequest(s"Not valid IE815 message: ${exception.getMessage}")))
-  def parseXml[A](xmlBody: NodeSeq, request: AuthorizedRequest[A]) : Future[Either[Result, AuthorizedIE815Request[A]]] = {
-
-    Try(xmlParser.fromXml(xmlBody)) match {
-      case Success(value) => Future.successful(Right(AuthorizedIE815Request(request, value, request.internalId)))
       case Failure(exception) =>
         logger.error(s"Not valid IE815 message: ${exception.getMessage}", exception)
         Future.successful(Left(BadRequest(s"Not valid IE815 message: ${exception.getMessage}")))

@@ -81,7 +81,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
       result.status mustBe ACCEPTED
 
-      withClue("return the json response"){
+      withClue("return the json response") {
         val responseBody = Json.parse(result.body).as[ExciseMovementResponse]
         responseBody mustBe ExciseMovementResponse(ACCEPTED, "LRNQA20230909022221", "GBWK002281023")
       }
@@ -142,7 +142,6 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       withAuthorizedTrader("GBWK002281023")
 
       val result = await(wsClient.url(url)
-      val result = await(wsClient.url(url)
         .addHttpHeaders(
           HeaderNames.AUTHORIZATION -> "TOKEN",
           HeaderNames.CONTENT_TYPE -> """application/vnd.hmrc.1.0+xml"""
@@ -157,6 +156,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
       postRequest(IE815).status mustBe FORBIDDEN
     }
+  }
 
   private def createEISErrorResponseBody(message: String) = {
     Json.toJson(EISErrorResponse(

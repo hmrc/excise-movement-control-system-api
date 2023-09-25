@@ -32,18 +32,10 @@ import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateConsignorAction, FakeXmlParsers}
-import scala.concurrent.ExecutionContext
-import scala.xml.Elem
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISResponse
-
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
-    with FakeAuthentication
-    with FakeXmlParsers
-    with FakeValidateConsignorAction
-    with TestXml
-    with EitherValues {
 
 class DraftExciseMovementControllerSpec
   extends PlaySpec
@@ -53,10 +45,10 @@ class DraftExciseMovementControllerSpec
     with TestXml
     with BeforeAndAfterEach
     with EitherValues {
+
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val sys = ActorSystem("DraftExciseMovementControllerSpec")
   private val connector = mock[MovementMessageConnector]
-  private val cc = stubControllerComponents()
   private val cc = stubControllerComponents()
   private val ieMessage = scalaxb.fromXML[IE815Type](IE815)
   private val request = createRequest(IE815)
@@ -89,7 +81,6 @@ class DraftExciseMovementControllerSpec
     }
 
     "return an error when EIS error" in {
-
       when(connector.submitExciseMovement(any, any)(any))
         .thenReturn(Future.successful(Left(NotFound("not found"))))
 
@@ -170,7 +161,5 @@ class DraftExciseMovementControllerSpec
     FakeRequest("POST", "/foo")
       .withHeaders(FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> "application/xml")))
       .withBody(body)
-
-
   }
 }

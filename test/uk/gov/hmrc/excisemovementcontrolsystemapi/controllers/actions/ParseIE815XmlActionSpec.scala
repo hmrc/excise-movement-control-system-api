@@ -79,27 +79,6 @@ class ParseIE815XmlActionSpec extends PlaySpec with EitherValues{
 
       val result = await(controller.refine(request))
       result mustBe Left(BadRequest("Not valid IE815 message: Not valid"))
-      verify(xmlParser).fromXml(eqTo(body))
-      result mustBe Right(AuthorizedIE815Request(request, obj, "123"))
-    }
-
-    "return a Bad Request supplied XML Node Sequence that is not an IE815" in {
-
-      when(xmlParser.fromXml(any)).thenThrow(new ParserFailure("Not valid"))
-
-      val body = scala.xml.XML.loadString(xmlStr)
-      val fakeRequest = FakeRequest().withBody(body)
-      val request = AuthorizedRequest(fakeRequest, Set.empty, "123")
-
-      val result = await(controller.refine(request))
-      result mustBe Left(BadRequest("Not valid IE815 message: Not valid"))
-    }
-
-    "return 400 if body supplied is a string" in {
-      val request = AuthorizedRequest(FakeRequest().withBody("<xml>asdasd</xml>"), Set.empty, "123")
-      val result = await(controller.refine(request))
-
-      result mustBe Left(BadRequest("Not valid XML or XML is empty"))
     }
 
     "return 400 if body supplied is a string" in {
