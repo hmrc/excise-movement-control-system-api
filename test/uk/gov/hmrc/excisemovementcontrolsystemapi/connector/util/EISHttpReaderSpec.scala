@@ -30,7 +30,7 @@ import scala.reflect.runtime.universe.typeOf
 
 class EISHttpReaderSpec extends PlaySpec with EitherValues{
 
-  private val eisHttpParser = EISHttpReader("123")
+  private val eisHttpParser = EISHttpReader("123", "GB123", "date time")
   "read" should {
     "return EISResponse" in {
       val eisResponse  = EISResponse("ok", "Success", "123")
@@ -62,7 +62,7 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues{
       (503, ServiceUnavailable("error")))) { case (statusCode, expectedResult) =>
       s"return $statusCode" when {
         "$status code us returned from HttpResponse" in {
-          val result = EISHttpReader("123").read(
+          val result = eisHttpParser.read(
             "ANY",
             "/foo",
             HttpResponse(statusCode, "error")
@@ -75,7 +75,7 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues{
 
     "throw if cannot parse json" in {
       val ex = intercept[RuntimeException] {
-        EISHttpReader("123").read(
+        eisHttpParser.read(
           "ANY",
           "/foo",
           HttpResponse(200, """{"test":"test"}""")

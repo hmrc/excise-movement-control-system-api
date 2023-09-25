@@ -23,6 +23,7 @@ import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Header.EmcsSource
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISRequest, EISResponse, Header}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
@@ -40,25 +41,30 @@ class MovementMessageConnector @Inject()
 )(implicit ec: ExecutionContext) extends Logging {
 
 
-  def post(message: String, messageType: String)(implicit hc: HeaderCarrier): Future[Either[Result, EISResponse]] = {
+  def submitExciseMovement(request: DataRequest[_], messageType: String)(implicit hc: HeaderCarrier): Future[Either[Result, EISResponse]] = {
 
     val timer = metrics.defaultRegistry.timer("emcs.eiscontroller.timer").time()
 
     //todo: add retry
     val correlationId = eisUtils.generateCorrelationId
     val createdDateTime = eisUtils.getCurrentDateTimeString
-    val encodedMessage = eisUtils.createEncoder.encodeToString(message.getBytes(StandardCharsets.UTF_8))
+    val encodedMessage = eisUtils.createEncoder.encodeToString(request.body.toString.getBytes(StandardCharsets.UTF_8))
     val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", encodedMessage)
+    val consignorId = request.consignorId
 
       httpClient.POST[EISRequest, Either[Result, EISResponse]](
         appConfig.emcsReceiverMessageUrl,
         eisRequest,
         Header.build(correlationId, createdDateTime)
-      )(EISRequest.format, EISHttpReader(correlationId), hc, ec)
+      )(EISRequest.format, EISHttpReader(correlationId, consignorId, createdDateTime), hc, ec)
         .andThen { case _ => timer.stop() }
         .recover {
           case ex: Throwable =>
-            logger.error(s"EIS error with message: ${ex.getMessage} and correlationId: $correlationId", ex)
+            logger.warn(s"""EIS error with message: ${ex.getMessage}, messageId: $correlationId,
+                 | correlationId: $correlationId, messageType: $messageType, timestamp: $createdDateTime
+                 | exciseId: $consignorId""".stripMargin,
+              ex)
+
             Left(InternalServerError(ex.getMessage))
     }
   }

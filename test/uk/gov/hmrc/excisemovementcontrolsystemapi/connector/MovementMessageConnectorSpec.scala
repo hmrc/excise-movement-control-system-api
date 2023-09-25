@@ -28,14 +28,15 @@ import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.{ContentTypes, HeaderNames}
-import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
+import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISRequest, EISResponse}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
@@ -58,12 +59,6 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
   private val emcsCorrelationId = "1234566"
   private val message = "<IE815></IE815>"
   private val messageType = "IE815"
-  private val jsonResponse = Json.obj(
-    "status" -> "ok",
-    "message" -> "Success",
-    "emcsCorrelationId" -> emcsCorrelationId
-  )
-
   private val encoder = Base64.getEncoder
   private val timerContext = mock[Timer.Context]
 
@@ -84,7 +79,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(Future.successful(Right(EISResponse("ok", "Success", emcsCorrelationId))))
 
-      val result: Either[Result, EISResponse] = await(connector.post(message, messageType))
+      val result: Either[Result, EISResponse] = await(submitExciseMovement)
 
       result mustBe Right(EISResponse("ok", "Success", emcsCorrelationId))
     }
@@ -96,7 +91,16 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
       val encodeMessage = encoder.encodeToString(message.getBytes(StandardCharsets.UTF_8))
       val eisRequest = EISRequest(emcsCorrelationId, "2023-09-17T09:32:50.345Z", messageType, "APIP", "user1", encodeMessage)
 
-      await(connector.post(message, messageType))
+      await(connector.submitExciseMovement(
+        DataRequest(
+          FakeRequest().withBody(message),
+          "123",
+          None,
+          "234",
+          "124"
+        ),
+        messageType)
+      )
 
       verify(appConfig).emcsReceiverMessageUrl
 
@@ -114,7 +118,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(Future.successful(Left(BadRequest("any error"))))
 
-      val result = await(connector.post(message, messageType))
+      val result = await(submitExciseMovement)
 
       result.left.value mustBe BadRequest("any error")
     }
@@ -123,7 +127,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(Future.successful(Left(NotFound("error"))))
 
-      val result = await(connector.post(message, messageType))
+      val result = await(submitExciseMovement)
 
       result.left.value mustBe NotFound("error")
     }
@@ -132,7 +136,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(Future.successful(Left(ServiceUnavailable("any error"))))
 
-      val result = await(connector.post(message, messageType))
+      val result = await(submitExciseMovement)
 
       result.left.value mustBe ServiceUnavailable("any error")
     }
@@ -141,7 +145,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(Future.successful(Left(InternalServerError("any error"))))
 
-      val result = await(connector.post(message, messageType))
+      val result = await(submitExciseMovement)
 
       result.left.value mustBe InternalServerError("any error")
     }
@@ -150,7 +154,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
-      val result = await(connector.post(message, messageType))
+      val result = await(submitExciseMovement)
 
       result.left.value mustBe InternalServerError("error")
     }
@@ -158,13 +162,17 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(Future.successful(Left(BadRequest("any error"))))
 
-      await(connector.post(message, messageType))
+      await(submitExciseMovement)
 
       verify(metrics.defaultRegistry).timer(eqTo("emcs.eiscontroller.timer"))
       verify(metrics.defaultRegistry.timer(eqTo("emcs.eiscontroller.timer"))).time()
       verify(timerContext).stop()
     }
 
+  }
+
+  private def submitExciseMovement(): Future[Either[Result, EISResponse]] = {
+    connector.submitExciseMovement(DataRequest(FakeRequest(), "123", None, "234", "124"), messageType)
   }
 
   def expectedHeader =

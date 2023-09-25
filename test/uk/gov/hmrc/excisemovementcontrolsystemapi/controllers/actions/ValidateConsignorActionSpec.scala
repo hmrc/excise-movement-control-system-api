@@ -23,7 +23,7 @@ import play.api.mvc.Results.Forbidden
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{ParsedXmlRequest, EnrolmentRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth._
 
 import scala.concurrent.ExecutionContext
 
@@ -44,7 +44,7 @@ class ValidateConsignorActionSpec extends PlaySpec with TestXml with EitherValue
 
       val result = await(sut.refine(request))
 
-      result mustBe Right(request)
+      result mustBe Right(DataRequest(request, "GBWK002281023", Some("GBWKQOZ8OVLYR"), "LRNQA20230909022221", "123"))
     }
 
     "an error" when {

@@ -16,11 +16,13 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util
 
+import generated.MessageBodyType
 import play.api.Logging
 import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, SERVICE_UNAVAILABLE}
 import play.api.libs.json.{Json, Reads}
 import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISResponse
 import uk.gov.hmrc.http.HttpReads.is2xx
 import uk.gov.hmrc.http.{HttpReads, HttpResponse}
@@ -28,7 +30,11 @@ import uk.gov.hmrc.http.{HttpReads, HttpResponse}
 import scala.reflect.runtime.universe.{TypeTag, typeOf}
 import scala.util.{Failure, Success, Try}
 
-class EISHttpReader(correlationId: String) extends HttpReads[Either[Result, EISResponse]] with Logging {
+class EISHttpReader(
+  correlationId: String,
+  consignorId: String,
+  createDateTime: String
+) extends HttpReads[Either[Result, EISResponse]] with Logging {
 
     override def read(method: String, url: String, response: HttpResponse): Either[Result, EISResponse] = {
         val result = extractIfSuccessful[EISResponse](response)
@@ -44,7 +50,9 @@ class EISHttpReader(correlationId: String) extends HttpReads[Either[Result, EISR
     message: String,
   ): Result = {
 
-    logger.error(s"EIS error with message: $message, status: $status and correlationId: $correlationId")
+    logger.warn(s"""EIS error with message: $message, messageId: $correlationId,
+         | correlationId: $correlationId, messageType: ${MessageTypes.IE815Message}, timestamp: $createDateTime,
+         | exciseId: $consignorId""".stripMargin)
 
     status match {
       case BAD_REQUEST => BadRequest(message)
@@ -67,7 +75,11 @@ class EISHttpReader(correlationId: String) extends HttpReads[Either[Result, EISR
 }
 
 object EISHttpReader {
-  def apply(correlationId: String): EISHttpReader = {
-    new EISHttpReader(correlationId)
+  def apply(correlationId: String, consignorId: String, createDateTime: String): EISHttpReader = {
+    new EISHttpReader(
+      correlationId: String,
+      consignorId: String,
+      createDateTime: String
+    )
   }
 }

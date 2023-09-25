@@ -33,6 +33,7 @@ import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.WireMockServerSpec
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISResponse}
 
 import java.time.LocalDateTime
@@ -48,7 +49,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
   private val url = s"http://localhost:$port/customs/excise/movements"
-  private val eisUrl = "/emcs/digitalSubmitNewMessage/v1"
+  private val eisUrl = "/emcs/digital-submit-new-message/v1"
 
   override lazy val app: Application = {
     wireMock.start()
@@ -78,7 +79,12 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
       val result = postRequest(IE815)
 
-      result.status mustBe OK
+      result.status mustBe ACCEPTED
+
+      withClue("return the json response"){
+        val responseBody = Json.parse(result.body).as[ExciseMovementResponse]
+        responseBody mustBe ExciseMovementResponse(ACCEPTED, "LRNQA20230909022221", "GBWK002281023")
+      }
     }
 
     "return not found if EIS return not found" in {
