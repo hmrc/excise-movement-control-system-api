@@ -18,24 +18,29 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseIE815XmlAction, ValidateConsignorAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ExciseMovementResponse, MessageTypes}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ExciseMovementResponse, MessageTypes, MovementMessageCreateFailedResult, MovementMessageCreatedResult}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, ExecutionContext}
 import scala.xml.NodeSeq
 
 @Singleton
 class DraftExciseMovementController @Inject()(
-  authAction: AuthAction,
-  xmlParser: ParseIE815XmlAction,
-  consignorValidatorAction: ValidateConsignorAction,
-  movementMessageConnector: MovementMessageConnector,
-  cc: ControllerComponents
-)(implicit ec: ExecutionContext) extends BackendController(cc) {
+                                               authAction: AuthAction,
+                                               xmlParser: ParseIE815XmlAction,
+                                               consignorValidatorAction: ValidateConsignorAction,
+                                               movementMessageConnector: MovementMessageConnector,
+                                               movementMessageService: MovementMessageService,
+                                               appConfig: AppConfig,
+                                               cc: ControllerComponents
+                                             )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
   def submit: Action[NodeSeq] =
     (authAction andThen xmlParser andThen consignorValidatorAction).async(parse.xml) {
@@ -43,10 +48,13 @@ class DraftExciseMovementController @Inject()(
         movementMessageConnector.submitExciseMovement(request, MessageTypes.IE815Message).map {
           case Right(_) => handleSuccess
           case Left(error) => error
-      }
+        }
     }
 
   private def handleSuccess(implicit request: DataRequest[NodeSeq]): Result = {
-    Accepted(Json.toJson(ExciseMovementResponse(ACCEPTED, request.localRefNumber, request.consignorId)))
+    Await.result(movementMessageService.saveMovementMessage(request.localRefNumber, request.consignorId, request.consigneeId.get).map({
+      case _: MovementMessageCreatedResult => Accepted(Json.toJson(ExciseMovementResponse(ACCEPTED, request.localRefNumber, request.consignorId)))
+      case error: MovementMessageCreateFailedResult => InternalServerError("An error occurred") //Exception logged in repository class already
+    }), appConfig.defaultAwaitTimeoutForMongoDb.seconds)
   }
 }

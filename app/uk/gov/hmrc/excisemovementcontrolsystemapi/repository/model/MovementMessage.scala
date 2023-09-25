@@ -14,21 +14,11 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.config
+package uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model
 
-import javax.inject.{Inject, Singleton}
-import play.api.Configuration
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
-
-@Singleton
-class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig) {
-
-  val appName: String = config.get[String]("appName")
-
-  val defaultAwaitTimeoutForMongoDb : Int = config.get[Int]("mongoDbWaitTimeout")
-
-  lazy val eisHost: String = servicesConfig.baseUrl("eis")
-
-  def emcsReceiverMessageUrl: String =
-    s"$eisHost/emcs/digital-submit-new-message/v1"
-}
+case class MovementMessage(
+                            localReferenceNumber: String,
+                            consignorId: String,
+                            consigneeId: String,
+                            administrativeReferenceCode: Option[String] = None
+                          )

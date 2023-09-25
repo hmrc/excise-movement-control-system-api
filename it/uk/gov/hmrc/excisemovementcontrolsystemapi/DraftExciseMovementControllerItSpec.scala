@@ -18,7 +18,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, ok, post, urlEqualTo}
-import org.scalatest.BeforeAndAfterAll
+import org.mongodb.scala.model.Filters
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -35,46 +36,66 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.WireMockServerSpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 
 import java.time.LocalDateTime
+import scala.concurrent.ExecutionContext
 import scala.xml.NodeSeq
 
 
 class DraftExciseMovementControllerItSpec extends PlaySpec
   with GuiceOneServerPerSuite
   with AuthTestSupport
+  with PlayMongoRepositorySupport[MovementMessage]
+  with CleanMongoCollectionSupport
   with TestXml
   with WireMockServerSpec
-  with BeforeAndAfterAll {
+  with BeforeAndAfterAll
+  with BeforeAndAfterEach {
 
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
   private val url = s"http://localhost:$port/customs/excise/movements"
   private val eisUrl = "/emcs/digital-submit-new-message/v1"
+  private val consignorId = "GBWK002281023"
+
+  protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
   override lazy val app: Application = {
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
     GuiceApplicationBuilder()
-      .configure(configureServer)
+      .configure(configureServer ++
+        Map("mongodb.uri" -> s"mongodb://127.0.0.1:27017/test-${this.getClass.getSimpleName}"))
       .overrides(
         bind[AuthConnector].to(authConnector),
       )
       .build
   }
 
+  def repo: MovementMessageRepository =
+    app.injector.instanceOf[MovementMessageRepository]
+
+  override protected def repository: PlayMongoRepository[MovementMessage] = app.injector.instanceOf[MovementMessageRepository]
+
   override def beforeAll(): Unit = {
     super.beforeAll()
     wireMock.resetAll()
+
   }
 
   override def afterAll(): Unit = {
     super.afterAll()
     wireMock.stop()
+    dropDatabase()
   }
 
   "Draft Excise Movement" should {
+
     "return 200" in {
-      withAuthorizedTrader("GBWK002281023")
+      withAuthorizedTrader(consignorId)
       stubEISSuccessfulRequest()
 
       val result = postRequest(IE815)
@@ -83,15 +104,25 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
       withClue("return the json response") {
         val responseBody = Json.parse(result.body).as[ExciseMovementResponse]
-        responseBody mustBe ExciseMovementResponse(ACCEPTED, "LRNQA20230909022221", "GBWK002281023")
+        responseBody mustBe ExciseMovementResponse(ACCEPTED, "LRNQA20230909022221", consignorId)
       }
+
+      val mongoResult: Option[MovementMessage] = repository.collection.find(Filters.equal("consignorId", consignorId)).toFuture().map(_.headOption).futureValue
+
+      mongoResult.isDefined mustBe true
+
+      val movementMessage = mongoResult.get
+      movementMessage.consignorId mustBe consignorId
     }
 
     "return not found if EIS return not found" in {
-      withAuthorizedTrader("GBWK002281023")
+      withAuthorizedTrader(consignorId)
       stubEISErrorResponse(NOT_FOUND, createEISErrorResponseBody("NOT_FOUND"))
 
       postRequest(IE815).status mustBe NOT_FOUND
+
+      checkDataNotSavedInMongoDB(consignorId)
+
     }
 
     "return bad request if EIS return BAD_REQUEST" in {
@@ -99,20 +130,26 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       stubEISErrorResponse(BAD_REQUEST, createEISErrorResponseBody("BAD_REQUEST"))
 
       postRequest(IE815).status mustBe BAD_REQUEST
+
+      checkDataNotSavedInMongoDB(consignorId)
     }
 
     "return 500 if EIS return 500" in {
-      withAuthorizedTrader("GBWK002281023")
+      withAuthorizedTrader(consignorId)
       stubEISErrorResponse(INTERNAL_SERVER_ERROR, createEISErrorResponseBody("INTERNAL_SERVER_ERROR"))
 
       postRequest(IE815).status mustBe INTERNAL_SERVER_ERROR
+
+      checkDataNotSavedInMongoDB(consignorId)
     }
 
     "return 500 if EIS return bad json" in {
-      withAuthorizedTrader("GBWK002281023")
+      withAuthorizedTrader(consignorId)
       stubEISErrorResponse(INTERNAL_SERVER_ERROR, """"{"json": "is-bad"}""")
 
       postRequest(IE815).status mustBe INTERNAL_SERVER_ERROR
+
+      checkDataNotSavedInMongoDB(consignorId)
     }
 
     "return forbidden (403) when there are no authorized ERN" in {
@@ -168,7 +205,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     )).toString
   }
 
-  private def postRequest(xml: NodeSeq = IE815, contentType: String =  """application/vnd.hmrc.1.0+xml""") = {
+  private def postRequest(xml: NodeSeq = IE815, contentType: String = """application/vnd.hmrc.1.0+xml""") = {
     await(wsClient.url(url)
       .addHttpHeaders(
         HeaderNames.AUTHORIZATION -> "TOKEN",
@@ -197,5 +234,11 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
             .withHeader("Content-Type", "application/json")
         )
     )
+  }
+
+  private def checkDataNotSavedInMongoDB(consignorId: String) = {
+    val mongoResult: Option[MovementMessage] = repository.collection.find(Filters.equal("consignorId", consignorId)).toFuture().map(_.headOption).futureValue
+
+    mongoResult.isDefined mustBe false
   }
 }
