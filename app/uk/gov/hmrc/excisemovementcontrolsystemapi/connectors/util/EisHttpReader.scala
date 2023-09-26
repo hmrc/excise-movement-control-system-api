@@ -22,7 +22,7 @@ import play.api.libs.json.{Json, Reads}
 import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, EISResponse}
 import uk.gov.hmrc.http.HttpReads.is2xx
 import uk.gov.hmrc.http.{HttpReads, HttpResponse}
 
@@ -32,7 +32,7 @@ import scala.util.{Failure, Success, Try}
 class EISHttpReader(
   correlationId: String,
   consignorId: String,
-  createDateTime: String
+  createdDateTime: String
 ) extends HttpReads[Either[Result, EISResponse]] with Logging {
 
     override def read(method: String, url: String, response: HttpResponse): Either[Result, EISResponse] = {
@@ -49,9 +49,7 @@ class EISHttpReader(
     message: String,
   ): Result = {
 
-    logger.warn(s"""EIS error with message: $message, messageId: $correlationId,
-         | correlationId: $correlationId, messageType: ${MessageTypes.IE815Message}, timestamp: $createDateTime,
-         | exciseId: $consignorId""".stripMargin)
+    logger.warn(EISErrorMessage(createdDateTime, consignorId, message, correlationId, MessageTypes.IE815Message))
 
     status match {
       case BAD_REQUEST => BadRequest(message)

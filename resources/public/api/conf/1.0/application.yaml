@@ -42,15 +42,26 @@ paths:
             application/vnd.hmrc.1.0+json:
               schema:
                 $ref: '#/components/schemas/ExciseMovement'
-            application/vnd.hmrc.1.0+xml:
-              schema:
-                $ref: '#/components/schemas/ExciseMovement'
         '400':
           description: The submission of draft movement message has failed validation
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ExciseMovement400Error'
         '403':
           description: Consignor ID is not in authorisation bearer token
+        '404':
+          description: Conection Refused
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ExciseMovement404Error'
         '500':
           description: Internal server error
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ExciseMovement500Error'
       security:
         - userRestricted:
             - excise-movement-control-system
@@ -332,6 +343,14 @@ components:
         - Exporting
         - Accepted for export
         - Stopped
+    DateTime:
+      type: string
+      pattern: ^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[01]|0[1-9]|[12][0-9])T(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])(.[0-9]+)?(Z)?$
+      example: '2021-12-17T09:30:47Z'
+    CorrelationId:
+      type: string
+      format: uuid
+      example: 3e8dae97-b586-4cef-8511-68ac12da9028
     IE810:
       type: object
       description: Submit cancellation
@@ -413,24 +432,78 @@ components:
     ExciseMovement:
       type: object
       required:
-        - movementId
         - consignorId
         - localReferenceNumber
         - status
       properties:
-        movementId:
-          type: string
-          format: uuid
         consignorId:
           $ref: '#/components/schemas/ExciseReferenceNumber'
         localReferenceNumber:
           $ref: '#/components/schemas/LocalReferenceNumber'
-        administrativeReferenceCode:
-          $ref: '#/components/schemas/AdministrativeReferenceCode'
         status:
           $ref: '#/components/schemas/MovementStatus'
       xml:
         name: exciseMovement
+    ExciseMovement400Error:
+      type: object
+      required:
+        - dateTime
+        - message
+        - debugMessage
+        - emcsCorrelationId
+      properties:
+        dateTime:
+          $ref: '#/components/schemas/DateTime'
+        message:
+          type: string
+          default: "Json validation failed"
+        debugMessage:
+          type: string
+          default: "user is missing but it is required"
+        emcsCorrelationId:
+          $ref: '#/components/schemas/CorrelationId'
+      xml:
+        name: exciseMovement400Errors
+    ExciseMovement404Error:
+      type: object
+      required:
+        - dateTime
+        - message
+        - debugMessage
+        - emcsCorrelationId
+      properties:
+        dateTime:
+          $ref: '#/components/schemas/DateTime'
+        message:
+          type: string
+          default: "Received error response from server"
+        debugMessage:
+          type: string
+          default: "Connection refused; nested exception is java.net.ConnectException: Connection refused"
+        emcsCorrelationId:
+          $ref: '#/components/schemas/CorrelationId'
+      xml:
+        name: exciseMovement404Errors
+    ExciseMovement500Error:
+      type: object
+      required:
+        - dateTime
+        - message
+        - debugMessage
+        - emcsCorrelationId
+      properties:
+        dateTime:
+          $ref: '#/components/schemas/DateTime'
+        message:
+          type: string
+          default: "Invalid JSON structure"
+        debugMessage:
+          type: string
+          default: "JSON parse error"
+        emcsCorrelationId:
+          $ref: '#/components/schemas/CorrelationId'
+      xml:
+        name: exciseMovement500Errors
     SubmitDraftMessageType:
       type: string
       description: The submit draft message type

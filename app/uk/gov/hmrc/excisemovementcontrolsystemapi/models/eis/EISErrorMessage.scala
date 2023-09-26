@@ -14,16 +14,20 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.models
+package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.Logging
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 
-case class ExciseMovementResponse(
-    status: String,
-    localReferentNumber: String,
-    consignorId: String
-)
+object EISErrorMessage {
 
-object ExciseMovementResponse {
-  implicit val format: OFormat[ExciseMovementResponse] = Json.format[ExciseMovementResponse]
+  def apply(createDateTime: String, consignorId: String, message: String, correlationId: String, messageTypes: String): String = {
+    s"""EIS error with message: $message,
+    | messageId: $correlationId,
+    | correlationId: $correlationId,
+    | messageType: $messageTypes,
+    | timestamp: $createDateTime,
+    | exciseId: $consignorId""".stripMargin
+  }
+
 }

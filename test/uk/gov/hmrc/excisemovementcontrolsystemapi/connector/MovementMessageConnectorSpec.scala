@@ -28,6 +28,7 @@ import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.{ContentTypes, HeaderNames}
+import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
 import play.api.test.FakeRequest
@@ -37,10 +38,11 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConn
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISRequest, EISResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISRequest, EISResponse}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import java.nio.charset.StandardCharsets
+import java.time.LocalDateTime
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -66,7 +68,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
     super.beforeEach()
     reset(mockHttpClient, appConfig, metrics, timerContext)
 
-    when(eisUtils.getCurrentDateTimeString).thenReturn("2023-09-17T09:32:50.345Z")
+    when(eisUtils.getCurrentDateTimeString).thenReturn("2023-09-17T09:32:50.345")
     when(eisUtils.generateCorrelationId).thenReturn(emcsCorrelationId)
     when(appConfig.emcsReceiverMessageUrl).thenReturn("/eis/path")
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
@@ -89,7 +91,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
         .thenReturn(Future.successful(Right(EISResponse("ok", "Success", emcsCorrelationId))))
 
       val encodeMessage = encoder.encodeToString(message.getBytes(StandardCharsets.UTF_8))
-      val eisRequest = EISRequest(emcsCorrelationId, "2023-09-17T09:32:50.345Z", messageType, "APIP", "user1", encodeMessage)
+      val eisRequest = EISRequest(emcsCorrelationId, "2023-09-17T09:32:50.345", messageType, "APIP", "user1", encodeMessage)
 
       await(connector.submitExciseMovement(
         DataRequest(
@@ -156,7 +158,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
 
       val result = await(submitExciseMovement)
 
-      result.left.value mustBe InternalServerError("error")
+      result.left.value mustBe InternalServerError(s"""{"dateTime":"2023-09-17T09:32:50.345","status":"INTERNAL_SERVER_ERROR","message":"Exception","debugMessage":"error","emcsCorrelationId":"$emcsCorrelationId"}""")
     }
     "start and stop metrics" in {
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
@@ -178,7 +180,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
   def expectedHeader =
     Seq(HeaderNames.ACCEPT -> ContentTypes.JSON,
       HeaderNames.CONTENT_TYPE -> ContentTypes.JSON,
-      "dateTime" -> "2023-09-17T09:32:50.345Z",
+      "dateTime" -> "2023-09-17T09:32:50.345",
       "x-correlation-id" -> "1234566",
       "x-forwarded-host" -> "",
       "source" -> "APIP"

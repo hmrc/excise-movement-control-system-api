@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
+import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
@@ -25,10 +26,11 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Header.EmcsSource
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISRequest, EISResponse, Header}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import java.nio.charset.StandardCharsets
+import java.time.LocalDateTime
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -60,12 +62,17 @@ class MovementMessageConnector @Inject()
         .andThen { case _ => timer.stop() }
         .recover {
           case ex: Throwable =>
-            logger.warn(s"""EIS error with message: ${ex.getMessage}, messageId: $correlationId,
-                 | correlationId: $correlationId, messageType: $messageType, timestamp: $createdDateTime
-                 | exciseId: $consignorId""".stripMargin,
-              ex)
 
-            Left(InternalServerError(ex.getMessage))
+            logger.warn(EISErrorMessage(createdDateTime, consignorId, ex.getMessage, correlationId, messageType), ex)
+
+            val error = EISErrorResponse(
+              LocalDateTime.parse(createdDateTime),
+              "INTERNAL_SERVER_ERROR",
+              "Exception",
+              ex.getMessage,
+              correlationId
+            )
+            Left(InternalServerError(Json.toJson(error).toString()))
     }
   }
 }
