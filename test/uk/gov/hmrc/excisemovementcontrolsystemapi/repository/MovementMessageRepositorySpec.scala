@@ -19,7 +19,9 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 import org.mongodb.scala.model.Filters
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.IntegrationPatience
+import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
@@ -32,11 +34,12 @@ class MovementMessageRepositorySpec extends PlaySpec
   with OptionValues {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  protected override val repository = new MovementMessageRepository(mongoComponent)
+  private val appConfig = mock[AppConfig]
+  protected override val repository = new MovementMessageRepository(mongoComponent, appConfig)
 
   "saveMovementMessage" should {
     "return insert a movement message" in {
-      val repository = new MovementMessageRepository(mongoComponent)
+      val repository = new MovementMessageRepository(mongoComponent, appConfig)
 
       val result = repository.saveMovementMessage(MovementMessage("123", "345", Some("789"), None)).futureValue
       val insertedRecord = find(

@@ -20,7 +20,6 @@ import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, ok, post, urlEqualTo}
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.when
-import org.mongodb.scala.model.Filters
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
@@ -40,9 +39,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.WireMockServerSpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
-import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 
 import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
@@ -52,7 +48,6 @@ import scala.xml.NodeSeq
 class DraftExciseMovementControllerItSpec extends PlaySpec
   with GuiceOneServerPerSuite
   with AuthTestSupport
-  with CleanMongoCollectionSupport
   with TestXml
   with WireMockServerSpec
   with BeforeAndAfterAll
@@ -62,7 +57,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   private val url = s"http://localhost:$port/customs/excise/movements"
   private val eisUrl = "/emcs/digital-submit-new-message/v1"
   private val consignorId = "GBWK002281023"
-  private val movementMessageRepository = mock[MovementMessageRepository]
+  private lazy val movementMessageRepository = mock[MovementMessageRepository]
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
@@ -70,8 +65,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
     GuiceApplicationBuilder()
-      .configure(configureServer ++
-        Map("mongodb.uri" -> s"mongodb://127.0.0.1:27017/test-${this.getClass.getSimpleName}"))
+      .configure(configureServer)
       .overrides(
         bind[AuthConnector].to(authConnector),
         bind[MovementMessageRepository].to(movementMessageRepository)
@@ -79,13 +73,9 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       .build
   }
 
-  def repo: MovementMessageRepository =
-    app.injector.instanceOf[MovementMessageRepository]
-
   override def beforeAll(): Unit = {
     super.beforeAll()
     wireMock.resetAll()
-
   }
 
   override def afterAll(): Unit = {

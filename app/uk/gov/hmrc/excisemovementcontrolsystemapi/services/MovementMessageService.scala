@@ -26,13 +26,13 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class MovementMessageService @Inject()(
-  movementMessageRepository: MovementMessageRepository
-)(implicit ec: ExecutionContext) {
+                                        movementMessageRepository: MovementMessageRepository
+                                      )(implicit ec: ExecutionContext) {
 
   def saveMovementMessage(movementMessage: MovementMessage): Future[Either[MongoError, MovementMessage]] = {
     movementMessageRepository.saveMovementMessage(movementMessage)
       .map(_ => Right(movementMessage))
-      .recover{
+      .recover {
         case ex: Throwable => Left(MongoError(ex.getMessage))
       }
   }

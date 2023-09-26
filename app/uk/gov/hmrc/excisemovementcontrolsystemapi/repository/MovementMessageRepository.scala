@@ -21,16 +21,18 @@ import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.{IndexModel, IndexOptions}
 import play.api.Logging
 import play.api.libs.json.Json
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
+import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.ExecutionContext
 
 @Singleton
-class MovementMessageRepository @Inject()(mongo: MongoComponent)(implicit ec: ExecutionContext) extends
-   PlayMongoRepository[MovementMessage] (
+class MovementMessageRepository @Inject()(mongo: MongoComponent, appConfig: AppConfig)(implicit ec: ExecutionContext) extends
+  PlayMongoRepository[MovementMessage](
     collectionName = "movements",
     mongoComponent = mongo,
     domainFormat = Json.format[MovementMessage],
@@ -41,14 +43,21 @@ class MovementMessageRepository @Inject()(mongo: MongoComponent)(implicit ec: Ex
           .name("lrn_consignor_index")
           .background(true)
           .unique(true)
+      ),
+      IndexModel(
+        ascending(Seq("createdOn"): _*),
+        IndexOptions()
+          .name("create_on_ttl_idx")
+          .expireAfter(appConfig.movementMessagesMongoExpirySeconds, TimeUnit.SECONDS)
+          .background(true)
+          .unique(false)
       )
     )
-  ) with Logging{
+  ) with Logging {
 
   def saveMovementMessage(movementMessage: MovementMessage): Future[Boolean] = {
     collection.insertOne(movementMessage)
       .toFuture()
       .map(_ => true)
   }
-
 }

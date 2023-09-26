@@ -25,7 +25,7 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
 
   val appName: String = config.get[String]("appName")
 
-  val defaultAwaitTimeoutForMongoDb : Int = config.get[Int]("mongoDbWaitTimeout")
+  val movementMessagesMongoExpirySeconds : Int = config.get[Int]("mongodb.movementMessagesMongoExpirySeconds")
 
   lazy val eisHost: String = servicesConfig.baseUrl("eis")
 

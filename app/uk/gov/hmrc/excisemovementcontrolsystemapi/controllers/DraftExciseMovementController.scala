@@ -37,7 +37,6 @@ class DraftExciseMovementController @Inject()(
                                                consignorValidatorAction: ValidateConsignorAction,
                                                movementMessageConnector: MovementMessageConnector,
                                                movementMessageService: MovementMessageService,
-                                               appConfig: AppConfig,
                                                cc: ControllerComponents
                                              )(implicit ec: ExecutionContext) extends BackendController(cc) {
 

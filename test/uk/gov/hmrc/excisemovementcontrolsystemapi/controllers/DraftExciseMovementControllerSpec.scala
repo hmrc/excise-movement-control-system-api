@@ -29,7 +29,6 @@ import play.api.http.HeaderNames
 import play.api.mvc.Results.NotFound
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateConsignorAction, FakeXmlParsers}
@@ -58,14 +57,12 @@ class DraftExciseMovementControllerSpec
   private val cc = stubControllerComponents()
   private val ieMessage = scalaxb.fromXML[IE815Type](IE815)
   private val request = createRequest(IE815)
-  private val appConfig = mock[AppConfig]
 
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(connector)
 
     when(connector.submitExciseMovement(any, any)(any)).thenReturn(Future.successful(Right(EISResponse("ok", "success", "123"))))
-    when(appConfig.defaultAwaitTimeoutForMongoDb).thenReturn(5)
   }
 
   "submit" should {
@@ -148,7 +145,6 @@ class DraftExciseMovementControllerSpec
       FakeSuccessfulValidateConsignorAction,
       connector,
       movementMessageService,
-      appConfig,
       cc
     )
 
@@ -159,7 +155,6 @@ class DraftExciseMovementControllerSpec
       FakeSuccessfulValidateConsignorAction,
       connector,
       movementMessageService,
-      appConfig,
       cc
     )
 
@@ -170,7 +165,6 @@ class DraftExciseMovementControllerSpec
       FakeSuccessfulValidateConsignorAction,
       connector,
       movementMessageService,
-      appConfig,
       cc
     )
 
@@ -181,7 +175,6 @@ class DraftExciseMovementControllerSpec
       FakeFailureValidateConsignorAction,
       connector,
       movementMessageService,
-      appConfig,
       cc
     )
 

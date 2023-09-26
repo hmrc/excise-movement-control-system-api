@@ -16,9 +16,12 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model
 
+import java.time.Instant
+
 case class MovementMessage(
                             localReferenceNumber: String,
                             consignorId: String,
                             consigneeId: Option[String],
-                            administrativeReferenceCode: Option[String] = None
+                            administrativeReferenceCode: Option[String] = None,
+                            createdOn: Instant = Instant.now
                           )
