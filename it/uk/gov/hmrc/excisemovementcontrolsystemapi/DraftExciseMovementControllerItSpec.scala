@@ -18,8 +18,11 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, ok, post, urlEqualTo}
+import org.mockito.ArgumentMatchersSugar.any
+import org.mockito.MockitoSugar.when
 import org.mongodb.scala.model.Filters
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
+import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -42,14 +45,13 @@ import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 
 import java.time.LocalDateTime
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
 
 class DraftExciseMovementControllerItSpec extends PlaySpec
   with GuiceOneServerPerSuite
   with AuthTestSupport
-  with PlayMongoRepositorySupport[MovementMessage]
   with CleanMongoCollectionSupport
   with TestXml
   with WireMockServerSpec
@@ -60,6 +62,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   private val url = s"http://localhost:$port/customs/excise/movements"
   private val eisUrl = "/emcs/digital-submit-new-message/v1"
   private val consignorId = "GBWK002281023"
+  private val movementMessageRepository = mock[MovementMessageRepository]
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
@@ -71,14 +74,13 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         Map("mongodb.uri" -> s"mongodb://127.0.0.1:27017/test-${this.getClass.getSimpleName}"))
       .overrides(
         bind[AuthConnector].to(authConnector),
+        bind[MovementMessageRepository].to(movementMessageRepository)
       )
       .build
   }
 
   def repo: MovementMessageRepository =
     app.injector.instanceOf[MovementMessageRepository]
-
-  override protected def repository: PlayMongoRepository[MovementMessage] = app.injector.instanceOf[MovementMessageRepository]
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -89,14 +91,15 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   override def afterAll(): Unit = {
     super.afterAll()
     wireMock.stop()
-    dropDatabase()
   }
 
   "Draft Excise Movement" should {
 
-    "return 200" in {
+    "return 202" in {
       withAuthorizedTrader(consignorId)
       stubEISSuccessfulRequest()
+      when(movementMessageRepository.saveMovementMessage(any))
+        .thenReturn(Future.successful(true))
 
       val result = postRequest(IE815)
 
@@ -106,13 +109,6 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         val responseBody = Json.parse(result.body).as[ExciseMovementResponse]
         responseBody mustBe ExciseMovementResponse(ACCEPTED, "LRNQA20230909022221", consignorId)
       }
-
-      val mongoResult: Option[MovementMessage] = repository.collection.find(Filters.equal("consignorId", consignorId)).toFuture().map(_.headOption).futureValue
-
-      mongoResult.isDefined mustBe true
-
-      val movementMessage = mongoResult.get
-      movementMessage.consignorId mustBe consignorId
     }
 
     "return not found if EIS return not found" in {
@@ -120,9 +116,6 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       stubEISErrorResponse(NOT_FOUND, createEISErrorResponseBody("NOT_FOUND"))
 
       postRequest(IE815).status mustBe NOT_FOUND
-
-      checkDataNotSavedInMongoDB(consignorId)
-
     }
 
     "return bad request if EIS return BAD_REQUEST" in {
@@ -130,8 +123,6 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       stubEISErrorResponse(BAD_REQUEST, createEISErrorResponseBody("BAD_REQUEST"))
 
       postRequest(IE815).status mustBe BAD_REQUEST
-
-      checkDataNotSavedInMongoDB(consignorId)
     }
 
     "return 500 if EIS return 500" in {
@@ -139,8 +130,6 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       stubEISErrorResponse(INTERNAL_SERVER_ERROR, createEISErrorResponseBody("INTERNAL_SERVER_ERROR"))
 
       postRequest(IE815).status mustBe INTERNAL_SERVER_ERROR
-
-      checkDataNotSavedInMongoDB(consignorId)
     }
 
     "return 500 if EIS return bad json" in {
@@ -148,8 +137,6 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       stubEISErrorResponse(INTERNAL_SERVER_ERROR, """"{"json": "is-bad"}""")
 
       postRequest(IE815).status mustBe INTERNAL_SERVER_ERROR
-
-      checkDataNotSavedInMongoDB(consignorId)
     }
 
     "return forbidden (403) when there are no authorized ERN" in {
@@ -234,11 +221,5 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
             .withHeader("Content-Type", "application/json")
         )
     )
-  }
-
-  private def checkDataNotSavedInMongoDB(consignorId: String) = {
-    val mongoResult: Option[MovementMessage] = repository.collection.find(Filters.equal("consignorId", consignorId)).toFuture().map(_.headOption).futureValue
-
-    mongoResult.isDefined mustBe false
   }
 }

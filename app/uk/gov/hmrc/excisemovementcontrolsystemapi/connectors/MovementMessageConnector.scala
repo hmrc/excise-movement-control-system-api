@@ -50,7 +50,7 @@ class MovementMessageConnector @Inject()
     val createdDateTime = eisUtils.getCurrentDateTimeString
     val encodedMessage = eisUtils.createEncoder.encodeToString(request.body.toString.getBytes(StandardCharsets.UTF_8))
     val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", encodedMessage)
-    val consignorId = request.consignorId
+    val consignorId = request.movementMessage.consignorId
 
       httpClient.POST[EISRequest, Either[Result, EISResponse]](
         appConfig.emcsReceiverMessageUrl,

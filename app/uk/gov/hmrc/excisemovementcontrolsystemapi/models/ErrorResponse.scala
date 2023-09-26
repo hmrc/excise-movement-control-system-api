@@ -16,12 +16,10 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
+sealed trait ErrorResponse {
+  val message: String
+}
 
-sealed trait CreateMovementMessageResult
-
-final case class MovementMessageCreateFailedResult(message: String) extends CreateMovementMessageResult
-
-sealed trait MovementMessageSuccessResult extends CreateMovementMessageResult
-
-final case class MovementMessageCreatedResult(movementMessage: MovementMessage) extends MovementMessageSuccessResult
+case class MongoError(msg: String) extends ErrorResponse {
+  val message = s"Error from Mongo with message: $msg"
+}

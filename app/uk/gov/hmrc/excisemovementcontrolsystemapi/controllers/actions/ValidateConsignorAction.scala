@@ -20,7 +20,8 @@ import com.google.inject.ImplementedBy
 import play.api.Logging
 import play.api.mvc.Results.Forbidden
 import play.api.mvc.{ActionRefiner, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{ParsedXmlRequest, DataRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequest, ParsedXmlRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -38,9 +39,7 @@ class ValidateConsignorActionImpl @Inject()(implicit val executionContext: Execu
       val localRefNumber = request.ie815Message.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber
       Future.successful(Right(DataRequest(
         request,
-        consignorId,
-        consigneeId,
-        localRefNumber,
+        MovementMessage(localRefNumber, consignorId, consigneeId),
         request.internalId))
       )
     }

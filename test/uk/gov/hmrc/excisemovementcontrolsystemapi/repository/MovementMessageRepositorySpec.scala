@@ -16,33 +16,45 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
-import com.mongodb.client.result.InsertOneResult
-import dispatch.Future
-import org.bson.BsonValue
-import org.mockito.ArgumentMatchersSugar.any
-import org.mockito.MockitoSugar.when
-import org.mongodb.scala.{MongoCollection, SingleObservable}
-import org.scalatestplus.mockito.MockitoSugar.mock
+import org.mongodb.scala.model.Filters
+import org.scalatest.OptionValues
+import org.scalatest.concurrent.IntegrationPatience
 import org.scalatestplus.play.PlaySpec
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MovementMessageCreatedResult
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
-import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.Codecs
+import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import scala.concurrent.ExecutionContext
+import scala.language.postfixOps
 
-class MovementMessageRepositorySpec extends PlaySpec {
+class MovementMessageRepositorySpec extends PlaySpec
+  with DefaultPlayMongoRepositorySupport[MovementMessage]
+  with IntegrationPatience
+  with OptionValues {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-
-  private val mockMongoComponent = mock[MongoComponent]
-
-  private val movementMessage = MovementMessage("123", "ABC", "123AV")
+  protected override val repository = new MovementMessageRepository(mongoComponent)
 
   "saveMovementMessage" should {
-    "return CreateMovementMessageResult" in {
-      //TODO: implement this
+    "return insert a movement message" in {
+      val repository = new MovementMessageRepository(mongoComponent)
+
+      val result = repository.saveMovementMessage(MovementMessage("123", "345", Some("789"), None)).futureValue
+      val insertedRecord = find(
+        Filters.and(
+          Filters.equal("consignorId", "345"),
+          Filters.equal("localReferenceNumber", "123")
+        )
+      ).futureValue
+        .headOption
+        .value
+
+      result mustEqual true
+      insertedRecord.localReferenceNumber mustEqual "123"
+      insertedRecord.consignorId mustEqual "345"
+      insertedRecord.consigneeId mustEqual Some("789")
+      insertedRecord.administrativeReferenceCode mustEqual None
     }
+
+
   }
 }

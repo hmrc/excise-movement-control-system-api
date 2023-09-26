@@ -21,14 +21,12 @@ import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.{IndexModel, IndexOptions}
 import play.api.Logging
 import play.api.libs.json.Json
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{CreateMovementMessageResult, MovementMessageCreateFailedResult, MovementMessageCreatedResult}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.ExecutionContext
-import scala.util.control.NonFatal
 
 @Singleton
 class MovementMessageRepository @Inject()(mongo: MongoComponent)(implicit ec: ExecutionContext) extends
@@ -47,12 +45,10 @@ class MovementMessageRepository @Inject()(mongo: MongoComponent)(implicit ec: Ex
     )
   ) with Logging{
 
-  def saveMovementMessage(movementMessage: MovementMessage): Future[CreateMovementMessageResult] = {
-    collection.insertOne(movementMessage).map(_ => MovementMessageCreatedResult(movementMessage)).head() recoverWith {
-      case NonFatal(e) =>
-        logger.error(s"Could not save movement message to mongo db ${e.getMessage}", e)
-        Future.successful(MovementMessageCreateFailedResult(e.getMessage))
-    }
+  def saveMovementMessage(movementMessage: MovementMessage): Future[Boolean] = {
+    collection.insertOne(movementMessage)
+      .toFuture()
+      .map(_ => true)
   }
 
 }

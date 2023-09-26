@@ -19,6 +19,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model
 case class MovementMessage(
                             localReferenceNumber: String,
                             consignorId: String,
-                            consigneeId: String,
+                            consigneeId: Option[String],
                             administrativeReferenceCode: Option[String] = None
                           )

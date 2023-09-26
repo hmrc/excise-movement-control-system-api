@@ -38,6 +38,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISRequest, EISResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import java.nio.charset.StandardCharsets
@@ -94,9 +95,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
       await(connector.submitExciseMovement(
         DataRequest(
           FakeRequest().withBody(message),
-          "123",
-          None,
-          "234",
+          MovementMessage("123","234", None),
           "124"
         ),
         messageType)
@@ -172,7 +171,11 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
   }
 
   private def submitExciseMovement(): Future[Either[Result, EISResponse]] = {
-    connector.submitExciseMovement(DataRequest(FakeRequest(), "123", None, "234", "124"), messageType)
+    connector.submitExciseMovement(DataRequest(
+      FakeRequest(),
+      MovementMessage("123", "123", None), "124"),
+      messageType
+    )
   }
 
   def expectedHeader =

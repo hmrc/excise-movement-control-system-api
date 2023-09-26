@@ -19,10 +19,11 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.service
 import dispatch.Future
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.when
+import org.scalatest.EitherValues
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MovementMessageCreateFailedResult, MovementMessageCreatedResult}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MongoError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
@@ -30,7 +31,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext
 
-class MovementMessageServiceSpec extends PlaySpec {
+class MovementMessageServiceSpec extends PlaySpec with EitherValues{
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -44,15 +45,23 @@ class MovementMessageServiceSpec extends PlaySpec {
   private val consigneedId = "ABC123"
 
   "saveMovementMessage" should {
-    "return CreateMovementMessageResult" in {
-      val successMovementMessage = MovementMessageCreatedResult(MovementMessage(lrn, consignorId, consigneedId))
-      when(mockMovementMessageRepository.saveMovementMessage(any)).thenReturn(Future.successful(successMovementMessage))
+    "return a MovementMessage" in {
+      val successMovementMessage = MovementMessage(lrn, consignorId, Some(consigneedId))
+      when(mockMovementMessageRepository.saveMovementMessage(any))
+        .thenReturn(Future.successful(true))
 
-      val result = await(movementMessageService.saveMovementMessage(lrn, consignorId, consigneedId))
+      val result = await(movementMessageService.saveMovementMessage(successMovementMessage))
 
-      result mustBe successMovementMessage
+      result mustBe Right(successMovementMessage)
+    }
+
+    "throw an error" in {
+      when(mockMovementMessageRepository.saveMovementMessage(any))
+        .thenReturn(Future.failed(new RuntimeException("error")))
+
+      val result = await(movementMessageService.saveMovementMessage(MovementMessage(lrn, consignorId, Some(consigneedId))))
+
+      result.left.value mustBe MongoError("error")
     }
   }
-
-
 }

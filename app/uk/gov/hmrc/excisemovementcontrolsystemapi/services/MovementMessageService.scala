@@ -17,19 +17,23 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.Singleton
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.CreateMovementMessageResult
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MongoError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
 
 import javax.inject.Inject
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class MovementMessageService @Inject()(
-                                        movementMessageRepository: MovementMessageRepository
-                                      ) {
+  movementMessageRepository: MovementMessageRepository
+)(implicit ec: ExecutionContext) {
 
-  def saveMovementMessage(localReferenceNumber: String, consignorId: String, consigneeId: String): Future[CreateMovementMessageResult] = {
-    movementMessageRepository.saveMovementMessage(MovementMessage(localReferenceNumber, consignorId, consigneeId))
+  def saveMovementMessage(movementMessage: MovementMessage): Future[Either[MongoError, MovementMessage]] = {
+    movementMessageRepository.saveMovementMessage(movementMessage)
+      .map(_ => Right(movementMessage))
+      .recover{
+        case ex: Throwable => Left(MongoError(ex.getMessage))
+      }
   }
 }

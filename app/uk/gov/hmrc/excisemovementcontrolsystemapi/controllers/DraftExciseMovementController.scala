@@ -22,13 +22,12 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseIE815XmlAction, ValidateConsignorAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ExciseMovementResponse, MessageTypes, MovementMessageCreateFailedResult, MovementMessageCreatedResult}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ExciseMovementResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
 @Singleton
@@ -45,16 +44,20 @@ class DraftExciseMovementController @Inject()(
   def submit: Action[NodeSeq] =
     (authAction andThen xmlParser andThen consignorValidatorAction).async(parse.xml) {
       implicit request: DataRequest[NodeSeq] =>
-        movementMessageConnector.submitExciseMovement(request, MessageTypes.IE815Message).map {
+        movementMessageConnector.submitExciseMovement(request, MessageTypes.IE815Message).flatMap {
           case Right(_) => handleSuccess
-          case Left(error) => error
+          case Left(error) => Future.successful(error)
         }
     }
 
-  private def handleSuccess(implicit request: DataRequest[NodeSeq]): Result = {
-    Await.result(movementMessageService.saveMovementMessage(request.localRefNumber, request.consignorId, request.consigneeId.get).map({
-      case _: MovementMessageCreatedResult => Accepted(Json.toJson(ExciseMovementResponse(ACCEPTED, request.localRefNumber, request.consignorId)))
-      case error: MovementMessageCreateFailedResult => InternalServerError("An error occurred") //Exception logged in repository class already
-    }), appConfig.defaultAwaitTimeoutForMongoDb.seconds)
+
+  private def handleSuccess(implicit request: DataRequest[NodeSeq]): Future[Result] = {
+
+    movementMessageService.saveMovementMessage(request.movementMessage)
+      .flatMap( message =>
+        message match {
+          case Right(msg) => Future.successful(Accepted(Json.toJson(ExciseMovementResponse(ACCEPTED, msg.localReferenceNumber, msg.consignorId))))
+          case Left(error) => Future.successful(InternalServerError(error.message))
+      })
   }
 }
