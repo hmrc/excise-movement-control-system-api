@@ -86,6 +86,5 @@ class ParseIE815XmlActionSpec extends PlaySpec with EitherValues{
 
       result mustBe Left(BadRequest("Not valid XML or XML is empty"))
     }
-
   }
 }
