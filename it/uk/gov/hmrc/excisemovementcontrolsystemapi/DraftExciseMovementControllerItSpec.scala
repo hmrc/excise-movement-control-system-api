@@ -21,7 +21,6 @@ import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, ok, post, url
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.when
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
-import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -35,7 +34,7 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.WireMockServerSpec
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
@@ -50,6 +49,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   with AuthTestSupport
   with TestXml
   with WireMockServerSpec
+  with RepositoryTestStub
   with BeforeAndAfterAll
   with BeforeAndAfterEach {
 
@@ -57,7 +57,6 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   private val url = s"http://localhost:$port/customs/excise/movements"
   private val eisUrl = "/emcs/digital-submit-new-message/v1"
   private val consignorId = "GBWK002281023"
-  private lazy val movementMessageRepository = mock[MovementMessageRepository]
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 

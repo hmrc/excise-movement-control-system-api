@@ -18,13 +18,23 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi;
 
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
+import play.api.Application
 import play.api.http.Status.{NOT_FOUND, OK}
+import play.api.inject.bind
+import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
-import play.api.test.Helpers.{await, defaultAwaitTimeout};
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.RepositoryTestStub
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository;
 
-class DocumentationItSpec extends PlaySpec with GuiceOneServerPerSuite {
+class DocumentationItSpec extends PlaySpec with GuiceOneServerPerSuite with RepositoryTestStub {
 
   lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
+
+  override def fakeApplication(): Application =
+    GuiceApplicationBuilder()
+      .overrides(bind[MovementMessageRepository].to(movementMessageRepository))
+      .build()
 
   "get" should {
     "return the definition specification" in {

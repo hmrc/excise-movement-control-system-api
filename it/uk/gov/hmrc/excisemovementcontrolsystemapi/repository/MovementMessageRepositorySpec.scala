@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
+import org.mockito.Mockito.when
 import org.mongodb.scala.model.Filters
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.IntegrationPatience
@@ -25,6 +26,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
+import java.time.{Clock, Instant, ZoneId}
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 
@@ -35,11 +37,14 @@ class MovementMessageRepositorySpec extends PlaySpec
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val appConfig = mock[AppConfig]
-  protected override val repository = new MovementMessageRepository(mongoComponent, appConfig)
+  private val instant = Instant.now
+  private val stubClock: Clock = Clock.fixed(instant, ZoneId.systemDefault)
+
+  protected override val repository = new MovementMessageRepository(mongoComponent, appConfig, stubClock)
 
   "saveMovementMessage" should {
     "return insert a movement message" in {
-      val repository = new MovementMessageRepository(mongoComponent, appConfig)
+      when(appConfig.movementMessagesMongoExpirySeconds) thenReturn 1
 
       val result = repository.saveMovementMessage(MovementMessage("123", "345", Some("789"), None)).futureValue
       val insertedRecord = find(

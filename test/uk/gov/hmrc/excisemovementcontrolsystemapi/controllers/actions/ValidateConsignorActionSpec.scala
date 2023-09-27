@@ -24,7 +24,6 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
 
 import scala.concurrent.ExecutionContext
 
@@ -45,11 +44,11 @@ class ValidateConsignorActionSpec extends PlaySpec with TestXml with EitherValue
 
       val result = await(sut.refine(request))
 
-      result mustBe Right(DataRequest(
-        request,
-        MovementMessage("LRNQA20230909022221", "GBWK002281023", Some("GBWKQOZ8OVLYR")),
-        "123")
-      )
+      val dataRequest = result.toOption.get
+      dataRequest.internalId mustBe "123"
+      dataRequest.movementMessage.localReferenceNumber mustBe "LRNQA20230909022221"
+      dataRequest.movementMessage.consignorId mustBe "GBWK002281023"
+      dataRequest.movementMessage.consigneeId mustBe Some("GBWKQOZ8OVLYR")
     }
 
     "an error" when {
