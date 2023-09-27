@@ -18,7 +18,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseIE815XmlAction, ValidateConsignorAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest

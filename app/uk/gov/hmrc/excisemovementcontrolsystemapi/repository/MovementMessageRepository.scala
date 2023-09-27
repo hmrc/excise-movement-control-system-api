@@ -55,8 +55,6 @@ class MovementMessageRepository @Inject()
         IndexOptions()
           .name("create_on_ttl_idx")
           .expireAfter(appConfig.movementMessagesMongoExpirySeconds, TimeUnit.SECONDS)
-          .background(true)
-          .unique(false)
       )
     )
   ) with Logging {

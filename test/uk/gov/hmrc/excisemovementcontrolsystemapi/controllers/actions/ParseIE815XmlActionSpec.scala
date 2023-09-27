@@ -23,7 +23,6 @@ import org.scalatest.EitherValues
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.mvc.Results.BadRequest
-import play.api.mvc.Results.BadRequest
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import scalaxb.ParserFailure

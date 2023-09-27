@@ -170,7 +170,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
 
   }
 
-  private def submitExciseMovement(): Future[Either[Result, EISResponse]] = {
+  private def submitExciseMovement: Future[Either[Result, EISResponse]] = {
     connector.submitExciseMovement(DataRequest(
       FakeRequest(),
       MovementMessage("123", "123", None), "124"),
