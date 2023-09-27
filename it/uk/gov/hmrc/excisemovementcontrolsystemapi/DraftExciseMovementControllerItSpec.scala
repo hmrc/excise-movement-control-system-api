@@ -26,7 +26,7 @@ import play.api.http.HeaderNames
 import play.api.http.Status._
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.json.Json
+import play.api.libs.json.{JsValue, Json}
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
@@ -89,21 +89,28 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
     "return not found if EIS return not found" in {
       withAuthorizedTrader("GBWK002281023")
-      stubEISErrorResponse(NOT_FOUND, createEISErrorResponseBody("NOT_FOUND"))
+      val eisErrorResponse = createEISErrorResponseBodyAsJson("NOT_FOUND")
+      stubEISErrorResponse(NOT_FOUND,eisErrorResponse.toString() )
 
-      postRequest(IE815).status mustBe NOT_FOUND
+      val result = postRequest(IE815)
+
+      result.status mustBe NOT_FOUND
+
+      withClue("return the EIS error response") {
+        result.json mustBe Json.toJson(eisErrorResponse)
+      }
     }
 
     "return bad request if EIS return BAD_REQUEST" in {
       withAuthorizedTrader("GBWK002281023")
-      stubEISErrorResponse(BAD_REQUEST, createEISErrorResponseBody("BAD_REQUEST"))
+      stubEISErrorResponse(BAD_REQUEST, createEISErrorResponseBodyAsJson("BAD_REQUEST").toString())
 
       postRequest(IE815).status mustBe BAD_REQUEST
     }
 
     "return 500 if EIS return 500" in {
       withAuthorizedTrader("GBWK002281023")
-      stubEISErrorResponse(INTERNAL_SERVER_ERROR, createEISErrorResponseBody("INTERNAL_SERVER_ERROR"))
+      stubEISErrorResponse(INTERNAL_SERVER_ERROR, createEISErrorResponseBodyAsJson("INTERNAL_SERVER_ERROR").toString())
 
       postRequest(IE815).status mustBe INTERNAL_SERVER_ERROR
     }
@@ -158,14 +165,14 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     }
   }
 
-  private def createEISErrorResponseBody(message: String) = {
+  private def createEISErrorResponseBodyAsJson(message: String): JsValue = {
     Json.toJson(EISErrorResponse(
       LocalDateTime.of(2023, 12, 5, 12, 5, 6),
       message,
-      "bad request",
-      "debug bad request",
+      message,
+      s"debug $message",
       "123"
-    )).toString
+    ))
   }
 
   private def postRequest(xml: NodeSeq = IE815, contentType: String =  """application/vnd.hmrc.1.0+xml""") = {
@@ -179,7 +186,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
   private def stubEISSuccessfulRequest() = {
 
-    val response = EISResponse("ok", "message", "123")
+    val response = EISResponse("OK", "message", "123")
     wireMock.stubFor(
       post(eisUrl)
         .willReturn(ok().withBody(Json.toJson(response).toString()))

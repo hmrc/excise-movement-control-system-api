@@ -61,7 +61,7 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues{
       (500, InternalServerError("error")),
       (503, ServiceUnavailable("error")))) { case (statusCode, expectedResult) =>
       s"return $statusCode" when {
-        "$status code us returned from HttpResponse" in {
+        "$status code has returned from HttpResponse" in {
           val result = eisHttpParser.read(
             "ANY",
             "/foo",

@@ -16,12 +16,15 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
-import play.api.Logging
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
-
 object EISErrorMessage {
 
-  def apply(createDateTime: String, consignorId: String, message: String, correlationId: String, messageTypes: String): String = {
+  def apply(
+    createDateTime: String,
+    consignorId: String,
+    message: String,
+    correlationId: String,
+    messageTypes: String
+  ): String = {
     s"""EIS error with message: $message,
     | messageId: $correlationId,
     | correlationId: $correlationId,

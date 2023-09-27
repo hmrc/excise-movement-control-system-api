@@ -61,7 +61,14 @@ paths:
           content:
             application/vnd.hmrc.1.0+json:
               schema:
-                $ref: '#/components/schemas/ExciseMovement500Error'
+                $ref: '#/components/schemas/ExciseMovement503Error'
+        '503':
+          description: Downstream service is Unavailable
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ExciseMovement503Error'
+
       security:
         - userRestricted:
             - excise-movement-control-system
@@ -454,6 +461,9 @@ components:
       properties:
         dateTime:
           $ref: '#/components/schemas/DateTime'
+        status:
+          type: string
+          default: "BAD_REQUEST"
         message:
           type: string
           default: "Json validation failed"
@@ -474,6 +484,9 @@ components:
       properties:
         dateTime:
           $ref: '#/components/schemas/DateTime'
+        status:
+          type: string
+          default: "NOT_FOUND"
         message:
           type: string
           default: "Received error response from server"
@@ -494,6 +507,9 @@ components:
       properties:
         dateTime:
           $ref: '#/components/schemas/DateTime'
+        status:
+          type: string
+          default: "INTERNAL_SERVER_ERROR"
         message:
           type: string
           default: "Invalid JSON structure"
@@ -503,7 +519,30 @@ components:
         emcsCorrelationId:
           $ref: '#/components/schemas/CorrelationId'
       xml:
-        name: exciseMovement500Errors
+        name: exciseMovement500Error
+    ExciseMovement503Error:
+      type: object
+      required:
+        - dateTime
+        - message
+        - debugMessage
+        - emcsCorrelationId
+      properties:
+        dateTime:
+          $ref: '#/components/schemas/DateTime'
+        status:
+          type: string
+          default: "SERVICE_UNAVAILABLE"
+        message:
+          type: string
+          default: "CIRCUIT_BREAKER - 815_CB is OPEN"
+        debugMessage:
+          type: string
+          default: "CircuitBreaker '815_CB' is OPEN and does not permit further calls"
+        emcsCorrelationId:
+          $ref: '#/components/schemas/CorrelationId'
+      xml:
+        name: exciseMovement503Errors
     SubmitDraftMessageType:
       type: string
       description: The submit draft message type
