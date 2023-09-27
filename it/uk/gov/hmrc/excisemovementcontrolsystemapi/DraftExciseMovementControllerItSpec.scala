@@ -83,7 +83,12 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
       withClue("return the json response") {
         val responseBody = Json.parse(result.body).as[ExciseMovementResponse]
-        responseBody mustBe ExciseMovementResponse("Accepted", "LRNQA20230909022221", "GBWK002281023")
+        responseBody mustBe ExciseMovementResponse(
+          "Accepted",
+          "LRNQA20230909022221",
+          "GBWK002281023",
+          Some("GBWKQOZ8OVLYR")
+        )
       }
     }
 

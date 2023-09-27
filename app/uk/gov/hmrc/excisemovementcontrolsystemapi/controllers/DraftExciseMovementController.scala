@@ -47,6 +47,12 @@ class DraftExciseMovementController @Inject()(
     }
 
   private def handleSuccess(implicit request: DataRequest[NodeSeq]): Result = {
-    Accepted(Json.toJson(ExciseMovementResponse("Accepted", request.localRefNumber, request.consignorId)))
+    Accepted(Json.toJson(
+      ExciseMovementResponse(
+        "Accepted",
+        request.localRefNumber,
+        request.consignorId,
+        request.consigneeId))
+    )
   }
 }
