@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
+import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
@@ -25,7 +26,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Header.EmcsSource
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISRequest, EISResponse, Header}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, EISErrorResponse, EISRequest, EISResponse, Header}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import java.nio.charset.StandardCharsets

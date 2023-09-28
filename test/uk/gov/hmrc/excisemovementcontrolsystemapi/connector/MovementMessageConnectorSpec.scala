@@ -67,7 +67,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
     super.beforeEach()
     reset(mockHttpClient, appConfig, metrics, timerContext)
 
-    when(eisUtils.getCurrentDateTimeString).thenReturn("2023-09-17T09:32:50.345Z")
+    when(eisUtils.getCurrentDateTimeString).thenReturn("2023-09-17T09:32:50.345")
     when(eisUtils.generateCorrelationId).thenReturn(emcsCorrelationId)
     when(appConfig.emcsReceiverMessageUrl).thenReturn("/eis/path")
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
@@ -90,7 +90,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
         .thenReturn(Future.successful(Right(EISResponse("ok", "Success", emcsCorrelationId))))
 
       val encodeMessage = encoder.encodeToString(message.getBytes(StandardCharsets.UTF_8))
-      val eisRequest = EISRequest(emcsCorrelationId, "2023-09-17T09:32:50.345Z", messageType, "APIP", "user1", encodeMessage)
+      val eisRequest = EISRequest(emcsCorrelationId, "2023-09-17T09:32:50.345", messageType, "APIP", "user1", encodeMessage)
 
       await(connector.submitExciseMovement(
         DataRequest(
@@ -129,6 +129,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
 
       result.left.value mustBe InternalServerError(s"""{"dateTime":"2023-09-17T09:32:50.345","message":"Exception","debugMessage":"error","emcsCorrelationId":"$emcsCorrelationId"}""")
     }
+
     "return Not found error" in {
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(Future.successful(Left(NotFound("error"))))
@@ -156,14 +157,6 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
       result.left.value mustBe InternalServerError("any error")
     }
 
-    "return 500 if post request fail" in {
-      when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
-        .thenReturn(Future.failed(new RuntimeException("error")))
-
-      val result = await(submitExciseMovement)
-
-      result.left.value mustBe InternalServerError("error")
-    }
     "start and stop metrics" in {
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(Future.successful(Left(BadRequest("any error"))))

@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, ok, post, urlEqualTo}
+import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.when
 import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play.PlaySpec
@@ -27,7 +28,6 @@ import play.api.http.HeaderNames
 import play.api.http.Status._
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.json.Json
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
@@ -95,7 +95,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
       withClue("return the json response") {
         val responseBody = Json.parse(result.body).as[ExciseMovementResponse]
-        responseBody mustBe ExciseMovementResponse(ACCEPTED, "LRNQA20230909022221", consignorId)
+        responseBody mustBe ExciseMovementResponse("Accepted", "LRNQA20230909022221", consignorId)
       }
     }
 
@@ -115,14 +115,14 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
     "return bad request if EIS return BAD_REQUEST" in {
       withAuthorizedTrader("GBWK002281023")
-      stubEISErrorResponse(BAD_REQUEST, createEISErrorResponseBodyAsJson("BAD_REQUEST"))
+      stubEISErrorResponse(BAD_REQUEST, createEISErrorResponseBodyAsJson("BAD_REQUEST").toString())
 
       postRequest(IE815).status mustBe BAD_REQUEST
     }
 
     "return 500 if EIS return 500" in {
       withAuthorizedTrader(consignorId)
-      stubEISErrorResponse(INTERNAL_SERVER_ERROR, createEISErrorResponseBodyAsJson("INTERNAL_SERVER_ERROR"))
+      stubEISErrorResponse(INTERNAL_SERVER_ERROR, createEISErrorResponseBodyAsJson("INTERNAL_SERVER_ERROR").toString())
 
       postRequest(IE815).status mustBe INTERNAL_SERVER_ERROR
     }
@@ -181,7 +181,6 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     Json.toJson(EISErrorResponse(
       LocalDateTime.of(2023, 12, 5, 12, 5, 6),
       message,
-      "bad request",
       "debug bad request",
       "123"
     ))

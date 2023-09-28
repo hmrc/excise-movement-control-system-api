@@ -22,7 +22,6 @@ import java.time.LocalDateTime
 
 case class EISErrorResponse(
   dateTime: LocalDateTime,
-  status: String,
   message: String,
   debugMessage: String,
   emcsCorrelationId: String
