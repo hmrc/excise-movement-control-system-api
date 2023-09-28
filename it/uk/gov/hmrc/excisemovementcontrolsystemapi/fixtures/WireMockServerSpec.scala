@@ -24,7 +24,7 @@ trait WireMockServerSpec {
   val wireHost = "localhost"
   implicit lazy val wireMock: WireMockServer = new WireMockServer(options().dynamicPort())
 
-  def configureServer(): Map[String, Any] = {
+  def configureServer: Map[String, Any] = {
     Map(
       "microservice.services.eis.host" -> wireHost,
       "microservice.services.eis.port" -> wireMock.port()

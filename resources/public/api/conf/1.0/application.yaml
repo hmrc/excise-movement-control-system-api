@@ -42,12 +42,22 @@ paths:
             application/vnd.hmrc.1.0+json:
               schema:
                 $ref: '#/components/schemas/ExciseMovement'
+              example:
+                consignorId: "FP2iB8JaC6AWj"
+                localReferenceNumber: "{%"
+                consigneeId: "25COVY7BHMI3N4IJ4KV39"
+                status: "Accepted"
         '400':
           description: The submission of draft movement message has failed validation
           content:
             application/vnd.hmrc.1.0+json:
               schema:
-                $ref: '#/components/schemas/ExciseMovement400Error'
+                $ref: '#/components/schemas/ExciseMovementError'
+              example:
+                dateTime: "2021-12-17T09:30:47Z"
+                message: "Json validation failed"
+                debugMessage: "user is missing but it is required"
+                emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
         '403':
           description: Consignor ID is not in authorisation bearer token
         '404':
@@ -55,20 +65,34 @@ paths:
           content:
             application/vnd.hmrc.1.0+json:
               schema:
-                $ref: '#/components/schemas/ExciseMovement404Error'
+                $ref: '#/components/schemas/ExciseMovementError'
+              example:
+                dateTime: "2021-12-17T09:30:47Z"
+                message: "Received error response from server"
+                debugMessage: "Connection refused; nested exception is java.net.ConnectException: Connection refused"
+                emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
         '500':
           description: Internal server error
           content:
             application/vnd.hmrc.1.0+json:
               schema:
-                $ref: '#/components/schemas/ExciseMovement503Error'
+                $ref: '#/components/schemas/ExciseMovementError'
+              example:
+                dateTime: "2021-12-17T09:30:47Z"
+                message: "Invalid JSON structure"
+                debugMessage: "JSON parse error: Unexpected character"
+                emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
         '503':
           description: Downstream service is Unavailable
           content:
             application/vnd.hmrc.1.0+json:
               schema:
-                $ref: '#/components/schemas/ExciseMovement503Error'
-
+                $ref: '#/components/schemas/ExciseMovementError'
+              example:
+                dateTime: "2021-12-17T09:30:47Z"
+                message: "CIRCUIT_BREAKER - 815_CB is OPEN"
+                debugMessage: "CircuitBreaker '815_CB' is OPEN and does not permit further calls"
+                emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
       security:
         - userRestricted:
             - excise-movement-control-system
@@ -331,6 +355,9 @@ components:
     LocalReferenceNumber:
       type: string
       pattern: '.{1,22}'
+    ConsigneeId:
+      type: string
+      pattern: '[0-9]{2}[A-Z]{2}[A-Z0-9]{16}[0-9]'
     ExciseReferenceNumber:
       type: string
       pattern: '[A-Z]{2}[a-zA-Z0-9]{11}'
@@ -447,11 +474,15 @@ components:
           $ref: '#/components/schemas/ExciseReferenceNumber'
         localReferenceNumber:
           $ref: '#/components/schemas/LocalReferenceNumber'
+        consigneeId:
+          $ref: '#/components/schemas/ConsigneeId'
+        administrativeReferenceCode:
+          $ref: '#/components/schemas/AdministrativeReferenceCode'
         status:
           $ref: '#/components/schemas/MovementStatus'
       xml:
         name: exciseMovement
-    ExciseMovement400Error:
+    ExciseMovementError:
       type: object
       required:
         - dateTime
@@ -461,88 +492,14 @@ components:
       properties:
         dateTime:
           $ref: '#/components/schemas/DateTime'
-        status:
-          type: string
-          default: "BAD_REQUEST"
-        message:
-          type: string
-          default: "Json validation failed"
-        debugMessage:
-          type: string
-          default: "user is missing but it is required"
         emcsCorrelationId:
           $ref: '#/components/schemas/CorrelationId'
-      xml:
-        name: exciseMovement400Errors
-    ExciseMovement404Error:
-      type: object
-      required:
-        - dateTime
-        - message
-        - debugMessage
-        - emcsCorrelationId
-      properties:
-        dateTime:
-          $ref: '#/components/schemas/DateTime'
-        status:
-          type: string
-          default: "NOT_FOUND"
         message:
           type: string
-          default: "Received error response from server"
         debugMessage:
           type: string
-          default: "Connection refused; nested exception is java.net.ConnectException: Connection refused"
-        emcsCorrelationId:
-          $ref: '#/components/schemas/CorrelationId'
       xml:
-        name: exciseMovement404Errors
-    ExciseMovement500Error:
-      type: object
-      required:
-        - dateTime
-        - message
-        - debugMessage
-        - emcsCorrelationId
-      properties:
-        dateTime:
-          $ref: '#/components/schemas/DateTime'
-        status:
-          type: string
-          default: "INTERNAL_SERVER_ERROR"
-        message:
-          type: string
-          default: "Invalid JSON structure"
-        debugMessage:
-          type: string
-          default: "JSON parse error"
-        emcsCorrelationId:
-          $ref: '#/components/schemas/CorrelationId'
-      xml:
-        name: exciseMovement500Error
-    ExciseMovement503Error:
-      type: object
-      required:
-        - dateTime
-        - message
-        - debugMessage
-        - emcsCorrelationId
-      properties:
-        dateTime:
-          $ref: '#/components/schemas/DateTime'
-        status:
-          type: string
-          default: "SERVICE_UNAVAILABLE"
-        message:
-          type: string
-          default: "CIRCUIT_BREAKER - 815_CB is OPEN"
-        debugMessage:
-          type: string
-          default: "CircuitBreaker '815_CB' is OPEN and does not permit further calls"
-        emcsCorrelationId:
-          $ref: '#/components/schemas/CorrelationId'
-      xml:
-        name: exciseMovement503Errors
+        name: exciseMovementType
     SubmitDraftMessageType:
       type: string
       description: The submit draft message type

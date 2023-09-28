@@ -67,7 +67,6 @@ class MovementMessageConnector @Inject()
 
             val error = EISErrorResponse(
               LocalDateTime.parse(createdDateTime),
-              "INTERNAL_SERVER_ERROR",
               "Exception",
               ex.getMessage,
               correlationId

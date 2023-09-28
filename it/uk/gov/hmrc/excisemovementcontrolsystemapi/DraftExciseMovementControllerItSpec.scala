@@ -59,7 +59,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       .overrides(
         bind[AuthConnector].to(authConnector),
       )
-      .build
+      .build()
   }
 
   override def beforeAll(): Unit = {
@@ -173,7 +173,6 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   private def createEISErrorResponseBodyAsJson(message: String): JsValue = {
     Json.toJson(EISErrorResponse(
       LocalDateTime.of(2023, 12, 5, 12, 5, 6),
-      message,
       message,
       s"debug $message",
       "123"
