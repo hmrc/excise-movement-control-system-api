@@ -181,7 +181,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     Json.toJson(EISErrorResponse(
       LocalDateTime.of(2023, 12, 5, 12, 5, 6),
       message,
-      "debug bad request",
+      s"debug $message",
       "123"
     ))
   }
@@ -197,7 +197,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
   private def stubEISSuccessfulRequest() = {
 
-    val response = EISResponse("ok", "message", "123")
+    val response = EISResponse("OK", "message", "123")
     wireMock.stubFor(
       post(eisUrl)
         .willReturn(ok().withBody(Json.toJson(response).toString()))
