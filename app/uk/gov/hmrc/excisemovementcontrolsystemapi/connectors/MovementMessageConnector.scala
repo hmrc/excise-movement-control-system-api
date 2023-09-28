@@ -29,6 +29,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISRequest, EISRes
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import java.nio.charset.StandardCharsets
+import java.time.LocalDateTime
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -60,12 +61,16 @@ class MovementMessageConnector @Inject()
         .andThen { case _ => timer.stop() }
         .recover {
           case ex: Throwable =>
-            logger.warn(s"""EIS error with message: ${ex.getMessage}, messageId: $correlationId,
-                 | correlationId: $correlationId, messageType: $messageType, timestamp: $createdDateTime
-                 | exciseId: $consignorId""".stripMargin,
-              ex)
 
-            Left(InternalServerError(ex.getMessage))
+            logger.warn(EISErrorMessage(createdDateTime, consignorId, ex.getMessage, correlationId, messageType), ex)
+
+            val error = EISErrorResponse(
+              LocalDateTime.parse(createdDateTime),
+              "Exception",
+              ex.getMessage,
+              correlationId
+            )
+            Left(InternalServerError(Json.toJson(error).toString()))
     }
   }
 }

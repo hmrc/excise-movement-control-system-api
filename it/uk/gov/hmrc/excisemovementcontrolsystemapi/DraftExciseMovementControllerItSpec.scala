@@ -18,9 +18,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, ok, post, urlEqualTo}
-import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.when
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
+import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -29,6 +28,7 @@ import play.api.http.Status._
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
+import play.api.libs.json.{JsValue, Json}
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
@@ -50,8 +50,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   with TestXml
   with WireMockServerSpec
   with RepositoryTestStub
-  with BeforeAndAfterAll
-  with BeforeAndAfterEach {
+  with BeforeAndAfterAll {
 
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
   private val url = s"http://localhost:$port/customs/excise/movements"
@@ -69,7 +68,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         bind[AuthConnector].to(authConnector),
         bind[MovementMessageRepository].to(movementMessageRepository)
       )
-      .build
+      .build()
   }
 
   override def beforeAll(): Unit = {
@@ -101,22 +100,29 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     }
 
     "return not found if EIS return not found" in {
-      withAuthorizedTrader(consignorId)
-      stubEISErrorResponse(NOT_FOUND, createEISErrorResponseBody("NOT_FOUND"))
+      withAuthorizedTrader("GBWK002281023")
+      val eisErrorResponse = createEISErrorResponseBodyAsJson("NOT_FOUND")
+      stubEISErrorResponse(NOT_FOUND, eisErrorResponse.toString())
 
-      postRequest(IE815).status mustBe NOT_FOUND
+      val result = postRequest(IE815)
+
+      result.status mustBe NOT_FOUND
+
+      withClue("return the EIS error response") {
+        result.json mustBe Json.toJson(eisErrorResponse)
+      }
     }
 
     "return bad request if EIS return BAD_REQUEST" in {
       withAuthorizedTrader("GBWK002281023")
-      stubEISErrorResponse(BAD_REQUEST, createEISErrorResponseBody("BAD_REQUEST"))
+      stubEISErrorResponse(BAD_REQUEST, createEISErrorResponseBodyAsJson("BAD_REQUEST"))
 
       postRequest(IE815).status mustBe BAD_REQUEST
     }
 
     "return 500 if EIS return 500" in {
       withAuthorizedTrader(consignorId)
-      stubEISErrorResponse(INTERNAL_SERVER_ERROR, createEISErrorResponseBody("INTERNAL_SERVER_ERROR"))
+      stubEISErrorResponse(INTERNAL_SERVER_ERROR, createEISErrorResponseBodyAsJson("INTERNAL_SERVER_ERROR"))
 
       postRequest(IE815).status mustBe INTERNAL_SERVER_ERROR
     }
@@ -171,14 +177,14 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     }
   }
 
-  private def createEISErrorResponseBody(message: String) = {
+  private def createEISErrorResponseBodyAsJson(message: String): JsValue = {
     Json.toJson(EISErrorResponse(
       LocalDateTime.of(2023, 12, 5, 12, 5, 6),
       message,
       "bad request",
       "debug bad request",
       "123"
-    )).toString
+    ))
   }
 
   private def postRequest(xml: NodeSeq = IE815, contentType: String = """application/vnd.hmrc.1.0+xml""") = {

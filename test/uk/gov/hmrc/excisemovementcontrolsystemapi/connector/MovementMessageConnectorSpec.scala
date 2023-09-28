@@ -122,6 +122,13 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
       result.left.value mustBe BadRequest("any error")
     }
 
+    "return 500 if post request fail" in {
+      when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
+        .thenReturn(Future.failed(new RuntimeException("error")))
+      val result = await(submitExciseMovement)
+
+      result.left.value mustBe InternalServerError(s"""{"dateTime":"2023-09-17T09:32:50.345","message":"Exception","debugMessage":"error","emcsCorrelationId":"$emcsCorrelationId"}""")
+    }
     "return Not found error" in {
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(Future.successful(Left(NotFound("error"))))
@@ -181,7 +188,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
   def expectedHeader =
     Seq(HeaderNames.ACCEPT -> ContentTypes.JSON,
       HeaderNames.CONTENT_TYPE -> ContentTypes.JSON,
-      "dateTime" -> "2023-09-17T09:32:50.345Z",
+      "dateTime" -> "2023-09-17T09:32:50.345",
       "x-correlation-id" -> "1234566",
       "x-forwarded-host" -> "",
       "source" -> "APIP"

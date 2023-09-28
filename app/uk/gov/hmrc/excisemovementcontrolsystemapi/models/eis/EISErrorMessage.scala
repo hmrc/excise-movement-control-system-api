@@ -14,21 +14,23 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures
+package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
-import com.github.tomakehurst.wiremock.WireMockServer
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
+object EISErrorMessage {
 
-trait WireMockServerSpec {
-
-  val wireHost = "localhost"
-  implicit lazy val wireMock: WireMockServer = new WireMockServer(options().dynamicPort())
-
-  def configureServer: Map[String, Any] = {
-    Map(
-      "microservice.services.eis.host" -> wireHost,
-      "microservice.services.eis.port" -> wireMock.port()
-    )
+  def apply(
+    createDateTime: String,
+    consignorId: String,
+    message: String,
+    correlationId: String,
+    messageTypes: String
+  ): String = {
+    s"""EIS error with message: $message,
+    | messageId: $correlationId,
+    | correlationId: $correlationId,
+    | messageType: $messageTypes,
+    | timestamp: $createDateTime,
+    | exciseId: $consignorId""".stripMargin
   }
 
 }

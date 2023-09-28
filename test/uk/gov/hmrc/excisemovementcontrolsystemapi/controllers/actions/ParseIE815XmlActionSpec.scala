@@ -26,7 +26,7 @@ import play.api.mvc.Results.BadRequest
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import scalaxb.ParserFailure
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{ParsedXmlRequest, EnrolmentRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.XmlParser
 import uk.gov.hmrc.play.bootstrap.tools.Stubs.stubMessagesControllerComponents
 
@@ -86,6 +86,5 @@ class ParseIE815XmlActionSpec extends PlaySpec with EitherValues{
 
       result mustBe Left(BadRequest("Not valid XML or XML is empty"))
     }
-
   }
 }

@@ -19,9 +19,10 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 import play.api.libs.json.{Json, OFormat}
 
 case class ExciseMovementResponse(
-    status: Int,
+    status: String,
     localReferentNumber: String,
-    consignorId: String
+    consignorId: String,
+    consigneeId: Option[String]
 )
 
 object ExciseMovementResponse {

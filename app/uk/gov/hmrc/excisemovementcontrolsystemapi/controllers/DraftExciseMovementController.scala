@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
+import dispatch.Future
 import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
@@ -23,21 +24,23 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthActio
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ExciseMovementResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ExciseMovementResponse, MessageTypes}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import scala.xml.NodeSeq
 
 @Singleton
 class DraftExciseMovementController @Inject()(
-                                               authAction: AuthAction,
-                                               xmlParser: ParseIE815XmlAction,
-                                               consignorValidatorAction: ValidateConsignorAction,
-                                               movementMessageConnector: MovementMessageConnector,
-                                               movementMessageService: MovementMessageService,
-                                               cc: ControllerComponents
-                                             )(implicit ec: ExecutionContext) extends BackendController(cc) {
+  authAction: AuthAction,
+  xmlParser: ParseIE815XmlAction,
+  consignorValidatorAction: ValidateConsignorAction,
+  movementMessageConnector: MovementMessageConnector,
+  movementMessageService: MovementMessageService,
+  cc: ControllerComponents
+)(implicit ec: ExecutionContext) extends BackendController(cc) {
 
   def submit: Action[NodeSeq] =
     (authAction andThen xmlParser andThen consignorValidatorAction).async(parse.xml) {

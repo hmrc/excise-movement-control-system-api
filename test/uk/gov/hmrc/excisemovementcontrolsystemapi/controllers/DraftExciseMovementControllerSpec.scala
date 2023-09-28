@@ -138,6 +138,13 @@ class DraftExciseMovementControllerSpec
     actual.localReferenceNumber mustBe "123"
   }
 
+  private def verifyDataRequest(actual: DataRequest[_]) = {
+    actual.consignorId mustBe "123"
+    actual.consigneeId mustBe Some("456")
+    actual.localRefNumber mustBe "789"
+    actual.internalId mustBe "1234"
+  }
+
   private def createWithAuthActionFailure =
     new DraftExciseMovementController(
       FakeFailingAuthentication,
