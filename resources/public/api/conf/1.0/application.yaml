@@ -26,6 +26,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/AcceptHeader"
       requestBody:
+        description: The body for this request should be an XML body that conforms to the [IE815 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie815-v16-0.xsd)
         required: true
         content:
           application/vnd.hmrc.1.0+xml:
@@ -43,9 +44,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ExciseMovement'
               example:
-                consignorId: "FP2iB8JaC6AWj"
-                localReferenceNumber: "{%"
-                consigneeId: "25COVY7BHMI3N4IJ4KV39"
+                consignorId: "GBWK002281023"
+                consigneeId: "GBWKQOZ8OVLYR"
+                localReferenceNumber: "LRNQA20230909022221"
                 status: "Accepted"
         '400':
           description: The submission of draft movement message has failed validation
@@ -345,8 +346,7 @@ components:
       schema:
         type: string
         enum: [
-          "application/vnd.hmrc.1.0+json",
-          "application/vnd.hmrc.1.0+xml"
+          "application/vnd.hmrc.1.0+json"
         ]
   schemas:
     AdministrativeReferenceCode:
