@@ -42,15 +42,57 @@ paths:
             application/vnd.hmrc.1.0+json:
               schema:
                 $ref: '#/components/schemas/ExciseMovement'
-            application/vnd.hmrc.1.0+xml:
-              schema:
-                $ref: '#/components/schemas/ExciseMovement'
+              example:
+                consignorId: "FP2iB8JaC6AWj"
+                localReferenceNumber: "{%"
+                consigneeId: "25COVY7BHMI3N4IJ4KV39"
+                status: "Accepted"
         '400':
           description: The submission of draft movement message has failed validation
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ExciseMovementError'
+              example:
+                dateTime: "2021-12-17T09:30:47Z"
+                message: "Json validation failed"
+                debugMessage: "user is missing but it is required"
+                emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
         '403':
           description: Consignor ID is not in authorisation bearer token
+        '404':
+          description: Conection Refused
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ExciseMovementError'
+              example:
+                dateTime: "2021-12-17T09:30:47Z"
+                message: "Received error response from server"
+                debugMessage: "Connection refused; nested exception is java.net.ConnectException: Connection refused"
+                emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
         '500':
           description: Internal server error
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ExciseMovementError'
+              example:
+                dateTime: "2021-12-17T09:30:47Z"
+                message: "Invalid JSON structure"
+                debugMessage: "JSON parse error: Unexpected character"
+                emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+        '503':
+          description: Downstream service is Unavailable
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ExciseMovementError'
+              example:
+                dateTime: "2021-12-17T09:30:47Z"
+                message: "CIRCUIT_BREAKER - 815_CB is OPEN"
+                debugMessage: "CircuitBreaker '815_CB' is OPEN and does not permit further calls"
+                emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
       security:
         - userRestricted:
             - excise-movement-control-system
@@ -313,6 +355,9 @@ components:
     LocalReferenceNumber:
       type: string
       pattern: '.{1,22}'
+    ConsigneeId:
+      type: string
+      pattern: '.{1,16}'
     ExciseReferenceNumber:
       type: string
       pattern: '[A-Z]{2}[a-zA-Z0-9]{11}'
@@ -332,6 +377,14 @@ components:
         - Exporting
         - Accepted for export
         - Stopped
+    DateTime:
+      type: string
+      pattern: ^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[01]|0[1-9]|[12][0-9])T(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])(.[0-9]+)?(Z)?$
+      example: '2021-12-17T09:30:47Z'
+    CorrelationId:
+      type: string
+      format: uuid
+      example: 3e8dae97-b586-4cef-8511-68ac12da9028
     IE810:
       type: object
       description: Submit cancellation
@@ -413,24 +466,40 @@ components:
     ExciseMovement:
       type: object
       required:
-        - movementId
         - consignorId
         - localReferenceNumber
         - status
       properties:
-        movementId:
-          type: string
-          format: uuid
         consignorId:
           $ref: '#/components/schemas/ExciseReferenceNumber'
         localReferenceNumber:
           $ref: '#/components/schemas/LocalReferenceNumber'
+        consigneeId:
+          $ref: '#/components/schemas/ConsigneeId'
         administrativeReferenceCode:
           $ref: '#/components/schemas/AdministrativeReferenceCode'
         status:
           $ref: '#/components/schemas/MovementStatus'
       xml:
         name: exciseMovement
+    ExciseMovementError:
+      type: object
+      required:
+        - dateTime
+        - message
+        - debugMessage
+        - emcsCorrelationId
+      properties:
+        dateTime:
+          $ref: '#/components/schemas/DateTime'
+        emcsCorrelationId:
+          $ref: '#/components/schemas/CorrelationId'
+        message:
+          type: string
+        debugMessage:
+          type: string
+      xml:
+        name: exciseMovementType
     SubmitDraftMessageType:
       type: string
       description: The submit draft message type

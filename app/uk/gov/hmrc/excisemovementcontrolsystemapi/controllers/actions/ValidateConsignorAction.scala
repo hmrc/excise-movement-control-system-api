@@ -20,7 +20,7 @@ import com.google.inject.ImplementedBy
 import play.api.Logging
 import play.api.mvc.Results.Forbidden
 import play.api.mvc.{ActionRefiner, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{ParsedXmlRequest, DataRequest}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -29,11 +29,21 @@ import scala.concurrent.{ExecutionContext, Future}
 class ValidateConsignorActionImpl @Inject()(implicit val executionContext: ExecutionContext)
   extends ValidateConsignorAction
     with Logging {
-  override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
+  override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, DataRequest[A]]] = {
 
     val consignorId = request.ie815Message.Body.SubmittedDraftOfEADESAD.ConsignorTrader.TraderExciseNumber
-    if(request.erns.contains(consignorId))
-      Future.successful(Right(request))
+
+    if(request.request.erns.contains(consignorId)) {
+      val consigneeId = request.ie815Message.Body.SubmittedDraftOfEADESAD.ConsigneeTrader.flatMap(_.Traderid)
+      val localRefNumber = request.ie815Message.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber
+      Future.successful(Right(DataRequest(
+        request,
+        consignorId,
+        consigneeId,
+        localRefNumber,
+        request.internalId))
+      )
+    }
     else {
       logger.error("[ValidateErnAction] - Invalid Excise Number")
       Future.successful(Left(Forbidden("Invalid Excise Number")))
@@ -42,6 +52,6 @@ class ValidateConsignorActionImpl @Inject()(implicit val executionContext: Execu
 }
 
 @ImplementedBy(classOf[ValidateConsignorActionImpl])
-trait ValidateConsignorAction extends ActionRefiner[ParsedXmlRequest, ParsedXmlRequest ]{
-  def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]]
+trait ValidateConsignorAction extends ActionRefiner[ParsedXmlRequest, DataRequest ]{
+  def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, DataRequest[A]]]
 }

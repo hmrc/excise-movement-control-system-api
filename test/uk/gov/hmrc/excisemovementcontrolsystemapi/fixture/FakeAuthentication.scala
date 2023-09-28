@@ -47,5 +47,4 @@ trait FakeAuthentication {
 
     override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global
   }
-
 }

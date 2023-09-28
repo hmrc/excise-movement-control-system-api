@@ -14,19 +14,21 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.config
+package uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures
 
-import javax.inject.{Inject, Singleton}
-import play.api.Configuration
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
 
-@Singleton
-class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig) {
+trait WireMockServerSpec {
 
-  val appName: String = config.get[String]("appName")
+  val wireHost = "localhost"
+  implicit lazy val wireMock: WireMockServer = new WireMockServer(options().dynamicPort())
 
-  lazy val eisHost: String = servicesConfig.baseUrl("eis")
+  def configureServer: Map[String, Any] = {
+    Map(
+      "microservice.services.eis.host" -> wireHost,
+      "microservice.services.eis.port" -> wireMock.port()
+    )
+  }
 
-  def emcsReceiverMessageUrl: String =
-    s"$eisHost/emcs/digital-submit-new-message/v1"
 }

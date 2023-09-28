@@ -14,19 +14,23 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.config
+package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
-import javax.inject.{Inject, Singleton}
-import play.api.Configuration
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+object EISErrorMessage {
 
-@Singleton
-class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig) {
+  def apply(
+    createDateTime: String,
+    consignorId: String,
+    message: String,
+    correlationId: String,
+    messageTypes: String
+  ): String = {
+    s"""EIS error with message: $message,
+    | messageId: $correlationId,
+    | correlationId: $correlationId,
+    | messageType: $messageTypes,
+    | timestamp: $createDateTime,
+    | exciseId: $consignorId""".stripMargin
+  }
 
-  val appName: String = config.get[String]("appName")
-
-  lazy val eisHost: String = servicesConfig.baseUrl("eis")
-
-  def emcsReceiverMessageUrl: String =
-    s"$eisHost/emcs/digital-submit-new-message/v1"
 }

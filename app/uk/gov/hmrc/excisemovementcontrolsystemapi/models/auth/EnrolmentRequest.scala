@@ -31,3 +31,12 @@ case class ParsedXmlRequest[A]
   erns: Set[String],
   internalId: String
 ) extends WrappedRequest[A](request)
+
+case class DataRequest[A]
+(
+  request: Request[A],
+  consignorId: String,
+  consigneeId: Option[String],
+  localRefNumber: String,
+  internalId: String
+) extends WrappedRequest[A](request)

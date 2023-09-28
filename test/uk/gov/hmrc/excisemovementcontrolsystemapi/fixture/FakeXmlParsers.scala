@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
+import generated.IE815Type
 import play.api.mvc.Result
 import play.api.mvc.Results.BadRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ParseIE815XmlAction
@@ -24,7 +25,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{ParsedXmlRequest,
 import scala.concurrent.{ExecutionContext, Future}
 
 trait FakeXmlParsers {
-  object FakeSuccessIE815XMLParser extends ParseIE815XmlAction {
+  case class FakeSuccessIE815XMLParser(ieMessage: IE815Type) extends ParseIE815XmlAction {
     override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
       Future.successful(Right(ParsedXmlRequest(EnrolmentRequest(request, Set.empty, "123"),null, Set.empty, "123")))
     }

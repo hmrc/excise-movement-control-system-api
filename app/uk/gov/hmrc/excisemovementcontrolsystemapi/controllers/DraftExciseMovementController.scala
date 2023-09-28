@@ -17,30 +17,42 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import play.api.libs.json.Json
-import play.api.mvc.{Action, ControllerComponents}
+import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseIE815XmlAction, ValidateConsignorAction}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ExciseMovementResponse, MessageTypes}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import scala.xml.NodeSeq
 
 @Singleton
 class DraftExciseMovementController @Inject()(
-                                               authAction: AuthAction,
-                                               xmlParser: ParseIE815XmlAction,
-                                               consignorValidatorAction: ValidateConsignorAction,
-                                               movementMessageConnector: MovementMessageConnector,
-                                               cc: ControllerComponents
-                                             )(implicit ec: ExecutionContext) extends BackendController(cc) {
+  authAction: AuthAction,
+  xmlParser: ParseIE815XmlAction,
+  consignorValidatorAction: ValidateConsignorAction,
+  movementMessageConnector: MovementMessageConnector,
+  cc: ControllerComponents
+)(implicit ec: ExecutionContext) extends BackendController(cc) {
 
   def submit: Action[NodeSeq] =
-    (authAction andThen xmlParser andThen consignorValidatorAction).async(parse.xml) { implicit request: ParsedXmlRequest[NodeSeq] =>
-      // todo integrate controller
-      // todo store MovementDetails(LRN, ConsignorId, ConsigneeId) in mongodb
-      // movementMessageConnector.post("test-message", "IE815")
-      Future.successful(Ok(Json.parse("""{"message": "Draft Movement submitted successfully"}""")))
+    (authAction andThen xmlParser andThen consignorValidatorAction).async(parse.xml) {
+      implicit request: DataRequest[NodeSeq] =>
+        movementMessageConnector.submitExciseMovement(request, MessageTypes.IE815Message).map {
+          case Right(_) => handleSuccess
+          case Left(error) => error
+      }
     }
+
+  private def handleSuccess(implicit request: DataRequest[NodeSeq]): Result = {
+    Accepted(Json.toJson(
+      ExciseMovementResponse(
+        "Accepted",
+        request.localRefNumber,
+        request.consignorId,
+        request.consigneeId))
+    )
+  }
 }
