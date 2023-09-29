@@ -17,7 +17,6 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connector
 
 
-
 import com.codahale.metrics.Timer
 import com.kenshoo.play.metrics.Metrics
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
@@ -28,6 +27,7 @@ import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.{ContentTypes, HeaderNames}
+import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
 import play.api.test.FakeRequest
@@ -37,15 +37,16 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConn
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISRequest, EISResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISRequest, EISResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import java.nio.charset.StandardCharsets
+import java.time.LocalDateTime
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
-class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with EitherValues{
+class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with EitherValues {
 
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
   protected implicit val ec: ExecutionContext = ExecutionContext.global
@@ -95,7 +96,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
       await(connector.submitExciseMovement(
         DataRequest(
           FakeRequest().withBody(message),
-          MovementMessage("123","234", None),
+          MovementMessage("123", "234", None),
           "124"
         ),
         messageType)
@@ -127,7 +128,9 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
         .thenReturn(Future.failed(new RuntimeException("error")))
       val result = await(submitExciseMovement)
 
-      result.left.value mustBe InternalServerError(s"""{"dateTime":"2023-09-17T09:32:50.345","message":"Exception","debugMessage":"error","emcsCorrelationId":"$emcsCorrelationId"}""")
+      result.left.value mustBe InternalServerError(
+        Json.toJson(EISErrorResponse(LocalDateTime.parse("2023-09-17T09:32:50.345"),
+          "Exception", "error", emcsCorrelationId)).toString())
     }
 
     "return Not found error" in {
