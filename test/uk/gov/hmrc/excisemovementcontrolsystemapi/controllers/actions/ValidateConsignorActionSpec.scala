@@ -44,7 +44,11 @@ class ValidateConsignorActionSpec extends PlaySpec with TestXml with EitherValue
 
       val result = await(sut.refine(request))
 
-      result mustBe Right(DataRequest(request, "GBWK002281023", Some("GBWKQOZ8OVLYR"), "LRNQA20230909022221", "123"))
+      val dataRequest = result.toOption.get
+      dataRequest.internalId mustBe "123"
+      dataRequest.movementMessage.localReferenceNumber mustBe "LRNQA20230909022221"
+      dataRequest.movementMessage.consignorId mustBe "GBWK002281023"
+      dataRequest.movementMessage.consigneeId mustBe Some("GBWKQOZ8OVLYR")
     }
 
     "an error" when {

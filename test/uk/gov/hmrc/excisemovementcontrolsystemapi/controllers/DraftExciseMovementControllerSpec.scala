@@ -32,8 +32,12 @@ import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateConsignorAction, FakeXmlParsers}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MongoError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
+
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
 
@@ -49,6 +53,7 @@ class DraftExciseMovementControllerSpec
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val sys = ActorSystem("DraftExciseMovementControllerSpec")
   private val connector = mock[MovementMessageConnector]
+  private val movementMessageService = mock[MovementMessageService]
   private val cc = stubControllerComponents()
   private val ieMessage = scalaxb.fromXML[IE815Type](IE815)
   private val request = createRequest(IE815)
@@ -62,6 +67,8 @@ class DraftExciseMovementControllerSpec
 
   "submit" should {
     "return 200" in {
+      when(movementMessageService.saveMovementMessage(any))
+        .thenReturn(Future.successful(Right(MovementMessage("", "", None))))
       val result = createWithSuccessfulAuth.submit(request)
 
       status(result) mustBe ACCEPTED
@@ -69,6 +76,8 @@ class DraftExciseMovementControllerSpec
     }
 
     "send a request to EIS" in {
+      when(movementMessageService.saveMovementMessage(any))
+        .thenReturn(Future.successful(Right(MovementMessage("", "", None))))
       await(createWithSuccessfulAuth.submit(request))
 
       val captor = ArgCaptor[DataRequest[_]]
@@ -77,7 +86,7 @@ class DraftExciseMovementControllerSpec
         eqTo("IE815")
       )(any)
 
-      verifyDataRequest(captor.value)
+      verifyDataRequest(captor.value.movementMessage)
     }
 
     "return an error when EIS error" in {
@@ -112,13 +121,21 @@ class DraftExciseMovementControllerSpec
         status(result) mustBe FORBIDDEN
       }
     }
+
+    "return 500 when message saving movement fails" in {
+      when(movementMessageService.saveMovementMessage(any))
+        .thenReturn(Future.successful(Left(MongoError("error"))))
+
+      val result = createWithSuccessfulAuth.submit(request)
+
+      status(result) mustBe INTERNAL_SERVER_ERROR
+    }
   }
 
-  private def verifyDataRequest(actual: DataRequest[_]) = {
-    actual.consignorId mustBe "123"
-    actual.consigneeId mustBe Some("456")
-    actual.localRefNumber mustBe "789"
-    actual.internalId mustBe "1234"
+  private def verifyDataRequest(actual: MovementMessage) = {
+    actual.consignorId mustBe "456"
+    actual.consigneeId mustBe Some("789")
+    actual.localReferenceNumber mustBe "123"
   }
 
   private def createWithAuthActionFailure =
@@ -127,6 +144,7 @@ class DraftExciseMovementControllerSpec
       FakeSuccessIE815XMLParser(ieMessage),
       FakeSuccessfulValidateConsignorAction,
       connector,
+      movementMessageService,
       cc
     )
 
@@ -136,6 +154,7 @@ class DraftExciseMovementControllerSpec
       FakeFailureIE815XMLParser,
       FakeSuccessfulValidateConsignorAction,
       connector,
+      movementMessageService,
       cc
     )
 
@@ -145,6 +164,7 @@ class DraftExciseMovementControllerSpec
       FakeSuccessIE815XMLParser(ieMessage),
       FakeSuccessfulValidateConsignorAction,
       connector,
+      movementMessageService,
       cc
     )
 
@@ -154,10 +174,11 @@ class DraftExciseMovementControllerSpec
       FakeSuccessIE815XMLParser(ieMessage),
       FakeFailureValidateConsignorAction,
       connector,
+      movementMessageService,
       cc
     )
 
-   private def createRequest(body: Elem): FakeRequest[Elem] = {
+  private def createRequest(body: Elem): FakeRequest[Elem] = {
     FakeRequest("POST", "/foo")
       .withHeaders(FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> "application/xml")))
       .withBody(body)

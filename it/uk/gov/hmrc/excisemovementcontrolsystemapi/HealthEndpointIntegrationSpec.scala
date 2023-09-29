@@ -21,15 +21,19 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
+import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.RepositoryTestStub
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
 
 class HealthEndpointIntegrationSpec
   extends AnyWordSpec
-     with Matchers
-     with ScalaFutures
-     with IntegrationPatience
-     with GuiceOneServerPerSuite {
+    with Matchers
+    with ScalaFutures
+    with IntegrationPatience
+    with RepositoryTestStub
+    with GuiceOneServerPerSuite {
 
   private val wsClient = app.injector.instanceOf[WSClient]
   private val baseUrl  = s"http://localhost:$port"
@@ -37,6 +41,7 @@ class HealthEndpointIntegrationSpec
   override def fakeApplication(): Application =
     GuiceApplicationBuilder()
       .configure("metrics.enabled" -> false)
+      .overrides(bind[MovementMessageRepository].to(movementMessageRepository))
       .build()
 
   "service health endpoint" should {

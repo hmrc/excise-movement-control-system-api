@@ -26,7 +26,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Header.EmcsSource
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, EISErrorResponse, EISRequest, EISResponse, Header}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import java.nio.charset.StandardCharsets
@@ -52,7 +52,7 @@ class MovementMessageConnector @Inject()
     val createdDateTime = eisUtils.getCurrentDateTimeString
     val encodedMessage = eisUtils.createEncoder.encodeToString(request.body.toString.getBytes(StandardCharsets.UTF_8))
     val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", encodedMessage)
-    val consignorId = request.consignorId
+    val consignorId = request.movementMessage.consignorId
 
       httpClient.POST[EISRequest, Either[Result, EISResponse]](
         appConfig.emcsReceiverMessageUrl,

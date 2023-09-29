@@ -14,21 +14,12 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.config
+package uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures
 
-import javax.inject.{Inject, Singleton}
-import play.api.Configuration
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import org.scalatestplus.mockito.MockitoSugar.mock
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
 
-@Singleton
-class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig) {
+trait RepositoryTestStub {
+  protected lazy val movementMessageRepository = mock[MovementMessageRepository]
 
-  val appName: String = config.get[String]("appName")
-
-  val movementMessagesMongoExpirySeconds : Int = config.get[Int]("mongodb.movementMessagesMongoExpirySeconds")
-
-  lazy val eisHost: String = servicesConfig.baseUrl("eis")
-
-  def emcsReceiverMessageUrl: String =
-    s"$eisHost/emcs/digital-submit-new-message/v1"
 }
