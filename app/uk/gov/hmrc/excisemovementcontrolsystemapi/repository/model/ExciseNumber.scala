@@ -14,11 +14,18 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.models
+package uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model
 
-object MessageTypes {
+import play.api.libs.json.{Json, OFormat}
 
-  val IE815Message = "IE815"
-  val IENewMessages = "IE_NEW_MESSAGES"
+import java.time.Instant
 
+case class ExciseNumber(
+  exciseNumber: String,
+  localReferenceNumber: String,
+  lastUpdated: Instant = Instant.now
+)
+
+object ExciseNumber {
+  implicit val format: OFormat[ExciseNumber] = Json.format[ExciseNumber]
 }

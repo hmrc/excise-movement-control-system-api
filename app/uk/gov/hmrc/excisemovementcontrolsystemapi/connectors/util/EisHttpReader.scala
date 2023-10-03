@@ -18,22 +18,17 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util
 
 import play.api.Logging
 import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, SERVICE_UNAVAILABLE}
-import play.api.libs.json.{Json, Reads}
 import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, EISResponse}
-import uk.gov.hmrc.http.HttpReads.is2xx
 import uk.gov.hmrc.http.{HttpReads, HttpResponse}
-
-import scala.reflect.runtime.universe.{TypeTag, typeOf}
-import scala.util.{Failure, Success, Try}
 
 class EISHttpReader(
   correlationId: String,
   consignorId: String,
   createdDateTime: String
-) extends HttpReads[Either[Result, EISResponse]] with Logging {
+) extends HttpReads[Either[Result, EISResponse]] with EisResponseHandler with Logging {
 
     override def read(method: String, url: String, response: HttpResponse): Either[Result, EISResponse] = {
         val result = extractIfSuccessful[EISResponse](response)
@@ -56,17 +51,6 @@ class EISHttpReader(
       case NOT_FOUND => NotFound(message)
       case SERVICE_UNAVAILABLE => ServiceUnavailable(message)
       case _ => InternalServerError(message)
-    }
-  }
-
-  def extractIfSuccessful[T](response: HttpResponse)(implicit reads: Reads[T], tt: TypeTag[T]): Either[HttpResponse, T] =
-    if (is2xx(response.status)) Right(jsonAs[T](response.body))
-    else Left(response)
-
-  private def jsonAs[T](body: String)(implicit reads: Reads[T],  tt: TypeTag[T]): T = {
-    Try(Json.parse(body).as[T]) match {
-      case Success(obj) => obj
-      case Failure(exception) => throw new RuntimeException(s"Response body could not be read as type ${typeOf[T]}", exception)
     }
   }
 }

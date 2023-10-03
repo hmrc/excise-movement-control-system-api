@@ -14,12 +14,22 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures
+package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
-import org.scalatestplus.mockito.MockitoSugar.mock
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
+trait ScheduledJobState { e: ScheduledJob =>
+  sealed trait RunningOfJobSuccessful
 
-trait RepositoryTestStub {
-  protected lazy val movementMessageRepository = mock[MovementMessageRepository]
+  case object RunningOfJobSuccessful extends RunningOfJobSuccessful
 
+  case class RunningOfJobFailed(jobName: String, wrappedCause: Throwable) extends RuntimeException {
+
+    def asResult: Result = {
+      Result(
+        s"""The execution of scheduled job $jobName failed with error '${wrappedCause.getMessage}'.
+           |The next execution of the job will do retry."""
+          .stripMargin
+          .replace('\n', ' ')
+      )
+    }
+  }
 }

@@ -22,13 +22,13 @@ import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 import java.time.Instant
 
 case class MovementMessage(
-                            localReferenceNumber: String,
-                            consignorId: String,
-                            consigneeId: Option[String],
-                            administrativeReferenceCode: Option[String] = None,
-                            createdOn: Instant = Instant.now,
-                            messages: Option[Seq[Message]] = None
-                          )
+    localReferenceNumber: String,
+    consignorId: String,
+    consigneeId: Option[String],
+    administrativeReferenceCode: Option[String] = None,
+    lastUpdate: Instant = Instant.now,	
+    messages: Option[Seq[Message]] = None
+)
 
 case class Message(encodedMessage: String, messageType: String, createdOn: Instant = Instant.now)
 

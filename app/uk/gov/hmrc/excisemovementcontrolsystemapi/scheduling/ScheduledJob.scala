@@ -14,11 +14,23 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.models
+package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
-object MessageTypes {
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{ExecutionContext, Future}
 
-  val IE815Message = "IE815"
-  val IENewMessages = "IE_NEW_MESSAGES"
+trait ScheduledJob {
+  def name: String
+  def execute(implicit ec: ExecutionContext): Future[Result]
+  def isRunning: Future[Boolean]
 
+  case class Result(message: String)
+
+  def configKey: String = name
+
+  def initialDelay: FiniteDuration
+
+  def interval: FiniteDuration
+
+  override def toString() = s"$name after $initialDelay every $interval"
 }

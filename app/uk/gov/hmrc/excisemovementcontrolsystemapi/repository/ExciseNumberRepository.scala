@@ -16,60 +16,65 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
-import org.mongodb.scala.model.Filters.{and, equal, in, or}
-import org.mongodb.scala.model._
+import akka.NotUsed
+import akka.stream.scaladsl.Source
+import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.{Filters, IndexModel, IndexOptions, Indexes, ReplaceOptions}
 import play.api.Logging
 import play.api.libs.json.Json
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository.mongoIndexes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumber
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
 import java.time.{Clock, Instant}
 import java.util.concurrent.TimeUnit
-import javax.inject.{Inject, Singleton}
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 
-
-@Singleton
-class MovementMessageRepository @Inject()
+class ExciseNumberRepository @Inject()
 (
   mongo: MongoComponent,
   appConfig: AppConfig,
   clock: Clock
 )(implicit ec: ExecutionContext) extends
-  PlayMongoRepository[MovementMessage](
-    collectionName = "movements",
+  PlayMongoRepository[ExciseNumber](
+    collectionName = "excise-number-list",
     mongoComponent = mongo,
-    domainFormat = Json.format[MovementMessage],
-    indexes = mongoIndexes(appConfig.getMovementTTL),
+    domainFormat = Json.format[ExciseNumber],
+    indexes = mongoIndexes(appConfig.getExciseNumberListTTL),
     replaceIndexes = true
-  ) with Logging {
+  ) with Logging
+{
+  def save(exciseNumber: ExciseNumber): Future[Boolean] = {
+    val updatedExciseNumber = exciseNumber copy (lastUpdated = Instant.now(clock))
 
-  private def byId(id: String): Bson = Filters.equal("_id", id)
-
-  def keepAlive(id: String): Future[Boolean] =
     collection
-      .updateOne(filter = byId(id), update = Updates.set("lastUpdated", Instant.now(clock)))
-      .toFuture()
-      .map(_ => true)
-
-  def saveMovementMessage(movementMessage: MovementMessage): Future[Boolean] = {
-    collection.insertOne(movementMessage copy (lastUpdate = Instant.now(clock)))
+      .replaceOne(filter = Filters.and(
+        equal("exciseNumber", exciseNumber.exciseNumber),
+        equal("localReferenceNumber", exciseNumber.localReferenceNumber)),
+        replacement = updatedExciseNumber,
+        options = ReplaceOptions().upsert(true)
+      )
       .toFuture()
       .map(_ => true)
   }
 
-  def getMovementMessagesByLRNAndERNIn(lrn: String, erns: List[String]): Future[Seq[MovementMessage]] = {
-    collection.find(and(equal("localReferenceNumber", lrn),
-      or(in("consignorId", erns: _*), in("consigneeId", erns: _*)))).toFuture()
+
+  def getAll: Source[ExciseNumber, NotUsed] = {
+
+    Source.fromPublisher(
+      collection.find().toObservable()
+    )
+      .map(o => o)
+      .collect { case c => c }
   }
 
 }
 
-object MovementMessageRepository {
+object ExciseNumberRepository {
   def mongoIndexes(ttl: Duration): Seq[IndexModel] =
     Seq(
       IndexModel(
@@ -81,9 +86,9 @@ object MovementMessageRepository {
       IndexModel(
         Indexes.compoundIndex(
           Indexes.ascending("localReferenceNumber"),
-          Indexes.ascending("consignorId")
+          Indexes.ascending("exciseNumber")
         ),
-        IndexOptions().name("lrn_consignor_index")
+        IndexOptions().name("lrn_ern_index")
           .background(true)
           .unique(true)
       )

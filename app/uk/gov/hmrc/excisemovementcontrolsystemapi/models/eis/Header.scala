@@ -35,4 +35,13 @@ object Header {
       SourceName -> EmcsSource)
 
   }
+
+  def showNewMessage(emcsCorrelationId: String, createdDateTime: String) = {
+    Seq(
+      XForwardedHostName -> "uk.gov.hmrc.cdio.cbit.emcs.core.api",
+      XCorrelationIdName -> emcsCorrelationId,
+      SourceName -> EmcsSource,
+      DateTimeName -> createdDateTime
+    )
+  }
 }

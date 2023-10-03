@@ -20,23 +20,13 @@ import play.api.libs.json.{Json, OFormat}
 
 import java.time.LocalDateTime
 
-sealed trait ErrorResponse {
-  val message: String
-}
+case class ShowNewMessageResponse
+(
+    dateTime: LocalDateTime,
+    exciseRegistrationNumber: String,
+    message: String
+)
 
-case class MongoError(msg: String) extends ErrorResponse {
-  val message = s"Error from Mongo with message: $msg"
-}
-
-//todo: this may need to be deletes. Check if it is used
-case class ShowNewMessageErrorResponse(msg: String, dateTime: LocalDateTime) extends ErrorResponse {
-  val message = msg
-}
-
-object ShowNewMessageErrorResponse {
-  implicit val format: OFormat[ShowNewMessageErrorResponse] = Json.format[ShowNewMessageErrorResponse]
-}
-
-case class NotFoundError() extends ErrorResponse {
-  override val message: String = "No Message found for LRN and ERN combination"
+object ShowNewMessageResponse {
+  implicit val format: OFormat[ShowNewMessageResponse] = Json.format[ShowNewMessageResponse]
 }

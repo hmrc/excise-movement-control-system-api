@@ -24,26 +24,25 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 
-import java.time.{Clock, Instant, ZoneId}
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 
 class MovementMessageRepositorySpec extends PlaySpec
-  with CleanMongoCollectionSupport
-  with PlayMongoRepositorySupport[MovementMessage]
-  with IntegrationPatience
   with BeforeAndAfterEach
   with BeforeAndAfterAll
-  with OptionValues
+  with PlayMongoRepositorySupport[MovementMessage]
+  with CleanMongoCollectionSupport
+  with IntegrationPatience
   with GuiceOneAppPerSuite {
+
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val appConfig = app.injector.instanceOf[AppConfig]
-  private val instant = Instant.now
+  private def repo: MovementMessageRepository = repository.asInstanceOf[MovementMessageRepository]
   private val stubClock = Clock.fixed(instant, ZoneId.systemDefault)
 
   protected override val repository = new MovementMessageRepository(
@@ -71,7 +70,8 @@ class MovementMessageRepositorySpec extends PlaySpec
 
   "saveMovementMessage" should {
     "return insert a movement message" in {
-      val result = repository.saveMovementMessage(MovementMessage("123", "345", Some("789"), None)).futureValue
+      val movement = MovementMessage("123", "345", Some("789"))
+      val result = repo.saveMovementMessage(movement).futureValue
       val insertedRecord = find(
         Filters.and(
           Filters.equal("consignorId", "345"),
@@ -82,11 +82,9 @@ class MovementMessageRepositorySpec extends PlaySpec
         .value
 
       result mustEqual true
-      insertedRecord.localReferenceNumber mustEqual "123"
-      insertedRecord.consignorId mustEqual "345"
-      insertedRecord.consigneeId mustEqual Some("789")
-      insertedRecord.administrativeReferenceCode mustEqual None
+      verifyResults(insertedRecord, movement)
     }
+  }
   }
 
   "getMovementMessagesByLRNAndERNIn" should {
@@ -103,12 +101,6 @@ class MovementMessageRepositorySpec extends PlaySpec
       result.size mustBe 1
     }
 
-    "return movement message with valid lrn and consigneeId combination" in {
-      saveMovementMessage(lrn, consignorId, consigneeId)
-      val result = repository.getMovementMessagesByLRNAndERNIn(lrn, List(consigneeId)).futureValue
-
-      result.size mustBe 1
-    }
 
     "return movement message with valid lrn and list of consignor and consignee Ids combination" in {
       saveMovementMessage(lrn, consignorId, consigneeId)

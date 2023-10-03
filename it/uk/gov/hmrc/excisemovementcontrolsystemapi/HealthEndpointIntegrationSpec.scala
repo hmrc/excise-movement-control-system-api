@@ -24,7 +24,7 @@ import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.RepositoryTestStub
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.RepositoryTestStub
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
 
 class HealthEndpointIntegrationSpec

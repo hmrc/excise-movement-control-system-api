@@ -20,15 +20,32 @@ import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+import java.util.concurrent.TimeUnit.{MINUTES, SECONDS}
+import scala.concurrent.duration.{Duration, FiniteDuration}
+
 @Singleton
 class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig) {
 
   val appName: String = config.get[String]("appName")
 
-  val movementMessagesMongoExpirySeconds : Int = config.get[Int]("mongodb.movementMessagesMongoExpirySeconds")
-
   lazy val eisHost: String = servicesConfig.baseUrl("eis")
+
 
   def emcsReceiverMessageUrl: String =
     s"$eisHost/emcs/digital-submit-new-message/v1"
+
+  def showNewMessageUrl: String = s"$eisHost/apip-emcs/messages/v1/show-new-messages"
+
+
+  def getMovementTTL: Duration = Duration(config.get[String]("mongodb.movement.TTL"))
+  def getExciseNumberListTTL: Duration = Duration(config.get[String]("mongodb.excise-number-list.TTL"))
+
+  val interval = config.getOptional[String]("pollingNewMessageJob.interval").map(Duration.create(_).asInstanceOf[FiniteDuration])
+    .getOrElse(FiniteDuration(5, MINUTES))
+
+  val initialDelay = config.getOptional[String]("pollingNewMessageJob.initialDelay").map(Duration.create(_).asInstanceOf[FiniteDuration])
+    .getOrElse(FiniteDuration(60, SECONDS))
+
+  val parallelism = config.get[Int]("pollingNewMessageJob.parallelism")
+
 }

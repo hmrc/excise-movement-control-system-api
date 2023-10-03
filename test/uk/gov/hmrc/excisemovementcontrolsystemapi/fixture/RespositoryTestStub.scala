@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.models
+package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
-object MessageTypes {
+import org.scalatestplus.mockito.MockitoSugar.mock
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberRepository, MovementMessageRepository}
 
-  val IE815Message = "IE815"
-  val IENewMessages = "IE_NEW_MESSAGES"
+trait RepositoryTestStub {
+  protected lazy val movementMessageRepository = mock[MovementMessageRepository]
+  protected lazy val exciseNumberRepository = mock[ExciseNumberRepository]
 
 }
