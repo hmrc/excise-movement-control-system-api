@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model
 
+import play.api.libs.json.{Json, OFormat}
+
 import java.time.Instant
 
 case class MovementMessage(
@@ -23,5 +25,17 @@ case class MovementMessage(
                             consignorId: String,
                             consigneeId: Option[String],
                             administrativeReferenceCode: Option[String] = None,
-                            createdOn: Instant = Instant.now
+                            createdOn: Instant = Instant.now,
+                            messages: Option[Seq[Message]] = None
                           )
+
+case class Message(encodedMessage: String, messageType: String, createdOn: Instant = Instant.now)
+
+
+object MovementMessage {
+  implicit val format: OFormat[MovementMessage] = Json.format[MovementMessage]
+}
+
+object Message {
+  implicit val format: OFormat[Message] = Json.format[Message]
+}

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
-import dispatch.Future
+import org.mongodb.scala.model.Filters.{and, equal, in, or}
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.{IndexModel, IndexOptions}
 import play.api.Logging
@@ -29,7 +29,7 @@ import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import java.time.{Clock, Instant}
 import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class MovementMessageRepository @Inject()
@@ -63,5 +63,18 @@ class MovementMessageRepository @Inject()
     collection.insertOne(movementMessage copy (createdOn = Instant.now(clock)))
       .toFuture()
       .map(_ => true)
+  }
+
+  def getMovementMessagesForERN(ern: String): Future[Seq[MovementMessage]] = {
+    collection.find(or(equal("consignorId", ern), equal("consigneeId", ern))).toFuture()
+  }
+
+  def getMovementMessagesForERNList(erns: List[String]): Future[Seq[MovementMessage]] = {
+    collection.find(in("consignorId", erns: _*)).toFuture()
+  }
+
+  def getMovementMessagesByLRNAndERNIn(lrn: String, erns: List[String]): Future[Seq[MovementMessage]] = {
+    collection.find(and(equal("localReferenceNumber", lrn),
+      or(in("consignorId", erns: _*), in("consigneeId", erns: _*)))).toFuture()
   }
 }

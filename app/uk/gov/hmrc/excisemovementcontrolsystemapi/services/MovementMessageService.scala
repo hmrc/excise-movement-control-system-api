@@ -17,9 +17,9 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.Singleton
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MongoError
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MongoError, NotFoundError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, MovementMessage}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -36,4 +36,34 @@ class MovementMessageService @Inject()(
         case ex: Throwable => Left(MongoError(ex.getMessage))
       }
   }
+
+  def getMovementMessagesForERN(ern: String): Future[Either[MongoError, Seq[MovementMessage]]] = {
+    movementMessageRepository.getMovementMessagesForERN(ern).map(f => Right(f))
+      .recover {
+        case ex: Throwable => Left(MongoError(ex.getMessage))
+      }
+  }
+
+  def getMovementMessagesForERNList(erns: List[String]): Future[Either[MongoError, Seq[MovementMessage]]] = {
+    movementMessageRepository.getMovementMessagesForERNList(erns).map(f => Right(f))
+      .recover {
+        case ex: Throwable => Left(MongoError(ex.getMessage))
+      }
+  }
+
+  def getMovementMessagesByLRNAndERNIn(lrn: String, erns: List[String]): Future[Either[ErrorResponse, Seq[Message]]] = {
+    movementMessageRepository.getMovementMessagesByLRNAndERNIn(lrn, erns).map {
+        case Nil => Left(NotFoundError())
+        case f@_ :: Nil =>
+          f.head.messages match {
+            case Some(m) => Right(m)
+            case None => Right(Seq.empty)
+          }
+        case _ => Left(MongoError("Multiple movements found for lrn and ern combination"))
+      }
+      .recover {
+        case ex: Throwable => Left(MongoError(ex.getMessage))
+      }
+  }
+
 }
