@@ -70,7 +70,7 @@ class MovementMessageRepository @Inject()
   }
 
   def getMovementMessagesForERNList(erns: List[String]): Future[Seq[MovementMessage]] = {
-    collection.find(in("consignorId", erns: _*)).toFuture()
+    collection.find(or(in("consignorId", erns: _*), in("consigneeId", erns: _*))).toFuture()
   }
 
   def getMovementMessagesByLRNAndERNIn(lrn: String, erns: List[String]): Future[Seq[MovementMessage]] = {
