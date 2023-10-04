@@ -9,7 +9,7 @@
            targetNamespace="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/MovementForTraderData/3"  
            elementFormDefault="qualified"
            attributeFormDefault="unqualified">
-    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE934:V3.01" schemaLocation="v3.01/ie934.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE934:V3.01" schemaLocation="ie934.xsd"/>
 
     <xs:element name="MovementForTraderDataResponse">
         <xs:complexType>
