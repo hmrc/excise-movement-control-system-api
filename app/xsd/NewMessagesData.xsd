@@ -24,21 +24,21 @@
            xmlns:xs="http://www.w3.org/2001/XMLSchema"
            elementFormDefault="qualified"
            attributeFormDefault="unqualified">
-    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.01" schemaLocation="v3.01/ie801.xsd"/>
-    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE802:V3.01" schemaLocation="v3.01/ie802.xsd"/>
-    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE803:V3.01" schemaLocation="v3.01/ie803.xsd"/>
-    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE807:V3.01" schemaLocation="v3.01/ie807.xsd"/>
-    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE810:V3.01" schemaLocation="v3.01/ie810.xsd"/>
-    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE813:V3.01" schemaLocation="v3.01/ie813.xsd"/>
-    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE818:V3.01" schemaLocation="v3.01/ie818.xsd"/>
-    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE819:V3.01" schemaLocation="v3.01/ie819.xsd"/>
-    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE829:V3.01" schemaLocation="v3.01/ie829.xsd"/>
-    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE837:V3.01" schemaLocation="v3.01/ie837.xsd"/>
-    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.01" schemaLocation="v3.01/ie839.xsd"/>
-    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE840:V3.01" schemaLocation="v3.01/ie840.xsd"/>
-    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE871:V3.01" schemaLocation="v3.01/ie871.xsd"/>
-    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE881:V3.01" schemaLocation="v3.01/ie881.xsd"/>
-    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE905:V3.01" schemaLocation="v3.01/ie905.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.01" schemaLocation="ie801.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE802:V3.01" schemaLocation="ie802.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE803:V3.01" schemaLocation="ie803.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE807:V3.01" schemaLocation="ie807.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE810:V3.01" schemaLocation="ie810.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE813:V3.01" schemaLocation="ie813.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE818:V3.01" schemaLocation="ie818.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE819:V3.01" schemaLocation="ie819.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE829:V3.01" schemaLocation="ie829.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE837:V3.01" schemaLocation="ie837.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.01" schemaLocation="ie839.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE840:V3.01" schemaLocation="ie840.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE871:V3.01" schemaLocation="ie871.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE881:V3.01" schemaLocation="ie881.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE905:V3.01" schemaLocation="ie905.xsd"/>
     <xs:import namespace="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3" schemaLocation="ie704uk.xsd"/>
     
     <xs:element name="NewMessagesDataResponse">
