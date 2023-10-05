@@ -98,14 +98,14 @@ class PollingNewMessagesJobSpec
         "123",
         "any message"
       )
-      when(newMessageService.getNewMessages(any)(any))
+      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
         .thenReturn(Future.successful(Right(newMessageResponse)))
 
       val result = await(job.executeInMutex)
 
       result.message mustBe "polling-new-message Job ran successfully."
       val captor = ArgCaptor[String]
-      verify(newMessageService, times(3)).getNewMessages(captor.capture)(any)
+      verify(newMessageService, times(3)).getNewMessagesAndAcknowledge(captor.capture)(any)
 
       captor.values  mustBe Seq("1", "3", "4")
     }
@@ -122,7 +122,7 @@ class PollingNewMessagesJobSpec
 
     "not change status in the data base if show new message API has errors" in {
       when(exciseNumberRepository.getAll).thenReturn(createSource)
-      when(newMessageService.getNewMessages(any)(any))
+      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
         .thenReturn(Future.successful(Left(InternalServerError("error"))))
 
       val result = await(job.executeInMutex)
@@ -135,7 +135,7 @@ class PollingNewMessagesJobSpec
 
     "not change status in the database if show new message API throw" in {
       when(exciseNumberRepository.getAll).thenReturn(createSource)
-      when(newMessageService.getNewMessages(any)(any))
+      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
         .thenReturn(Future.failed(new RuntimeException("Error")))
 
       val result = await(job.executeInMutex)
@@ -153,6 +153,26 @@ class PollingNewMessagesJobSpec
       result.message mustBe "The execution of scheduled job polling-new-message failed with error 'size must be positive'. The next execution of the job will do retry."
       //todo: verify that the retrieved message is not saved to the db
       //verify(movementMessageRepository, never()).save(MovementMessage)
+    }
+
+    "process message and saved it tot the DB" in {
+      when(exciseNumberRepository.getAll).thenReturn(createSource)
+
+      val newMessageResponse = ShowNewMessageResponse(
+        LocalDateTime.of(2023, 5, 6, 9,10,13),
+        "123",
+        "any message"
+      )
+      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+        .thenReturn(Future.successful(Right(newMessageResponse)))
+
+      val result = await(job.executeInMutex)
+
+      result.message mustBe "polling-new-message Job ran successfully."
+      val captor = ArgCaptor[String]
+      verify(newMessageService, times(3)).getNewMessagesAndAcknowledge(captor.capture)(any)
+
+      captor.values  mustBe Seq("1", "3", "4")
     }
   }
 

@@ -45,7 +45,7 @@ class PollingNewMessagesJob @Inject()(
   override def initialDelay: FiniteDuration = appConfig.initialDelay
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  //todo: we may need to lock mongo db until we have finished the task
+  //todo: do we may need to lock mongo db until we have finished the task?
   //  lazy override val lockKeeper: LockService = LockService(mongoLockRepository, lockId = "RetryPushNotificationsJob", ttl = 1.hour)
 
 
@@ -65,16 +65,16 @@ class PollingNewMessagesJob @Inject()(
        .map(_ => RunningOfJobSuccessful)
        .recoverWith {
          case NonFatal(e) =>
-           logger.error("Failed to get all new message", e)
-           //todo: not sure if this
+           logger.error("Failed to get all new messages", e)
            Future.failed(RunningOfJobFailed(name, e))
        }
    }
 
   private def getNewMessages(exciseNumber: ExciseNumber)(implicit ec: ExecutionContext): Future[Unit] = {
-    newMessageService.getNewMessages(exciseNumber.exciseNumber).map {
+    newMessageService.getNewMessagesAndAcknowledge(exciseNumber.exciseNumber).map {
       case Right(_) => logger.info("store message to database")
-      case Left(error) => logger.warn(s"Could not get messages for ern: ${exciseNumber.exciseNumber} with message: ${error.body}. Will retry later")
+      case Left(error) =>
+        logger.warn(s"Could not get messages for ern: ${exciseNumber.exciseNumber} with message: ${error.body}. Will retry later")
     }.recover {
       case NonFatal(e) =>
         logger.warn(s"Could not get messages for ern: ${exciseNumber.exciseNumber} with message: ${e.getMessage}. Will retry later", e)

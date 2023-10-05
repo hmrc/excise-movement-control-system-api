@@ -16,17 +16,18 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
+import akka.NotUsed
 import akka.stream.scaladsl.Source
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import org.mockito.MockitoSugar.when
 import org.scalatestplus.play.PlaySpec
-import org.scalatestplus.play.guice.GuiceOneServerPerSuite
-import play.api.{Application, Configuration}
+import org.scalatestplus.play.guice.{GuiceOneServerPerSuite, GuiceOneServerPerTest}
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
+import play.api.{Application, Configuration}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{RepositoryTestStub, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptResponse, ShowNewMessageResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumber
@@ -40,12 +41,20 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
   with RepositoryTestStub {
 
   private val showNewMessageUrl = "/apip-emcs/messages/v1/show-new-messages"
-  private val messageReceiptUrl = "/apip-emcs/messages/v1/message-receipt"
+  private val messageReceiptUrl = "/apip-emcs/messages/v1/message-receipt?exciseregistrationnumber="
 
   override lazy val app: Application = {
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
     when(exciseNumberRepository.getAll).thenReturn(createSource)
+
+    //This need to be set before the scheduler start
+    stubShowNewMessageRequest("1")
+    stubShowNewMessageRequest("3")
+    stubShowNewMessageRequest("4")
+    stubMessageReceiptRequest("1")
+    stubMessageReceiptRequest("3")
+    stubMessageReceiptRequest("4")
 
     GuiceApplicationBuilder()
       .configure(configureServer)
@@ -60,10 +69,6 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
   "Scheduler" should {
 
     "start Polling show new message" in {
-      stubShowNewMessageRequest("1")
-      stubShowNewMessageRequest("3")
-      stubShowNewMessageRequest("4")
-
       //todo: check if we save to movement db if successful
 
       wireMock.verify(getRequestedFor(urlEqualTo("/apip-emcs/messages/v1/show-new-messages?exciseregistrationnumber=1")))
@@ -72,25 +77,16 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
     }
 
     "Should poll message receipt api" in {
-
-      stubShowNewMessageRequest("1")
-      stubShowNewMessageRequest("3")
-      stubShowNewMessageRequest("4")
-      stubMessageReceiptRequest("1")
-      stubMessageReceiptRequest("3")
-      stubMessageReceiptRequest("4")
-
-      wireMock.verify(getRequestedFor(urlEqualTo(s"$messageReceiptUrl?exciseregistrationnumber=1")))
-      wireMock.verify(getRequestedFor(urlEqualTo(s"$messageReceiptUrl?exciseregistrationnumber=3")))
-      wireMock.verify(getRequestedFor(urlEqualTo(s"$messageReceiptUrl?exciseregistrationnumber=4")))
-
+      Thread.sleep(1000)
+      wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}1")))
+      wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}3")))
+      wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))
     }
   }
 
   private def stubShowNewMessageRequest(exciseNumber: String) = {
     wireMock.stubFor(
-      get(showNewMessageUrl)
-        .withQueryParam("exciseregistrationnumber", equalTo(exciseNumber))
+      get(s"$showNewMessageUrl?exciseregistrationnumber=$exciseNumber")
         .willReturn(ok().withBody(Json.toJson(
           ShowNewMessageResponse(
             LocalDateTime.of(2023, 1, 2, 3, 4, 5),
@@ -103,8 +99,7 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
 
   private def stubMessageReceiptRequest(exciseNumber: String): StubMapping = {
     wireMock.stubFor(
-      get(messageReceiptUrl)
-        .withQueryParam("exciseregistrationnumber", equalTo(exciseNumber))
+      put(s"$messageReceiptUrl$exciseNumber")
         .willReturn(ok().withBody(Json.toJson(
           MessageReceiptResponse(
             LocalDateTime.of(2023, 1, 2, 3, 4, 5),
@@ -115,7 +110,7 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
     )
   }
 
-  private def createSource = {
+  private def createSource: Source[ExciseNumber, NotUsed] = {
     Source(
       Seq(
         ExciseNumber("1", "2"),

@@ -118,12 +118,6 @@ class ShowNewMessagesConnectorSpec
     }
   }
 
-  "receipt" should {
-    "" in {
-
-    }
-  }
-
   private def expectedHeader: Seq[(String, String)] = {
     Seq(
       "x-forwarded-host" -> "uk.gov.hmrc.cdio.cbit.emcs.core.api",

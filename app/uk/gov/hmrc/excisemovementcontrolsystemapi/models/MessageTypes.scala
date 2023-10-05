@@ -17,8 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
 object MessageTypes {
-
-  val IE815Message = "IE815"
-  val IENewMessages = "IE_NEW_MESSAGES"
-
+  val IE815Message: String = "IE815"
+  val IENewMessages: String = "IE_NEW_MESSAGES"
+  val IEMessageReceipt: String = "IE_MESSAGE_RECEIPT"
 }

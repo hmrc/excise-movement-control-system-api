@@ -31,8 +31,7 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-class ShowNewMessagesConnector @Inject()
-(
+class ShowNewMessagesConnector @Inject()(
   httpClient: HttpClient,
   appConfig: AppConfig,
   eisUtils: EisUtils,
@@ -67,9 +66,6 @@ class ShowNewMessagesConnector @Inject()
       }
   }
 
-//  def receipt(str: String) (implicit hc: HeaderCarrier): Future[Either[Result, MessageReceipt]] = {
-//
-//  }
 }
 
 //todo: this my be generalised for reuse. see EISHttpReader

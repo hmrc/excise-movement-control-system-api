@@ -30,12 +30,12 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
 
   lazy val eisHost: String = servicesConfig.baseUrl("eis")
 
-
   def emcsReceiverMessageUrl: String =
     s"$eisHost/emcs/digital-submit-new-message/v1"
 
   def showNewMessageUrl: String = s"$eisHost/apip-emcs/messages/v1/show-new-messages"
-
+  def messageReceiptUrl(ern: String): String =
+    s"$eisHost/apip-emcs/messages/v1/message-receipt?exciseregistrationnumber=$ern"
 
   def getMovementTTL: Duration = Duration(config.get[String]("mongodb.movement.TTL"))
   def getExciseNumberListTTL: Duration = Duration(config.get[String]("mongodb.excise-number-list.TTL"))
