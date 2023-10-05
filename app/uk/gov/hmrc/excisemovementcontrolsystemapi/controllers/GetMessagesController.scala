@@ -19,8 +19,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.NotFoundError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MongoError, NotFoundError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -45,7 +45,7 @@ class GetMessagesController @Inject()(
     movementMessageService.getMovementMessagesByLRNAndERNIn(lrn, ern).flatMap {
       case Right(msg) => Future.successful(Ok(Json.toJson(msg)))
       case Left(error: NotFoundError) => Future.successful(NotFound(error.message))
-      case Left(error: MongoError) => Future.successful(InternalServerError(error.message))
+      case Left(error) => Future.successful(InternalServerError(error.message))
     }
   }
 

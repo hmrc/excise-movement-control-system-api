@@ -145,7 +145,7 @@ paths:
       security:
         - userRestricted:
             - excise-movement-control-system
-  /customs/excise/movements/{movementId}/messages:
+  /customs/excise/movements/{localReferenceNumber}/messages:
     post:
       tags:
         - Movements
@@ -166,7 +166,7 @@ paths:
         **Note:** The consignor ID or consignee ID must match an excise reference number (ERN) in the bearer token that you use for API authentication. If it does not, a 403 Forbidden error will be thrown.
       operationId: postMessage
       parameters:
-        - name: movementId
+        - name: localReferenceNumber
           in: path
           description: The excise movement identifier
           required: true
@@ -226,12 +226,12 @@ paths:
     get:
       tags:
         - Movements
-      summary: Get all messages for an excise movement using the movementId
+      summary: Get all messages for an excise movement using the localReferenceNumber
       description: Get all messages for a specific excise movement. </br></br>There could be filter query parameters applied here to filter on date range, message type etc.</br></br>**Existing SOAP API equivalent:** GetNewMessages  </br></br>**Note:** The consignor ID or consignee ID must match an excise reference number (ERN) in the bearer token that you use for API authentication. If it does not, a 403 Forbidden error will be thrown.
       operationId: getAllMessages
       parameters:
         - $ref: "#/components/parameters/AcceptHeader"
-        - name: movementId
+        - name: localReferenceNumber
           in: path
           description: The excise movement identifier
           required: true

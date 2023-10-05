@@ -37,20 +37,6 @@ class MovementMessageService @Inject()(
       }
   }
 
-  def getMovementMessagesForERN(ern: String): Future[Either[MongoError, Seq[MovementMessage]]] = {
-    movementMessageRepository.getMovementMessagesForERN(ern).map(f => Right(f))
-      .recover {
-        case ex: Throwable => Left(MongoError(ex.getMessage))
-      }
-  }
-
-  def getMovementMessagesForERNList(erns: List[String]): Future[Either[MongoError, Seq[MovementMessage]]] = {
-    movementMessageRepository.getMovementMessagesForERNList(erns).map(f => Right(f))
-      .recover {
-        case ex: Throwable => Left(MongoError(ex.getMessage))
-      }
-  }
-
   def getMovementMessagesByLRNAndERNIn(lrn: String, erns: List[String]): Future[Either[ErrorResponse, Seq[Message]]] = {
     movementMessageRepository.getMovementMessagesByLRNAndERNIn(lrn, erns).map {
         case Nil => Left(NotFoundError())

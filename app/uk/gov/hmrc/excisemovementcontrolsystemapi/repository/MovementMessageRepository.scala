@@ -65,14 +65,6 @@ class MovementMessageRepository @Inject()
       .map(_ => true)
   }
 
-  def getMovementMessagesForERN(ern: String): Future[Seq[MovementMessage]] = {
-    collection.find(or(equal("consignorId", ern), equal("consigneeId", ern))).toFuture()
-  }
-
-  def getMovementMessagesForERNList(erns: List[String]): Future[Seq[MovementMessage]] = {
-    collection.find(or(in("consignorId", erns: _*), in("consigneeId", erns: _*))).toFuture()
-  }
-
   def getMovementMessagesByLRNAndERNIn(lrn: String, erns: List[String]): Future[Seq[MovementMessage]] = {
     collection.find(and(equal("localReferenceNumber", lrn),
       or(in("consignorId", erns: _*), in("consigneeId", erns: _*)))).toFuture()

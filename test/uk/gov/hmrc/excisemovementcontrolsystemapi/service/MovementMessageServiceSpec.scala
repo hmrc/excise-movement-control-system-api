@@ -66,49 +66,6 @@ class MovementMessageServiceSpec extends PlaySpec with EitherValues {
     }
   }
 
-  "getMessagesForMovement with ern list" should {
-    "return a list of MovementMessage" in {
-      val movementMessage = MovementMessage(lrn, consignorId, Some(consigneedId))
-      when(mockMovementMessageRepository.getMovementMessagesForERNList(any))
-        .thenReturn(Future.successful(Seq(movementMessage)))
-
-
-      val result = await(movementMessageService.getMovementMessagesForERNList(List(consignorId, consigneedId)))
-
-      result mustBe Right(Seq(movementMessage))
-    }
-    "throw an error" in {
-      when(mockMovementMessageRepository.getMovementMessagesForERNList(any))
-        .thenReturn(Future.failed(new RuntimeException("error")))
-
-      val result = await(movementMessageService.getMovementMessagesForERNList(List(consignorId, consigneedId)))
-
-      result.left.value mustBe MongoError("error")
-    }
-  }
-
-  "getMessagesForMovement with an ern" should {
-    "return a list of MovementMessage" in {
-      val movementMessage = MovementMessage(lrn, consignorId, Some(consigneedId))
-      when(mockMovementMessageRepository.getMovementMessagesForERN(any))
-        .thenReturn(Future.successful(Seq(movementMessage)))
-
-
-      val result = await(movementMessageService.getMovementMessagesForERN(consignorId))
-
-      result mustBe Right(Seq(movementMessage))
-    }
-
-    "throw an error" in {
-      when(mockMovementMessageRepository.getMovementMessagesForERN(any))
-        .thenReturn(Future.failed(new RuntimeException("error")))
-
-      val result = await(movementMessageService.getMovementMessagesForERN(consignorId))
-
-      result.left.value mustBe MongoError("error")
-    }
-  }
-
   "getMovementMessagesByLRNAndERNIn with valid LRN and ERN combination" should {
     "return  List of Messages" in {
       val messages = Seq(Message("123456", "IE801"), Message("ABCDE", "IE815"))
