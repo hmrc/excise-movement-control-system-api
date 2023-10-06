@@ -23,3 +23,7 @@ sealed trait ErrorResponse {
 case class MongoError(msg: String) extends ErrorResponse {
   val message = s"Error from Mongo with message: $msg"
 }
+
+case class NotFoundError() extends ErrorResponse {
+  override val message: String = "No Message found for LRN and ERN combination"
+}
