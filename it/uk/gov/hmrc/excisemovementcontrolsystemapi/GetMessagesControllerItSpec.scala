@@ -32,8 +32,7 @@ import play.api.libs.ws.WSClient
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{AuthTestSupport, RepositoryTestStub, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, MovementMessage}
 
@@ -87,7 +86,7 @@ class GetMessagesControllerItSpec extends PlaySpec
       when(movementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(MovementMessage("", "", None, None, now, Some(Seq(Message("", "", now)))))))
 
-      val result = getRequest()
+      val result = getRequest
 
       result.status mustBe OK
 
@@ -103,7 +102,7 @@ class GetMessagesControllerItSpec extends PlaySpec
       when(movementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq.empty))
 
-      val result = getRequest()
+      val result = getRequest
 
       result.status mustBe NOT_FOUND
     }
@@ -114,7 +113,7 @@ class GetMessagesControllerItSpec extends PlaySpec
       when(movementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
-      val result = getRequest()
+      val result = getRequest
 
       result.status mustBe INTERNAL_SERVER_ERROR
     }
@@ -129,7 +128,7 @@ class GetMessagesControllerItSpec extends PlaySpec
       when(movementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(list))
 
-      val result = getRequest()
+      val result = getRequest
 
       result.status mustBe INTERNAL_SERVER_ERROR
     }
@@ -137,18 +136,18 @@ class GetMessagesControllerItSpec extends PlaySpec
     "return forbidden (403) when there are no authorized ERN" in {
       withUnAuthorizedERN()
 
-      getRequest().status mustBe FORBIDDEN
+      getRequest.status mustBe FORBIDDEN
     }
 
     "return a Unauthorized (401) when no authorized trader" in {
       withUnauthorizedTrader(InternalError("A general auth failure"))
 
-      getRequest().status mustBe UNAUTHORIZED
+      getRequest.status mustBe UNAUTHORIZED
     }
 
   }
 
-  private def getRequest() = {
+  private def getRequest = {
     await(wsClient.url(url)
       .addHttpHeaders(
         HeaderNames.AUTHORIZATION -> "TOKEN"

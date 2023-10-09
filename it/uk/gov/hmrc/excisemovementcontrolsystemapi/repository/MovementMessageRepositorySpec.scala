@@ -18,16 +18,17 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import org.mongodb.scala.model.Filters
 import org.scalatest.concurrent.IntegrationPatience
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, OptionValues}
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
-import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 
+import java.time.{Clock, Instant, ZoneId}
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 
@@ -42,7 +43,7 @@ class MovementMessageRepositorySpec extends PlaySpec
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val appConfig = app.injector.instanceOf[AppConfig]
-  private def repo: MovementMessageRepository = repository.asInstanceOf[MovementMessageRepository]
+  private val instant = Instant.now
   private val stubClock = Clock.fixed(instant, ZoneId.systemDefault)
 
   protected override val repository = new MovementMessageRepository(
@@ -71,7 +72,7 @@ class MovementMessageRepositorySpec extends PlaySpec
   "saveMovementMessage" should {
     "return insert a movement message" in {
       val movement = MovementMessage("123", "345", Some("789"))
-      val result = repo.saveMovementMessage(movement).futureValue
+      val result = repository.saveMovementMessage(movement).futureValue
       val insertedRecord = find(
         Filters.and(
           Filters.equal("consignorId", "345"),
@@ -82,9 +83,12 @@ class MovementMessageRepositorySpec extends PlaySpec
         .value
 
       result mustEqual true
-      verifyResults(insertedRecord, movement)
+      insertedRecord.localReferenceNumber mustEqual "123"
+      insertedRecord.consignorId mustEqual "345"
+      insertedRecord.consigneeId mustEqual Some("789")
+      insertedRecord.administrativeReferenceCode mustEqual None
     }
-  }
+
   }
 
   "getMovementMessagesByLRNAndERNIn" should {
