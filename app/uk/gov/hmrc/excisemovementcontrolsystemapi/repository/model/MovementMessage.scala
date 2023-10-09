@@ -30,13 +30,16 @@ case class MovementMessage(
     messages: Option[Seq[Message]] = None
 )
 
-case class Message(encodedMessage: String, messageType: String, createdOn: Instant = Instant.now)
-
-
 object MovementMessage {
   implicit val instantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
   implicit val format: OFormat[MovementMessage] = Json.format[MovementMessage]
 }
+
+case class Message(
+  encodeMessage: String,
+  messageType: String,
+  received: Instant = Instant.now
+)
 
 object Message {
   implicit val format: OFormat[Message] = Json.format[Message]

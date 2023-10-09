@@ -28,7 +28,6 @@ import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.mvc.Results.InternalServerError
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.RepositoryTestStub
@@ -99,7 +98,7 @@ class PollingNewMessagesJobSpec
         "any message"
       )
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
-        .thenReturn(Future.successful(Right(newMessageResponse)))
+        .thenReturn(Future.successful(Some(newMessageResponse)))
 
       val result = await(job.executeInMutex)
 
@@ -123,7 +122,7 @@ class PollingNewMessagesJobSpec
     "not change status in the data base if show new message API has errors" in {
       when(exciseNumberRepository.getAll).thenReturn(createSource)
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
-        .thenReturn(Future.successful(Left(InternalServerError("error"))))
+        .thenReturn(Future.successful(None))
 
       val result = await(job.executeInMutex)
 
@@ -164,7 +163,7 @@ class PollingNewMessagesJobSpec
         "any message"
       )
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
-        .thenReturn(Future.successful(Right(newMessageResponse)))
+        .thenReturn(Future.successful(Some(newMessageResponse)))
 
       val result = await(job.executeInMutex)
 

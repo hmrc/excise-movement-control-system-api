@@ -28,17 +28,21 @@ import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.{Application, Configuration}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.GetNewMessagesXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{RepositoryTestStub, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptResponse, ShowNewMessageResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumber
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberRepository, MovementMessageRepository}
 
+import java.nio.charset.StandardCharsets
 import java.time.LocalDateTime
+import java.util.Base64
 
 class SchedulePollingNewMessagesItSpec extends PlaySpec
   with GuiceOneServerPerSuite
   with WireMockServerSpec
-  with RepositoryTestStub {
+  with RepositoryTestStub
+  with GetNewMessagesXml  {
 
   private val showNewMessageUrl = "/apip-emcs/messages/v1/show-new-messages"
   private val messageReceiptUrl = "/apip-emcs/messages/v1/message-receipt?exciseregistrationnumber="
@@ -91,7 +95,7 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
           ShowNewMessageResponse(
             LocalDateTime.of(2023, 1, 2, 3, 4, 5),
             exciseNumber,
-            "message"
+            Base64.getEncoder.encodeToString(newMessageXml.toString().getBytes(StandardCharsets.UTF_8)),
           )).toString()
         ))
     )

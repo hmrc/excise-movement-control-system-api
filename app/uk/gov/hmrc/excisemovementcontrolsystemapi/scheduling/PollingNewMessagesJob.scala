@@ -16,17 +16,18 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
+import akka.http.scaladsl.util.FastFuture.successful
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ShowNewMessageResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ExciseNumberRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumber
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.GetNewMessageService
 import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.Inject
-import scala.concurrent.Future.successful
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
@@ -71,14 +72,18 @@ class PollingNewMessagesJob @Inject()(
    }
 
   private def getNewMessages(exciseNumber: ExciseNumber)(implicit ec: ExecutionContext): Future[Unit] = {
-    newMessageService.getNewMessagesAndAcknowledge(exciseNumber.exciseNumber).map {
-      case Right(_) => logger.info("store message to database")
-      case Left(error) =>
-        logger.warn(s"Could not get messages for ern: ${exciseNumber.exciseNumber} with message: ${error.body}. Will retry later")
-    }.recover {
-      case NonFatal(e) =>
-        logger.warn(s"Could not get messages for ern: ${exciseNumber.exciseNumber} with message: ${e.getMessage}. Will retry later", e)
-        successful(())
+
+    newMessageService.getNewMessagesAndAcknowledge(exciseNumber.exciseNumber)
+      .flatMap(message => message.fold[Future[Unit]](successful(()))(m => saveToDB(m)))
+      .recover {
+        case NonFatal(e) =>
+          logger.warn(s"Could not get messages for ern: ${exciseNumber.exciseNumber} with message: ${e.getMessage}. Will retry later", e)
+          successful(())
     }
+  }
+
+  private def saveToDB(message: ShowNewMessageResponse): Future[Unit] = {
+    logger.warn("test")
+    successful(())
   }
 }

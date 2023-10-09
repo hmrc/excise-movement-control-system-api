@@ -30,7 +30,7 @@ import play.api.mvc.Results.InternalServerError
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageReceiptConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, MessageReceiptResponse, ShowNewMessageResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, MessageReceiptResponse}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
 import java.time.LocalDateTime

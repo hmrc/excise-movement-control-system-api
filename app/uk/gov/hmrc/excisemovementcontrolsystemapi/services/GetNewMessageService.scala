@@ -18,8 +18,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.ImplementedBy
 import play.api.Logging
-import play.api.mvc.Result
-import play.api.mvc.Results.NotFound
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageReceiptConnector, ShowNewMessagesConnector}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ShowNewMessageResponse
 import uk.gov.hmrc.http.HeaderCarrier
@@ -29,16 +27,19 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class GetNewMessageServiceImpl @Inject()(
     showNewMessageConnector: ShowNewMessagesConnector,
-    messageReceiptConnector: MessageReceiptConnector
+    messageReceiptConnector: MessageReceiptConnector,
+    showNewMessageParser: ShowNewMessageParser
 )(implicit val ec: ExecutionContext )extends GetNewMessageService with Logging {
 
   def getNewMessagesAndAcknowledge(
     exciseNumber: String
-  )(implicit hc: HeaderCarrier): Future[Either[Result, ShowNewMessageResponse]] = {
+  )(implicit hc: HeaderCarrier): Future[Option[ShowNewMessageResponse]] = {
     showNewMessageConnector.get(exciseNumber).flatMap(response =>
       response.fold(
-        error => Future.successful(Left(error)),
-        success => handleSuccess(exciseNumber, success)
+        _ => Future.successful(None),
+        success =>
+          //Todo store message into mongo. Do not store duplicated
+          handleSuccess(exciseNumber, success)
       )
     )
   }
@@ -50,15 +51,22 @@ class GetNewMessageServiceImpl @Inject()(
   // so that messages will be lost.
   private def handleSuccess(
     exciseNumber: String,
-    success: ShowNewMessageResponse
-  )(implicit hc: HeaderCarrier): Future[Either[Result,ShowNewMessageResponse]] = {
-    if (success.message.isEmpty) {
+    newMessageResponse: ShowNewMessageResponse
+  )(implicit hc: HeaderCarrier): Future[Option[ShowNewMessageResponse]] = {
+    //todo check CountOfMessagesAvailable as message return an xml with no messages
+
+    val hasMessage = showNewMessageParser.countOfMessagesAvailable(newMessageResponse.message) > 0
+
+    if(!hasMessage) {
       logger.warn(s"No more new message available for Excise Registration Number: $exciseNumber")
-      Future.successful(Left(NotFound(s"No more new message available for Excise Registration Number: $exciseNumber")))
+      Future.successful(None)
     } else {
+
+      // todo: Acknowledge all the time?
       messageReceiptConnector.put(exciseNumber).map {
-        case Right(_) => Right(success)
-        case Left(receiptError) => Left(receiptError)
+        case Right(_) => Some(newMessageResponse)
+        case Left(_) if hasMessage => Some(newMessageResponse)
+        case Left(_) => None
       }
     }
   }
@@ -66,5 +74,5 @@ class GetNewMessageServiceImpl @Inject()(
 
 @ImplementedBy(classOf[GetNewMessageServiceImpl])
 trait GetNewMessageService {
-  def getNewMessagesAndAcknowledge(exciseNumber: String)(implicit hc: HeaderCarrier): Future[Either[Result,ShowNewMessageResponse]]
+  def getNewMessagesAndAcknowledge(exciseNumber: String)(implicit hc: HeaderCarrier): Future[Option[ShowNewMessageResponse]]
 }

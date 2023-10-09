@@ -24,4 +24,5 @@ class EisUtils {
   def getCurrentDateTimeString: String = LocalDateTime.now().toString
   def generateCorrelationId: String = UUID.randomUUID().toString
   def createEncoder: Base64.Encoder = Base64.getEncoder
+  def createDecoder: Base64.Decoder = Base64.getDecoder
 }

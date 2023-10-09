@@ -18,14 +18,14 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.service
 
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, verify, verifyZeroInteractions, when}
-import org.scalatest.{BeforeAndAfterEach, EitherValues}
+import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound}
+import play.api.mvc.Results.{BadRequest, InternalServerError}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageReceiptConnector, ShowNewMessagesConnector}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptResponse, ShowNewMessageResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.GetNewMessageServiceImpl
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageServiceImpl, ShowNewMessageParser}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.LocalDateTime
@@ -33,8 +33,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class GetNewMessageServiceSpec
   extends PlaySpec
-    with BeforeAndAfterEach
-    with EitherValues {
+    with BeforeAndAfterEach {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.global
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -42,7 +41,8 @@ class GetNewMessageServiceSpec
   private val dateTime = LocalDateTime.of(2023, 3, 4, 5, 6, 7)
   private val showNewMessageConnector = mock[ShowNewMessagesConnector]
   private val messageReceiptConnector = mock[MessageReceiptConnector]
-  private val sut = new GetNewMessageServiceImpl(showNewMessageConnector, messageReceiptConnector)
+  private val showNewMessageParser = mock[ShowNewMessageParser]
+  private val sut = new GetNewMessageServiceImpl(showNewMessageConnector, messageReceiptConnector, showNewMessageParser)
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -51,6 +51,7 @@ class GetNewMessageServiceSpec
 
   "getNewMessages" should {
     "get messages for an excise number" in {
+      when(showNewMessageParser.countOfMessagesAvailable(any)).thenReturn(10)
       when(showNewMessageConnector.get(any)(any))
         .thenReturn(Future.successful(Right(ShowNewMessageResponse(dateTime, "123", "any message"))))
       when(messageReceiptConnector.put(any)(any))
@@ -59,7 +60,7 @@ class GetNewMessageServiceSpec
       val result = await(sut.getNewMessagesAndAcknowledge("123"))
 
       verify(showNewMessageConnector).get(eqTo("123"))(any)
-      result mustBe Right(ShowNewMessageResponse(dateTime, "123", "any message"))
+      result mustBe Some(ShowNewMessageResponse(dateTime, "123", "any message"))
 
       withClue("acknowledge the messages") {
         verify(messageReceiptConnector).put(eqTo("123"))(any)
@@ -67,20 +68,32 @@ class GetNewMessageServiceSpec
     }
 
     "not call the message-receipt api if no new message found" in {
+      when(showNewMessageParser.countOfMessagesAvailable(any)).thenReturn(0)
       when(showNewMessageConnector.get(any)(any))
         .thenReturn(Future.successful(Right(ShowNewMessageResponse(dateTime, "123", ""))))
       when(messageReceiptConnector.put(any)(any))
         .thenReturn(Future.successful(Right(MessageReceiptResponse(dateTime, "123", 10))))
 
-      val result = await(sut.getNewMessagesAndAcknowledge("123"))
-
-      result.left.value mustBe NotFound("No more new message available for Excise Registration Number: 123")
+      await(sut.getNewMessagesAndAcknowledge("123"))
 
       withClue("acknowledge the messages") {
         verifyZeroInteractions(messageReceiptConnector)
       }
     }
-    "return an error" when {
+
+    "return message if message-receipt fails" in {
+      when(showNewMessageParser.countOfMessagesAvailable(any)).thenReturn(10)
+      when(showNewMessageConnector.get(any)(any))
+        .thenReturn(Future.successful(Right(ShowNewMessageResponse(dateTime, "123", "any message"))))
+      when(messageReceiptConnector.put(any)(any))
+        .thenReturn(Future.successful(Left(BadRequest("error"))))
+
+      val result = await(sut.getNewMessagesAndAcknowledge("123"))
+
+      result mustBe Some(ShowNewMessageResponse(dateTime, "123", "any message"))
+    }
+
+    "return No messages" when {
       "show-new-message api return an error" in {
         when(showNewMessageConnector.get(any)(any))
           .thenReturn(Future.successful(Left(InternalServerError("error"))))
@@ -89,14 +102,15 @@ class GetNewMessageServiceSpec
 
         val result = await(sut.getNewMessagesAndAcknowledge("123"))
 
-        result mustBe Left(InternalServerError("error"))
+        result mustBe None
 
         withClue("message receipt API should not be called") {
           verifyZeroInteractions(messageReceiptConnector)
         }
       }
 
-      "when message-receipt api return an error" in {
+      "message-receipt fails and there are no message" in {
+        when(showNewMessageParser.countOfMessagesAvailable(any)).thenReturn(0)
         when(showNewMessageConnector.get(any)(any))
           .thenReturn(Future.successful(Right(ShowNewMessageResponse(dateTime, "123", "any message"))))
         when(messageReceiptConnector.put(any)(any))
@@ -104,7 +118,7 @@ class GetNewMessageServiceSpec
 
         val result = await(sut.getNewMessagesAndAcknowledge("123"))
 
-        result mustBe Left(BadRequest("error"))
+        result mustBe None
       }
     }
   }
