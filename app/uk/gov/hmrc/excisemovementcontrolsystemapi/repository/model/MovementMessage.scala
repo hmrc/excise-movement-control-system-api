@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.{Format, Json, OFormat}
+import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 import java.time.Instant
 
@@ -33,6 +34,7 @@ case class Message(encodedMessage: String, messageType: String, createdOn: Insta
 
 
 object MovementMessage {
+  implicit val instantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
   implicit val format: OFormat[MovementMessage] = Json.format[MovementMessage]
 }
 
