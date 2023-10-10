@@ -33,14 +33,26 @@ class MovementMessageService @Inject()(
     movementMessageRepository.get(lrn, List(exciseNumber)).map {
       case Some(movement) =>
 
-//        val me = movement.messages.flatMap(m => messages.filter(o => o.))
-//        for {
-//          cached <- movement.messages
-//          newMessage <- messages
-//        } yield {
-//          if(cached.hash != newMessage.hash) newMessage
-//        }
-        movementMessageRepository.save(movement copy(messages = messages))
+        if(movement.messages.isEmpty) {
+          movementMessageRepository.save(movement copy (messages = messages))
+        } else {
+
+          val mess = movement.messages ++ messages
+          val me = mess.distinctBy(m => m.hash)
+
+          val y = me.diff(movement.messages)
+//          val me = movement.messages.flatMap(m => {
+//            val l = messages.filterNot(o =>
+//              o.hash == m.hash
+//            )
+//            l
+//          }
+//          )
+
+
+            movementMessageRepository.save(movement copy (messages = me))
+
+        }
         true
       case None => false
     }
