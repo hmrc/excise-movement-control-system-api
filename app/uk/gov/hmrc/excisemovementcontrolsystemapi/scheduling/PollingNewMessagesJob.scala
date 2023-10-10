@@ -83,6 +83,8 @@ class PollingNewMessagesJob @Inject()(
   }
 
   private def saveToDB(message: ShowNewMessageResponse): Future[Unit] = {
+
+
     logger.warn("test")
     successful(())
   }

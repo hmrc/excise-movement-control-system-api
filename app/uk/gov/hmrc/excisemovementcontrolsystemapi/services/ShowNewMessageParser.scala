@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import generated.{MessagesOption, NewMessagesDataResponse}
 import scalaxb.DataRecord
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, MessageTypes1}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 
 import java.nio.charset.StandardCharsets
@@ -63,7 +63,7 @@ class ShowNewMessageParser @Inject()(eisUtils: EisUtils) {
       val xml = scalaxb.DataRecord.toXML(o, None, o.key, scalaxb.toScope(o.key -> namespace), true)
       val encodedXml = eisUtils.createEncoder.encodeToString(xml.toString().getBytes(StandardCharsets.UTF_8))
 
-      Message(encodedXml, MessageTypes1.withValue(o.key.getOrElse("unknown")).value)
+      Message(encodedXml, MessageTypes.withValue(o.key.getOrElse("unknown")).value)
     })
   }
 

@@ -51,21 +51,51 @@ class MovementMessageRepository @Inject()
 
   private def byId(id: String): Bson = Filters.equal("_id", id)
 
+  private def filterBy(localReferenceNumber: String, consignorId: String, consigneeId: Option[String]): Bson = {
+    val erns = Seq(consignorId) ++ consigneeId.fold[Seq[String]](Seq.empty)(o => Seq(o))
+
+    and(
+      equal("localReferenceNumber", localReferenceNumber),
+      or(in("consignorId", erns: _*),
+        in("consigneeId", erns: _*))
+    )
+  }
+
+  private def filterBy(localReferenceNumber: String, erns: List[String]): Bson = {
+    and(
+      equal("localReferenceNumber", localReferenceNumber),
+      or(in("consignorId", erns: _*),
+        in("consigneeId", erns: _*))
+    )
+  }
+
   def keepAlive(id: String): Future[Boolean] =
     collection
       .updateOne(filter = byId(id), update = Updates.set("lastUpdated", Instant.now(clock)))
       .toFuture()
       .map(_ => true)
 
-  def saveMovementMessage(movementMessage: MovementMessage): Future[Boolean] = {
-    collection.insertOne(movementMessage copy (lastUpdate = Instant.now(clock)))
-      .toFuture()
+
+  def save(movementMessage: MovementMessage): Future[Boolean] = {
+    val updatedMovement = movementMessage copy(lastUpdate = Instant.now(clock))
+
+    collection.replaceOne(
+      filter = filterBy(movementMessage.localReferenceNumber, movementMessage.consignorId, movementMessage.consigneeId),
+      replacement = updatedMovement,
+      options = ReplaceOptions().upsert(true)
+    ).toFuture()
       .map(_ => true)
   }
 
+  //todo: Check if this is right. Should the combinationof LRN and consigneeId or consignorId be unique?
   def getMovementMessagesByLRNAndERNIn(lrn: String, erns: List[String]): Future[Seq[MovementMessage]] = {
-    collection.find(and(equal("localReferenceNumber", lrn),
-      or(in("consignorId", erns: _*), in("consigneeId", erns: _*)))).toFuture()
+    collection.find(filterBy(lrn, erns)).toFuture()
+  }
+
+  def get(lrn: String, erns: List[String]): Future[Option[MovementMessage]] = {
+    collection
+      .find(filterBy(lrn, erns))
+      .headOption()
   }
 
 }

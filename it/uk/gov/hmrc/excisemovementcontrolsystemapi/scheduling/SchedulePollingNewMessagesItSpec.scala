@@ -19,11 +19,12 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import com.github.tomakehurst.wiremock.client.WireMock
-import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.client.WireMock.{getRequestedFor, ok, put, putRequestedFor, urlEqualTo}
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
-import org.mockito.MockitoSugar.when
+import org.mockito.ArgumentMatchersSugar.any
+import org.mockito.MockitoSugar.{times, verify, when}
 import org.scalatestplus.play.PlaySpec
-import org.scalatestplus.play.guice.{GuiceOneServerPerSuite, GuiceOneServerPerTest}
+import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
@@ -78,6 +79,11 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
       wireMock.verify(getRequestedFor(urlEqualTo("/apip-emcs/messages/v1/show-new-messages?exciseregistrationnumber=1")))
       wireMock.verify(getRequestedFor(urlEqualTo("/apip-emcs/messages/v1/show-new-messages?exciseregistrationnumber=3")))
       wireMock.verify(getRequestedFor(urlEqualTo("/apip-emcs/messages/v1/show-new-messages?exciseregistrationnumber=4")))
+
+      withClue("save the message to DB") {
+        verify(movementMessageRepository, times(3)).save(any)
+
+      }
     }
 
     "Should poll message receipt api" in {
@@ -90,7 +96,7 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
 
   private def stubShowNewMessageRequest(exciseNumber: String) = {
     wireMock.stubFor(
-      get(s"$showNewMessageUrl?exciseregistrationnumber=$exciseNumber")
+      WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=$exciseNumber")
         .willReturn(ok().withBody(Json.toJson(
           ShowNewMessageResponse(
             LocalDateTime.of(2023, 1, 2, 3, 4, 5),

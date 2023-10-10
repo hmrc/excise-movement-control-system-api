@@ -61,7 +61,6 @@ class GetNewMessageServiceImpl @Inject()(
       logger.warn(s"No more new message available for Excise Registration Number: $exciseNumber")
       Future.successful(None)
     } else {
-
       // todo: Acknowledge all the time?
       messageReceiptConnector.put(exciseNumber).map {
         case Right(_) => Some(newMessageResponse)

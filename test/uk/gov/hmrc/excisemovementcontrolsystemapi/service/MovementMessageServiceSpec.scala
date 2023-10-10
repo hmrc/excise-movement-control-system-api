@@ -18,12 +18,12 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.service
 
 import dispatch.Future
 import org.mockito.ArgumentMatchersSugar.any
-import org.mockito.MockitoSugar.when
-import org.scalatest.EitherValues
+import org.mockito.MockitoSugar.{reset, verify, verifyZeroInteractions, when}
+import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MongoError, NotFoundError}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageTypes, MongoError, NotFoundError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, MovementMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
@@ -32,7 +32,9 @@ import uk.gov.hmrc.http.HeaderCarrier
 import java.time.Instant
 import scala.concurrent.ExecutionContext
 
-class MovementMessageServiceSpec extends PlaySpec with EitherValues {
+class MovementMessageServiceSpec extends PlaySpec
+  with BeforeAndAfterEach
+  with EitherValues {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -43,12 +45,17 @@ class MovementMessageServiceSpec extends PlaySpec with EitherValues {
 
   private val lrn = "123"
   private val consignorId = "ABC"
-  private val consigneedId = "ABC123"
+  private val consigneeId = "ABC123"
+
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    reset(mockMovementMessageRepository)
+  }
 
   "saveMovementMessage" should {
     "return a MovementMessage" in {
-      val successMovementMessage = MovementMessage(lrn, consignorId, Some(consigneedId))
-      when(mockMovementMessageRepository.saveMovementMessage(any))
+      val successMovementMessage = MovementMessage(lrn, consignorId, Some(consigneeId))
+      when(mockMovementMessageRepository.save(any))
         .thenReturn(Future.successful(true))
 
       val result = await(movementMessageService.saveMovementMessage(successMovementMessage))
@@ -57,10 +64,10 @@ class MovementMessageServiceSpec extends PlaySpec with EitherValues {
     }
 
     "throw an error" in {
-      when(mockMovementMessageRepository.saveMovementMessage(any))
+      when(mockMovementMessageRepository.save(any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
-      val result = await(movementMessageService.saveMovementMessage(MovementMessage(lrn, consignorId, Some(consigneedId))))
+      val result = await(movementMessageService.saveMovementMessage(MovementMessage(lrn, consignorId, Some(consigneeId))))
 
       result.left.value mustBe MongoError("error")
     }
@@ -69,7 +76,7 @@ class MovementMessageServiceSpec extends PlaySpec with EitherValues {
   "getMovementMessagesByLRNAndERNIn with valid LRN and ERN combination" should {
     "return  List of Messages" in {
       val messages = Seq(Message("123456", "IE801"), Message("ABCDE", "IE815"))
-      val movementMessage = MovementMessage(lrn, consignorId, Some(consigneedId), None, Instant.now(), Some(messages))
+      val movementMessage = MovementMessage(lrn, consignorId, Some(consigneeId), None, messages, Instant.now())
       when(mockMovementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(movementMessage)))
 
@@ -80,7 +87,7 @@ class MovementMessageServiceSpec extends PlaySpec with EitherValues {
     }
 
     "return empty Message when Movement is found with no Messages" in {
-      val movementMessage = MovementMessage(lrn, consignorId, Some(consigneedId), None, Instant.now())
+      val movementMessage = MovementMessage(lrn, consignorId, Some(consigneeId), None, Seq.empty, Instant.now())
       when(mockMovementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(movementMessage)))
 
@@ -112,13 +119,55 @@ class MovementMessageServiceSpec extends PlaySpec with EitherValues {
 
   "getMovementMessagesByLRNAndERNIn with multiple movement messages for LRN and ERN combination" should {
     "return a MongoError" in {
-      val movementMessage = MovementMessage(lrn, consignorId, Some(consigneedId))
+      val movementMessage = MovementMessage(lrn, consignorId, Some(consigneeId))
       when(mockMovementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(movementMessage, movementMessage)))
 
       val result = await(movementMessageService.getMovementMessagesByLRNAndERNIn(lrn, List(consignorId)))
 
       result.left.value mustBe MongoError("Multiple movements found for lrn and ern combination")
+    }
+  }
+
+  "updateMessage" should {
+
+    "get the movement from the DB" in {
+
+      val message1 = Message("any message", MessageTypes.IE704.value)
+      val messages = Seq(message1)
+      when(mockMovementMessageRepository.get(any, any))
+        .thenReturn(Future.successful(Some(MovementMessage(lrn, consignorId, None, None, Seq.empty))))
+
+      await(movementMessageService.updateMessages(lrn, consignorId, messages))
+
+      verify(mockMovementMessageRepository).get(lrn, List(consignorId))
+    }
+
+    "save the movement with all message" in {
+      val instant = Instant.now
+      val message1 = Message("any message", MessageTypes.IE704.value)
+      val messages = Seq(message1)
+
+      when(mockMovementMessageRepository.get(any, any))
+        .thenReturn(Future.successful(Some(MovementMessage(lrn, consignorId, None, None, Seq.empty, instant))))
+
+      await(movementMessageService.updateMessages(lrn, consignorId, messages))
+
+      val movement = MovementMessage(lrn, consignorId, None, None, Seq(message1), instant)
+
+      verify(mockMovementMessageRepository).save(movement)
+    }
+
+    "do not save to DB when message is a duplicate" in {
+      val instant = Instant.now
+      val message1 = Message("any message", MessageTypes.IE704.value)
+
+      when(mockMovementMessageRepository.get(any, any))
+        .thenReturn(Future.successful(Some(MovementMessage(lrn, consignorId, None, None, Seq(message1), instant))))
+
+      await(movementMessageService.updateMessages(lrn, consignorId, Seq(message1)))
+
+      verifyZeroInteractions(mockMovementMessageRepository)
     }
   }
 

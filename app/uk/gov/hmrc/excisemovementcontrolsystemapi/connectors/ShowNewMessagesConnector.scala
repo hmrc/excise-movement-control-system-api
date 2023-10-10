@@ -53,7 +53,7 @@ class ShowNewMessagesConnector @Inject()(
       extractIfSuccessful[ShowNewMessageResponse](response) match {
         case Right(eisResponse) => Right(eisResponse)
         case Left(_) =>
-          logger.warn(EISErrorMessage(dateTime,ern, response.body, correlationId, MessageTypes.IENewMessages))
+          logger.warn(EISErrorMessage(dateTime,ern, response.body, correlationId, MessageTypes.IE_NEW_MESSAGES.value))
           //todo: we might we want return the error message of the EIS
           Left(InternalServerError(response.body))
       }
@@ -61,7 +61,7 @@ class ShowNewMessagesConnector @Inject()(
       .andThen {case _ => timer.stop() }
       .recover {
         case ex: Throwable =>
-          logger.warn(EISErrorMessage(dateTime,ern, ex.getMessage, correlationId, MessageTypes.IENewMessages))
+          logger.warn(EISErrorMessage(dateTime,ern, ex.getMessage, correlationId, MessageTypes.IE_NEW_MESSAGES.value))
           Left(InternalServerError(ex.getMessage))
       }
   }

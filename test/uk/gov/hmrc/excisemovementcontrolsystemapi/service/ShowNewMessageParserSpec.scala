@@ -40,13 +40,13 @@ class ShowNewMessageParserSpec
       val result = new ShowNewMessageParser(new EisUtils()).parseEncodedMessage1(encodeGetNewMessage)
 
       result.size mustBe 3
-      assertResults1(result, IE704, "ie704", 0)
-      assertResults1(result, IE801, "ie801", 1)
-      assertResults1(result, IE802, "ie802", 2)
+      assertResults(result, IE704, "IE704", 0)
+      assertResults(result, IE801, "IE801", 1)
+      assertResults(result, IE802, "IE802", 2)
     }
   }
 
-  private def assertResults1(actual: Seq[Message], IE704: Elem, messageType: String, index: Int) =
+  private def assertResults(actual: Seq[Message], IE704: Elem, messageType: String, index: Int) =
   {
     val actualMessage = new String(Base64.getDecoder.decode(actual(index).encodeMessage),
       StandardCharsets.UTF_8).replaceAll("[\\t\\n\\r\\s]+", "")

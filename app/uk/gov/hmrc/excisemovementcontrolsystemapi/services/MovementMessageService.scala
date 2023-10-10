@@ -28,9 +28,27 @@ import scala.concurrent.{ExecutionContext, Future}
 class MovementMessageService @Inject()(
                                         movementMessageRepository: MovementMessageRepository
                                       )(implicit ec: ExecutionContext) {
+  def updateMessages(lrn: String, exciseNumber: String, messages: Seq[Message]): Future[Boolean] = {
+
+    movementMessageRepository.get(lrn, List(exciseNumber)).map {
+      case Some(movement) =>
+
+//        val me = movement.messages.flatMap(m => messages.filter(o => o.))
+//        for {
+//          cached <- movement.messages
+//          newMessage <- messages
+//        } yield {
+//          if(cached.hash != newMessage.hash) newMessage
+//        }
+        movementMessageRepository.save(movement copy(messages = messages))
+        true
+      case None => false
+    }
+  }
+
 
   def saveMovementMessage(movementMessage: MovementMessage): Future[Either[MongoError, MovementMessage]] = {
-    movementMessageRepository.saveMovementMessage(movementMessage)
+    movementMessageRepository.save(movementMessage)
       .map(_ => Right(movementMessage))
       .recover {
         case ex: Throwable => Left(MongoError(ex.getMessage))
@@ -40,11 +58,7 @@ class MovementMessageService @Inject()(
   def getMovementMessagesByLRNAndERNIn(lrn: String, erns: List[String]): Future[Either[ErrorResponse, Seq[Message]]] = {
     movementMessageRepository.getMovementMessagesByLRNAndERNIn(lrn, erns).map {
         case Nil => Left(NotFoundError())
-        case f@_ :: Nil =>
-          f.head.messages match {
-            case Some(m) => Right(m)
-            case None => Right(Seq.empty)
-          }
+        case f@_ :: Nil => Right(f.head.messages)
         case _ => Left(MongoError("Multiple movements found for lrn and ern combination"))
       }
       .recover {

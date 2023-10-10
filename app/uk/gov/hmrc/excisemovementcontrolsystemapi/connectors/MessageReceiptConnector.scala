@@ -52,14 +52,14 @@ class MessageReceiptConnector @Inject()
         extractIfSuccessful[MessageReceiptResponse](response) match {
           case Right(eisResponse) => Right(eisResponse)
           case Left(error) =>
-            logger.error(EISErrorMessage(dateTime,ern, response.body, correlationId, MessageTypes.IEMessageReceipt))
+            logger.error(EISErrorMessage(dateTime,ern, response.body, correlationId, MessageTypes.IE_MESSAGE_RECEIPT.value))
             Left(InternalServerError(error.body))
         }
     }
       .andThen(_ => timer.stop())
       .recover {
         case ex: Throwable =>
-          logger.error(EISErrorMessage(dateTime,ern, ex.getMessage, correlationId, MessageTypes.IEMessageReceipt), ex)
+          logger.error(EISErrorMessage(dateTime,ern, ex.getMessage, correlationId, MessageTypes.IE_MESSAGE_RECEIPT.value), ex)
           Left(InternalServerError(ex.getMessage))
       }
   }

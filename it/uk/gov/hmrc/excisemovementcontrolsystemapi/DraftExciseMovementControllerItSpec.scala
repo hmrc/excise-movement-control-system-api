@@ -86,7 +86,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     "return 202" in {
       withAuthorizedTrader(consignorId)
       stubEISSuccessfulRequest()
-      when(movementMessageRepository.saveMovementMessage(any))
+      when(movementMessageRepository.save(any))
         .thenReturn(Future.successful(true))
 
       val result = postRequest(IE815)

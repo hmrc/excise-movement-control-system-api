@@ -84,7 +84,7 @@ class GetMessagesControllerItSpec extends PlaySpec
 
       val now = Instant.now
       when(movementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq(MovementMessage("", "", None, None, now, Some(Seq(Message("", "", now)))))))
+        .thenReturn(Future.successful(Seq(MovementMessage("", "", None, None, Seq(Message("", "", now)), now))))
 
       val result = getRequest
 
@@ -123,7 +123,7 @@ class GetMessagesControllerItSpec extends PlaySpec
 
       val now = Instant.now()
 
-      val movementMessage = MovementMessage("", "", None, None, now, Some(Seq(Message("", "", now))))
+      val movementMessage = MovementMessage("", "", None, None, Seq(Message("", "", now)), now)
       val list = Seq(movementMessage, movementMessage)
       when(movementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(list))

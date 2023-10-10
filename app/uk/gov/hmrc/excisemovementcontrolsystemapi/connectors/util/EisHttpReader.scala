@@ -44,7 +44,7 @@ class EISHttpReader(
     message: String,
   ): Result = {
 
-    logger.warn(EISErrorMessage(createdDateTime, consignorId, message, correlationId, MessageTypes.IE815Message))
+    logger.warn(EISErrorMessage(createdDateTime, consignorId, message, correlationId, MessageTypes.IE815.value))
 
     status match {
       case BAD_REQUEST => BadRequest(message)

@@ -119,7 +119,7 @@ class PollingNewMessagesJobSpec
     }
 
 
-    "not change status in the data base if show new message API has errors" in {
+    "not change status in the database if show new message API has errors" in {
       when(exciseNumberRepository.getAll).thenReturn(createSource)
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
         .thenReturn(Future.successful(None))

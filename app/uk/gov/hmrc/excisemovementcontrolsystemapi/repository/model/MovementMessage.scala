@@ -26,8 +26,8 @@ case class MovementMessage(
     consignorId: String,
     consigneeId: Option[String],
     administrativeReferenceCode: Option[String] = None,
-    lastUpdate: Instant = Instant.now,	
-    messages: Option[Seq[Message]] = None
+    messages: Seq[Message] = Seq.empty,
+    lastUpdate: Instant = Instant.now,
 )
 
 object MovementMessage {
@@ -35,12 +35,23 @@ object MovementMessage {
   implicit val format: OFormat[MovementMessage] = Json.format[MovementMessage]
 }
 
-case class Message(
+case class Message private(
+  hash: Int,
   encodeMessage: String,
   messageType: String,
-  received: Instant = Instant.now
+  received: Instant
 )
 
 object Message {
+
+
+  def apply(encodeMessage: String,
+            messageType: String,
+            received: Instant = Instant.now): Message = {
+
+    Message(encodeMessage.hashCode(), encodeMessage, messageType, received)
+
+  }
+
   implicit val format: OFormat[Message] = Json.format[Message]
 }
