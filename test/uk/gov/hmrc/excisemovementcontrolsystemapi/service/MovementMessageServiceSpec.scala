@@ -145,14 +145,13 @@ class MovementMessageServiceSpec extends PlaySpec
       verify(mockMovementMessageRepository).get(lrn, List(consignorId))
     }
 
-    "save the movement with all message" ignore {
+    "save the movement with all message" in {
       val instant = Instant.now
       val message1 = Message("any message", MessageTypes.IE704.value)
       val messages = Seq(message1)
 
       when(mockMovementMessageRepository.get(any, any))
         .thenReturn(Future.successful(Some(MovementMessage(lrn, consignorId, None, None, Seq.empty, instant))))
-
       await(movementMessageService.updateMessages(lrn, consignorId, messages))
 
       val movement = MovementMessage(lrn, consignorId, None, None, Seq(message1), instant)
@@ -160,20 +159,7 @@ class MovementMessageServiceSpec extends PlaySpec
       verify(mockMovementMessageRepository).save(eqTo(movement))
     }
 
-    "do not save to DB when message is a duplicate" ignore {
-      val instant = Instant.now
-      val message1 = Message("any message", MessageTypes.IE704.value)
-
-      when(mockMovementMessageRepository.get(any, any))
-        .thenReturn(Future.successful(Some(MovementMessage(lrn, consignorId, None, None, Seq(message1), instant))))
-
-      await(movementMessageService.updateMessages(lrn, consignorId, Seq(message1)))
-
-      verify(mockMovementMessageRepository, never()).save(any)
-    }
-
-
-    "do not save to DB when message is a duplicate bis" in {
+    "do not save to DB when message is a duplicate" in {
       val instant = Instant.now
       val message1 = Message("message1", MessageTypes.IE704.value)
       val message2 = Message("message2", MessageTypes.IE801.value)
@@ -188,7 +174,21 @@ class MovementMessageServiceSpec extends PlaySpec
       val expectedMovement = MovementMessage(lrn, consignorId, None, None, Seq(message1, message2, message3, message4), instant)
       verify(mockMovementMessageRepository).save(eqTo(expectedMovement))
     }
+
+    "do not save to DB when message has different content but the same message type" in {
+      val instant = Instant.now
+      val message1 = Message("message1", MessageTypes.IE704.value)
+      val message2 = Message("message2", MessageTypes.IE801.value)
+      val message3 = Message("message3", MessageTypes.IE801.value)
+      val message4 = Message("message4", MessageTypes.IE815.value)
+
+      when(mockMovementMessageRepository.get(any, any))
+        .thenReturn(Future.successful(Some(MovementMessage(lrn, consignorId, None, None, Seq(message1, message2), instant))))
+
+      await(movementMessageService.updateMessages(lrn, consignorId, Seq(message3, message4)))
+
+      val expectedMovement = MovementMessage(lrn, consignorId, None, None, Seq(message1, message2, message3, message4), instant)
+      verify(mockMovementMessageRepository).save(eqTo(expectedMovement))
+    }
   }
-
-
 }

@@ -31,29 +31,11 @@ class MovementMessageService @Inject()(
   def updateMessages(lrn: String, exciseNumber: String, messages: Seq[Message]): Future[Boolean] = {
 
     movementMessageRepository.get(lrn, List(exciseNumber)).map {
-      case Some(movement) =>
+      case Some(movement) => val allMessages = movement.messages ++ messages.diff(movement.messages)
 
-        if(movement.messages.isEmpty) {
-          movementMessageRepository.save(movement copy (messages = messages))
-        } else {
+      movementMessageRepository.save(movement copy (messages = allMessages))
 
-          val mess = movement.messages ++ messages
-          val me = mess.distinctBy(m => m.hash)
-
-          val y = me.diff(movement.messages)
-//          val me = movement.messages.flatMap(m => {
-//            val l = messages.filterNot(o =>
-//              o.hash == m.hash
-//            )
-//            l
-//          }
-//          )
-
-
-            movementMessageRepository.save(movement copy (messages = me))
-
-        }
-        true
+      true
       case None => false
     }
   }
