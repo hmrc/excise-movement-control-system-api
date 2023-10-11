@@ -21,7 +21,7 @@ import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 import java.time.Instant
 
-case class MovementMessage(
+case class Movement(
     localReferenceNumber: String,
     consignorId: String,
     consigneeId: Option[String],
@@ -30,9 +30,9 @@ case class MovementMessage(
     lastUpdate: Instant = Instant.now,
 )
 
-object MovementMessage {
+object Movement {
   implicit val instantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
-  implicit val format: OFormat[MovementMessage] = Json.format[MovementMessage]
+    implicit val format: OFormat[Movement] = Json.format[Movement]
 }
 
 case class Message private(
@@ -43,14 +43,12 @@ case class Message private(
 )
 
 object Message {
-
-
-  def apply(encodeMessage: String,
-            messageType: String,
-            received: Instant = Instant.now): Message = {
+  def apply(
+    encodeMessage: String,
+    messageType: String,
+    received: Instant = Instant.now): Message = {
 
     Message(encodeMessage.hashCode(), encodeMessage, messageType, received)
-
   }
 
   implicit val format: OFormat[Message] = Json.format[Message]

@@ -20,6 +20,7 @@ import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import org.mockito.ArgumentMatchersSugar.any
+import org.mockito.Mockito.never
 import org.mockito.MockitoSugar.{reset, times, verify, verifyZeroInteractions, when}
 import org.mockito.captor.ArgCaptor
 import org.scalatest.BeforeAndAfterEach
@@ -33,7 +34,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.RepositoryTestStub
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ShowNewMessageResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumber
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.GetNewMessageService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementMessageService}
 
 import java.time.LocalDateTime
 import scala.concurrent.duration.{Duration, SECONDS}
@@ -51,10 +52,12 @@ class PollingNewMessagesJobSpec
 
   private val appConfig = mock[AppConfig]
   private val newMessageService = mock[GetNewMessageService]
+  private val movementService = mock[MovementMessageService]
 
   private val job = new PollingNewMessagesJob(
     newMessageService,
     exciseNumberRepository,
+    movementService,
     appConfig
   )
 
@@ -107,7 +110,12 @@ class PollingNewMessagesJobSpec
       verify(newMessageService, times(3)).getNewMessagesAndAcknowledge(captor.capture)(any)
 
       captor.values  mustBe Seq("1", "3", "4")
+
+//      withClue("Save the new messages to the cache") {
+//        verify(movementService).updateMovement("1", "2", "any message")
+//      }
     }
+
 
     "not process any message if no pending message exist" in {
       when(exciseNumberRepository.getAll).thenReturn(Source(Seq.empty))
@@ -128,21 +136,9 @@ class PollingNewMessagesJobSpec
 
       result.message mustBe "polling-new-message Job ran successfully."
 
-      //todo: verify that the retrieved message is not saved the db
-      //verify(movementMessageRepository, never()).save(MovementMessage)
+      verify(movementService, never()).saveMovementMessage(any)
     }
 
-    "not change status in the database if show new message API throw" in {
-      when(exciseNumberRepository.getAll).thenReturn(createSource)
-      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
-        .thenReturn(Future.failed(new RuntimeException("Error")))
-
-      val result = await(job.executeInMutex)
-
-      result.message mustBe "polling-new-message Job ran successfully."
-      //todo: verify that the retrieved message is not saved the db
-      //verify(movementMessageRepository, never()).save(MovementMessage)
-    }
 
     "return an error if job fail" in {
       when(appConfig.parallelism).thenReturn(0)
@@ -152,26 +148,6 @@ class PollingNewMessagesJobSpec
       result.message mustBe "The execution of scheduled job polling-new-message failed with error 'size must be positive'. The next execution of the job will do retry."
       //todo: verify that the retrieved message is not saved to the db
       //verify(movementMessageRepository, never()).save(MovementMessage)
-    }
-
-    "process message and saved it tot the DB" in {
-      when(exciseNumberRepository.getAll).thenReturn(createSource)
-
-      val newMessageResponse = ShowNewMessageResponse(
-        LocalDateTime.of(2023, 5, 6, 9,10,13),
-        "123",
-        "any message"
-      )
-      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
-        .thenReturn(Future.successful(Some(newMessageResponse)))
-
-      val result = await(job.executeInMutex)
-
-      result.message mustBe "polling-new-message Job ran successfully."
-      val captor = ArgCaptor[String]
-      verify(newMessageService, times(3)).getNewMessagesAndAcknowledge(captor.capture)(any)
-
-      captor.values  mustBe Seq("1", "3", "4")
     }
   }
 

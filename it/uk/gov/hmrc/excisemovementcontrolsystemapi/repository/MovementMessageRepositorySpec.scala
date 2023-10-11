@@ -26,7 +26,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, MovementMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 
 import java.time.temporal.ChronoUnit
@@ -37,7 +37,7 @@ import scala.language.postfixOps
 class MovementMessageRepositorySpec extends PlaySpec
   with BeforeAndAfterEach
   with BeforeAndAfterAll
-  with PlayMongoRepositorySupport[MovementMessage]
+  with PlayMongoRepositorySupport[Movement]
   with CleanMongoCollectionSupport
   with IntegrationPatience
   with GuiceOneAppPerSuite {
@@ -76,11 +76,11 @@ class MovementMessageRepositorySpec extends PlaySpec
       "consigneeId is missing " in {
         val message1 = Message("any message", MessageTypes.IE704.value, instant)
         val message2 = Message("any message 2", MessageTypes.IE801.value, instant)
-        val movement = MovementMessage("123", "345", None, None, Seq(message1))
+        val movement = Movement("123", "345", None, None, Seq(message1))
 
         val lastUpdate = instant.truncatedTo(ChronoUnit.MILLIS)
-        insert(MovementMessage("123", "345", None, None, Seq.empty, lastUpdate)).futureValue
-        insert(MovementMessage("12", "789", None, None, Seq(message2), lastUpdate)).futureValue
+        insert(Movement("123", "345", None, None, Seq.empty, lastUpdate)).futureValue
+        insert(Movement("12", "789", None, None, Seq(message2), lastUpdate)).futureValue
 
         val result = repository.save(movement).futureValue
 
@@ -93,11 +93,11 @@ class MovementMessageRepositorySpec extends PlaySpec
       "consigneeId is present " in {
         val message1 = Message("any message", MessageTypes.IE704.value, instant)
         val message2 = Message("any message 2", MessageTypes.IE801.value, instant)
-        val movement = MovementMessage("123", "345", Some("456"), None, Seq(message1))
+        val movement = Movement("123", "345", Some("456"), None, Seq(message1))
 
         val lastUpdate = instant.truncatedTo(ChronoUnit.MILLIS)
-        insert(MovementMessage("123", "345", None, None, Seq.empty, lastUpdate)).futureValue
-        insert(MovementMessage("12", "789", None, None, Seq(message2), lastUpdate)).futureValue
+        insert(Movement("123", "345", None, None, Seq.empty, lastUpdate)).futureValue
+        insert(Movement("12", "789", None, None, Seq(message2), lastUpdate)).futureValue
 
         val result = repository.save(movement).futureValue
 
@@ -109,7 +109,7 @@ class MovementMessageRepositorySpec extends PlaySpec
     }
 
     "insert a new record" in {
-      val movement = MovementMessage("123", "345", Some("789"))
+      val movement = Movement("123", "345", Some("789"))
       val result = repository.save(movement).futureValue
 
       val insertedRecord = findRecordBy("345", "123")
@@ -125,55 +125,56 @@ class MovementMessageRepositorySpec extends PlaySpec
     val lrn = "123"
     val consignorId = "Abc"
     val consigneeId = "def"
+    val movement = Movement(lrn, consignorId, Some(consigneeId), None)
 
 
     "return movement message with valid lrn and consignorId combination" in {
-      insert(MovementMessage(lrn, consignorId, Some(consigneeId), None))
+      insert(movement)
 
-      val result = await(repository.getMovementMessagesByLRNAndERNIn(lrn, List(consignorId)))
+      val result = repository.get(lrn, List(consignorId)).futureValue
 
-      result.size mustBe 1
+      result mustBe Some(movement)
     }
 
 
     "return movement message with valid lrn and list of consignor and consignee Ids combination" in {
-      insert(MovementMessage(lrn, consignorId, Some(consigneeId), None))
+      insert(movement)
 
-      val result = repository.getMovementMessagesByLRNAndERNIn(lrn, List(consignorId, consigneeId)).futureValue
+      val result = repository.get(lrn, List(consignorId, consigneeId)).futureValue
 
-      result.size mustBe 1
+      result mustBe Some(movement)
     }
 
     "return movement message with valid lrn and only one valid ern combination in the list of erns" in {
-      insert(MovementMessage(lrn, consignorId, Some(consigneeId), None))
+      insert(movement)
 
-      val result = repository.getMovementMessagesByLRNAndERNIn(lrn, List(consignorId, "hhh", "222", "mmm")).futureValue
+      val result = repository.get(lrn, List(consignorId, "hhh", "222", "mmm")).futureValue
 
-      result.size mustBe 1
+      result mustBe Some(movement)
     }
 
     "return one movement message with valid lrn and ern combination when multiple movements are available" in {
-      insert(MovementMessage(lrn, consignorId, Some(consigneeId), None))
-      insert(MovementMessage("Test3333", consignorId, Some(consigneeId), None))
+      insert(movement)
+      insert(Movement("Test3333", consignorId, Some(consigneeId), None))
 
-      val result = repository.getMovementMessagesByLRNAndERNIn(lrn, List(consignorId)).futureValue
+      val result = repository.get(lrn, List(consignorId)).futureValue
 
-      result.size mustBe 1
+      result mustBe Some(movement)
     }
 
     "return empty list with invalid lrn and ern combination" in {
-      insert(MovementMessage(lrn, consignorId, Some(consigneeId), None))
+      insert(movement)
 
-      val result = repository.getMovementMessagesByLRNAndERNIn("1111", List(consignorId)).futureValue
+      val result = repository.get("1111", List(consignorId)).futureValue
 
-      result.isEmpty mustBe true
+      result mustBe None
     }
   }
 
   private def verifyResults(
-    actual: MovementMessage,
-    expected: MovementMessage,
-    message: Seq[Message]
+                             actual: Movement,
+                             expected: Movement,
+                             message: Seq[Message]
   ) = {
     actual.localReferenceNumber mustEqual expected.localReferenceNumber
     actual.consignorId mustEqual expected.consignorId
@@ -182,7 +183,7 @@ class MovementMessageRepositorySpec extends PlaySpec
     actual.messages mustEqual message
   }
 
-  private def findRecordBy(consignorId: String, localReferenceNumber: String): MovementMessage = {
+  private def findRecordBy(consignorId: String, localReferenceNumber: String): Movement = {
     find(
       Filters.and(
         Filters.equal("consignorId", consignorId),

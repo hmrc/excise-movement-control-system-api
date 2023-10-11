@@ -21,7 +21,7 @@ import play.api.Logging
 import play.api.mvc.Results.Forbidden
 import play.api.mvc.{ActionRefiner, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequest, ParsedXmlRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -39,7 +39,7 @@ class ValidateConsignorActionImpl @Inject()(implicit val executionContext: Execu
       val localRefNumber = request.ie815Message.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber
       Future.successful(Right(DataRequest(
         request,
-        MovementMessage(localRefNumber, consignorId, consigneeId),
+        Movement(localRefNumber, consignorId, consigneeId),
         request.internalId))
       )
     }

@@ -34,7 +34,7 @@ import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{AuthTestSupport, RepositoryTestStub, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, MovementMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
@@ -83,8 +83,8 @@ class GetMessagesControllerItSpec extends PlaySpec
       withAuthorizedTrader(consignorId)
 
       val now = Instant.now
-      when(movementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq(MovementMessage("", "", None, None, Seq(Message("", "", now)), now))))
+      when(movementMessageRepository.get(any, any))
+        .thenReturn(Future.successful(Some(Movement("", "", None, None, Seq(Message("", "", now)), now))))
 
       val result = getRequest
 
@@ -99,8 +99,8 @@ class GetMessagesControllerItSpec extends PlaySpec
     "return 404 when no movement message is found" in {
       withAuthorizedTrader(consignorId)
 
-      when(movementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq.empty))
+      when(movementMessageRepository.get(any, any))
+        .thenReturn(Future.successful(None))
 
       val result = getRequest
 
@@ -110,23 +110,8 @@ class GetMessagesControllerItSpec extends PlaySpec
     "return 500 when mongo db fails to fetch details" in {
       withAuthorizedTrader(consignorId)
 
-      when(movementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
+      when(movementMessageRepository.get(any, any))
         .thenReturn(Future.failed(new RuntimeException("error")))
-
-      val result = getRequest
-
-      result.status mustBe INTERNAL_SERVER_ERROR
-    }
-
-    "return 500 when multiple movements messages are found" in {
-      withAuthorizedTrader(consignorId)
-
-      val now = Instant.now()
-
-      val movementMessage = MovementMessage("", "", None, None, Seq(Message("", "", now)), now)
-      val list = Seq(movementMessage, movementMessage)
-      when(movementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(list))
 
       val result = getRequest
 

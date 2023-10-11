@@ -37,7 +37,7 @@ class ShowNewMessageParserSpec
     "parse the message" in {
       val encodeGetNewMessage = Base64.getEncoder.encodeToString(newMessageXml.toString.getBytes(StandardCharsets.UTF_8))
 
-      val result = new ShowNewMessageParser(new EisUtils()).parseEncodedMessage1(encodeGetNewMessage)
+      val result = new ShowNewMessageParser(new EisUtils()).parseEncodedMessage(encodeGetNewMessage)
 
       result.size mustBe 3
       assertResults(result, IE704, "IE704", 0)

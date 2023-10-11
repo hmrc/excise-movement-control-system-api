@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth
 
 import generated.IE815Type
 import play.api.mvc.{Request, WrappedRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
 case class EnrolmentRequest[A](
   request: Request[A],
@@ -36,6 +36,6 @@ case class ParsedXmlRequest[A]
 case class DataRequest[A]
 (
   request: Request[A],
-  movementMessage: MovementMessage,
+  movementMessage: Movement,
   internalId: String
 ) extends WrappedRequest[A](request)

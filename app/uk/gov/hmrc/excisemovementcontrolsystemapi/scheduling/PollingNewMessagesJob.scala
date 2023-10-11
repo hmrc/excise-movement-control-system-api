@@ -24,7 +24,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ShowNewMessageResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ExciseNumberRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumber
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.GetNewMessageService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementMessageService}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.Inject
@@ -35,6 +35,7 @@ import scala.util.control.NonFatal
 class PollingNewMessagesJob @Inject()(
   newMessageService: GetNewMessageService,
   exciseNumberRepository: ExciseNumberRepository,
+  movementService: MovementMessageService,
   appConfig: AppConfig
 ) (implicit mat: Materializer)
   extends ExclusiveScheduledJob
@@ -84,6 +85,12 @@ class PollingNewMessagesJob @Inject()(
 
   private def saveToDB(message: ShowNewMessageResponse): Future[Unit] = {
 
+    /*
+    todo: ShowNewMessageREsponse.message contain all the messages encode base64 string
+    3. call movementService.updateMovement(message))
+
+
+     */
 
     logger.warn("test")
     successful(())

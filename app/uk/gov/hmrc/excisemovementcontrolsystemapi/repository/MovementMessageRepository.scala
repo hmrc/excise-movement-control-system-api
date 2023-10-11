@@ -23,7 +23,7 @@ import play.api.Logging
 import play.api.libs.json.Json
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository.mongoIndexes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
@@ -41,10 +41,10 @@ class MovementMessageRepository @Inject()
   appConfig: AppConfig,
   clock: Clock
 )(implicit ec: ExecutionContext) extends
-  PlayMongoRepository[MovementMessage](
+  PlayMongoRepository[Movement](
     collectionName = "movements",
     mongoComponent = mongo,
-    domainFormat = Json.format[MovementMessage],
+    domainFormat = Json.format[Movement],
     indexes = mongoIndexes(appConfig.getMovementTTL),
     replaceIndexes = true
   ) with Logging {
@@ -76,7 +76,7 @@ class MovementMessageRepository @Inject()
       .map(_ => true)
 
 
-  def save(movementMessage: MovementMessage): Future[Boolean] = {
+  def save(movementMessage: Movement): Future[Boolean] = {
     val updatedMovement = movementMessage copy(lastUpdate = Instant.now(clock))
 
     collection.replaceOne(
@@ -87,12 +87,7 @@ class MovementMessageRepository @Inject()
       .map(_ => true)
   }
 
-  //todo: Check if this is right. Should the combinationof LRN and consigneeId or consignorId be unique?
-  def getMovementMessagesByLRNAndERNIn(lrn: String, erns: List[String]): Future[Seq[MovementMessage]] = {
-    collection.find(filterBy(lrn, erns)).toFuture()
-  }
-
-  def get(lrn: String, erns: List[String]): Future[Option[MovementMessage]] = {
+  def get(lrn: String, erns: List[String]): Future[Option[Movement]] = {
     collection
       .find(filterBy(lrn, erns))
       .headOption()

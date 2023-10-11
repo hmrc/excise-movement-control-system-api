@@ -26,7 +26,10 @@ import javax.inject.Inject
 import scala.xml.{Elem, TopScope}
 
 class ShowNewMessageParser @Inject()(eisUtils: EisUtils) {
-  def parseEncodedMessage(encodedMessage: String): Seq[Message] = {
+
+  //todo: this is not used for the moment. We may delete this. Just kept because
+  // I thought it may be a batter way than parseEncodedMessage.
+  def parseEncodedMessageCopy(encodedMessage: String): Seq[Message] = {
 
     val decodedMessage = new String(
       eisUtils.createDecoder.decode(encodedMessage),
@@ -50,7 +53,7 @@ class ShowNewMessageParser @Inject()(eisUtils: EisUtils) {
   }
 
 
-  def parseEncodedMessage1(encodedMessage: String): Seq[Message] = {
+  def parseEncodedMessage(encodedMessage: String): Seq[Message] = {
 
     val decodedMessage = new String(
       eisUtils.createDecoder.decode(encodedMessage),

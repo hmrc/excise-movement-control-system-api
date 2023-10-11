@@ -19,29 +19,35 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 import com.google.inject.Singleton
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MongoError, NotFoundError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, MovementMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class MovementMessageService @Inject()(
-                                        movementMessageRepository: MovementMessageRepository
-                                      )(implicit ec: ExecutionContext) {
-  def updateMessages(lrn: String, exciseNumber: String, messages: Seq[Message]): Future[Boolean] = {
+  movementMessageRepository: MovementMessageRepository
+)(implicit ec: ExecutionContext) {
 
-    movementMessageRepository.get(lrn, List(exciseNumber)).map {
-      case Some(movement) => val allMessages = movement.messages ++ messages.diff(movement.messages)
+  /*
+  todo:
 
-      movementMessageRepository.save(movement copy (messages = allMessages))
 
-      true
-      case None => false
+  1. replace messages with: encodedMessage: String
+  2. decode the messages. We can use ShowNewMessageParser.parseEncodedMessageCopy
+      which return a Seq[Message]
+  3. Extract all the messages and put them into a Seq
+  4. pass the Seq to the saveDistinctMessage function
+   */
+  def updateMovement(lrn: String, exciseNumber: String, messages: Seq[Message]): Future[Boolean] = {
+
+    movementMessageRepository.get(lrn, List(exciseNumber)).flatMap {
+      case Some(movement) => saveDistinctMessage(messages, movement)
+      case None => Future.successful(false)
     }
   }
 
-
-  def saveMovementMessage(movementMessage: MovementMessage): Future[Either[MongoError, MovementMessage]] = {
+  def saveMovementMessage(movementMessage: Movement): Future[Either[MongoError, Movement]] = {
     movementMessageRepository.save(movementMessage)
       .map(_ => Right(movementMessage))
       .recover {
@@ -50,14 +56,21 @@ class MovementMessageService @Inject()(
   }
 
   def getMovementMessagesByLRNAndERNIn(lrn: String, erns: List[String]): Future[Either[ErrorResponse, Seq[Message]]] = {
-    movementMessageRepository.getMovementMessagesByLRNAndERNIn(lrn, erns).map {
-        case Nil => Left(NotFoundError())
-        case f@_ :: Nil => Right(f.head.messages)
-        case _ => Left(MongoError("Multiple movements found for lrn and ern combination"))
+    movementMessageRepository.get(lrn, erns).map {
+        case Some(movement) => Right(movement.messages)
+        case _ => Left(NotFoundError())
       }
       .recover {
         case ex: Throwable => Left(MongoError(ex.getMessage))
       }
   }
 
+  private def saveDistinctMessage(messages: Seq[Message], movement: Movement): Future[Boolean] = {
+    val allMessages = movement.messages ++ messages.diff(movement.messages)
+
+    movementMessageRepository.save(movement copy (messages = allMessages)).map {
+      case true => true
+      case _ => false
+    }
+  }
 }
