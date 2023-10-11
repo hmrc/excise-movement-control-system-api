@@ -26,7 +26,7 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageTypes, MongoError, NotFoundError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementMessageService, ShowNewMessageParser}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.Instant
@@ -39,9 +39,10 @@ class MovementMessageServiceSpec extends PlaySpec
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
 
+  private val messageParser = mock[ShowNewMessageParser]
   private val mockMovementMessageRepository = mock[MovementMessageRepository]
 
-  private val movementMessageService = new MovementMessageService(mockMovementMessageRepository)
+  private val movementMessageService = new MovementMessageService(messageParser, mockMovementMessageRepository)
 
   private val lrn = "123"
   private val consignorId = "ABC"
@@ -117,7 +118,7 @@ class MovementMessageServiceSpec extends PlaySpec
     }
   }
 
-  "updateMessage" should {
+  "updateMovement" should {
 
     val instant = Instant.now
     val message1 = Message("message1", MessageTypes.IE704.value)
@@ -125,6 +126,16 @@ class MovementMessageServiceSpec extends PlaySpec
     val message3 = Message("message3", MessageTypes.IE802.value)
     val message4 = Message("message4", MessageTypes.IE815.value)
 
+    "decode message and get all messages - NEW" in {
+      when(messageParser.parseEncodedMessage(any)).thenReturn(Seq(message1))
+      when(mockMovementMessageRepository.save(any)).thenReturn(Future.successful(true))
+      when(mockMovementMessageRepository.get(any, any))
+        .thenReturn(Future.successful(Some(Movement(lrn, consignorId, None, None, Seq.empty, instant))))
+
+      await(movementMessageService.updateMovement(lrn, consignorId, "encode message"))
+
+      verify(messageParser).parseEncodedMessage(eqTo("encode message"))
+    }
 
     "get the movement from the DB" in {
       when(mockMovementMessageRepository.save(any)).thenReturn(Future.successful(true))

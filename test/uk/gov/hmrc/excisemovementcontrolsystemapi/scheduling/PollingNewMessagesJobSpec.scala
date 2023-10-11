@@ -111,9 +111,9 @@ class PollingNewMessagesJobSpec
 
       captor.values  mustBe Seq("1", "3", "4")
 
-//      withClue("Save the new messages to the cache") {
-//        verify(movementService).updateMovement("1", "2", "any message")
-//      }
+      withClue("Save the new messages to the cache") {
+        verify(movementService).updateMovement("1", "2", "any message")
+      }
     }
 
 

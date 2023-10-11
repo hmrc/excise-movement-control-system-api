@@ -26,12 +26,12 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class MovementMessageService @Inject()(
-  movementMessageRepository: MovementMessageRepository
+    messageParser: ShowNewMessageParser,
+    movementMessageRepository: MovementMessageRepository
 )(implicit ec: ExecutionContext) {
 
   /*
   todo:
-
 
   1. replace messages with: encodedMessage: String
   2. decode the messages. We can use ShowNewMessageParser.parseEncodedMessageCopy
