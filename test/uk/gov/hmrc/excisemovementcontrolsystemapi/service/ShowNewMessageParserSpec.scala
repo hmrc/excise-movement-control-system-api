@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.service
 
 import org.scalatestplus.play.PlaySpec
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.EmptyNewMessageDataResponse.emptyNewMessageDataXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.GetNewMessagesXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.Ie704XmlMessage.IE704
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.Ie801XmlMessage.IE801
@@ -33,11 +34,15 @@ class ShowNewMessageParserSpec
   extends PlaySpec
     with GetNewMessagesXml {
 
+  private val parser = new ShowNewMessageParser(new EisUtils())
+
   "parseEncodedMessage" should {
     "parse the message" in {
-      val encodeGetNewMessage = Base64.getEncoder.encodeToString(newMessageXml.toString.getBytes(StandardCharsets.UTF_8))
+      val encodeGetNewMessage = Base64.getEncoder.encodeToString(
+        newMessageXml.toString.getBytes(StandardCharsets.UTF_8)
+      )
 
-      val result = new ShowNewMessageParser(new EisUtils()).parseEncodedMessage(encodeGetNewMessage)
+      val result = parser.parseEncodedMessage(encodeGetNewMessage)
 
       result.size mustBe 3
       assertResults(result, IE704, "IE704", 0)
@@ -46,23 +51,29 @@ class ShowNewMessageParserSpec
     }
   }
 
-  //todo
   "return an empty list if there are not message" in {
-    fail()
+    val encodeGetNewMessage = Base64.getEncoder.encodeToString(
+      emptyNewMessageDataXml.toString.getBytes(StandardCharsets.UTF_8)
+    )
+
+    parser.parseEncodedMessage(encodeGetNewMessage) mustBe Seq.empty
   }
 
-  //todo
-  "return error" when {
-    "cannot parse xml" in {
-      fail()
+  "countOfMessagesAvailable" should {
+    "return the number of messages" in {
+      val encodeGetNewMessage = Base64.getEncoder.encodeToString(
+        newMessageXml.toString.getBytes(StandardCharsets.UTF_8)
+      )
+
+      parser.countOfMessagesAvailable(encodeGetNewMessage) mustBe 3
     }
   }
 
-  private def assertResults(actual: Seq[Message], IE704: Elem, messageType: String, index: Int) =
+  private def assertResults(actual: Seq[Message], expected: Elem, messageType: String, index: Int) =
   {
     val actualMessage = new String(Base64.getDecoder.decode(actual(index).encodeMessage),
       StandardCharsets.UTF_8).replaceAll("[\\t\\n\\r\\s]+", "")
-    actualMessage mustBe IE704.toString.replaceAll("[\\t\\n\\r\\s]+", "")
+    actualMessage mustBe expected.toString.replaceAll("[\\t\\n\\r\\s]+", "")
     actual(index).messageType mustBe messageType
   }
 }
