@@ -30,19 +30,10 @@ class MovementMessageService @Inject()(
     movementMessageRepository: MovementMessageRepository
 )(implicit ec: ExecutionContext) {
 
-  /*
-  todo:
-
-  1. replace messages with: encodedMessage: String
-  2. decode the messages. We can use ShowNewMessageParser.parseEncodedMessageCopy
-      which return a Seq[Message]
-  3. Extract all the messages and put them into a Seq
-  4. pass the Seq to the saveDistinctMessage function
-   */
-  def updateMovement(lrn: String, exciseNumber: String, messages: Seq[Message]): Future[Boolean] = {
+  def updateMovement(lrn: String, exciseNumber: String, encodedMessage: String): Future[Boolean] = {
 
     movementMessageRepository.get(lrn, List(exciseNumber)).flatMap {
-      case Some(movement) => saveDistinctMessage(messages, movement)
+      case Some(movement) => saveDistinctMessage(encodedMessage, movement)
       case None => Future.successful(false)
     }
   }
@@ -65,7 +56,9 @@ class MovementMessageService @Inject()(
       }
   }
 
-  private def saveDistinctMessage(messages: Seq[Message], movement: Movement): Future[Boolean] = {
+  private def saveDistinctMessage(encodedMessage: String, movement: Movement): Future[Boolean] = {
+
+    val messages = messageParser.parseEncodedMessage(encodedMessage)
     val allMessages = movement.messages ++ messages.diff(movement.messages)
 
     movementMessageRepository.save(movement copy (messages = allMessages)).map {

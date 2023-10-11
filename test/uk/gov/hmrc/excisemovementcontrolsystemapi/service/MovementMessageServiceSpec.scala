@@ -138,21 +138,23 @@ class MovementMessageServiceSpec extends PlaySpec
     }
 
     "get the movement from the DB" in {
+      when(messageParser.parseEncodedMessage(any)).thenReturn(Seq(message1))
       when(mockMovementMessageRepository.save(any)).thenReturn(Future.successful(true))
       when(mockMovementMessageRepository.get(any, any))
         .thenReturn(Future.successful(Some(Movement(lrn, consignorId, None, None, Seq.empty))))
 
-      await(movementMessageService.updateMovement(lrn, consignorId, Seq(message1)))
+      await(movementMessageService.updateMovement(lrn, consignorId, "any encoded message"))
 
       verify(mockMovementMessageRepository).get(lrn, List(consignorId))
     }
 
     "save the movement with all message" in {
+      when(messageParser.parseEncodedMessage(any)).thenReturn(Seq(message1))
       when(mockMovementMessageRepository.save(any)).thenReturn(Future.successful(true))
       when(mockMovementMessageRepository.get(any, any))
         .thenReturn(Future.successful(Some(Movement(lrn, consignorId, None, None, Seq.empty, instant))))
 
-      val result = await(movementMessageService.updateMovement(lrn, consignorId, Seq(message1)))
+      val result = await(movementMessageService.updateMovement(lrn, consignorId, "any encode message"))
 
       val movement = Movement(lrn, consignorId, None, None, Seq(message1), instant)
 
@@ -161,33 +163,44 @@ class MovementMessageServiceSpec extends PlaySpec
     }
 
     "do not save to DB when message is a duplicate" in {
+      when(messageParser.parseEncodedMessage(any)).thenReturn(Seq(message1, message4))
       when(mockMovementMessageRepository.save(any)).thenReturn(Future.successful(true))
       when(mockMovementMessageRepository.get(any, any))
         .thenReturn(Future.successful(Some(Movement(lrn, consignorId, None, None, Seq(message1, message2, message3), instant))))
 
-      await(movementMessageService.updateMovement(lrn, consignorId, Seq(message1, message4)))
+      await(movementMessageService.updateMovement(lrn, consignorId, "Seq(message1, message4)"))
 
       val expectedMovement = Movement(lrn, consignorId, None, None, Seq(message1, message2, message3, message4), instant)
       verify(mockMovementMessageRepository).save(eqTo(expectedMovement))
     }
 
     "do not save to DB when message has different content but the same message type" in {
+      when(messageParser.parseEncodedMessage(any)).thenReturn(Seq(message3, message4))
       when(mockMovementMessageRepository.save(any)).thenReturn(Future.successful(true))
       when(mockMovementMessageRepository.get(any, any))
         .thenReturn(Future.successful(Some(Movement(lrn, consignorId, None, None, Seq(message1, message2), instant))))
 
-      await(movementMessageService.updateMovement(lrn, consignorId, Seq(message3, message4)))
+      await(movementMessageService.updateMovement(lrn, consignorId, "Seq(message3, message4)"))
 
       val expectedMovement = Movement(lrn, consignorId, None, None, Seq(message1, message2, message3, message4), instant)
       verify(mockMovementMessageRepository).save(eqTo(expectedMovement))
     }
 
     "return false if did not save the message" in {
+      when(messageParser.parseEncodedMessage(any)).thenReturn(Seq(message3, message4))
       when(mockMovementMessageRepository.save(any)).thenReturn(Future.successful(false))
       when(mockMovementMessageRepository.get(any, any))
         .thenReturn(Future.successful(Some(Movement(lrn, consignorId, None, None, Seq.empty, instant))))
 
-      val result = await(movementMessageService.updateMovement(lrn, consignorId, Seq(message3, message4)))
+      val result = await(movementMessageService.updateMovement(lrn, consignorId, "Seq(message3, message4)"))
+
+      result mustBe false
+    }
+
+    "return false if cannot retrieve message" in {
+      when(mockMovementMessageRepository.get(any, any)).thenReturn(Future.successful(None))
+
+      val result = await(movementMessageService.updateMovement(lrn, consignorId, "Seq(message3, message4)"))
 
       result mustBe false
     }

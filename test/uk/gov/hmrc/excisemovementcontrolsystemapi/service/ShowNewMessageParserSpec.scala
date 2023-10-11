@@ -46,6 +46,18 @@ class ShowNewMessageParserSpec
     }
   }
 
+  //todo
+  "return an empty list if there are not message" in {
+    fail()
+  }
+
+  //todo
+  "return error" when {
+    "cannot parse xml" in {
+      fail()
+    }
+  }
+
   private def assertResults(actual: Seq[Message], IE704: Elem, messageType: String, index: Int) =
   {
     val actualMessage = new String(Base64.getDecoder.decode(actual(index).encodeMessage),

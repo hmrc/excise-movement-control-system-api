@@ -75,7 +75,7 @@ class PollingNewMessagesJob @Inject()(
   private def getNewMessages(exciseNumber: ExciseNumber)(implicit ec: ExecutionContext): Future[Unit] = {
 
     newMessageService.getNewMessagesAndAcknowledge(exciseNumber.exciseNumber)
-      .flatMap(message => message.fold[Future[Unit]](successful(()))(m => saveToDB(m)))
+      .flatMap(message => message.fold[Future[Unit]](successful(()))(m => saveToDB(exciseNumber, m)))
       .recover {
         case NonFatal(e) =>
           logger.warn(s"Could not get messages for ern: ${exciseNumber.exciseNumber} with message: ${e.getMessage}. Will retry later", e)
@@ -83,16 +83,17 @@ class PollingNewMessagesJob @Inject()(
     }
   }
 
-  private def saveToDB(message: ShowNewMessageResponse): Future[Unit] = {
+  private def saveToDB(
+    exciseNumber: ExciseNumber,
+    message: ShowNewMessageResponse
+  )(implicit ec: ExecutionContext): Future[Unit] = {
 
-    /*
-    todo: ShowNewMessageREsponse.message contain all the messages encode base64 string
-    3. call movementService.updateMovement(message))
-
-
-     */
-
-    logger.warn("test")
-    successful(())
+    movementService.updateMovement(exciseNumber.localReferenceNumber, exciseNumber.exciseNumber, message.message)
+      .flatMap {
+      case true => successful(())
+      case _ =>
+          logger.warn("Could not came new message to cache")
+          successful(())
+    }
   }
 }
