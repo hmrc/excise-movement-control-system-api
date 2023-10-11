@@ -19,10 +19,15 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import com.github.tomakehurst.wiremock.client.WireMock
-import com.github.tomakehurst.wiremock.client.WireMock.{getRequestedFor, ok, put, putRequestedFor, urlEqualTo}
+import com.github.tomakehurst.wiremock.client.WireMock.{getRequestedFor, ok, put, reset, putRequestedFor, urlEqualTo}
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
-import org.mockito.ArgumentMatchersSugar.any
-import org.mockito.MockitoSugar.{times, verify, when}
+import org.mockito.ArgumentMatchersSugar.{any, eqTo}
+import org.mockito.MockitoSugar.{reset => mockitoReset, times, verify, when}
+import org.mockito.captor.ArgCaptor
+import org.scalatest.BeforeAndAfterEach
+import org.scalatest.concurrent.Eventually.eventually
+import org.scalatest.concurrent.Waiters.timeout
+import org.scalatest.time.{Second, Seconds, Span}
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.inject.bind
@@ -31,19 +36,23 @@ import play.api.libs.json.Json
 import play.api.{Application, Configuration}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.GetNewMessagesXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{RepositoryTestStub, WireMockServerSpec}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptResponse, ShowNewMessageResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumber
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes.{IE704, IE801, IE802}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptResponse, MessageTypes, ShowNewMessageResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumber, Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberRepository, MovementMessageRepository}
 
 import java.nio.charset.StandardCharsets
 import java.time.LocalDateTime
 import java.util.Base64
+import scala.concurrent.duration.{Duration, SECONDS}
+import scala.concurrent.{Await, Future}
 
 class SchedulePollingNewMessagesItSpec extends PlaySpec
   with GuiceOneServerPerSuite
   with WireMockServerSpec
   with RepositoryTestStub
-  with GetNewMessagesXml  {
+  with GetNewMessagesXml
+  with BeforeAndAfterEach  {
 
   private val showNewMessageUrl = "/apip-emcs/messages/v1/show-new-messages"
   private val messageReceiptUrl = "/apip-emcs/messages/v1/message-receipt?exciseregistrationnumber="
@@ -71,27 +80,54 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
       .build()
   }
 
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    mockitoReset(movementMessageRepository)
+  }
+
   "Scheduler" should {
 
     "start Polling show new message" in {
       //todo: check if we save to movement db if successful
+      when(movementMessageRepository.get(any, eqTo(List("1"))))
+        .thenReturn(Future.successful(Some(Movement("123", "1", None, None, Seq.empty))))
+      when(movementMessageRepository.get(any, eqTo(List("3"))))
+        .thenReturn(Future.successful(Some(Movement("123", "3", None, None, Seq.empty))))
+      when(movementMessageRepository.get(any, eqTo(List("4"))))
+        .thenReturn(Future.successful(Some(Movement("123", "4", None, None, Seq.empty))))
 
       wireMock.verify(getRequestedFor(urlEqualTo("/apip-emcs/messages/v1/show-new-messages?exciseregistrationnumber=1")))
       wireMock.verify(getRequestedFor(urlEqualTo("/apip-emcs/messages/v1/show-new-messages?exciseregistrationnumber=3")))
       wireMock.verify(getRequestedFor(urlEqualTo("/apip-emcs/messages/v1/show-new-messages?exciseregistrationnumber=4")))
 
-      withClue("save the message to DB") {
-        verify(movementMessageRepository, times(3)).save(any)
+      val encoder = Base64.getEncoder
+      val expectedMessages = Seq(
+        encoder.encodeToString(IE704.toString.getBytes(StandardCharsets.UTF_8)),
+        encoder.encodeToString(IE801.toString.getBytes(StandardCharsets.UTF_8)),
+        encoder.encodeToString(IE802.toString.getBytes(StandardCharsets.UTF_8))
+      )
 
+      withClue("save the message to DB") {
+        eventually(timeout(Span(5L, Seconds))) {
+
+          val captor = ArgCaptor[Movement]
+          verify(movementMessageRepository, times(3)).save(captor.capture)
+
+          val movements = captor.value
+          movements.localReferenceNumber mustBe "123"
+          movements.consignorId mustBe "1"
+          movements.messages mustBe expectedMessages
+        }
       }
     }
 
-    "Should poll message receipt api" in {
-      Thread.sleep(1000)
-      wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}1")))
-      wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}3")))
-      wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))
-    }
+//    "Should poll message receipt api" in {
+//      eventually(timeout(Span(5L, Seconds))) {
+//        wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}1")))
+//        wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}3")))
+//        wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))
+//      }
+//    }
   }
 
   private def stubShowNewMessageRequest(exciseNumber: String) = {

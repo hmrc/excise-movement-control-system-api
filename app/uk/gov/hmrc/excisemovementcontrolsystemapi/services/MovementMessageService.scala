@@ -61,6 +61,7 @@ class MovementMessageService @Inject()(
     val messages = messageParser.parseEncodedMessage(encodedMessage)
     val allMessages = movement.messages ++ messages.diff(movement.messages)
 
+    println(s"====================== exciseNumber: ${movement.consignorId}")
     movementMessageRepository.save(movement copy (messages = allMessages)).map {
       case true => true
       case _ => false
