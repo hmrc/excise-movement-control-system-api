@@ -19,26 +19,26 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import org.mongodb.scala.model.Filters.equal
-import org.mongodb.scala.model.{Filters, IndexModel, IndexOptions, Indexes, ReplaceOptions}
+import org.mongodb.scala.model._
 import play.api.Logging
 import play.api.libs.json.Json
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository.mongoIndexes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumber
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.DateTimeService
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
-import java.time.{Clock, Instant}
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
+import scala.concurrent.{ExecutionContext, Future}
 
 class ExciseNumberRepository @Inject()
 (
   mongo: MongoComponent,
   appConfig: AppConfig,
-  clock: Clock
+  timeService: DateTimeService
 )(implicit ec: ExecutionContext) extends
   PlayMongoRepository[ExciseNumber](
     collectionName = "excise-number-list",
@@ -49,7 +49,7 @@ class ExciseNumberRepository @Inject()
   ) with Logging
 {
   def save(exciseNumber: ExciseNumber): Future[Boolean] = {
-    val updatedExciseNumber = exciseNumber copy (lastUpdated = Instant.now(clock))
+    val updatedExciseNumber = exciseNumber copy (lastUpdated = timeService.now)
 
     collection
       .replaceOne(filter = Filters.and(

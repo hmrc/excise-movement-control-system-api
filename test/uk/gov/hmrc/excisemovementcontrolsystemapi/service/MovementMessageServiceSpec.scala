@@ -26,7 +26,7 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageTypes, MongoError, NotFoundError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementMessageService, ShowNewMessageParser}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementMessageService, ShowNewMessageParser, DateTimeService}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.Instant
@@ -47,10 +47,13 @@ class MovementMessageServiceSpec extends PlaySpec
   private val lrn = "123"
   private val consignorId = "ABC"
   private val consigneeId = "ABC123"
+  private val timeService = mock[DateTimeService]
+  private val now = Instant.parse("2018-11-30T18:35:24.00Z")
 
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(mockMovementMessageRepository)
+    when(timeService.now).thenReturn(now)
   }
 
   "saveMovementMessage" should {
@@ -76,8 +79,8 @@ class MovementMessageServiceSpec extends PlaySpec
 
   "getMovementMessagesByLRNAndERNIn with valid LRN and ERN combination" should {
     "return  List of Messages" in {
-      val messages = Seq(Message("123456", "IE801"), Message("ABCDE", "IE815"))
-      val movementMessage = Movement(lrn, consignorId, Some(consigneeId), None, messages, Instant.now())
+      val messages = Seq(Message("123456", "IE801", timeService), Message("ABCDE", "IE815", timeService))
+      val movementMessage = Movement(lrn, consignorId, Some(consigneeId), None, messages)
       when(mockMovementMessageRepository.get(any, any))
         .thenReturn(Future.successful(Some(movementMessage)))
 
@@ -88,7 +91,7 @@ class MovementMessageServiceSpec extends PlaySpec
     }
 
     "return empty Message when Movement is found with no Messages" in {
-      val movementMessage = Movement(lrn, consignorId, Some(consigneeId), None, Seq.empty, Instant.now())
+      val movementMessage = Movement(lrn, consignorId, Some(consigneeId), None, Seq.empty)
       when(mockMovementMessageRepository.get(any, any))
         .thenReturn(Future.successful(Some(movementMessage)))
 
@@ -120,17 +123,16 @@ class MovementMessageServiceSpec extends PlaySpec
 
   "updateMovement" should {
 
-    val instant = Instant.now
-    val message1 = Message("message1", MessageTypes.IE704.value)
-    val message2 = Message("message2", MessageTypes.IE801.value)
-    val message3 = Message("message3", MessageTypes.IE802.value)
-    val message4 = Message("message4", MessageTypes.IE815.value)
+    val message1 = Message("message1", MessageTypes.IE704.value, timeService)
+    val message2 = Message("message2", MessageTypes.IE801.value, timeService)
+    val message3 = Message("message3", MessageTypes.IE802.value, timeService)
+    val message4 = Message("message4", MessageTypes.IE815.value, timeService)
 
     "decode message and get all messages - NEW" in {
       when(messageParser.parseEncodedMessage(any)).thenReturn(Seq(message1))
       when(mockMovementMessageRepository.save(any)).thenReturn(Future.successful(true))
       when(mockMovementMessageRepository.get(any, any))
-        .thenReturn(Future.successful(Some(Movement(lrn, consignorId, None, None, Seq.empty, instant))))
+        .thenReturn(Future.successful(Some(Movement(lrn, consignorId, None, None, Seq.empty))))
 
       await(movementMessageService.updateMovement(lrn, consignorId, "encode message"))
 
@@ -152,11 +154,11 @@ class MovementMessageServiceSpec extends PlaySpec
       when(messageParser.parseEncodedMessage(any)).thenReturn(Seq(message1))
       when(mockMovementMessageRepository.save(any)).thenReturn(Future.successful(true))
       when(mockMovementMessageRepository.get(any, any))
-        .thenReturn(Future.successful(Some(Movement(lrn, consignorId, None, None, Seq.empty, instant))))
+        .thenReturn(Future.successful(Some(Movement(lrn, consignorId, None, None, Seq.empty,  now))))
 
       val result = await(movementMessageService.updateMovement(lrn, consignorId, "any encode message"))
 
-      val movement = Movement(lrn, consignorId, None, None, Seq(message1), instant)
+      val movement = Movement(lrn, consignorId, None, None, Seq(message1), now)
 
       result mustBe true
       verify(mockMovementMessageRepository).save(eqTo(movement))
@@ -166,11 +168,11 @@ class MovementMessageServiceSpec extends PlaySpec
       when(messageParser.parseEncodedMessage(any)).thenReturn(Seq(message1, message4))
       when(mockMovementMessageRepository.save(any)).thenReturn(Future.successful(true))
       when(mockMovementMessageRepository.get(any, any))
-        .thenReturn(Future.successful(Some(Movement(lrn, consignorId, None, None, Seq(message1, message2, message3), instant))))
+        .thenReturn(Future.successful(Some(Movement(lrn, consignorId, None, None, Seq(message1, message2, message3), now))))
 
       await(movementMessageService.updateMovement(lrn, consignorId, "Seq(message1, message4)"))
 
-      val expectedMovement = Movement(lrn, consignorId, None, None, Seq(message1, message2, message3, message4), instant)
+      val expectedMovement = Movement(lrn, consignorId, None, None, Seq(message1, message2, message3, message4), now)
       verify(mockMovementMessageRepository).save(eqTo(expectedMovement))
     }
 
@@ -178,11 +180,11 @@ class MovementMessageServiceSpec extends PlaySpec
       when(messageParser.parseEncodedMessage(any)).thenReturn(Seq(message3, message4))
       when(mockMovementMessageRepository.save(any)).thenReturn(Future.successful(true))
       when(mockMovementMessageRepository.get(any, any))
-        .thenReturn(Future.successful(Some(Movement(lrn, consignorId, None, None, Seq(message1, message2), instant))))
+        .thenReturn(Future.successful(Some(Movement(lrn, consignorId, None, None, Seq(message1, message2), now))))
 
       await(movementMessageService.updateMovement(lrn, consignorId, "Seq(message3, message4)"))
 
-      val expectedMovement = Movement(lrn, consignorId, None, None, Seq(message1, message2, message3, message4), instant)
+      val expectedMovement = Movement(lrn, consignorId, None, None, Seq(message1, message2, message3, message4), now)
       verify(mockMovementMessageRepository).save(eqTo(expectedMovement))
     }
 
@@ -190,7 +192,7 @@ class MovementMessageServiceSpec extends PlaySpec
       when(messageParser.parseEncodedMessage(any)).thenReturn(Seq(message3, message4))
       when(mockMovementMessageRepository.save(any)).thenReturn(Future.successful(false))
       when(mockMovementMessageRepository.get(any, any))
-        .thenReturn(Future.successful(Some(Movement(lrn, consignorId, None, None, Seq.empty, instant))))
+        .thenReturn(Future.successful(Some(Movement(lrn, consignorId, None, None, Seq.empty))))
 
       val result = await(movementMessageService.updateMovement(lrn, consignorId, "Seq(message3, message4)"))
 

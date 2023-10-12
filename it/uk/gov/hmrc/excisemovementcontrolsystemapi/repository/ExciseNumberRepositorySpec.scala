@@ -17,9 +17,11 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import akka.stream.scaladsl.Sink
+import org.mockito.MockitoSugar.when
 import org.mongodb.scala.model.Filters
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
+import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
@@ -28,6 +30,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumber
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.DateTimeService
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 
 import java.time.temporal.ChronoUnit
@@ -44,13 +47,13 @@ class ExciseNumberRepositorySpec extends PlaySpec
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val instant = Instant.now
-  private val stubClock: Clock = Clock.fixed(instant, ZoneId.systemDefault)
   private val appConfig = app.injector.instanceOf[AppConfig]
+  private val timeService = mock[DateTimeService]
 
   protected override val repository = new ExciseNumberRepository(
     mongoComponent,
     appConfig,
-    stubClock
+    timeService
   )
 
   protected def appBuilder: GuiceApplicationBuilder =
@@ -63,6 +66,7 @@ class ExciseNumberRepositorySpec extends PlaySpec
 
   override def beforeEach(): Unit = {
     prepareDatabase()
+    when(timeService.now).thenReturn(instant)
   }
 
   "getAll" should {

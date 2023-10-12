@@ -32,7 +32,7 @@ class ValidateConsignorActionSpec extends PlaySpec with TestXml with EitherValue
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
-  val sut = new ValidateConsignorActionImpl()
+  private val sut = new ValidateConsignorActionImpl()
 
   "ValidateConsignorActionSpec" should {
     "return a request" in {

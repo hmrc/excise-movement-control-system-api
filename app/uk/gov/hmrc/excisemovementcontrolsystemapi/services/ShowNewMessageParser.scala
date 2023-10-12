@@ -23,34 +23,9 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 
 import java.nio.charset.StandardCharsets
 import javax.inject.Inject
-import scala.xml.{Elem, TopScope}
 
-class ShowNewMessageParser @Inject()(eisUtils: EisUtils) {
-
-  //todo: this is not used for the moment. We may delete this. Just kept because
-  // I thought it may be a batter way than parseEncodedMessage.
-  def parseEncodedMessageCopy(encodedMessage: String): Seq[Message] = {
-
-    val decodedMessage = new String(
-      eisUtils.createDecoder.decode(encodedMessage),
-      StandardCharsets.UTF_8
-    )
-
-    val xml = scala.xml.XML.loadString(decodedMessage)
-
-    (xml \\ "NewMessagesDataResponse" \\ "Messages").flatMap { o => o.child }
-      .flatMap { _ match {
-        case e: Elem =>
-          e.copy(scope = TopScope)
-        case _ => Seq.empty
-      }}
-      .filterNot(_.isEmpty)
-      .map(message => {
-        val encodeMessage = eisUtils.createEncoder.encodeToString(message.toString.getBytes(StandardCharsets.UTF_8))
-        val messageType = message.toString.substring(message.toString.indexOf("IE"), message.toString().indexOf(" "))
-        Message(encodeMessage = encodeMessage, messageType = messageType)
-      })
-  }
+class ShowNewMessageParser @Inject()(timeService: DateTimeService,
+                                     eisUtils: EisUtils) {
 
 
   def parseEncodedMessage(encodedMessage: String): Seq[Message] = {
@@ -61,12 +36,13 @@ class ShowNewMessageParser @Inject()(eisUtils: EisUtils) {
     )
 
     val newMessage: NewMessagesDataResponse = scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
+
     newMessage.Messages.messagesoption.map((o: DataRecord[MessagesOption]) => {
       val namespace =  o.namespace.fold(generated.defaultScope.uri)(o => o)
       val xml = scalaxb.DataRecord.toXML(o, None, o.key, scalaxb.toScope(o.key -> namespace), true)
       val encodedXml = eisUtils.createEncoder.encodeToString(xml.toString().getBytes(StandardCharsets.UTF_8))
 
-      Message(encodedXml, MessageTypes.withValue(o.key.getOrElse("unknown")).value)
+      Message(encodedXml, MessageTypes.withValue(o.key.getOrElse("unknown")).value, timeService)
     })
   }
 

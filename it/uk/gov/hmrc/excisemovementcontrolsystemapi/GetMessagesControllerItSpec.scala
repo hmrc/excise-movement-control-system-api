@@ -19,7 +19,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi
 import com.github.tomakehurst.wiremock.client.WireMock
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.when
-import org.scalatest.BeforeAndAfterAll
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
+import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -35,6 +36,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{AuthTestSupport, RepositoryTestStub, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.DateTimeService
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
@@ -45,6 +47,7 @@ class GetMessagesControllerItSpec extends PlaySpec
   with TestXml
   with WireMockServerSpec
   with RepositoryTestStub
+  with BeforeAndAfterEach
   with BeforeAndAfterAll {
 
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
@@ -52,6 +55,7 @@ class GetMessagesControllerItSpec extends PlaySpec
   private val url = s"http://localhost:$port/movements/$lrn/messages"
 
   private val consignorId = "GBWK002281023"
+  private val timeService = mock[DateTimeService]
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
@@ -65,6 +69,11 @@ class GetMessagesControllerItSpec extends PlaySpec
         bind[MovementMessageRepository].to(movementMessageRepository)
       )
       .build()
+  }
+
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    when(timeService.now).thenReturn(Instant.parse("2018-11-30T18:35:24.00Z"))
   }
 
   override def beforeAll(): Unit = {
@@ -82,9 +91,9 @@ class GetMessagesControllerItSpec extends PlaySpec
     "return 200" in {
       withAuthorizedTrader(consignorId)
 
-      val now = Instant.now
+      val cachedMessage = Message("", "", timeService)
       when(movementMessageRepository.get(any, any))
-        .thenReturn(Future.successful(Some(Movement("", "", None, None, Seq(Message("", "", now)), now))))
+        .thenReturn(Future.successful(Some(Movement("", "", None, None, Seq(cachedMessage)))))
 
       val result = getRequest
 
@@ -92,7 +101,7 @@ class GetMessagesControllerItSpec extends PlaySpec
 
       withClue("return the json response") {
         val responseBody = Json.parse(result.body).as[Seq[Message]]
-        responseBody mustBe Seq(Message("", "", now))
+        responseBody mustBe Seq(cachedMessage)
       }
     }
 

@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.service
 
+import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.EmptyNewMessageDataResponse.emptyNewMessageDataXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.GetNewMessagesXml
@@ -24,7 +25,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.Ie801XmlMessage.IE801
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.Ie802XmlMessage.IE802
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.ShowNewMessageParser
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{ShowNewMessageParser, DateTimeService}
 
 import java.nio.charset.StandardCharsets
 import java.util.Base64
@@ -34,7 +35,8 @@ class ShowNewMessageParserSpec
   extends PlaySpec
     with GetNewMessagesXml {
 
-  private val parser = new ShowNewMessageParser(new EisUtils())
+  private val timeService = mock[DateTimeService]
+  private val parser = new ShowNewMessageParser(timeService, new EisUtils())
 
   "parseEncodedMessage" should {
     "parse the message" in {

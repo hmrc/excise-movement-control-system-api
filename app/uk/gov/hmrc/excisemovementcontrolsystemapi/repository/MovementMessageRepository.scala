@@ -24,14 +24,14 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository.mongoIndexes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.DateTimeService
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
-import java.time.{Clock, Instant}
 import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
+import scala.concurrent.{ExecutionContext, Future}
 
 
 @Singleton
@@ -39,7 +39,7 @@ class MovementMessageRepository @Inject()
 (
   mongo: MongoComponent,
   appConfig: AppConfig,
-  clock: Clock
+  timeService: DateTimeService
 )(implicit ec: ExecutionContext) extends
   PlayMongoRepository[Movement](
     collectionName = "movements",
@@ -71,13 +71,13 @@ class MovementMessageRepository @Inject()
 
   def keepAlive(id: String): Future[Boolean] =
     collection
-      .updateOne(filter = byId(id), update = Updates.set("lastUpdated", Instant.now(clock)))
+      .updateOne(filter = byId(id), update = Updates.set("lastUpdated", timeService.now))
       .toFuture()
       .map(_ => true)
 
 
   def save(movementMessage: Movement): Future[Boolean] = {
-    val updatedMovement = movementMessage copy(lastUpdate = Instant.now(clock))
+    val updatedMovement = movementMessage copy(lastUpdate = timeService.now)
 
     collection.replaceOne(
       filter = filterBy(movementMessage.localReferenceNumber, movementMessage.consignorId, movementMessage.consigneeId),

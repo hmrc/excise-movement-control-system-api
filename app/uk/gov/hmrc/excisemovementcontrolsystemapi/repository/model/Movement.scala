@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model
 
 import play.api.libs.json.{Format, Json, OFormat}
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.DateTimeService
 
 import java.time.Instant
 
@@ -27,7 +28,7 @@ case class Movement(
     consigneeId: Option[String],
     administrativeReferenceCode: Option[String] = None,
     messages: Seq[Message] = Seq.empty,
-    lastUpdate: Instant = Instant.now,
+    lastUpdate: Instant = Instant.now
 )
 
 object Movement {
@@ -46,9 +47,9 @@ object Message {
   def apply(
     encodeMessage: String,
     messageType: String,
-    received: Instant = Instant.now): Message = {
+    timeService: DateTimeService): Message = {
 
-    Message(encodeMessage.hashCode(), encodeMessage, messageType, received)
+    Message(encodeMessage.hashCode(), encodeMessage, messageType, timeService.now)
   }
 
   implicit val format: OFormat[Message] = Json.format[Message]

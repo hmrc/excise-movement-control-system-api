@@ -31,7 +31,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateConsignorAction, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MongoError, NotFoundError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementMessageService, DateTimeService}
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
@@ -49,12 +49,13 @@ class GetMessagesControllerSpec extends PlaySpec
   private val movementMessageService = mock[MovementMessageService]
   private val cc = stubControllerComponents()
   private val lrn = "LRN1234"
+  private val timeService = mock[DateTimeService]
 
 
   "getMessagesForMovement" should {
     "return 200" in {
-
-      val messages = Seq(Message(lrn, "IE801", Instant.now()))
+      when(timeService.now).thenReturn(Instant.parse("2018-11-30T18:35:24.00Z"))
+      val messages = Seq(Message(lrn, "IE801", timeService))
       when(movementMessageService.getMovementMessagesByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Right(messages)))
 

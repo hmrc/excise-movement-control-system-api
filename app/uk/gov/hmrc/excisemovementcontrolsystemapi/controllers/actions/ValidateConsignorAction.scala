@@ -44,7 +44,7 @@ class ValidateConsignorActionImpl @Inject()(implicit val executionContext: Execu
       )
     }
     else {
-      logger.error("[ValidateErnAction] - Invalid Excise Number")
+      logger.error("[ValidateConsignorAction] - Invalid Excise Number")
       Future.successful(Left(Forbidden("Invalid Excise Number")))
     }
   }

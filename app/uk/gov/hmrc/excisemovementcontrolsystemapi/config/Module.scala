@@ -28,9 +28,9 @@ import scala.concurrent.ExecutionContext
 class Module extends AbstractModule {
 
   override def configure(): Unit = {
+    bind(classOf[Clock]).toInstance(Clock.systemDefaultZone.withZone(ZoneOffset.UTC))
     bind(classOf[Scheduler]).asEagerSingleton()
     bind(classOf[AppConfig]).asEagerSingleton()
-    bind(classOf[Clock]).toInstance(Clock.systemDefaultZone.withZone(ZoneOffset.UTC))
   }
 }
 

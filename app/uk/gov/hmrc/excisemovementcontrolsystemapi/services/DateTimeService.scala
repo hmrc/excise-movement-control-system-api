@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.models
+package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-import java.time.LocalDateTime
-import java.util.{Base64, UUID}
+import java.time.{Clock, Instant}
+import javax.inject.{Inject, Singleton}
 
-class EisUtils {
+@Singleton
+class DateTimeService @Inject()(clock: Clock) {
 
-  //todo: This may be moved to timeServices
-  def getCurrentDateTimeString: String = LocalDateTime.now().toString
-  def generateCorrelationId: String = UUID.randomUUID().toString
-  def createEncoder: Base64.Encoder = Base64.getEncoder
-  def createDecoder: Base64.Decoder = Base64.getDecoder
+  def now: Instant = Instant.now(clock)
 }
+
