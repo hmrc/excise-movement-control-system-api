@@ -50,7 +50,7 @@ class GetMessagesControllerItSpec extends PlaySpec
 
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
   private val lrn = "LRN00001"
-  private val url = s"http://localhost:$port/customs/excise/movements/$lrn/messages"
+  private val url = s"http://localhost:$port/movements/$lrn/messages"
 
   private val consignorId = "GBWK002281023"
 
