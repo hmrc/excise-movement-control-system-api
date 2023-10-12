@@ -1,4 +1,4 @@
 # microservice specific routes
 
-POST       /customs/excise/movements                 uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.DraftExciseMovementController.submit
-GET        /customs/excise/movements/:lrn/messages    uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.GetMessagesController.getMessagesForMovement(lrn: String)
+POST       /movements                  uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.DraftExciseMovementController.submit
+GET        /movements/:lrn/messages    uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.GetMessagesController.getMessagesForMovement(lrn: String)

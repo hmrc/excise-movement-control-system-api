@@ -53,7 +53,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   with BeforeAndAfterAll {
 
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
-  private val url = s"http://localhost:$port/customs/excise/movements"
+  private val url = s"http://localhost:$port/movements"
   private val eisUrl = "/emcs/digital-submit-new-message/v1"
   private val consignorId = "GBWK002281023"
 
