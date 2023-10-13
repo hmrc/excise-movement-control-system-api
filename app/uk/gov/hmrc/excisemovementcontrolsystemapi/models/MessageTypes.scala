@@ -21,11 +21,10 @@ import enumeratum.values.{StringEnum, StringEnumEntry, StringPlayJsonValueEnum}
 import scala.collection.immutable
 
 
-//todo replace the aboce MessageType with the below enum
 sealed abstract class MessageEumn (val value: String) extends StringEnumEntry
 
 /*
-todo: we do need to accound for all message here.
+todo: we do need to account for all message here.
  Just thinking for the end of october we will not deploy all
  message, so we may getnew one that are not in this enum
 */

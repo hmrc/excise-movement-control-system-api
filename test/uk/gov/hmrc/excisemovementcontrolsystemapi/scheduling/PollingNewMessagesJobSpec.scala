@@ -148,8 +148,7 @@ class PollingNewMessagesJobSpec
       val result = await(job.executeInMutex)
 
       result.message mustBe "The execution of scheduled job polling-new-message failed with error 'size must be positive'. The next execution of the job will do retry."
-      //todo: verify that the retrieved message is not saved to the db
-      //verify(movementMessageRepository, never()).save(MovementMessage)
+      verify(movementMessageRepository, never()).save(any)
     }
   }
 

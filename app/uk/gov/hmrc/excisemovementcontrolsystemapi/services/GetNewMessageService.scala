@@ -37,23 +37,15 @@ class GetNewMessageServiceImpl @Inject()(
     showNewMessageConnector.get(exciseNumber).flatMap(response =>
       response.fold(
         _ => Future.successful(None),
-        success =>
-          //Todo store message into mongo. Do not store duplicated
-          handleSuccess(exciseNumber, success)
+        success => handleSuccess(exciseNumber, success)
       )
     )
   }
 
-  //todo: We only return success (and so cahce the message) if a message-receipt is successful.
-  // There may be problem here as if the message-receipt fails between
-  // between MDTP and EIS (but was successfule between (EIS and EMCS Core)
-  // then the message would be deleted in EMCS core, but we do not cache them
-  // so that messages will be lost.
   private def handleSuccess(
     exciseNumber: String,
     newMessageResponse: ShowNewMessageResponse
   )(implicit hc: HeaderCarrier): Future[Option[ShowNewMessageResponse]] = {
-    //todo check CountOfMessagesAvailable as message return an xml with no messages
 
     val hasMessage = showNewMessageParser.countOfMessagesAvailable(newMessageResponse.message) > 0
 
@@ -61,7 +53,6 @@ class GetNewMessageServiceImpl @Inject()(
       logger.warn(s"No more new message available for Excise Registration Number: $exciseNumber")
       Future.successful(None)
     } else {
-      // todo: Acknowledge all the time?
       messageReceiptConnector.put(exciseNumber).map {
         case Right(_) => Some(newMessageResponse)
         case Left(_) if hasMessage => Some(newMessageResponse)
