@@ -24,43 +24,36 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, EISResponse}
 import uk.gov.hmrc.http.{HttpReads, HttpResponse}
 
-class EISHttpReader(
-  correlationId: String,
-  consignorId: String,
-  createdDateTime: String
-) extends HttpReads[Either[Result, EISResponse]] with EisResponseHandler with Logging {
-
-    override def read(method: String, url: String, response: HttpResponse): Either[Result, EISResponse] = {
-        val result = extractIfSuccessful[EISResponse](response)
-        result match {
-          case Right(eisResponse) => Right(eisResponse)
-          case Left(httpResponse: HttpResponse) => Left(handleErrorResponse(httpResponse.status, httpResponse.body))
-        }
+object HttpReader extends EisResponseHandler with Logging {
+  def read(
+            correlationId: String,
+            ern: String,
+            dateTime: String
+          ): HttpReads[Either[Result, EISResponse]] =
+    (_: String, _: String, response: HttpResponse) => {
+      val result = extractIfSuccessful[EISResponse](response)
+      result match {
+        case Right(eisResponse) => Right(eisResponse)
+        case Left(httpResponse: HttpResponse) => Left(handleErrorResponse(ern, correlationId, dateTime, httpResponse))
+      }
     }
 
   private def handleErrorResponse
   (
-    status: Int,
-    message: String,
+    consignorId: String,
+    correlationId: String,
+    createdDateTime: String,
+    response: HttpResponse,
   ): Result = {
 
+    val message = response.body
     logger.warn(EISErrorMessage(createdDateTime, consignorId, message, correlationId, MessageTypes.IE815.value))
 
-    status match {
+    response.status match {
       case BAD_REQUEST => BadRequest(message)
       case NOT_FOUND => NotFound(message)
       case SERVICE_UNAVAILABLE => ServiceUnavailable(message)
       case _ => InternalServerError(message)
     }
-  }
-}
-
-object EISHttpReader {
-  def apply(correlationId: String, consignorId: String, createDateTime: String): EISHttpReader = {
-    new EISHttpReader(
-      correlationId: String,
-      consignorId: String,
-      createDateTime: String
-    )
   }
 }

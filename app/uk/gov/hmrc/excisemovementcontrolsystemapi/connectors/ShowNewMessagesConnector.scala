@@ -18,18 +18,16 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
-import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EisResponseHandler
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, Header}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, MessageTypes, ShowNewMessageErrorResponse, ShowNewMessageResponse}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, MessageTypes, ShowNewMessageResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
 
 class ShowNewMessagesConnector @Inject()(
   httpClient: HttpClient,
@@ -54,7 +52,6 @@ class ShowNewMessagesConnector @Inject()(
         case Right(eisResponse) => Right(eisResponse)
         case Left(_) =>
           logger.warn(EISErrorMessage(dateTime,ern, response.body, correlationId, MessageTypes.IE_NEW_MESSAGES.value))
-          //todo: we might we want return the error message of the EIS
           Left(InternalServerError(response.body))
       }
     }
@@ -65,24 +62,4 @@ class ShowNewMessagesConnector @Inject()(
           Left(InternalServerError(ex.getMessage))
       }
   }
-
-}
-
-//todo: this my be generalised for reuse. see EISHttpReader
-object ShowNewMessageReader extends Logging {
-  def read(
-    correlationId: String,
-    ern: String,
-    dateTime: String
-  ): HttpReads[Either[ShowNewMessageErrorResponse, ShowNewMessageResponse]] =
-    (_: String, _: String, response: HttpResponse) => {
-      Try(Json.parse(response.body).as[ShowNewMessageResponse]) match {
-        case Success(value) => Right(value)
-        case Failure(exception) => {
-          //Todo: output the default error message. see MovementMessageConnector. we may want to use EISErrorMessage
-          logger.error("Error to pars JSON", exception)
-          throw new RuntimeException(exception.getMessage)
-        }
-      }
-    }
 }

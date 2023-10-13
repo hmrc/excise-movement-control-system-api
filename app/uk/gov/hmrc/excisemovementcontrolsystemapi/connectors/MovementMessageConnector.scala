@@ -22,11 +22,11 @@ import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.HttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Header.EmcsSource
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, EISErrorResponse, EISRequest, EISResponse, Header}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import java.nio.charset.StandardCharsets
@@ -58,7 +58,7 @@ class MovementMessageConnector @Inject()
         appConfig.emcsReceiverMessageUrl,
         eisRequest,
         Header.build(correlationId, createdDateTime)
-      )(EISRequest.format, EISHttpReader(correlationId, consignorId, createdDateTime), hc, ec)
+      )(EISRequest.format, HttpReader.read(correlationId, consignorId, createdDateTime), hc, ec)
         .andThen { case _ => timer.stop() }
         .recover {
           case ex: Throwable =>

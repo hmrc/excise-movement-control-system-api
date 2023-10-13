@@ -22,7 +22,6 @@ import com.kenshoo.play.metrics.Metrics
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.mockito.MockitoSugar.{reset, verify, when}
-import org.mockito.captor.ArgCaptor
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
@@ -34,7 +33,6 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISRequest, EISResponse}
@@ -104,14 +102,11 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
 
       verify(appConfig).emcsReceiverMessageUrl
 
-      val captor = ArgCaptor[EISHttpReader]
       verify(mockHttpClient).POST(
         eqTo("/eis/path"),
         eqTo(eisRequest),
         eqTo(expectedHeader)
-      )(any, captor.capture, any, any)
-
-      captor.value.isInstanceOf[EISHttpReader] mustBe true
+      )(any, any, any, any)
     }
 
     "return Bad request error" in {

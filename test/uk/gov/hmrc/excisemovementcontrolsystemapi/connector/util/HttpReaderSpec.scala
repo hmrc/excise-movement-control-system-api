@@ -22,15 +22,15 @@ import org.scalatest.Inspectors.forAll
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.HttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISResponse
 import uk.gov.hmrc.http.HttpResponse
 
 import scala.reflect.runtime.universe.typeOf
 
-class EISHttpReaderSpec extends PlaySpec with EitherValues{
+class HttpReaderSpec extends PlaySpec with EitherValues{
 
-  private val eisHttpParser = EISHttpReader("123", "GB123", "date time")
+  private val eisHttpParser = HttpReader.read("123", "GB123", "date time")
   "read" should {
     "return EISResponse" in {
       val eisResponse  = EISResponse("ok", "Success", "123")
