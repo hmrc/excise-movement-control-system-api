@@ -24,7 +24,7 @@ import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisUtils
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequest, DataRequestIE818}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Header.EmcsSource
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, EISErrorResponse, EISRequest, EISResponse, Header}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
@@ -73,5 +73,38 @@ class MovementMessageConnector @Inject()
             )
             Left(InternalServerError(Json.toJson(error).toString()))
     }
+  }
+
+  //TODO not this
+  def submitExciseMovementIE818(request: DataRequestIE818[_], messageType: String)(implicit hc: HeaderCarrier): Future[Either[Result, EISResponse]] = {
+
+    val timer = metrics.defaultRegistry.timer("emcs.eiscontroller.timer").time()
+
+    //todo: add retry
+    val correlationId = eisUtils.generateCorrelationId
+    val createdDateTime = eisUtils.getCurrentDateTimeString
+    val encodedMessage = eisUtils.createEncoder.encodeToString(request.body.toString.getBytes(StandardCharsets.UTF_8))
+    val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", encodedMessage)
+    val consigneeId = request.movementMessage.consigneeId.getOrElse("TODO")
+
+    httpClient.POST[EISRequest, Either[Result, EISResponse]](
+      appConfig.emcsReceiverMessageUrl,
+      eisRequest,
+      Header.build(correlationId, createdDateTime)
+    )(EISRequest.format, EISHttpReader(correlationId, consigneeId, createdDateTime), hc, ec)
+      .andThen { case _ => timer.stop() }
+      .recover {
+        case ex: Throwable =>
+
+          logger.warn(EISErrorMessage(createdDateTime, consigneeId, ex.getMessage, correlationId, messageType), ex)
+
+          val error = EISErrorResponse(
+            LocalDateTime.parse(createdDateTime),
+            "Exception",
+            ex.getMessage,
+            correlationId
+          )
+          Left(InternalServerError(Json.toJson(error).toString()))
+      }
   }
 }

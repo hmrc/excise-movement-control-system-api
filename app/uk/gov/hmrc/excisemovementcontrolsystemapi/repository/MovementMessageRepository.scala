@@ -60,7 +60,7 @@ class MovementMessageRepository @Inject()
   ) with Logging {
 
   def saveMovementMessage(movementMessage: MovementMessage): Future[Boolean] = {
-    collection.insertOne(movementMessage copy (createdOn = Instant.now(clock)))
+    collection.insertOne(movementMessage.copy(createdOn = Instant.now(clock)))
       .toFuture()
       .map(_ => true)
   }

@@ -14,11 +14,22 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.models
+package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-object MessageTypes {
+import com.google.inject.ImplementedBy
+import generated.{IE815Type, IE818Type}
 
-  val IE815Message = "IE815"
-  val IE818Message = "IE818"
+import javax.inject.Inject
+import scala.xml.NodeSeq
+class IE818XmlParser @Inject() extends XmlParserIE818 {
 
+  override def fromXml(xml: NodeSeq): IE818Type = {
+    scalaxb.fromXML[IE818Type](xml)
+  }
+
+}
+
+@ImplementedBy(classOf[IE815XmlParser])
+trait XmlParserIE818 {
+  def fromXml(xml: NodeSeq): IE818Type
 }

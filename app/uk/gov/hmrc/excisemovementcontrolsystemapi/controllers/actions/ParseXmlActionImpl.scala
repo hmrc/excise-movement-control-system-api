@@ -36,7 +36,6 @@ class ParseIE815XmlActionImpl @Inject()
   with ParseIE815XmlAction
   with Logging {
 
-
   override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
 
       request.body match {

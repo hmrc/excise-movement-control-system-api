@@ -2,3 +2,4 @@
 
 POST       /movements                  uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.DraftExciseMovementController.submit
 GET        /movements/:lrn/messages    uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.GetMessagesController.getMessagesForMovement(lrn: String)
+POST       /movements/:lrn/messages    uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubmitMessageController.submit(lrn: String)

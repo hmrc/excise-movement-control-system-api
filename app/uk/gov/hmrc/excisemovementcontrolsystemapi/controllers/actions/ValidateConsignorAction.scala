@@ -34,7 +34,7 @@ class ValidateConsignorActionImpl @Inject()(implicit val executionContext: Execu
 
     val consignorId = request.ie815Message.Body.SubmittedDraftOfEADESAD.ConsignorTrader.TraderExciseNumber
 
-    if(request.request.erns.contains(consignorId)) {
+    if(request.erns.contains(consignorId)) {
       val consigneeId = request.ie815Message.Body.SubmittedDraftOfEADESAD.ConsigneeTrader.flatMap(_.Traderid)
       val localRefNumber = request.ie815Message.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber
       Future.successful(Right(DataRequest(
