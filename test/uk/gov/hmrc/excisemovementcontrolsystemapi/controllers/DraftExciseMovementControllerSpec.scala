@@ -36,7 +36,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MongoError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{ExciseNumberService, MovementMessageService}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
@@ -54,6 +54,7 @@ class DraftExciseMovementControllerSpec
   implicit val sys = ActorSystem("DraftExciseMovementControllerSpec")
   private val connector = mock[MovementMessageConnector]
   private val movementMessageService = mock[MovementMessageService]
+  private val exciseNumberService = mock[ExciseNumberService]
   private val cc = stubControllerComponents()
   private val ieMessage = scalaxb.fromXML[IE815Type](IE815)
   private val request = createRequest(IE815)
@@ -85,6 +86,9 @@ class DraftExciseMovementControllerSpec
         captor.capture,
         eqTo("IE815")
       )(any)
+
+      verify(movementMessageService).saveMovementMessage(any)
+      verify(exciseNumberService).saveExciseNumber(any)
 
       verifyDataRequest(captor.value.movementMessage)
     }
@@ -145,6 +149,7 @@ class DraftExciseMovementControllerSpec
       FakeSuccessfulValidateConsignorAction,
       connector,
       movementMessageService,
+      exciseNumberService,
       cc
     )
 
@@ -155,6 +160,7 @@ class DraftExciseMovementControllerSpec
       FakeSuccessfulValidateConsignorAction,
       connector,
       movementMessageService,
+      exciseNumberService,
       cc
     )
 
@@ -165,6 +171,7 @@ class DraftExciseMovementControllerSpec
       FakeSuccessfulValidateConsignorAction,
       connector,
       movementMessageService,
+      exciseNumberService,
       cc
     )
 
@@ -175,6 +182,7 @@ class DraftExciseMovementControllerSpec
       FakeFailureValidateConsignorAction,
       connector,
       movementMessageService,
+      exciseNumberService,
       cc
     )
 

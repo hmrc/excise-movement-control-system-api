@@ -22,7 +22,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConn
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseIE815XmlAction, ValidateConsignorAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ExciseMovementResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumber
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{ExciseNumberService, MovementMessageService}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -36,6 +37,7 @@ class DraftExciseMovementController @Inject()(
                                                consignorValidatorAction: ValidateConsignorAction,
                                                movementMessageConnector: MovementMessageConnector,
                                                movementMessageService: MovementMessageService,
+                                               exciseNumberService: ExciseNumberService,
                                                cc: ControllerComponents
                                              )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
@@ -52,9 +54,12 @@ class DraftExciseMovementController @Inject()(
   private def handleSuccess(implicit request: DataRequest[NodeSeq]): Future[Result] = {
 
     movementMessageService.saveMovementMessage(request.movementMessage)
-      .flatMap(message =>
-        message match {
-          case Right(msg) => Future.successful(Accepted(Json.toJson(ExciseMovementResponse("Accepted", msg.localReferenceNumber, msg.consignorId))))
+      .flatMap(movement =>
+        movement match {
+          case Right(msg) => {
+            exciseNumberService.saveExciseNumber(ExciseNumber(msg.consignorId, msg.localReferenceNumber))
+            Future.successful(Accepted(Json.toJson(ExciseMovementResponse("Accepted", msg.localReferenceNumber, msg.consignorId))))
+          }
           case Left(error) => Future.successful(InternalServerError(error.message))
         })
   }
