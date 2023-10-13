@@ -54,13 +54,12 @@ class DraftExciseMovementController @Inject()(
   private def handleSuccess(implicit request: DataRequest[NodeSeq]): Future[Result] = {
 
     movementMessageService.saveMovementMessage(request.movementMessage)
-      .flatMap(movement =>
-        movement match {
-          case Right(msg) => {
-            exciseNumberService.saveExciseNumber(ExciseNumber(msg.consignorId, msg.localReferenceNumber))
-            Future.successful(Accepted(Json.toJson(ExciseMovementResponse("Accepted", msg.localReferenceNumber, msg.consignorId))))
-          }
-          case Left(error) => Future.successful(InternalServerError(error.message))
-        })
+      .flatMap {
+        case Right(msg) => {
+          exciseNumberService.saveExciseNumber(ExciseNumber(msg.consignorId, msg.localReferenceNumber))
+          Future.successful(Accepted(Json.toJson(ExciseMovementResponse("Accepted", msg.localReferenceNumber, msg.consignorId))))
+        }
+        case Left(error) => Future.successful(InternalServerError(error.message))
+      }
   }
 }

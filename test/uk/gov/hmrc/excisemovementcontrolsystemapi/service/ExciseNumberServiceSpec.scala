@@ -55,9 +55,8 @@ class ExciseNumberServiceSpec extends PlaySpec
     when(timeService.now).thenReturn(now)
   }
 
-  "saveMovementMessage" should {
+  "saveExciseNumber" should {
     "save a ExciseNumber" in {
-      val successMovementMessage = Movement(lrn, consignorId, Some(consigneeId))
       when(mockExciseNumberRepository.save(any))
         .thenReturn(Future.successful(true))
 

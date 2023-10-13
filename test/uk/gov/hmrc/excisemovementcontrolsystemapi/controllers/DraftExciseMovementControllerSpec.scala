@@ -61,7 +61,7 @@ class DraftExciseMovementControllerSpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(connector)
+    reset(connector, movementMessageService, exciseNumberService)
 
     when(connector.submitExciseMovement(any, any)(any)).thenReturn(Future.successful(Right(EISResponse("ok", "success", "123"))))
   }
