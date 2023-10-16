@@ -22,8 +22,8 @@ import akka.stream.scaladsl.Sink
 import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ShowNewMessageResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ExciseNumberRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumber
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumber, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementMessageService}
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -34,7 +34,6 @@ import scala.util.control.NonFatal
 
 class PollingNewMessagesJob @Inject()(
   newMessageService: GetNewMessageService,
-  exciseNumberRepository: ExciseNumberRepository,
   movementService: MovementMessageService,
   appConfig: AppConfig
 ) (implicit mat: Materializer)
@@ -60,35 +59,47 @@ class PollingNewMessagesJob @Inject()(
     }
   }
 
-   def runJob(implicit ec: ExecutionContext): Future[RunningOfJobSuccessful] = {
-     exciseNumberRepository
-       .getAll
-       .runWith(Sink.foreachAsync[ExciseNumber](appConfig.parallelism)(getNewMessages(_)))
-       .map(_ => RunningOfJobSuccessful)
-       .recoverWith {
-         case NonFatal(e) =>
-           logger.error("Failed to get all new messages", e)
-           Future.failed(RunningOfJobFailed(name, e))
-       }
-   }
+//   def runJobOld(implicit ec: ExecutionContext): Future[RunningOfJobSuccessful] = {
+//     exciseNumberRepository
+//       .getAll
+//       .runWith(Sink.foreachAsync[ExciseNumber](appConfig.parallelism)(getNewMessages(_)))
+//       .map(_ => RunningOfJobSuccessful)
+//       .recoverWith {
+//         case NonFatal(e) =>
+//           logger.error("Failed to get all new messages", e)
+//           Future.failed(RunningOfJobFailed(name, e))
+//       }
+//   }
 
-  private def getNewMessages(exciseNumber: ExciseNumber)(implicit ec: ExecutionContext): Future[Unit] = {
+  def runJob(implicit ec: ExecutionContext): Future[RunningOfJobSuccessful] = {
+    movementService
+      .getAllMovements
+      .runWith(Sink.foreachAsync[Movement](appConfig.parallelism)(getNewMessages(_)))
+      .map(_ => RunningOfJobSuccessful)
+      .recoverWith {
+        case NonFatal(e) =>
+          logger.error("Failed to get all new messages", e)
+          Future.failed(RunningOfJobFailed(name, e))
+      }
+  }
 
-    newMessageService.getNewMessagesAndAcknowledge(exciseNumber.exciseNumber)
-      .flatMap(message => message.fold[Future[Unit]](successful(()))(m => saveToDB(exciseNumber, m)))
+  private def getNewMessages(movement: Movement)(implicit ec: ExecutionContext): Future[Unit] = {
+
+    newMessageService.getNewMessagesAndAcknowledge(movement.consignorId)
+      .flatMap(message => message.fold[Future[Unit]](successful(()))(m => saveToDB(movement, m)))
       .recover {
         case NonFatal(e) =>
-          logger.warn(s"Could not get messages for ern: ${exciseNumber.exciseNumber} with message: ${e.getMessage}. Will retry later", e)
+          logger.warn(s"Could not get messages for ern: ${movement.consignorId} with message: ${e.getMessage}. Will retry later", e)
           successful(())
     }
   }
 
   private def saveToDB(
-    exciseNumber: ExciseNumber,
+    movement: Movement,
     message: ShowNewMessageResponse
   )(implicit ec: ExecutionContext): Future[Unit] = {
 
-    movementService.updateMovement(exciseNumber.localReferenceNumber, exciseNumber.exciseNumber, message.message)
+    movementService.updateMovement(movement.localReferenceNumber, movement.consignorId, message.message)
       .flatMap {
       case true => successful(())
       case _ =>

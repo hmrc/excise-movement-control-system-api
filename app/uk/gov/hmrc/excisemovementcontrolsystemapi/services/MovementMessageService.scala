@@ -16,10 +16,12 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
+import akka.NotUsed
+import akka.stream.scaladsl.Source
 import com.google.inject.Singleton
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MongoError, NotFoundError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumber, Message, Movement}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -55,6 +57,8 @@ class MovementMessageService @Inject()(
         case ex: Throwable => Left(MongoError(ex.getMessage))
       }
   }
+
+  def getAllMovements: Source[Movement, NotUsed] = ???
 
   private def saveDistinctMessage(encodedMessage: String, movement: Movement): Future[Boolean] = {
 

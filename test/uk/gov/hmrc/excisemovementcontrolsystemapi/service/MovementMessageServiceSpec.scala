@@ -25,8 +25,8 @@ import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageTypes, MongoError, NotFoundError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementMessageService, ShowNewMessageParser, DateTimeService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumber, Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{DateTimeService, MovementMessageService, ShowNewMessageParser}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.Instant
@@ -205,6 +205,24 @@ class MovementMessageServiceSpec extends PlaySpec
       val result = await(movementMessageService.updateMovement(lrn, consignorId, "Seq(message3, message4)"))
 
       result mustBe false
+    }
+  }
+
+  "getExciseNumbers" should {
+    "return a list of excise numbers" in {
+//      val messages = Seq(Message("123456", "IE801", timeService), Message("ABCDE", "IE815", timeService))
+      val lrn = "lrn"
+      val exciseNumber = "exciseNumber"
+
+      val exciseNumbers = Seq(ExciseNumber(exciseNumber, lrn))
+//      val movementMessage = Movement(lrn, consignorId, Some(consigneeId), None, messages)
+      when(mockMovementMessageRepository.getAllMovements)
+        .thenReturn(Future.successful(Seq(Movement(lrn, exciseNumber, None))))
+
+
+      val result = await(movementMessageService.getAllMovements)
+
+      result mustBe exciseNumbers
     }
   }
 }

@@ -33,7 +33,7 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.RepositoryTestStub
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ShowNewMessageResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumber
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumber, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementMessageService}
 
 import java.time.LocalDateTime
@@ -56,7 +56,6 @@ class PollingNewMessagesJobSpec
 
   private val job = new PollingNewMessagesJob(
     newMessageService,
-    exciseNumberRepository,
     movementService,
     appConfig
   )
@@ -85,15 +84,15 @@ class PollingNewMessagesJobSpec
     }
 
     "Get Pending ERN from Mongo" in {
-      when(exciseNumberRepository.getAll).thenReturn(createSource)
+      when(movementService.getAllMovements).thenReturn(createSource)
 
       await(job.executeInMutex)
 
-      verify(exciseNumberRepository).getAll
+      verify(movementService).getAllMovements
     }
 
     "send getNewMessage request for each pending ern" in {
-      when(exciseNumberRepository.getAll).thenReturn(createSource)
+      when(movementService.getAllMovements).thenReturn(createSource)
 
       val newMessageResponse = ShowNewMessageResponse(
         LocalDateTime.of(2023, 5, 6, 9,10,13),
@@ -120,7 +119,7 @@ class PollingNewMessagesJobSpec
 
 
     "not process any message if no pending message exist" in {
-      when(exciseNumberRepository.getAll).thenReturn(Source(Seq.empty))
+      when(movementService.getAllMovements).thenReturn(Source(Seq.empty))
 
       val result = await(job.executeInMutex)
 
@@ -130,7 +129,7 @@ class PollingNewMessagesJobSpec
 
 
     "not change status in the database if show new message API has errors" in {
-      when(exciseNumberRepository.getAll).thenReturn(createSource)
+      when(movementService.getAllMovements).thenReturn(createSource)
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
         .thenReturn(Future.successful(None))
 
@@ -152,12 +151,12 @@ class PollingNewMessagesJobSpec
     }
   }
 
-  private def createSource: Source[ExciseNumber, NotUsed] = {
+  private def createSource: Source[Movement, NotUsed] = {
     Source(
       Seq(
-        ExciseNumber("1", "2"),
-        ExciseNumber("3", "3"),
-        ExciseNumber("4", "4")
+        Movement("2","1", None),
+        Movement("3","3", None),
+        Movement("4","4", None)
       )
     )
   }

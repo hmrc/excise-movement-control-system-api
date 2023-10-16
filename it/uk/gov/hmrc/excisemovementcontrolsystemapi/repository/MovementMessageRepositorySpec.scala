@@ -27,7 +27,7 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumber, Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.DateTimeService
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 
@@ -115,6 +115,21 @@ class MovementMessageRepositorySpec extends PlaySpec
 
       result mustEqual true
       verifyResults(insertedRecord, movement, Seq.empty)
+    }
+  }
+
+  "getAllMovements" should {
+    "return all available movements" in {
+      val lrn = "lrn"
+      val consignorId = "consignorId"
+      val consigneeId = "consigneeId"
+      val movement = Movement(lrn, consignorId, Some(consigneeId), None)
+
+      insert(movement).futureValue
+
+      val result = repository.getAllMovements
+
+      result mustBe Some(Seq(movement))
     }
   }
 

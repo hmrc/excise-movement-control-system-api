@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
+import akka.NotUsed
+import akka.stream.scaladsl.Source
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Filters.{and, equal, in, or}
 import org.mongodb.scala.model._
@@ -93,6 +95,13 @@ class MovementMessageRepository @Inject()
       .headOption()
   }
 
+  def getAllMovements: Source[Movement, NotUsed] = {
+    Source.fromPublisher(
+          collection.find().toObservable()
+        )
+          .map(o => o)
+          .collect { case c => c }
+  }
 }
 
 object MovementMessageRepository {
