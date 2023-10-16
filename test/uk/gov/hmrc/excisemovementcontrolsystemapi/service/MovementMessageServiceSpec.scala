@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.service
 
-import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{Sink, Source}
 import dispatch.Future
@@ -28,7 +27,7 @@ import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageTypes, MongoError, NotFoundError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumber, Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{DateTimeService, MovementMessageService, ShowNewMessageParser}
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -212,16 +211,19 @@ class MovementMessageServiceSpec extends PlaySpec
     }
   }
 
-  "getExciseNumbers" should {
+  "getUniqueConsignorId" should {
     "return a list of excise numbers" in {
-      val movement = Movement(lrn, consignorId, Some(consigneeId), None, Seq.empty, now)
-      when(mockMovementMessageRepository.getAllMovements)
-        .thenReturn(Source(Seq(movement)))
+      val movement1 = Movement("lrn1", "consignorId1", Some("consigneeId1"), None, Seq.empty, now)
+      val movement2 = Movement("lrn2", "consignorId2", Some("consigneeId2"), None, Seq.empty, now)
+      val movement3 = Movement("lrn3", "consignorId3", Some("consigneeId3"), None, Seq.empty, now)
+      val movement4 = Movement("lrn4", "consignorId1", Some("consigneeId2"), None, Seq.empty, now)
+      val movement5 = Movement("lrn5", "consignorId2", Some("consigneeId2"), None, Seq.empty, now)
+      when(mockMovementMessageRepository.getMovements)
+        .thenReturn(Future.successful(Seq(movement1, movement2, movement3, movement4, movement5)))
 
+      val result = await(movementMessageService.getUniqueConsignorId.flatMap(stream => stream.runWith(Sink.seq)))
 
-      val result = await(movementMessageService.getAllMovements.runWith(Sink.seq))
-
-      result mustBe Seq(movement)
+      result mustBe Seq(movement1, movement2, movement3)
     }
   }
 }

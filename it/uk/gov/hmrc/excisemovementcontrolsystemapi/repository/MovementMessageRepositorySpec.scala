@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
-import akka.stream.scaladsl.Sink
 import org.mockito.MockitoSugar.when
 import org.mongodb.scala.model.Filters
 import org.scalatest.concurrent.IntegrationPatience
@@ -25,17 +24,14 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
-import play.api.Play.materializer
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumber, Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.DateTimeService
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 
 import java.time.Instant
-import scala.Seq
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 
@@ -122,18 +118,17 @@ class MovementMessageRepositorySpec extends PlaySpec
     }
   }
 
-  "getAllMovements" should {
+  "getMovements" should {
     "return all available movements" in {
-      val lrn = "lrn"
-      val consignorId = "consignorId"
-      val consigneeId = "consigneeId"
-      val movement = Movement(lrn, consignorId, Some(consigneeId), None)
+      val movement1 = Movement("lrn", "consignorId", Some("consigneeId"), None)
+      val movement2 = Movement("lrn1", "consignorId_1", Some("consigneeId_1"), None)
 
-      insert(movement).futureValue
+      insert(movement1).futureValue
+      insert(movement2).futureValue
 
-      val result = await(repository.getAllMovements.runWith(Sink.seq))
+      val result = repository.getMovements.futureValue
 
-      result mustBe Seq(movement)
+      result mustBe Seq(movement1, movement2)
     }
   }
 

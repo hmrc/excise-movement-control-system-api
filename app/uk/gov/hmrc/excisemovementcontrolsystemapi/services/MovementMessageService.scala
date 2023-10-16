@@ -21,7 +21,7 @@ import akka.stream.scaladsl.Source
 import com.google.inject.Singleton
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MongoError, NotFoundError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumber, Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -58,8 +58,10 @@ class MovementMessageService @Inject()(
       }
   }
 
-  def getAllMovements: Source[Movement, NotUsed] = {
-    movementMessageRepository.getAllMovements
+  def getUniqueConsignorId: Future[Source[Movement, NotUsed]] = {
+    movementMessageRepository.getMovements
+      .map(m => m.distinctBy(o => o.consignorId))
+      .map(o => Source(o))
   }
 
   private def saveDistinctMessage(encodedMessage: String, movement: Movement): Future[Boolean] = {

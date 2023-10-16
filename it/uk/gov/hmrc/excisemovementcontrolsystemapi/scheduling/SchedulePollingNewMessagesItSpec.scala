@@ -77,7 +77,7 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
   override lazy val app: Application = {
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
-    when(movementMessageRepository.getAllMovements).thenReturn(Source(Seq.empty))
+    when(movementMessageRepository.getMovements).thenReturn(Future.successful(Seq.empty))
 
     GuiceApplicationBuilder()
       .configure(configureServer)
@@ -102,14 +102,13 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
     stubMessageReceiptRequest("4")
 
     when(timeService.now).thenReturn(Instant.parse("2018-11-30T18:35:24.00Z"))
-    when(movementMessageRepository.getAllMovements).thenReturn(createSource)
+    when(movementMessageRepository.getMovements).thenReturn(Future.successful(createSource))
 
 
   }
 
   "Scheduler" should {
     "start Polling show new message copy" in {
-
       setUp
 
       eventually (timeout(Span(1L, Seconds))){wireMock.verify(getRequestedFor(urlEqualTo("/apip-emcs/messages/v1/show-new-messages?exciseregistrationnumber=1")))}
@@ -274,13 +273,11 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
     )
   }
 
-  private def createSource: Source[Movement, NotUsed] = {
-    Source(
-      Seq(
-        Movement("2", "1", None),
-        Movement("3", "3", None),
-        Movement("4", "4", None)
-      )
+  private def createSource: Seq[Movement] = {
+    Seq(
+      Movement("2", "1", None),
+      Movement("3", "3", None),
+      Movement("4", "4", None)
     )
   }
 

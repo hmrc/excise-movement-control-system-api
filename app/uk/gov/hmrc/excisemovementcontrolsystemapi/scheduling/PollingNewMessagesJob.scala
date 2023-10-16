@@ -22,8 +22,7 @@ import akka.stream.scaladsl.Sink
 import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ShowNewMessageResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumber, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementMessageService}
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -59,23 +58,13 @@ class PollingNewMessagesJob @Inject()(
     }
   }
 
-//   def runJobOld(implicit ec: ExecutionContext): Future[RunningOfJobSuccessful] = {
-//     exciseNumberRepository
-//       .getAll
-//       .runWith(Sink.foreachAsync[ExciseNumber](appConfig.parallelism)(getNewMessages(_)))
-//       .map(_ => RunningOfJobSuccessful)
-//       .recoverWith {
-//         case NonFatal(e) =>
-//           logger.error("Failed to get all new messages", e)
-//           Future.failed(RunningOfJobFailed(name, e))
-//       }
-//   }
-
   def runJob(implicit ec: ExecutionContext): Future[RunningOfJobSuccessful] = {
     movementService
-      .getAllMovements
-      .runWith(Sink.foreachAsync[Movement](appConfig.parallelism)(getNewMessages(_)))
-      .map(_ => RunningOfJobSuccessful)
+      .getUniqueConsignorId.flatMap(
+      stream =>
+        stream.runWith(Sink.foreachAsync[Movement](appConfig.parallelism)(getNewMessages(_)))
+          .map(_ => RunningOfJobSuccessful)
+    )
       .recoverWith {
         case NonFatal(e) =>
           logger.error("Failed to get all new messages", e)
@@ -99,6 +88,12 @@ class PollingNewMessagesJob @Inject()(
     message: ShowNewMessageResponse
   )(implicit ec: ExecutionContext): Future[Unit] = {
 
+    /*
+    todo
+    1. extract messages
+    2. get LRN, ARC for that message that mach consignorId
+    3. store the message into mongo according LRN/ARC anc consignorID
+     */
     movementService.updateMovement(movement.localReferenceNumber, movement.consignorId, message.message)
       .flatMap {
       case true => successful(())

@@ -31,9 +31,8 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.RepositoryTestStub
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ShowNewMessageResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumber, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementMessageService}
 
 import java.time.LocalDateTime
@@ -42,7 +41,6 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class PollingNewMessagesJobSpec
   extends PlaySpec
-    with RepositoryTestStub
     with GuiceOneAppPerSuite
     with BeforeAndAfterEach {
 
@@ -62,9 +60,10 @@ class PollingNewMessagesJobSpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(movementMessageRepository, appConfig, newMessageService)
+    reset(movementService, appConfig, newMessageService)
 
     when(appConfig.parallelism).thenReturn(5)
+    when(movementService.getUniqueConsignorId).thenReturn(Future.successful(createSource))
   }
 
   "Job" should {
@@ -84,16 +83,12 @@ class PollingNewMessagesJobSpec
     }
 
     "Get Pending ERN from Mongo" in {
-      when(movementService.getAllMovements).thenReturn(createSource)
-
       await(job.executeInMutex)
 
-      verify(movementService).getAllMovements
+      verify(movementService).getUniqueConsignorId
     }
 
     "send getNewMessage request for each pending ern" in {
-      when(movementService.getAllMovements).thenReturn(createSource)
-
       val newMessageResponse = ShowNewMessageResponse(
         LocalDateTime.of(2023, 5, 6, 9,10,13),
         "123",
@@ -119,7 +114,7 @@ class PollingNewMessagesJobSpec
 
 
     "not process any message if no pending message exist" in {
-      when(movementService.getAllMovements).thenReturn(Source(Seq.empty))
+      when(movementService.getUniqueConsignorId).thenReturn(Future.successful(Source(Seq.empty)))
 
       val result = await(job.executeInMutex)
 
@@ -129,7 +124,6 @@ class PollingNewMessagesJobSpec
 
 
     "not change status in the database if show new message API has errors" in {
-      when(movementService.getAllMovements).thenReturn(createSource)
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
         .thenReturn(Future.successful(None))
 
@@ -140,14 +134,24 @@ class PollingNewMessagesJobSpec
       verify(movementService, never()).saveMovementMessage(any)
     }
 
-
-    "return an error if job fail" in {
-      when(appConfig.parallelism).thenReturn(0)
+    "carry on polling if GetNewMessage Api fails" in {
+      when(newMessageService.getNewMessagesAndAcknowledge(any)(any)).thenReturn(Future.successful(None))
 
       val result = await(job.executeInMutex)
 
-      result.message mustBe "The execution of scheduled job polling-new-message failed with error 'size must be positive'. The next execution of the job will do retry."
-      verify(movementMessageRepository, never()).save(any)
+      result.message mustBe "polling-new-message Job ran successfully."
+      verify(movementService, never()).saveMovementMessage(any)
+    }
+
+    "return an error" when {
+      "stream return an error" in {
+        when(appConfig.parallelism).thenReturn(0)
+
+        val result = await(job.executeInMutex)
+
+        result.message mustBe "The execution of scheduled job polling-new-message failed with error 'size must be positive'. The next execution of the job will do retry."
+        verify(movementService, never()).saveMovementMessage(any)
+      }
     }
   }
 
