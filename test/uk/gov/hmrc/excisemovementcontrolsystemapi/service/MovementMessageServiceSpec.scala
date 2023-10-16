@@ -16,6 +16,9 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.service
 
+import akka.NotUsed
+import akka.actor.ActorSystem
+import akka.stream.scaladsl.{Sink, Source}
 import dispatch.Future
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, verify, when}
@@ -38,6 +41,7 @@ class MovementMessageServiceSpec extends PlaySpec
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val sys = ActorSystem("MovementMessageServiceSpec")
 
   private val messageParser = mock[ShowNewMessageParser]
   private val mockMovementMessageRepository = mock[MovementMessageRepository]
@@ -210,19 +214,14 @@ class MovementMessageServiceSpec extends PlaySpec
 
   "getExciseNumbers" should {
     "return a list of excise numbers" in {
-//      val messages = Seq(Message("123456", "IE801", timeService), Message("ABCDE", "IE815", timeService))
-      val lrn = "lrn"
-      val exciseNumber = "exciseNumber"
-
-      val exciseNumbers = Seq(ExciseNumber(exciseNumber, lrn))
-//      val movementMessage = Movement(lrn, consignorId, Some(consigneeId), None, messages)
+      val movement = Movement(lrn, consignorId, Some(consigneeId), None, Seq.empty, now)
       when(mockMovementMessageRepository.getAllMovements)
-        .thenReturn(Future.successful(Seq(Movement(lrn, exciseNumber, None))))
+        .thenReturn(Source(Seq(movement)))
 
 
-      val result = await(movementMessageService.getAllMovements)
+      val result = await(movementMessageService.getAllMovements.runWith(Sink.seq))
 
-      result mustBe exciseNumbers
+      result mustBe Seq(movement)
     }
   }
 }

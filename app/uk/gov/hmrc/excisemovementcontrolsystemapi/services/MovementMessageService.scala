@@ -58,7 +58,9 @@ class MovementMessageService @Inject()(
       }
   }
 
-  def getAllMovements: Source[Movement, NotUsed] = ???
+  def getAllMovements: Source[Movement, NotUsed] = {
+    movementMessageRepository.getAllMovements
+  }
 
   private def saveDistinctMessage(encodedMessage: String, movement: Movement): Future[Boolean] = {
 

@@ -40,7 +40,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{RepositoryTestStub, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptResponse, MessageTypes, ShowNewMessageResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumber, Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberRepository, MovementMessageRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.DateTimeService
 
 import java.nio.charset.StandardCharsets
@@ -77,14 +77,13 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
   override lazy val app: Application = {
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
-    when(exciseNumberRepository.getAll).thenReturn(Source(Seq.empty))
+    when(movementMessageRepository.getAllMovements).thenReturn(Source(Seq.empty))
 
     GuiceApplicationBuilder()
       .configure(configureServer)
       .loadConfig(env => Configuration.load(env, Map("config.resource" -> "application.test.conf")))
       .overrides(
         bind[MovementMessageRepository].to(movementMessageRepository),
-        bind[ExciseNumberRepository].to(exciseNumberRepository),
         bind[DateTimeService].to(timeService)
       )
       .build()
@@ -103,7 +102,7 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
     stubMessageReceiptRequest("4")
 
     when(timeService.now).thenReturn(Instant.parse("2018-11-30T18:35:24.00Z"))
-    when(exciseNumberRepository.getAll).thenReturn(createSource)
+    when(movementMessageRepository.getAllMovements).thenReturn(createSource)
 
 
   }
@@ -275,12 +274,12 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
     )
   }
 
-  private def createSource: Source[ExciseNumber, NotUsed] = {
+  private def createSource: Source[Movement, NotUsed] = {
     Source(
       Seq(
-        ExciseNumber("1", "2"),
-        ExciseNumber("3", "3"),
-        ExciseNumber("4", "4")
+        Movement("2", "1", None),
+        Movement("3", "3", None),
+        Movement("4", "4", None)
       )
     )
   }
