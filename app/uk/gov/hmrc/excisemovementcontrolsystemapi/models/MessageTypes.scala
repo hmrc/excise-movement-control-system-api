@@ -37,7 +37,11 @@ object MessageTypes extends StringEnum[MessageEumn] with StringPlayJsonValueEnum
   case object IE801 extends MessageEumn("IE801")
   case object IE802 extends MessageEumn("IE802")
   case object IE810 extends MessageEumn("IE810")
+  case object IE813 extends MessageEumn("IE813")
   case object IE818 extends MessageEumn("IE818")
+  case object IE819 extends MessageEumn("IE819")
+  case object IE837 extends MessageEumn("IE837")
+  case object IE871 extends MessageEumn("IE871")
   case object IE_NEW_MESSAGES extends MessageEumn("IENewMessage")
   case object IE_MESSAGE_RECEIPT extends MessageEumn("IEMessageReceipt")
 }

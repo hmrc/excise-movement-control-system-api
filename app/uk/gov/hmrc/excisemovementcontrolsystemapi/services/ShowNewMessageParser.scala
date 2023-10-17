@@ -38,6 +38,7 @@ class ShowNewMessageParser @Inject()(timeService: DateTimeService,
     val newMessage: NewMessagesDataResponse = scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
 
     newMessage.Messages.messagesoption.map((o: DataRecord[MessagesOption]) => {
+
       val namespace =  o.namespace.fold(generated.defaultScope.uri)(o => o)
       val xml = scalaxb.DataRecord.toXML(o, None, o.key, scalaxb.toScope(o.key -> namespace), true)
       val encodedXml = eisUtils.createEncoder.encodeToString(xml.toString().getBytes(StandardCharsets.UTF_8))
