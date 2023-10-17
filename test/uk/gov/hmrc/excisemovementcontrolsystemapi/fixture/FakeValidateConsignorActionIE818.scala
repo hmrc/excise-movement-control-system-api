@@ -18,10 +18,10 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
 import play.api.mvc.Result
 import play.api.mvc.Results.Forbidden
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{ValidateConsignorAction, ValidateConsignorActionIE818}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateConsignorActionIE818
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequest, DataRequestIE818, ParsedXmlRequest, ParsedXmlRequestIE818}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{MovementMessage, MovementMessageIE818}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequestIE818, ParsedXmlRequestIE818}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessageIE818
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -31,7 +31,8 @@ trait FakeValidateConsignorActionIE818 {
     override def refine[A](request: ParsedXmlRequestIE818[A]): Future[Either[Result, DataRequestIE818[A]]] = {
       Future.successful(Right(DataRequestIE818(
         request,
-        MovementMessageIE818( Some("789")),
+        MovementMessageIE818(Some("789")),
+        Set(),
         "1234"))
       )
     }

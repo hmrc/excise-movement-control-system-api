@@ -19,8 +19,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 import com.google.inject.ImplementedBy
 import play.api.Logging
 import play.api.mvc.{ActionRefiner, ControllerComponents, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest, ParsedXmlRequestIE818}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{XmlParser, XmlParserIE818}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequestIE818}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.XmlParserIE818
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
@@ -38,15 +38,15 @@ class ParseIE818XmlActionImpl @Inject()
 
   override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequestIE818[A]]] = {
 
-      request.body match {
-        case body: NodeSeq if body.nonEmpty => parseXml(body, request)
-        case _ =>
-          logger.error("Not valid XML or XML is empty")
-          Future.successful(Left(BadRequest("Not valid XML or XML is empty")))
-      }
+    request.body match {
+      case body: NodeSeq if body.nonEmpty => parseXml(body, request)
+      case _ =>
+        logger.error("Not valid XML or XML is empty")
+        Future.successful(Left(BadRequest("Not valid XML or XML is empty")))
+    }
   }
 
-  def parseXml[A](xmlBody: NodeSeq, request: EnrolmentRequest[A]) : Future[Either[Result, ParsedXmlRequestIE818[A]]] = {
+  def parseXml[A](xmlBody: NodeSeq, request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequestIE818[A]]] = {
 
     Try(xmlParser.fromXml(xmlBody)) match {
       case Success(value) => Future.successful(Right(ParsedXmlRequestIE818(request, value, request.erns, request.internalId)))
@@ -55,6 +55,7 @@ class ParseIE818XmlActionImpl @Inject()
         Future.successful(Left(BadRequest(s"Not valid IE818 message: ${exception.getMessage}")))
     }
   }
+
 }
 
 @ImplementedBy(classOf[ParseIE818XmlActionImpl])

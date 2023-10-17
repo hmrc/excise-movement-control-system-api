@@ -18,10 +18,10 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
 import com.google.inject.ImplementedBy
 import play.api.Logging
-import play.api.mvc.Results.Forbidden
+import play.api.mvc.Results.{BadRequest, Forbidden}
 import play.api.mvc.{ActionRefiner, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequest, DataRequestIE818, ParsedXmlRequest, ParsedXmlRequestIE818}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{MovementMessage, MovementMessageIE818}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequestIE818, ParsedXmlRequestIE818}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessageIE818
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -34,28 +34,30 @@ class ValidateConsignorActionIE818Impl @Inject()(implicit val executionContext: 
 
     val consigneeIdOption = request.ie818Message.Body.AcceptedOrRejectedReportOfReceiptExport.ConsigneeTrader
 
-    if (consigneeIdOption.isEmpty) {
-      //TODO something
-    }
+    if (consigneeIdOption.flatMap(_.Traderid).isEmpty) {
+      Future.successful(Left(BadRequest("Consignee ID should be supplied in the message")))
+    } else {
 
-    //TODO if traderid not defined
-    val consigneeId = consigneeIdOption.get.Traderid.get
+      val consigneeId = consigneeIdOption.get.Traderid.get
 
-    if(request.erns.contains(consigneeId)) {
-      Future.successful(Right(DataRequestIE818(
-        request,
-        MovementMessageIE818(Some(consigneeId)),
-        request.internalId))
-      )
-    }
-    else {
-      logger.error("[ValidateErnAction] - Invalid Excise Number")
-      Future.successful(Left(Forbidden("Invalid Excise Number")))
+      if (request.erns.contains(consigneeId)) {
+        // This is checking the ERN we get from the auth process matches the consignee ID
+        Future.successful(Right(DataRequestIE818(
+          request,
+          MovementMessageIE818(Some(consigneeId)),
+          request.erns,
+          request.internalId)
+        ))
+      }
+      else {
+        logger.error("[ValidateErnAction] - Invalid Excise Number")
+        Future.successful(Left(Forbidden("Invalid Excise Number")))
+      }
     }
   }
 }
 
 @ImplementedBy(classOf[ValidateConsignorActionIE818Impl])
-trait ValidateConsignorActionIE818 extends ActionRefiner[ParsedXmlRequestIE818, DataRequestIE818]{
+trait ValidateConsignorActionIE818 extends ActionRefiner[ParsedXmlRequestIE818, DataRequestIE818] {
   def refine[A](request: ParsedXmlRequestIE818[A]): Future[Either[Result, DataRequestIE818[A]]]
 }

@@ -38,44 +38,42 @@ class AuthActionImpl @Inject()
   override val authConnector: AuthConnector,
   cc: ControllerComponents,
   val parser: BodyParsers.Default
-) (implicit val ec: ExecutionContext)
-  extends BackendController(cc) with AuthorisedFunctions with AuthAction with Logging{
+)(implicit val ec: ExecutionContext)
+  extends BackendController(cc) with AuthorisedFunctions with AuthAction with Logging {
 
   protected val fetch = authorisedEnrolments and affinityGroup and credentials and internalId
+
   protected def executionContext = ec
 
   override def invokeBlock[A](request: Request[A], block: EnrolmentRequest[A] => Future[Result]): Future[Result] = {
 
     implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
-    implicit val req = request
+    implicit val req: Request[A] = request
 
-      authorise.flatMap {
-        case Right(authorisedRequest) =>
-          logger.info(s"Authorised request for ${authorisedRequest.erns.mkString(",")}")
-          block(authorisedRequest)
-        case Left(error) if error.statusCode == FORBIDDEN =>
-          logger.error(s"Forbidden: ${error.message}")
-          Future.successful(Forbidden(error.message))
-        case Left(error) =>
-          logger.error(s"Problems with Authorisation: ${error.message}")
-          Future.successful(Unauthorized(error.message))
-      }
+    authorise.flatMap {
+      case Right(authorisedRequest) =>
+        logger.info(s"Authorised request for ${authorisedRequest.erns.mkString(",")}")
+        block(authorisedRequest)
+      case Left(error) if error.statusCode == FORBIDDEN =>
+        logger.error(s"Forbidden: ${error.message}")
+        Future.successful(Forbidden(error.message))
+      case Left(error) =>
+        logger.error(s"Problems with Authorisation: ${error.message}")
+        Future.successful(Unauthorized(error.message))
+    }
   }
 
   def authorise[A](implicit hc: HeaderCarrier, request: Request[A]): Future[Either[ErrorResponse, EnrolmentRequest[A]]] = {
     authorised(Enrolment(EnrolmentKey.EMCS_ENROLMENT))
-      .retrieve(fetch) { retrievals =>
-
-        retrievals match {
-          case authorisedEnrolments ~ Some(Organisation) ~ Some(credentials) ~ Some(internalId) =>
-            Future.successful(checkErns(authorisedEnrolments, internalId))
-          case _ ~ None ~ _ ~ _ => handleAuthError("Could not retrieve affinity group from Auth")
-          case _ ~ Some(affinityGroup) ~ _ ~ _ if(affinityGroup != Organisation) =>
-            handleAuthError(s"Invalid affinity group $affinityGroup from Auth")
-          case _ ~ _ ~ None ~ _ => handleAuthError("Could not retrieve credentials from Auth")
-          case _ ~ _ ~ _ ~ None => handleAuthError("Could not retrieve internalId from Auth")
-          case _ => handleAuthError("Invalid enrolment parameter from Auth")
-        }
+      .retrieve(fetch) {
+        case authorisedEnrolments ~ Some(Organisation) ~ Some(credentials) ~ Some(internalId) =>
+          Future.successful(checkErns(authorisedEnrolments, internalId))
+        case _ ~ None ~ _ ~ _ => handleAuthError("Could not retrieve affinity group from Auth")
+        case _ ~ Some(affinityGroup) ~ _ ~ _ if (affinityGroup != Organisation) =>
+          handleAuthError(s"Invalid affinity group $affinityGroup from Auth")
+        case _ ~ _ ~ None ~ _ => handleAuthError("Could not retrieve credentials from Auth")
+        case _ ~ _ ~ _ ~ None => handleAuthError("Could not retrieve internalId from Auth")
+        case _ => handleAuthError("Invalid enrolment parameter from Auth")
       }.recover {
       case error: AuthorisationException =>
         handleException(UNAUTHORIZED, s"Unauthorised Exception for ${request.uri} with error ${error.reason}")
@@ -97,7 +95,7 @@ class AuthActionImpl @Inject()
 
     val erns: Set[EnrolmentIdentifier] = enrolments.enrolments.flatMap(e => e.getIdentifier(EnrolmentKey.ERN))
 
-    if(erns.isEmpty) {
+    if (erns.isEmpty) {
       logger.error(s"Could not find ${EnrolmentKey.ERN}")
       Left(ErrorResponse(FORBIDDEN, s"Could not find ${EnrolmentKey.ERN}"))
     }

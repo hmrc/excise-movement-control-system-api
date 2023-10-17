@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import generated.{IE815Type, IE818Type}
+import generated.IE818Type
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, verify, when}
 import org.mockito.captor.ArgCaptor
@@ -29,9 +29,11 @@ import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateConsignorActionIE818, FakeXmlParsersIE818}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateConsignorActionIE818, FakeValidateLRNAction, FakeXmlParsersIE818}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.NotFoundError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequestIE818
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
@@ -41,12 +43,14 @@ class SubmitMessageControllerSpec
     with FakeAuthentication
     with FakeXmlParsersIE818
     with FakeValidateConsignorActionIE818
+    with FakeValidateLRNAction
     with BeforeAndAfterEach
     with TestXml {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val cc = stubControllerComponents()
   private val request = createRequest(IE818)
+  private val movementMessageService = mock[MovementMessageService]
   private val ieMessage = scalaxb.fromXML[IE818Type](IE818)
   private val connector = mock[MovementMessageConnector]
 
@@ -55,12 +59,12 @@ class SubmitMessageControllerSpec
     reset(connector)
 
     when(connector.submitExciseMovementIE818(any, any)(any)).thenReturn(Future.successful(Right(EISResponse("ok", "success", "123"))))
+    when(movementMessageService.getMovementMessagesByLRNAndERNIn(any, any))
+      .thenReturn(Future.successful(Right(Seq())))
   }
 
   "submit" should {
     "return 200" in {
-    //  when(movementMessageService.saveMovementMessage(any))
-      //  .thenReturn(Future.successful(Right(MovementMessage("", "", None))))
 
       val result = createWithSuccessfulAuth.submit("LRN")(request)
 
@@ -114,6 +118,18 @@ class SubmitMessageControllerSpec
         status(result) mustBe FORBIDDEN
       }
     }
+
+    "return a ern / lrn mismatch error" when {
+      "lrn and ern are not in the database" in {
+
+        when(movementMessageService.getMovementMessagesByLRNAndERNIn(any, any))
+          .thenReturn(Future.successful(Left(NotFoundError())))
+
+        val result = createWithSuccessfulAuth.submit("LRN")(request)
+
+        status(result) mustBe BAD_REQUEST
+      }
+    }
   }
 
   private def createWithSuccessfulAuth =
@@ -121,7 +137,9 @@ class SubmitMessageControllerSpec
       FakeSuccessAuthentication,
       FakeSuccessIE818XMLParser(ieMessage),
       FakeSuccessfulValidateConsignorAction,
+      FakeSuccessfulValidateLRNAction,
       connector,
+      movementMessageService,
       cc
     )
 
@@ -136,7 +154,9 @@ class SubmitMessageControllerSpec
       FakeFailingAuthentication,
       FakeSuccessIE818XMLParser(ieMessage),
       FakeSuccessfulValidateConsignorAction,
+      FakeFailureValidateLRNAction,
       connector,
+      movementMessageService,
       cc
     )
 
@@ -145,7 +165,9 @@ class SubmitMessageControllerSpec
       FakeSuccessAuthentication,
       FakeFailureIE818XMLParser,
       FakeSuccessfulValidateConsignorAction,
+      FakeFailureValidateLRNAction,
       connector,
+      movementMessageService,
       cc
     )
 
@@ -154,7 +176,9 @@ class SubmitMessageControllerSpec
       FakeSuccessAuthentication,
       FakeSuccessIE818XMLParser(ieMessage),
       FakeFailureValidateConsignorAction,
+      FakeFailureValidateLRNAction,
       connector,
+      movementMessageService,
       cc
     )
 

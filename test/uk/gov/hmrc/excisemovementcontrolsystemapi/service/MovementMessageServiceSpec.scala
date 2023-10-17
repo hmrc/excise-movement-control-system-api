@@ -43,11 +43,11 @@ class MovementMessageServiceSpec extends PlaySpec with EitherValues {
 
   private val lrn = "123"
   private val consignorId = "ABC"
-  private val consigneedId = "ABC123"
+  private val consigneeId = "ABC123"
 
   "saveMovementMessage" should {
     "return a MovementMessage" in {
-      val successMovementMessage = MovementMessage(lrn, consignorId, Some(consigneedId))
+      val successMovementMessage = MovementMessage(lrn, consignorId, Some(consigneeId))
       when(mockMovementMessageRepository.saveMovementMessage(any))
         .thenReturn(Future.successful(true))
 
@@ -60,7 +60,7 @@ class MovementMessageServiceSpec extends PlaySpec with EitherValues {
       when(mockMovementMessageRepository.saveMovementMessage(any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
-      val result = await(movementMessageService.saveMovementMessage(MovementMessage(lrn, consignorId, Some(consigneedId))))
+      val result = await(movementMessageService.saveMovementMessage(MovementMessage(lrn, consignorId, Some(consigneeId))))
 
       result.left.value mustBe MongoError("error")
     }
@@ -69,7 +69,7 @@ class MovementMessageServiceSpec extends PlaySpec with EitherValues {
   "getMovementMessagesByLRNAndERNIn with valid LRN and ERN combination" should {
     "return  List of Messages" in {
       val messages = Seq(Message("123456", "IE801"), Message("ABCDE", "IE815"))
-      val movementMessage = MovementMessage(lrn, consignorId, Some(consigneedId), None, Instant.now(), Some(messages))
+      val movementMessage = MovementMessage(lrn, consignorId, Some(consigneeId), None, Instant.now(), Some(messages))
       when(mockMovementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(movementMessage)))
 
@@ -80,7 +80,7 @@ class MovementMessageServiceSpec extends PlaySpec with EitherValues {
     }
 
     "return empty Message when Movement is found with no Messages" in {
-      val movementMessage = MovementMessage(lrn, consignorId, Some(consigneedId), None, Instant.now())
+      val movementMessage = MovementMessage(lrn, consignorId, Some(consigneeId), None, Instant.now())
       when(mockMovementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(movementMessage)))
 
@@ -112,7 +112,7 @@ class MovementMessageServiceSpec extends PlaySpec with EitherValues {
 
   "getMovementMessagesByLRNAndERNIn with multiple movement messages for LRN and ERN combination" should {
     "return a MongoError" in {
-      val movementMessage = MovementMessage(lrn, consignorId, Some(consigneedId))
+      val movementMessage = MovementMessage(lrn, consignorId, Some(consigneeId))
       when(mockMovementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(movementMessage, movementMessage)))
 

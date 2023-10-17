@@ -52,5 +52,6 @@ case class DataRequestIE818[A]
 (
   request: Request[A],
   movementMessage: MovementMessageIE818,
+  erns: Set[String],
   internalId: String
 ) extends WrappedRequest[A](request)
