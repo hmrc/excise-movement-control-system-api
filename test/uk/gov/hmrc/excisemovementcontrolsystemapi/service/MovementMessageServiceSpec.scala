@@ -224,18 +224,17 @@ class MovementMessageServiceSpec extends PlaySpec
 
       setUpForUpdateMovement(newMessage, None, Some("123"), "<foo>test</foo>")
       when(mockMovementMessageRepository.save(any)).thenReturn(Future.successful(false))
-//      when(mockMovementMessageRepository.get(any, any))
-//        .thenReturn(Future.successful(Some(Movement(lrn, consignorId, None, None, Seq.empty))))
 
-      val result = await(movementMessageService.updateMovement(mock[IEMessage], consignorId))
+      val result = await(movementMessageService.updateMovement(newMessage, consignorId))
 
       result mustBe false
     }
 
     "return false if cannot retrieve message" in {
+      setUpForUpdateMovement(newMessage, None, Some("123"), "<foo>test</foo>")
       when(mockMovementMessageRepository.get(any, any)).thenReturn(Future.successful(None))
 
-      val result = await(movementMessageService.updateMovement(mock[IEMessage], consignorId))
+      val result = await(movementMessageService.updateMovement(newMessage, consignorId))
 
       result mustBe false
     }
