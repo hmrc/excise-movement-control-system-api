@@ -155,6 +155,13 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
         Future.successful(None)
       )
 
+    when(movementMessageRepository.getByArc(any, eqTo(List("1"))))
+      .thenReturn(
+        Future.successful(Some(m0)),
+        Future.successful(Some(m1)),
+        Future.successful(None)
+      )
+
     when(movementMessageRepository.get(any, eqTo(List("3"))))
       .thenReturn(
         Future.successful(Some(m2)),

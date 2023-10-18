@@ -28,6 +28,7 @@ case class IEMessageFactory () {
     MessageTypes.withValueOpt(messageType) match {
       case  Some(MessageTypes.IE704) => IE704Message(message)
       case  Some(MessageTypes.IE801) => IE801Message(message)
+      case  Some(MessageTypes.IE802) => IE802Message(message)
       case  Some(MessageTypes.IE810) => IE810Message(message)
       case  Some(MessageTypes.IE813) => IE813Message(message)
       case  Some(MessageTypes.IE818) => IE818Message(message)

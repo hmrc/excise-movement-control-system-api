@@ -64,6 +64,11 @@ class IEMessageFactorySpec extends PlaySpec with BeforeAndAfterEach{
       sut.createIEMessage(message).isInstanceOf[IE801Message] mustBe true
     }
 
+    "return an instance of IE802Message" in {
+      when(message.key).thenReturn(Some("IE802"))
+      sut.createIEMessage(message).isInstanceOf[IE802Message] mustBe true
+    }
+
     "return an instance of IE810Message" in {
       when(message.key).thenReturn(Some("IE810"))
       sut.createIEMessage(message).isInstanceOf[IE810Message] mustBe true
