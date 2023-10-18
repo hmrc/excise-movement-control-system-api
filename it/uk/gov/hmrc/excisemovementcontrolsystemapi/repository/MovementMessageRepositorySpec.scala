@@ -132,13 +132,21 @@ class MovementMessageRepositorySpec extends PlaySpec
     }
   }
 
-  "getMovementMessagesByLRNAndERNIn" should {
+  "get" should {
     val lrn = "123"
     val consignorId = "Abc"
     val consigneeId = "def"
     val movement = Movement(lrn, consignorId, Some(consigneeId), None)
 
+    "return movement for a valid AdministrationReference code and consignorId" in {
+      val newMovement = movement.copy(administrativeReferenceCode = Some("897"))
+      insert(newMovement).futureValue
 
+      val result = repository.getByArc("897", List(consignorId)).futureValue
+
+      result mustBe Some(newMovement)
+
+    }
     "return movement message with valid lrn and consignorId combination" in {
       insert(movement).futureValue
 

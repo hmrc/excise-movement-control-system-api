@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.service
 
+import org.mockito.ArgumentMatchersSugar.any
+import org.mockito.MockitoSugar.{times, verify, when}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.EmptyNewMessageDataResponse.emptyNewMessageDataXml
@@ -23,9 +25,11 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.GetNewMessagesXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.Ie704XmlMessage.IE704
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.Ie801XmlMessage.IE801
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.Ie802XmlMessage.IE802
+import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{ShowNewMessageParser, DateTimeService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{DateTimeService, ShowNewMessageParser}
 
 import java.nio.charset.StandardCharsets
 import java.util.Base64
@@ -35,8 +39,9 @@ class ShowNewMessageParserSpec
   extends PlaySpec
     with GetNewMessagesXml {
 
+  private val messageFactory = mock[IEMessageFactory]
   private val timeService = mock[DateTimeService]
-  private val parser = new ShowNewMessageParser(timeService, new EisUtils())
+  private val parser = new ShowNewMessageParser(messageFactory, timeService, new EisUtils())
 
   "parseEncodedMessage" should {
     "parse the message" in {
@@ -71,6 +76,22 @@ class ShowNewMessageParserSpec
     }
   }
 
+  "extractMessages" should {
+    "extract all messages" in {
+
+      val message1 = mock[IEMessage]
+      val message2 = mock[IEMessage]
+      val message3 = mock[IEMessage]
+
+      val encodeGetNewMessage = Base64.getEncoder.encodeToString(
+        newMessageXml.toString.getBytes(StandardCharsets.UTF_8)
+      )
+      when(messageFactory.createIEMessage(any)).thenReturn(message1, message2, message3)
+
+      parser.extractMessages(encodeGetNewMessage) mustBe Seq(message1, message2, message3)
+      verify(messageFactory, times(3)).createIEMessage(any)
+    }
+  }
   private def assertResults(actual: Seq[Message], expected: Elem, messageType: String, index: Int) =
   {
     val actualMessage = new String(Base64.getDecoder.decode(actual(index).encodeMessage),

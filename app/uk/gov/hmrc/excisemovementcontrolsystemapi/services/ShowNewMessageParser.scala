@@ -18,24 +18,26 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import generated.{MessagesOption, NewMessagesDataResponse}
 import scalaxb.DataRecord
+import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 
 import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 
-class ShowNewMessageParser @Inject()(timeService: DateTimeService,
-                                     eisUtils: EisUtils) {
+class ShowNewMessageParser @Inject()
+(
+  factory: IEMessageFactory,
+  timeService: DateTimeService,
+  eisUtils: EisUtils) {
 
 
   def parseEncodedMessage(encodedMessage: String): Seq[Message] = {
 
-    val decodedMessage = new String(
-      eisUtils.createDecoder.decode(encodedMessage),
-      StandardCharsets.UTF_8
-    )
+    val decodedMessage: String = decodeMessage(encodedMessage)
 
-    val newMessage: NewMessagesDataResponse = scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
+    val newMessage: NewMessagesDataResponse = getNewMessageDataResponse(decodedMessage)
 
     newMessage.Messages.messagesoption.map((o: DataRecord[MessagesOption]) => {
 
@@ -48,9 +50,26 @@ class ShowNewMessageParser @Inject()(timeService: DateTimeService,
   }
 
   def countOfMessagesAvailable(encodedMessage: String): Long ={
-    val decodedMessage = new String(eisUtils.createDecoder.decode(encodedMessage),  StandardCharsets.UTF_8)
-    val newMessage = scala.xml.XML.loadString(decodedMessage)
+    val newMessage = scala.xml.XML.loadString(decodeMessage(encodedMessage))
     (newMessage \ "CountOfMessagesAvailable").text.toLong
+  }
+
+  def extractMessages(encodedMessage: String): Seq[IEMessage] = {
+    val decodedMessage: String = decodeMessage(encodedMessage)
+
+    getNewMessageDataResponse(decodedMessage)
+      .Messages.messagesoption.map(factory.createIEMessage(_))
+  }
+
+  private def getNewMessageDataResponse(decodedMessage: String) = {
+    scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
+  }
+
+  private def decodeMessage(encodedMessage: String) = {
+    new String(
+      eisUtils.createDecoder.decode(encodedMessage),
+      StandardCharsets.UTF_8
+    )
   }
 }
 

@@ -17,14 +17,33 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
 import generated.{IE818Type, MessagesOption}
+import scalaxb.DataRecord
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
+
+import scala.xml.NodeSeq
 
 
-case class IE818Message (private val obj: Option[IE818Type]) extends IEMessage {
+case class IE818Message
+(
+  private val obj: IE818Type,
+  private val key: Option[String],
+  private val namespace: Option[String]
+) extends IEMessage {
+  override def localReferenceNumber: Option[String] = None
 
+  override def administrativeRefCode: Option[String] =
+    Some(obj.Body.AcceptedOrRejectedReportOfReceiptExport.ExciseMovement.AdministrativeReferenceCode)
+
+  override def toXml: NodeSeq = {
+    val ns: String = namespace.fold(generated.defaultScope.uri)(o => o)
+    scalaxb.toXML[IE818Type](obj, None, key, scalaxb.toScope(key -> ns))
+  }
+
+  override def getType: String = MessageTypes.IE818.value
 }
 
 object IE818Message {
-  def apply(message: MessagesOption): IE818Message = {
-    IE818Message(Some(message.asInstanceOf[IE818Type]))
+  def apply(message: DataRecord[MessagesOption]): IE818Message = {
+    IE818Message(message.as[IE818Type], message.key, message.namespace)
   }
 }

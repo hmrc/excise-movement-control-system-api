@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.factories
 
-import generated.MessagesOption
+import generated.{IE815Type, MessagesOption}
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE704Message, IE801Message, IE810Message, IE813Message, IE815Message, IE818Message, IE819Message, IE837Message, IE871Message, IEMessage}
@@ -26,15 +26,14 @@ case class IEMessageFactory () {
     val messageType = message.key.getOrElse(throw new RuntimeException("Could not create Message object. Message type is empty"))
 
     MessageTypes.withValueOpt(messageType) match {
-      case  Some(MessageTypes.IE704) => IE704Message(message.value)
-      case  Some(MessageTypes.IE801) => IE801Message(message.value)
-      case  Some(MessageTypes.IE810) => IE810Message(message.value)
-      case  Some(MessageTypes.IE813) => IE813Message(message.value)
-      case  Some(MessageTypes.IE815) => IE815Message(message.value)
-      case  Some(MessageTypes.IE818) => IE818Message(message.value)
-      case  Some(MessageTypes.IE819) => IE819Message(message.value)
-      case  Some(MessageTypes.IE837) => IE837Message(message.value)
-      case  Some(MessageTypes.IE871) => IE871Message(message.value)
+      case  Some(MessageTypes.IE704) => IE704Message(message)
+      case  Some(MessageTypes.IE801) => IE801Message(message)
+      case  Some(MessageTypes.IE810) => IE810Message(message)
+      case  Some(MessageTypes.IE813) => IE813Message(message)
+      case  Some(MessageTypes.IE818) => IE818Message(message)
+      case  Some(MessageTypes.IE819) => IE819Message(message)
+      case  Some(MessageTypes.IE837) => IE837Message(message)
+      case  Some(MessageTypes.IE871) => IE871Message(message)
       case _ => throw new RuntimeException(s"Could not create Message object. Unsupported message: $messageType")
     }
   }

@@ -16,14 +16,25 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
-import generated.{IE815Type, MessagesOption}
+import generated.IE815Type
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 
-case class IE815Message (private val obj: Option[IE815Type]) extends IEMessage {
+import scala.xml.NodeSeq
 
+case class IE815Message (private val obj: IE815Type) extends IEMessage {
+  override def localReferenceNumber: Option[String] =
+    Some(obj.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber)
+
+  override def administrativeRefCode: Option[String] = None
+
+  override def toXml: NodeSeq =
+    scalaxb.toXML[IE815Type](obj, MessageTypes.IE815.value, generated.defaultScope)
+
+  override def getType: String = MessageTypes.IE815.value
 }
 
 object IE815Message {
-  def apply(message: MessagesOption): IE815Message = {
-    IE815Message(Some(message.asInstanceOf[IE815Type]))
+  def apply(message: IE815Type): IE815Message = {
+    IE815Message(message)
   }
 }

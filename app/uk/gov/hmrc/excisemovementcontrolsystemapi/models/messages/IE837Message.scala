@@ -17,13 +17,31 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
 import generated.{IE837Type, MessagesOption}
+import scalaxb.DataRecord
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 
-case class IE837Message (private val obj: Option[IE837Type]) extends IEMessage {
+import scala.xml.NodeSeq
 
+case class IE837Message(
+  private val obj: IE837Type,
+  private val key: Option[String],
+  private val namespace: Option[String]
+) extends IEMessage {
+  override val localReferenceNumber: Option[String] = None
+
+  override def administrativeRefCode: Option[String] =
+    Some(obj.Body.ExplanationOnDelayForDelivery.ExciseMovement.AdministrativeReferenceCode)
+
+  override def toXml: NodeSeq = {
+    val ns: String = namespace.fold(generated.defaultScope.uri)(o => o)
+    scalaxb.toXML[IE837Type](obj, None, key, scalaxb.toScope(key -> ns))
+  }
+
+  override def getType: String = MessageTypes.IE837.value
 }
 
 object IE837Message {
-  def apply(message: MessagesOption): IE837Message = {
-    IE837Message(Some(message.asInstanceOf[IE837Type]))
+  def apply(message: DataRecord[MessagesOption]): IE837Message = {
+    IE837Message(message.as[IE837Type], message.key, message.namespace)
   }
 }

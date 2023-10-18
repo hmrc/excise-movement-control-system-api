@@ -19,7 +19,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import org.mockito.ArgumentMatchersSugar.any
+import generated.NewMessagesDataResponse
+import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.Mockito.never
 import org.mockito.MockitoSugar.{reset, times, verify, verifyZeroInteractions, when}
 import org.mockito.captor.ArgCaptor
@@ -31,9 +32,12 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.GetNewMessagesXml
+import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ShowNewMessageResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementMessageService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementMessageService, ShowNewMessageParser}
 
 import java.time.LocalDateTime
 import scala.concurrent.duration.{Duration, SECONDS}
@@ -42,7 +46,8 @@ import scala.concurrent.{ExecutionContext, Future}
 class PollingNewMessagesJobSpec
   extends PlaySpec
     with GuiceOneAppPerSuite
-    with BeforeAndAfterEach {
+    with BeforeAndAfterEach
+    with GetNewMessagesXml {
 
   implicit override lazy val app: Application = new GuiceApplicationBuilder().build()
   implicit lazy val materializer: Materializer = app.materializer
@@ -51,16 +56,18 @@ class PollingNewMessagesJobSpec
   private val appConfig = mock[AppConfig]
   private val newMessageService = mock[GetNewMessageService]
   private val movementService = mock[MovementMessageService]
+  private val shoeNewMessageParser = mock[ShowNewMessageParser]
 
   private val job = new PollingNewMessagesJob(
     newMessageService,
     movementService,
+    shoeNewMessageParser,
     appConfig
   )
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(movementService, appConfig, newMessageService)
+    reset(movementService, appConfig, newMessageService, shoeNewMessageParser)
 
     when(appConfig.parallelism).thenReturn(5)
     when(movementService.getUniqueConsignorId).thenReturn(Future.successful(createSource))
@@ -88,14 +95,36 @@ class PollingNewMessagesJobSpec
       verify(movementService).getUniqueConsignorId
     }
 
+    "parse the messages" in {
+      val newMessageResponse = ShowNewMessageResponse(
+        LocalDateTime.of(2023, 5, 6, 9,10,13),
+        "123",
+        "any message"
+      )
+
+      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+        .thenReturn(Future.successful(Some(newMessageResponse)))
+      when(shoeNewMessageParser.extractMessages(any)).thenReturn(Seq(mock[IEMessage]))
+
+      await(job.executeInMutex)
+
+      verify(shoeNewMessageParser, times(3)).extractMessages(eqTo("any message"))
+    }
+
     "send getNewMessage request for each pending ern" in {
       val newMessageResponse = ShowNewMessageResponse(
         LocalDateTime.of(2023, 5, 6, 9,10,13),
         "123",
         "any message"
       )
+      val message1 = mock[IEMessage]
+      val message2 = mock[IEMessage]
+
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
         .thenReturn(Future.successful(Some(newMessageResponse)))
+      when(shoeNewMessageParser.extractMessages(any))
+        .thenReturn(Seq(message1, message2), Seq(message1), Seq(message2))
+      when(movementService.updateMovement(any,any)).thenReturn(Future.successful(true))
 
       val result = await(job.executeInMutex)
 
@@ -106,9 +135,10 @@ class PollingNewMessagesJobSpec
       captor.values  mustBe Seq("1", "3", "4")
 
       withClue("Save the new messages to the cache") {
-        verify(movementService).updateMovement("2", "1", "any message")
-        verify(movementService).updateMovement("3", "3", "any message")
-        verify(movementService).updateMovement("4", "4", "any message")
+        verify(movementService).updateMovement(message1, "1")
+        verify(movementService).updateMovement(message2, "1")
+        verify(movementService).updateMovement(message1, "3")
+        verify(movementService).updateMovement(message2, "4")
       }
     }
 

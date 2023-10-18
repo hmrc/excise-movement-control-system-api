@@ -16,6 +16,12 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
+import scala.xml.NodeSeq
+
 trait IEMessage {
-  val localReferenceNumber: Option[String]
+  def localReferenceNumber: Option[String]
+  def administrativeRefCode: Option[String]
+  def toXml: NodeSeq
+  def getType: String
+
 }

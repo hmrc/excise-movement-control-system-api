@@ -19,24 +19,34 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import com.google.inject.Singleton
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MongoError, NotFoundError}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, ErrorResponse, MongoError, NotFoundError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 
+import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class MovementMessageService @Inject()(
-    messageParser: ShowNewMessageParser,
-    movementMessageRepository: MovementMessageRepository
+    movementMessageRepository: MovementMessageRepository,
+    eisUtils: EisUtils,
+    dateTimeService: DateTimeService
 )(implicit ec: ExecutionContext) {
+  def updateMovement(message: IEMessage, consignorId: String): Future[Boolean] = {
 
-  def updateMovement(lrn: String, exciseNumber: String, encodedMessage: String): Future[Boolean] = {
+      getMovement(message, consignorId).flatMap {
+        case Some(movement) => saveDistinctMessage(movement, message)
+        case None => Future.successful(false)
+      }
+  }
 
-    movementMessageRepository.get(lrn, List(exciseNumber)).flatMap {
-      case Some(movement) => saveDistinctMessage(encodedMessage, movement)
-      case None => Future.successful(false)
+  private def getMovement(message: IEMessage, consignorId: String): Future[Option[Movement]] = {
+    (message.administrativeRefCode, message.localReferenceNumber) match {
+      case (Some(arc), _) => movementMessageRepository.getByArc(arc, List(consignorId))
+      case (None, Some(lrn)) => movementMessageRepository.get(lrn, List(consignorId))
+      case _ => throw new IllegalArgumentException("Cannot retrieve a movement. Local reference number or administration reference code may be invalid")
     }
   }
 
@@ -64,12 +74,18 @@ class MovementMessageService @Inject()(
       .map(o => Source(o))
   }
 
-  private def saveDistinctMessage(encodedMessage: String, movement: Movement): Future[Boolean] = {
+  private def saveDistinctMessage(movement: Movement, newMessage: IEMessage): Future[Boolean] = {
 
-    val messages = messageParser.parseEncodedMessage(encodedMessage)
+    val encodedMessage = eisUtils.createEncoder.encodeToString(newMessage.toXml.toString.getBytes(StandardCharsets.UTF_8))
+    val messages = Seq(Message(encodedMessage, newMessage.getType, dateTimeService))
+
     val allMessages = movement.messages ++ messages.diff(movement.messages)
 
-    movementMessageRepository.save(movement copy (messages = allMessages)).map {
+    val newMovement = movement copy (
+      administrativeReferenceCode = newMessage.administrativeRefCode,
+      messages = allMessages
+    )
+    movementMessageRepository.save(newMovement).map {
       case true => true
       case _ => false
     }

@@ -1,17 +1,40 @@
+/*
+ * Copyright 2023 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package uk.gov.hmrc.excisemovementcontrolsystemapi.factories
 
-import generated.{MessagesOption, NewMessagesDataResponse}
-import org.mockito.MockitoSugar.when
+import generated.MessagesOption
+import org.mockito.MockitoSugar.{reset, when}
+import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import scalaxb.DataRecord
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE704Message, IE801Message, IE810Message, IE813Message, IE815Message, IE818Message, IE819Message, IE837Message, IE871Message}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 
-class IEMessageFactorySpec extends PlaySpec {
+class IEMessageFactorySpec extends PlaySpec with BeforeAndAfterEach{
 
   private val message = mock[DataRecord[MessagesOption]]
   private val sut = IEMessageFactory()
 
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    reset(message)
+
+    when(message.value).thenReturn(mock[MessagesOption])
+  }
 
   "createIEMessage" should {
 
@@ -33,47 +56,42 @@ class IEMessageFactorySpec extends PlaySpec {
 
     "return an instance of IE704Message" in {
       when(message.key).thenReturn(Some("IE704"))
-      sut.createIEMessage(message).isInstanceOf[IE704Message]
+      sut.createIEMessage(message).isInstanceOf[IE704Message] mustBe true
     }
 
     "return an instance of IE801Message" in {
       when(message.key).thenReturn(Some("IE801"))
-      sut.createIEMessage(message).isInstanceOf[IE801Message]
+      sut.createIEMessage(message).isInstanceOf[IE801Message] mustBe true
     }
 
     "return an instance of IE810Message" in {
       when(message.key).thenReturn(Some("IE810"))
-      sut.createIEMessage(message).isInstanceOf[IE810Message]
+      sut.createIEMessage(message).isInstanceOf[IE810Message] mustBe true
     }
 
     "return an instance of IE813Message" in {
       when(message.key).thenReturn(Some("IE813"))
-      sut.createIEMessage(message).isInstanceOf[IE813Message]
-    }
-
-    "return an instance of IE815Message" in {
-      when(message.key).thenReturn(Some("IE815"))
-      sut.createIEMessage(message).isInstanceOf[IE815Message]
+      sut.createIEMessage(message).isInstanceOf[IE813Message] mustBe true
     }
 
     "return an instance of IE818Message" in {
       when(message.key).thenReturn(Some("IE818"))
-      sut.createIEMessage(message).isInstanceOf[IE818Message]
+      sut.createIEMessage(message).isInstanceOf[IE818Message] mustBe true
     }
 
     "return an instance of IE819Message" in {
       when(message.key).thenReturn(Some("IE819"))
-      sut.createIEMessage(message).isInstanceOf[IE819Message]
+      sut.createIEMessage(message).isInstanceOf[IE819Message] mustBe true
     }
 
     "return an instance of IE837Message" in {
       when(message.key).thenReturn(Some("IE837"))
-      sut.createIEMessage(message).isInstanceOf[IE837Message]
+      sut.createIEMessage(message).isInstanceOf[IE837Message] mustBe true
     }
 
     "return an instance of IE871Message" in {
       when(message.key).thenReturn(Some("IE871"))
-      sut.createIEMessage(message).isInstanceOf[IE871Message]
+      sut.createIEMessage(message).isInstanceOf[IE871Message] mustBe true
     }
   }
 }

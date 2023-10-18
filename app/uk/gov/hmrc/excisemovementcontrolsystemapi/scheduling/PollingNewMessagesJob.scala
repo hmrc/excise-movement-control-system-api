@@ -16,14 +16,16 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
+import akka.Done
 import akka.http.scaladsl.util.FastFuture.successful
 import akka.stream.Materializer
-import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{Sink, Source}
 import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ShowNewMessageResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementMessageService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementMessageService, ShowNewMessageParser}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.Inject
@@ -34,6 +36,7 @@ import scala.util.control.NonFatal
 class PollingNewMessagesJob @Inject()(
   newMessageService: GetNewMessageService,
   movementService: MovementMessageService,
+  messageParser: ShowNewMessageParser,
   appConfig: AppConfig
 ) (implicit mat: Materializer)
   extends ExclusiveScheduledJob
@@ -85,21 +88,21 @@ class PollingNewMessagesJob @Inject()(
 
   private def saveToDB(
     movement: Movement,
-    message: ShowNewMessageResponse
+    messages: ShowNewMessageResponse
   )(implicit ec: ExecutionContext): Future[Unit] = {
 
-    /*
-    todo
-    1. extract messages
-    2. get LRN, ARC for that message that mach consignorId
-    3. store the message into mongo according LRN/ARC anc consignorID
-     */
-    movementService.updateMovement(movement.localReferenceNumber, movement.consignorId, message.message)
+    Source(messageParser.extractMessages(messages.message))
+      .runWith(Sink.foreachAsync[IEMessage](appConfig.parallelism)(save(_, movement.consignorId)))
+      .map(_ => Done)
+  }
+
+  private def save(message: IEMessage, consignorId: String)(implicit ec: ExecutionContext): Future[Unit] = {
+    movementService.updateMovement( message, consignorId)
       .flatMap {
-      case true => successful(())
-      case _ =>
-          logger.warn("Could not came new message to cache")
+        case true => successful(())
+        case _ =>
+          logger.warn("Could not update movement")
           successful(())
-    }
+      }
   }
 }

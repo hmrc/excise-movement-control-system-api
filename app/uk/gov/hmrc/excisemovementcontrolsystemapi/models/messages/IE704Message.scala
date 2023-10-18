@@ -17,21 +17,44 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
 import generated.{IE704Type, MessagesOption}
+import scalaxb.DataRecord
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
+
+import scala.xml.NodeSeq
 
 
-case class IE704Message (private val obj: IE704Type) extends IEMessage {
+case class IE704Message
+(
+  private val obj: IE704Type,
+  private val key: Option[String],
+  private val namespace: Option[String]
+) extends IEMessage {
 
-  override val localReferenceNumber: Option[String] = {
+  override def localReferenceNumber: Option[String] = {
     for {
       attribute <- obj.Body.GenericRefusalMessage.AttributesValue
       lrn <- attribute.LocalReferenceNumber
     } yield lrn
-
   }
+
+  override def administrativeRefCode:  Option[String] = {
+
+    for {
+      attribute <- obj.Body.GenericRefusalMessage.AttributesValue
+      arc <- attribute.AdministrativeReferenceCode
+    } yield arc
+  }
+
+  override def toXml: NodeSeq = {
+    val ns: String = namespace.fold(generated.defaultScope.uri)(o => o)
+    scalaxb.toXML[IE704Type](obj, None, key, scalaxb.toScope(key -> ns))
+  }
+
+  override def getType: String = MessageTypes.IE704.value
 }
 
 object IE704Message {
-  def apply(message: MessagesOption): IE704Message = {
-    IE704Message(message.asInstanceOf[IE704Type])
+  def apply(message: DataRecord[MessagesOption]): IE704Message = {
+    IE704Message(message.as[IE704Type], message.key, message.namespace)
   }
 }
