@@ -18,7 +18,9 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
 import com.google.inject.ImplementedBy
 import play.api.Logging
+import play.api.libs.json.Json
 import play.api.mvc.{ActionRefiner, ControllerComponents, Result}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.XmlParser
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -32,7 +34,7 @@ class ParseIE815XmlActionImpl @Inject()
 (
   xmlParser: XmlParser,
   cc: ControllerComponents
-)(implicit val executionContext: ExecutionContext) extends BackendController(cc)
+)(implicit val executionContext: ExecutionContext, implicit val eisUtils: EisUtils) extends BackendController(cc)
   with ParseIE815XmlAction
   with Logging {
 
@@ -42,7 +44,7 @@ class ParseIE815XmlActionImpl @Inject()
         case body: NodeSeq if body.nonEmpty => parseXml(body, request)
         case _ =>
           logger.error("Not valid XML or XML is empty")
-          Future.successful(Left(BadRequest("Not valid XML or XML is empty")))
+          Future.successful(Left(BadRequest(Json.toJson(ErrorResponse(eisUtils.getCurrentDateTime, "XML formatting error", "Not valid XML or XML is empty",eisUtils.generateCorrelationId)))))
       }
   }
 
@@ -52,7 +54,7 @@ class ParseIE815XmlActionImpl @Inject()
       case Success(value) => Future.successful(Right(ParsedXmlRequest(request, value, request.erns, request.internalId)))
       case Failure(exception) =>
         logger.error(s"Not valid IE815 message: ${exception.getMessage}", exception)
-        Future.successful(Left(BadRequest(s"Not valid IE815 message: ${exception.getMessage}")))
+        Future.successful(Left(BadRequest(Json.toJson(ErrorResponse(eisUtils.getCurrentDateTime, "XML formatting error", s"Not valid IE815 message: ${exception.getMessage}",eisUtils.generateCorrelationId)))))
     }
   }
 }

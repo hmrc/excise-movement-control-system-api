@@ -20,8 +20,10 @@ import java.time.LocalDateTime
 import java.util.{Base64, UUID}
 
 class EisUtils {
+  //TODO rename
 
-  def getCurrentDateTimeString: String = LocalDateTime.now().toString
+  def getCurrentDateTime: LocalDateTime = LocalDateTime.now()
+  def getCurrentDateTimeString: String = getCurrentDateTime.toString
   def generateCorrelationId: String = UUID.randomUUID().toString
   def createEncoder: Base64.Encoder = Base64.getEncoder
 }

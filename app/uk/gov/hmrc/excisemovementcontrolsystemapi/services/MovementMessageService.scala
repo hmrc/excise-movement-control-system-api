@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.Singleton
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MongoError, NotFoundError}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{DatabaseError, MongoError, NotFoundError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, MovementMessage}
 
@@ -37,7 +37,7 @@ class MovementMessageService @Inject()(
       }
   }
 
-  def getMovementMessagesByLRNAndERNIn(lrn: String, erns: List[String]): Future[Either[ErrorResponse, Seq[Message]]] = {
+  def getMovementMessagesByLRNAndERNIn(lrn: String, erns: List[String]): Future[Either[DatabaseError, Seq[Message]]] = {
     movementMessageRepository.getMovementMessagesByLRNAndERNIn(lrn, erns).map {
         case Nil => Left(NotFoundError())
         case f@_ :: Nil =>

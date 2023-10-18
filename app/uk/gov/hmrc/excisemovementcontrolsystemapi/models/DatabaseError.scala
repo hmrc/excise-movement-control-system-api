@@ -16,17 +16,14 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
-import play.api.libs.json.{Json, OFormat}
+sealed trait DatabaseError {
+  val message: String
+}
 
-import java.time.LocalDateTime
+case class MongoError(msg: String) extends DatabaseError {
+  val message = s"Error from Mongo with message: $msg"
+}
 
-case class ErrorResponse(
-  dateTime: LocalDateTime,
-  message: String,
-  debugMessage: String,
-  emcsCorrelationId: String
-)
-
-object ErrorResponse {
-  implicit def format: OFormat[ErrorResponse] = Json.format[ErrorResponse]
+case class NotFoundError() extends DatabaseError {
+  override val message: String = "No Message found for LRN and ERN combination"
 }

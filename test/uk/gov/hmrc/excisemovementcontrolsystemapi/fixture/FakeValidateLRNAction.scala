@@ -20,6 +20,7 @@ import play.api.mvc.Result
 import play.api.mvc.Results.Forbidden
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{ValidateLRNAction, ValidateLRNActionFactory, ValidateLRNImpl}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequestIE818
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
 
@@ -28,11 +29,12 @@ import scala.concurrent.{ExecutionContext, Future}
 trait FakeValidateLRNAction {
 
   implicit def executionContext: ExecutionContext = ExecutionContext.global
+  implicit def eisUtils: EisUtils = new EisUtils
 
   object FakeSuccessfulValidateLRNAction extends ValidateLRNActionFactory() with TestXml {
 
     override def apply(lrn: String, movementMessageService: MovementMessageService): ValidateLRNAction =
-      new ValidateLRNImpl(lrn, movementMessageService, executionContext)
+      new ValidateLRNImpl(lrn, movementMessageService, executionContext, eisUtils)
 
   }
 

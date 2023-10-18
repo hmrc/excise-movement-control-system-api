@@ -18,8 +18,10 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
 import com.google.inject.ImplementedBy
 import play.api.Logging
+import play.api.libs.json.Json
 import play.api.mvc.Results.Forbidden
 import play.api.mvc.{ActionRefiner, Result}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
 
@@ -27,7 +29,7 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 
-class ValidateConsignorActionImpl @Inject()(implicit val executionContext: ExecutionContext)
+class ValidateConsignorActionImpl @Inject()(implicit val executionContext: ExecutionContext, implicit val eisUtils: EisUtils)
   extends ValidateConsignorAction
     with Logging {
   override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, DataRequest[A]]] = {
@@ -45,7 +47,7 @@ class ValidateConsignorActionImpl @Inject()(implicit val executionContext: Execu
     }
     else {
       logger.error("[ValidateErnAction] - Invalid Excise Number")
-      Future.successful(Left(Forbidden("Invalid Excise Number")))
+      Future.successful(Left(Forbidden(Json.toJson(ErrorResponse(eisUtils.getCurrentDateTime, "ERN validation error", "Excise number in message does not match authenticated excise number", eisUtils.generateCorrelationId)))))
     }
   }
 }

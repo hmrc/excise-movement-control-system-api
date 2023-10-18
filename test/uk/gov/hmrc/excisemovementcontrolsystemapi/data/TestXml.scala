@@ -149,7 +149,7 @@ trait TestXml {
         <urn:ConsigneeTrader language="en">
           <urn:Traderid>GBWK002281023</urn:Traderid>
           <urn:TraderName>Meredith Ent</urn:TraderName>
-          <urn:StreetName>Romanus Jews Crescent</urn:StreetName>
+          <urn:StreetName>Romanus Crescent</urn:StreetName>
           <urn:StreetNumber>38</urn:StreetNumber>
           <urn:Postcode>SE24 5GY</urn:Postcode>
           <urn:City>London</urn:City>
@@ -161,7 +161,7 @@ trait TestXml {
         <urn:DeliveryPlaceTrader language="en">
           <urn:Traderid>GB00002281023</urn:Traderid>
           <urn:TraderName>Meredith Ent</urn:TraderName>
-          <urn:StreetName>Romanus Jews Crescent</urn:StreetName>
+          <urn:StreetName>Romanus Crescent</urn:StreetName>
           <urn:StreetNumber>38</urn:StreetNumber>
           <urn:Postcode>SE24 5GY</urn:Postcode>
           <urn:City>London</urn:City>

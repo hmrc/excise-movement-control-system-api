@@ -16,23 +16,30 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
+import dispatch.Future
 import generated.IE818Type
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{verify, when}
-import org.scalatest.EitherValues
+import org.scalatest.{BeforeAndAfterAll, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
+import play.api.http.Status.BAD_REQUEST
+import play.api.mvc.Result
 import play.api.mvc.Results.BadRequest
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout}
 import scalaxb.ParserFailure
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequestIE818}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.XmlParserIE818
 import uk.gov.hmrc.play.bootstrap.tools.Stubs.stubMessagesControllerComponents
 
+import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class ParseIE818XmlActionSpec extends PlaySpec with EitherValues {
+class ParseIE818XmlActionSpec extends PlaySpec with EitherValues with BeforeAndAfterAll {
+
+  implicit val eisUtils: EisUtils = mock[EisUtils]
 
   private val xmlParser = mock[XmlParserIE818]
   private val controller = new ParseIE818XmlActionImpl(xmlParser, stubMessagesControllerComponents())
@@ -46,12 +53,31 @@ class ParseIE818XmlActionSpec extends PlaySpec with EitherValues {
       |  <body>Don't forget me this weekend!</body>
       |</note>""".stripMargin
 
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    when(eisUtils.getCurrentDateTime).thenReturn(LocalDateTime.of(2023, 10, 18, 15, 33, 33))
+  }
+
   "parseXML" should {
     "return 400 if no body supplied" in {
       val request = EnrolmentRequest(FakeRequest().withBody(None), Set.empty, "123")
       val result = await(controller.refine(request))
 
-      result mustBe Left(BadRequest("Not valid XML or XML is empty"))
+      result match {
+        case Left(error: Result) =>
+
+          error.header.status mustBe BAD_REQUEST
+
+          val response = contentAsJson(Future.successful(error)).validate[ErrorResponse].asEither
+
+          response.map {
+            response =>
+              response.message mustBe "XML validation error"
+              response.debugMessage mustBe "Not valid XML or XML is empty"
+          }
+
+        case _ => fail("Should have an error")
+      }
     }
 
     "return a request with the IE815Types object when supplied XML Node Sequence" in {
@@ -78,14 +104,45 @@ class ParseIE818XmlActionSpec extends PlaySpec with EitherValues {
       val request = EnrolmentRequest(fakeRequest, Set.empty, "123")
 
       val result = await(controller.refine(request))
-      result mustBe Left(BadRequest("Not valid IE818 message: Not valid"))
+
+      result match {
+        case Left(error: Result) =>
+
+          error.header.status mustBe BAD_REQUEST
+
+          val response = contentAsJson(Future.successful(error)).validate[ErrorResponse].asEither
+
+          response.map {
+            response =>
+              response.message mustBe "XML validation error"
+              response.debugMessage mustBe "Not valid IE818 message: Not valid"
+          }
+
+        case _ => fail("Should have an error")
+      }
+
     }
 
     "return 400 if body supplied is a string" in {
       val request = EnrolmentRequest(FakeRequest().withBody("<xml>asdasd</xml>"), Set.empty, "123")
       val result = await(controller.refine(request))
 
-      result mustBe Left(BadRequest("Not valid XML or XML is empty"))
+      result match {
+        case Left(error: Result) =>
+
+          error.header.status mustBe BAD_REQUEST
+
+          val response = contentAsJson(Future.successful(error)).validate[ErrorResponse].asEither
+
+          response.map {
+            response =>
+              response.message mustBe "XML validation error"
+              response.debugMessage mustBe "Not valid XML or XML is empty"
+          }
+
+        case _ => fail("Should have an error")
+      }
+
     }
   }
 }

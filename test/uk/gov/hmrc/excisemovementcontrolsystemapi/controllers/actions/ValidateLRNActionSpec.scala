@@ -18,25 +18,37 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.when
-import org.scalatest.EitherValues
+import org.scalatest.{BeforeAndAfterAll, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
+import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND}
+import play.api.libs.json.{JsResult, Json}
+import play.api.mvc.{AnyContentAsEmpty, Result}
 import play.api.mvc.Results.{InternalServerError, NotFound}
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MongoError, NotFoundError}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, ErrorResponse, MongoError, NotFoundError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessageIE818
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
+import play.api.test._
 
+import java.time.LocalDateTime
+import scala.annotation.unused
 import scala.concurrent.{ExecutionContext, Future}
 
 
-class ValidateLRNActionSpec extends PlaySpec with TestXml with EitherValues {
+class ValidateLRNActionSpec extends PlaySpec with TestXml with EitherValues with BeforeAndAfterAll {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
+  implicit val eisUtils: EisUtils = mock[EisUtils]
   private val movementMessageService = mock[MovementMessageService]
+
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    when(eisUtils.getCurrentDateTime).thenReturn(LocalDateTime.of(2023, 10, 18, 15, 33, 33))
+  }
 
   "ValidateLRNActionSpec" should {
     "return a request when valid LRN/ERN combo in database" in {
@@ -64,7 +76,22 @@ class ValidateLRNActionSpec extends PlaySpec with TestXml with EitherValues {
         val request = DataRequestIE818(FakeRequest(), MovementMessageIE818(Some("12356")), Set("12356"), "123")
         val result = await(sut.refine(request))
 
-        result mustBe Left(NotFound("LRN is not valid for this ERN"))
+        result match {
+
+          case Left(error: Result) =>
+            error.header.status mustBe NOT_FOUND
+
+            val response = contentAsJson(Future.successful(error)).validate[ErrorResponse].asEither
+
+            response.map {
+              response =>
+                response.message mustBe "Invalid LRN supplied"
+                response.debugMessage mustBe "LRN is not valid for this ERN"
+            }
+
+          case _ => fail("Should have an error")
+        }
+
       }
 
       "DB error occurs" in {
@@ -75,7 +102,20 @@ class ValidateLRNActionSpec extends PlaySpec with TestXml with EitherValues {
         val request = DataRequestIE818(FakeRequest(), MovementMessageIE818(Some("12356")), Set("12356"), "123")
         val result = await(sut.refine(request))
 
-        result mustBe Left(InternalServerError("Error from Mongo with message: Error accessing database"))
+        result match {
+          case Left(error: Result) =>
+            error.header.status mustBe INTERNAL_SERVER_ERROR
+
+            val response = contentAsJson(Future.successful(error)).validate[ErrorResponse].asEither
+
+            response.map {
+              response =>
+                response.message mustBe "Database error"
+                response.debugMessage mustBe "Error accessing database"
+            }
+
+          case _ => fail("Should have an error")
+        }
       }
     }
   }

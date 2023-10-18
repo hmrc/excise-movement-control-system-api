@@ -18,9 +18,10 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
 import com.google.inject.ImplementedBy
 import play.api.Logging
+import play.api.libs.json.Json
 import play.api.mvc.Results.{InternalServerError, NotFound}
 import play.api.mvc.{ActionRefiner, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.NotFoundError
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, ErrorResponse, NotFoundError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequestIE818
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
 
@@ -28,15 +29,15 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 
-class ValidateLRNImpl @Inject()(val lrn: String, val movementMessageService: MovementMessageService, implicit val executionContext: ExecutionContext)
+class ValidateLRNImpl @Inject()(val lrn: String, val movementMessageService: MovementMessageService, implicit val executionContext: ExecutionContext, implicit val eisUtils: EisUtils)
   extends ValidateLRNAction
     with Logging {
   override def refine[A](request: DataRequestIE818[A]): Future[Either[Result, DataRequestIE818[A]]] = {
 
     movementMessageService.getMovementMessagesByLRNAndERNIn(lrn, request.erns.toList).flatMap {
       case Right(_) => Future.successful(Right(request))
-      case Left(_: NotFoundError) => Future.successful(Left(NotFound("LRN is not valid for this ERN")))
-      case Left(error) => Future.successful(Left(InternalServerError(error.message)))
+      case Left(_: NotFoundError) => Future.successful(Left(NotFound(Json.toJson(ErrorResponse(eisUtils.getCurrentDateTime,"Invalid LRN supplied",s"LRN $lrn is not valid for ERNs ${request.erns.mkString("/")}", eisUtils.generateCorrelationId)))))
+      case Left(error) => Future.successful(Left(InternalServerError(Json.toJson(ErrorResponse(eisUtils.getCurrentDateTime,"Database error occurred",error.message, eisUtils.generateCorrelationId)))))
     }
 
   }
@@ -48,6 +49,6 @@ trait ValidateLRNAction extends ActionRefiner[DataRequestIE818, DataRequestIE818
   def refine[A](request: DataRequestIE818[A]): Future[Either[Result, DataRequestIE818[A]]]
 }
 
-class ValidateLRNActionFactory @Inject()(implicit val executionContext: ExecutionContext) {
-  def apply(lrn: String, movementMessageService: MovementMessageService): ValidateLRNAction = new ValidateLRNImpl(lrn, movementMessageService, executionContext)
+class ValidateLRNActionFactory @Inject()(implicit val executionContext: ExecutionContext, implicit val eisUtils: EisUtils) {
+  def apply(lrn: String, movementMessageService: MovementMessageService): ValidateLRNAction = new ValidateLRNImpl(lrn, movementMessageService, executionContext, eisUtils)
 }

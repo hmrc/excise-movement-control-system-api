@@ -17,22 +17,34 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
 import generated.IE815Type
-import org.scalatest.EitherValues
+import org.mockito.MockitoSugar.when
+import org.scalatest.{BeforeAndAfterAll, EitherValues}
+import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
+import play.api.http.Status.{BAD_REQUEST, FORBIDDEN}
+import play.api.mvc.Result
 import play.api.mvc.Results.Forbidden
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth._
 
-import scala.concurrent.ExecutionContext
+import java.time.LocalDateTime
+import scala.concurrent.{ExecutionContext, Future}
 
 
-class ValidateConsignorActionSpec extends PlaySpec with TestXml with EitherValues {
+class ValidateConsignorActionSpec extends PlaySpec with TestXml with EitherValues with BeforeAndAfterAll {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
+  implicit val eisUtils: EisUtils = mock[EisUtils]
 
   val sut = new ValidateConsignorActionImpl()
+
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    when(eisUtils.getCurrentDateTime).thenReturn(LocalDateTime.of(2023, 10, 18, 15, 33, 33))
+  }
 
   "ValidateConsignorActionSpec" should {
     "return a request" in {
@@ -59,7 +71,20 @@ class ValidateConsignorActionSpec extends PlaySpec with TestXml with EitherValue
 
         val result = await(sut.refine(request))
 
-        result mustBe Left(Forbidden("Invalid Excise Number"))
+        result match {
+          case Left(error: Result) =>
+            error.header.status mustBe FORBIDDEN
+
+            val response = contentAsJson(Future.successful(error)).validate[ErrorResponse].asEither
+
+            response.map {
+              response =>
+                response.message mustBe "ERN validation error"
+                response.debugMessage mustBe "Excise number in message does not match authenticated excise number"
+            }
+
+          case _ => fail("Should have an error")
+        }
       }
     }
   }

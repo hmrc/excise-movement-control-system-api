@@ -18,8 +18,10 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
 import com.google.inject.ImplementedBy
 import play.api.Logging
+import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, Forbidden}
 import play.api.mvc.{ActionRefiner, Result}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequestIE818, ParsedXmlRequestIE818}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessageIE818
 
@@ -27,7 +29,7 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 
-class ValidateConsignorActionIE818Impl @Inject()(implicit val executionContext: ExecutionContext)
+class ValidateConsignorActionIE818Impl @Inject()(implicit val executionContext: ExecutionContext, implicit val eisUtils: EisUtils)
   extends ValidateConsignorActionIE818
     with Logging {
   override def refine[A](request: ParsedXmlRequestIE818[A]): Future[Either[Result, DataRequestIE818[A]]] = {
@@ -35,7 +37,7 @@ class ValidateConsignorActionIE818Impl @Inject()(implicit val executionContext: 
     val consigneeIdOption = request.ie818Message.Body.AcceptedOrRejectedReportOfReceiptExport.ConsigneeTrader
 
     if (consigneeIdOption.flatMap(_.Traderid).isEmpty) {
-      Future.successful(Left(BadRequest("Consignee ID should be supplied in the message")))
+      Future.successful(Left(BadRequest(Json.toJson(ErrorResponse(eisUtils.getCurrentDateTime,"ERN validation error", "Consignee ID should be supplied in the message", eisUtils.generateCorrelationId)))))
     } else {
 
       val consigneeId = consigneeIdOption.get.Traderid.get
@@ -51,7 +53,7 @@ class ValidateConsignorActionIE818Impl @Inject()(implicit val executionContext: 
       }
       else {
         logger.error("[ValidateErnAction] - Invalid Excise Number")
-        Future.successful(Left(Forbidden("Invalid Excise Number")))
+        Future.successful(Left(Forbidden(Json.toJson(ErrorResponse(eisUtils.getCurrentDateTime, "ERN validation error", "Excise number in message does not match authenticated excise number", eisUtils.generateCorrelationId)))))
       }
     }
   }
