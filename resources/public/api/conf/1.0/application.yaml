@@ -90,10 +90,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ExciseMovementError'
               example:
-                dateTime: "2021-12-17T09:30:47Z"
-                message: "CIRCUIT_BREAKER - 815_CB is OPEN"
-                debugMessage: "CircuitBreaker '815_CB' is OPEN and does not permit further calls"
-                emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+                code: "SERVER_ERROR"
+                message: "Service unavailable"
       security:
         - userRestricted:
             - excise-movement-control-system
@@ -254,10 +252,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ExciseMovementError'
               example:
-                dateTime: "2021-12-17T09:30:47Z"
-                message: "CIRCUIT_BREAKER - 815_CB is OPEN"
-                debugMessage: "CircuitBreaker '815_CB' is OPEN and does not permit further calls"
-                emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+                code: "SERVER_ERROR"
+                message: "Service unavailable"
       security:
         - userRestricted:
             - excise-movement-control-system
