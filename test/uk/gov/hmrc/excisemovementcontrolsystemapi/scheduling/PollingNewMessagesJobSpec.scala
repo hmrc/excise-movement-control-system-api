@@ -135,10 +135,10 @@ class PollingNewMessagesJobSpec
       captor.values  mustBe Seq("1", "3", "4")
 
       withClue("Save the new messages to the cache") {
-        verify(movementService).updateMovement(message1, "1")
-        verify(movementService).updateMovement(message2, "1")
-        verify(movementService).updateMovement(message1, "3")
-        verify(movementService).updateMovement(message2, "4")
+        verify(movementService).updateMovement(eqTo(message1), eqTo("1"))
+        verify(movementService).updateMovement(eqTo(message2), eqTo("1"))
+        verify(movementService).updateMovement(eqTo(message1), eqTo("3"))
+        verify(movementService).updateMovement(eqTo(message2), eqTo("4"))
       }
     }
 

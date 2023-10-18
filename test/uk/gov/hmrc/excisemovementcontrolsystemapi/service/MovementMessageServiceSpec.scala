@@ -186,9 +186,9 @@ class MovementMessageServiceSpec extends PlaySpec
       "throw an error if both invalid" in {
         setUpForUpdateMovement(message, None, None, "<foo>test</foo>")
 
-        intercept[IllegalArgumentException] {
+        intercept[RuntimeException] {
           await(movementMessageService.updateMovement(message, consignorId))
-        }.getMessage mustBe "Cannot retrieve a movement. Local reference number or administration reference code may be invalid"
+        }.getMessage mustBe "Cannot retrieve a movement. Local reference number or administration reference code are not present"
       }
     }
 
