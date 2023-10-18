@@ -46,7 +46,7 @@ class MovementMessageService @Inject()(
     (message.administrativeRefCode, message.localReferenceNumber) match {
       case (Some(arc), _) => movementMessageRepository.getByArc(arc, List(consignorId))
       case (None, Some(lrn)) => movementMessageRepository.get(lrn, List(consignorId))
-      case _ => throw new IllegalArgumentException("Cannot retrieve a movement. Local reference number or administration reference code may be invalid")
+      case _ => throw new RuntimeException("Cannot retrieve a movement. Local reference number or administration reference code are not present")
     }
   }
 

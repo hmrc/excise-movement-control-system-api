@@ -16,10 +16,10 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.factories
 
-import generated.{IE815Type, MessagesOption}
+import generated.MessagesOption
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE704Message, IE801Message, IE810Message, IE813Message, IE815Message, IE818Message, IE819Message, IE837Message, IE871Message, IEMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 
 case class IEMessageFactory () {
   def createIEMessage(message: DataRecord[MessagesOption]) : IEMessage = {
