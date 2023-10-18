@@ -127,7 +127,7 @@ class SubmitMessageControllerSpec
 
         val result = createWithSuccessfulAuth.submit("LRN")(request)
 
-        status(result) mustBe BAD_REQUEST
+        status(result) mustBe NOT_FOUND
       }
     }
   }

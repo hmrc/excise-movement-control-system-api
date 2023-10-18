@@ -16,13 +16,12 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
-import generated.IE818Type
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.when
 import org.scalatest.EitherValues
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.mvc.Results.{BadRequest, InternalServerError}
+import play.api.mvc.Results.{InternalServerError, NotFound}
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
@@ -62,14 +61,10 @@ class ValidateLRNActionSpec extends PlaySpec with TestXml with EitherValues {
           .thenReturn(Future.successful(Left(NotFoundError())))
 
         val sut = new ValidateLRNActionFactory().apply("lrn", movementMessageService)
-
-        val ie818Obj = scalaxb.fromXML[IE818Type](IE818)
-        val authorizedRequest = EnrolmentRequest(FakeRequest(), Set("12356"), "123")
         val request = DataRequestIE818(FakeRequest(), MovementMessageIE818(Some("12356")), Set("12356"), "123")
-
         val result = await(sut.refine(request))
 
-        result mustBe Left(BadRequest("LRN is not valid for this ERN"))
+        result mustBe Left(NotFound("LRN is not valid for this ERN"))
       }
 
       "DB error occurs" in {
@@ -77,11 +72,7 @@ class ValidateLRNActionSpec extends PlaySpec with TestXml with EitherValues {
           .thenReturn(Future.successful(Left(MongoError("Error accessing database"))))
 
         val sut = new ValidateLRNActionFactory().apply("lrn", movementMessageService)
-
-        val ie818Obj = scalaxb.fromXML[IE818Type](IE818)
-        val authorizedRequest = EnrolmentRequest(FakeRequest(), Set("12356"), "123")
         val request = DataRequestIE818(FakeRequest(), MovementMessageIE818(Some("12356")), Set("12356"), "123")
-
         val result = await(sut.refine(request))
 
         result mustBe Left(InternalServerError("Error from Mongo with message: Error accessing database"))

@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseIE818XmlAction, ValidateConsignorAction, ValidateConsignorActionIE818, ValidateLRNAction, ValidateLRNActionFactory, ValidateLRNImpl}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseIE818XmlAction, ValidateConsignorActionIE818, ValidateLRNActionFactory}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -28,23 +28,23 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
 @Singleton
-class SubmitMessageController @Inject() (
-                                          authAction: AuthAction,
-                                          xmlParser: ParseIE818XmlAction,
-                                          consignorValidatorAction: ValidateConsignorActionIE818,
-                                          validateLRNAction: ValidateLRNActionFactory,
-                                          movementMessageConnector: MovementMessageConnector,
-                                          movementMessageService: MovementMessageService,
-                                          cc: ControllerComponents
-                                        )(implicit ec: ExecutionContext) extends BackendController(cc) {
+class SubmitMessageController @Inject()(
+                                         authAction: AuthAction,
+                                         xmlParser: ParseIE818XmlAction,
+                                         consignorValidatorAction: ValidateConsignorActionIE818,
+                                         validateLRNAction: ValidateLRNActionFactory,
+                                         movementMessageConnector: MovementMessageConnector,
+                                         movementMessageService: MovementMessageService,
+                                         cc: ControllerComponents
+                                       )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
   def submit(lrn: String): Action[NodeSeq] = {
 
-    (authAction andThen xmlParser andThen consignorValidatorAction andThen validateLRNAction(lrn,movementMessageService)).async(parse.xml){
+    (authAction andThen xmlParser andThen consignorValidatorAction andThen validateLRNAction(lrn, movementMessageService)).async(parse.xml) {
       implicit request =>
         movementMessageConnector.submitExciseMovementIE818(request, MessageTypes.IE818Message).flatMap {
-          case Right(_) => Future.successful(Accepted("Accepted"))
 
+          case Right(_) => Future.successful(Accepted(""))
           case Left(error) => Future.successful(error)
         }
 

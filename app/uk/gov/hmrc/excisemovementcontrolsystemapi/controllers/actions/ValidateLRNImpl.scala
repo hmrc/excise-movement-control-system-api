@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
 import com.google.inject.ImplementedBy
 import play.api.Logging
-import play.api.mvc.Results.{BadRequest, InternalServerError}
+import play.api.mvc.Results.{InternalServerError, NotFound}
 import play.api.mvc.{ActionRefiner, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.NotFoundError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequestIE818
@@ -35,7 +35,7 @@ class ValidateLRNImpl @Inject()(val lrn: String, val movementMessageService: Mov
 
     movementMessageService.getMovementMessagesByLRNAndERNIn(lrn, request.erns.toList).flatMap {
       case Right(_) => Future.successful(Right(request))
-      case Left(error: NotFoundError) => Future.successful(Left(BadRequest("LRN is not valid for this ERN")))
+      case Left(_: NotFoundError) => Future.successful(Left(NotFound("LRN is not valid for this ERN")))
       case Left(error) => Future.successful(Left(InternalServerError(error.message)))
     }
 

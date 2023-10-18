@@ -27,3 +27,16 @@ case class ExciseMovementResponse(
 object ExciseMovementResponse {
   implicit val format: OFormat[ExciseMovementResponse] = Json.format[ExciseMovementResponse]
 }
+
+//TODO merge? split into sep files if not
+case class SubmitMovementResponse(
+                                   status: String,
+                                   localReferentNumber: String,
+                                   consignorId: Option[String],
+                                   consgineeId: Option[String],
+                                   arc: Option[String]
+                                 )
+
+object SubmitMovementResponse {
+  implicit val format: OFormat[SubmitMovementResponse] = Json.format[SubmitMovementResponse]
+}

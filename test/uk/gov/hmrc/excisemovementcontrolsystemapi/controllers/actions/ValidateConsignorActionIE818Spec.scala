@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
-import generated.{IE815Type, IE818Type}
+import generated.IE818Type
 import org.scalatest.EitherValues
 import org.scalatestplus.play.PlaySpec
 import play.api.mvc.Results.Forbidden

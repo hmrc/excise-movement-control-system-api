@@ -17,10 +17,11 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.ImplementedBy
-import generated.{IE815Type, IE818Type}
+import generated.IE818Type
 
 import javax.inject.Inject
 import scala.xml.NodeSeq
+
 class IE818XmlParser @Inject() extends XmlParserIE818 {
 
   override def fromXml(xml: NodeSeq): IE818Type = {
@@ -29,7 +30,7 @@ class IE818XmlParser @Inject() extends XmlParserIE818 {
 
 }
 
-@ImplementedBy(classOf[IE815XmlParser])
+@ImplementedBy(classOf[IE818XmlParser])
 trait XmlParserIE818 {
   def fromXml(xml: NodeSeq): IE818Type
 }

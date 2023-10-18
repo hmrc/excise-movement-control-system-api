@@ -16,18 +16,18 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
-import generated.{IE815Type, IE818Type}
+import generated.IE818Type
 import play.api.mvc.Result
 import play.api.mvc.Results.BadRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{ParseIE815XmlAction, ParseIE818XmlAction}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest, ParsedXmlRequestIE818}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ParseIE818XmlAction
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequestIE818}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 trait FakeXmlParsersIE818 {
   case class FakeSuccessIE818XMLParser(ieMessage: IE818Type) extends ParseIE818XmlAction {
     override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequestIE818[A]]] = {
-      Future.successful(Right(ParsedXmlRequestIE818(EnrolmentRequest(request, Set.empty, "123"),null, Set.empty, "123")))
+      Future.successful(Right(ParsedXmlRequestIE818(EnrolmentRequest(request, Set.empty, "123"), null, Set.empty, "123")))
     }
 
     override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global

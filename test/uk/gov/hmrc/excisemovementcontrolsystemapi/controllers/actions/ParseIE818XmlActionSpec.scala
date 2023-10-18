@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
-import generated.{IE815Type, IE818Type}
+import generated.IE818Type
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{verify, when}
 import org.scalatest.EitherValues
@@ -26,24 +26,25 @@ import play.api.mvc.Results.BadRequest
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import scalaxb.ParserFailure
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest, ParsedXmlRequestIE818}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{XmlParser, XmlParserIE818}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequestIE818}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.XmlParserIE818
 import uk.gov.hmrc.play.bootstrap.tools.Stubs.stubMessagesControllerComponents
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class ParseIE818XmlActionSpec extends PlaySpec with EitherValues{
+class ParseIE818XmlActionSpec extends PlaySpec with EitherValues {
 
   private val xmlParser = mock[XmlParserIE818]
   private val controller = new ParseIE818XmlActionImpl(xmlParser, stubMessagesControllerComponents())
 
-  private val xmlStr = """<?xml version="1.0" encoding="UTF-8"?>
-              |<note>
-              |  <to>Tove</to>
-              |  <from>Jani</from>
-              |  <heading>Reminder</heading>
-              |  <body>Don't forget me this weekend!</body>
-              |</note>""".stripMargin
+  private val xmlStr =
+    """<?xml version="1.0" encoding="UTF-8"?>
+      |<note>
+      |  <to>Tove</to>
+      |  <from>Jani</from>
+      |  <heading>Reminder</heading>
+      |  <body>Don't forget me this weekend!</body>
+      |</note>""".stripMargin
 
   "parseXML" should {
     "return 400 if no body supplied" in {
