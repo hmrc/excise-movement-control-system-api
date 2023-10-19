@@ -69,7 +69,7 @@ class AuthActionImpl @Inject()
         case authorisedEnrolments ~ Some(Organisation) ~ Some(credentials) ~ Some(internalId) =>
           Future.successful(checkErns(authorisedEnrolments, internalId))
         case _ ~ None ~ _ ~ _ => handleAuthError("Could not retrieve affinity group from Auth")
-        case _ ~ Some(affinityGroup) ~ _ ~ _ if (affinityGroup != Organisation) =>
+        case _ ~ Some(affinityGroup) ~ _ ~ _ if affinityGroup != Organisation =>
           handleAuthError(s"Invalid affinity group $affinityGroup from Auth")
         case _ ~ _ ~ None ~ _ => handleAuthError("Could not retrieve credentials from Auth")
         case _ ~ _ ~ _ ~ None => handleAuthError("Could not retrieve internalId from Auth")

@@ -37,11 +37,11 @@ import scala.concurrent.ExecutionContext
 class ValidateConsignorActionIE818Spec extends PlaySpec with TestXml with EitherValues with BeforeAndAfterAll {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  implicit val eisUtils: EmcsUtils = mock[EmcsUtils]
+  implicit val emcsUtils: EmcsUtils = mock[EmcsUtils]
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    when(eisUtils.getCurrentDateTime)
+    when(emcsUtils.getCurrentDateTime)
       .thenReturn(LocalDateTime.of(2023, 10, 18, 15, 33, 33))
   }
 

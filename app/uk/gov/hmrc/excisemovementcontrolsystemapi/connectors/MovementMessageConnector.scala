@@ -37,7 +37,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class MovementMessageConnector @Inject()
 (
   httpClient: HttpClient,
-  eisUtils: EmcsUtils,
+  emcsUtils: EmcsUtils,
   appConfig: AppConfig,
   metrics: Metrics
 )(implicit ec: ExecutionContext) extends Logging {
@@ -48,9 +48,9 @@ class MovementMessageConnector @Inject()
     val timer = metrics.defaultRegistry.timer("emcs.eiscontroller.timer").time()
 
     //todo: add retry
-    val correlationId = eisUtils.generateCorrelationId
-    val createdDateTime = eisUtils.getCurrentDateTimeString
-    val encodedMessage = eisUtils.createEncoder.encodeToString(request.body.toString.getBytes(StandardCharsets.UTF_8))
+    val correlationId = emcsUtils.generateCorrelationId
+    val createdDateTime = emcsUtils.getCurrentDateTimeString
+    val encodedMessage = emcsUtils.createEncoder.encodeToString(request.body.toString.getBytes(StandardCharsets.UTF_8))
     val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", encodedMessage)
     val consignorId = request.movementMessage.consignorId
 
@@ -82,9 +82,9 @@ class MovementMessageConnector @Inject()
     val timer = metrics.defaultRegistry.timer("emcs.eiscontroller.timer").time()
 
     //todo: add retry
-    val correlationId = eisUtils.generateCorrelationId
-    val createdDateTime = eisUtils.getCurrentDateTimeString
-    val encodedMessage = eisUtils.createEncoder.encodeToString(request.body.toString.getBytes(StandardCharsets.UTF_8))
+    val correlationId = emcsUtils.generateCorrelationId
+    val createdDateTime = emcsUtils.getCurrentDateTimeString
+    val encodedMessage = emcsUtils.createEncoder.encodeToString(request.body.toString.getBytes(StandardCharsets.UTF_8))
     val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", encodedMessage)
     val consigneeId = request.movementMessage.consigneeId
 

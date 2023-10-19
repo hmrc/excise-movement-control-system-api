@@ -29,7 +29,7 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 
-class ValidateConsignorActionIE818Impl @Inject()(implicit val executionContext: ExecutionContext, implicit val eisUtils: EmcsUtils)
+class ValidateConsignorActionIE818Impl @Inject()(implicit val executionContext: ExecutionContext, implicit val emcsUtils: EmcsUtils)
   extends ValidateConsignorActionIE818
     with Logging {
   override def refine[A](request: ParsedXmlRequestIE818[A]): Future[Either[Result, DataRequestIE818[A]]] = {
@@ -42,10 +42,10 @@ class ValidateConsignorActionIE818Impl @Inject()(implicit val executionContext: 
           BadRequest(
             Json.toJson(
               ErrorResponse(
-                eisUtils.getCurrentDateTime,
+                emcsUtils.getCurrentDateTime,
                 "ERN validation error",
                 "Consignee ID should be supplied in the message",
-                eisUtils.generateCorrelationId
+                emcsUtils.generateCorrelationId
               )
             )
           )
@@ -71,10 +71,10 @@ class ValidateConsignorActionIE818Impl @Inject()(implicit val executionContext: 
             Forbidden(
               Json.toJson(
                 ErrorResponse(
-                  eisUtils.getCurrentDateTime,
+                  emcsUtils.getCurrentDateTime,
                   "ERN validation error",
                   "Excise number in message does not match authenticated excise number",
-                  eisUtils.generateCorrelationId
+                  emcsUtils.generateCorrelationId
                 )
               )
             )

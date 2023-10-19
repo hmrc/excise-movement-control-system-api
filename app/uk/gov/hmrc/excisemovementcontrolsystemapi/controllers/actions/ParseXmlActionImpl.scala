@@ -34,7 +34,7 @@ class ParseIE815XmlActionImpl @Inject()
 (
   xmlParser: XmlParser,
   cc: ControllerComponents
-)(implicit val executionContext: ExecutionContext, implicit val eisUtils: EmcsUtils) extends BackendController(cc)
+)(implicit val executionContext: ExecutionContext, implicit val emcsUtils: EmcsUtils) extends BackendController(cc)
   with ParseIE815XmlAction
   with Logging {
 
@@ -49,9 +49,9 @@ class ParseIE815XmlActionImpl @Inject()
             BadRequest(
               Json.toJson(
                 ErrorResponse(
-                  eisUtils.getCurrentDateTime,
+                  emcsUtils.getCurrentDateTime,
                   "XML formatting error", "Not valid XML or XML is empty",
-                  eisUtils.generateCorrelationId
+                  emcsUtils.generateCorrelationId
                 )
               )
             )
@@ -71,10 +71,10 @@ class ParseIE815XmlActionImpl @Inject()
             BadRequest(
               Json.toJson(
                 ErrorResponse(
-                  eisUtils.getCurrentDateTime,
+                  emcsUtils.getCurrentDateTime,
                   "XML formatting error",
                   s"Not valid IE815 message: ${exception.getMessage}",
-                  eisUtils.generateCorrelationId
+                  emcsUtils.generateCorrelationId
                 )
               )
             )

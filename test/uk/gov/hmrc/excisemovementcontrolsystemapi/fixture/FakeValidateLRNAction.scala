@@ -30,12 +30,12 @@ trait FakeValidateLRNAction {
 
   implicit def executionContext: ExecutionContext = ExecutionContext.global
 
-  implicit def eisUtils: EmcsUtils = new EmcsUtils
+  implicit def emcsUtils: EmcsUtils = new EmcsUtils
 
   object FakeSuccessfulValidateLRNAction extends ValidateLRNActionFactory() with TestXml {
 
     override def apply(lrn: String, movementMessageService: MovementMessageService): ValidateLRNAction =
-      new ValidateLRNImpl(lrn, movementMessageService, executionContext, eisUtils)
+      new ValidateLRNImpl(lrn, movementMessageService, executionContext, emcsUtils)
 
   }
 

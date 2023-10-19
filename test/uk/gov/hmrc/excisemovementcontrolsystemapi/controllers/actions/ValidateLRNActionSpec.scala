@@ -38,12 +38,12 @@ import scala.concurrent.{ExecutionContext, Future}
 class ValidateLRNActionSpec extends PlaySpec with TestXml with EitherValues with BeforeAndAfterAll {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  implicit val eisUtils: EmcsUtils = mock[EmcsUtils]
+  implicit val emcsUtils: EmcsUtils = mock[EmcsUtils]
   private val movementMessageService = mock[MovementMessageService]
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    when(eisUtils.getCurrentDateTime)
+    when(emcsUtils.getCurrentDateTime)
       .thenReturn(LocalDateTime.of(2023, 10, 18, 15, 33, 33))
   }
 

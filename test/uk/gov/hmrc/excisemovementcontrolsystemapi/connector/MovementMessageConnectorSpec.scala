@@ -52,12 +52,12 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
   protected implicit val ec: ExecutionContext = ExecutionContext.global
 
   private val mockHttpClient = mock[HttpClient]
-  private val eisUtils = mock[EmcsUtils]
+  private val emcsUtils = mock[EmcsUtils]
   private val appConfig = mock[AppConfig]
 
   private val metrics = mock[Metrics](RETURNS_DEEP_STUBS)
 
-  private val connector = new MovementMessageConnector(mockHttpClient, eisUtils, appConfig, metrics)
+  private val connector = new MovementMessageConnector(mockHttpClient, emcsUtils, appConfig, metrics)
   private val emcsCorrelationId = "1234566"
   private val message = "<IE815></IE815>"
   private val messageType = "IE815"
@@ -68,11 +68,11 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
     super.beforeEach()
     reset(mockHttpClient, appConfig, metrics, timerContext)
 
-    when(eisUtils.getCurrentDateTimeString).thenReturn("2023-09-17T09:32:50.345")
-    when(eisUtils.generateCorrelationId).thenReturn(emcsCorrelationId)
+    when(emcsUtils.getCurrentDateTimeString).thenReturn("2023-09-17T09:32:50.345")
+    when(emcsUtils.generateCorrelationId).thenReturn(emcsCorrelationId)
     when(appConfig.emcsReceiverMessageUrl).thenReturn("/eis/path")
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
-    when(eisUtils.createEncoder).thenReturn(encoder)
+    when(emcsUtils.createEncoder).thenReturn(encoder)
   }
 
   "post" should {

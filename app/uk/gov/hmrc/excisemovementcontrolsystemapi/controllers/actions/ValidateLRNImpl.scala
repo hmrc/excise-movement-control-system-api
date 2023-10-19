@@ -33,7 +33,7 @@ class ValidateLRNImpl @Inject()(
                                  val lrn: String,
                                  val movementMessageService: MovementMessageService,
                                  implicit val executionContext: ExecutionContext,
-                                 implicit val eisUtils: EmcsUtils
+                                 implicit val emcsUtils: EmcsUtils
                                )
   extends ValidateLRNAction
     with Logging {
@@ -46,10 +46,10 @@ class ValidateLRNImpl @Inject()(
           NotFound(
             Json.toJson(
               ErrorResponse(
-                eisUtils.getCurrentDateTime,
+                emcsUtils.getCurrentDateTime,
                 "Invalid LRN supplied",
                 s"LRN $lrn is not valid for ERNs ${request.erns.mkString("/")}",
-                eisUtils.generateCorrelationId
+                emcsUtils.generateCorrelationId
               )
             )
           )
@@ -60,10 +60,10 @@ class ValidateLRNImpl @Inject()(
           InternalServerError(
             Json.toJson(
               ErrorResponse(
-                eisUtils.getCurrentDateTime,
+                emcsUtils.getCurrentDateTime,
                 "Database error occurred",
                 error.message,
-                eisUtils.generateCorrelationId
+                emcsUtils.generateCorrelationId
               )
             )
           )
@@ -80,7 +80,7 @@ trait ValidateLRNAction extends ActionRefiner[DataRequestIE818, DataRequestIE818
   def refine[A](request: DataRequestIE818[A]): Future[Either[Result, DataRequestIE818[A]]]
 }
 
-class ValidateLRNActionFactory @Inject()(implicit val executionContext: ExecutionContext, implicit val eisUtils: EmcsUtils) {
+class ValidateLRNActionFactory @Inject()(implicit val executionContext: ExecutionContext, implicit val emcsUtils: EmcsUtils) {
   def apply(lrn: String, movementMessageService: MovementMessageService): ValidateLRNAction =
-    new ValidateLRNImpl(lrn, movementMessageService, executionContext, eisUtils)
+    new ValidateLRNImpl(lrn, movementMessageService, executionContext, emcsUtils)
 }
