@@ -130,7 +130,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
 
       result.left.value mustBe InternalServerError(
         Json.toJson(EISErrorResponse(LocalDateTime.parse("2023-09-17T09:32:50.345"),
-          "Exception", "error", emcsCorrelationId)).toString())
+          "Exception", "error", emcsCorrelationId)))
     }
 
     "return Not found error" in {

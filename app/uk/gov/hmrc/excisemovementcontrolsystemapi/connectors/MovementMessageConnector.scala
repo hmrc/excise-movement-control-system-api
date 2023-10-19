@@ -71,7 +71,7 @@ class MovementMessageConnector @Inject()
             ex.getMessage,
             correlationId
           )
-          Left(InternalServerError(Json.toJson(error).toString()))
+          Left(InternalServerError(Json.toJson(error)))
       }
   }
 
@@ -105,7 +105,7 @@ class MovementMessageConnector @Inject()
             ex.getMessage,
             correlationId
           )
-          Left(InternalServerError(Json.toJson(error).toString()))
+          Left(InternalServerError(Json.toJson(error)))
       }
   }
 }
