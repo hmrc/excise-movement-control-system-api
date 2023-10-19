@@ -52,10 +52,10 @@ class EISHttpReader(
     logger.warn(EISErrorMessage(createdDateTime, consignorId, message, correlationId, MessageTypes.IE815Message))
 
     status match {
-      case BAD_REQUEST => BadRequest(message)
-      case NOT_FOUND => NotFound(message)
-      case SERVICE_UNAVAILABLE => ServiceUnavailable(message)
-      case _ => InternalServerError(message)
+      case BAD_REQUEST => BadRequest(message).as("application/json")
+      case NOT_FOUND => NotFound(message).as("application/json")
+      case SERVICE_UNAVAILABLE => ServiceUnavailable(message).as("application/json")
+      case _ => InternalServerError(message).as("application/json")
     }
   }
 
