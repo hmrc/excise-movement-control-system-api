@@ -36,7 +36,7 @@ case class IE871Message(
   override def administrativeReferenceCode: Option[String] =
     Some(obj.Body.ExplanationOnReasonForShortage.ExciseMovement.AdministrativeReferenceCode)
 
-  override def messageType: String = MessageTypes.IE810.value
+  override def messageType: String = MessageTypes.IE871.value
 
   override def toXml: NodeSeq = {
     scalaxb.toXML[IE871Type](obj, namespace, key, generated.defaultScope)

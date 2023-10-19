@@ -22,22 +22,18 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, OK}
-import play.api.libs.json.Json
+import play.api.http.Status.{BAD_REQUEST, OK}
+import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.AnyContent
-import play.api.mvc.Results.InternalServerError
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.ShowNewMessagesConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnsAction, FakeXmlParsers}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.MessageFilter
 import uk.gov.hmrc.mongo.TimestampSupport
 
-import java.time.{Instant, LocalDateTime}
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
 class GetMessagesControllerSpec extends PlaySpec
@@ -52,20 +48,14 @@ class GetMessagesControllerSpec extends PlaySpec
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val movementService = mock[MovementService]
   private val cc = stubControllerComponents()
-  private val showNewMessagesConnector = mock[ShowNewMessagesConnector]
-  private val messageFilter = mock[MessageFilter]
   private val lrn = "LRN1234"
   private val dateTimeService = mock[TimestampSupport]
   private val timeStamp = Instant.parse("2018-11-30T18:35:24.00Z")
 
-  private val newMessage = EISConsumptionResponse(
-    LocalDateTime.of(2023, 5, 5, 6, 6, 2),
-    ern,
-    "message")
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(showNewMessagesConnector, movementService, messageFilter, dateTimeService)
+    reset(movementService, dateTimeService)
 
     when(movementService.getMatchingERN(any, any))
       .thenReturn(Future.successful(Some(ern)))
@@ -76,9 +66,9 @@ class GetMessagesControllerSpec extends PlaySpec
   "getMessagesForMovement" should {
     "return 200" in {
       val message = Message("message","IE801", dateTimeService)
-      when(messageFilter.filter(any, any)).thenReturn(Seq(message))
-      when(showNewMessagesConnector.get(any)(any))
-        .thenReturn(Future.successful(Right(newMessage)))
+      val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
+      when(movementService.getMovementByLRNAndERNIn(any,any))
+        .thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest())
 
@@ -88,24 +78,23 @@ class GetMessagesControllerSpec extends PlaySpec
 
     "get all the new messages" in {
       val message = Message("message","IE801", dateTimeService)
-      when(messageFilter.filter(any, any)).thenReturn(Seq(message))
-        when(showNewMessagesConnector.get(any)(any))
-          .thenReturn(Future.successful(Right(newMessage)))
+      val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
+      when(movementService.getMovementByLRNAndERNIn(any,any))
+        .thenReturn(Future.successful(Some(movement)))
 
         await(createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest()))
 
-        verify(showNewMessagesConnector).get(eqTo(ern))(any)
+        verify(movementService).getMovementByLRNAndERNIn(eqTo(lrn), eqTo(List(ern)))
       }
 
-    "filter messages by lrn" in {
-      val message = Message("message","IE801", dateTimeService)
-      when(messageFilter.filter(any, any)).thenReturn(Seq(message))
-      when(showNewMessagesConnector.get(any)(any))
-        .thenReturn(Future.successful(Right(newMessage)))
+    "return an empty array" in {
+      when(movementService.getMovementByLRNAndERNIn(any,any))
+        .thenReturn(Future.successful(None))
 
-      await(createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest()))
+      val result = createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest())
 
-      verify(messageFilter).filter(eqTo(newMessage), eqTo(lrn))
+      status(result) mustBe OK
+      contentAsJson(result) mustBe JsArray()
     }
 
     "return a bad request when no movement exists for LRN/ERNs combination" in {
@@ -115,24 +104,12 @@ class GetMessagesControllerSpec extends PlaySpec
 
       status(result) mustBe BAD_REQUEST
     }
-
-    "return 500 when 500 error from eis" in {
-
-      when(showNewMessagesConnector.get(any)(any))
-        .thenReturn(Future.successful(Left(InternalServerError( "error :("))))
-
-      val result = createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest())
-
-      status(result) mustBe INTERNAL_SERVER_ERROR
-    }
   }
 
   private def createWithSuccessfulAuth =
     new GetMessagesController(
       FakeSuccessAuthentication,
-      showNewMessagesConnector,
       movementService,
-      messageFilter,
       cc
     )
 

@@ -16,14 +16,12 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.ShowNewMessagesConnector
+import play.api.libs.json.{JsArray, Json}
+import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.MessageFilter
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.LocalDateTime
@@ -33,25 +31,26 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class GetMessagesController @Inject()(
                                        authAction: AuthAction,
-                                       messagesConnector: ShowNewMessagesConnector,
                                        movementService: MovementService,
-                                       messageFilter: MessageFilter,
                                        cc: ControllerComponents
                                      )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
-  def getMessagesForMovement(lrn: String): Action[AnyContent] =
+  def getMessagesForMovement(lrn: String): Action[AnyContent] = {
+    // todo: how we handle error here if for example MongoDb throws?
     authAction.async(parse.default) {
       implicit request: EnrolmentRequest[AnyContent] => {
         movementService.getMatchingERN(lrn, request.erns.toList).flatMap {
           case None => Future.successful(BadRequest(Json.toJson(ErrorResponse(LocalDateTime.now(), "Invalid LRN supplied for ERN", ""))))
-          case Some(ern) =>
-            messagesConnector.get(ern).map {
-              case Right(messages) => Ok(Json.toJson(messageFilter.filter(messages, lrn)))
-              case Left(error) => error
-            }
+          case Some(ern) => getMessagesAsJson(lrn, ern)
         }
       }
     }
+  }
 
-
+  private def getMessagesAsJson(lrn: String, ern: String): Future[Result] = {
+    movementService.getMovementByLRNAndERNIn(lrn, List(ern)).map {
+      case Some(mv) => Ok(Json.toJson(mv.messages))
+      case _ => Ok(JsArray())
+    }
+  }
 }

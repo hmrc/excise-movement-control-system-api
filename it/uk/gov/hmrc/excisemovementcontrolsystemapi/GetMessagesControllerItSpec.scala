@@ -98,9 +98,10 @@ class GetMessagesControllerItSpec extends PlaySpec
     "return 200" in {
       withAuthorizedTrader(consignorId)
       stubShowNewMessageRequest(consignorId)
-      when(movementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq(Movement(lrn, consignorId, None, None, Instant.now, Seq.empty))))
       when(dateTimeService.timestamp()).thenReturn(timestamp)
+      val message = Message("encodedMessage", "IE801", dateTimeService)
+      when(movementRepository.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(Seq(Movement(lrn, consignorId, None, None, Instant.now, Seq(message)))))
 
       val result = getRequest
 
@@ -177,10 +178,8 @@ class GetMessagesControllerItSpec extends PlaySpec
   }
 
   private def assertResponseContent(messageObj: Seq[Message]) = {
-    messageObj.head.messageType mustBe MessageTypes.IE801.value
-
-    val actualMessage = Base64.getDecoder.decode(messageObj.head.encodedMessage).map(_.toChar).mkString
-    actualMessage.matches(".*</ie801:IE801>$") mustBe true
+    messageObj.head.messageType mustBe "IE801"
+    messageObj.head.encodedMessage mustBe "encodedMessage"
   }
 
 }
