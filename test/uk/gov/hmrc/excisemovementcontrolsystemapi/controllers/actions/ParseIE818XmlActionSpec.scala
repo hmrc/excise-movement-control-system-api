@@ -25,12 +25,11 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.Status.BAD_REQUEST
 import play.api.mvc.Result
-import play.api.mvc.Results.BadRequest
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout}
 import scalaxb.ParserFailure
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequestIE818}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.XmlParserIE818
 import uk.gov.hmrc.play.bootstrap.tools.Stubs.stubMessagesControllerComponents
 
@@ -39,7 +38,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class ParseIE818XmlActionSpec extends PlaySpec with EitherValues with BeforeAndAfterAll {
 
-  implicit val eisUtils: EisUtils = mock[EisUtils]
+  implicit val eisUtils: EmcsUtils = mock[EmcsUtils]
 
   private val xmlParser = mock[XmlParserIE818]
   private val controller = new ParseIE818XmlActionImpl(xmlParser, stubMessagesControllerComponents())
@@ -55,7 +54,8 @@ class ParseIE818XmlActionSpec extends PlaySpec with EitherValues with BeforeAndA
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    when(eisUtils.getCurrentDateTime).thenReturn(LocalDateTime.of(2023, 10, 18, 15, 33, 33))
+    when(eisUtils.getCurrentDateTime)
+      .thenReturn(LocalDateTime.of(2023, 10, 18, 15, 33, 33))
   }
 
   "parseXML" should {

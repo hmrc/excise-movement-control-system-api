@@ -31,7 +31,7 @@ trait FakeValidateConsignorActionIE818 {
     override def refine[A](request: ParsedXmlRequestIE818[A]): Future[Either[Result, DataRequestIE818[A]]] = {
       Future.successful(Right(DataRequestIE818(
         request,
-        MovementMessageIE818(Some("789")),
+        MovementMessageIE818("789"),
         Set(),
         "1234"))
       )

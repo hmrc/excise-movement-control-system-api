@@ -40,10 +40,12 @@ class SubmitMessageController @Inject()(
 
   def submit(lrn: String): Action[NodeSeq] = {
 
-    (authAction andThen xmlParser andThen consignorValidatorAction andThen validateLRNAction(lrn, movementMessageService)).async(parse.xml) {
+    (authAction
+      andThen xmlParser
+      andThen consignorValidatorAction
+      andThen validateLRNAction(lrn, movementMessageService)).async(parse.xml) {
       implicit request =>
         movementMessageConnector.submitExciseMovementIE818(request, MessageTypes.IE818Message).flatMap {
-
           case Right(_) => Future.successful(Accepted(""))
           case Left(error) => Future.successful(error)
         }

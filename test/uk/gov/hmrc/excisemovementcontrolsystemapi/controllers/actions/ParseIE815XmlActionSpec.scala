@@ -24,12 +24,11 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.Status.BAD_REQUEST
 import play.api.mvc.Result
-import play.api.mvc.Results.BadRequest
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout}
 import scalaxb.ParserFailure
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.XmlParser
 import uk.gov.hmrc.play.bootstrap.tools.Stubs.stubMessagesControllerComponents
 
@@ -37,24 +36,26 @@ import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class ParseIE815XmlActionSpec extends PlaySpec with EitherValues with BeforeAndAfterAll{
+class ParseIE815XmlActionSpec extends PlaySpec with EitherValues with BeforeAndAfterAll {
 
-  implicit val eisUtils: EisUtils = mock[EisUtils]
+  implicit val eisUtils: EmcsUtils = mock[EmcsUtils]
 
   private val xmlParser = mock[XmlParser]
   private val controller = new ParseIE815XmlActionImpl(xmlParser, stubMessagesControllerComponents())
 
-  private val xmlStr = """<?xml version="1.0" encoding="UTF-8"?>
-              |<note>
-              |  <to>Tove</to>
-              |  <from>Jani</from>
-              |  <heading>Reminder</heading>
-              |  <body>Don't forget me this weekend!</body>
-              |</note>""".stripMargin
+  private val xmlStr =
+    """<?xml version="1.0" encoding="UTF-8"?>
+      |<note>
+      |  <to>Tove</to>
+      |  <from>Jani</from>
+      |  <heading>Reminder</heading>
+      |  <body>Don't forget me this weekend!</body>
+      |</note>""".stripMargin
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    when(eisUtils.getCurrentDateTime).thenReturn(LocalDateTime.of(2023, 10, 18, 15, 33, 33))
+    when(eisUtils.getCurrentDateTime).
+      thenReturn(LocalDateTime.of(2023, 10, 18, 15, 33, 33))
   }
 
 
@@ -120,7 +121,8 @@ class ParseIE815XmlActionSpec extends PlaySpec with EitherValues with BeforeAndA
           }
 
         case _ => fail("Should have an error")
-      }    }
+      }
+    }
 
     "return 400 if body supplied is a string" in {
       val request = EnrolmentRequest(FakeRequest().withBody("<xml>asdasd</xml>"), Set.empty, "123")
@@ -140,6 +142,7 @@ class ParseIE815XmlActionSpec extends PlaySpec with EitherValues with BeforeAndA
           }
 
         case _ => fail("Should have an error")
-      }    }
+      }
+    }
   }
 }

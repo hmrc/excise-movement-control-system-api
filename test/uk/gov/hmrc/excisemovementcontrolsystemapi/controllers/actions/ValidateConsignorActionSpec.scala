@@ -21,14 +21,13 @@ import org.mockito.MockitoSugar.when
 import org.scalatest.{BeforeAndAfterAll, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.{BAD_REQUEST, FORBIDDEN}
+import play.api.http.Status.FORBIDDEN
 import play.api.mvc.Result
-import play.api.mvc.Results.Forbidden
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
 
 import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
@@ -37,13 +36,14 @@ import scala.concurrent.{ExecutionContext, Future}
 class ValidateConsignorActionSpec extends PlaySpec with TestXml with EitherValues with BeforeAndAfterAll {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  implicit val eisUtils: EisUtils = mock[EisUtils]
+  implicit val eisUtils: EmcsUtils = mock[EmcsUtils]
 
   val sut = new ValidateConsignorActionImpl()
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    when(eisUtils.getCurrentDateTime).thenReturn(LocalDateTime.of(2023, 10, 18, 15, 33, 33))
+    when(eisUtils.getCurrentDateTime)
+      .thenReturn(LocalDateTime.of(2023, 10, 18, 15, 33, 33))
   }
 
   "ValidateConsignorActionSpec" should {
@@ -52,7 +52,7 @@ class ValidateConsignorActionSpec extends PlaySpec with TestXml with EitherValue
       val ie815Obj = scalaxb.fromXML[IE815Type](IE815)
       val erns = Set("GBWK002281023", "GBWK002181023", "GBWK002281022")
       val authorizedRequest = EnrolmentRequest(FakeRequest(), erns, "123")
-      val request = ParsedXmlRequest(authorizedRequest, ie815Obj, erns, "123");
+      val request = ParsedXmlRequest(authorizedRequest, ie815Obj, erns, "123")
 
       val result = await(sut.refine(request))
 
@@ -67,7 +67,7 @@ class ValidateConsignorActionSpec extends PlaySpec with TestXml with EitherValue
       "ern does not must tye consignorId" in {
         val ie815Obj = scalaxb.fromXML[IE815Type](IE815)
         val authorizedRequest = EnrolmentRequest(FakeRequest(), Set("12356"), "123")
-        val request = ParsedXmlRequest(authorizedRequest, ie815Obj, Set("12356"), "123");
+        val request = ParsedXmlRequest(authorizedRequest, ie815Obj, Set("12356"), "123")
 
         val result = await(sut.refine(request))
 

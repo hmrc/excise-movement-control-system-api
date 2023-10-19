@@ -22,14 +22,13 @@ import org.mockito.MockitoSugar.when
 import org.scalatest.{BeforeAndAfterAll, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.{BAD_REQUEST, FORBIDDEN}
+import play.api.http.Status.FORBIDDEN
 import play.api.mvc.Result
-import play.api.mvc.Results.BadRequest
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
 
 import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext
@@ -38,11 +37,12 @@ import scala.concurrent.ExecutionContext
 class ValidateConsignorActionIE818Spec extends PlaySpec with TestXml with EitherValues with BeforeAndAfterAll {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  implicit val eisUtils: EisUtils = mock[EisUtils]
+  implicit val eisUtils: EmcsUtils = mock[EmcsUtils]
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    when(eisUtils.getCurrentDateTime).thenReturn(LocalDateTime.of(2023, 10, 18, 15, 33, 33))
+    when(eisUtils.getCurrentDateTime)
+      .thenReturn(LocalDateTime.of(2023, 10, 18, 15, 33, 33))
   }
 
   val sut = new ValidateConsignorActionIE818Impl()
@@ -59,7 +59,7 @@ class ValidateConsignorActionIE818Spec extends PlaySpec with TestXml with Either
 
       val dataRequest = result.toOption.get
       dataRequest.internalId mustBe "123"
-      dataRequest.movementMessage.consigneeId mustBe Some("GBWK002281023")
+      dataRequest.movementMessage.consigneeId mustBe "GBWK002281023"
     }
 
     "an error" when {

@@ -22,16 +22,16 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import java.time.LocalDateTime
 
 class EISErrorResponse(dateTime: LocalDateTime,
-                              message: String,
+                       message: String,
                        debugMessage: String,
-                              emcsCorrelationId: String
-) extends ErrorResponse(dateTime,message, debugMessage, emcsCorrelationId)
+                       emcsCorrelationId: String
+                      ) extends ErrorResponse(dateTime, message, debugMessage, emcsCorrelationId)
 
 object EISErrorResponse {
   implicit def format: OFormat[EISErrorResponse] = Json.format[EISErrorResponse]
 
   def apply(dateTime: LocalDateTime, message: String, debugMessage: String, emcsCorrelationId: String): EISErrorResponse = {
-      new EISErrorResponse(dateTime,message,debugMessage,emcsCorrelationId)
+    new EISErrorResponse(dateTime, message, debugMessage, emcsCorrelationId)
   }
 
   def unapply(eisErrorResponse: EISErrorResponse): Option[(LocalDateTime, String, String, String)] = {

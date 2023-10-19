@@ -31,7 +31,7 @@ case class MovementMessage(
                           )
 
 case class MovementMessageIE818(
-                                 consigneeId: Option[String],
+                                 consigneeId: String,
                                  administrativeReferenceCode: Option[String] = None,
                                  createdOn: Instant = Instant.now,
                                  messages: Option[Seq[Message]] = None

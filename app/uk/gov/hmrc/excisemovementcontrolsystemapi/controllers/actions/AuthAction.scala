@@ -41,9 +41,9 @@ class AuthActionImpl @Inject()
 )(implicit val ec: ExecutionContext)
   extends BackendController(cc) with AuthorisedFunctions with AuthAction with Logging {
 
-  protected val fetch = authorisedEnrolments and affinityGroup and credentials and internalId
+  private val fetch = authorisedEnrolments and affinityGroup and credentials and internalId
 
-  protected def executionContext = ec
+  protected def executionContext: ExecutionContext = ec
 
   override def invokeBlock[A](request: Request[A], block: EnrolmentRequest[A] => Future[Result]): Future[Result] = {
 
@@ -91,7 +91,8 @@ class AuthActionImpl @Inject()
     Left(ErrorResponse(status, msg))
   }
 
-  def checkErns[A](enrolments: Enrolments, internalId: String)(implicit request: Request[A]): Either[ErrorResponse, EnrolmentRequest[A]] = {
+  private def checkErns[A](enrolments: Enrolments, internalId: String)
+                          (implicit request: Request[A]): Either[ErrorResponse, EnrolmentRequest[A]] = {
 
     val erns: Set[EnrolmentIdentifier] = enrolments.enrolments.flatMap(e => e.getIdentifier(EnrolmentKey.ERN))
 

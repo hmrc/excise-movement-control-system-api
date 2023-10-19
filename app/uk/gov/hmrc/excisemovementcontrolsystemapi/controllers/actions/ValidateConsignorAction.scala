@@ -21,22 +21,22 @@ import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.Results.Forbidden
 import play.api.mvc.{ActionRefiner, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequest, ParsedXmlRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 
-class ValidateConsignorActionImpl @Inject()(implicit val executionContext: ExecutionContext, implicit val eisUtils: EisUtils)
+class ValidateConsignorActionImpl @Inject()(implicit val executionContext: ExecutionContext, implicit val eisUtils: EmcsUtils)
   extends ValidateConsignorAction
     with Logging {
   override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, DataRequest[A]]] = {
 
     val consignorId = request.ie815Message.Body.SubmittedDraftOfEADESAD.ConsignorTrader.TraderExciseNumber
 
-    if(request.erns.contains(consignorId)) {
+    if (request.erns.contains(consignorId)) {
       val consigneeId = request.ie815Message.Body.SubmittedDraftOfEADESAD.ConsigneeTrader.flatMap(_.Traderid)
       val localRefNumber = request.ie815Message.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber
       Future.successful(Right(DataRequest(
@@ -47,12 +47,25 @@ class ValidateConsignorActionImpl @Inject()(implicit val executionContext: Execu
     }
     else {
       logger.error("[ValidateErnAction] - Invalid Excise Number")
-      Future.successful(Left(Forbidden(Json.toJson(ErrorResponse(eisUtils.getCurrentDateTime, "ERN validation error", "Excise number in message does not match authenticated excise number", eisUtils.generateCorrelationId)))))
+      Future.successful(
+        Left(
+          Forbidden(
+            Json.toJson(
+              ErrorResponse(
+                eisUtils.getCurrentDateTime,
+                "ERN validation error",
+                "Excise number in message does not match authenticated excise number",
+                eisUtils.generateCorrelationId
+              )
+            )
+          )
+        )
+      )
     }
   }
 }
 
 @ImplementedBy(classOf[ValidateConsignorActionImpl])
-trait ValidateConsignorAction extends ActionRefiner[ParsedXmlRequest, DataRequest ]{
+trait ValidateConsignorAction extends ActionRefiner[ParsedXmlRequest, DataRequest] {
   def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, DataRequest[A]]]
 }

@@ -58,7 +58,8 @@ class SubmitMessageControllerSpec
     super.beforeEach()
     reset(connector)
 
-    when(connector.submitExciseMovementIE818(any, any)(any)).thenReturn(Future.successful(Right(EISResponse("ok", "success", "123"))))
+    when(connector.submitExciseMovementIE818(any, any)(any))
+      .thenReturn(Future.successful(Right(EISResponse("ok", "success", "123"))))
     when(movementMessageService.getMovementMessagesByLRNAndERNIn(any, any))
       .thenReturn(Future.successful(Right(Seq())))
   }
@@ -67,7 +68,6 @@ class SubmitMessageControllerSpec
     "return 200" in {
 
       val result = createWithSuccessfulAuth.submit("LRN")(request)
-
       status(result) mustBe ACCEPTED
 
     }
@@ -82,7 +82,7 @@ class SubmitMessageControllerSpec
         eqTo("IE818")
       )(any)
 
-      captor.value.movementMessage.consigneeId mustBe Some("789")
+      captor.value.movementMessage.consigneeId mustBe "789"
 
     }
 
@@ -181,6 +181,5 @@ class SubmitMessageControllerSpec
       movementMessageService,
       cc
     )
-
 
 }

@@ -20,8 +20,8 @@ import com.google.inject.ImplementedBy
 import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{ActionRefiner, ControllerComponents, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequestIE818}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.XmlParserIE818
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -34,7 +34,7 @@ class ParseIE818XmlActionImpl @Inject()
 (
   xmlParser: XmlParserIE818,
   cc: ControllerComponents
-)(implicit val executionContext: ExecutionContext, implicit val eisUtils: EisUtils) extends BackendController(cc)
+)(implicit val executionContext: ExecutionContext, implicit val eisUtils: EmcsUtils) extends BackendController(cc)
   with ParseIE818XmlAction
   with Logging {
 
@@ -44,7 +44,20 @@ class ParseIE818XmlActionImpl @Inject()
       case body: NodeSeq if body.nonEmpty => parseXml(body, request)
       case _ =>
         logger.error("Not valid XML or XML is empty")
-        Future.successful(Left(BadRequest(Json.toJson(ErrorResponse(eisUtils.getCurrentDateTime, "XML formatting error", "Not valid XML or XML is empty",eisUtils.generateCorrelationId)))))
+        Future.successful(
+          Left(
+            BadRequest(
+              Json.toJson(
+                ErrorResponse(
+                  eisUtils.getCurrentDateTime,
+                  "XML formatting error",
+                  "Not valid XML or XML is empty",
+                  eisUtils.generateCorrelationId
+                )
+              )
+            )
+          )
+        )
     }
   }
 
@@ -54,7 +67,20 @@ class ParseIE818XmlActionImpl @Inject()
       case Success(value) => Future.successful(Right(ParsedXmlRequestIE818(request, value, request.erns, request.internalId)))
       case Failure(exception) =>
         logger.error(s"Not valid IE818 message: ${exception.getMessage}", exception)
-        Future.successful(Left(BadRequest(Json.toJson(ErrorResponse(eisUtils.getCurrentDateTime, "XML formatting error", s"Not valid IE818 message: ${exception.getMessage}",eisUtils.generateCorrelationId)))))
+        Future.successful(
+          Left(
+            BadRequest(
+              Json.toJson(
+                ErrorResponse(
+                  eisUtils.getCurrentDateTime,
+                  "XML formatting error",
+                  s"Not valid IE818 message: ${exception.getMessage}",
+                  eisUtils.generateCorrelationId
+                )
+              )
+            )
+          )
+        )
     }
   }
 

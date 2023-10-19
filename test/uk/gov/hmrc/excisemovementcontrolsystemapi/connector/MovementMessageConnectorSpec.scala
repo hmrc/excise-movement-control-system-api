@@ -35,7 +35,7 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISRequest, EISResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
@@ -52,7 +52,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
   protected implicit val ec: ExecutionContext = ExecutionContext.global
 
   private val mockHttpClient = mock[HttpClient]
-  private val eisUtils = mock[EisUtils]
+  private val eisUtils = mock[EmcsUtils]
   private val appConfig = mock[AppConfig]
 
   private val metrics = mock[Metrics](RETURNS_DEEP_STUBS)
@@ -181,7 +181,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
     )
   }
 
-  def expectedHeader =
+  private def expectedHeader =
     Seq(HeaderNames.ACCEPT -> ContentTypes.JSON,
       HeaderNames.CONTENT_TYPE -> ContentTypes.JSON,
       "dateTime" -> "2023-09-17T09:32:50.345",
