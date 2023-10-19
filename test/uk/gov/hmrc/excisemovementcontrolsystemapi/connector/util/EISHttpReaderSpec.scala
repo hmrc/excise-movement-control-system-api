@@ -23,17 +23,18 @@ import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISResponse}
 import uk.gov.hmrc.http.HttpResponse
 
+import java.time.LocalDateTime
 import scala.reflect.runtime.universe.typeOf
 
-class EISHttpReaderSpec extends PlaySpec with EitherValues{
+class EISHttpReaderSpec extends PlaySpec with EitherValues {
 
   private val eisHttpParser = EISHttpReader("123", "GB123", "date time")
   "read" should {
     "return EISResponse" in {
-      val eisResponse  = EISResponse("ok", "Success", "123")
+      val eisResponse = EISResponse("ok", "Success", "123")
 
       val result = eisHttpParser.read(
         "ANY",
@@ -44,28 +45,24 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues{
       result mustBe Right(eisResponse)
     }
 
-
-    "return an error" in {
-      val result = eisHttpParser.read(
-        "ANY",
-        "/foo",
-        HttpResponse(400, "bad request")
-      )
-
-      result.left.value mustBe BadRequest("bad request")
-    }
+    val exampleError = Json.toJson(EISErrorResponse(
+      LocalDateTime.of(2023, 9, 19, 15, 57, 23),
+      "Error",
+      "Error details",
+      "123"
+    ))
 
     forAll(Seq(
-      (400, BadRequest("error")),
-      (404, NotFound("error")),
-      (500, InternalServerError("error")),
-      (503, ServiceUnavailable("error")))) { case (statusCode, expectedResult) =>
+      (400, BadRequest(exampleError)),
+      (404, NotFound(exampleError)),
+      (500, InternalServerError(exampleError)),
+      (503, ServiceUnavailable(exampleError)))) { case (statusCode, expectedResult) =>
       s"return $statusCode" when {
         "$status code has returned from HttpResponse" in {
           val result = eisHttpParser.read(
             "ANY",
             "/foo",
-            HttpResponse(statusCode, "error")
+            HttpResponse(statusCode, exampleError.toString())
           )
 
           result.left.value mustBe expectedResult

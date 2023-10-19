@@ -35,6 +35,6 @@ object EISErrorResponse {
   }
 
   def unapply(eisErrorResponse: EISErrorResponse): Option[(LocalDateTime, String, String, String)] = {
-    Some(eisErrorResponse.dateTime, eisErrorResponse.message, eisErrorResponse.debugMessage, eisErrorResponse.emcsCorrelationId)
+    Some((eisErrorResponse.dateTime, eisErrorResponse.message, eisErrorResponse.debugMessage, eisErrorResponse.emcsCorrelationId))
   }
 }
