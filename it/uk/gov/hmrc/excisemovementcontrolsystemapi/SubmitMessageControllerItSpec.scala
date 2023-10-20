@@ -178,6 +178,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
     "return bad request (400) when body is not xml" in {
       withAuthorizedTrader("GBWK002281023")
 
+      //Can't use postRequest routine as test requires non-xml body
       val result = await(wsClient.url(url("lrn"))
         .addHttpHeaders(
           HeaderNames.AUTHORIZATION -> "TOKEN",

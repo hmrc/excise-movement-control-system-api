@@ -41,79 +41,30 @@ class ValidateConsignorActionIE818Impl @Inject()(implicit val executionContext: 
     } yield (traderId, isValidConsignee)) match {
       case Some(a) if a._1.nonEmpty && a._2 =>
         Future.successful(Right(DataRequestIE818(
-        request,
-        MovementMessageIE818(a._1),
-        request.erns,
-        request.internalId)))
+          request,
+          MovementMessageIE818(a._1),
+          request.erns,
+          request.internalId)))
       case Some(a) if a._1.nonEmpty && !a._2 =>
         logger.error("[ValidateErnAction] - Invalid Excise Number")
         Future.successful(
           Left(
             Forbidden(Json.toJson(ErrorResponse(
-                  emcsUtils.getCurrentDateTime,
-                  "ERN validation error",
-                  "Excise number in message does not match authenticated excise number",
-                  emcsUtils.generateCorrelationId
+              emcsUtils.getCurrentDateTime,
+              "ERN validation error",
+              "Excise number in message does not match authenticated excise number"
             ))))
         )
-      case _ =>  Future.successful(
+      case _ => Future.successful(
         Left(BadRequest(Json.toJson(ErrorResponse(
           emcsUtils.getCurrentDateTime,
           "ERN validation error",
-          "Consignee ID should be supplied in the message",
-          emcsUtils.generateCorrelationId
+          "Consignee ID should be supplied in the message"
         ))))
       )
 
     }
 
-
-//    if (consigneeIdOption.flatMap(_.Traderid).isEmpty) {
-//      Future.successful(
-//        Left(
-//          BadRequest(
-//            Json.toJson(
-//              ErrorResponse(
-//                emcsUtils.getCurrentDateTime,
-//                "ERN validation error",
-//                "Consignee ID should be supplied in the message",
-//                emcsUtils.generateCorrelationId
-//              )
-//            )
-//          )
-//        )
-//      )
-//    } else {
-//
-//      val consigneeId = consigneeIdOption.get.Traderid.get
-//
-//      if (request.erns.contains(consigneeId)) {
-//        // This is checking the ERN we get from the auth process matches the consignee ID
-//        Future.successful(Right(DataRequestIE818(
-//          request,
-//          MovementMessageIE818(consigneeId),
-//          request.erns,
-//          request.internalId)
-//        ))
-//      }
-//      else {
-//        logger.error("[ValidateErnAction] - Invalid Excise Number")
-//        Future.successful(
-//          Left(
-//            Forbidden(
-//              Json.toJson(
-//                ErrorResponse(
-//                  emcsUtils.getCurrentDateTime,
-//                  "ERN validation error",
-//                  "Excise number in message does not match authenticated excise number",
-//                  emcsUtils.generateCorrelationId
-//                )
-//              )
-//            )
-//          )
-//        )
-//      }
-//    }
   }
 }
 

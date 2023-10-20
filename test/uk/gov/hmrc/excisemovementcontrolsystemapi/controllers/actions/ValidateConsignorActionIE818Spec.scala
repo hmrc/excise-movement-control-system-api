@@ -93,15 +93,15 @@ class ValidateConsignorActionIE818Spec extends PlaySpec with TestXml with Either
     ErrorResponse(
       currentDateTime,
       "ERN validation error",
-      "Excise number in message does not match authenticated excise number",
-      "123")
+      "Excise number in message does not match authenticated excise number"
+    )
   }
 
   private def createErrorResponseForBadRequest: ErrorResponse = {
     ErrorResponse(
       currentDateTime,
       "ERN validation error",
-      "Consignee ID should be supplied in the message",
-      "123")
+      "Consignee ID should be supplied in the message"
+    )
   }
 }

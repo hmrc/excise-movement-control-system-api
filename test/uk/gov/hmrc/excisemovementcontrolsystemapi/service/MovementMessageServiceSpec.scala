@@ -23,7 +23,7 @@ import org.scalatest.EitherValues
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MongoError, NotFoundError}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{GeneralMongoError, NotFoundError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, MovementMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
@@ -62,7 +62,7 @@ class MovementMessageServiceSpec extends PlaySpec with EitherValues {
 
       val result = await(movementMessageService.saveMovementMessage(MovementMessage(lrn, consignorId, Some(consigneeId))))
 
-      result.left.value mustBe MongoError("error")
+      result.left.value mustBe GeneralMongoError("error")
     }
   }
 
@@ -95,7 +95,7 @@ class MovementMessageServiceSpec extends PlaySpec with EitherValues {
 
       val result = await(movementMessageService.getMovementMessagesByLRNAndERNIn(lrn, List(consignorId)))
 
-      result.left.value mustBe MongoError("error")
+      result.left.value mustBe GeneralMongoError("error")
     }
   }
 
@@ -118,7 +118,7 @@ class MovementMessageServiceSpec extends PlaySpec with EitherValues {
 
       val result = await(movementMessageService.getMovementMessagesByLRNAndERNIn(lrn, List(consignorId)))
 
-      result.left.value mustBe MongoError("Multiple movements found for lrn and ern combination")
+      result.left.value mustBe GeneralMongoError("Multiple movements found for lrn and ern combination")
     }
   }
 

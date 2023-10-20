@@ -17,20 +17,21 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
 import generated.IE815Type
+import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.mockito.MockitoSugar.when
 import org.scalatest.{BeforeAndAfterAll, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.FORBIDDEN
-import play.api.mvc.Result
+import play.api.libs.json.Json
+import play.api.mvc.Results.Forbidden
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout}
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
 
 import java.time.LocalDateTime
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 
 class ValidateConsignorActionSpec extends PlaySpec with TestXml with EitherValues with BeforeAndAfterAll {
@@ -40,19 +41,26 @@ class ValidateConsignorActionSpec extends PlaySpec with TestXml with EitherValue
 
   val sut = new ValidateConsignorActionImpl()
 
+  private val message = mock[IE815Type](RETURNS_DEEP_STUBS)
+  private val currentDateTime = LocalDateTime.of(2023, 10, 18, 15, 33, 33)
+
+
   override def beforeAll(): Unit = {
     super.beforeAll()
-    when(emcsUtils.getCurrentDateTime)
-      .thenReturn(LocalDateTime.of(2023, 10, 18, 15, 33, 33))
+    when(emcsUtils.getCurrentDateTime).thenReturn(currentDateTime)
+    when(emcsUtils.generateCorrelationId).thenReturn("123")
+
+    when(message.Body.SubmittedDraftOfEADESAD.ConsignorTrader.TraderExciseNumber).thenReturn("GBWK002281023")
+    when(message.Body.SubmittedDraftOfEADESAD.ConsigneeTrader.value.Traderid).thenReturn(Some("GBWKQOZ8OVLYR"))
+    when(message.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber).thenReturn("LRNQA20230909022221")
   }
 
   "ValidateConsignorActionSpec" should {
     "return a request" in {
 
-      val ie815Obj = scalaxb.fromXML[IE815Type](IE815)
       val erns = Set("GBWK002281023", "GBWK002181023", "GBWK002281022")
       val authorizedRequest = EnrolmentRequest(FakeRequest(), erns, "123")
-      val request = ParsedXmlRequest(authorizedRequest, ie815Obj, erns, "123")
+      val request = ParsedXmlRequest(authorizedRequest, message, erns, "123")
 
       val result = await(sut.refine(request))
 
@@ -64,27 +72,15 @@ class ValidateConsignorActionSpec extends PlaySpec with TestXml with EitherValue
     }
 
     "an error" when {
-      "ern does not must tye consignorId" in {
-        val ie815Obj = scalaxb.fromXML[IE815Type](IE815)
+      "ern does not match consignorId" in {
         val authorizedRequest = EnrolmentRequest(FakeRequest(), Set("12356"), "123")
-        val request = ParsedXmlRequest(authorizedRequest, ie815Obj, Set("12356"), "123")
+        val request = ParsedXmlRequest(authorizedRequest, message, Set("12356"), "123")
 
         val result = await(sut.refine(request))
 
-        result match {
-          case Left(error: Result) =>
-            error.header.status mustBe FORBIDDEN
+        result.left.value mustBe Forbidden(Json.toJson(ErrorResponse(currentDateTime, "ERN validation error",
+          "Excise number in message does not match authenticated excise number")))
 
-            val response = contentAsJson(Future.successful(error)).validate[ErrorResponse].asEither
-
-            response.map {
-              response =>
-                response.message mustBe "ERN validation error"
-                response.debugMessage mustBe "Excise number in message does not match authenticated excise number"
-            }
-
-          case _ => fail("Should have an error")
-        }
       }
     }
   }

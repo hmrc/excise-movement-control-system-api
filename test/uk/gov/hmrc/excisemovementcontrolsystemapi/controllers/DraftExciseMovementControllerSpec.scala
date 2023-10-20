@@ -32,7 +32,7 @@ import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateConsignorAction, FakeXmlParsers}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MongoError
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GeneralMongoError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
@@ -51,7 +51,7 @@ class DraftExciseMovementControllerSpec
     with EitherValues {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  implicit val sys = ActorSystem("DraftExciseMovementControllerSpec")
+  implicit val sys: ActorSystem = ActorSystem("DraftExciseMovementControllerSpec")
   private val connector = mock[MovementMessageConnector]
   private val movementMessageService = mock[MovementMessageService]
   private val cc = stubControllerComponents()
@@ -124,7 +124,7 @@ class DraftExciseMovementControllerSpec
 
     "return 500 when message saving movement fails" in {
       when(movementMessageService.saveMovementMessage(any))
-        .thenReturn(Future.successful(Left(MongoError("error"))))
+        .thenReturn(Future.successful(Left(GeneralMongoError("error"))))
 
       val result = createWithSuccessfulAuth.submit(request)
 

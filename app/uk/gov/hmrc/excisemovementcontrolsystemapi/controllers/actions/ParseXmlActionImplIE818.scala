@@ -42,17 +42,32 @@ class ParseIE818XmlActionImpl @Inject()
 
     request.body match {
       case body: NodeSeq if body.nonEmpty => parseXml(body, request)
-      case _ =>
-        logger.error("Not valid XML or XML is empty")
+      case None =>
+        logger.error("XML is empty")
         Future.successful(
           Left(
             BadRequest(
               Json.toJson(
                 ErrorResponse(
                   emcsUtils.getCurrentDateTime,
-                  "XML formatting error",
-                  "Not valid XML or XML is empty",
-                  emcsUtils.generateCorrelationId
+                  "XML error",
+                  "XML is empty"
+                )
+              )
+            )
+          )
+        )
+
+      case _ =>
+        logger.error("Value supplied is not XML")
+        Future.successful(
+          Left(
+            BadRequest(
+              Json.toJson(
+                ErrorResponse(
+                  emcsUtils.getCurrentDateTime,
+                  "XML error",
+                  "Value supplied is not XML"
                 )
               )
             )
@@ -74,8 +89,7 @@ class ParseIE818XmlActionImpl @Inject()
                 ErrorResponse(
                   emcsUtils.getCurrentDateTime,
                   "XML formatting error",
-                  s"Not valid IE818 message: ${exception.getMessage}",
-                  emcsUtils.generateCorrelationId
+                  s"Not valid IE818 message: ${exception.getMessage}"
                 )
               )
             )

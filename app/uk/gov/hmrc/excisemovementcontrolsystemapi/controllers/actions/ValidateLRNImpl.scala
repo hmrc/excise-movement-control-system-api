@@ -48,8 +48,7 @@ class ValidateLRNImpl @Inject()(
               ErrorResponse(
                 emcsUtils.getCurrentDateTime,
                 "Invalid LRN supplied",
-                s"LRN $lrn is not valid for ERNs ${request.erns.mkString("/")}",
-                emcsUtils.generateCorrelationId
+                s"LRN $lrn is not valid for ERNs ${request.erns.mkString("/")}"
               )
             )
           )
@@ -62,8 +61,7 @@ class ValidateLRNImpl @Inject()(
               ErrorResponse(
                 emcsUtils.getCurrentDateTime,
                 "Database error occurred",
-                error.message,
-                emcsUtils.generateCorrelationId
+                error.message
               )
             )
           )

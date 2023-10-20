@@ -17,24 +17,15 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
 import play.api.libs.json.{Json, OFormat}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 
 import java.time.LocalDateTime
 
-class EISErrorResponse(dateTime: LocalDateTime,
-                       message: String,
-                       debugMessage: String,
-                       emcsCorrelationId: String
-                      ) extends ErrorResponse(dateTime, message, debugMessage, emcsCorrelationId)
+case class EISErrorResponse(dateTime: LocalDateTime,
+                            message: String,
+                            debugMessage: String,
+                            emcsCorrelationId: String
+                           )
 
 object EISErrorResponse {
   implicit def format: OFormat[EISErrorResponse] = Json.format[EISErrorResponse]
-
-  def apply(dateTime: LocalDateTime, message: String, debugMessage: String, emcsCorrelationId: String): EISErrorResponse = {
-    new EISErrorResponse(dateTime, message, debugMessage, emcsCorrelationId)
-  }
-
-  def unapply(eisErrorResponse: EISErrorResponse): Option[(LocalDateTime, String, String, String)] = {
-    Some((eisErrorResponse.dateTime, eisErrorResponse.message, eisErrorResponse.debugMessage, eisErrorResponse.emcsCorrelationId))
-  }
 }

@@ -16,14 +16,14 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
-sealed trait DatabaseError {
+sealed trait MongoError {
   val message: String
 }
 
-case class MongoError(msg: String) extends DatabaseError {
+case class GeneralMongoError(msg: String) extends MongoError {
   val message = s"Error from Mongo with message: $msg"
 }
 
-case class NotFoundError() extends DatabaseError {
+case class NotFoundError() extends MongoError {
   override val message: String = "No Message found for LRN and ERN combination"
 }

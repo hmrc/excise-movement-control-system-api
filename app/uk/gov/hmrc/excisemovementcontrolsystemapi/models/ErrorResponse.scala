@@ -21,11 +21,10 @@ import play.api.libs.json.{Json, OFormat}
 import java.time.LocalDateTime
 
 case class ErrorResponse(
-  dateTime: LocalDateTime,
-  message: String,
-  debugMessage: String,
-  emcsCorrelationId: String
-)
+                          dateTime: LocalDateTime,
+                          message: String,
+                          debugMessage: String,
+                        )
 
 object ErrorResponse {
   implicit def format: OFormat[ErrorResponse] = Json.format[ErrorResponse]

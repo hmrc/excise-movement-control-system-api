@@ -54,8 +54,7 @@ class ValidateConsignorActionImpl @Inject()(implicit val executionContext: Execu
               ErrorResponse(
                 emcsUtils.getCurrentDateTime,
                 "ERN validation error",
-                "Excise number in message does not match authenticated excise number",
-                emcsUtils.generateCorrelationId
+                "Excise number in message does not match authenticated excise number"
               )
             )
           )
