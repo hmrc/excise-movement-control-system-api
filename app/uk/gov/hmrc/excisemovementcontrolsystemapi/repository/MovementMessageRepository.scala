@@ -69,14 +69,6 @@ class MovementMessageRepository @Inject()
     )
   }
 
-  private def filterByArc(arc: String, erns: List[String]): Bson = {
-    and(
-      equal("administrativeReferenceCode", arc),
-      or(in("consignorId", erns: _*),
-        in("consigneeId", erns: _*))
-    )
-  }
-
   def keepAlive(id: String): Future[Boolean] =
     collection
       .updateOne(filter = byId(id), update = Updates.set("lastUpdated", timeService.now))
@@ -101,14 +93,15 @@ class MovementMessageRepository @Inject()
       .headOption()
   }
 
-  def getByArc(arc: String, erns: List[String]): Future[Option[Movement]] = {
-    collection
-      .find(filterByArc(arc, erns))
-      .headOption()
-  }
-
   def getMovements: Future[Seq[Movement]] = {
       collection.find().toFuture()
+  }
+
+  def getAllBy(consignorId: String): Future[Seq[Movement]] = {
+
+    collection
+      .find(and(equal("consignorId", consignorId)))
+      .toFuture()
   }
 }
 

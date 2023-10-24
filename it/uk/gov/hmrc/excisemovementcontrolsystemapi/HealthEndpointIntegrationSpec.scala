@@ -26,6 +26,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.RepositoryTestStub
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
+import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
 class HealthEndpointIntegrationSpec
   extends AnyWordSpec
@@ -41,7 +42,9 @@ class HealthEndpointIntegrationSpec
   override def fakeApplication(): Application =
     GuiceApplicationBuilder()
       .configure("metrics.enabled" -> false)
-      .overrides(bind[MovementMessageRepository].to(movementMessageRepository))
+      .overrides(bind[MovementMessageRepository].to(movementMessageRepository),
+        bind[MongoLockRepository].to(mongoLockRepository)
+      )
       .build()
 
   "service health endpoint" should {

@@ -38,7 +38,7 @@ case class IE813Message
     scalaxb.toXML[IE813Type](obj, None, key, scalaxb.toScope(key -> ns))
   }
 
-  override def getType: String = MessageTypes.IE815.value
+  override def getType: String = MessageTypes.IE813.value
 }
 
 object IE813Message {

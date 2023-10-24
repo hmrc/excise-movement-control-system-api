@@ -18,7 +18,9 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
 import org.scalatestplus.mockito.MockitoSugar.mock
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
+import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
 trait RepositoryTestStub {
   protected lazy val movementMessageRepository = mock[MovementMessageRepository]
+  protected lazy val mongoLockRepository = mock[MongoLockRepository]
 }

@@ -38,6 +38,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{RepositoryTestStub, W
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
+import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
 import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
@@ -66,7 +67,8 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       .configure(configureServer)
       .overrides(
         bind[AuthConnector].to(authConnector),
-        bind[MovementMessageRepository].to(movementMessageRepository)
+        bind[MovementMessageRepository].to(movementMessageRepository),
+        bind[MongoLockRepository].to(mongoLockRepository)
       )
       .build()
   }

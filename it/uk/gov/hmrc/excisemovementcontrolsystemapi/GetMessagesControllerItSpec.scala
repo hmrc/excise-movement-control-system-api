@@ -37,6 +37,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{AuthTestSupport, Repo
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.DateTimeService
+import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
@@ -66,7 +67,8 @@ class GetMessagesControllerItSpec extends PlaySpec
       .configure(configureServer)
       .overrides(
         bind[AuthConnector].to(authConnector),
-        bind[MovementMessageRepository].to(movementMessageRepository)
+        bind[MovementMessageRepository].to(movementMessageRepository),
+        bind[MongoLockRepository].to(mongoLockRepository)
       )
       .build()
   }

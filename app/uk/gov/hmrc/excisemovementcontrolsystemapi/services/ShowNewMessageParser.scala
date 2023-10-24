@@ -16,12 +16,10 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-import generated.{MessagesOption, NewMessagesDataResponse}
-import scalaxb.DataRecord
+import generated.NewMessagesDataResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, MessageTypes}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 
 import java.nio.charset.StandardCharsets
 import javax.inject.Inject
@@ -32,22 +30,6 @@ class ShowNewMessageParser @Inject()
   timeService: DateTimeService,
   eisUtils: EisUtils) {
 
-
-  def parseEncodedMessage(encodedMessage: String): Seq[Message] = {
-
-    val decodedMessage: String = decodeMessage(encodedMessage)
-
-    val newMessage: NewMessagesDataResponse = getNewMessageDataResponse(decodedMessage)
-
-    newMessage.Messages.messagesoption.map((o: DataRecord[MessagesOption]) => {
-
-      val namespace =  o.namespace.fold(generated.defaultScope.uri)(o => o)
-      val xml = scalaxb.DataRecord.toXML(o, None, o.key, scalaxb.toScope(o.key -> namespace), true)
-      val encodedXml = eisUtils.createEncoder.encodeToString(xml.toString().getBytes(StandardCharsets.UTF_8))
-
-      Message(encodedXml, MessageTypes.withValue(o.key.getOrElse("unknown")).value, timeService)
-    })
-  }
 
   def countOfMessagesAvailable(encodedMessage: String): Long ={
     val newMessage = scala.xml.XML.loadString(decodeMessage(encodedMessage))

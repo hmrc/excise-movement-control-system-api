@@ -25,7 +25,8 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.RepositoryTestStub
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository;
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
+import uk.gov.hmrc.mongo.lock.MongoLockRepository;
 
 class DocumentationItSpec extends PlaySpec with GuiceOneServerPerSuite with RepositoryTestStub {
 
@@ -33,7 +34,10 @@ class DocumentationItSpec extends PlaySpec with GuiceOneServerPerSuite with Repo
 
   override def fakeApplication(): Application =
     GuiceApplicationBuilder()
-      .overrides(bind[MovementMessageRepository].to(movementMessageRepository))
+      .overrides(
+        bind[MovementMessageRepository].to(movementMessageRepository),
+        bind[MongoLockRepository].to(mongoLockRepository)
+      )
       .build()
 
   "get" should {

@@ -16,48 +16,48 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
-import akka.NotUsed
-import akka.stream.scaladsl.Source
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.{Scenario, StubMapping}
-import org.mockito.ArgumentMatchersSugar.{any, eqTo}
-import org.mockito.Mockito
-import org.mockito.MockitoSugar.{verify, when, reset => mockitoReset}
-import org.mockito.captor.ArgCaptor
+import org.mockito.MockitoSugar.when
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.Eventually.eventually
-import org.scalatest.concurrent.Waiters.timeout
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
-import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.{Application, Configuration}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.EmptyNewMessageDataResponse.emptyNewMessageDataXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{RepositoryTestStub, WireMockServerSpec}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.WireMockServerSpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptResponse, MessageTypes, ShowNewMessageResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumber, Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.DateTimeService
+import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 
 import java.nio.charset.StandardCharsets
 import java.time.{Instant, LocalDateTime}
 import java.util.Base64
-import scala.concurrent.Future
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.{Duration, MINUTES}
 import scala.xml.NodeSeq
 
 
 class SchedulePollingNewMessagesItSpec extends PlaySpec
-  with GuiceOneServerPerSuite
+  with PlayMongoRepositorySupport[Movement]
+  with CleanMongoCollectionSupport
   with WireMockServerSpec
-  with RepositoryTestStub
   with GetNewMessagesXml
   with MockitoSugar
-  with BeforeAndAfterEach  {
+  with ScalaFutures
+  with IntegrationPatience
+  with BeforeAndAfterEach {
 
+  var count3 = 0
   private val showNewMessageUrl = "/apip-emcs/messages/v1/show-new-messages"
   private val messageReceiptUrl = "/apip-emcs/messages/v1/message-receipt?exciseregistrationnumber="
   private val expectedMessages: Seq[String] = Seq(
@@ -73,105 +73,101 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
 
 
   private lazy val timeService = mock[DateTimeService]
+  private val timestamp = Instant.parse("2018-11-30T18:35:24.00Z")
+  protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
+  private lazy val appConfig = mock[AppConfig]
+  protected override lazy val repository = new MovementMessageRepository(
+    mongoComponent,
+    appConfig,
+    timeService
+  )
 
-  override lazy val app: Application = {
+  protected def appBuilder = {
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
-    when(movementMessageRepository.getMovements).thenReturn(Future.successful(Seq.empty))
 
     GuiceApplicationBuilder()
-      .configure(configureServer)
+      .configure(configureServer ++ Map("mongodb.uri" -> mongoUri))
       .loadConfig(env => Configuration.load(env, Map("config.resource" -> "application.test.conf")))
       .overrides(
-        bind[MovementMessageRepository].to(movementMessageRepository),
         bind[DateTimeService].to(timeService)
       )
-      .build()
+
   }
 
+   lazy val app: Application = appBuilder.build()
+
   override def beforeEach(): Unit = {
-    super.beforeEach()
     wireMock.resetAll()
-    mockitoReset(movementMessageRepository, timeService)
 
-    stubMultipleShowNewMessageRequest("1")
-    stubShowNewMessageRequest("3")
-    stubShowNewMessageRequest("4")
-    stubMessageReceiptRequest1("1")
-    stubMessageReceiptRequest("3")
-    stubMessageReceiptRequest("4")
-
+    setUpWireMockStubs
     when(timeService.now).thenReturn(Instant.parse("2018-11-30T18:35:24.00Z"))
-    when(movementMessageRepository.getMovements).thenReturn(Future.successful(createSource))
+    when(appConfig.getMovementTTL).thenReturn(Duration.create(30, MINUTES))
+    when(timeService.now).thenReturn(timestamp)
+  }
 
 
+  override def afterEach(): Unit = {
+    super.afterEach()
+    app.stop()
   }
 
   "Scheduler" should {
     "start Polling show new message copy" in {
-      setUp
 
-      eventually (timeout(Span(1L, Seconds))){wireMock.verify(getRequestedFor(urlEqualTo("/apip-emcs/messages/v1/show-new-messages?exciseregistrationnumber=1")))}
-      eventually { wireMock.verify(getRequestedFor(urlEqualTo("/apip-emcs/messages/v1/show-new-messages?exciseregistrationnumber=3")))}
-      eventually { wireMock.verify(getRequestedFor(urlEqualTo("/apip-emcs/messages/v1/show-new-messages?exciseregistrationnumber=4")))}
+      prepareDatabase()
+      insert(Movement("token", "1", None, None, Seq.empty)).futureValue
+      insert(Movement("token", "3", None, None, Seq.empty)).futureValue
+      insert(Movement("token", "4", None, None, Seq.empty)).futureValue
 
-//      withClue("save the message to DB") {
+      app
+      Thread.sleep(6000)
+      eventually { wireMock.verify(getRequestedFor(urlEqualTo(s"$showNewMessageUrl?exciseregistrationnumber=1")))}
+      eventually { wireMock.verify(getRequestedFor(urlEqualTo(s"$showNewMessageUrl?exciseregistrationnumber=3")))}
+      eventually { wireMock.verify(getRequestedFor(urlEqualTo(s"$showNewMessageUrl?exciseregistrationnumber=4")))}
+      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}1")))}
+      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}3")))}
+      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))}
 
-        val captor = ArgCaptor[Movement]
-        eventually(timeout(Span(3L, Seconds))) {
-          verify(movementMessageRepository,Mockito.atLeast(2)).save(captor.capture)
-        }
 
-        val movements: Map[String, List[Movement]] = captor.values.groupBy(m => m.consignorId)
-        assertResultForErn(movements.get("1").get(1), expectedMessages1, "1", "123")
-//        assertResultForErn(movements.get("3").get(0), expectedMessages, "3", "123")
-//        assertResultForErn(movements.get("4").get(0), expectedMessages, "4", "123")
-//      }
-    }
+      val result: Seq[Movement] = findAll().futureValue
 
-    "poll message receipt api" in {
-      eventually(timeout(Span(2L, Seconds))) {
-        wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}1")))
-        wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}3")))
-        wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))
-      }
+      val expectedMessage = Seq(
+        createMessage(Ie801XmlMessage.IE801, MessageTypes.IE801.value),
+        createMessage(Ie818XmlMessage.IE818, MessageTypes.IE818.value),
+        createMessage(Ie802XmlMessage.IE802, MessageTypes.IE802.value)
+      )
+
+      result.size mustBe 3
+      assertResults(result(0), Movement("token", "1", None, Some("tokentokentokentokent"), expectedMessage))
+      assertResults(result(1), Movement("token", "3", None, Some("tokentokentokentokent"), expectedMessage.take(1)))
+      assertResults(result(2), Movement("token", "4", None, Some("tokentokentokentokent"), Seq(createMessage(Ie704XmlMessage.IE704, MessageTypes.IE704.value))))
     }
   }
 
-  private def setUp: Unit = {
-    val message1 = createMessage(Ie704XmlMessage.IE704, MessageTypes.IE704.value)
-    val message2 = createMessage(Ie801XmlMessage.IE801, MessageTypes.IE801.value )
-    val message3 = createMessage(Ie802XmlMessage.IE802, MessageTypes.IE802.value)
+  private def assertResults(actual: Movement, expected: Movement) = {
+    actual.localReferenceNumber mustBe expected.localReferenceNumber
+    actual.consignorId mustBe expected.consignorId
+    actual.administrativeReferenceCode mustBe expected.administrativeReferenceCode
+    actual.consigneeId mustBe expected.consigneeId
+    decodeAndCleanUpMessage(actual.messages) mustBe decodeAndCleanUpMessage(expected.messages)
+  }
 
-    val m0 = Movement("123", "1", None, None, Seq.empty)
-    val m1 = Movement("123", "1", None, None, Seq(message1, message2, message3))
-    val m2 = Movement("123", "3", None, None, Seq.empty)
-    val m3 = Movement("123", "4", None, None, Seq.empty)
+  private def decodeAndCleanUpMessage(messages: Seq[Message]) = {
+    val decoder = Base64.getDecoder
+    messages
+      .map(o => new String(decoder.decode(o.encodeMessage), StandardCharsets.UTF_8))
+      .map(cleanUpString(_))
+  }
 
-    when(movementMessageRepository.get(any, eqTo(List("1"))))
-      .thenReturn(
-        Future.successful(Some(m0)),
-        Future.successful(Some(m1)),
-        Future.successful(None)
-      )
+  private def setUpWireMockStubs: Unit = {
+    stubMultipleShowNewMessageRequest("1")
+    stubShowNewMessageRequestForConsignorId3
+    stubShowNewMessageRequestForConsignorId4
+    stubMessageReceiptRequest("1")
+    stubMessageReceiptRequest("3")
+    stubMessageReceiptRequest("4")
 
-    when(movementMessageRepository.getByArc(any, eqTo(List("1"))))
-      .thenReturn(
-        Future.successful(Some(m0)),
-        Future.successful(Some(m1)),
-        Future.successful(None)
-      )
-
-    when(movementMessageRepository.get(any, eqTo(List("3"))))
-      .thenReturn(
-        Future.successful(Some(m2)),
-        Future.successful(None)
-      )
-    when(movementMessageRepository.get(any, eqTo(List("4"))))
-      .thenReturn(
-        Future.successful(Some(m3)),
-        Future.successful(None)
-      )
   }
 
   private def createMessage(xml: NodeSeq, messageType: String): Message = {
@@ -181,29 +177,62 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
       timeService
     )
   }
-  private def assertResultForErn(
-    actual: Movement,
-    expectedMessages: Seq[String],
-    ern: String,
-    lrn: String): Unit = {
 
-    actual.localReferenceNumber mustBe lrn
-    actual.consignorId mustBe ern
-    val actualMessages = actual.messages.map(m =>
-      cleanUpString(new String(Base64.getDecoder.decode(m.encodeMessage), StandardCharsets.UTF_8))
-    )
-    actualMessages mustBe expectedMessages
-
-  }
-
-  private def stubShowNewMessageRequest(exciseNumber: String) = {
+  private def stubShowNewMessageRequestForConsignorId3 = {
     wireMock.stubFor(
-      WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=$exciseNumber")
+      WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=3")
+        .inScenario(s"requesting-new-message-for-ern-3")
+        .whenScenarioStateIs(Scenario.STARTED)
         .willReturn(ok().withBody(Json.toJson(
           ShowNewMessageResponse(
             LocalDateTime.of(2023, 1, 2, 3, 4, 5),
-            exciseNumber,
-            Base64.getEncoder.encodeToString(newMessageXml.toString().getBytes(StandardCharsets.UTF_8)),
+            "3",
+            Base64.getEncoder.encodeToString(newMessageWithIE801.toString().getBytes(StandardCharsets.UTF_8)),
+          )).toString()
+        ))
+        .willSetStateTo(s"new-message-response-for-ern-3")
+    )
+
+    wireMock.stubFor(
+      WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=3")
+        .inScenario("requesting-new-message-for-ern-3")
+        .whenScenarioStateIs(s"new-message-response-for-ern-3")
+        .willSetStateTo("end-of-stubbing")
+        .willReturn(ok().withBody(Json.toJson(
+          ShowNewMessageResponse(
+            LocalDateTime.of(2024, 1, 2, 3, 4, 5),
+            "3",
+            Base64.getEncoder.encodeToString(emptyNewMessageDataXml.toString().getBytes(StandardCharsets.UTF_8)),
+          )).toString()
+        ))
+    )
+  }
+
+  private def stubShowNewMessageRequestForConsignorId4 = {
+    wireMock.stubFor(
+      WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=4")
+        .inScenario(s"requesting-new-message-for-ern-4")
+        .whenScenarioStateIs(Scenario.STARTED)
+        .willReturn(ok().withBody(Json.toJson(
+          ShowNewMessageResponse(
+            LocalDateTime.of(2023, 1, 2, 3, 4, 5),
+            "4",
+            Base64.getEncoder.encodeToString(newMessageXmlWithIE404.toString().getBytes(StandardCharsets.UTF_8)),
+          )).toString()
+        ))
+        .willSetStateTo(s"new-message-response-for-ern-4")
+    )
+
+    wireMock.stubFor(
+      WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=4")
+        .inScenario("requesting-new-message-for-ern-4")
+        .whenScenarioStateIs(s"new-message-response-for-ern-4")
+        .willSetStateTo("end-of-stubbing")
+        .willReturn(ok().withBody(Json.toJson(
+          ShowNewMessageResponse(
+            LocalDateTime.of(2024, 1, 2, 3, 4, 5),
+            "4",
+            Base64.getEncoder.encodeToString(emptyNewMessageDataXml.toString().getBytes(StandardCharsets.UTF_8)),
           )).toString()
         ))
     )
@@ -218,7 +247,7 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
           ShowNewMessageResponse(
             LocalDateTime.of(2023, 1, 2, 3, 4, 5),
             exciseNumber,
-            Base64.getEncoder.encodeToString(newMessageXml.toString().getBytes(StandardCharsets.UTF_8)),
+            Base64.getEncoder.encodeToString(newMessageWithIE801.toString().getBytes(StandardCharsets.UTF_8)),
           )).toString()
         ))
         .willSetStateTo("new-message-response")
@@ -228,11 +257,25 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
       WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=$exciseNumber")
         .inScenario("requesting-new-message")
         .whenScenarioStateIs("new-message-response")
+        .willSetStateTo("show-empty-message")
         .willReturn(ok().withBody(Json.toJson(
           ShowNewMessageResponse(
             LocalDateTime.of(2024, 1, 2, 3, 4, 5),
             exciseNumber,
-            Base64.getEncoder.encodeToString(newMessageXml2.toString().getBytes(StandardCharsets.UTF_8)),
+            Base64.getEncoder.encodeToString(newMessageXml.toString().getBytes(StandardCharsets.UTF_8)),
+          )).toString()
+        ))
+    )
+
+    wireMock.stubFor(
+      WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=$exciseNumber")
+        .inScenario("requesting-new-message")
+        .whenScenarioStateIs("show-empty-message")
+        .willReturn(ok().withBody(Json.toJson(
+          ShowNewMessageResponse(
+            LocalDateTime.of(2024, 1, 2, 3, 4, 5),
+            exciseNumber,
+            Base64.getEncoder.encodeToString(emptyNewMessageDataXml.toString().getBytes(StandardCharsets.UTF_8)),
           )).toString()
         ))
     )
@@ -248,43 +291,6 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
             3
           )).toString()
         ))
-    )
-  }
-
-  private def stubMessageReceiptRequest1(exciseNumber: String): StubMapping = {
-    wireMock.stubFor(
-      put(s"$messageReceiptUrl$exciseNumber")
-        .inScenario("requesting-message-receipt")
-        .whenScenarioStateIs(Scenario.STARTED)
-        .willReturn(ok().withBody(Json.toJson(
-          MessageReceiptResponse(
-            LocalDateTime.of(2023, 1, 2, 3, 4, 5),
-            exciseNumber,
-            3
-          )).toString()
-        ))
-        .willSetStateTo("message-receipt-response")
-    )
-
-    wireMock.stubFor(
-      put(s"$messageReceiptUrl$exciseNumber")
-        .inScenario("requesting-message-receipt")
-        .whenScenarioStateIs("message-receipt-response")
-        .willReturn(ok().withBody(Json.toJson(
-          MessageReceiptResponse(
-            LocalDateTime.of(2024, 1, 2, 3, 4, 5),
-            exciseNumber,
-            2
-          )).toString()
-        ))
-    )
-  }
-
-  private def createSource: Seq[Movement] = {
-    Seq(
-      Movement("2", "1", None),
-      Movement("3", "3", None),
-      Movement("4", "4", None)
     )
   }
 

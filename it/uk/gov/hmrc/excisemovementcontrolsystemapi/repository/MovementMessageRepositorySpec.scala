@@ -47,6 +47,7 @@ class MovementMessageRepositorySpec extends PlaySpec
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val appConfig = app.injector.instanceOf[AppConfig]
   private lazy val timeService = mock[DateTimeService]
+  private val timestamp = Instant.parse("2018-11-30T18:35:24.00Z")
 
   protected override val repository = new MovementMessageRepository(
     mongoComponent,
@@ -138,15 +139,6 @@ class MovementMessageRepositorySpec extends PlaySpec
     val consigneeId = "def"
     val movement = Movement(lrn, consignorId, Some(consigneeId), None)
 
-    "return movement for a valid AdministrationReference code and consignorId" in {
-      val newMovement = movement.copy(administrativeReferenceCode = Some("897"))
-      insert(newMovement).futureValue
-
-      val result = repository.getByArc("897", List(consignorId)).futureValue
-
-      result mustBe Some(newMovement)
-
-    }
     "return movement message with valid lrn and consignorId combination" in {
       insert(movement).futureValue
 
@@ -187,6 +179,31 @@ class MovementMessageRepositorySpec extends PlaySpec
       val result = repository.get("1111", List(consignorId)).futureValue
 
       result mustBe None
+    }
+  }
+
+  "gelAllBy" should {
+    "return all movement for that consignorid" in {
+      insert(Movement("lrn1", "consignorId1", Some("consigneeId1"), None, Seq.empty, timestamp)).futureValue
+      insert(Movement("lrn2", "consignorId2", Some("consigneeId2"), None, Seq.empty, timestamp)).futureValue
+      insert(Movement("lrn3", "consignorId3", Some("consigneeId3"), None, Seq.empty, timestamp)).futureValue
+      insert(Movement("lrn2", "consignorId1", Some("consigneeId1"), None, Seq.empty, timestamp)).futureValue
+
+      val result = repository.getAllBy("consignorId1").futureValue
+
+      result mustBe Seq(
+        Movement("lrn1", "consignorId1", Some("consigneeId1"), None, Seq.empty, timestamp),
+        Movement("lrn2", "consignorId1", Some("consigneeId1"), None, Seq.empty, timestamp)
+      )
+    }
+
+    "return an empty seq" in {
+      insert(Movement("lrn1", "consignorId1", Some("consigneeId1"), None, Seq.empty, timestamp)).futureValue
+      insert(Movement("lrn2", "consignorId2", Some("consigneeId2"), None, Seq.empty, timestamp)).futureValue
+
+      val result = repository.getAllBy("consignorId4").futureValue
+
+      result mustBe Seq.empty
     }
   }
 
