@@ -18,8 +18,10 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
 import com.google.inject.ImplementedBy
 import play.api.Logging
+import play.api.libs.json.Json
 import play.api.mvc.{ActionRefiner, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.XmlParser
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -32,28 +34,67 @@ class ParseIE815XmlActionImpl @Inject()
 (
   xmlParser: XmlParser,
   cc: ControllerComponents
-)(implicit val executionContext: ExecutionContext) extends BackendController(cc)
+)(implicit val executionContext: ExecutionContext, implicit val emcsUtils: EmcsUtils) extends BackendController(cc)
   with ParseIE815XmlAction
   with Logging {
 
-
   override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
 
-      request.body match {
-        case body: NodeSeq if body.nonEmpty => parseXml(body, request)
-        case _ =>
-          logger.error("Not valid XML or XML is empty")
-          Future.successful(Left(BadRequest("Not valid XML or XML is empty")))
-      }
+    request.body match {
+      case body: NodeSeq if body.nonEmpty => parseXml(body, request)
+      case None =>
+        logger.error("XML is empty")
+        Future.successful(
+          Left(
+            BadRequest(
+              Json.toJson(
+                ErrorResponse(
+                  emcsUtils.getCurrentDateTime,
+                  "XML error",
+                  "XML is empty"
+                )
+              )
+            )
+          )
+        )
+
+      case _ =>
+        logger.error("Value supplied is not XML")
+        Future.successful(
+          Left(
+            BadRequest(
+              Json.toJson(
+                ErrorResponse(
+                  emcsUtils.getCurrentDateTime,
+                  "XML error",
+                  "Value supplied is not XML"
+                )
+              )
+            )
+          )
+        )
+    }
   }
 
-  def parseXml[A](xmlBody: NodeSeq, request: EnrolmentRequest[A]) : Future[Either[Result, ParsedXmlRequest[A]]] = {
+  def parseXml[A](xmlBody: NodeSeq, request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
 
     Try(xmlParser.fromXml(xmlBody)) match {
       case Success(value) => Future.successful(Right(ParsedXmlRequest(request, value, request.erns, request.internalId)))
       case Failure(exception) =>
         logger.error(s"Not valid IE815 message: ${exception.getMessage}", exception)
-        Future.successful(Left(BadRequest(s"Not valid IE815 message: ${exception.getMessage}")))
+        Future.successful(
+          Left(
+            BadRequest(
+              Json.toJson(
+                ErrorResponse(
+                  emcsUtils.getCurrentDateTime,
+                  "XML formatting error",
+                  s"Not valid IE815 message: ${exception.getMessage}"
+                )
+              )
+            )
+          )
+        )
     }
   }
 }

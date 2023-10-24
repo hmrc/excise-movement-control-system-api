@@ -16,35 +16,31 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
-import generated.IE815Type
+import generated.IE818Type
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{verify, when}
-import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.scalatest.{BeforeAndAfterAll, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.BAD_REQUEST
 import play.api.libs.json.Json
-import play.api.mvc.Result
 import play.api.mvc.Results.BadRequest
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout}
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import scalaxb.ParserFailure
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequestIE818}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.XmlParser
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.XmlParserIE818
 import uk.gov.hmrc.play.bootstrap.tools.Stubs.stubMessagesControllerComponents
 
 import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
-class ParseIE815XmlActionSpec extends PlaySpec with EitherValues with BeforeAndAfterAll {
+class ParseIE818XmlActionSpec extends PlaySpec with EitherValues with BeforeAndAfterAll {
 
   implicit val emcsUtils: EmcsUtils = mock[EmcsUtils]
 
-  private val xmlParser = mock[XmlParser]
-  private val controller = new ParseIE815XmlActionImpl(xmlParser, stubMessagesControllerComponents())
+  private val xmlParser = mock[XmlParserIE818]
+  private val controller = new ParseIE818XmlActionImpl(xmlParser, stubMessagesControllerComponents())
 
   private val currentDateTime = LocalDateTime.of(2023, 10, 18, 15, 33, 33)
 
@@ -67,13 +63,13 @@ class ParseIE815XmlActionSpec extends PlaySpec with EitherValues with BeforeAndA
       val request = EnrolmentRequest(FakeRequest().withBody(None), Set.empty, "123")
       val result = await(controller.refine(request))
 
-      result.left.value mustBe BadRequest(Json.toJson(ErrorResponse(currentDateTime,"XML error", "XML is empty" )))
+      result.left.value mustBe BadRequest(Json.toJson(ErrorResponse(currentDateTime, "XML error", "XML is empty")))
 
     }
 
     "return a request with the IE815Types object when supplied XML Node Sequence" in {
 
-      val obj = mock[IE815Type]
+      val obj = mock[IE818Type]
       when(xmlParser.fromXml(any)).thenReturn(obj)
 
       val body = scala.xml.XML.loadString(xmlStr)
@@ -83,10 +79,10 @@ class ParseIE815XmlActionSpec extends PlaySpec with EitherValues with BeforeAndA
       val result = await(controller.refine(request))
 
       verify(xmlParser).fromXml(eqTo(body))
-      result mustBe Right(ParsedXmlRequest(request, obj, Set.empty, "123"))
+      result mustBe Right(ParsedXmlRequestIE818(request, obj, Set.empty, "123"))
     }
 
-    "return a Bad Request supplied XML Node Sequence that is not an IE815" in {
+    "return a Bad Request supplied XML Node Sequence that is not an IE818" in {
 
       when(xmlParser.fromXml(any)).thenThrow(new ParserFailure("Not valid"))
 
@@ -95,7 +91,8 @@ class ParseIE815XmlActionSpec extends PlaySpec with EitherValues with BeforeAndA
       val request = EnrolmentRequest(fakeRequest, Set.empty, "123")
 
       val result = await(controller.refine(request))
-      result.left.value mustBe BadRequest(Json.toJson(ErrorResponse(currentDateTime,"XML formatting error", "Not valid IE815 message: Not valid" )))
+
+      result.left.value mustBe BadRequest(Json.toJson(ErrorResponse(currentDateTime, "XML formatting error", "Not valid IE818 message: Not valid")))
 
     }
 
@@ -103,7 +100,7 @@ class ParseIE815XmlActionSpec extends PlaySpec with EitherValues with BeforeAndA
       val request = EnrolmentRequest(FakeRequest().withBody("<xml>asdasd</xml>"), Set.empty, "123")
       val result = await(controller.refine(request))
 
-      result.left.value mustBe BadRequest(Json.toJson(ErrorResponse(currentDateTime,"XML error", "Value supplied is not XML"  )))
+      result.left.value mustBe BadRequest(Json.toJson(ErrorResponse(currentDateTime, "XML error", "Value supplied is not XML")))
 
     }
   }

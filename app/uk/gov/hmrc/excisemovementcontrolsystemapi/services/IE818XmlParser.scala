@@ -14,14 +14,23 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.models
+package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-import java.time.LocalDateTime
-import java.util.{Base64, UUID}
+import com.google.inject.ImplementedBy
+import generated.IE818Type
 
-class EisUtils {
+import javax.inject.Inject
+import scala.xml.NodeSeq
 
-  def getCurrentDateTimeString: String = LocalDateTime.now().toString
-  def generateCorrelationId: String = UUID.randomUUID().toString
-  def createEncoder: Base64.Encoder = Base64.getEncoder
+class IE818XmlParser @Inject() extends XmlParserIE818 {
+
+  override def fromXml(xml: NodeSeq): IE818Type = {
+    scalaxb.fromXML[IE818Type](xml)
+  }
+
+}
+
+@ImplementedBy(classOf[IE818XmlParser])
+trait XmlParserIE818 {
+  def fromXml(xml: NodeSeq): IE818Type
 }

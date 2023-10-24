@@ -23,10 +23,10 @@ import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisUtils
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequest, DataRequestIE818}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Header.EmcsSource
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, EISErrorResponse, EISRequest, EISResponse, Header}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import java.nio.charset.StandardCharsets
@@ -37,7 +37,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class MovementMessageConnector @Inject()
 (
   httpClient: HttpClient,
-  eisUtils: EisUtils,
+  emcsUtils: EmcsUtils,
   appConfig: AppConfig,
   metrics: Metrics
 )(implicit ec: ExecutionContext) extends Logging {
@@ -48,30 +48,64 @@ class MovementMessageConnector @Inject()
     val timer = metrics.defaultRegistry.timer("emcs.eiscontroller.timer").time()
 
     //todo: add retry
-    val correlationId = eisUtils.generateCorrelationId
-    val createdDateTime = eisUtils.getCurrentDateTimeString
-    val encodedMessage = eisUtils.createEncoder.encodeToString(request.body.toString.getBytes(StandardCharsets.UTF_8))
+    val correlationId = emcsUtils.generateCorrelationId
+    val createdDateTime = emcsUtils.getCurrentDateTimeString
+    val encodedMessage = emcsUtils.createEncoder.encodeToString(request.body.toString.getBytes(StandardCharsets.UTF_8))
     val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", encodedMessage)
     val consignorId = request.movementMessage.consignorId
 
-      httpClient.POST[EISRequest, Either[Result, EISResponse]](
-        appConfig.emcsReceiverMessageUrl,
-        eisRequest,
-        Header.build(correlationId, createdDateTime)
-      )(EISRequest.format, EISHttpReader(correlationId, consignorId, createdDateTime), hc, ec)
-        .andThen { case _ => timer.stop() }
-        .recover {
-          case ex: Throwable =>
+    httpClient.POST[EISRequest, Either[Result, EISResponse]](
+      appConfig.emcsReceiverMessageUrl,
+      eisRequest,
+      Header.build(correlationId, createdDateTime)
+    )(EISRequest.format, EISHttpReader(correlationId, consignorId, createdDateTime), hc, ec)
+      .andThen { case _ => timer.stop() }
+      .recover {
+        case ex: Throwable =>
 
-            logger.warn(EISErrorMessage(createdDateTime, consignorId, ex.getMessage, correlationId, messageType), ex)
+          logger.warn(EISErrorMessage(createdDateTime, consignorId, ex.getMessage, correlationId, messageType), ex)
 
-            val error = EISErrorResponse(
-              LocalDateTime.parse(createdDateTime),
-              "Exception",
-              ex.getMessage,
-              correlationId
-            )
-            Left(InternalServerError(Json.toJson(error).toString()))
-    }
+          val error = EISErrorResponse(
+            LocalDateTime.parse(createdDateTime),
+            "Exception",
+            ex.getMessage,
+            correlationId
+          )
+          Left(InternalServerError(Json.toJson(error)))
+      }
+  }
+
+  //TODO implement a more generic solution that doesn't involve duplicating all the code
+  def submitExciseMovementIE818(request: DataRequestIE818[_], messageType: String)
+                               (implicit hc: HeaderCarrier): Future[Either[Result, EISResponse]] = {
+
+    val timer = metrics.defaultRegistry.timer("emcs.eiscontroller.timer").time()
+
+    //todo: add retry
+    val correlationId = emcsUtils.generateCorrelationId
+    val createdDateTime = emcsUtils.getCurrentDateTimeString
+    val encodedMessage = emcsUtils.createEncoder.encodeToString(request.body.toString.getBytes(StandardCharsets.UTF_8))
+    val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", encodedMessage)
+    val consigneeId = request.movementMessage.consigneeId
+
+    httpClient.POST[EISRequest, Either[Result, EISResponse]](
+      appConfig.emcsReceiverMessageUrl,
+      eisRequest,
+      Header.build(correlationId, createdDateTime)
+    )(EISRequest.format, EISHttpReader(correlationId, consigneeId, createdDateTime), hc, ec)
+      .andThen { case _ => timer.stop() }
+      .recover {
+        case ex: Throwable =>
+
+          logger.warn(EISErrorMessage(createdDateTime, consigneeId, ex.getMessage, correlationId, messageType), ex)
+
+          val error = EISErrorResponse(
+            LocalDateTime.parse(createdDateTime),
+            "Exception",
+            ex.getMessage,
+            correlationId
+          )
+          Left(InternalServerError(Json.toJson(error)))
+      }
   }
 }

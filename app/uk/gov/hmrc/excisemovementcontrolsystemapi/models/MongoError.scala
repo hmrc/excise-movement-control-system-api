@@ -16,9 +16,14 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
-object MessageTypes {
+sealed trait MongoError {
+  val message: String
+}
 
-  val IE815Message = "IE815"
-  val IE818Message = "IE818"
+case class GeneralMongoError(msg: String) extends MongoError {
+  val message = s"Error from Mongo with message: $msg"
+}
 
+case class NotFoundError() extends MongoError {
+  override val message: String = "No Message found for LRN and ERN combination"
 }

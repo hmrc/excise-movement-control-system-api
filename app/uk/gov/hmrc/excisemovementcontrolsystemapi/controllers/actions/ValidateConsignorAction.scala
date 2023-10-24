@@ -18,23 +18,25 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
 import com.google.inject.ImplementedBy
 import play.api.Logging
+import play.api.libs.json.Json
 import play.api.mvc.Results.Forbidden
 import play.api.mvc.{ActionRefiner, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequest, ParsedXmlRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 
-class ValidateConsignorActionImpl @Inject()(implicit val executionContext: ExecutionContext)
+class ValidateConsignorActionImpl @Inject()(implicit val executionContext: ExecutionContext, implicit val emcsUtils: EmcsUtils)
   extends ValidateConsignorAction
     with Logging {
   override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, DataRequest[A]]] = {
 
     val consignorId = request.ie815Message.Body.SubmittedDraftOfEADESAD.ConsignorTrader.TraderExciseNumber
 
-    if(request.request.erns.contains(consignorId)) {
+    if (request.erns.contains(consignorId)) {
       val consigneeId = request.ie815Message.Body.SubmittedDraftOfEADESAD.ConsigneeTrader.flatMap(_.Traderid)
       val localRefNumber = request.ie815Message.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber
       Future.successful(Right(DataRequest(
@@ -45,12 +47,24 @@ class ValidateConsignorActionImpl @Inject()(implicit val executionContext: Execu
     }
     else {
       logger.error("[ValidateErnAction] - Invalid Excise Number")
-      Future.successful(Left(Forbidden("Invalid Excise Number")))
+      Future.successful(
+        Left(
+          Forbidden(
+            Json.toJson(
+              ErrorResponse(
+                emcsUtils.getCurrentDateTime,
+                "ERN validation error",
+                "Excise number in message does not match authenticated excise number"
+              )
+            )
+          )
+        )
+      )
     }
   }
 }
 
 @ImplementedBy(classOf[ValidateConsignorActionImpl])
-trait ValidateConsignorAction extends ActionRefiner[ParsedXmlRequest, DataRequest ]{
+trait ValidateConsignorAction extends ActionRefiner[ParsedXmlRequest, DataRequest] {
   def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, DataRequest[A]]]
 }

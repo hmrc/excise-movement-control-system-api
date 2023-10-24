@@ -30,8 +30,14 @@ case class MovementMessage(
                             messages: Option[Seq[Message]] = None
                           )
 
-case class Message(encodedMessage: String, messageType: String, createdOn: Instant = Instant.now)
+case class MovementMessageIE818(
+                                 consigneeId: String,
+                                 administrativeReferenceCode: Option[String] = None,
+                                 createdOn: Instant = Instant.now,
+                                 messages: Option[Seq[Message]] = None
+                               )
 
+case class Message(encodedMessage: String, messageType: String, createdOn: Instant = Instant.now)
 
 object MovementMessage {
   implicit val instantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat

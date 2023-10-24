@@ -29,7 +29,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers.{defaultAwaitTimeout, status, stubControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateConsignorAction, FakeXmlParsers}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MongoError, NotFoundError}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{GeneralMongoError, NotFoundError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
 
@@ -45,7 +45,7 @@ class GetMessagesControllerSpec extends PlaySpec
   with Matchers {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  implicit val sys = ActorSystem("GetMessagesControllerSpec")
+  implicit val sys: ActorSystem = ActorSystem("GetMessagesControllerSpec")
   private val movementMessageService = mock[MovementMessageService]
   private val cc = stubControllerComponents()
   private val lrn = "LRN1234"
@@ -74,7 +74,7 @@ class GetMessagesControllerSpec extends PlaySpec
 
     "return 500 when mongo error" in {
       when(movementMessageService.getMovementMessagesByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Left(MongoError("error"))))
+        .thenReturn(Future.successful(Left(GeneralMongoError("error"))))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest())
 

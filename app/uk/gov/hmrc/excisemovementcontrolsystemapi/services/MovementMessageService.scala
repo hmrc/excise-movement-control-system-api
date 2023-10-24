@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.Singleton
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MongoError, NotFoundError}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{GeneralMongoError, MongoError, NotFoundError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, MovementMessage}
 
@@ -29,26 +29,26 @@ class MovementMessageService @Inject()(
                                         movementMessageRepository: MovementMessageRepository
                                       )(implicit ec: ExecutionContext) {
 
-  def saveMovementMessage(movementMessage: MovementMessage): Future[Either[MongoError, MovementMessage]] = {
+  def saveMovementMessage(movementMessage: MovementMessage): Future[Either[GeneralMongoError, MovementMessage]] = {
     movementMessageRepository.saveMovementMessage(movementMessage)
       .map(_ => Right(movementMessage))
       .recover {
-        case ex: Throwable => Left(MongoError(ex.getMessage))
+        case ex: Throwable => Left(GeneralMongoError(ex.getMessage))
       }
   }
 
-  def getMovementMessagesByLRNAndERNIn(lrn: String, erns: List[String]): Future[Either[ErrorResponse, Seq[Message]]] = {
+  def getMovementMessagesByLRNAndERNIn(lrn: String, erns: List[String]): Future[Either[MongoError, Seq[Message]]] = {
     movementMessageRepository.getMovementMessagesByLRNAndERNIn(lrn, erns).map {
-        case Nil => Left(NotFoundError())
-        case f@_ :: Nil =>
-          f.head.messages match {
-            case Some(m) => Right(m)
-            case None => Right(Seq.empty)
-          }
-        case _ => Left(MongoError("Multiple movements found for lrn and ern combination"))
-      }
+      case Nil => Left(NotFoundError())
+      case f@_ :: Nil =>
+        f.head.messages match {
+          case Some(m) => Right(m)
+          case None => Right(Seq.empty)
+        }
+      case _ => Left(GeneralMongoError("Multiple movements found for lrn and ern combination"))
+    }
       .recover {
-        case ex: Throwable => Left(MongoError(ex.getMessage))
+        case ex: Throwable => Left(GeneralMongoError(ex.getMessage))
       }
   }
 

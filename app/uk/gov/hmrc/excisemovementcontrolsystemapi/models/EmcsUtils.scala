@@ -16,9 +16,13 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
-object MessageTypes {
+import java.time.LocalDateTime
+import java.util.{Base64, UUID}
 
-  val IE815Message = "IE815"
-  val IE818Message = "IE818"
+class EmcsUtils {
 
+  def getCurrentDateTime: LocalDateTime = LocalDateTime.now()
+  def getCurrentDateTimeString: String = getCurrentDateTime.toString
+  def generateCorrelationId: String = UUID.randomUUID().toString
+  def createEncoder: Base64.Encoder = Base64.getEncoder
 }

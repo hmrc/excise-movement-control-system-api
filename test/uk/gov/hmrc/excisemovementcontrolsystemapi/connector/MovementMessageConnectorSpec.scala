@@ -35,7 +35,7 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISRequest, EISResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
@@ -52,12 +52,12 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
   protected implicit val ec: ExecutionContext = ExecutionContext.global
 
   private val mockHttpClient = mock[HttpClient]
-  private val eisUtils = mock[EisUtils]
+  private val emcsUtils = mock[EmcsUtils]
   private val appConfig = mock[AppConfig]
 
   private val metrics = mock[Metrics](RETURNS_DEEP_STUBS)
 
-  private val connector = new MovementMessageConnector(mockHttpClient, eisUtils, appConfig, metrics)
+  private val connector = new MovementMessageConnector(mockHttpClient, emcsUtils, appConfig, metrics)
   private val emcsCorrelationId = "1234566"
   private val message = "<IE815></IE815>"
   private val messageType = "IE815"
@@ -68,11 +68,11 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
     super.beforeEach()
     reset(mockHttpClient, appConfig, metrics, timerContext)
 
-    when(eisUtils.getCurrentDateTimeString).thenReturn("2023-09-17T09:32:50.345")
-    when(eisUtils.generateCorrelationId).thenReturn(emcsCorrelationId)
+    when(emcsUtils.getCurrentDateTimeString).thenReturn("2023-09-17T09:32:50.345")
+    when(emcsUtils.generateCorrelationId).thenReturn(emcsCorrelationId)
     when(appConfig.emcsReceiverMessageUrl).thenReturn("/eis/path")
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
-    when(eisUtils.createEncoder).thenReturn(encoder)
+    when(emcsUtils.createEncoder).thenReturn(encoder)
   }
 
   "post" should {
@@ -130,7 +130,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
 
       result.left.value mustBe InternalServerError(
         Json.toJson(EISErrorResponse(LocalDateTime.parse("2023-09-17T09:32:50.345"),
-          "Exception", "error", emcsCorrelationId)).toString())
+          "Exception", "error", emcsCorrelationId)))
     }
 
     "return Not found error" in {
@@ -181,7 +181,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
     )
   }
 
-  def expectedHeader =
+  private def expectedHeader =
     Seq(HeaderNames.ACCEPT -> ContentTypes.JSON,
       HeaderNames.CONTENT_TYPE -> ContentTypes.JSON,
       "dateTime" -> "2023-09-17T09:32:50.345",

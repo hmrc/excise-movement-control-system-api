@@ -62,7 +62,7 @@ paths:
         '403':
           description: Consignor ID is not in authorisation bearer token
         '404':
-          description: Conection Refused
+          description: Connection Refused
           content:
             application/vnd.hmrc.1.0+json:
               schema:
@@ -90,10 +90,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ExciseMovementError'
               example:
-                dateTime: "2021-12-17T09:30:47Z"
-                message: "CIRCUIT_BREAKER - 815_CB is OPEN"
-                debugMessage: "CircuitBreaker '815_CB' is OPEN and does not permit further calls"
-                emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+                code: "SERVER_ERROR"
+                message: "Service unavailable"
       security:
         - userRestricted:
             - excise-movement-control-system
@@ -210,16 +208,52 @@ paths:
                 summary: Submit reason for shortage (IE871)
                 value: '<IE871><!-- Example IE871 message --></IE871>'
       responses:
-        '200':
-          description: Successful operation
+        '202':
+          description: Message accepted
         '400':
           description: The submitted message has failed validation
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ExciseMovementError'
+              example:
+                dateTime: "2021-12-17T09:30:47Z"
+                message: "Json validation failed"
+                debugMessage: "user is missing but it is required"
+                emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
         '403':
           description: Consignor ID or consignee ID is not in authorisation bearer token
         '404':
           description: Unknown excise movement identifier
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ExciseMovementError'
+              example:
+                dateTime: "2021-12-17T09:30:47Z"
+                message: "Received error response from server"
+                debugMessage: "Connection refused; nested exception is java.net.ConnectException: Connection refused"
+                emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
         '500':
           description: Internal server error
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ExciseMovementError'
+              example:
+                dateTime: "2021-12-17T09:30:47Z"
+                message: "Invalid JSON structure"
+                debugMessage: "JSON parse error: Unexpected character"
+                emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+        '503':
+          description: Downstream service is Unavailable
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ExciseMovementError'
+              example:
+                code: "SERVER_ERROR"
+                message: "Service unavailable"
       security:
         - userRestricted:
             - excise-movement-control-system
