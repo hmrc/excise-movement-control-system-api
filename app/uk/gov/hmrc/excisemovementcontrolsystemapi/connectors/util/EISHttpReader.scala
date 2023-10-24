@@ -48,7 +48,7 @@ class EISHttpReader(
     response: HttpResponse
   ): Result = {
 
-    logger.warn(EISErrorMessage(createdDateTime, consignorId, response.body, correlationId, MessageTypes.IE815Message))
+    logger.warn(EISErrorMessage(createdDateTime, consignorId, response.body, correlationId, MessageTypes.IE815.value))
 
     val messageAsJson = response.json
     response.status match {

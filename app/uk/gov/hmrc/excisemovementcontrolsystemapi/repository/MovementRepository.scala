@@ -22,7 +22,7 @@ import org.mongodb.scala.model.{IndexModel, IndexOptions}
 import play.api.Logging
 import play.api.libs.json.Json
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
@@ -32,16 +32,16 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class MovementMessageRepository @Inject()
+class MovementRepository @Inject()
 (
   mongo: MongoComponent,
   appConfig: AppConfig,
   clock: Clock
 )(implicit ec: ExecutionContext) extends
-  PlayMongoRepository[MovementMessage](
+  PlayMongoRepository[Movement](
     collectionName = "movements",
     mongoComponent = mongo,
-    domainFormat = Json.format[MovementMessage],
+    domainFormat = Json.format[Movement],
     indexes = Seq(
       IndexModel(
         ascending(List("localReferenceNumber", "consignorId"): _*),
@@ -59,14 +59,15 @@ class MovementMessageRepository @Inject()
     )
   ) with Logging {
 
-  def saveMovementMessage(movementMessage: MovementMessage): Future[Boolean] = {
-    collection.insertOne(movementMessage.copy(createdOn = Instant.now(clock)))
+  def saveMovement(movement: Movement): Future[Boolean] = {
+    collection.insertOne(movement.copy(createdOn = Instant.now(clock)))
       .toFuture()
       .map(_ => true)
   }
 
-  def getMovementMessagesByLRNAndERNIn(lrn: String, erns: List[String]): Future[Seq[MovementMessage]] = {
+  def getMovementByLRNAndERNIn(lrn: String, erns: List[String]): Future[Option[Movement]] = {
+    //TODO case where returns more than one (e.g. consignee has the same LRN for two different consignors)
     collection.find(and(equal("localReferenceNumber", lrn),
-      or(in("consignorId", erns: _*), in("consigneeId", erns: _*)))).toFuture()
+      or(in("consignorId", erns: _*), in("consigneeId", erns: _*)))).headOption()
   }
 }

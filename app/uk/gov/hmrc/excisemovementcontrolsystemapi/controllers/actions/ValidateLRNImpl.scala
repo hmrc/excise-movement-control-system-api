@@ -23,7 +23,7 @@ import play.api.mvc.Results.{InternalServerError, NotFound}
 import play.api.mvc.{ActionRefiner, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequestIE818
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse, NotFoundError}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -31,7 +31,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class ValidateLRNImpl @Inject()(
                                  val lrn: String,
-                                 val movementMessageService: MovementMessageService,
+                                 val movementService: MovementService,
                                  implicit val executionContext: ExecutionContext,
                                  implicit val emcsUtils: EmcsUtils
                                )
@@ -39,7 +39,7 @@ class ValidateLRNImpl @Inject()(
     with Logging {
   override def refine[A](request: DataRequestIE818[A]): Future[Either[Result, DataRequestIE818[A]]] = {
 
-    movementMessageService.getMovementMessagesByLRNAndERNIn(lrn, request.erns.toList).flatMap {
+    movementService.getMovementMessagesByLRNAndERNIn(lrn, request.erns.toList).flatMap {
       case Right(_) => Future.successful(Right(request))
       case Left(_: NotFoundError) => Future.successful(
         Left(
@@ -79,6 +79,6 @@ trait ValidateLRNAction extends ActionRefiner[DataRequestIE818, DataRequestIE818
 }
 
 class ValidateLRNActionFactory @Inject()(implicit val executionContext: ExecutionContext, implicit val emcsUtils: EmcsUtils) {
-  def apply(lrn: String, movementMessageService: MovementMessageService): ValidateLRNAction =
+  def apply(lrn: String, movementMessageService: MovementService): ValidateLRNAction =
     new ValidateLRNImpl(lrn, movementMessageService, executionContext, emcsUtils)
 }

@@ -29,7 +29,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse, GeneralMongoError, NotFoundError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessageIE818
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 
 import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
@@ -39,7 +39,7 @@ class ValidateLRNActionSpec extends PlaySpec with TestXml with EitherValues with
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val emcsUtils: EmcsUtils = mock[EmcsUtils]
-  private val movementMessageService = mock[MovementMessageService]
+  private val movementService = mock[MovementService]
   private val currentDateTime = LocalDateTime.of(2023, 10, 18, 15, 33, 33)
 
   override def beforeAll(): Unit = {
@@ -50,10 +50,10 @@ class ValidateLRNActionSpec extends PlaySpec with TestXml with EitherValues with
   "ValidateLRNActionSpec" should {
     "return a request when valid LRN/ERN combo in database" in {
 
-      when(movementMessageService.getMovementMessagesByLRNAndERNIn(any, any))
+      when(movementService.getMovementMessagesByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Right(Seq())))
 
-      val sut = new ValidateLRNActionFactory().apply("lrn", movementMessageService)
+      val sut = new ValidateLRNActionFactory().apply("lrn", movementService)
 
       val erns = Set("GBWK002281023", "GBWK002181023", "GBWK002281022")
       val request = DataRequestIE818(FakeRequest(), MovementMessageIE818("GBWK002181023"), erns, "123")
@@ -66,10 +66,10 @@ class ValidateLRNActionSpec extends PlaySpec with TestXml with EitherValues with
 
     "an error" when {
       "LRN/ERN combo is not in the db" in {
-        when(movementMessageService.getMovementMessagesByLRNAndERNIn(any, any))
+        when(movementService.getMovementMessagesByLRNAndERNIn(any, any))
           .thenReturn(Future.successful(Left(NotFoundError())))
 
-        val sut = new ValidateLRNActionFactory().apply("lrn", movementMessageService)
+        val sut = new ValidateLRNActionFactory().apply("lrn", movementService)
         val request = DataRequestIE818(FakeRequest(), MovementMessageIE818("12356"), Set("12356"), "123")
         val result = await(sut.refine(request))
 
@@ -78,10 +78,10 @@ class ValidateLRNActionSpec extends PlaySpec with TestXml with EitherValues with
       }
 
       "DB error occurs" in {
-        when(movementMessageService.getMovementMessagesByLRNAndERNIn(any, any))
+        when(movementService.getMovementMessagesByLRNAndERNIn(any, any))
           .thenReturn(Future.successful(Left(GeneralMongoError("Error accessing database"))))
 
-        val sut = new ValidateLRNActionFactory().apply("lrn", movementMessageService)
+        val sut = new ValidateLRNActionFactory().apply("lrn", movementService)
         val request = DataRequestIE818(FakeRequest(), MovementMessageIE818("12356"), Set("12356"), "123")
         val result = await(sut.refine(request))
 

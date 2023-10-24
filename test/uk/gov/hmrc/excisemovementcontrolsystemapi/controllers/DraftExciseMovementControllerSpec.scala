@@ -35,8 +35,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, F
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GeneralMongoError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
@@ -53,7 +53,7 @@ class DraftExciseMovementControllerSpec
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val sys: ActorSystem = ActorSystem("DraftExciseMovementControllerSpec")
   private val connector = mock[MovementMessageConnector]
-  private val movementMessageService = mock[MovementMessageService]
+  private val movementMessageService = mock[MovementService]
   private val cc = stubControllerComponents()
   private val ieMessage = scalaxb.fromXML[IE815Type](IE815)
   private val request = createRequest(IE815)
@@ -68,7 +68,7 @@ class DraftExciseMovementControllerSpec
   "submit" should {
     "return 200" in {
       when(movementMessageService.saveMovementMessage(any))
-        .thenReturn(Future.successful(Right(MovementMessage("", "", None))))
+        .thenReturn(Future.successful(Right(Movement("", "", None))))
       val result = createWithSuccessfulAuth.submit(request)
 
       status(result) mustBe ACCEPTED
@@ -77,7 +77,7 @@ class DraftExciseMovementControllerSpec
 
     "send a request to EIS" in {
       when(movementMessageService.saveMovementMessage(any))
-        .thenReturn(Future.successful(Right(MovementMessage("", "", None))))
+        .thenReturn(Future.successful(Right(Movement("", "", None))))
       await(createWithSuccessfulAuth.submit(request))
 
       val captor = ArgCaptor[DataRequest[_]]
@@ -132,7 +132,7 @@ class DraftExciseMovementControllerSpec
     }
   }
 
-  private def verifyDataRequest(actual: MovementMessage) = {
+  private def verifyDataRequest(actual: Movement) = {
     actual.consignorId mustBe "456"
     actual.consigneeId mustBe Some("789")
     actual.localReferenceNumber mustBe "123"

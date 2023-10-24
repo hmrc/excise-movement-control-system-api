@@ -9,12 +9,13 @@ object AppDependencies {
 
   val compile = Seq(
     "uk.gov.hmrc"             %% "bootstrap-backend-play-28"  % bootstrapVersion,
-    "uk.gov.hmrc.mongo"       %% "hmrc-mongo-play-28"          % mongoVersion,
+    "uk.gov.hmrc.mongo"       %% "hmrc-mongo-play-28"         % mongoVersion,
     // required for scalaxb
-    "org.scala-lang.modules"  %% "scala-xml"                % "1.3.0",
-    "org.scala-lang.modules"  %% "scala-parser-combinators" % "1.1.2",
-    "javax.xml.bind"          % "jaxb-api"                 % "2.3.1",
-    "org.dispatchhttp"        %% "dispatch-core"            % dispatchVersion
+    "org.scala-lang.modules"  %% "scala-xml"                  % "1.3.0",
+    "org.scala-lang.modules"  %% "scala-parser-combinators"   % "1.1.2",
+    "javax.xml.bind"          % "jaxb-api"                    % "2.3.1",
+    "org.dispatchhttp"        %% "dispatch-core"              % dispatchVersion,
+    "com.beachape"            %% "enumeratum-play-json"       % "1.6.0",
   )
 
   val test = Seq(

@@ -18,19 +18,19 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.Singleton
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{GeneralMongoError, MongoError, NotFoundError}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, MovementMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class MovementMessageService @Inject()(
-                                        movementMessageRepository: MovementMessageRepository
+class MovementService @Inject()(
+                                 movementRepository: MovementRepository
                                       )(implicit ec: ExecutionContext) {
 
-  def saveMovementMessage(movementMessage: MovementMessage): Future[Either[GeneralMongoError, MovementMessage]] = {
-    movementMessageRepository.saveMovementMessage(movementMessage)
+  def saveMovementMessage(movementMessage: Movement): Future[Either[GeneralMongoError, Movement]] = {
+    movementRepository.saveMovement(movementMessage)
       .map(_ => Right(movementMessage))
       .recover {
         case ex: Throwable => Left(GeneralMongoError(ex.getMessage))
@@ -38,10 +38,10 @@ class MovementMessageService @Inject()(
   }
 
   def getMovementMessagesByLRNAndERNIn(lrn: String, erns: List[String]): Future[Either[MongoError, Seq[Message]]] = {
-    movementMessageRepository.getMovementMessagesByLRNAndERNIn(lrn, erns).map {
-      case Nil => Left(NotFoundError())
-      case f@_ :: Nil =>
-        f.head.messages match {
+    getMovementByLRNAndERNIn(lrn, erns).map {
+      case None => Left(NotFoundError())
+      case Some(movement) =>
+        movement.messages match {
           case Some(m) => Right(m)
           case None => Right(Seq.empty)
         }
@@ -52,4 +52,7 @@ class MovementMessageService @Inject()(
       }
   }
 
+  def getMovementByLRNAndERNIn(lrn: String, erns: List[String]): Future[Option[Movement]] = {
+    movementRepository.getMovementByLRNAndERNIn(lrn, erns)
+  }
 }

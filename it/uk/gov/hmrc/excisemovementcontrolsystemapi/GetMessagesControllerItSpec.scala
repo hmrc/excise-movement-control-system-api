@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
+import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, post, urlEqualTo}
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.when
 import org.scalatest.BeforeAndAfterAll
@@ -34,8 +35,9 @@ import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, MovementMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ShowNewMessageResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
@@ -51,6 +53,7 @@ class GetMessagesControllerItSpec extends PlaySpec
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
   private val lrn = "LRN00001"
   private val url = s"http://localhost:$port/movements/$lrn/messages"
+  private val showMessagesUrl = "/apip-emcs/messages/v1/show-new-messages"
 
   private val consignorId = "GBWK002281023"
 
@@ -63,7 +66,7 @@ class GetMessagesControllerItSpec extends PlaySpec
       .configure(configureServer)
       .overrides(
         bind[AuthConnector].to(authConnector),
-        bind[MovementMessageRepository].to(movementMessageRepository)
+        bind[MovementRepository].to(movementRepository)
       )
       .build()
   }
@@ -78,14 +81,26 @@ class GetMessagesControllerItSpec extends PlaySpec
     wireMock.stop()
   }
 
-  "Get Messages" should {
+  def stubShowNewMessages(status: Int, body: ShowNewMessageResponse): Unit = {
+      wireMock.stubFor(
+        post(urlEqualTo(showMessagesUrl))
+          .willReturn(
+            aResponse()
+              .withStatus(status)
+              .withBody(Json.toJson(body).toString())
+              .withHeader("Content-Type", "application/json")
+          )
+      )
+  }
 
+  "Get Messages" should {
     "return 200" in {
+
       withAuthorizedTrader(consignorId)
 
       val now = Instant.now
-      when(movementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq(MovementMessage("", "", None, None, now, Some(Seq(Message("", "", now)))))))
+      when(movementRepository.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(Some(Movement("", "", None, None, now, Some(Seq(Message("", "", now)))))))
 
       val result = getRequest()
 
@@ -100,8 +115,8 @@ class GetMessagesControllerItSpec extends PlaySpec
     "return 404 when no movement message is found" in {
       withAuthorizedTrader(consignorId)
 
-      when(movementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq.empty))
+      when(movementRepository.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(None))
 
       val result = getRequest()
 
@@ -111,7 +126,7 @@ class GetMessagesControllerItSpec extends PlaySpec
     "return 500 when mongo db fails to fetch details" in {
       withAuthorizedTrader(consignorId)
 
-      when(movementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
+      when(movementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
       val result = getRequest()
@@ -124,10 +139,9 @@ class GetMessagesControllerItSpec extends PlaySpec
 
       val now = Instant.now()
 
-      val movementMessage = MovementMessage("", "", None, None, now, Some(Seq(Message("", "", now))))
-      val list = Seq(movementMessage, movementMessage)
-      when(movementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(list))
+      val movementMessage = Movement("", "", None, None, now, Some(Seq(Message("", "", now))))
+      when(movementRepository.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(Some(movementMessage)))
 
       val result = getRequest()
 

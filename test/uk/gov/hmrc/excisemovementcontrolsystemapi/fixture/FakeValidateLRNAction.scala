@@ -22,7 +22,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{ValidateL
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequestIE818
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -34,13 +34,13 @@ trait FakeValidateLRNAction {
 
   object FakeSuccessfulValidateLRNAction extends ValidateLRNActionFactory() with TestXml {
 
-    override def apply(lrn: String, movementMessageService: MovementMessageService): ValidateLRNAction =
+    override def apply(lrn: String, movementMessageService: MovementService): ValidateLRNAction =
       new ValidateLRNImpl(lrn, movementMessageService, executionContext, emcsUtils)
 
   }
 
   object FakeFailureValidateLRNAction extends ValidateLRNActionFactory() with TestXml {
-    override def apply(lrn: String, movementMessageService: MovementMessageService): ValidateLRNAction = new ValidateLRNAction {
+    override def apply(lrn: String, movementMessageService: MovementService): ValidateLRNAction = new ValidateLRNAction {
       override def refine[A](request: DataRequestIE818[A]): Future[Either[Result, DataRequestIE818[A]]] = Future.successful(Left(Forbidden("Error")))
 
       override protected def executionContext: ExecutionContext = ExecutionContext.global

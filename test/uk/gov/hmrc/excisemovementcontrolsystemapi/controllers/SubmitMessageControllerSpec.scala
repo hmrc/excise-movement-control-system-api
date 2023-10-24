@@ -33,7 +33,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, F
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.NotFoundError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequestIE818
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
@@ -50,7 +50,7 @@ class SubmitMessageControllerSpec
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val cc = stubControllerComponents()
   private val request = createRequest(IE818)
-  private val movementMessageService = mock[MovementMessageService]
+  private val movementService = mock[MovementService]
   private val ieMessage = scalaxb.fromXML[IE818Type](IE818)
   private val connector = mock[MovementMessageConnector]
 
@@ -60,7 +60,7 @@ class SubmitMessageControllerSpec
 
     when(connector.submitExciseMovementIE818(any, any)(any))
       .thenReturn(Future.successful(Right(EISResponse("ok", "success", "123"))))
-    when(movementMessageService.getMovementMessagesByLRNAndERNIn(any, any))
+    when(movementService.getMovementMessagesByLRNAndERNIn(any, any))
       .thenReturn(Future.successful(Right(Seq())))
   }
 
@@ -122,7 +122,7 @@ class SubmitMessageControllerSpec
     "return a ern / lrn mismatch error" when {
       "lrn and ern are not in the database" in {
 
-        when(movementMessageService.getMovementMessagesByLRNAndERNIn(any, any))
+        when(movementService.getMovementMessagesByLRNAndERNIn(any, any))
           .thenReturn(Future.successful(Left(NotFoundError())))
 
         val result = createWithSuccessfulAuth.submit("LRN")(request)
@@ -139,7 +139,7 @@ class SubmitMessageControllerSpec
       FakeSuccessfulValidateConsignorAction,
       FakeSuccessfulValidateLRNAction,
       connector,
-      movementMessageService,
+      movementService,
       cc
     )
 
@@ -156,7 +156,7 @@ class SubmitMessageControllerSpec
       FakeSuccessfulValidateConsignorAction,
       FakeFailureValidateLRNAction,
       connector,
-      movementMessageService,
+      movementService,
       cc
     )
 
@@ -167,7 +167,7 @@ class SubmitMessageControllerSpec
       FakeSuccessfulValidateConsignorAction,
       FakeFailureValidateLRNAction,
       connector,
-      movementMessageService,
+      movementService,
       cc
     )
 
@@ -178,7 +178,7 @@ class SubmitMessageControllerSpec
       FakeFailureValidateConsignorAction,
       FakeFailureValidateLRNAction,
       connector,
-      movementMessageService,
+      movementService,
       cc
     )
 

@@ -36,8 +36,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
 import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
@@ -69,7 +69,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       .configure(configureServer)
       .overrides(
         bind[AuthConnector].to(authConnector),
-        bind[MovementMessageRepository].to(movementMessageRepository)
+        bind[MovementRepository].to(movementRepository)
       )
       .build()
   }
@@ -81,10 +81,10 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(movementMessageRepository)
+    reset(movementRepository)
 
-    when(movementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
-      .thenReturn(Future.successful(Seq(MovementMessage("LRNQA20230909022221", "", Some("23GB00000000000378553")))))
+    when(movementRepository.getMovementByLRNAndERNIn(any, any))
+      .thenReturn(Future.successful(Some(Movement("LRNQA20230909022221", "", Some("23GB00000000000378553")))))
   }
 
   override def afterAll(): Unit = {
@@ -122,8 +122,8 @@ class SubmitMessageControllerItSpec extends PlaySpec
     "return not found if database cannot find ERN/LRN combo" in {
       withAuthorizedTrader("GBWK002281023")
 
-      when(movementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Nil))
+      when(movementRepository.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(None))
 
       val result: WSResponse = postRequest(IE818)
 

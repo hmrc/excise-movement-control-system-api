@@ -37,7 +37,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 
 import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
@@ -66,7 +66,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       .configure(configureServer)
       .overrides(
         bind[AuthConnector].to(authConnector),
-        bind[MovementMessageRepository].to(movementMessageRepository)
+        bind[MovementRepository].to(movementRepository)
       )
       .build()
   }
@@ -86,7 +86,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     "return 202" in {
       withAuthorizedTrader(consignorId)
       stubEISSuccessfulRequest()
-      when(movementMessageRepository.saveMovementMessage(any))
+      when(movementRepository.saveMovement(any))
         .thenReturn(Future.successful(true))
 
       val result = postRequest(IE815)
