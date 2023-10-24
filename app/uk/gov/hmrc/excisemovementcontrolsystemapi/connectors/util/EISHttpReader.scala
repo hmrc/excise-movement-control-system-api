@@ -39,23 +39,23 @@ class EISHttpReader(
         val result = extractIfSuccessful[EISResponse](response)
         result match {
           case Right(eisResponse) => Right(eisResponse)
-          case Left(httpResponse: HttpResponse) => Left(handleErrorResponse(httpResponse.status, httpResponse.body))
+          case Left(httpResponse: HttpResponse) => Left(handleErrorResponse(httpResponse))
         }
     }
 
   private def handleErrorResponse
   (
-    status: Int,
-    message: String,
+    response: HttpResponse
   ): Result = {
 
-    logger.warn(EISErrorMessage(createdDateTime, consignorId, message, correlationId, MessageTypes.IE815Message))
+    logger.warn(EISErrorMessage(createdDateTime, consignorId, response.body, correlationId, MessageTypes.IE815Message))
 
-    status match {
-      case BAD_REQUEST => BadRequest(message).as("application/json")
-      case NOT_FOUND => NotFound(message).as("application/json")
-      case SERVICE_UNAVAILABLE => ServiceUnavailable(message).as("application/json")
-      case _ => InternalServerError(message).as("application/json")
+    val messageAsJson = response.json
+    response.status match {
+      case BAD_REQUEST => BadRequest(messageAsJson)
+      case NOT_FOUND => NotFound(messageAsJson)
+      case SERVICE_UNAVAILABLE => ServiceUnavailable(messageAsJson)
+      case _ => InternalServerError(messageAsJson)
     }
   }
 
