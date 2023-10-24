@@ -35,40 +35,16 @@ class MovementMessageService @Inject()(
 )(implicit ec: ExecutionContext) {
   def updateMovement(message: IEMessage, consignorId: String): Future[Boolean] = {
 
-    println(s"1) KK=> ERN: $consignorId, message Type: ${message.getType}")
     movementMessageRepository.getAllBy(consignorId).flatMap(cachedMovement => {
       val arc = message.administrativeRefCode
       val lrn = message.localReferenceNumber.getOrElse("")
       val movementWithArc = cachedMovement.filter(o => o.administrativeReferenceCode.equals(arc)).headOption
       val movementWithLrn = cachedMovement.filter(m => m.localReferenceNumber.equals(lrn)).headOption
 
-      cachedMovement.map(s =>
-        println(s"2) KK=> ERN: ${s.consignorId}, messageType: ${message.getType}, consignorId, Movement LRN: ${s.localReferenceNumber}, ARC: ${s.administrativeReferenceCode}")
-      )
-      println(s"3) KK=> ERN: $consignorId, messageType: ${message.getType}, message LRN: ${lrn}, ARC: $arc")
-
-      movementWithArc.map(o =>
-        println(
-          s"""4) KK=> Movement with ARC ERN: $consignorId,
-             |movement LRN: ${o.localReferenceNumber},
-             |ARC: ${o.administrativeReferenceCode},
-             |messages ${o.messages.map(m => m.messageType)}""".stripMargin)
-      )
-
-      movementWithLrn.map(o =>
-        println(s"5) KK=> ERN: $consignorId, movement LRN: ${o.localReferenceNumber}, ARC: ${o.administrativeReferenceCode}")
-      )
-
       (movementWithArc, movementWithLrn) match {
-        case (Some(mArc), _) =>
-          println(s"6) KK=> ERN: $consignorId, message Type: ${message.getType}")
-          saveDistinctMessage(mArc, message)
-        case (None, Some(mLrn)) =>
-          println(s"7) KK=> ERN: $consignorId, message Type: ${message.getType}")
-          saveDistinctMessage(mLrn, message)
-        case _ =>
-          println(s"8) KK=> ERN: $consignorId, message Type: ${message.getType}")
-          throw new RuntimeException("Cannot retrieve a movement. Local reference number or administration reference code are not present")
+        case (Some(mArc), _) => saveDistinctMessage(mArc, message)
+        case (None, Some(mLrn)) => saveDistinctMessage(mLrn, message)
+        case _ => throw new RuntimeException("Cannot retrieve a movement. Local reference number or administration reference code are not present")
       }
     })
   }
@@ -92,7 +68,6 @@ class MovementMessageService @Inject()(
   }
 
   def getUniqueConsignorId: Future[Seq[Movement]] = {
-    println(s"££=> ern: ${Instant.now}")
     movementMessageRepository.getMovements
       .map(m => m.distinctBy(o => o.consignorId))
   }
@@ -113,24 +88,9 @@ class MovementMessageService @Inject()(
       messages = allMessages
     )
 
-    val log =
-      s"""==> ALL MESSAGES ERN: ${movement.consignorId}, message: ${allMessages.map(o => o.messageType)}
-         |==> Cached MESSAGE: ERN: ${movement.consignorId}, cached message: ${movement.messages.map(o => o.messageType)}
-         |SAVE newMovement: ${newMovement.messages.map(o => o.messageType)}, ern: ${newMovement.consignorId}, time: ${Instant.now}
-         |==> Message: LRN: ${newMessage.localReferenceNumber}, ARC: ${newMessage.administrativeRefCode}
-         |==> MOVEMENT: LRN: ${movement.localReferenceNumber}, ARC: ${movement.administrativeReferenceCode}
-         |""".stripMargin
-
-
-    println(log)
     movementMessageRepository.save(newMovement).map {
-      case true =>
-        if(newMessage.getType.equals(MessageTypes.IE802.value)){
-          println("found")
-        }
-        true
-      case _ =>
-        false
+      case true => true
+      case _ => false
     }
   }
 }

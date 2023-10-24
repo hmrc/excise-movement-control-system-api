@@ -57,13 +57,12 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
   with IntegrationPatience
   with BeforeAndAfterEach {
 
-  var count3 = 0
   private val showNewMessageUrl = "/apip-emcs/messages/v1/show-new-messages"
   private val messageReceiptUrl = "/apip-emcs/messages/v1/message-receipt?exciseregistrationnumber="
-  private val expectedMessages: Seq[String] = Seq(
-    cleanUpString(Ie704XmlMessage.IE704.toString),
-    cleanUpString(Ie801XmlMessage.IE801.toString),
-    cleanUpString(Ie802XmlMessage.IE802.toString)
+  private val expectedMessage = Seq(
+    createMessage(Ie801XmlMessage.IE801, MessageTypes.IE801.value),
+    createMessage(Ie818XmlMessage.IE818, MessageTypes.IE818.value),
+    createMessage(Ie802XmlMessage.IE802, MessageTypes.IE802.value)
   )
 
 
@@ -127,11 +126,7 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
 
       val result: Seq[Movement] = findAll().futureValue
 
-      val expectedMessage = Seq(
-        createMessage(Ie801XmlMessage.IE801, MessageTypes.IE801.value),
-        createMessage(Ie818XmlMessage.IE818, MessageTypes.IE818.value),
-        createMessage(Ie802XmlMessage.IE802, MessageTypes.IE802.value)
-      )
+
 
       result.size mustBe 3
       assertResults(result(0), Movement("token", "1", None, Some("tokentokentokentokent"), expectedMessage))

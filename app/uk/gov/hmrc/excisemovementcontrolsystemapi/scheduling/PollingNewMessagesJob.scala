@@ -76,7 +76,6 @@ class PollingNewMessagesJob @Inject()(
     newMessageResponse: ShowNewMessageResponse
   )(implicit ec: ExecutionContext): Future[Unit] = {
 
-    println(s"XXX=> ERN: $consignorId")
     val messages = messageParser.extractMessages(newMessageResponse.message)
 
     //! process IE818 or IE704 first if any.We are Processing message in sequence (not in parallel)
@@ -100,7 +99,6 @@ class PollingNewMessagesJob @Inject()(
 //        .map(o => save(o, consignorId)))
 //      .map(_ => successful(()))
 
-//          println(s"MESSAGES": ${messages.})
     messages
       .filterNot(isAcceptedOrRefusalMessage(_))
       .foldLeft(successful(())) { case (acc, x) =>
@@ -111,7 +109,6 @@ class PollingNewMessagesJob @Inject()(
   }
 
   private def save(message: IEMessage, consignorId: String)(implicit ec: ExecutionContext): Future[Unit] = {
-    println(s"**=> ern: ${consignorId}, message: ${message.getType}")
     movementService.updateMovement( message, consignorId)
       .flatMap {
         case true => successful(())
