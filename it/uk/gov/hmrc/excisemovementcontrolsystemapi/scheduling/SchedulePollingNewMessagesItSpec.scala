@@ -66,11 +66,6 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
     cleanUpString(Ie802XmlMessage.IE802.toString)
   )
 
-  private val expectedMessages1: Seq[String] =
-    expectedMessages :+
-      cleanUpString(Ie810XmlMessage.IE810.toString) :+
-      cleanUpString(Ie818XmlMessage.IE818.toString)
-
 
   private lazy val timeService = mock[DateTimeService]
   private val timestamp = Instant.parse("2018-11-30T18:35:24.00Z")
@@ -100,7 +95,7 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
   override def beforeEach(): Unit = {
     wireMock.resetAll()
 
-    setUpWireMockStubs
+    setUpWireMockStubs()
     when(timeService.now).thenReturn(Instant.parse("2018-11-30T18:35:24.00Z"))
     when(appConfig.getMovementTTL).thenReturn(Duration.create(30, MINUTES))
     when(timeService.now).thenReturn(timestamp)
@@ -160,7 +155,7 @@ class SchedulePollingNewMessagesItSpec extends PlaySpec
       .map(cleanUpString(_))
   }
 
-  private def setUpWireMockStubs: Unit = {
+  private def setUpWireMockStubs(): Unit = {
     stubMultipleShowNewMessageRequest("1")
     stubShowNewMessageRequestForConsignorId3
     stubShowNewMessageRequestForConsignorId4
