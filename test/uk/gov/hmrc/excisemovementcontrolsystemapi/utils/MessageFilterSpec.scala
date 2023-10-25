@@ -20,7 +20,7 @@ import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.when
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.NewMessagesXml
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{Ie801XmlMessage, NewMessagesXml}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, MessageTypes, ShowNewMessageResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
@@ -35,14 +35,15 @@ class MessageFilterSpec extends PlaySpec {
   private val emcsUtils = new EmcsUtils
   private val messageFactory = new IEMessageFactory
 
+  private val timestamp = Instant.parse("2018-11-30T18:35:24.00Z")
+  when(dateTimeService.now).thenReturn(timestamp)
+
   "filter" should {
-    "filter a message by LRN" in {
-      val timestamp = Instant.parse("2018-11-30T18:35:24.00Z")
-      when(dateTimeService.now).thenReturn(timestamp)
+    "filter a message by LRN when multiple LRNs are in the NewMessagesXml" in {
 
       val messageFilter = new MessageFilter(dateTimeService, emcsUtils = emcsUtils, factory = messageFactory)
 
-      val xml = scala.xml.XML.loadString(NewMessagesXml.newMessageWithIE801.toString())
+      val xml = scala.xml.XML.loadString(NewMessagesXml.newMessageWith2IE801sXml.toString())
       val encodeXml = Base64.getEncoder.encodeToString(xml.toString.getBytes(StandardCharsets.UTF_8))
 
       val message: ShowNewMessageResponse = ShowNewMessageResponse(LocalDateTime.now(), "123", encodeXml)
@@ -51,16 +52,49 @@ class MessageFilterSpec extends PlaySpec {
 
       result.size mustBe 1
 
-      decodeAndCleanUpMessage(result).head mustBe decodeAndCleanUpMessage(Seq(
-        Message(encodeXml, MessageTypes.IE801.value, timestamp))).head
+      decodeAndCleanUpMessage(result).head mustBe
+        cleanUpString(Ie801XmlMessage.IE801.toString)
+
+      result.head.messageType mustBe MessageTypes.IE801.value
     }
+
+    "filter when no matching messages for lrn" in {
+
+      val messageFilter = new MessageFilter(dateTimeService, emcsUtils = emcsUtils, factory = messageFactory)
+
+      val xml = scala.xml.XML.loadString(NewMessagesXml.newMessageWith2IE801sXml.toString())
+      val encodeXml = Base64.getEncoder.encodeToString(xml.toString.getBytes(StandardCharsets.UTF_8))
+
+      val message: ShowNewMessageResponse = ShowNewMessageResponse(LocalDateTime.now(), "123", encodeXml)
+
+      val result = messageFilter.filter(message, "newLRN")
+
+      result mustBe Seq.empty
+
+    }
+
+    "return nothing when no messages returned from eis" in {
+
+      val messageFilter = new MessageFilter(dateTimeService, emcsUtils = emcsUtils, factory = messageFactory)
+
+      val xml = scala.xml.XML.loadString(NewMessagesXml.emptyNewMessageDataXml.toString())
+      val encodeXml = Base64.getEncoder.encodeToString(xml.toString.getBytes(StandardCharsets.UTF_8))
+
+      val message: ShowNewMessageResponse = ShowNewMessageResponse(LocalDateTime.now(), "123", encodeXml)
+
+      val result = messageFilter.filter(message, "token")
+
+      result mustBe Seq.empty
+
+    }
+
   }
 
   private def decodeAndCleanUpMessage(messages: Seq[Message]): Seq[String] = {
     val decoder = Base64.getDecoder
     messages
       .map(o => new String(decoder.decode(o.encodedMessage), StandardCharsets.UTF_8))
-      .map(cleanUpString(_))
+      .map(cleanUpString)
   }
 
   private def cleanUpString(str: String): String = {

@@ -46,7 +46,7 @@ class GetMessagesController @Inject()(
           case None => Future.successful(BadRequest(Json.toJson(ErrorResponse(LocalDateTime.now(), "Invalid LRN supplied for ERN", ""))))
           case Some(ern) =>
             messagesConnector.get(ern).map {
-              case Right(messages) => Ok(Json.toJson(messages))
+              case Right(messages) => Ok(Json.toJson(messageFilter.filter(messages, lrn)))
               case Left(error) => error
             }
         }

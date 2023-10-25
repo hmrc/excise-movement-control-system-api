@@ -33,10 +33,11 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.ShowNewMessagesConn
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateConsignorAction, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ShowNewMessageResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.MessageFilter
 
-import java.time.LocalDateTime
+import java.time.{Instant, LocalDateTime}
 import scala.concurrent.{ExecutionContext, Future}
 
 class GetMessagesControllerSpec extends PlaySpec
@@ -54,6 +55,7 @@ class GetMessagesControllerSpec extends PlaySpec
   private val showNewMessagesConnector = mock[ShowNewMessagesConnector]
   private val messageFilter = mock[MessageFilter]
   private val lrn = "LRN1234"
+  private val timeStamp = Instant.now
   private val newMessage = ShowNewMessageResponse(
     LocalDateTime.of(2023, 5, 5, 6, 6, 2),
     ern,
@@ -61,10 +63,12 @@ class GetMessagesControllerSpec extends PlaySpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(showNewMessagesConnector, movementService)
+    reset(showNewMessagesConnector, movementService,messageFilter)
 
   when(movementService.getMatchingERN(any, any))
     .thenReturn(Future.successful(Some(ern)))
+
+    when(messageFilter.filter(any, any)).thenReturn(Seq(Message("message","IE801", timeStamp)))
   }
 
   "getMessagesForMovement" should {
@@ -76,7 +80,7 @@ class GetMessagesControllerSpec extends PlaySpec
       val result = createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest())
 
       status(result) mustBe OK
-      contentAsJson(result) mustBe Json.toJson(newMessage)
+      contentAsJson(result) mustBe Json.toJson(Seq(Message("message","IE801", timeStamp)))
     }
 
     "get all the new messages" in {

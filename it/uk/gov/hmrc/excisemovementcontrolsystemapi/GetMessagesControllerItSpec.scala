@@ -21,6 +21,7 @@ import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, ok, post, url
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.when
 import org.scalatest.BeforeAndAfterAll
+import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -35,9 +36,10 @@ import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{NewMessagesXml, TestXml}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ShowNewMessageResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageTypes, ShowNewMessageResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import java.nio.charset.StandardCharsets
 import java.time.{Instant, LocalDateTime}
@@ -55,11 +57,13 @@ class GetMessagesControllerItSpec extends PlaySpec
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
 
-  private val url = s"http://localhost:$port/movements/$lrn/messages"
   private val showMessagesUrl = "/apip-emcs/messages/v1/show-new-messages"
   private val consignorId = "GBWK002281023"
-  private val lrn = "LRN00001"
-  private val response = ShowNewMessageResponse(
+  private val lrn = "token"
+  private val url = s"http://localhost:$port/movements/$lrn/messages"
+  private lazy val dateTimeService: DateTimeService = mock[DateTimeService]
+  private val timestamp = Instant.parse("2018-11-30T18:35:24.00Z")
+  private val responseFromEis = ShowNewMessageResponse(
     LocalDateTime.of(2023, 1, 2, 3, 4, 5),
     consignorId,
     Base64.getEncoder.encodeToString(NewMessagesXml.newMessageWithIE801.toString().getBytes(StandardCharsets.UTF_8)),
@@ -72,7 +76,8 @@ class GetMessagesControllerItSpec extends PlaySpec
       .configure(configureServer)
       .overrides(
         bind[AuthConnector].to(authConnector),
-        bind[MovementRepository].to(movementRepository)
+        bind[MovementRepository].to(movementRepository),
+        bind[DateTimeService].to(dateTimeService)
       )
       .build()
   }
@@ -92,19 +97,28 @@ class GetMessagesControllerItSpec extends PlaySpec
   "Get Messages" should {
     "return 200" in {
 
+      val expectedResponse = Seq(Message(
+        Base64.getEncoder.encodeToString(NewMessagesXml.newMessageWithIE801.toString().getBytes(StandardCharsets.UTF_8)),
+        MessageTypes.IE801.value,
+        timestamp
+      ))
+
       withAuthorizedTrader(consignorId)
       stubShowNewMessageRequest(consignorId)
 
       when(movementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(Movement(lrn, consignorId, None, None, Instant.now, Some(Seq.empty)))))
 
+      when(dateTimeService.now).thenReturn(timestamp)
+
       val result = getRequest()
 
       result.status mustBe OK
 
       withClue("return the json response") {
-        result.json mustBe Json.toJson(response)
+        result.json mustBe Json.toJson(expectedResponse).toString()
       }
+
     }
 
     //todo: Is this right? We return a 400 in the unit tests if no movement found in mongo
@@ -171,7 +185,7 @@ class GetMessagesControllerItSpec extends PlaySpec
   private def stubShowNewMessageRequest(exciseNumber: String) = {
     wireMock.stubFor(
       WireMock.get(s"/apip-emcs/messages/v1/show-new-messages?exciseregistrationnumber=$exciseNumber")
-        .willReturn(ok().withBody(Json.toJson(response).toString()
+        .willReturn(ok().withBody(Json.toJson(responseFromEis).toString()
         ))
     )
   }
@@ -186,5 +200,9 @@ class GetMessagesControllerItSpec extends PlaySpec
             .withHeader("Content-Type", "application/json")
         )
     )
+  }
+
+  private def cleanUpString(str: String): String = {
+    str.replaceAll("[\\t\\n\\r\\s]+", "")
   }
 }
