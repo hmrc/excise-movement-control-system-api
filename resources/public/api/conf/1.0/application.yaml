@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: Excise Movement Control System API (Alpha)
+  title: Excise Movement Control System API
   description: |-
-    This is a prototype of a potential RESTful replacement for the [EMCS SOAP API](https://developer.service.hmrc.gov.uk/api-documentation/docs/api/xml/Excise%20Movement%20Control%20System)
+    Use the EMCS API to submit excise movement notifications to the Excise Movement and Control System (EMCS). You can also send and receive messages about excise movements and retrieve information about excise traders. For a detailed overview of v1.0 of the API, see the [EMCS API service guide](/guides/emcs-api-service-guide/).
   contact: {}
   version: "0.0.1"
 servers:
@@ -273,7 +273,7 @@ paths:
             type: string
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             application/vnd.hmrc.1.0+json:
               example:
@@ -399,17 +399,17 @@ components:
       type: string
       enum:
         - Accepted
+        - Accepted for export
         - Cancelled
         - Delivered
         - Diverted
-        - Rejected
-        - Replaced
         - e-AD/e-SAD manually closed
-        - Refused
+        - Exporting
         - None
         - Partially refused
-        - Exporting
-        - Accepted for export
+        - Refused   
+        - Rejected
+        - Replaced         
         - Stopped
     DateTime:
       type: string
