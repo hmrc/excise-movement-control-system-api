@@ -131,7 +131,7 @@ class GetMessagesControllerSpec extends PlaySpec
 
   "putMessageReceipt" should {
     "respond with OK" in {
-      val result = createWithSuccessfulAuth.putMessageReceipt()
+      val result = createWithSuccessfulAuth.putMessageReceipt()(createRequest())
       status(result) mustBe OK
     }
   }
