@@ -35,4 +35,7 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
     s"$eisHost/emcs/digital-submit-new-message/v1"
 
   def showNewMessageUrl: String = s"$eisHost/apip-emcs/messages/v1/show-new-messages"
+  def messageReceiptUrl(ern: String): String =
+    s"$eisHost/apip-emcs/messages/v1/message-receipt?exciseregistrationnumber=$ern"
+
 }
