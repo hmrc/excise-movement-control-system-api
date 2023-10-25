@@ -17,7 +17,8 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, post, urlEqualTo}
+import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, ok, post, urlEqualTo}
+import com.github.tomakehurst.wiremock.stubbing.Scenario
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.when
 import org.scalatest.BeforeAndAfterAll
@@ -30,16 +31,18 @@ import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{IE801MessageXml, NewMessagesXml, TestXml}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ShowNewMessageResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageTypes, ShowNewMessageResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 
-import java.time.Instant
+import java.nio.charset.StandardCharsets
+import java.time.{Instant, LocalDateTime}
+import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
 class GetMessagesControllerItSpec extends PlaySpec
@@ -50,14 +53,18 @@ class GetMessagesControllerItSpec extends PlaySpec
   with RepositoryTestStub
   with BeforeAndAfterAll {
 
+  protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
-  private val lrn = "LRN00001"
+
   private val url = s"http://localhost:$port/movements/$lrn/messages"
   private val showMessagesUrl = "/apip-emcs/messages/v1/show-new-messages"
-
   private val consignorId = "GBWK002281023"
-
-  protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
+  private val lrn = "LRN00001"
+  private val response = ShowNewMessageResponse(
+    LocalDateTime.of(2023, 1, 2, 3, 4, 5),
+    consignorId,
+    Base64.getEncoder.encodeToString(NewMessagesXml.newMessageWithIE801.toString().getBytes(StandardCharsets.UTF_8)),
+  )
 
   override lazy val app: Application = {
     wireMock.start()
@@ -81,37 +88,27 @@ class GetMessagesControllerItSpec extends PlaySpec
     wireMock.stop()
   }
 
-  def stubShowNewMessages(status: Int, body: ShowNewMessageResponse): Unit = {
-      wireMock.stubFor(
-        post(urlEqualTo(showMessagesUrl))
-          .willReturn(
-            aResponse()
-              .withStatus(status)
-              .withBody(Json.toJson(body).toString())
-              .withHeader("Content-Type", "application/json")
-          )
-      )
-  }
+
 
   "Get Messages" should {
     "return 200" in {
 
       withAuthorizedTrader(consignorId)
+      stubShowNewMessageRequest(consignorId)
 
-      val now = Instant.now
       when(movementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Some(Movement("", "", None, None, now, Some(Seq(Message("", "", now)))))))
+        .thenReturn(Future.successful(Some(Movement(lrn, consignorId, None, None, Instant.now, Some(Seq.empty)))))
 
       val result = getRequest()
 
       result.status mustBe OK
 
       withClue("return the json response") {
-        val responseBody = Json.parse(result.body).as[Seq[Message]]
-        responseBody mustBe Seq(Message("", "", now))
+        result.json mustBe Json.toJson(response)
       }
     }
 
+    //todo: Is this right? We return a 404 in the unit tests if no movement found in mongo
     "return 404 when no movement message is found" in {
       withAuthorizedTrader(consignorId)
 
@@ -167,6 +164,26 @@ class GetMessagesControllerItSpec extends PlaySpec
       .addHttpHeaders(
         HeaderNames.AUTHORIZATION -> "TOKEN"
       ).get()
+    )
+  }
+
+  private def stubShowNewMessageRequest(exciseNumber: String) = {
+    wireMock.stubFor(
+      WireMock.get(s"/apip-emcs/messages/v1/show-new-messages?exciseregistrationnumber=$exciseNumber")
+        .willReturn(ok().withBody(Json.toJson(response).toString()
+        ))
+    )
+  }
+
+  def stubShowNewMessages(status: Int, body: ShowNewMessageResponse): Unit = {
+    wireMock.stubFor(
+      post(urlEqualTo(showMessagesUrl))
+        .willReturn(
+          aResponse()
+            .withStatus(status)
+            .withBody(Json.toJson(body).toString())
+            .withHeader("Content-Type", "application/json")
+        )
     )
   }
 }

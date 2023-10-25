@@ -16,24 +16,23 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import akka.actor.ActorSystem
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
-import org.mockito.MockitoSugar.{verify, when}
-import org.scalatest.{BeforeAndAfterEach, EitherValues}
+import org.mockito.MockitoSugar.{reset, verify, when}
 import org.scalatest.matchers.must.Matchers
+import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, OK}
+import play.api.libs.json.Json
 import play.api.mvc.AnyContent
+import play.api.mvc.Results.InternalServerError
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{defaultAwaitTimeout, status, stubControllerComponents}
+import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.ShowNewMessagesConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateConsignorAction, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ShowNewMessageResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
-import org.mockito.MockitoSugar.reset
-import play.api.mvc.Results.InternalServerError
 
 import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
@@ -52,47 +51,68 @@ class GetMessagesControllerSpec extends PlaySpec
   private val cc = stubControllerComponents()
   private val showNewMessagesConnector = mock[ShowNewMessagesConnector]
   private val lrn = "LRN1234"
-  private val ern = "testErn"
+  private val newMessage = ShowNewMessageResponse(
+    LocalDateTime.of(2023, 5, 5, 6, 6, 2),
+    ern,
+    "message")
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(showNewMessagesConnector)
-    reset(movementService)
+    reset(showNewMessagesConnector, movementService)
+
+  when(movementService.getMatchingERN(any, any))
+    .thenReturn(Future.successful(Some(ern)))
   }
 
   "getMessagesForMovement" should {
     "return 200" in {
 
       when(showNewMessagesConnector.get(any)(any))
-        .thenReturn(Future.successful(Right(ShowNewMessageResponse(
-          LocalDateTime.of(2023, 5, 5, 6, 6, 2),
-          "exciseNumber",
-          "message"
-        )))
-        )
+        .thenReturn(Future.successful(Right(newMessage)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest())
 
       status(result) mustBe OK
+      contentAsJson(result) mustBe Json.toJson(newMessage)
     }
 
     "get all the new messages" in {
+        when(showNewMessagesConnector.get(any)(any))
+          .thenReturn(Future.successful(Right(newMessage)))
 
-      when(showNewMessagesConnector.get(any)(any))
-        .thenReturn(Future.successful(Right(ShowNewMessageResponse(
-          LocalDateTime.of(2023, 5, 5, 6, 6, 2),
-          ern,
-          "message"
-        )))
-        )
+        await(createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest()))
 
-      createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest())
+        verify(showNewMessagesConnector).get(eqTo(ern))(any)
+      }
 
-      verify(showNewMessagesConnector).get(eqTo(ern))(any)
-    }
+    //todo: remove these test ig changes approved
+//    "get all the new messages" when {
+//      "matching the consignorId" in {
+//        when(showNewMessagesConnector.get(any)(any))
+//          .thenReturn(Future.successful(Right(newMessage)))
+//
+//        await(createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest()))
+//
+//        verify(showNewMessagesConnector).get(eqTo(ern))(any)
+//      }
+//
+//      "matching the consigneeId" in {
+//        when(movementService.getMovementByLRNAndERNIn(any, any))
+//          .thenReturn(Future.successful(Some(Movement("LRN1234", "234", Some(ern)))))
+//
+//        when(showNewMessagesConnector.get(any)(any))
+//          .thenReturn(Future.successful(Right(newMessage))          )
+//
+//        await(createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest()))
+//
+//        verify(showNewMessagesConnector).get(eqTo(ern))(any)
+//      }
+//
+//    }
+
 
     "return a bad request when no movement exists for LRN/ERNs combination" in {
-      when(movementService.getMovementByLRNAndERNIn(any, any)).thenReturn(Future.successful(None))
+      when(movementService.getMatchingERN(any, any)).thenReturn(Future.successful(None))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest())
 

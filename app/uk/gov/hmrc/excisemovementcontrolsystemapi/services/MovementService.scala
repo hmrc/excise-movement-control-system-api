@@ -55,4 +55,17 @@ class MovementService @Inject()(
   def getMovementByLRNAndERNIn(lrn: String, erns: List[String]): Future[Option[Movement]] = {
     movementRepository.getMovementByLRNAndERNIn(lrn, erns)
   }
+
+  def getMatchingERN(lrn: String, erns: List[String]): Future[Option[String]] = {
+    movementRepository.getMovementByLRNAndERNIn(lrn, erns).map {
+      case Some(movement) => matchingERN(movement, erns)
+      case _ => None
+    }
+  }
+
+  private def matchingERN(movement: Movement, erns: List[String]): Option[String] = {
+
+    if (erns.contains(movement.consignorId)) Some(movement.consignorId)
+    else movement.consigneeId
+  }
 }

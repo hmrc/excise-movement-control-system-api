@@ -70,7 +70,8 @@ class MovementRepositorySpec extends PlaySpec
 
   "saveMovement" should {
     "return insert a movement" in {
-      val result = saveMovement(Movement("123", "345", Some("789"), None))
+      val result = repository.saveMovement(Movement("123", "345", Some("789"), None)).futureValue
+
       val insertedRecord = find(
         Filters.and(
           Filters.equal("consignorId", "345"),

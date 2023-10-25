@@ -46,24 +46,22 @@ class GetMessagesController @Inject()(
         // then for each erns call messagesConnector.get
         //TODO multiple erns in list
 
-        val erns = request.erns.toList
-        movementService.getMovementByLRNAndERNIn(lrn, erns).flatMap {
+        movementService.getMatchingERN(lrn, request.erns.toList).flatMap {
           case None => Future.successful(BadRequest(Json.toJson(ErrorResponse(LocalDateTime.now(), "Invalid LRN supplied for ERN", ""))))
-          case Some(movement) =>
-            val ern = matchingERN(movement, erns)
-
+          case Some(ern) =>
             messagesConnector.get(ern).map {
               case Right(messages) => Ok(Json.toJson(messages))
               case Left(error) => error
             }
         }
-
-        //getMovementMessagesByLRNAndERNList(lrn, request.erns.toList)
       }
     }
 
+  // the throw should nevr happens. if this does happens something when seriously wrong.
   private def matchingERN(movement: Movement, erns: List[String]) = {
-    if (erns.contains(movement.consignorId)) movement.consignorId else movement.consigneeId.get
+
+    if (erns.contains(movement.consignorId)) movement.consignorId
+    else movement.consigneeId.getOrElse(throw new IllegalStateException("Invalid ERN"))
   }
 
   private def getMovementMessagesByLRNAndERNList(lrn: String, ern: List[String]): Future[Result] = {
