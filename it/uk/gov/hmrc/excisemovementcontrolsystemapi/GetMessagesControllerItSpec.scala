@@ -18,7 +18,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, ok, post, urlEqualTo}
-import com.github.tomakehurst.wiremock.stubbing.Scenario
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.when
 import org.scalatest.BeforeAndAfterAll
@@ -31,12 +30,12 @@ import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
-import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout}
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{IE801MessageXml, NewMessagesXml, TestXml}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{NewMessagesXml, TestXml}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageTypes, ShowNewMessageResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ShowNewMessageResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 
@@ -108,8 +107,8 @@ class GetMessagesControllerItSpec extends PlaySpec
       }
     }
 
-    //todo: Is this right? We return a 404 in the unit tests if no movement found in mongo
-    "return 404 when no movement message is found" in {
+    //todo: Is this right? We return a 400 in the unit tests if no movement found in mongo
+    "return 400 when no movement message is found" in {
       withAuthorizedTrader(consignorId)
 
       when(movementRepository.getMovementByLRNAndERNIn(any, any))
@@ -117,7 +116,7 @@ class GetMessagesControllerItSpec extends PlaySpec
 
       val result = getRequest()
 
-      result.status mustBe NOT_FOUND
+      result.status mustBe BAD_REQUEST
     }
 
     "return 500 when mongo db fails to fetch details" in {
@@ -131,6 +130,8 @@ class GetMessagesControllerItSpec extends PlaySpec
       result.status mustBe INTERNAL_SERVER_ERROR
     }
 
+    //todo: This may be deleted as it may not be a valid case. We should only have one movement,
+    // for a combination of lrn consignorId/consigneeId
     "return 500 when multiple movements messages are found" in {
       withAuthorizedTrader(consignorId)
 
