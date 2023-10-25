@@ -84,7 +84,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
     reset(movementRepository)
 
     when(movementRepository.getMovementByLRNAndERNIn(any, any))
-      .thenReturn(Future.successful(Some(Movement("LRNQA20230909022221", "", Some("23GB00000000000378553")))))
+      .thenReturn(Future.successful(Seq(Movement("LRNQA20230909022221", "", Some("23GB00000000000378553")))))
   }
 
   override def afterAll(): Unit = {
@@ -123,7 +123,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       withAuthorizedTrader("GBWK002281023")
 
       when(movementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(None))
+        .thenReturn(Future.successful(Seq.empty))
 
       val result: WSResponse = postRequest(IE818)
 

@@ -17,7 +17,6 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import org.mongodb.scala.model.Filters.{and, equal, in, or}
-import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
 import play.api.Logging
 import play.api.libs.json.Json
@@ -54,11 +53,11 @@ class MovementRepository @Inject()
       .map(_ => true)
   }
 
-  def getMovementByLRNAndERNIn(lrn: String, erns: List[String]): Future[Option[Movement]] = {
+  def getMovementByLRNAndERNIn(lrn: String, erns: List[String]): Future[Seq[Movement]] = {
     //TODO case where returns more than one (e.g. consignee has the same LRN for two different consignors)
     // IN this case woiuld this be the same movement? So we are ok to get the head?
     collection.find(and(equal("localReferenceNumber", lrn),
-      or(in("consignorId", erns: _*), in("consigneeId", erns: _*)))).headOption()
+      or(in("consignorId", erns: _*), in("consigneeId", erns: _*)))).toFuture()
   }
 }
 

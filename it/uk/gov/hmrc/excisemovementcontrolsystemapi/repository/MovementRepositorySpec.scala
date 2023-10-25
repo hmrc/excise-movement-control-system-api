@@ -100,28 +100,28 @@ class MovementRepositorySpec extends PlaySpec
       saveMovement(movement)
       val result = repository.getMovementByLRNAndERNIn(lrn, List(consignorId)).futureValue
 
-      result mustBe Some(movement)
+      result mustBe Seq(movement)
     }
 
     "return movement with valid lrn and consigneeId combination" in {
       saveMovement(movement)
       val result = repository.getMovementByLRNAndERNIn(lrn, List(consigneeId)).futureValue
 
-      result mustBe Some(movement)
+      result mustBe Seq(movement)
     }
 
     "return movement with valid lrn and list of consignor and consignee Ids combination" in {
       saveMovement(movement)
       val result = repository.getMovementByLRNAndERNIn(lrn, List(consignorId, consigneeId)).futureValue
 
-      result mustBe Some(movement)
+      result mustBe Seq(movement)
     }
 
     "return movement with valid lrn and only one valid ern combination in the list of erns" in {
       saveMovement(movement)
       val result = repository.getMovementByLRNAndERNIn(lrn, List(consignorId, "hhh", "222", "mmm")).futureValue
 
-      result mustBe Some(movement)
+      result mustBe Seq(movement)
     }
 
     "return one movement with valid lrn and ern combination when multiple movements are available" in {
@@ -129,14 +129,14 @@ class MovementRepositorySpec extends PlaySpec
       saveMovement(Movement("Test3333", consignorId, Some(consigneeId), None))
       val result = repository.getMovementByLRNAndERNIn(lrn, List(consignorId)).futureValue
 
-      result mustBe Some(movement)
+      result mustBe Seq(movement)
     }
 
     "return empty list with invalid lrn and ern combination" in {
       saveMovement(movement)
       val result = repository.getMovementByLRNAndERNIn("1111", List(consignorId)).futureValue
 
-      result mustBe None
+      result mustBe Seq.empty
     }
   }
 

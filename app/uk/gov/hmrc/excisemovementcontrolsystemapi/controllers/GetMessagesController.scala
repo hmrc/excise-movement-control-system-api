@@ -17,12 +17,11 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.ShowNewMessagesConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, NotFoundError}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -41,11 +40,6 @@ class GetMessagesController @Inject()(
   def getMessagesForMovement(lrn: String): Action[AnyContent] =
     authAction.async(parse.default) {
       implicit request: EnrolmentRequest[AnyContent] => {
-
-        //get the erns from movement by LRN and ERN combination (consignor/consigneeId)
-        // then for each erns call messagesConnector.get
-        //TODO multiple erns in list
-
         movementService.getMatchingERN(lrn, request.erns.toList).flatMap {
           case None => Future.successful(BadRequest(Json.toJson(ErrorResponse(LocalDateTime.now(), "Invalid LRN supplied for ERN", ""))))
           case Some(ern) =>
@@ -56,20 +50,4 @@ class GetMessagesController @Inject()(
         }
       }
     }
-
-  // the throw should nevr happens. if this does happens something when seriously wrong.
-  private def matchingERN(movement: Movement, erns: List[String]) = {
-
-    if (erns.contains(movement.consignorId)) movement.consignorId
-    else movement.consigneeId.getOrElse(throw new IllegalStateException("Invalid ERN"))
-  }
-
-  private def getMovementMessagesByLRNAndERNList(lrn: String, ern: List[String]): Future[Result] = {
-    movementService.getMovementMessagesByLRNAndERNIn(lrn, ern).flatMap {
-      case Right(msg) => Future.successful(Ok(Json.toJson(msg)))
-      case Left(error: NotFoundError) => Future.successful(NotFound(error.message))
-      case Left(error) => Future.successful(InternalServerError(error.message))
-    }
-  }
-
 }

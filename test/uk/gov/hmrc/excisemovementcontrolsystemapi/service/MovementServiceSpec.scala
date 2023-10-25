@@ -71,7 +71,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
       val messages = Seq(Message("123456", "IE801"), Message("ABCDE", "IE815"))
       val movementMessage = Movement(lrn, consignorId, Some(consigneeId), None, Instant.now(), Some(messages))
       when(mockMovementMessageRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Some(movementMessage)))
+        .thenReturn(Future.successful(Seq(movementMessage)))
 
 
       val result = await(movementMessageService.getMovementMessagesByLRNAndERNIn(lrn, List(consignorId)))
@@ -82,7 +82,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
     "return empty Message when Movement is found with no Messages" in {
       val movementMessage = Movement(lrn, consignorId, Some(consigneeId), None, Instant.now())
       when(mockMovementMessageRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Some(movementMessage)))
+        .thenReturn(Future.successful(Seq(movementMessage)))
 
       val result = await(movementMessageService.getMovementMessagesByLRNAndERNIn(lrn, List(consignorId)))
 
@@ -102,11 +102,54 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
   "getMovementMessagesByLRNAndERNIn with no movement message for LRN and ERN combination" should {
     "return a NotFoundError" in {
       when(mockMovementMessageRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(None))
+        .thenReturn(Future.successful(Seq.empty))
 
       val result = await(movementMessageService.getMovementMessagesByLRNAndERNIn(lrn, List(consignorId)))
 
       result.left.value mustBe NotFoundError()
+    }
+  }
+
+  "getMatchingERN" should {
+
+    "return None if no movement found" in {
+      when(mockMovementMessageRepository.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(Seq.empty))
+
+      val result = await(movementMessageService.getMatchingERN(lrn, List(consignorId)))
+
+      result mustBe None
+
+    }
+
+    "return an ERN for the movement found" in {
+      when(mockMovementMessageRepository.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(Seq(Movement(lrn, consignorId, Some(consigneeId)))))
+
+      val result = await(movementMessageService.getMatchingERN(lrn, List(consignorId)))
+
+      result mustBe Some(consignorId)
+    }
+
+    "return an ERN for the movement for a consigneeId match" in {
+      when(mockMovementMessageRepository.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(Seq(Movement(lrn, consignorId, Some(consigneeId)))))
+
+      val result = await(movementMessageService.getMatchingERN(lrn, List(consigneeId)))
+
+      result mustBe Some(consigneeId)
+    }
+
+    "throw an exception if more then one movement found" in {
+      when(mockMovementMessageRepository.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(Seq(
+          Movement(lrn, consignorId, Some(consigneeId)),
+          Movement(lrn, consignorId, Some(consigneeId))
+        )))
+
+      intercept[RuntimeException] {
+        await(movementMessageService.getMatchingERN(lrn, List(consignorId)))
+      }.getMessage mustBe s"Multiple movement found for local reference number: $lrn"
     }
   }
 

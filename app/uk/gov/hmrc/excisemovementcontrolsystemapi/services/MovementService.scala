@@ -37,11 +37,12 @@ class MovementService @Inject()(
       }
   }
 
+  //todo clean it up. This may need to be deleted. Check for usages
   def getMovementMessagesByLRNAndERNIn(lrn: String, erns: List[String]): Future[Either[MongoError, Seq[Message]]] = {
-    getMovementByLRNAndERNIn(lrn, erns).map {
-      case None => Left(NotFoundError())
-      case Some(movement) =>
-        movement.messages match {
+    movementRepository.getMovementByLRNAndERNIn(lrn, erns).map {
+      case Nil => Left(NotFoundError())
+      case f@_ :: Nil =>
+        f.head.messages match {
           case Some(m) => Right(m)
           case None => Right(Seq.empty)
         }
@@ -52,19 +53,15 @@ class MovementService @Inject()(
       }
   }
 
-  def getMovementByLRNAndERNIn(lrn: String, erns: List[String]): Future[Option[Movement]] = {
-    movementRepository.getMovementByLRNAndERNIn(lrn, erns)
-  }
-
   def getMatchingERN(lrn: String, erns: List[String]): Future[Option[String]] = {
     movementRepository.getMovementByLRNAndERNIn(lrn, erns).map {
-      case Some(movement) => matchingERN(movement, erns)
-      case _ => None
+      case Seq()  => None
+      case head :: Nil => matchingERN(head, erns)
+      case _ => throw new RuntimeException(s"Multiple movement found for local reference number: $lrn")
     }
   }
 
   private def matchingERN(movement: Movement, erns: List[String]): Option[String] = {
-
     if (erns.contains(movement.consignorId)) Some(movement.consignorId)
     else movement.consigneeId
   }

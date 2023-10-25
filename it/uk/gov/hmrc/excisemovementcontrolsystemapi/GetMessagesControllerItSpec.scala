@@ -96,7 +96,7 @@ class GetMessagesControllerItSpec extends PlaySpec
       stubShowNewMessageRequest(consignorId)
 
       when(movementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Some(Movement(lrn, consignorId, None, None, Instant.now, Some(Seq.empty)))))
+        .thenReturn(Future.successful(Seq(Movement(lrn, consignorId, None, None, Instant.now, Some(Seq.empty)))))
 
       val result = getRequest()
 
@@ -112,7 +112,7 @@ class GetMessagesControllerItSpec extends PlaySpec
       withAuthorizedTrader(consignorId)
 
       when(movementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(None))
+        .thenReturn(Future.successful(Seq.empty))
 
       val result = getRequest()
 
@@ -139,7 +139,7 @@ class GetMessagesControllerItSpec extends PlaySpec
 
       val movementMessage = Movement("", "", None, None, now, Some(Seq(Message("", "", now))))
       when(movementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Some(movementMessage)))
+        .thenReturn(Future.successful(Seq(movementMessage, movementMessage)))
 
       val result = getRequest()
 
