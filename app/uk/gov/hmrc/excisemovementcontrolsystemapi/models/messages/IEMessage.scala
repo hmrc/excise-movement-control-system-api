@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
+package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
-import java.time.{Clock, Instant}
-import javax.inject.{Inject, Singleton}
+import scala.xml.NodeSeq
 
-@Singleton
-class DateTimeService @Inject()(clock: Clock) {
+trait IEMessage {
+  def localReferenceNumber: Option[String]
+  def getType: String
+  def toXml: NodeSeq
 
-  def now: Instant = Instant.now(clock)
 }
