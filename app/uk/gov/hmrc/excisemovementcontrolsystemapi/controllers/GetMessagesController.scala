@@ -23,6 +23,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.MessageFilter
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.LocalDateTime
@@ -34,6 +35,7 @@ class GetMessagesController @Inject()(
                                        authAction: AuthAction,
                                        messagesConnector: ShowNewMessagesConnector,
                                        movementService: MovementService,
+                                       messageFilter: MessageFilter,
                                        cc: ControllerComponents
                                      )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
@@ -50,4 +52,6 @@ class GetMessagesController @Inject()(
         }
       }
     }
+
+
 }

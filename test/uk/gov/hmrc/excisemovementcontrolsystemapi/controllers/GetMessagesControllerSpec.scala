@@ -34,6 +34,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateConsignorAction, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ShowNewMessageResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.MessageFilter
 
 import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
@@ -51,6 +52,7 @@ class GetMessagesControllerSpec extends PlaySpec
   private val movementService = mock[MovementService]
   private val cc = stubControllerComponents()
   private val showNewMessagesConnector = mock[ShowNewMessagesConnector]
+  private val messageFilter = mock[MessageFilter]
   private val lrn = "LRN1234"
   private val newMessage = ShowNewMessageResponse(
     LocalDateTime.of(2023, 5, 5, 6, 6, 2),
@@ -85,6 +87,15 @@ class GetMessagesControllerSpec extends PlaySpec
 
         verify(showNewMessagesConnector).get(eqTo(ern))(any)
       }
+
+    "filter messages by lrn" in {
+      when(showNewMessagesConnector.get(any)(any))
+        .thenReturn(Future.successful(Right(newMessage)))
+
+      await(createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest()))
+
+      verify(messageFilter).filter(eqTo(newMessage), eqTo(lrn))
+    }
 
     //todo: remove these test ig changes approved
 //    "get all the new messages" when {
@@ -135,6 +146,7 @@ class GetMessagesControllerSpec extends PlaySpec
       FakeSuccessAuthentication,
       showNewMessagesConnector,
       movementService,
+      messageFilter,
       cc
     )
 
