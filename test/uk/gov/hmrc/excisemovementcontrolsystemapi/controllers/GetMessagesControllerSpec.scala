@@ -110,7 +110,6 @@ class GetMessagesControllerSpec extends PlaySpec
 //
 //    }
 
-
     "return a bad request when no movement exists for LRN/ERNs combination" in {
       when(movementService.getMatchingERN(any, any)).thenReturn(Future.successful(None))
 
@@ -118,7 +117,6 @@ class GetMessagesControllerSpec extends PlaySpec
 
       status(result) mustBe BAD_REQUEST
     }
-
 
     "return 500 when 500 error from eis" in {
 
@@ -128,6 +126,13 @@ class GetMessagesControllerSpec extends PlaySpec
       val result = createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest())
 
       status(result) mustBe INTERNAL_SERVER_ERROR
+    }
+  }
+
+  "putMessageReceipt" should {
+    "respond with OK" in {
+      val result = createWithSuccessfulAuth.putMessageReceipt()
+      status(result) mustBe OK
     }
   }
 
