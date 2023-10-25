@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import akka.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, verify, when}
 import org.scalatest.matchers.must.Matchers

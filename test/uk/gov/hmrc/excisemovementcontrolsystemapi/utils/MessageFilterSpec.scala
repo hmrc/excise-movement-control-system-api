@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
 
-import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.when
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec

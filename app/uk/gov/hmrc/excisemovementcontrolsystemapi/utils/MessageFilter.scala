@@ -22,7 +22,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ShowNewMessageResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 
-import java.time.Instant
 import javax.inject.Inject
 
 class MessageFilter @Inject()
@@ -34,24 +33,16 @@ class MessageFilter @Inject()
 
   def filter(encodedMessage: ShowNewMessageResponse, lrnToFilterBy: String): Seq[Message] = {
 
-//    val xml = emcsUtils.decode(encodeMessage.message)
-//    val messages = Seq(Message("message", "any", dateTimeService.now))
-
-    val unfilteredMessages = extractMessages(encodedMessage.message)
-    val filteredMessages = unfilteredMessages.filter(m => m.localReferenceNumber.contains(lrnToFilterBy))
-
-
-    filteredMessages.map(m => {
-      val encodedMessage = emcsUtils.encode(m.toXml.toString())
-      Message(encodedMessage, m.getType, dateTimeService.now)
-    })
-
+    extractMessages(encodedMessage.message)
+      .filter(m => m.localReferenceNumber.contains(lrnToFilterBy))
+      .map { m =>
+        val encodedMessage = emcsUtils.encode(m.toXml.toString())
+        Message(encodedMessage, m.getType, dateTimeService.now)
+    }
   }
 
   def extractMessages(encodedMessage: String): Seq[IEMessage] = {
-    val decodedMessage: String = emcsUtils.decode(encodedMessage)
-
-    getNewMessageDataResponse(decodedMessage)
+    getNewMessageDataResponse(emcsUtils.decode(encodedMessage))
       .Messages.messagesoption.map(factory.createIEMessage(_))
   }
 

@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, ok, post, urlEqualTo}
+import com.github.tomakehurst.wiremock.client.WireMock.ok
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.when
 import org.scalatest.BeforeAndAfterAll
@@ -33,7 +33,7 @@ import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{NewMessagesXml, TestXml}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{Ie801XmlMessage, NewMessagesXml, TestXml}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageTypes, ShowNewMessageResponse}
@@ -57,7 +57,6 @@ class GetMessagesControllerItSpec extends PlaySpec
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
 
-  private val showMessagesUrl = "/apip-emcs/messages/v1/show-new-messages"
   private val consignorId = "GBWK002281023"
   private val lrn = "token"
   private val url = s"http://localhost:$port/movements/$lrn/messages"
@@ -72,6 +71,7 @@ class GetMessagesControllerItSpec extends PlaySpec
   override lazy val app: Application = {
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
+
     GuiceApplicationBuilder()
       .configure(configureServer)
       .overrides(
@@ -92,54 +92,40 @@ class GetMessagesControllerItSpec extends PlaySpec
     wireMock.stop()
   }
 
-
-
   "Get Messages" should {
     "return 200" in {
-
-      val expectedResponse = Seq(Message(
-        Base64.getEncoder.encodeToString(NewMessagesXml.newMessageWithIE801.toString().getBytes(StandardCharsets.UTF_8)),
-        MessageTypes.IE801.value,
-        timestamp
-      ))
-
       withAuthorizedTrader(consignorId)
       stubShowNewMessageRequest(consignorId)
-
       when(movementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(Movement(lrn, consignorId, None, None, Instant.now, Some(Seq.empty)))))
-
       when(dateTimeService.now).thenReturn(timestamp)
 
-      val result = getRequest()
+      val result = getRequest
 
       result.status mustBe OK
 
-      withClue("return the json response") {
-        result.json mustBe Json.toJson(expectedResponse).toString()
+      withClue("return a list of messages as response") {
+        assertResponseContent(result.json.as[Seq[Message]])
       }
 
     }
 
-    //todo: Is this right? We return a 400 in the unit tests if no movement found in mongo
     "return 400 when no movement message is found" in {
       withAuthorizedTrader(consignorId)
-
       when(movementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq.empty))
 
-      val result = getRequest()
+      val result = getRequest
 
       result.status mustBe BAD_REQUEST
     }
 
     "return 500 when mongo db fails to fetch details" in {
       withAuthorizedTrader(consignorId)
-
       when(movementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
-      val result = getRequest()
+      val result = getRequest
 
       result.status mustBe INTERNAL_SERVER_ERROR
     }
@@ -148,14 +134,11 @@ class GetMessagesControllerItSpec extends PlaySpec
     // for a combination of lrn consignorId/consigneeId
     "return 500 when multiple movements messages are found" in {
       withAuthorizedTrader(consignorId)
-
-      val now = Instant.now()
-
-      val movementMessage = Movement("", "", None, None, now, Some(Seq(Message("", "", now))))
+      val movementMessage = Movement("", "", None, None, timestamp, Some(Seq(Message("", "", timestamp))))
       when(movementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(movementMessage, movementMessage)))
 
-      val result = getRequest()
+      val result = getRequest
 
       result.status mustBe INTERNAL_SERVER_ERROR
     }
@@ -163,18 +146,18 @@ class GetMessagesControllerItSpec extends PlaySpec
     "return forbidden (403) when there are no authorized ERN" in {
       withUnAuthorizedERN()
 
-      getRequest().status mustBe FORBIDDEN
+      getRequest.status mustBe FORBIDDEN
     }
 
     "return a Unauthorized (401) when no authorized trader" in {
       withUnauthorizedTrader(InternalError("A general auth failure"))
 
-      getRequest().status mustBe UNAUTHORIZED
+      getRequest.status mustBe UNAUTHORIZED
     }
 
   }
 
-  private def getRequest() = {
+  private def getRequest = {
     await(wsClient.url(url)
       .addHttpHeaders(
         HeaderNames.AUTHORIZATION -> "TOKEN"
@@ -185,21 +168,17 @@ class GetMessagesControllerItSpec extends PlaySpec
   private def stubShowNewMessageRequest(exciseNumber: String) = {
     wireMock.stubFor(
       WireMock.get(s"/apip-emcs/messages/v1/show-new-messages?exciseregistrationnumber=$exciseNumber")
-        .willReturn(ok().withBody(Json.toJson(responseFromEis).toString()
+        .willReturn(
+          ok().withBody(Json.toJson(responseFromEis).toString()
         ))
     )
   }
 
-  def stubShowNewMessages(status: Int, body: ShowNewMessageResponse): Unit = {
-    wireMock.stubFor(
-      post(urlEqualTo(showMessagesUrl))
-        .willReturn(
-          aResponse()
-            .withStatus(status)
-            .withBody(Json.toJson(body).toString())
-            .withHeader("Content-Type", "application/json")
-        )
-    )
+  private def assertResponseContent(messageObj: Seq[Message]) = {
+    messageObj.head.messageType mustBe MessageTypes.IE801.value
+
+    val actualMessage = Base64.getDecoder.decode(messageObj.head.encodedMessage).map(_.toChar).mkString
+    cleanUpString(actualMessage) mustBe cleanUpString(Ie801XmlMessage.IE801.toString())
   }
 
   private def cleanUpString(str: String): String = {
