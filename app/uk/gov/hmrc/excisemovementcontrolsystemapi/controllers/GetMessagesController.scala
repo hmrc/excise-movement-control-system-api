@@ -50,12 +50,4 @@ class GetMessagesController @Inject()(
         }
       }
     }
-
-  def putMessageReceipt(): Action[AnyContent] =
-    authAction.async(parse.default) {
-      implicit request => {
-        Future.successful(Ok("success!"))
-      }
-    }
-
 }

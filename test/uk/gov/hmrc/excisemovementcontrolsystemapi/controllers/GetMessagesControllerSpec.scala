@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
+import akka.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, verify, when}
 import org.scalatest.matchers.must.Matchers
@@ -126,13 +127,6 @@ class GetMessagesControllerSpec extends PlaySpec
       val result = createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest())
 
       status(result) mustBe INTERNAL_SERVER_ERROR
-    }
-  }
-
-  "putMessageReceipt" should {
-    "respond with OK" in {
-      val result = createWithSuccessfulAuth.putMessageReceipt()(createRequest())
-      status(result) mustBe OK
     }
   }
 
