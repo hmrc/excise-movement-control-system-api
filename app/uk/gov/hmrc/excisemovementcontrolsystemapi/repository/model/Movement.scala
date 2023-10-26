@@ -27,7 +27,7 @@ case class Movement(
                      consigneeId: Option[String],
                      administrativeReferenceCode: Option[String] = None,
                      createdOn: Instant = Instant.now,
-                     messages: Option[Seq[Message]] = None
+                     messages: Seq[Message] = Seq.empty
                    )
 
 case class MovementMessageIE818(

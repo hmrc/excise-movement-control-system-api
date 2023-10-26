@@ -30,9 +30,9 @@ import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateConsignorActionIE818, FakeValidateLRNAction, FakeXmlParsersIE818}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.NotFoundError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequestIE818
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -61,15 +61,13 @@ class SubmitMessageControllerSpec
     when(connector.submitExciseMovementIE818(any, any)(any))
       .thenReturn(Future.successful(Right(EISResponse("ok", "success", "123"))))
     when(movementService.getMovementMessagesByLRNAndERNIn(any, any))
-      .thenReturn(Future.successful(Right(Seq())))
+      .thenReturn(Future.successful(Some(Movement("lrn", "consignorId", None))))
   }
 
   "submit" should {
     "return 200" in {
-
       val result = createWithSuccessfulAuth.submit("LRN")(request)
       status(result) mustBe ACCEPTED
-
     }
 
     "send a request to EIS" in {
@@ -123,7 +121,7 @@ class SubmitMessageControllerSpec
       "lrn and ern are not in the database" in {
 
         when(movementService.getMovementMessagesByLRNAndERNIn(any, any))
-          .thenReturn(Future.successful(Left(NotFoundError())))
+          .thenReturn(Future.successful(None))
 
         val result = createWithSuccessfulAuth.submit("LRN")(request)
 

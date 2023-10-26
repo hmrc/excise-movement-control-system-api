@@ -97,7 +97,7 @@ class GetMessagesControllerItSpec extends PlaySpec
       withAuthorizedTrader(consignorId)
       stubShowNewMessageRequest(consignorId)
       when(movementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq(Movement(lrn, consignorId, None, None, Instant.now, Some(Seq.empty)))))
+        .thenReturn(Future.successful(Seq(Movement(lrn, consignorId, None, None, Instant.now, Seq.empty))))
       when(dateTimeService.now).thenReturn(timestamp)
 
       val result = getRequest
@@ -134,7 +134,7 @@ class GetMessagesControllerItSpec extends PlaySpec
     // for a combination of lrn consignorId/consigneeId
     "return 500 when multiple movements messages are found" in {
       withAuthorizedTrader(consignorId)
-      val movementMessage = Movement("", "", None, None, timestamp, Some(Seq(Message("", "", timestamp))))
+      val movementMessage = Movement("", "", None, None, timestamp, Seq(Message("", "", timestamp)))
       when(movementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(movementMessage, movementMessage)))
 

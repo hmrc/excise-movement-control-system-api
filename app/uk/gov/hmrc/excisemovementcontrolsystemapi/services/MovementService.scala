@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.Singleton
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{GeneralMongoError, MongoError, NotFoundError}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GeneralMongoError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 
@@ -37,20 +37,12 @@ class MovementService @Inject()(
       }
   }
 
-  //todo clean it up. This may need to be deleted. Check for usages
-  def getMovementMessagesByLRNAndERNIn(lrn: String, erns: List[String]): Future[Either[MongoError, Seq[Message]]] = {
+  def getMovementMessagesByLRNAndERNIn(lrn: String, erns: List[String]): Future[Option[Movement]] = {
     movementRepository.getMovementByLRNAndERNIn(lrn, erns).map {
-      case Nil => Left(NotFoundError())
-      case f@_ :: Nil =>
-        f.head.messages match {
-          case Some(m) => Right(m)
-          case None => Right(Seq.empty)
-        }
-      case _ => Left(GeneralMongoError("Multiple movements found for lrn and ern combination"))
+      case Seq()  => None
+      case head :: Nil => Some(head)
+      case _ => throw new RuntimeException(s"Multiple movement found for local reference number: $lrn")
     }
-      .recover {
-        case ex: Throwable => Left(GeneralMongoError(ex.getMessage))
-      }
   }
 
   def getMatchingERN(lrn: String, erns: List[String]): Future[Option[String]] = {

@@ -23,7 +23,7 @@ import org.scalatest.EitherValues
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{GeneralMongoError, NotFoundError}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GeneralMongoError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
@@ -67,46 +67,41 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
   }
 
   "getMovementMessagesByLRNAndERNIn with valid LRN and ERN combination" should {
-    "return  List of Messages" in {
-      val messages = Seq(Message("123456", "IE801"), Message("ABCDE", "IE815"))
-      val movementMessage = Movement(lrn, consignorId, Some(consigneeId), None, Instant.now(), Some(messages))
+    "return  a movement" in {
+      val message1 = Message("123456", "IE801")
+      val message2 = Message("ABCDE", "IE815")
+      val movement = Movement(lrn, consignorId, Some(consigneeId), None, Instant.now(), Seq(message1, message2))
       when(mockMovementMessageRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq(movementMessage)))
-
+        .thenReturn(Future.successful(Seq(movement)))
 
       val result = await(movementMessageService.getMovementMessagesByLRNAndERNIn(lrn, List(consignorId)))
 
-      result mustBe Right(messages)
+      result mustBe Some(movement)
     }
 
-    "return empty Message when Movement is found with no Messages" in {
-      val movementMessage = Movement(lrn, consignorId, Some(consigneeId), None, Instant.now())
+    "throw an error if multiple movement found" in {
       when(mockMovementMessageRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq(movementMessage)))
+        .thenReturn(Future.successful(Seq(
+          Movement("lrn1", "consignorId1", None),
+          Movement("lrn2", "consignorId2", None)
+        )))
 
-      val result = await(movementMessageService.getMovementMessagesByLRNAndERNIn(lrn, List(consignorId)))
+      intercept[RuntimeException] {
+        await(movementMessageService.getMovementMessagesByLRNAndERNIn(lrn, List(consignorId)))
+      }.getMessage mustBe s"Multiple movement found for local reference number: $lrn"
 
-      result mustBe Right(Seq.empty)
-    }
 
-    "throw an error" in {
-      when(mockMovementMessageRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.failed(new RuntimeException("error")))
-
-      val result = await(movementMessageService.getMovementMessagesByLRNAndERNIn(lrn, List(consignorId)))
-
-      result.left.value mustBe GeneralMongoError("error")
     }
   }
 
   "getMovementMessagesByLRNAndERNIn with no movement message for LRN and ERN combination" should {
-    "return a NotFoundError" in {
+    "return no movement" in {
       when(mockMovementMessageRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq.empty))
 
       val result = await(movementMessageService.getMovementMessagesByLRNAndERNIn(lrn, List(consignorId)))
 
-      result.left.value mustBe NotFoundError()
+      result mustBe None
     }
   }
 
