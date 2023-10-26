@@ -22,7 +22,7 @@ import org.scalatest.{BeforeAndAfterAll, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
-import play.api.mvc.Results.{InternalServerError, NotFound}
+import play.api.mvc.Results.NotFound
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
@@ -73,7 +73,11 @@ class ValidateLRNActionSpec extends PlaySpec with TestXml with EitherValues with
         val request = DataRequestIE818(FakeRequest(), MovementMessageIE818("12356"), Set("12356"), "123")
         val result = await(sut.refine(request))
 
-        result.left.value mustBe NotFound(Json.toJson(ErrorResponse(currentDateTime, "Invalid LRN supplied", "LRN lrn is not valid for ERNs 12356")))
+        result.left.value mustBe NotFound(Json.toJson(ErrorResponse(
+          currentDateTime,
+          "Local reference number not found",
+          "Local reference number lrn is not found within the data for ERNs 12356"))
+        )
 
       }
 
