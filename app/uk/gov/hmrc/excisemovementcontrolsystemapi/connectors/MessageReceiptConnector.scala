@@ -22,7 +22,7 @@ import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, Header}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISConsumptionHeader, EISErrorMessage, EISSubmissionHeader}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, MessageReceiptResponse, MessageTypes}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
@@ -32,10 +32,10 @@ import scala.concurrent.{ExecutionContext, Future}
 class MessageReceiptConnector @Inject()
 (
   httpClient: HttpClient,
-  appConfig: AppConfig,
+  override val appConfig: AppConfig,
   eisUtils: EmcsUtils,
   metrics: Metrics
-)(implicit val ec: ExecutionContext) extends ResponseHandler with Logging {
+)(implicit val ec: ExecutionContext) extends EISConsumptionHeader with ResponseHandler with Logging {
 
   def put(ern: String)(implicit hc: HeaderCarrier): Future[Either[Result, MessageReceiptResponse]] = {
 
@@ -46,7 +46,7 @@ class MessageReceiptConnector @Inject()
     httpClient.PUTString[HttpResponse](
       appConfig.messageReceiptUrl(ern),
       "",
-      Header.showNewMessage(correlationId, dateTime)
+      build(correlationId, dateTime)
     ).map {
       response =>
         extractIfSuccessful[MessageReceiptResponse](response) match {

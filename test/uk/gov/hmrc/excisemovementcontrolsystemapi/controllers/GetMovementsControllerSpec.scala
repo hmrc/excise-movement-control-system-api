@@ -16,41 +16,62 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
+import org.mockito.ArgumentMatchersSugar.{any, eqTo}
+import org.mockito.MockitoSugar.{reset, verify, when}
+import org.scalatest.BeforeAndAfterEach
+import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.OK
+import play.api.http.Status.{ACCEPTED, OK}
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
+import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.GetMovementConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeAuthentication
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISConsumptionResponse, EISErrorResponse}
 
-import scala.concurrent.ExecutionContext
+import java.time.LocalDateTime
+import scala.concurrent.{ExecutionContext, Future}
 
-class GetMovementsControllerSpec extends PlaySpec with FakeAuthentication {
+class GetMovementsControllerSpec
+  extends PlaySpec
+    with FakeAuthentication
+    with BeforeAndAfterEach {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val cc = stubControllerComponents()
+  private val getMovementConnector = mock[GetMovementConnector]
+  private val controller = new GetMovementsController(FakeSuccessAuthentication, cc, getMovementConnector)
+
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    reset(getMovementConnector)
+
+    when(getMovementConnector.get(any, any)(any)).thenReturn(Future.successful(
+      Right(EISConsumptionResponse(
+        LocalDateTime.of(2023, 10, 26, 3, 2, 2),
+        ern,
+        "message")))
+    )
+  }
 
   "getMovements" should {
     "return 200 when successful" in {
-      val controller = new GetMovementsController( FakeSuccessAuthentication, cc)
-
       val result = controller.getMovements(FakeRequest("POST", "/foo"))
 
       status(result) mustBe OK
+      contentAsJson(result) mustBe Json.toJson(Seq(GetMovementResponse(
+        ern,
+        "lrn",
+        "consigneeId",
+        "arc",
+        ACCEPTED
+      )))
+    }
 
-      val expectedJson = Json.parse(
-        """[
-          |  {
-          |    "consignorId": "MRlY1BIyYA1nd",
-          |    "localReferenceNumber": "1v$%wqd",
-          |    "consigneeId": "dUC\"v",
-          |    "administrativeReferenceCode": "73CUHCY7XA4BIDE35CBR6",
-          |    "status": "Accepted"
-          |  }
-          |]""".stripMargin
-      )
+    "request movement from EIS" in {
+      await(controller.getMovements(FakeRequest("GET", "/foo")))
 
-      contentAsJson(result) mustBe expectedJson
+      verify(getMovementConnector).get(eqTo(ern), eqTo("arc"))(any)
     }
   }
 

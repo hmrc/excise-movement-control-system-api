@@ -16,51 +16,56 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
-import javax.inject.Inject
 import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
 import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISConsumptionHeader, EISConsumptionResponse, EISErrorMessage, EISSubmissionHeader}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, MessageTypes}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISConsumptionHeader, EISConsumptionResponse, EISErrorMessage, EISErrorResponse, EISSubmissionHeader}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
+import java.time.LocalDateTime
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-class ShowNewMessagesConnector @Inject()(
+class GetMovementConnector @Inject()
+(
   httpClient: HttpClient,
   override val appConfig: AppConfig,
   emcsUtils: EmcsUtils,
   metrics: Metrics
-)(implicit ec: ExecutionContext) extends EISConsumptionHeader with ResponseHandler with Logging {
+)(implicit val ec: ExecutionContext) extends EISConsumptionHeader with ResponseHandler with Logging {
 
-  def get(ern: String)(implicit hc: HeaderCarrier): Future[Either[Result, EISConsumptionResponse]] = {
+  def get(
+    ern: String,
+    arc: String
+  )(implicit hc: HeaderCarrier): Future[Either[Result, EISConsumptionResponse]] = {
 
-    val timer = metrics.defaultRegistry.timer("emcs.shownewmessage.timer").time()
+    val timer = metrics.defaultRegistry.timer("emcs.getmovements.timer").time()
     val correlationId = emcsUtils.generateCorrelationId
-    val dateTime = emcsUtils.getCurrentDateTimeString
+    val createDateTime = emcsUtils.getCurrentDateTimeString
 
     httpClient.GET[HttpResponse](
-      appConfig.showNewMessageUrl,
-      Seq("exciseregistrationnumber" -> ern),
-      build(correlationId, dateTime)
-    ).map { response =>
+      appConfig.traderMovementUrl,
+      Seq("exciseregistrationnumber" -> ern, "arc" -> arc),
+      build(correlationId, createDateTime)
+    ).map { response: HttpResponse =>
 
       extractIfSuccessful[EISConsumptionResponse](response) match {
         case Right(eisResponse) => Right(eisResponse)
         case Left(_) =>
-          logger.warn(EISErrorMessage(dateTime,ern, response.body, correlationId, MessageTypes.IE_NEW_MESSAGES.value))
+          logger.warn(EISErrorMessage(createDateTime,ern, response.body, correlationId, MessageTypes.IE_MOVEMENT_FOR_TRADER.value))
           Left(InternalServerError(response.body))
       }
     }
       .andThen {case _ => timer.stop() }
       .recover {
-        case ex: Throwable =>
-          logger.warn(EISErrorMessage(dateTime,ern, ex.getMessage, correlationId, MessageTypes.IE_NEW_MESSAGES.value))
-          Left(InternalServerError(ex.getMessage))
-      }
+      case ex: Throwable =>
+        logger.warn(EISErrorMessage(createDateTime,ern, ex.getMessage, correlationId, MessageTypes.IE_MOVEMENT_FOR_TRADER.value))
+        Left(InternalServerError(ex.getMessage))
+    }
   }
-}
 
+}

@@ -64,6 +64,7 @@ class MessageReceiptConnectorSpec
     when(emcsUtil.getCurrentDateTimeString).thenReturn(dateTime.toString)
     when(emcsUtil.generateCorrelationId).thenReturn("12345")
     when(appConfig.messageReceiptUrl(any)).thenReturn("/messageReceipt")
+    when(appConfig.systemApplication).thenReturn("system.application")
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
   }
 
@@ -78,7 +79,7 @@ class MessageReceiptConnectorSpec
       await(sut.put("123"))
 
       val headers = Seq(
-        "x-forwarded-host" -> "uk.gov.hmrc.cdio.cbit.emcs.core.api",
+        "x-forwarded-host" -> "system.application",
         "x-correlation-id" -> "12345",
         "source" -> "APIP",
         "dateTime" -> dateTime.toString

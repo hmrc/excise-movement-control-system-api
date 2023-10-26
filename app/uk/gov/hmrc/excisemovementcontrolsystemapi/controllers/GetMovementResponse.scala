@@ -14,14 +14,18 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
+package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-trait Header {
+import play.api.libs.json.{Json, OFormat}
 
-  val EmcsSource: String = "APIP"
-  val SourceName: String = "source"
-  val XCorrelationIdName = "x-correlation-id"
-  val DateTimeName = "dateTime"
-  val XForwardedHostName = "x-forwarded-host"
+case class GetMovementResponse(
+  consignorId: String,
+  localReferenceNumber: String,
+  consigneeId: String,
+  administrativeReferenceCode: String,
+  status: Int
+)
 
+object GetMovementResponse {
+  implicit val format: OFormat[GetMovementResponse] = Json.format[GetMovementResponse]
 }

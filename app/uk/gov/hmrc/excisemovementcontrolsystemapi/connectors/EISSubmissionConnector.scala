@@ -25,7 +25,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequest, DataRequestIE818}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Header.EmcsSource
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
@@ -40,7 +39,7 @@ class EISSubmissionConnector @Inject()
   emcsUtils: EmcsUtils,
   appConfig: AppConfig,
   metrics: Metrics
-)(implicit ec: ExecutionContext) extends Logging {
+)(implicit ec: ExecutionContext) extends EISSubmissionHeader with Logging {
 
 
   def submitExciseMovement(request: DataRequest[_], messageType: String)(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
@@ -58,7 +57,7 @@ class EISSubmissionConnector @Inject()
     httpClient.POST[EISRequest, Either[Result, EISSubmissionResponse]](
       appConfig.emcsReceiverMessageUrl,
       eisRequest,
-      Header.build(correlationId, createdDateTime)
+      build(correlationId, createdDateTime)
     )(EISRequest.format, EISHttpReader(correlationId, consignorId, createdDateTime), hc, ec)
       .andThen { case _ => timer.stop() }
       .recover {
@@ -92,7 +91,7 @@ class EISSubmissionConnector @Inject()
     httpClient.POST[EISRequest, Either[Result, EISSubmissionResponse]](
       appConfig.emcsReceiverMessageUrl,
       eisRequest,
-      Header.build(correlationId, createdDateTime)
+      build(correlationId, createdDateTime)
     )(EISRequest.format, EISHttpReader(correlationId, consigneeId, createdDateTime), hc, ec)
       .andThen { case _ => timer.stop() }
       .recover {

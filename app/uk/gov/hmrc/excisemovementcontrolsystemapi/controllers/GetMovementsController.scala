@@ -16,9 +16,11 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
+import play.api.http.Status.ACCEPTED
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import play.api.mvc.Results.Ok
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.GetMovementConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -28,18 +30,26 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class GetMovementsController @Inject()(
-                                        authAction: AuthAction,
-                                        cc: ControllerComponents
-                                      )(implicit ec: ExecutionContext) extends BackendController(cc)  {
+  authAction: AuthAction,
+  cc: ControllerComponents,
+  getMovementConnector: GetMovementConnector
+)(implicit ec: ExecutionContext) extends BackendController(cc)  {
 
   def getMovements: Action[AnyContent] = {
     authAction.async(parse.default) {
       implicit request =>
-        Future.successful(Ok(Json.toJson(EISConsumptionResponse(
-          LocalDateTime.of(2023, 10, 26, 12, 3, 5),
-          "arc",
-          "message"
-        ))))
+
+        getMovementConnector.get(request.erns.head, "arc").map {
+          case Right(response) =>
+            //todo get the movement from Mongo using lrn and ern from EIS
+            Ok(Json.toJson(Seq(GetMovementResponse(
+              response.exciseRegistrationNumber,
+              "lrn",
+              "consigneeId",
+              "arc",
+              ACCEPTED
+            ))))
+        }
     }
   }
 
