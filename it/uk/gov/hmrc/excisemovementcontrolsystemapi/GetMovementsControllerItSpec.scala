@@ -31,7 +31,7 @@ import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{Ie801XmlMessage, NewMessagesXml, TestXml}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
@@ -92,15 +92,25 @@ class GetMovementsControllerItSpec extends PlaySpec
   "Get Movements" should {
     "return 200" in {
       withAuthorizedTrader(consignorId)
-      //      stubShowNewMessageRequest(consignorId)
-      //      when(movementRepository.getMovementByLRNAndERNIn(any, any))
-      //        .thenReturn(Future.successful(Seq(Movement(lrn, consignorId, None, None, Instant.now, Seq.empty))))
-      when(dateTimeService.now).thenReturn(timestamp)
 
       val result = getRequest
 
       result.status mustBe OK
 
+      withClue("return an EIS response") {
+        result.json mustBe Json.toJson(EISConsumptionResponse(
+          LocalDateTime.of(2023, 10, 26, 12, 3, 5),
+          "arc",
+          "message"
+        ))
+      }
+
+    }
+
+    "return a Unauthorized (401) when no authorized trader" in {
+      withUnauthorizedTrader(InternalError("A general auth failure"))
+
+      getRequest.status mustBe UNAUTHORIZED
     }
   }
 
