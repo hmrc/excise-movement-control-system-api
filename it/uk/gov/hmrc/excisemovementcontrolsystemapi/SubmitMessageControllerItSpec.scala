@@ -35,7 +35,7 @@ import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
@@ -220,7 +220,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
   private def stubEISSuccessfulRequest() = {
 
-    val response = EISResponse("OK", "message", "123")
+    val response = EISSubmissionResponse("OK", "message", "123")
     wireMock.stubFor(
       post(eisUrl)
         .willReturn(ok().withBody(Json.toJson(response).toString()))

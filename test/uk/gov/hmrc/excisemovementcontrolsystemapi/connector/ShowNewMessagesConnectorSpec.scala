@@ -30,7 +30,8 @@ import play.api.mvc.Results.InternalServerError
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.ShowNewMessagesConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ShowNewMessageResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
 import java.time.LocalDateTime
@@ -52,7 +53,7 @@ class ShowNewMessagesConnectorSpec
   private val sut = new ShowNewMessagesConnector(httpClient, appConfig, eisUtil, metrics)
 
   private val dateTime = LocalDateTime.of(2023, 2, 3, 5, 6, 7)
-  private val response  = ShowNewMessageResponse(
+  private val response  = EISConsumptionResponse(
     dateTime,
     "123",
     "message"
@@ -112,7 +113,7 @@ class ShowNewMessagesConnectorSpec
 
         val result = await(sut.get("123"))
 
-        result.left.value mustBe InternalServerError(s"Response body could not be read as type ${typeOf[ShowNewMessageResponse]}")
+        result.left.value mustBe InternalServerError(s"Response body could not be read as type ${typeOf[EISConsumptionResponse]}")
       }
     }
   }

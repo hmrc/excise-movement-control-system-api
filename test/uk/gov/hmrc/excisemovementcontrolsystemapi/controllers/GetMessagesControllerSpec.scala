@@ -31,7 +31,7 @@ import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.ShowNewMessagesConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateConsignorAction, FakeXmlParsers}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ShowNewMessageResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.MessageFilter
@@ -55,7 +55,7 @@ class GetMessagesControllerSpec extends PlaySpec
   private val messageFilter = mock[MessageFilter]
   private val lrn = "LRN1234"
   private val timeStamp = Instant.now
-  private val newMessage = ShowNewMessageResponse(
+  private val newMessage = EISConsumptionResponse(
     LocalDateTime.of(2023, 5, 5, 6, 6, 2),
     ern,
     "message")
@@ -99,31 +99,6 @@ class GetMessagesControllerSpec extends PlaySpec
 
       verify(messageFilter).filter(eqTo(newMessage), eqTo(lrn))
     }
-
-    //todo: remove these test ig changes approved
-//    "get all the new messages" when {
-//      "matching the consignorId" in {
-//        when(showNewMessagesConnector.get(any)(any))
-//          .thenReturn(Future.successful(Right(newMessage)))
-//
-//        await(createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest()))
-//
-//        verify(showNewMessagesConnector).get(eqTo(ern))(any)
-//      }
-//
-//      "matching the consigneeId" in {
-//        when(movementService.getMovementByLRNAndERNIn(any, any))
-//          .thenReturn(Future.successful(Some(Movement("LRN1234", "234", Some(ern)))))
-//
-//        when(showNewMessagesConnector.get(any)(any))
-//          .thenReturn(Future.successful(Right(newMessage))          )
-//
-//        await(createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest()))
-//
-//        verify(showNewMessagesConnector).get(eqTo(ern))(any)
-//      }
-//
-//    }
 
     "return a bad request when no movement exists for LRN/ERNs combination" in {
       when(movementService.getMatchingERN(any, any)).thenReturn(Future.successful(None))

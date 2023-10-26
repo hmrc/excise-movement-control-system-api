@@ -34,7 +34,7 @@ import java.time.LocalDateTime
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-class MovementMessageConnector @Inject()
+class EISSubmissionConnector @Inject()
 (
   httpClient: HttpClient,
   emcsUtils: EmcsUtils,
@@ -43,8 +43,9 @@ class MovementMessageConnector @Inject()
 )(implicit ec: ExecutionContext) extends Logging {
 
 
-  def submitExciseMovement(request: DataRequest[_], messageType: String)(implicit hc: HeaderCarrier): Future[Either[Result, EISResponse]] = {
+  def submitExciseMovement(request: DataRequest[_], messageType: String)(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
 
+    //TODO: remember to rename this
     val timer = metrics.defaultRegistry.timer("emcs.eiscontroller.timer").time()
 
     //todo: add retry
@@ -54,7 +55,7 @@ class MovementMessageConnector @Inject()
     val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", encodedMessage)
     val consignorId = request.movementMessage.consignorId
 
-    httpClient.POST[EISRequest, Either[Result, EISResponse]](
+    httpClient.POST[EISRequest, Either[Result, EISSubmissionResponse]](
       appConfig.emcsReceiverMessageUrl,
       eisRequest,
       Header.build(correlationId, createdDateTime)
@@ -77,7 +78,7 @@ class MovementMessageConnector @Inject()
 
   //TODO implement a more generic solution that doesn't involve duplicating all the code
   def submitExciseMovementIE818(request: DataRequestIE818[_], messageType: String)
-                               (implicit hc: HeaderCarrier): Future[Either[Result, EISResponse]] = {
+                               (implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
 
     val timer = metrics.defaultRegistry.timer("emcs.eiscontroller.timer").time()
 
@@ -88,7 +89,7 @@ class MovementMessageConnector @Inject()
     val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", encodedMessage)
     val consigneeId = request.movementMessage.consigneeId
 
-    httpClient.POST[EISRequest, Either[Result, EISResponse]](
+    httpClient.POST[EISRequest, Either[Result, EISSubmissionResponse]](
       appConfig.emcsReceiverMessageUrl,
       eisRequest,
       Header.build(correlationId, createdDateTime)

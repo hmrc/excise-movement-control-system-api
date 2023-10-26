@@ -27,11 +27,11 @@ import play.api.http.HeaderNames
 import play.api.mvc.Results.NotFound
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateConsignorActionIE818, FakeValidateLRNAction, FakeXmlParsersIE818}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequestIE818
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 
@@ -52,14 +52,14 @@ class SubmitMessageControllerSpec
   private val request = createRequest(IE818)
   private val movementService = mock[MovementService]
   private val ieMessage = scalaxb.fromXML[IE818Type](IE818)
-  private val connector = mock[MovementMessageConnector]
+  private val connector = mock[EISSubmissionConnector]
 
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(connector)
 
     when(connector.submitExciseMovementIE818(any, any)(any))
-      .thenReturn(Future.successful(Right(EISResponse("ok", "success", "123"))))
+      .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
     when(movementService.getMovementMessagesByLRNAndERNIn(any, any))
       .thenReturn(Future.successful(Some(Movement("lrn", "consignorId", None))))
   }

@@ -22,7 +22,7 @@ import play.api.libs.json.{Json, Reads}
 import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, EISResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, EISSubmissionResponse}
 import uk.gov.hmrc.http.HttpReads.is2xx
 import uk.gov.hmrc.http.{HttpReads, HttpResponse}
 
@@ -33,10 +33,10 @@ class EISHttpReader(
   correlationId: String,
   consignorId: String,
   createdDateTime: String
-) extends HttpReads[Either[Result, EISResponse]] with Logging {
+) extends HttpReads[Either[Result, EISSubmissionResponse]] with Logging {
 
-    override def read(method: String, url: String, response: HttpResponse): Either[Result, EISResponse] = {
-        val result = extractIfSuccessful[EISResponse](response)
+    override def read(method: String, url: String, response: HttpResponse): Either[Result, EISSubmissionResponse] = {
+        val result = extractIfSuccessful[EISSubmissionResponse](response)
         result match {
           case Right(eisResponse) => Right(eisResponse)
           case Left(httpResponse: HttpResponse) => Left(handleErrorResponse(httpResponse))

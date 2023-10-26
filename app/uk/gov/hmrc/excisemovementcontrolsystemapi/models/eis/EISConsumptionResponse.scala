@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.models
+package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
 import play.api.libs.json.{Json, OFormat}
 
 import java.time.LocalDateTime
 
-case class ShowNewMessageResponse
+case class EISConsumptionResponse
 (
   dateTime: LocalDateTime,
   exciseRegistrationNumber: String,
   message: String
 )
 
-object ShowNewMessageResponse {
-  implicit val format: OFormat[ShowNewMessageResponse] = Json.format[ShowNewMessageResponse]
+object EISConsumptionResponse {
+  implicit val format: OFormat[EISConsumptionResponse] = Json.format[EISConsumptionResponse]
 }
 

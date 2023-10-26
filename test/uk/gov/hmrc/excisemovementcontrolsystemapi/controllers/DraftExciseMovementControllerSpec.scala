@@ -29,12 +29,12 @@ import play.api.http.HeaderNames
 import play.api.mvc.Results.NotFound
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateConsignorAction, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GeneralMongoError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 
@@ -52,7 +52,7 @@ class DraftExciseMovementControllerSpec
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val sys: ActorSystem = ActorSystem("DraftExciseMovementControllerSpec")
-  private val connector = mock[MovementMessageConnector]
+  private val connector = mock[EISSubmissionConnector]
   private val movementMessageService = mock[MovementService]
   private val cc = stubControllerComponents()
   private val ieMessage = scalaxb.fromXML[IE815Type](IE815)
@@ -62,7 +62,7 @@ class DraftExciseMovementControllerSpec
     super.beforeEach()
     reset(connector)
 
-    when(connector.submitExciseMovement(any, any)(any)).thenReturn(Future.successful(Right(EISResponse("ok", "success", "123"))))
+    when(connector.submitExciseMovement(any, any)(any)).thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
   }
 
   "submit" should {

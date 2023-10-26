@@ -19,7 +19,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
 import generated.NewMessagesDataResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ShowNewMessageResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 
 import javax.inject.Inject
@@ -31,7 +32,7 @@ class MessageFilter @Inject()
   factory: IEMessageFactory
 ) {
 
-  def filter(encodedMessage: ShowNewMessageResponse, lrnToFilterBy: String): Seq[Message] = {
+  def filter(encodedMessage: EISConsumptionResponse, lrnToFilterBy: String): Seq[Message] = {
 
     extractMessages(encodedMessage.message)
       .filter(m => m.localReferenceNumber.contains(lrnToFilterBy))

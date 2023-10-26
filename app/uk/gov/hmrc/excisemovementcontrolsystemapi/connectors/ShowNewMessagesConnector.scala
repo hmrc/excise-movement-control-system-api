@@ -24,8 +24,8 @@ import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, Header}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, MessageTypes, ShowNewMessageResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISConsumptionResponse, EISErrorMessage, Header}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, MessageTypes}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -37,7 +37,7 @@ class ShowNewMessagesConnector @Inject()(
                                           metrics: Metrics
                                         )(implicit ec: ExecutionContext) extends ResponseHandler with Logging {
 
-  def get(ern: String)(implicit hc: HeaderCarrier): Future[Either[Result, ShowNewMessageResponse]] = {
+  def get(ern: String)(implicit hc: HeaderCarrier): Future[Either[Result, EISConsumptionResponse]] = {
 
     val timer = metrics.defaultRegistry.timer("emcs.shownewmessage.timer").time()
     val correlationId = emcsUtils.generateCorrelationId
@@ -49,7 +49,7 @@ class ShowNewMessagesConnector @Inject()(
       Header.showNewMessage(correlationId, dateTime)
     ).map { response =>
 
-      extractIfSuccessful[ShowNewMessageResponse](response) match {
+      extractIfSuccessful[EISConsumptionResponse](response) match {
         case Right(eisResponse) => Right(eisResponse)
         case Left(_) =>
           logger.warn(EISErrorMessage(dateTime,ern, response.body, correlationId, MessageTypes.IE_NEW_MESSAGES.value))

@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseIE815XmlAction, ValidateConsignorAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ExciseMovementResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
@@ -34,7 +34,7 @@ class DraftExciseMovementController @Inject()(
                                                authAction: AuthAction,
                                                xmlParser: ParseIE815XmlAction,
                                                consignorValidatorAction: ValidateConsignorAction,
-                                               movementMessageConnector: MovementMessageConnector,
+                                               movementMessageConnector: EISSubmissionConnector,
                                                movementMessageService: MovementService,
                                                cc: ControllerComponents
                                              )(implicit ec: ExecutionContext) extends BackendController(cc) {

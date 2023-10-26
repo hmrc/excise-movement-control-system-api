@@ -47,7 +47,7 @@ import java.time.{Instant, LocalDateTime}
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
-class GetMessagesControllerItSpec extends PlaySpec
+class GetMovementsControllerItSpec extends PlaySpec
   with GuiceOneServerPerSuite
   with AuthTestSupport
   with TestXml
@@ -60,14 +60,10 @@ class GetMessagesControllerItSpec extends PlaySpec
 
   private val consignorId = "GBWK002281023"
   private val lrn = "token"
-  private val url = s"http://localhost:$port/movements/$lrn/messages"
+  private val url = s"http://localhost:$port/movements"
   private lazy val dateTimeService: DateTimeService = mock[DateTimeService]
   private val timestamp = Instant.parse("2018-11-30T18:35:24.00Z")
-  private val responseFromEis = EISConsumptionResponse(
-    LocalDateTime.of(2023, 1, 2, 3, 4, 5),
-    consignorId,
-    Base64.getEncoder.encodeToString(NewMessagesXml.newMessageWithIE801.toString().getBytes(StandardCharsets.UTF_8)),
-  )
+//  private val responseFromEis = EISConsumptionResponse(dateTimeService.now, "exciseRegistrationNumber", "encoded data containing the movements")
 
   override lazy val app: Application = {
     wireMock.start()
@@ -93,69 +89,19 @@ class GetMessagesControllerItSpec extends PlaySpec
     wireMock.stop()
   }
 
-  "Get Messages" should {
+  "Get Movements" should {
     "return 200" in {
       withAuthorizedTrader(consignorId)
-      stubShowNewMessageRequest(consignorId)
-      when(movementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq(Movement(lrn, consignorId, None, None, Instant.now, Seq.empty))))
+      //      stubShowNewMessageRequest(consignorId)
+      //      when(movementRepository.getMovementByLRNAndERNIn(any, any))
+      //        .thenReturn(Future.successful(Seq(Movement(lrn, consignorId, None, None, Instant.now, Seq.empty))))
       when(dateTimeService.now).thenReturn(timestamp)
 
       val result = getRequest
 
       result.status mustBe OK
 
-      withClue("return a list of messages as response") {
-        assertResponseContent(result.json.as[Seq[Message]])
-      }
-
     }
-
-    "return 400 when no movement message is found" in {
-      withAuthorizedTrader(consignorId)
-      when(movementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq.empty))
-
-      val result = getRequest
-
-      result.status mustBe BAD_REQUEST
-    }
-
-    "return 500 when mongo db fails to fetch details" in {
-      withAuthorizedTrader(consignorId)
-      when(movementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.failed(new RuntimeException("error")))
-
-      val result = getRequest
-
-      result.status mustBe INTERNAL_SERVER_ERROR
-    }
-
-    //todo: This may be deleted as it may not be a valid case. We should only have one movement,
-    // for a combination of lrn consignorId/consigneeId
-    "return 500 when multiple movements messages are found" in {
-      withAuthorizedTrader(consignorId)
-      val movementMessage = Movement("", "", None, None, timestamp, Seq(Message("", "", timestamp)))
-      when(movementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq(movementMessage, movementMessage)))
-
-      val result = getRequest
-
-      result.status mustBe INTERNAL_SERVER_ERROR
-    }
-
-    "return forbidden (403) when there are no authorized ERN" in {
-      withUnAuthorizedERN()
-
-      getRequest.status mustBe FORBIDDEN
-    }
-
-    "return a Unauthorized (401) when no authorized trader" in {
-      withUnauthorizedTrader(InternalError("A general auth failure"))
-
-      getRequest.status mustBe UNAUTHORIZED
-    }
-
   }
 
   private def getRequest = {
@@ -166,23 +112,4 @@ class GetMessagesControllerItSpec extends PlaySpec
     )
   }
 
-  private def stubShowNewMessageRequest(exciseNumber: String) = {
-    wireMock.stubFor(
-      WireMock.get(s"/apip-emcs/messages/v1/show-new-messages?exciseregistrationnumber=$exciseNumber")
-        .willReturn(
-          ok().withBody(Json.toJson(responseFromEis).toString()
-        ))
-    )
-  }
-
-  private def assertResponseContent(messageObj: Seq[Message]) = {
-    messageObj.head.messageType mustBe MessageTypes.IE801.value
-
-    val actualMessage = Base64.getDecoder.decode(messageObj.head.encodedMessage).map(_.toChar).mkString
-    cleanUpString(actualMessage) mustBe cleanUpString(Ie801XmlMessage.IE801.toString())
-  }
-
-  private def cleanUpString(str: String): String = {
-    str.replaceAll("[\\t\\n\\r\\s]+", "")
-  }
 }

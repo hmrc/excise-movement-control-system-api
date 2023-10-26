@@ -36,7 +36,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 
 import java.time.LocalDateTime
@@ -197,7 +197,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
   private def stubEISSuccessfulRequest() = {
 
-    val response = EISResponse("OK", "message", "123")
+    val response = EISSubmissionResponse("OK", "message", "123")
     wireMock.stubFor(
       post(eisUrl)
         .willReturn(ok().withBody(Json.toJson(response).toString()))

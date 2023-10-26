@@ -33,11 +33,11 @@ import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceU
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConnector
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISRequest, EISResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISRequest, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
@@ -57,7 +57,7 @@ class MovementConnectorSpec extends PlaySpec with BeforeAndAfterEach with Either
 
   private val metrics = mock[Metrics](RETURNS_DEEP_STUBS)
 
-  private val connector = new MovementMessageConnector(mockHttpClient, emcsUtils, appConfig, metrics)
+  private val connector = new EISSubmissionConnector(mockHttpClient, emcsUtils, appConfig, metrics)
   private val emcsCorrelationId = "1234566"
   private val message = "<IE815></IE815>"
   private val messageType = "IE815"
@@ -79,16 +79,16 @@ class MovementConnectorSpec extends PlaySpec with BeforeAndAfterEach with Either
     "return successful EISResponse" in {
 
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
-        .thenReturn(Future.successful(Right(EISResponse("ok", "Success", emcsCorrelationId))))
+        .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "Success", emcsCorrelationId))))
 
-      val result: Either[Result, EISResponse] = await(submitExciseMovement)
+      val result: Either[Result, EISSubmissionResponse] = await(submitExciseMovement)
 
-      result mustBe Right(EISResponse("ok", "Success", emcsCorrelationId))
+      result mustBe Right(EISSubmissionResponse("ok", "Success", emcsCorrelationId))
     }
 
     "use the right request parameters in http client" in {
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
-        .thenReturn(Future.successful(Right(EISResponse("ok", "Success", emcsCorrelationId))))
+        .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "Success", emcsCorrelationId))))
 
       val encodeMessage = encoder.encodeToString(message.getBytes(StandardCharsets.UTF_8))
       val eisRequest = EISRequest(emcsCorrelationId, "2023-09-17T09:32:50.345", messageType, "APIP", "user1", encodeMessage)
@@ -173,7 +173,7 @@ class MovementConnectorSpec extends PlaySpec with BeforeAndAfterEach with Either
 
   }
 
-  private def submitExciseMovement: Future[Either[Result, EISResponse]] = {
+  private def submitExciseMovement: Future[Either[Result, EISSubmissionResponse]] = {
     connector.submitExciseMovement(DataRequest(
       FakeRequest(),
       Movement("123", "123", None), "124"),
