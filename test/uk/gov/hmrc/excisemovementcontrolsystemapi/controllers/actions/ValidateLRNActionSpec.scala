@@ -22,14 +22,14 @@ import org.scalatest.{BeforeAndAfterAll, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
-import play.api.mvc.Results.{InternalServerError, NotFound}
+import play.api.mvc.Results.NotFound
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse, GeneralMongoError, NotFoundError}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessageIE818
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Movement, MovementMessageIE818}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 
 import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
@@ -39,7 +39,7 @@ class ValidateLRNActionSpec extends PlaySpec with TestXml with EitherValues with
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val emcsUtils: EmcsUtils = mock[EmcsUtils]
-  private val movementMessageService = mock[MovementMessageService]
+  private val movementService = mock[MovementService]
   private val currentDateTime = LocalDateTime.of(2023, 10, 18, 15, 33, 33)
 
   override def beforeAll(): Unit = {
@@ -50,42 +50,47 @@ class ValidateLRNActionSpec extends PlaySpec with TestXml with EitherValues with
   "ValidateLRNActionSpec" should {
     "return a request when valid LRN/ERN combo in database" in {
 
-      when(movementMessageService.getMovementMessagesByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Right(Seq())))
+      when(movementService.getMovementMessagesByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(Some(Movement("lrn", "consignorId", None))))
 
-      val sut = new ValidateLRNActionFactory().apply("lrn", movementMessageService)
+      val sut = new ValidateLRNActionFactory().apply("lrn", movementService)
 
       val erns = Set("GBWK002281023", "GBWK002181023", "GBWK002281022")
       val request = DataRequestIE818(FakeRequest(), MovementMessageIE818("GBWK002181023"), erns, "123")
 
       val result = await(sut.refine(request))
 
-      val dataRequest = result.toOption.get
-      dataRequest mustBe request
+      result mustBe Right(request)
+
     }
 
     "an error" when {
       "LRN/ERN combo is not in the db" in {
-        when(movementMessageService.getMovementMessagesByLRNAndERNIn(any, any))
-          .thenReturn(Future.successful(Left(NotFoundError())))
+        when(movementService.getMovementMessagesByLRNAndERNIn(any, any))
+          .thenReturn(Future.successful(None))
 
-        val sut = new ValidateLRNActionFactory().apply("lrn", movementMessageService)
+        val sut = new ValidateLRNActionFactory().apply("lrn", movementService)
         val request = DataRequestIE818(FakeRequest(), MovementMessageIE818("12356"), Set("12356"), "123")
         val result = await(sut.refine(request))
 
-        result.left.value mustBe NotFound(Json.toJson(ErrorResponse(currentDateTime, "Invalid LRN supplied", "LRN lrn is not valid for ERNs 12356")))
+        result.left.value mustBe NotFound(Json.toJson(ErrorResponse(
+          currentDateTime,
+          "Local reference number not found",
+          "Local reference number lrn is not found within the data for ERNs 12356"))
+        )
 
       }
 
       "DB error occurs" in {
-        when(movementMessageService.getMovementMessagesByLRNAndERNIn(any, any))
-          .thenReturn(Future.successful(Left(GeneralMongoError("Error accessing database"))))
+        when(movementService.getMovementMessagesByLRNAndERNIn(any, any))
+          .thenReturn(Future.failed(new RuntimeException("error")))
 
-        val sut = new ValidateLRNActionFactory().apply("lrn", movementMessageService)
+        val sut = new ValidateLRNActionFactory().apply("lrn", movementService)
         val request = DataRequestIE818(FakeRequest(), MovementMessageIE818("12356"), Set("12356"), "123")
-        val result = await(sut.refine(request))
 
-        result.left.value mustBe InternalServerError(Json.toJson(ErrorResponse(currentDateTime, "Database error occurred", "Error from Mongo with message: Error accessing database")))
+        intercept[RuntimeException] {
+          await(sut.refine(request))
+        }.getMessage mustBe "error"
 
       }
     }

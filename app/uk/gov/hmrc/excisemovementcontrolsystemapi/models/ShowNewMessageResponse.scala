@@ -14,12 +14,20 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures
+package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
-import org.scalatestplus.mockito.MockitoSugar.mock
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
+import play.api.libs.json.{Json, OFormat}
 
-trait RepositoryTestStub {
-  protected lazy val movementRepository = mock[MovementRepository]
+import java.time.LocalDateTime
 
+case class ShowNewMessageResponse
+(
+  dateTime: LocalDateTime,
+  exciseRegistrationNumber: String,
+  message: String
+)
+
+object ShowNewMessageResponse {
+  implicit val format: OFormat[ShowNewMessageResponse] = Json.format[ShowNewMessageResponse]
 }
+

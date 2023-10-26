@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures
+package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
-import org.scalatestplus.mockito.MockitoSugar.mock
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
+import scala.xml.NodeSeq
 
-trait RepositoryTestStub {
-  protected lazy val movementRepository = mock[MovementRepository]
+trait IEMessage {
+  def localReferenceNumber: Option[String]
+  def getType: String
+  def toXml: NodeSeq
 
 }

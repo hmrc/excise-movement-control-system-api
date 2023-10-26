@@ -17,9 +17,11 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
+import com.github.tomakehurst.wiremock.client.WireMock.ok
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.when
 import org.scalatest.BeforeAndAfterAll
+import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -31,13 +33,17 @@ import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{Ie801XmlMessage, NewMessagesXml, TestXml}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, MovementMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageTypes, ShowNewMessageResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
-import java.time.Instant
+import java.nio.charset.StandardCharsets
+import java.time.{Instant, LocalDateTime}
+import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
 class GetMessagesControllerItSpec extends PlaySpec
@@ -48,22 +54,30 @@ class GetMessagesControllerItSpec extends PlaySpec
   with RepositoryTestStub
   with BeforeAndAfterAll {
 
+  protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
-  private val lrn = "LRN00001"
-  private val url = s"http://localhost:$port/movements/$lrn/messages"
 
   private val consignorId = "GBWK002281023"
-
-  protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
+  private val lrn = "token"
+  private val url = s"http://localhost:$port/movements/$lrn/messages"
+  private lazy val dateTimeService: DateTimeService = mock[DateTimeService]
+  private val timestamp = Instant.parse("2018-11-30T18:35:24.00Z")
+  private val responseFromEis = ShowNewMessageResponse(
+    LocalDateTime.of(2023, 1, 2, 3, 4, 5),
+    consignorId,
+    Base64.getEncoder.encodeToString(NewMessagesXml.newMessageWithIE801.toString().getBytes(StandardCharsets.UTF_8)),
+  )
 
   override lazy val app: Application = {
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
+
     GuiceApplicationBuilder()
       .configure(configureServer)
       .overrides(
         bind[AuthConnector].to(authConnector),
-        bind[MovementMessageRepository].to(movementMessageRepository)
+        bind[MovementRepository].to(movementRepository),
+        bind[DateTimeService].to(dateTimeService)
       )
       .build()
   }
@@ -79,57 +93,52 @@ class GetMessagesControllerItSpec extends PlaySpec
   }
 
   "Get Messages" should {
-
     "return 200" in {
       withAuthorizedTrader(consignorId)
+      stubShowNewMessageRequest(consignorId)
+      when(movementRepository.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(Seq(Movement(lrn, consignorId, None, None, Instant.now, Seq.empty))))
+      when(dateTimeService.now).thenReturn(timestamp)
 
-      val now = Instant.now
-      when(movementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq(MovementMessage("", "", None, None, now, Some(Seq(Message("", "", now)))))))
-
-      val result = getRequest()
+      val result = getRequest
 
       result.status mustBe OK
 
-      withClue("return the json response") {
-        val responseBody = Json.parse(result.body).as[Seq[Message]]
-        responseBody mustBe Seq(Message("", "", now))
+      withClue("return a list of messages as response") {
+        assertResponseContent(result.json.as[Seq[Message]])
       }
+
     }
 
-    "return 404 when no movement message is found" in {
+    "return 400 when no movement message is found" in {
       withAuthorizedTrader(consignorId)
-
-      when(movementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
+      when(movementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq.empty))
 
-      val result = getRequest()
+      val result = getRequest
 
-      result.status mustBe NOT_FOUND
+      result.status mustBe BAD_REQUEST
     }
 
     "return 500 when mongo db fails to fetch details" in {
       withAuthorizedTrader(consignorId)
-
-      when(movementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
+      when(movementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
-      val result = getRequest()
+      val result = getRequest
 
       result.status mustBe INTERNAL_SERVER_ERROR
     }
 
+    //todo: This may be deleted as it may not be a valid case. We should only have one movement,
+    // for a combination of lrn consignorId/consigneeId
     "return 500 when multiple movements messages are found" in {
       withAuthorizedTrader(consignorId)
+      val movementMessage = Movement("", "", None, None, timestamp, Seq(Message("", "", timestamp)))
+      when(movementRepository.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(Seq(movementMessage, movementMessage)))
 
-      val now = Instant.now()
-
-      val movementMessage = MovementMessage("", "", None, None, now, Some(Seq(Message("", "", now))))
-      val list = Seq(movementMessage, movementMessage)
-      when(movementMessageRepository.getMovementMessagesByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(list))
-
-      val result = getRequest()
+      val result = getRequest
 
       result.status mustBe INTERNAL_SERVER_ERROR
     }
@@ -137,22 +146,42 @@ class GetMessagesControllerItSpec extends PlaySpec
     "return forbidden (403) when there are no authorized ERN" in {
       withUnAuthorizedERN()
 
-      getRequest().status mustBe FORBIDDEN
+      getRequest.status mustBe FORBIDDEN
     }
 
     "return a Unauthorized (401) when no authorized trader" in {
       withUnauthorizedTrader(InternalError("A general auth failure"))
 
-      getRequest().status mustBe UNAUTHORIZED
+      getRequest.status mustBe UNAUTHORIZED
     }
 
   }
 
-  private def getRequest() = {
+  private def getRequest = {
     await(wsClient.url(url)
       .addHttpHeaders(
         HeaderNames.AUTHORIZATION -> "TOKEN"
       ).get()
     )
+  }
+
+  private def stubShowNewMessageRequest(exciseNumber: String) = {
+    wireMock.stubFor(
+      WireMock.get(s"/apip-emcs/messages/v1/show-new-messages?exciseregistrationnumber=$exciseNumber")
+        .willReturn(
+          ok().withBody(Json.toJson(responseFromEis).toString()
+        ))
+    )
+  }
+
+  private def assertResponseContent(messageObj: Seq[Message]) = {
+    messageObj.head.messageType mustBe MessageTypes.IE801.value
+
+    val actualMessage = Base64.getDecoder.decode(messageObj.head.encodedMessage).map(_.toChar).mkString
+    cleanUpString(actualMessage) mustBe cleanUpString(Ie801XmlMessage.IE801.toString())
+  }
+
+  private def cleanUpString(str: String): String = {
+    str.replaceAll("[\\t\\n\\r\\s]+", "")
   }
 }

@@ -17,36 +17,41 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.ShowNewMessagesConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.NotFoundError
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.MessageFilter
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
+import java.time.LocalDateTime
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class GetMessagesController @Inject()(
                                        authAction: AuthAction,
-                                       movementMessageService: MovementMessageService,
+                                       messagesConnector: ShowNewMessagesConnector,
+                                       movementService: MovementService,
+                                       messageFilter: MessageFilter,
                                        cc: ControllerComponents
                                      )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
   def getMessagesForMovement(lrn: String): Action[AnyContent] =
     authAction.async(parse.default) {
       implicit request: EnrolmentRequest[AnyContent] => {
-        getMovementMessagesByLRNAndERNList(lrn, request.erns.toList)
+        movementService.getMatchingERN(lrn, request.erns.toList).flatMap {
+          case None => Future.successful(BadRequest(Json.toJson(ErrorResponse(LocalDateTime.now(), "Invalid LRN supplied for ERN", ""))))
+          case Some(ern) =>
+            messagesConnector.get(ern).map {
+              case Right(messages) => Ok(Json.toJson(messageFilter.filter(messages, lrn)))
+              case Left(error) => error
+            }
+        }
       }
     }
 
-  private def getMovementMessagesByLRNAndERNList(lrn: String, ern: List[String]): Future[Result] = {
-    movementMessageService.getMovementMessagesByLRNAndERNIn(lrn, ern).flatMap {
-      case Right(msg) => Future.successful(Ok(Json.toJson(msg)))
-      case Left(error: NotFoundError) => Future.successful(NotFound(error.message))
-      case Left(error) => Future.successful(InternalServerError(error.message))
-    }
-  }
 
 }

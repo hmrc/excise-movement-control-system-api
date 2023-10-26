@@ -21,7 +21,7 @@ import play.api.mvc.Results.Forbidden
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateConsignorAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequest, ParsedXmlRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -31,7 +31,7 @@ trait FakeValidateConsignorAction {
     override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, DataRequest[A]]] = {
       Future.successful(Right(DataRequest(
         request,
-        MovementMessage("123", "456", Some("789")),
+        Movement("123", "456", Some("789")),
         "1234"))
       )
     }

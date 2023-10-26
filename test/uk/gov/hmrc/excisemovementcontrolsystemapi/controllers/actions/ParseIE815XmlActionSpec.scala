@@ -19,16 +19,13 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 import generated.IE815Type
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{verify, when}
-import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.scalatest.{BeforeAndAfterAll, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.BAD_REQUEST
 import play.api.libs.json.Json
-import play.api.mvc.Result
 import play.api.mvc.Results.BadRequest
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout}
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import scalaxb.ParserFailure
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
@@ -37,7 +34,6 @@ import uk.gov.hmrc.play.bootstrap.tools.Stubs.stubMessagesControllerComponents
 
 import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 class ParseIE815XmlActionSpec extends PlaySpec with EitherValues with BeforeAndAfterAll {
 

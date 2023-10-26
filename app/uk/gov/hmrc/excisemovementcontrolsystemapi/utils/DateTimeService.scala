@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures
+package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
 
-import org.scalatestplus.mockito.MockitoSugar.mock
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
+import java.time.{Clock, Instant}
+import javax.inject.{Inject, Singleton}
 
-trait RepositoryTestStub {
-  protected lazy val movementRepository = mock[MovementRepository]
+@Singleton
+class DateTimeService @Inject()(clock: Clock) {
 
+  def now: Instant = Instant.now(clock)
 }

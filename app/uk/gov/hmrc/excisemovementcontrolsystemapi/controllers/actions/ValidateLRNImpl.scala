@@ -19,11 +19,11 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 import com.google.inject.ImplementedBy
 import play.api.Logging
 import play.api.libs.json.Json
-import play.api.mvc.Results.{InternalServerError, NotFound}
+import play.api.mvc.Results.NotFound
 import play.api.mvc.{ActionRefiner, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequestIE818
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse, NotFoundError}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -31,44 +31,32 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class ValidateLRNImpl @Inject()(
                                  val lrn: String,
-                                 val movementMessageService: MovementMessageService,
+                                 val movementService: MovementService,
                                  implicit val executionContext: ExecutionContext,
                                  implicit val emcsUtils: EmcsUtils
                                )
   extends ValidateLRNAction
     with Logging {
+
   override def refine[A](request: DataRequestIE818[A]): Future[Either[Result, DataRequestIE818[A]]] = {
 
-    movementMessageService.getMovementMessagesByLRNAndERNIn(lrn, request.erns.toList).flatMap {
-      case Right(_) => Future.successful(Right(request))
-      case Left(_: NotFoundError) => Future.successful(
-        Left(
-          NotFound(
-            Json.toJson(
-              ErrorResponse(
-                emcsUtils.getCurrentDateTime,
-                "Invalid LRN supplied",
-                s"LRN $lrn is not valid for ERNs ${request.erns.mkString("/")}"
-              )
-            )
-          )
-        )
-      )
-      case Left(error) => Future.successful(
-        Left(
-          InternalServerError(
-            Json.toJson(
-              ErrorResponse(
-                emcsUtils.getCurrentDateTime,
-                "Database error occurred",
-                error.message
-              )
-            )
-          )
-        )
-      )
+    movementService.getMovementMessagesByLRNAndERNIn(lrn, request.erns.toList).map {
+      messages => messages match {
+        case Some(_) => Right(request)
+        case _ => Left(NotFoundErrorResponse(request))
+      }
     }
+  }
 
+
+  private def NotFoundErrorResponse[A](request: DataRequestIE818[A]): Result = {
+    NotFound(Json.toJson(
+      ErrorResponse(
+        emcsUtils.getCurrentDateTime,
+        "Local reference number not found",
+        s"Local reference number $lrn is not found within the data for ERNs ${request.erns.mkString("/")}"
+      )
+    ))
   }
 }
 
@@ -79,6 +67,6 @@ trait ValidateLRNAction extends ActionRefiner[DataRequestIE818, DataRequestIE818
 }
 
 class ValidateLRNActionFactory @Inject()(implicit val executionContext: ExecutionContext, implicit val emcsUtils: EmcsUtils) {
-  def apply(lrn: String, movementMessageService: MovementMessageService): ValidateLRNAction =
+  def apply(lrn: String, movementMessageService: MovementService): ValidateLRNAction =
     new ValidateLRNImpl(lrn, movementMessageService, executionContext, emcsUtils)
 }

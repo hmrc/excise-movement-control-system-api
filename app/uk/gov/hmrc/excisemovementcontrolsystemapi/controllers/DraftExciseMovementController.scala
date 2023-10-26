@@ -22,7 +22,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MovementMessageConn
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseIE815XmlAction, ValidateConsignorAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ExciseMovementResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementMessageService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -35,14 +35,14 @@ class DraftExciseMovementController @Inject()(
                                                xmlParser: ParseIE815XmlAction,
                                                consignorValidatorAction: ValidateConsignorAction,
                                                movementMessageConnector: MovementMessageConnector,
-                                               movementMessageService: MovementMessageService,
+                                               movementMessageService: MovementService,
                                                cc: ControllerComponents
                                              )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
   def submit: Action[NodeSeq] =
     (authAction andThen xmlParser andThen consignorValidatorAction).async(parse.xml) {
       implicit request: DataRequest[NodeSeq] =>
-        movementMessageConnector.submitExciseMovement(request, MessageTypes.IE815Message).flatMap {
+        movementMessageConnector.submitExciseMovement(request, MessageTypes.IE815.value).flatMap {
           case Right(_) => handleSuccess
           case Left(error) => Future.successful(error)
         }

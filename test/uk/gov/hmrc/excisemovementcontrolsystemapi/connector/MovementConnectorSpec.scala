@@ -38,7 +38,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISRequest, EISResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import java.nio.charset.StandardCharsets
@@ -46,7 +46,7 @@ import java.time.LocalDateTime
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
-class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with EitherValues {
+class MovementConnectorSpec extends PlaySpec with BeforeAndAfterEach with EitherValues {
 
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
   protected implicit val ec: ExecutionContext = ExecutionContext.global
@@ -96,7 +96,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
       await(connector.submitExciseMovement(
         DataRequest(
           FakeRequest().withBody(message),
-          MovementMessage("123", "234", None),
+          Movement("123", "234", None),
           "124"
         ),
         messageType)
@@ -176,7 +176,7 @@ class MovementMessageConnectorSpec extends PlaySpec with BeforeAndAfterEach with
   private def submitExciseMovement: Future[Either[Result, EISResponse]] = {
     connector.submitExciseMovement(DataRequest(
       FakeRequest(),
-      MovementMessage("123", "123", None), "124"),
+      Movement("123", "123", None), "124"),
       messageType
     )
   }
