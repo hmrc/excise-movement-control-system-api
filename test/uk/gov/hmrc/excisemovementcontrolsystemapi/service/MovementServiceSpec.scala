@@ -149,7 +149,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
   }
 
   "getMovementByErn" should {
-    "return all that movement for that ERN filtered by ARC" in {
+    "return all that movement for that ERN" in {
       val expectedMovement1 = Movement("lrn1", consignorId, None, Some("arc1"))
 
       when(mockMovementMessageRepository.getMovementByERN(Seq(consignorId)))

@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import org.mongodb.scala.model.Filters
+import org.mongodb.scala.model.Filters.{in, or}
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, OptionValues}
 import org.scalatestplus.play.PlaySpec
@@ -157,17 +158,39 @@ class MovementRepositorySpec extends PlaySpec
         result mustBe Seq(expectedMovement1, expectedMovement2, expectedMovement3)
       }
 
-      "ern match the consigneeId" in {
+      "ern match consignorId and consigneeId" in {
         val expectedMovement1 = Movement("lrn", "consignorId1", Some("ern1"), Some("arc1"))
-        val expectedMovement2 = Movement("lrn", "consignorId2", Some("ern2"), Some("arc2"))
+        val expectedMovement2 = Movement("lrn3", "consignorId2", Some("ern2"), Some("arc2"))
         val expectedMovement3 = Movement("lrn1", "consignorId1", Some("ern1"), Some("arc3"))
+        val expectedMovement4 = Movement("lrn4", "ern4", None, Some("arc4"))
         saveMovement(expectedMovement1)
         saveMovement(expectedMovement2)
         saveMovement(expectedMovement3)
+        saveMovement(expectedMovement4)
+
+        val result = repository.getMovementByERN(Seq("ern1", "consignorId2")).futureValue
+
+        result mustBe Seq(expectedMovement1, expectedMovement2, expectedMovement3)
+      }
+
+      //todo double check this. Would be this the case that if the ern1 is a consignor
+      // in a movement (expectedMovement2), but also a consignee in another movement
+      // (expectedMovement1 and expectedMovement3) we should get expectedMovement2, expectedMovement1
+      // and expectedMovement3?
+      "ern match consignorId and consigneeId 1" ignore {
+        val expectedMovement1 = Movement("lrn", "consignorId1", Some("ern1"), Some("arc1"))
+        val expectedMovement2 = Movement("lrn3", "ern1", Some("ern2"), Some("arc2"))
+        val expectedMovement3 = Movement("lrn1", "consignorId1", Some("ern1"), Some("arc3"))
+        val expectedMovement4 = Movement("lrn4", "ern4", None, Some("arc4"))
+        val expectedMovement5 = Movement("lrn4", "ern4", None, Some("arc4"))
+        saveMovement(expectedMovement1)
+        saveMovement(expectedMovement2)
+        saveMovement(expectedMovement3)
+        saveMovement(expectedMovement4)
 
         val result = repository.getMovementByERN(Seq("ern1")).futureValue
 
-        result mustBe Seq(expectedMovement1, expectedMovement3)
+        result mustBe Seq(expectedMovement2)
       }
     }
 
