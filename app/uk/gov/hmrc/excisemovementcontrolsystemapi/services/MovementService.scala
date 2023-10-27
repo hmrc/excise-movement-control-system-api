@@ -52,6 +52,8 @@ class MovementService @Inject()(
     }
   }
 
+  def getMovementsFilteredByLrn = ???
+
   def getMovementByErn(ern: Seq[String]): Future[Seq[Movement]] =
     movementRepository.getMovementByERN(ern)
 

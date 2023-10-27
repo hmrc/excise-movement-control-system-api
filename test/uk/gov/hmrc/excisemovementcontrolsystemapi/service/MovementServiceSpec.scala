@@ -170,6 +170,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
     }
   }
 
+
   //TODO these tests will be relevant when we change back to the other way
 //  "getMovementMessagesByLRNAndERNIn with multiple movement messages for LRN and ERN combination" should {
 //    "return a MongoError" in {

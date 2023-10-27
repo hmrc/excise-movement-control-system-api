@@ -81,6 +81,20 @@ class GetMovementsControllerSpec
         createMovementResponse(ern, "lrn2", "arc2", Some("consigneeId2"))
       ))
     }
+
+    "return only movements with the specificed ERN from the query parameter" in {
+      val movement1 = Movement("lrn", ern, Some("consigneeId"), Some("arc"))
+      val movement2 = Movement("lrn2", ern2, Some("consigneeId2"), Some("arc2"))
+      when(movementService.getMovementByErn(any))
+        .thenReturn(Future.successful(Seq(movement1, movement2)))
+
+      val result = controller.getMovements(FakeRequest("POST", "/foo"))
+
+      status(result) mustBe OK
+      contentAsJson(result) mustBe Json.toJson(Seq(
+        createMovementResponse(ern, "lrn", "arc", Some("consigneeId"))
+      ))
+    }
   }
 
   private def createMovementResponse(ern: String, lrn: String, arc: String, consigneeId: Some[String]) = {
