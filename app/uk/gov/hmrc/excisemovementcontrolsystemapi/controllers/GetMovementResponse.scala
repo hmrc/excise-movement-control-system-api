@@ -21,7 +21,7 @@ import play.api.libs.json.{Json, OFormat}
 case class GetMovementResponse(
   consignorId: String,
   localReferenceNumber: String,
-  consigneeId: String,
+  consigneeId: Option[String],
   administrativeReferenceCode: String,
   status: Int
 )

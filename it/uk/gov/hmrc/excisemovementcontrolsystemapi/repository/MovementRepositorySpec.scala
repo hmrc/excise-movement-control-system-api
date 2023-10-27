@@ -140,6 +140,54 @@ class MovementRepositorySpec extends PlaySpec
     }
   }
 
+  "getMovementByErn" should {
+    "return a list of movement" when {
+      "ern match the consignorId " in {
+        val expectedMovement1 = Movement("lrn", "ern1", None, Some("arc1"))
+        val expectedMovement2 = Movement("lrn", "ern2", None, Some("arc2"))
+        val expectedMovement3 = Movement("lrn1", "ern1", None, Some("arc3"))
+        val expectedMovement4 = Movement("lrn4", "ern4", None, Some("arc4"))
+        saveMovement(expectedMovement1)
+        saveMovement(expectedMovement2)
+        saveMovement(expectedMovement3)
+        saveMovement(expectedMovement4)
+
+        val result = repository.getMovementByERN(Seq("ern1", "ern2")).futureValue
+
+        result mustBe Seq(expectedMovement1, expectedMovement2, expectedMovement3)
+      }
+
+      "ern match the consigneeId" in {
+        val expectedMovement1 = Movement("lrn", "consignorId1", Some("ern1"), Some("arc1"))
+        val expectedMovement2 = Movement("lrn", "consignorId2", Some("ern2"), Some("arc2"))
+        val expectedMovement3 = Movement("lrn1", "consignorId1", Some("ern1"), Some("arc3"))
+        saveMovement(expectedMovement1)
+        saveMovement(expectedMovement2)
+        saveMovement(expectedMovement3)
+
+        val result = repository.getMovementByERN(Seq("ern1")).futureValue
+
+        result mustBe Seq(expectedMovement1, expectedMovement3)
+      }
+    }
+
+    "return an empty list" in {
+      val expectedMovement1 = Movement("lrn", "consignorId1", Some("ern1"), Some("arc1"))
+      val expectedMovement2 = Movement("lrn", "consignorId2", Some("ern2"), Some("arc2"))
+      val expectedMovement3 = Movement("lrn1", "consignorId1", Some("ern1"), Some("arc3"))
+      saveMovement(expectedMovement1)
+      saveMovement(expectedMovement2)
+      saveMovement(expectedMovement3)
+
+      val result = repository.getMovementByERN(Seq("ern3")).futureValue
+
+      result mustBe Seq.empty
+    }
+
+
+
+  }
+
   private def saveMovement(movement: Movement) = {
     insert(movement).futureValue
   }

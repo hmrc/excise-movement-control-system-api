@@ -60,7 +60,7 @@ class DraftExciseMovementControllerSpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(connector)
+    reset(connector, movementMessageService)
 
     when(connector.submitExciseMovement(any, any)(any)).thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
   }
@@ -87,6 +87,19 @@ class DraftExciseMovementControllerSpec
       )(any)
 
       verifyDataRequest(captor.value.movementMessage)
+    }
+
+    "generate an ARC and save to the cache" in {
+      val movement = Movement("lrn", ern, None)
+      when(movementMessageService.saveMovementMessage(any))
+        .thenReturn(Future.successful(Right(movement)))
+
+      await(createWithSuccessfulAuth.submit(request))
+
+      val captor = ArgCaptor[Movement]
+      verify(movementMessageService).saveMovementMessage(captor)
+
+      captor.value.administrativeReferenceCode.isDefined mustBe true
     }
 
     "return an error when EIS error" in {

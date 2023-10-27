@@ -27,7 +27,9 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.GetMovementConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeAuthentication
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISConsumptionResponse, EISErrorResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 
 import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
@@ -39,19 +41,16 @@ class GetMovementsControllerSpec
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val cc = stubControllerComponents()
-  private val getMovementConnector = mock[GetMovementConnector]
-  private val controller = new GetMovementsController(FakeSuccessAuthentication, cc, getMovementConnector)
+  private val movementService = mock[MovementService]
+  private val controller = new GetMovementsController(FakeSuccessAuthentication, cc, movementService)
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(getMovementConnector)
+    reset(movementService)
 
-    when(getMovementConnector.get(any, any)(any)).thenReturn(Future.successful(
-      Right(EISConsumptionResponse(
-        LocalDateTime.of(2023, 10, 26, 3, 2, 2),
-        ern,
-        "message")))
-    )
+    when(movementService.getMovementByErn(any))
+      .thenReturn(Future.successful(Seq(Movement("lrn", ern, Some("consigneeId"), Some("arc")))))
+
   }
 
   "getMovements" should {
@@ -59,20 +58,38 @@ class GetMovementsControllerSpec
       val result = controller.getMovements(FakeRequest("POST", "/foo"))
 
       status(result) mustBe OK
-      contentAsJson(result) mustBe Json.toJson(Seq(GetMovementResponse(
-        ern,
-        "lrn",
-        "consigneeId",
-        "arc",
-        ACCEPTED
-      )))
+      contentAsJson(result) mustBe Json.toJson(Seq(createMovementResponse(ern, "lrn", "arc", Some("consigneeId"))))
     }
 
-    "request movement from EIS" in {
+    "get all movement for an ERN" in {
       await(controller.getMovements(FakeRequest("GET", "/foo")))
 
-      verify(getMovementConnector).get(eqTo(ern), eqTo("arc"))(any)
+      verify(movementService).getMovementByErn(Seq(ern))
+    }
+
+    "return multiple movement" in {
+      val movement1 = Movement("lrn", ern, Some("consigneeId"), Some("arc"))
+      val movement2 = Movement("lrn2", ern, Some("consigneeId2"), Some("arc2"))
+      when(movementService.getMovementByErn(any))
+        .thenReturn(Future.successful(Seq(movement1, movement2)))
+
+      val result = controller.getMovements(FakeRequest("POST", "/foo"))
+
+      status(result) mustBe OK
+      contentAsJson(result) mustBe Json.toJson(Seq(
+        createMovementResponse(ern, "lrn", "arc", Some("consigneeId")),
+        createMovementResponse(ern, "lrn2", "arc2", Some("consigneeId2"))
+      ))
     }
   }
 
+  private def createMovementResponse(ern: String, lrn: String, arc: String, consigneeId: Some[String]) = {
+    GetMovementResponse(
+      ern,
+      lrn,
+      consigneeId,
+      arc,
+      ACCEPTED
+    )
+  }
 }

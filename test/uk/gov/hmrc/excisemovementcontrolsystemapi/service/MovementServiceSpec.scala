@@ -148,6 +148,28 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
     }
   }
 
+  "getMovementByErn" should {
+    "return all that movement for that ERN filtered by ARC" in {
+      val expectedMovement1 = Movement("lrn1", consignorId, None, Some("arc1"))
+
+      when(mockMovementMessageRepository.getMovementByERN(Seq(consignorId)))
+        .thenReturn(Future.successful(Seq(expectedMovement1)))
+
+      val result = await(movementMessageService.getMovementByErn(Seq(consignorId)))
+
+      result mustBe Seq(expectedMovement1)
+    }
+
+    "return an empty list" in {
+      when(mockMovementMessageRepository.getMovementByERN(Seq(consignorId)))
+        .thenReturn(Future.successful(Seq.empty))
+
+      val result = await(movementMessageService.getMovementByErn(Seq(consignorId)))
+
+      result mustBe Seq.empty
+    }
+  }
+
   //TODO these tests will be relevant when we change back to the other way
 //  "getMovementMessagesByLRNAndERNIn with multiple movement messages for LRN and ERN combination" should {
 //    "return a MongoError" in {

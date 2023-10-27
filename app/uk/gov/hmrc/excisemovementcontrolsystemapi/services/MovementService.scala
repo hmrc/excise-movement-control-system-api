@@ -28,7 +28,6 @@ import scala.concurrent.{ExecutionContext, Future}
 class MovementService @Inject()(
                                  movementRepository: MovementRepository
                                       )(implicit ec: ExecutionContext) {
-
   def saveMovementMessage(movementMessage: Movement): Future[Either[GeneralMongoError, Movement]] = {
     movementRepository.saveMovement(movementMessage)
       .map(_ => Right(movementMessage))
@@ -52,6 +51,9 @@ class MovementService @Inject()(
       case _ => throw new RuntimeException(s"Multiple movement found for local reference number: $lrn")
     }
   }
+
+  def getMovementByErn(ern: Seq[String]): Future[Seq[Movement]] =
+    movementRepository.getMovementByERN(ern)
 
   private def matchingERN(movement: Movement, erns: List[String]): Option[String] = {
     if (erns.contains(movement.consignorId)) Some(movement.consignorId)

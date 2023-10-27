@@ -27,6 +27,7 @@ import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Random
 import scala.xml.NodeSeq
 
 @Singleton
@@ -51,10 +52,25 @@ class DraftExciseMovementController @Inject()(
 
   private def handleSuccess(implicit request: DataRequest[NodeSeq]): Future[Result] = {
 
-    movementMessageService.saveMovementMessage(request.movementMessage)
+    val newMovement = request.movementMessage.copy(administrativeReferenceCode = Some(generateRandomArc))
+    movementMessageService.saveMovementMessage(newMovement)
       .flatMap {
         case Right(msg) => Future.successful(Accepted(Json.toJson(ExciseMovementResponse("Accepted", msg.localReferenceNumber, msg.consignorId))))
         case Left(error) => Future.successful(InternalServerError(error.message))
       }
+  }
+
+  //todo: this will be removed at a later time when we will do the polling
+  private def generateRandomArc = {
+    val rand = new scala.util.Random
+
+    val digit = rand.nextInt(10).toString + rand.nextInt(10).toString
+    val letters = rand.nextString(2)
+    val alphaNumeric = rand.alphanumeric.take(16)
+    val number = rand.nextInt(10)
+
+    s"$digit$letters$alphaNumeric$number"
+
+
   }
 }

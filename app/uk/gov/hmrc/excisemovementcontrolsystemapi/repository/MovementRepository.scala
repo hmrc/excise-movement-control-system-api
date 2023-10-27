@@ -59,6 +59,15 @@ class MovementRepository @Inject()
     collection.find(and(equal("localReferenceNumber", lrn),
       or(in("consignorId", erns: _*), in("consigneeId", erns: _*)))).toFuture()
   }
+
+  def getMovementByERN(ern: Seq[String]): Future[Seq[Movement]] = {
+    collection
+      .find(or(
+        in("consignorId", ern: _*),
+        in("consigneeId", ern: _*)
+      ))
+      .toFuture()
+  }
 }
 
 object MovementMessageRepository {

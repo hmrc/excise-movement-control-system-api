@@ -23,6 +23,8 @@ import play.api.mvc.Results.Ok
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.GetMovementConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.LocalDateTime
@@ -32,24 +34,36 @@ import scala.concurrent.{ExecutionContext, Future}
 class GetMovementsController @Inject()(
   authAction: AuthAction,
   cc: ControllerComponents,
-  getMovementConnector: GetMovementConnector
+  movementService: MovementService
 )(implicit ec: ExecutionContext) extends BackendController(cc)  {
 
   def getMovements: Action[AnyContent] = {
     authAction.async(parse.default) {
       implicit request =>
 
-        getMovementConnector.get(request.erns.head, "arc").map {
-          case Right(response) =>
-            //todo get the movement from Mongo using lrn and ern from EIS
-            Ok(Json.toJson(Seq(GetMovementResponse(
-              response.exciseRegistrationNumber,
-              "lrn",
-              "consigneeId",
-              "arc",
-              ACCEPTED
-            ))))
+        /*
+        todo:
+          1. When submitting IE815 generate an ARC and add it to Mongo for that movement (temporary)
+          2. get all the movement for all ERNs from mongo
+          3. Return the list of movement
+          4. apply filter for LRN, arc and ern
+          5. if not arc available just return the movement with no ARC
+          6. at the moment we do not call EIS.
+
+        */
+
+        movementService.getMovementByErn(request.erns.toSeq).map { movement: Seq[Movement] =>
+
+         val newMovements: Seq[GetMovementResponse] = movement.map(m => GetMovementResponse(
+           m.consignorId,
+           m.localReferenceNumber,
+           m.consigneeId,
+           m.administrativeReferenceCode.get,
+           ACCEPTED
+         ))
+          Ok(Json.toJson(newMovements))
         }
+
     }
   }
 
