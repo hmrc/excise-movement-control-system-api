@@ -37,7 +37,7 @@ class GetMovementsController @Inject()(
   movementService: MovementService
 )(implicit ec: ExecutionContext) extends BackendController(cc)  {
 
-  def getMovements(ern: Option[String], lrn: Option[String]): Action[AnyContent] = {
+  def getMovements(ern: Option[String], lrn: Option[String], arc: Option[String]): Action[AnyContent] = {
     authAction.async(parse.default) {
       implicit request =>
 
@@ -52,7 +52,7 @@ class GetMovementsController @Inject()(
 
         */
 
-        movementService.getMovementByErn(request.erns.toSeq, ern, lrn).map { movement: Seq[Movement] =>
+        movementService.getMovementByErn(request.erns.toSeq, ern, lrn, arc).map { movement: Seq[Movement] =>
 
          val newMovements: Seq[GetMovementResponse] = movement.map(m => GetMovementResponse(
            m.consignorId,

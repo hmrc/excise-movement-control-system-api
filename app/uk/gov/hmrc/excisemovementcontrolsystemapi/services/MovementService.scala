@@ -52,15 +52,19 @@ class MovementService @Inject()(
     }
   }
 
-  def getMovementByErn(ern: Seq[String], ernToFilterBy: Option[String], lrnToFilterBy: Option[String]): Future[Seq[Movement]] = {
+  def getMovementByErn(ern: Seq[String], ernToFilterBy: Option[String], lrnToFilterBy: Option[String], arcToFilterBy: Option[String]): Future[Seq[Movement]] = {
     val allMovements = movementRepository.getMovementByERN(ern)
     val movementsFilteredByErn = ernToFilterBy match {
       case None => allMovements
       case Some(e) => allMovements.map(mvs => mvs.filter(a => a.consignorId.equals(e)))
     }
-    lrnToFilterBy match {
+    val movementsFilteredByLrn = lrnToFilterBy match {
       case None => movementsFilteredByErn
       case Some(l) => movementsFilteredByErn.map(mvs => mvs.filter(a => a.localReferenceNumber.equals(l)))
+    }
+    arcToFilterBy match {
+      case None => movementsFilteredByLrn
+      case Some(ar) => movementsFilteredByLrn.map(mvs => mvs.filter(a => a.administrativeReferenceCode.contains(ar)))
     }
 
   }
