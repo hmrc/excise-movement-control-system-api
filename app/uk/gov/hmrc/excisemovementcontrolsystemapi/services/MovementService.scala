@@ -52,10 +52,18 @@ class MovementService @Inject()(
     }
   }
 
-  def getMovementsFilteredByLrn = ???
+  def getMovementByErn(ern: Seq[String], ernToFilterBy: Option[String], lrnToFilterBy: Option[String]): Future[Seq[Movement]] = {
+    val allMovements = movementRepository.getMovementByERN(ern)
+    val movementsFilteredByErn = ernToFilterBy match {
+      case None => allMovements
+      case Some(e) => allMovements.map(mvs => mvs.filter(a => a.consignorId.equals(e)))
+    }
+    lrnToFilterBy match {
+      case None => movementsFilteredByErn
+      case Some(l) => movementsFilteredByErn.map(mvs => mvs.filter(a => a.localReferenceNumber.equals(l)))
+    }
 
-  def getMovementByErn(ern: Seq[String]): Future[Seq[Movement]] =
-    movementRepository.getMovementByERN(ern)
+  }
 
   private def matchingERN(movement: Movement, erns: List[String]): Option[String] = {
     if (erns.contains(movement.consignorId)) Some(movement.consignorId)

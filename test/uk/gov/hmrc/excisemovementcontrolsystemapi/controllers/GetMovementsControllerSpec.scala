@@ -48,51 +48,37 @@ class GetMovementsControllerSpec
     super.beforeEach()
     reset(movementService)
 
-    when(movementService.getMovementByErn(any))
+    when(movementService.getMovementByErn(any, any, any))
       .thenReturn(Future.successful(Seq(Movement("lrn", ern, Some("consigneeId"), Some("arc")))))
 
   }
 
   "getMovements" should {
     "return 200 when successful" in {
-      val result = controller.getMovements(FakeRequest("POST", "/foo"))
+      val result = controller.getMovements(None, None)(FakeRequest("POST", "/foo"))
 
       status(result) mustBe OK
       contentAsJson(result) mustBe Json.toJson(Seq(createMovementResponse(ern, "lrn", "arc", Some("consigneeId"))))
     }
 
     "get all movement for an ERN" in {
-      await(controller.getMovements(FakeRequest("GET", "/foo")))
+      await(controller.getMovements(None, None)(FakeRequest("GET", "/foo")))
 
-      verify(movementService).getMovementByErn(Seq(ern))
+      verify(movementService).getMovementByErn(Seq(ern), None, None)
     }
 
     "return multiple movement" in {
       val movement1 = Movement("lrn", ern, Some("consigneeId"), Some("arc"))
       val movement2 = Movement("lrn2", ern, Some("consigneeId2"), Some("arc2"))
-      when(movementService.getMovementByErn(any))
+      when(movementService.getMovementByErn(any, any, any))
         .thenReturn(Future.successful(Seq(movement1, movement2)))
 
-      val result = controller.getMovements(FakeRequest("POST", "/foo"))
+      val result = controller.getMovements(None, None)(FakeRequest("POST", "/foo"))
 
       status(result) mustBe OK
       contentAsJson(result) mustBe Json.toJson(Seq(
         createMovementResponse(ern, "lrn", "arc", Some("consigneeId")),
         createMovementResponse(ern, "lrn2", "arc2", Some("consigneeId2"))
-      ))
-    }
-
-    "return only movements with the specificed ERN from the query parameter" in {
-      val movement1 = Movement("lrn", ern, Some("consigneeId"), Some("arc"))
-      val movement2 = Movement("lrn2", ern2, Some("consigneeId2"), Some("arc2"))
-      when(movementService.getMovementByErn(any))
-        .thenReturn(Future.successful(Seq(movement1, movement2)))
-
-      val result = controller.getMovements(FakeRequest("POST", "/foo"))
-
-      status(result) mustBe OK
-      contentAsJson(result) mustBe Json.toJson(Seq(
-        createMovementResponse(ern, "lrn", "arc", Some("consigneeId"))
       ))
     }
   }
