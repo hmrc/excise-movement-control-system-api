@@ -33,6 +33,7 @@ import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.GetMovementResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{Ie801XmlMessage, NewMessagesXml, TestXml}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
@@ -63,7 +64,6 @@ class GetMovementsControllerItSpec extends PlaySpec
   private val url = s"http://localhost:$port/movements"
   private lazy val dateTimeService: DateTimeService = mock[DateTimeService]
   private val timestamp = Instant.parse("2018-11-30T18:35:24.00Z")
-//  private val responseFromEis = EISConsumptionResponse(dateTimeService.now, "exciseRegistrationNumber", "encoded data containing the movements")
 
   override lazy val app: Application = {
     wireMock.start()
@@ -92,16 +92,19 @@ class GetMovementsControllerItSpec extends PlaySpec
   "Get Movements" should {
     "return 200" in {
       withAuthorizedTrader(consignorId)
+      when(movementRepository.getMovementByERN(Seq(consignorId)))
+        .thenReturn(Future.successful(Seq(
+          Movement(lrn, consignorId, Some("consigneeId"), Some("arc1"), timestamp),
+          Movement("lrn1", consignorId, Some("consigneeId"), Some("arc2"), timestamp)
+        )))
 
       val result = getRequest
 
       result.status mustBe OK
-
       withClue("return an EIS response") {
-        result.json mustBe Json.toJson(EISConsumptionResponse(
-          LocalDateTime.of(2023, 10, 26, 12, 3, 5),
-          "arc",
-          "message"
+        result.json mustBe Json.toJson(Seq(
+          createMovementResponse(consignorId,lrn, "arc1", Some("consigneeId")),
+          createMovementResponse(consignorId,"lrn1", "arc2", Some("consigneeId"))
         ))
       }
 
@@ -119,6 +122,16 @@ class GetMovementsControllerItSpec extends PlaySpec
       .addHttpHeaders(
         HeaderNames.AUTHORIZATION -> "TOKEN"
       ).get()
+    )
+  }
+
+  private def createMovementResponse(ern: String, lrn: String, arc: String, consigneeId: Some[String]) = {
+    GetMovementResponse(
+      ern,
+      lrn,
+      consigneeId,
+      arc,
+      ACCEPTED
     )
   }
 
