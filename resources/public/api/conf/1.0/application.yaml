@@ -54,11 +54,23 @@ paths:
             application/vnd.hmrc.1.0+json:
               schema:
                 $ref: '#/components/schemas/ExciseMovementError'
-              example:
-                dateTime: "2021-12-17T09:30:47Z"
-                message: "Json validation failed"
-                debugMessage: "user is missing but it is required"
-                emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+              examples:
+                jsonValidation:
+                  summary: "Json validation error downstream"
+                  value:
+                    dateTime: "2021-12-17T09:30:47Z"
+                    message: "Json validation failed"
+                    debugMessage: "user is missing but it is required"
+                    emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+                xmlValidation:
+                  summary: "Xml validation failure"
+                  value:
+                    message: "Validation error(s) occurred"
+                    errors:
+                      - errorCode: 8084
+                        errorMessage: "The Date of Dispatch you entered is incorrect. It must be today or later. Please amend your entry and resubmit."
+                        location: "/urn:IE815[1]/urn:Body[1]/urn:SubmittedDraftOfEADESAD[1]/urn:EadEsadDraft[1]/urn:DateOfDispatch[1]"
+                        value: "2023-09-09"
         '403':
           description: Consignor ID is not in authorisation bearer token
         '404':
@@ -277,11 +289,11 @@ paths:
           content:
             application/vnd.hmrc.1.0+json:
               example:
-                - id: 1
-                  body: "<IE815><!-- Example IE815 message --></IE815>"
+                - encodedMessage: PElFODE1PjwhLS0gRXhhbXBsZSBJRTgxNSBtZXNzYWdlIC0tPjwvSUU4MTU+
+                  createdOn: 2023-10-30T15:36:08.985Z
                   type: IE815
-                - id: 2
-                  body: "<IE801><!-- Example IE815 message --></IE801>"
+                - encodedMessage: PElFODAxPjwhLS0gRXhhbXBsZSBJRTgwMSBtZXNzYWdlIC0tPjwvSUU4MDE+
+                  createdOn: 2023-10-28T15:36:08.985Z
                   type: IE801
               schema:
                 type: array
@@ -532,8 +544,28 @@ components:
           type: string
         debugMessage:
           type: string
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
       xml:
         name: exciseMovementType
+    ValidationError:
+      type: object
+      required:
+        - errorCode
+        - errorMessage
+        - location
+        - value
+      properties:
+        errorCode:
+          type: integer
+        errorMessage:
+          type: string
+        location:
+          type: string
+        value:
+          type: string
     SubmitDraftMessageType:
       type: string
       description: The submit draft message type
@@ -577,19 +609,16 @@ components:
         - $ref: '#/components/schemas/OutgoingMessageType'
     Message:
       required:
-        - body
+        - encodedMessage
+        - createdOn
       type: object
       properties:
-        id:
-          type: integer
-          format: int64
-          example: 1
-          xml:
-            name: id
-        body:
-          type: object
-          xml:
-            name: body
+        encodedMessage:
+          type: string
+          format: byte
+        createdOn:
+          type: string
+          format: date-time
       xml:
         name: message
     MessageWithType:
