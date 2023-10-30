@@ -50,7 +50,7 @@ class GetMovementsController @Inject()(
       movement.consignorId,
       movement.localReferenceNumber,
       movement.consigneeId,
-      movement.administrativeReferenceCode.get,
+      movement.administrativeReferenceCode,
       ACCEPTED
     )
   }

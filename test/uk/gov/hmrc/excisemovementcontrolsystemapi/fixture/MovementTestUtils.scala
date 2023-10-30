@@ -31,7 +31,7 @@ trait MovementTestUtils {
       ern,
       lrn,
       consigneeId,
-      arc,
+      Some(arc),
       ACCEPTED
     )
   }
