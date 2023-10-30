@@ -55,7 +55,7 @@ class DraftExciseMovementController @Inject()(
     val newMovement = request.movementMessage.copy(administrativeReferenceCode = Some(generateRandomArc))
     movementMessageService.saveMovementMessage(newMovement)
       .flatMap {
-        case Right(msg) => Future.successful(Accepted(Json.toJson(ExciseMovementResponse("Accepted", msg.localReferenceNumber, msg.consignorId))))
+        case Right(msg) => Future.successful(Accepted(Json.toJson(ExciseMovementResponse("Accepted", msg.localReferenceNumber, msg.consignorId, msg.consigneeId))))
         case Left(error) => Future.successful(InternalServerError(error.message))
       }
   }
