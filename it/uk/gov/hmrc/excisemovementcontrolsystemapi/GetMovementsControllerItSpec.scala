@@ -17,8 +17,6 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
-import com.github.tomakehurst.wiremock.client.WireMock.ok
-import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.when
 import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.mockito.MockitoSugar.mock
@@ -31,21 +29,16 @@ import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
-import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout}
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.GetMovementResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{Ie801XmlMessage, NewMessagesXml, TestXml}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{AuthTestSupport, MovementTestUtils}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
-import java.nio.charset.StandardCharsets
-import java.time.{Instant, LocalDateTime}
-import java.util.Base64
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
 class GetMovementsControllerItSpec extends PlaySpec
@@ -54,6 +47,7 @@ class GetMovementsControllerItSpec extends PlaySpec
   with TestXml
   with WireMockServerSpec
   with RepositoryTestStub
+  with MovementTestUtils
   with BeforeAndAfterAll {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
@@ -64,6 +58,10 @@ class GetMovementsControllerItSpec extends PlaySpec
   private val url = s"http://localhost:$port/movements"
   private lazy val dateTimeService: DateTimeService = mock[DateTimeService]
   private val timestamp = Instant.parse("2018-11-30T18:35:24.00Z")
+
+  private val movement1 = Movement(lrn, consignorId, Some("consigneeId"), Some("arc1"), timestamp)
+  private val movement2 = Movement("lrn1", consignorId, Some("consigneeId"), Some("arc2"), timestamp)
+  private val movement3 = Movement("lrn2", "ern2", Some("consigneeId"), Some("arc3"), timestamp)
 
   override lazy val app: Application = {
     wireMock.start()
@@ -93,46 +91,80 @@ class GetMovementsControllerItSpec extends PlaySpec
     "return 200" in {
       withAuthorizedTrader(consignorId)
       when(movementRepository.getMovementByERN(Seq(consignorId)))
-        .thenReturn(Future.successful(Seq(
-          Movement(lrn, consignorId, Some("consigneeId"), Some("arc1"), timestamp),
-          Movement("lrn1", consignorId, Some("consigneeId"), Some("arc2"), timestamp)
-        )))
+        .thenReturn(Future.successful(Seq(movement1, movement2)))
 
-      val result = getRequest
+      val result = getRequest(url)
 
       result.status mustBe OK
       withClue("return an EIS response") {
         result.json mustBe Json.toJson(Seq(
-          createMovementResponse(consignorId,lrn, "arc1", Some("consigneeId")),
-          createMovementResponse(consignorId,"lrn1", "arc2", Some("consigneeId"))
+          createMovementResponse(consignorId, lrn, "arc1", Some("consigneeId")),
+          createMovementResponse(consignorId, "lrn1", "arc2", Some("consigneeId"))
         ))
       }
+    }
 
+    "get filtered movement by ERN" in {
+      withAuthorizedTrader(consignorId)
+      when(movementRepository.getMovementByERN(Seq(consignorId)))
+        .thenReturn(Future.successful(Seq(movement1, movement2, movement3)))
+
+      val result = getRequest(s"$url?ern=$consignorId")
+
+      result.json mustBe Json.toJson(Seq(
+        createMovementResponse(consignorId,lrn, "arc1", Some("consigneeId")),
+        createMovementResponse(consignorId,"lrn1", "arc2", Some("consigneeId"))
+      ))
+    }
+
+    "get filtered movement by LRN" in {
+      withAuthorizedTrader(consignorId)
+      when(movementRepository.getMovementByERN(Seq(consignorId)))
+        .thenReturn(Future.successful(Seq(movement1, movement2, movement3)))
+
+      val result = getRequest(s"$url?lrn=$lrn")
+
+      result.json mustBe Json.toJson(Seq(
+          createMovementResponse(consignorId,lrn, "arc1", Some("consigneeId")))
+      )
+    }
+
+    "get filtered movement by arc" in {
+      withAuthorizedTrader(consignorId)
+      when(movementRepository.getMovementByERN(Seq(consignorId)))
+        .thenReturn(Future.successful(Seq(movement1, movement2, movement3)))
+
+      val result = getRequest(s"$url?arc=arc1")
+
+      result.json mustBe Json.toJson(Seq(
+        createMovementResponse(consignorId,lrn, "arc1", Some("consigneeId")))
+      )
+    }
+
+    "get filtered movement by ern, lrn and rc" in {
+      withAuthorizedTrader(consignorId)
+      when(movementRepository.getMovementByERN(Seq(consignorId)))
+        .thenReturn(Future.successful(Seq(movement1, movement2, movement3)))
+
+      val result = getRequest(s"$url?arc=arc1&lrn=$lrn&ern=$consignorId")
+
+      result.json mustBe Json.toJson(Seq(
+        createMovementResponse(consignorId,lrn, "arc1", Some("consigneeId")))
+      )
     }
 
     "return a Unauthorized (401) when no authorized trader" in {
       withUnauthorizedTrader(InternalError("A general auth failure"))
 
-      getRequest.status mustBe UNAUTHORIZED
+      getRequest(url).status mustBe UNAUTHORIZED
     }
   }
 
-  private def getRequest = {
+  private def getRequest(url: String) = {
     await(wsClient.url(url)
       .addHttpHeaders(
         HeaderNames.AUTHORIZATION -> "TOKEN"
       ).get()
     )
   }
-
-  private def createMovementResponse(ern: String, lrn: String, arc: String, consigneeId: Some[String]) = {
-    GetMovementResponse(
-      ern,
-      lrn,
-      consigneeId,
-      arc,
-      ACCEPTED
-    )
-  }
-
 }

@@ -65,8 +65,8 @@ class DraftExciseMovementController @Inject()(
     val rand = new scala.util.Random
 
     val digit = rand.nextInt(10).toString + rand.nextInt(10).toString
-    val letters = rand.nextString(2)
-    val alphaNumeric = rand.alphanumeric.take(16)
+    val letters = rand.alphanumeric.dropWhile(_.isDigit).take(2).toList.mkString
+    val alphaNumeric = rand.alphanumeric.take(16).toList.mkString
     val number = rand.nextInt(10)
 
     s"$digit$letters$alphaNumeric$number"

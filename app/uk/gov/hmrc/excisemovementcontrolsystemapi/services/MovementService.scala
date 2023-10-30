@@ -17,9 +17,10 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.Singleton
+import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GeneralMongoError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -52,21 +53,14 @@ class MovementService @Inject()(
     }
   }
 
-  def getMovementByErn(ern: Seq[String], ernToFilterBy: Option[String], lrnToFilterBy: Option[String], arcToFilterBy: Option[String]): Future[Seq[Movement]] = {
-    val allMovements = movementRepository.getMovementByERN(ern)
-    val movementsFilteredByErn = ernToFilterBy match {
-      case None => allMovements
-      case Some(e) => allMovements.map(mvs => mvs.filter(a => a.consignorId.equals(e)))
-    }
-    val movementsFilteredByLrn = lrnToFilterBy match {
-      case None => movementsFilteredByErn
-      case Some(l) => movementsFilteredByErn.map(mvs => mvs.filter(a => a.localReferenceNumber.equals(l)))
-    }
-    arcToFilterBy match {
-      case None => movementsFilteredByLrn
-      case Some(ar) => movementsFilteredByLrn.map(mvs => mvs.filter(a => a.administrativeReferenceCode.contains(ar)))
-    }
+  def getMovementByErn(
+    ern: Seq[String],
+    filter: MovementFilter = MovementFilter.empty
+  ): Future[Seq[Movement]] = {
 
+    movementRepository.getMovementByERN(ern).map {
+      movements =>filter.filterMovement(movements)
+    }
   }
 
   private def matchingERN(movement: Movement, erns: List[String]): Option[String] = {

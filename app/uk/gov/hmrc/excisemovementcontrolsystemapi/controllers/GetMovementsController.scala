@@ -16,20 +16,16 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import play.api.http.Status.ACCEPTED
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import play.api.mvc.Results.Ok
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.GetMovementConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import java.time.LocalDateTime
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class GetMovementsController @Inject()(
   authAction: AuthAction,
@@ -41,30 +37,22 @@ class GetMovementsController @Inject()(
     authAction.async(parse.default) {
       implicit request =>
 
-        /*
-        todo:
-          1. When submitting IE815 generate an ARC and add it to Mongo for that movement (temporary)
-          2. get all the movement for all ERNs from mongo
-          3. Return the list of movement
-          4. apply filter for LRN, arc and ern
-          5. if not arc available just return the movement with no ARC
-          6. at the moment we do not call EIS.
-
-        */
-
-        movementService.getMovementByErn(request.erns.toSeq, ern, lrn, arc).map { movement: Seq[Movement] =>
-
-         val newMovements: Seq[GetMovementResponse] = movement.map(m => GetMovementResponse(
-           m.consignorId,
-           m.localReferenceNumber,
-           m.consigneeId,
-           m.administrativeReferenceCode.get,
-           ACCEPTED
-         ))
-          Ok(Json.toJson(newMovements))
+        val filter = MovementFilter.and(Seq("ern" -> ern, "lrn" -> lrn, "arc" -> arc))
+        movementService.getMovementByErn(request.erns.toSeq, filter)
+          .map { movement: Seq[Movement] =>
+            Ok(Json.toJson(movement.map(createResponseFrom(_))))
         }
-
     }
+  }
+
+  private def createResponseFrom(movement: Movement) = {
+    GetMovementResponse(
+      movement.consignorId,
+      movement.localReferenceNumber,
+      movement.consigneeId,
+      movement.administrativeReferenceCode.get,
+      ACCEPTED
+    )
   }
 
 }
