@@ -46,7 +46,7 @@ case class FilterArc(arc: Option[String] = None) extends Filter {
   }
 }
 
-class FilterEmpty extends Filter {
+class FilterNothing extends Filter {
   def filter(movements: Seq[Movement]): Seq[Movement] = {
     movements
   }
@@ -69,13 +69,13 @@ object MovementFilter {
 
     MovementFilter(
       filter match {
-        case Nil => Seq(new FilterEmpty)
+        case Nil => Seq(new FilterNothing)
         case m@ Seq(_,_*) => m.map (o =>
           o._1 match {
             case "ern" => FilterErn(o._2)
             case "lrn" => FilterLrn(o._2)
             case "arc" => FilterArc(o._2)
-            case _ => new FilterEmpty
+            case _ => new FilterNothing
           }
         )
     })
