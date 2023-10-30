@@ -23,7 +23,7 @@ import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
 import uk.gov.hmrc.http.HttpResponse
 
 import java.time.LocalDateTime
@@ -34,7 +34,7 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
   private val eisHttpParser = EISHttpReader("123", "GB123", "date time")
   "read" should {
     "return EISResponse" in {
-      val eisResponse = EISResponse("ok", "Success", "123")
+      val eisResponse = EISSubmissionResponse("ok", "Success", "123")
 
       val result = eisHttpParser.read(
         "ANY",
@@ -79,7 +79,7 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
         )
       }
 
-      ex.getMessage mustBe s"Response body could not be read as type ${typeOf[EISResponse]}"
+      ex.getMessage mustBe s"Response body could not be read as type ${typeOf[EISSubmissionResponse]}"
     }
   }
 }

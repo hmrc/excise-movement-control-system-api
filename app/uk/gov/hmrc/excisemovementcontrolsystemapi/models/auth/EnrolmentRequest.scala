@@ -20,6 +20,7 @@ import generated.{IE815Type, IE818Type}
 import play.api.mvc.{Request, WrappedRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Movement, MovementMessageIE818}
 
+//todo: can you definally have more then 1 ERN in the token
 case class EnrolmentRequest[A](
   request: Request[A],
   erns: Set[String],

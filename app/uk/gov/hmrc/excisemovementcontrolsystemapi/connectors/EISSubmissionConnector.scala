@@ -25,7 +25,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequest, DataRequestIE818}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Header.EmcsSource
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
@@ -34,17 +33,18 @@ import java.time.LocalDateTime
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-class MovementMessageConnector @Inject()
+class EISSubmissionConnector @Inject()
 (
   httpClient: HttpClient,
   emcsUtils: EmcsUtils,
   appConfig: AppConfig,
   metrics: Metrics
-)(implicit ec: ExecutionContext) extends Logging {
+)(implicit ec: ExecutionContext) extends EISSubmissionHeader with Logging {
 
 
-  def submitExciseMovement(request: DataRequest[_], messageType: String)(implicit hc: HeaderCarrier): Future[Either[Result, EISResponse]] = {
+  def submitExciseMovement(request: DataRequest[_], messageType: String)(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
 
+    //TODO: remember to rename this
     val timer = metrics.defaultRegistry.timer("emcs.eiscontroller.timer").time()
 
     //todo: add retry
@@ -54,10 +54,10 @@ class MovementMessageConnector @Inject()
     val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", encodedMessage)
     val consignorId = request.movementMessage.consignorId
 
-    httpClient.POST[EISRequest, Either[Result, EISResponse]](
+    httpClient.POST[EISRequest, Either[Result, EISSubmissionResponse]](
       appConfig.emcsReceiverMessageUrl,
       eisRequest,
-      Header.build(correlationId, createdDateTime)
+      build(correlationId, createdDateTime)
     )(EISRequest.format, EISHttpReader(correlationId, consignorId, createdDateTime), hc, ec)
       .andThen { case _ => timer.stop() }
       .recover {
@@ -77,7 +77,7 @@ class MovementMessageConnector @Inject()
 
   //TODO implement a more generic solution that doesn't involve duplicating all the code
   def submitExciseMovementIE818(request: DataRequestIE818[_], messageType: String)
-                               (implicit hc: HeaderCarrier): Future[Either[Result, EISResponse]] = {
+                               (implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
 
     val timer = metrics.defaultRegistry.timer("emcs.eiscontroller.timer").time()
 
@@ -88,10 +88,10 @@ class MovementMessageConnector @Inject()
     val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", encodedMessage)
     val consigneeId = request.movementMessage.consigneeId
 
-    httpClient.POST[EISRequest, Either[Result, EISResponse]](
+    httpClient.POST[EISRequest, Either[Result, EISSubmissionResponse]](
       appConfig.emcsReceiverMessageUrl,
       eisRequest,
-      Header.build(correlationId, createdDateTime)
+      build(correlationId, createdDateTime)
     )(EISRequest.format, EISHttpReader(correlationId, consigneeId, createdDateTime), hc, ec)
       .andThen { case _ => timer.stop() }
       .recover {

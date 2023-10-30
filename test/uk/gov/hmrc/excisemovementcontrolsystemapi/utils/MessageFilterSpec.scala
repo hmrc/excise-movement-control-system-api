@@ -21,7 +21,8 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{Ie801XmlMessage, NewMessagesXml}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, MessageTypes, ShowNewMessageResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 
 import java.nio.charset.StandardCharsets
@@ -45,7 +46,7 @@ class MessageFilterSpec extends PlaySpec {
       val xml = scala.xml.XML.loadString(NewMessagesXml.newMessageWith2IE801sXml.toString())
       val encodeXml = Base64.getEncoder.encodeToString(xml.toString.getBytes(StandardCharsets.UTF_8))
 
-      val message: ShowNewMessageResponse = ShowNewMessageResponse(LocalDateTime.now(), "123", encodeXml)
+      val message: EISConsumptionResponse = EISConsumptionResponse(LocalDateTime.now(), "123", encodeXml)
 
       val result = messageFilter.filter(message, "token")
 
@@ -64,7 +65,7 @@ class MessageFilterSpec extends PlaySpec {
       val xml = scala.xml.XML.loadString(NewMessagesXml.newMessageWith2IE801sXml.toString())
       val encodeXml = Base64.getEncoder.encodeToString(xml.toString.getBytes(StandardCharsets.UTF_8))
 
-      val message: ShowNewMessageResponse = ShowNewMessageResponse(LocalDateTime.now(), "123", encodeXml)
+      val message: EISConsumptionResponse = EISConsumptionResponse(LocalDateTime.now(), "123", encodeXml)
 
       val result = messageFilter.filter(message, "newLRN")
 
@@ -79,7 +80,7 @@ class MessageFilterSpec extends PlaySpec {
       val xml = scala.xml.XML.loadString(NewMessagesXml.emptyNewMessageDataXml.toString())
       val encodeXml = Base64.getEncoder.encodeToString(xml.toString.getBytes(StandardCharsets.UTF_8))
 
-      val message: ShowNewMessageResponse = ShowNewMessageResponse(LocalDateTime.now(), "123", encodeXml)
+      val message: EISConsumptionResponse = EISConsumptionResponse(LocalDateTime.now(), "123", encodeXml)
 
       val result = messageFilter.filter(message, "token")
 

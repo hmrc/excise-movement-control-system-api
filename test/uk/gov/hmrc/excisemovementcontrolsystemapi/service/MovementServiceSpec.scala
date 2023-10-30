@@ -23,6 +23,7 @@ import org.scalatest.EitherValues
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GeneralMongoError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
@@ -147,6 +148,112 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
       }.getMessage mustBe s"Multiple movement found for local reference number: $lrn"
     }
   }
+
+  "getMovementByErn" should {
+
+    val lrnToFilterBy = "lrn2"
+    val ernToFilterBy = "ABC2"
+    val arcToFilterBy = "arc2"
+
+    "return all that movement for that ERN" in {
+      val expectedMovement1 = Movement("lrn1", consignorId, None, Some("arc1"))
+
+      when(mockMovementMessageRepository.getMovementByERN(Seq(consignorId)))
+        .thenReturn(Future.successful(Seq(expectedMovement1)))
+
+      val result = await(movementMessageService.getMovementByErn(Seq(consignorId)))
+
+      result mustBe Seq(expectedMovement1)
+    }
+
+    "return only the movements that correspond to the filter ERN" in {
+      val consignorId2 = "ABC2"
+      val expectedMovement1 = Movement("lrn1", consignorId, None, Some("arc1"))
+      val expectedMovement2 = Movement("lrn1", consignorId2, None, Some("arc1"))
+
+      when(mockMovementMessageRepository.getMovementByERN(Seq(consignorId)))
+        .thenReturn(Future.successful(Seq(expectedMovement1, expectedMovement2)))
+
+      val filter = MovementFilter.and(Seq("ern" -> Some(consignorId)))
+      val result = await(movementMessageService.getMovementByErn(Seq(consignorId), filter))
+
+      result mustBe Seq(expectedMovement1)
+    }
+
+    "return only the movements that correspond to the filter LRN" in {
+      val lrnToFilterBy = "lrn2"
+      val expectedMovement1 = Movement("lrn1", consignorId, None, Some("arc1"))
+      val expectedMovement2 = Movement(lrnToFilterBy, consignorId, None, Some("arc1"))
+
+      when(mockMovementMessageRepository.getMovementByERN(Seq(consignorId)))
+        .thenReturn(Future.successful(Seq(expectedMovement1, expectedMovement2)))
+
+      val filter = MovementFilter.and(Seq("lrn" -> Some(lrnToFilterBy)))
+      val result = await(movementMessageService.getMovementByErn(Seq(consignorId), filter))
+
+      result mustBe Seq(expectedMovement2)
+    }
+
+
+    "return only the movements that correspond to the filter ARC" in {
+      val expectedMovement1 = Movement("lrn1", consignorId, None, Some("arc1"))
+      val expectedMovement2 = Movement("lrn1", consignorId, None, Some("arc2"))
+
+      when(mockMovementMessageRepository.getMovementByERN(Seq(consignorId)))
+        .thenReturn(Future.successful(Seq(expectedMovement1, expectedMovement2)))
+
+      val filter = MovementFilter.and(Seq("arc" -> Some(arcToFilterBy)))
+      val result = await(movementMessageService.getMovementByErn(Seq(consignorId), filter))
+
+      result mustBe Seq(expectedMovement2)
+    }
+
+    "return only the movements that correspond to the filter LRN and ern" in {
+      val expectedMovement1 = Movement("lrn1", consignorId, None, Some("arc1"))
+      val expectedMovement2 = Movement(lrnToFilterBy, consignorId, None, Some("arc1"))
+      val expectedMovement3 = Movement("lrn1", ernToFilterBy, None, Some("arc1"))
+      val expectedMovement4 = Movement(lrnToFilterBy, ernToFilterBy, None, Some("arc1"))
+
+      when(mockMovementMessageRepository.getMovementByERN(Seq(consignorId)))
+        .thenReturn(Future.successful(Seq(expectedMovement1, expectedMovement2, expectedMovement3, expectedMovement4)))
+
+      val filter = MovementFilter.and(Seq("ern" -> Some(ernToFilterBy), "lrn" -> Some(lrnToFilterBy)))
+      val result = await(movementMessageService.getMovementByErn(Seq(consignorId), filter))
+
+      result mustBe Seq(expectedMovement4)
+    }
+
+    "return only the movements that correspond to the filter LRN, ern and arc" in {
+
+      val expectedMovement1 = Movement("lrn1", consignorId, None, Some("arc1"))
+      val expectedMovement2 = Movement(lrnToFilterBy, consignorId, None, Some("arc1"))
+      val expectedMovement3 = Movement("lrn1", ernToFilterBy, None, Some("arc1"))
+      val expectedMovement4 = Movement(lrnToFilterBy, ernToFilterBy, None, Some(arcToFilterBy))
+      val expectedMovement5 = Movement("lrn1", consignorId, None, Some(arcToFilterBy))
+
+      when(mockMovementMessageRepository.getMovementByERN(Seq(consignorId)))
+        .thenReturn(Future.successful(Seq(expectedMovement1, expectedMovement2, expectedMovement3, expectedMovement4, expectedMovement5)))
+
+      val filter = MovementFilter.and(Seq(
+        "ern" -> Some(ernToFilterBy),
+        "lrn" -> Some(lrnToFilterBy),
+        "arc" -> Some(arcToFilterBy)
+      ))
+      val result = await(movementMessageService.getMovementByErn(Seq(consignorId), filter))
+
+      result mustBe Seq(expectedMovement4)
+    }
+
+    "return an empty list" in {
+      when(mockMovementMessageRepository.getMovementByERN(Seq(consignorId)))
+        .thenReturn(Future.successful(Seq.empty))
+
+      val result = await(movementMessageService.getMovementByErn(Seq(consignorId)))
+
+      result mustBe Seq.empty
+    }
+  }
+
 
   //TODO these tests will be relevant when we change back to the other way
 //  "getMovementMessagesByLRNAndERNIn with multiple movement messages for LRN and ERN combination" should {

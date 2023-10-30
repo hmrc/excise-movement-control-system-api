@@ -14,14 +14,26 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
+package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
-trait Header {
+import play.api.http.Status.ACCEPTED
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.GetMovementResponse
 
-  val EmcsSource: String = "APIP"
-  val SourceName: String = "source"
-  val XCorrelationIdName = "x-correlation-id"
-  val DateTimeName = "dateTime"
-  val XForwardedHostName = "x-forwarded-host"
+trait MovementTestUtils {
+
+  def createMovementResponse(
+    ern: String,
+    lrn: String,
+    arc: String,
+    consigneeId: Some[String]
+  ) = {
+    GetMovementResponse(
+      ern,
+      lrn,
+      consigneeId,
+      Some(arc),
+      "Accepted"
+    )
+  }
 
 }

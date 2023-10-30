@@ -14,16 +14,18 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
+package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import play.api.libs.json.{Json, OFormat}
 
-case class EISResponse(
-  status: String,
-  message: String,
-  emcsCorrelationId: String
+case class GetMovementResponse(
+  consignorId: String,
+  localReferenceNumber: String,
+  consigneeId: Option[String],
+  administrativeReferenceCode: Option[String],//todo: Should this be empty? I supect no, but double check
+  status: String
 )
 
-object EISResponse {
-  implicit val format: OFormat[EISResponse] = Json.format[EISResponse]
+object GetMovementResponse {
+  implicit val format: OFormat[GetMovementResponse] = Json.format[GetMovementResponse]
 }

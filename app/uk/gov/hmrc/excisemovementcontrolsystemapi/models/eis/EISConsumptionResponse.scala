@@ -16,12 +16,18 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
-trait Header {
+import play.api.libs.json.{Json, OFormat}
 
-  val EmcsSource: String = "APIP"
-  val SourceName: String = "source"
-  val XCorrelationIdName = "x-correlation-id"
-  val DateTimeName = "dateTime"
-  val XForwardedHostName = "x-forwarded-host"
+import java.time.LocalDateTime
 
+case class EISConsumptionResponse
+(
+  dateTime: LocalDateTime,
+  exciseRegistrationNumber: String,
+  message: String
+)
+
+object EISConsumptionResponse {
+  implicit val format: OFormat[EISConsumptionResponse] = Json.format[EISConsumptionResponse]
 }
+

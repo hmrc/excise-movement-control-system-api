@@ -17,9 +17,10 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.Singleton
+import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GeneralMongoError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -28,7 +29,6 @@ import scala.concurrent.{ExecutionContext, Future}
 class MovementService @Inject()(
                                  movementRepository: MovementRepository
                                       )(implicit ec: ExecutionContext) {
-
   def saveMovementMessage(movementMessage: Movement): Future[Either[GeneralMongoError, Movement]] = {
     movementRepository.saveMovement(movementMessage)
       .map(_ => Right(movementMessage))
@@ -50,6 +50,16 @@ class MovementService @Inject()(
       case Seq()  => None
       case head :: Nil => matchingERN(head, erns)
       case _ => throw new RuntimeException(s"Multiple movement found for local reference number: $lrn")
+    }
+  }
+
+  def getMovementByErn(
+    ern: Seq[String],
+    filter: MovementFilter = MovementFilter.empty
+  ): Future[Seq[Movement]] = {
+
+    movementRepository.getMovementByERN(ern).map {
+      movements =>filter.filterMovement(movements)
     }
   }
 

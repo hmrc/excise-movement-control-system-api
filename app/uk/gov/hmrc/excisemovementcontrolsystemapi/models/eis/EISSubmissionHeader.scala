@@ -14,20 +14,19 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.models
+package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.http.{ContentTypes, HeaderNames}
 
-import java.time.LocalDateTime
+trait EISSubmissionHeader extends Header {
 
-case class ShowNewMessageResponse
-(
-  dateTime: LocalDateTime,
-  exciseRegistrationNumber: String,
-  message: String
-)
 
-object ShowNewMessageResponse {
-  implicit val format: OFormat[ShowNewMessageResponse] = Json.format[ShowNewMessageResponse]
+  def build(emcsCorrelationId: String, createdDateTime: String): Seq[(String, String)] = {
+    Seq(HeaderNames.ACCEPT -> ContentTypes.JSON,
+      HeaderNames.CONTENT_TYPE -> ContentTypes.JSON,
+      DateTimeName -> createdDateTime,
+      XCorrelationIdName -> emcsCorrelationId,
+      XForwardedHostName -> "",
+      SourceName -> EmcsSource)
+  }
 }
-
