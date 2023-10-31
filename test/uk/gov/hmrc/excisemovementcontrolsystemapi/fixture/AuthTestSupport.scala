@@ -20,6 +20,7 @@ import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.when
 import org.scalatestplus.mockito.MockitoSugar.mock
+import uk.gov.hmrc.auth.core.AffinityGroup.Organisation
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{affinityGroup, authorisedEnrolments, credentials, internalId}
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
@@ -31,11 +32,11 @@ import scala.concurrent.Future
 trait AuthTestSupport {
 
   lazy val authConnector = mock[AuthConnector]
-  val authFetch = authorisedEnrolments and affinityGroup and credentials and internalId
-  val enrolment = Enrolment("HMRC-EMCS-ORG")
+  private val authFetch = authorisedEnrolments and affinityGroup and credentials and internalId
+  private val enrolment = Enrolment("HMRC-EMCS-ORG")
 
-  def withAuthorizedTrader(identifier: String): Unit = {
-    val retrieval = Enrolments(Set(enrolment.withIdentifier("ExciseNumber", identifier))) and
+  def withAuthorizedTrader(identifier: String = "123"): Unit = {
+    val retrieval = Enrolments(Set(createEnrolmentWithIdentifier(identifier))) and
       Some(AffinityGroup.Organisation) and
       Some(Credentials("testProviderId", "testProviderType")) and
       Some("123")
@@ -43,10 +44,46 @@ trait AuthTestSupport {
     withAuthorization(retrieval)
   }
 
-  def withUnAuthorizedERN(): Unit = {
+  def withAuthorizedTrader(enrolment: Enrolment): Unit = {
     val retrieval = Enrolments(Set(enrolment)) and
       Some(AffinityGroup.Organisation) and
       Some(Credentials("testProviderId", "testProviderType")) and
+      Some("123")
+
+    withAuthorization(retrieval)
+  }
+
+  def withAnEmptyERN(): Unit = {
+    val retrieval = Enrolments(Set(enrolment)) and
+      Some(AffinityGroup.Organisation) and
+      Some(Credentials("testProviderId", "testProviderType")) and
+      Some("123")
+
+    withAuthorization(retrieval)
+  }
+
+  def withUnAuthorizedInternalId(): Unit = {
+    val retrieval = Enrolments(Set(createEnrolmentWithIdentifier())) and
+      Some(AffinityGroup.Organisation) and
+      Some(Credentials("testProviderId", "testProviderType")) and
+      None
+
+    withAuthorization(retrieval)
+  }
+
+  def authorizeWithAffinityGroup(affinityGrp: Option[AffinityGroup]): Unit = {
+    val retrieval = Enrolments(Set(createEnrolmentWithIdentifier())) and
+      affinityGrp and
+      Some(Credentials("testProviderId", "testProviderType")) and
+      Some("123")
+
+    withAuthorization(retrieval)
+  }
+
+  def withUnauthorizedCredential(): Unit = {
+    val retrieval = Enrolments(Set(createEnrolmentWithIdentifier())) and
+      Some(Organisation) and
+      None and
       Some("123")
 
     withAuthorization(retrieval)
@@ -62,5 +99,9 @@ trait AuthTestSupport {
 
   def withUnauthorizedTrader(error: Throwable): Unit =
     when(authConnector.authorise(any, any)(any, any)).thenReturn(Future.failed(error))
+
+  private def createEnrolmentWithIdentifier(identifier: String = "123"): Enrolment = {
+    Enrolment("HMRC-EMCS-ORG").withIdentifier("ExciseNumber", identifier)
+  }
 
 }

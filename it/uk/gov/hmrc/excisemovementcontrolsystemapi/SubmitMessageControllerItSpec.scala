@@ -261,7 +261,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
     }
 
     "return forbidden (403) when there are no authorized ERN" in {
-      withUnAuthorizedERN()
+      withAnEmptyERN()
 
       postRequest(IE818).status mustBe FORBIDDEN
     }

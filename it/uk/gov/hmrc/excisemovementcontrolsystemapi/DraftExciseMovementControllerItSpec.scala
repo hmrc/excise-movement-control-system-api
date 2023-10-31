@@ -185,7 +185,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     }
 
     "return forbidden (403) when there are no authorized ERN" in {
-      withUnAuthorizedERN()
+      withAnEmptyERN()
 
       postRequest(IE815).status mustBe FORBIDDEN
     }
