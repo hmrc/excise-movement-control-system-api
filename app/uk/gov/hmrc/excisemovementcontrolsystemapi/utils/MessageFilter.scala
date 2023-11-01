@@ -38,13 +38,13 @@ class MessageFilter @Inject()
       .filter(m => m.localReferenceNumber.contains(lrnToFilterBy))
       .map { m =>
         val encodedMessage = emcsUtils.encode(m.toXml.toString())
-        Message(encodedMessage, m.getType, dateTimeService.now)
+        Message(encodedMessage, m.messageType, dateTimeService.now)
     }
   }
 
   def extractMessages(encodedMessage: String): Seq[IEMessage] = {
     getNewMessageDataResponse(emcsUtils.decode(encodedMessage))
-      .Messages.messagesoption.map(factory.createIEMessage(_))
+      .Messages.messagesoption.map(factory.createIEMessage)
   }
 
   private def getNewMessageDataResponse(decodedMessage: String) = {

@@ -31,13 +31,14 @@ case class IE818Message
 ) extends IEMessage {
   override def localReferenceNumber: Option[String] = None
 
-  //todo: should we return an option here?
-  def consignorId: String = ""
+  override def consignorId: Option[String] = None
 
-  def consigneeId: Option[String] =
+  override def consigneeId: Option[String] =
     obj.Body.AcceptedOrRejectedReportOfReceiptExport.ConsigneeTrader.flatMap(_.Traderid)
 
-  override def getType: String = MessageTypes.IE818.value
+  override def administrativeReferenceCode: Option[String] = Some(obj.Body.AcceptedOrRejectedReportOfReceiptExport.ExciseMovement.AdministrativeReferenceCode)
+
+  override def messageType: String = MessageTypes.IE818.value
 
   override def toXml: NodeSeq = {
     val ns: String = namespace.fold(generated.defaultScope.uri)(o => o)

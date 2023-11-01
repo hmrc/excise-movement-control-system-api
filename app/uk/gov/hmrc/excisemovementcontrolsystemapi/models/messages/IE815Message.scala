@@ -25,14 +25,15 @@ case class IE815Message (private val obj: IE815Type) extends IEMessage {
   override def localReferenceNumber: Option[String] =
     Some(obj.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber)
 
-  def consignorId: String =
-    obj.Body.SubmittedDraftOfEADESAD.ConsignorTrader.TraderExciseNumber
+  override def consignorId: Option[String] =
+    Some(obj.Body.SubmittedDraftOfEADESAD.ConsignorTrader.TraderExciseNumber)
 
-  def consigneeId: Option[String] =
+  override def consigneeId: Option[String] =
     obj.Body.SubmittedDraftOfEADESAD.ConsigneeTrader.flatMap(_.Traderid)
 
+  override def administrativeReferenceCode: Option[String] = None
 
-  override def getType: String = MessageTypes.IE815.value
+  override def messageType: String = MessageTypes.IE815.value
 
   override def toXml: NodeSeq =
     scalaxb.toXML[IE815Type](obj, MessageTypes.IE815.value, generated.defaultScope)

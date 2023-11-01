@@ -19,22 +19,22 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction, ValidateConsignorAction}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction, ValidateErnsAction}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequestCopy
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ExciseMovementResponse, MessageTypes}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Random
 import scala.xml.NodeSeq
 
 @Singleton
 class DraftExciseMovementController @Inject()(
                                                authAction: AuthAction,
                                                xmlParser: ParseXmlAction,
-                                               consignorValidatorAction: ValidateConsignorAction,
+                                               consignorValidatorAction: ValidateErnsAction,
                                                movementMessageConnector: EISSubmissionConnector,
                                                movementMessageService: MovementService,
                                                cc: ControllerComponents
@@ -42,7 +42,7 @@ class DraftExciseMovementController @Inject()(
 
   def submit: Action[NodeSeq] =
     (authAction andThen xmlParser andThen consignorValidatorAction).async(parse.xml) {
-      implicit request: DataRequest[NodeSeq] =>
+      implicit request: ParsedXmlRequestCopy[NodeSeq] =>
         movementMessageConnector.submitExciseMovement(request, MessageTypes.IE815.value).flatMap {
           case Right(_) => handleSuccess
           case Left(error) => Future.successful(error)
@@ -50,9 +50,11 @@ class DraftExciseMovementController @Inject()(
     }
 
 
-  private def handleSuccess(implicit request: DataRequest[NodeSeq]): Future[Result] = {
+  private def handleSuccess(implicit request: ParsedXmlRequestCopy[NodeSeq]): Future[Result] = {
 
-    val newMovement = request.movementMessage.copy(administrativeReferenceCode = Some(generateRandomArc))
+    val ieMessage = request.ieMessage
+    val newMovement = Movement(ieMessage.localReferenceNumber.getOrElse("TODO"), ieMessage.consignorId.getOrElse("TODO"), ieMessage.consigneeId, Some(generateRandomArc))
+
     movementMessageService.saveMovementMessage(newMovement)
       .flatMap {
         case Right(msg) => Future.successful(Accepted(Json.toJson(ExciseMovementResponse("Accepted", msg.localReferenceNumber, msg.consignorId, msg.consigneeId))))

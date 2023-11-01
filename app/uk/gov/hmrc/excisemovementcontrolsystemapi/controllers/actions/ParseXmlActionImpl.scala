@@ -46,7 +46,7 @@ class ParseXmlActionImpl @Inject()
       case body: NodeSeq if body.nonEmpty => parseXml(body, request)
       case _ =>
         logger.error("Not valid XML or XML is empty")
-        Future.successful(Left(BadRequest(Json.toJson(handleError("XML error","XML is empty")))))
+        Future.successful(Left(BadRequest(Json.toJson(handleError("XML error","Not valid XML or XML is empty")))))
     }
   }
 

@@ -31,13 +31,15 @@ case class IE801Message
     Some(obj.Body.EADESADContainer.EadEsad.LocalReferenceNumber)
   }
 
-  override def consignorId: String =
-    obj.Body.EADESADContainer.ConsignorTrader.TraderExciseNumber
+  override def consignorId: Option[String] =
+    Some(obj.Body.EADESADContainer.ConsignorTrader.TraderExciseNumber)
 
   override def consigneeId: Option[String] =
     obj.Body.EADESADContainer.ConsigneeTrader.flatMap(_.Traderid)
 
-  override def getType: String = MessageTypes.IE801.value
+  override def administrativeReferenceCode: Option[String] = Some(obj.Body.EADESADContainer.ExciseMovement.AdministrativeReferenceCode)
+
+  override def messageType: String = MessageTypes.IE801.value
 
   override def toXml: NodeSeq = {
     val ns: String = namespace.fold(generated.defaultScope.uri)(o => o)

@@ -16,9 +16,8 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
-import generated.IE815Type
-import org.mockito.ArgumentMatchersSugar.{any, eqTo}
-import org.mockito.MockitoSugar.{verify, when}
+import org.mockito.ArgumentMatchersSugar.any
+import org.mockito.MockitoSugar.when
 import org.scalatest.{BeforeAndAfterAll, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
@@ -28,7 +27,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import scalaxb.ParserFailure
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest, ParsedXmlRequestCopy}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequestCopy}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.XmlParser
@@ -71,7 +70,7 @@ class ParseIE815XmlActionSpec extends PlaySpec with EitherValues with BeforeAndA
       val request = EnrolmentRequest(FakeRequest().withBody(None), Set.empty, "123")
       val result = await(controller.refine(request))
 
-      result.left.value mustBe BadRequest(Json.toJson(ErrorResponse(currentDateTime,"XML error", "XML is empty" )))
+      result.left.value mustBe BadRequest(Json.toJson(ErrorResponse(currentDateTime, "XML error", "Not valid XML or XML is empty")))
 
     }
 
@@ -98,7 +97,7 @@ class ParseIE815XmlActionSpec extends PlaySpec with EitherValues with BeforeAndA
       val request = EnrolmentRequest(fakeRequest, Set.empty, "123")
 
       val result = await(controller.refine(request))
-      result.left.value mustBe BadRequest(Json.toJson(ErrorResponse(currentDateTime,"Not valid note message", "exception" )))
+      result.left.value mustBe BadRequest(Json.toJson(ErrorResponse(currentDateTime, "Not valid note message", "exception")))
 
     }
 
@@ -106,7 +105,7 @@ class ParseIE815XmlActionSpec extends PlaySpec with EitherValues with BeforeAndA
       val request = EnrolmentRequest(FakeRequest().withBody("<xml>asdasd</xml>"), Set.empty, "123")
       val result = await(controller.refine(request))
 
-      result.left.value mustBe BadRequest(Json.toJson(ErrorResponse(currentDateTime,"XML error", "Value supplied is not XML"  )))
+      result.left.value mustBe BadRequest(Json.toJson(ErrorResponse(currentDateTime, "XML error", "Not valid XML or XML is empty")))
     }
   }
 }

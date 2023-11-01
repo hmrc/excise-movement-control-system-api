@@ -34,7 +34,7 @@ import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext
 
 
-class ValidateConsignorActionIE818Spec extends PlaySpec with TestXml with EitherValues with BeforeAndAfterAll {
+class ValidateErnsActionIE818Spec extends PlaySpec with TestXml with EitherValues with BeforeAndAfterAll {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val emcsUtils: EmcsUtils = mock[EmcsUtils]

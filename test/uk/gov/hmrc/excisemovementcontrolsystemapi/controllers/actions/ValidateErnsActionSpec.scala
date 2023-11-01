@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
-import generated.IE815Type
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.mockito.MockitoSugar.when
 import org.scalatest.{BeforeAndAfterAll, EitherValues}
@@ -35,14 +34,14 @@ import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext
 
 
-class ValidateConsignorActionSpec extends PlaySpec with TestXml with EitherValues with BeforeAndAfterAll {
+class ValidateErnsActionSpec extends PlaySpec with TestXml with EitherValues with BeforeAndAfterAll {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val emcsUtils: EmcsUtils = mock[EmcsUtils]
 
-  val sut = new ValidateConsignorActionImpl()
+  val sut = new ValidateErnsActionImpl()
 
-  private val message = mock[IE815Type](RETURNS_DEEP_STUBS)
+  private val message = mock[IEMessage](RETURNS_DEEP_STUBS)
   private val currentDateTime = LocalDateTime.of(2023, 10, 18, 15, 33, 33)
 
 
@@ -51,32 +50,33 @@ class ValidateConsignorActionSpec extends PlaySpec with TestXml with EitherValue
     when(emcsUtils.getCurrentDateTime).thenReturn(currentDateTime)
     when(emcsUtils.generateCorrelationId).thenReturn("123")
 
-    when(message.Body.SubmittedDraftOfEADESAD.ConsignorTrader.TraderExciseNumber).thenReturn("GBWK002281023")
-    when(message.Body.SubmittedDraftOfEADESAD.ConsigneeTrader.value.Traderid).thenReturn(Some("GBWKQOZ8OVLYR"))
-    when(message.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber).thenReturn("LRNQA20230909022221")
+    when(message.consignorId).thenReturn(Some("GBWK002281023"))
+    when(message.consigneeId).thenReturn(Some("GBWKQOZ8OVLYR"))
+    when(message.localReferenceNumber).thenReturn(Some("LRNQA20230909022221"))
+    when(message.getErns).thenReturn(Set("GBWK002281023", "GBWKQOZ8OVLYR"))
   }
 
   "ValidateConsignorActionSpec" should {
     "return a request" in {
 
-      val ieMessage = mock[IEMessage]
       val erns = Set("GBWK002281023", "GBWK002181023", "GBWK002281022")
       val authorizedRequest = EnrolmentRequest(FakeRequest(), erns, "123")
-      val request = ParsedXmlRequestCopy(authorizedRequest, ieMessage, erns, "123")
+      val request = ParsedXmlRequestCopy(authorizedRequest, message, erns, "123")
 
       val result = await(sut.refine(request))
 
-      val dataRequest = result.toOption.get
-      dataRequest.internalId mustBe "123"
-      dataRequest.movementMessage.localReferenceNumber mustBe "LRNQA20230909022221"
-      dataRequest.movementMessage.consignorId mustBe "GBWK002281023"
-      dataRequest.movementMessage.consigneeId mustBe Some("GBWKQOZ8OVLYR")
+      val parsedRequest = result.toOption.get
+      parsedRequest.internalId mustBe "123"
+      parsedRequest.ieMessage.localReferenceNumber mustBe Some("LRNQA20230909022221")
+      parsedRequest.ieMessage.consignorId mustBe Some("GBWK002281023")
+      parsedRequest.ieMessage.consigneeId mustBe Some("GBWKQOZ8OVLYR")
     }
 
     "an error" when {
       "ern does not match consignorId" in {
+
         val authorizedRequest = EnrolmentRequest(FakeRequest(), Set("12356"), "123")
-        val request = ParsedXmlRequestCopy(authorizedRequest, mock[IEMessage], Set("12356"), "123")
+        val request = ParsedXmlRequestCopy(authorizedRequest, message, Set("12356"), "123")
 
         val result = await(sut.refine(request))
 

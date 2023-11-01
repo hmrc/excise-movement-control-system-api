@@ -24,7 +24,7 @@ import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequest, DataRequestIE818}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequestIE818, ParsedXmlRequestCopy}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
@@ -42,7 +42,7 @@ class EISSubmissionConnector @Inject()
 )(implicit ec: ExecutionContext) extends EISSubmissionHeader with Logging {
 
 
-  def submitExciseMovement(request: DataRequest[_], messageType: String)(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
+  def submitExciseMovement(request: ParsedXmlRequestCopy[_], messageType: String)(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
 
     //TODO: remember to rename this
     val timer = metrics.defaultRegistry.timer("emcs.eiscontroller.timer").time()
@@ -52,18 +52,18 @@ class EISSubmissionConnector @Inject()
     val createdDateTime = emcsUtils.getCurrentDateTimeString
     val encodedMessage = emcsUtils.createEncoder.encodeToString(request.body.toString.getBytes(StandardCharsets.UTF_8))
     val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", encodedMessage)
-    val consignorId = request.movementMessage.consignorId
+    val consignorId = request.ieMessage.consignorId
 
     httpClient.POST[EISRequest, Either[Result, EISSubmissionResponse]](
       appConfig.emcsReceiverMessageUrl,
       eisRequest,
       build(correlationId, createdDateTime)
-    )(EISRequest.format, EISHttpReader(correlationId, consignorId, createdDateTime), hc, ec)
+    )(EISRequest.format, EISHttpReader(correlationId, consignorId.getOrElse("TODO"), createdDateTime), hc, ec)
       .andThen { case _ => timer.stop() }
       .recover {
         case ex: Throwable =>
 
-          logger.warn(EISErrorMessage(createdDateTime, consignorId, ex.getMessage, correlationId, messageType), ex)
+          logger.warn(EISErrorMessage(createdDateTime, consignorId.getOrElse("TODO"), ex.getMessage, correlationId, messageType), ex)
 
           val error = EISErrorResponse(
             LocalDateTime.parse(createdDateTime),
