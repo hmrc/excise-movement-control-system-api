@@ -21,6 +21,8 @@ import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 
+import scala.xml.NodeSeq
+
 case class IEMessageFactory () {
   def createIEMessage(message: DataRecord[MessagesOption]) : IEMessage = {
     val messageType = message.key.getOrElse(throw new RuntimeException("Could not create Message object. Message type is empty"))
@@ -28,6 +30,15 @@ case class IEMessageFactory () {
     MessageTypes.withValueOpt(messageType) match {
       case  Some(MessageTypes.IE801) => IE801Message(message)
       case  Some(MessageTypes.IE818) => IE818Message(message)
+      case _ => throw new RuntimeException(s"Could not create Message object. Unsupported message: $messageType")
+    }
+  }
+
+  def createFromXml(messageType: String, xml: NodeSeq): IEMessage = {
+    MessageTypes.withValueOpt(messageType) match {
+      case  Some(MessageTypes.IE801) => IE801Message.createFromXml(xml)
+      case  Some(MessageTypes.IE818) => IE818Message.createFromXml(xml)
+      case  Some(MessageTypes.IE815) => IE815Message.createFromXml(xml)
       case _ => throw new RuntimeException(s"Could not create Message object. Unsupported message: $messageType")
     }
   }

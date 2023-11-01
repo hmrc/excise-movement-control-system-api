@@ -31,6 +31,12 @@ case class IE801Message
     Some(obj.Body.EADESADContainer.EadEsad.LocalReferenceNumber)
   }
 
+  override def consignorId: String =
+    obj.Body.EADESADContainer.ConsignorTrader.TraderExciseNumber
+
+  override def consigneeId: Option[String] =
+    obj.Body.EADESADContainer.ConsigneeTrader.flatMap(_.Traderid)
+
   override def getType: String = MessageTypes.IE801.value
 
   override def toXml: NodeSeq = {
@@ -42,5 +48,10 @@ case class IE801Message
 object IE801Message {
   def apply(message: DataRecord[MessagesOption]): IE801Message = {
     IE801Message(message.as[IE801Type], message.key, message.namespace)
+  }
+
+  def createFromXml(xml: NodeSeq): IE801Message = {
+    val ie801: IE801Type = scalaxb.fromXML[IE801Type](xml)
+    IE801Message(ie801, Some(ie801.productPrefix), None)
   }
 }

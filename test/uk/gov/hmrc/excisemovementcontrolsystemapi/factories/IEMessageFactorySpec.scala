@@ -22,9 +22,14 @@ import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import scalaxb.DataRecord
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.Ie801XmlMessage.IE801
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 
-class IEMessageFactorySpec extends PlaySpec with BeforeAndAfterEach{
+class IEMessageFactorySpec
+  extends PlaySpec
+    with TestXml
+    with BeforeAndAfterEach{
 
   private val message = mock[DataRecord[MessagesOption]]
   private val sut = IEMessageFactory()
@@ -62,6 +67,29 @@ class IEMessageFactorySpec extends PlaySpec with BeforeAndAfterEach{
     "return an instance of IE818Message" in {
       when(message.key).thenReturn(Some("IE818"))
       sut.createIEMessage(message).isInstanceOf[IE818Message] mustBe true
+    }
+  }
+
+  "createfromType" should {
+    "return throw an error" when {
+      "cannot handle message type" in {
+
+        the[Exception] thrownBy {
+          sut.createFromXml("Anything", IE801)
+        } must have message s"Could not create Message object. Unsupported message: Anything"
+      }
+    }
+
+    "return an instance of IE801Message" in {
+        sut.createFromXml("IE801", IE801).isInstanceOf[IE801Message] mustBe true
+    }
+
+    "return an instance of IE818Message" in {
+      sut.createFromXml("IE818", IE818).isInstanceOf[IE818Message] mustBe true
+    }
+
+    "return an instance of IE815Message" in {
+      sut.createFromXml("IE815", IE815).isInstanceOf[IE815Message] mustBe true
     }
   }
 }

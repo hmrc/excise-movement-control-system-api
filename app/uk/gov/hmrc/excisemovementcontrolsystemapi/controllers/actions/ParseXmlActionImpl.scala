@@ -20,9 +20,9 @@ import com.google.inject.ImplementedBy
 import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{ActionRefiner, ControllerComponents, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.XmlParser
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest, ParsedXmlRequestCopy}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
@@ -30,77 +30,50 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 import scala.xml.NodeSeq
 
-class ParseIE815XmlActionImpl @Inject()
+class ParseXmlActionImpl @Inject()
 (
-  xmlParser: XmlParser,
+  ieMessageFactory: IEMessageFactory,
+  emcsUtils: EmcsUtils,
   cc: ControllerComponents
-)(implicit val executionContext: ExecutionContext, implicit val emcsUtils: EmcsUtils) extends BackendController(cc)
-  with ParseIE815XmlAction
+)(implicit val executionContext: ExecutionContext) extends BackendController(cc)
+  with ParseXmlAction
   with Logging {
 
-  override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
+
+  override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequestCopy[A]]] = {
 
     request.body match {
       case body: NodeSeq if body.nonEmpty => parseXml(body, request)
-      case None =>
-        logger.error("XML is empty")
-        Future.successful(
-          Left(
-            BadRequest(
-              Json.toJson(
-                ErrorResponse(
-                  emcsUtils.getCurrentDateTime,
-                  "XML error",
-                  "XML is empty"
-                )
-              )
-            )
-          )
-        )
-
       case _ =>
-        logger.error("Value supplied is not XML")
-        Future.successful(
-          Left(
-            BadRequest(
-              Json.toJson(
-                ErrorResponse(
-                  emcsUtils.getCurrentDateTime,
-                  "XML error",
-                  "Value supplied is not XML"
-                )
-              )
-            )
-          )
-        )
+        logger.error("Not valid XML or XML is empty")
+        Future.successful(Left(BadRequest(Json.toJson(handleError("XML error","XML is empty")))))
     }
   }
 
-  def parseXml[A](xmlBody: NodeSeq, request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
+  def parseXml[A](
+    xmlBody: NodeSeq,
+    request: EnrolmentRequest[A]
+  ) : Future[Either[Result, ParsedXmlRequestCopy[A]]] = {
 
-    Try(xmlParser.fromXml(xmlBody)) match {
-      case Success(value) => Future.successful(Right(ParsedXmlRequest(request, value, request.erns, request.internalId)))
+    val messageType = xmlBody.head.label
+    Try(ieMessageFactory.createFromXml(messageType, xmlBody)) match {
+      case Success(value) => Future.successful(Right(ParsedXmlRequestCopy(request, value, request.erns, request.internalId)))
       case Failure(exception) =>
-        logger.error(s"Not valid IE815 message: ${exception.getMessage}", exception)
-        Future.successful(
-          Left(
-            BadRequest(
-              Json.toJson(
-                ErrorResponse(
-                  emcsUtils.getCurrentDateTime,
-                  "XML formatting error",
-                  s"Not valid IE815 message: ${exception.getMessage}"
-                )
-              )
-            )
-          )
-        )
+        logger.error(s"Not valid $messageType message: ${exception.getMessage}", exception)
+        Future.successful(Left(BadRequest(Json.toJson(handleError(s"Not valid $messageType message", exception.getMessage)))))
     }
+  }
+
+  private def handleError
+  (
+    message: String,
+    debugMessage: String
+  ): ErrorResponse = {
+    ErrorResponse(emcsUtils.getCurrentDateTime, message, debugMessage)
   }
 }
 
-@ImplementedBy(classOf[ParseIE815XmlActionImpl])
-trait ParseIE815XmlAction extends ActionRefiner[EnrolmentRequest, ParsedXmlRequest] {
-
-  def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]]
+@ImplementedBy(classOf[ParseXmlActionImpl])
+trait ParseXmlAction extends ActionRefiner[EnrolmentRequest, ParsedXmlRequestCopy] {
+  def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequestCopy[A]]]
 }

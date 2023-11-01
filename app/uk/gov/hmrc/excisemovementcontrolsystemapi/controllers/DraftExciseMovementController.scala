@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseIE815XmlAction, ValidateConsignorAction}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction, ValidateConsignorAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ExciseMovementResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
@@ -33,7 +33,7 @@ import scala.xml.NodeSeq
 @Singleton
 class DraftExciseMovementController @Inject()(
                                                authAction: AuthAction,
-                                               xmlParser: ParseIE815XmlAction,
+                                               xmlParser: ParseXmlAction,
                                                consignorValidatorAction: ValidateConsignorAction,
                                                movementMessageConnector: EISSubmissionConnector,
                                                movementMessageService: MovementService,

@@ -48,6 +48,7 @@ class MessageFilter @Inject()
   }
 
   private def getNewMessageDataResponse(decodedMessage: String) = {
-    scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
+    val t = scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
+    t
   }
 }

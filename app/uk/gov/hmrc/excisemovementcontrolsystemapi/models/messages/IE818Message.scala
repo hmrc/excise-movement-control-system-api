@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
-import generated.{IE818Type, MessagesOption}
+import generated.{IE801Type, IE818Type, MessagesOption}
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 
@@ -31,6 +31,12 @@ case class IE818Message
 ) extends IEMessage {
   override def localReferenceNumber: Option[String] = None
 
+  //todo: should we return an option here?
+  def consignorId: String = ""
+
+  def consigneeId: Option[String] =
+    obj.Body.AcceptedOrRejectedReportOfReceiptExport.ConsigneeTrader.flatMap(_.Traderid)
+
   override def getType: String = MessageTypes.IE818.value
 
   override def toXml: NodeSeq = {
@@ -42,5 +48,10 @@ case class IE818Message
 object IE818Message {
   def apply(message: DataRecord[MessagesOption]): IE818Message = {
     IE818Message(message.as[IE818Type], message.key, message.namespace)
+  }
+
+  def createFromXml(xml: NodeSeq): IE818Message = {
+    val ie818: IE818Type = scalaxb.fromXML[IE818Type](xml)
+    IE818Message(ie818, Some(ie818.productPrefix), None)
   }
 }

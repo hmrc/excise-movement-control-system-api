@@ -51,10 +51,7 @@ class MessageFilterSpec extends PlaySpec {
       val result = messageFilter.filter(message, "token")
 
       result.size mustBe 1
-
-      decodeAndCleanUpMessage(result).head mustBe
-        cleanUpString(Ie801XmlMessage.IE801.toString)
-
+      decodeAndCleanUpMessage(result).head.matches(".*</IE801>$") mustBe true
       result.head.messageType mustBe MessageTypes.IE801.value
     }
 

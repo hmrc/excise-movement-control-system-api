@@ -20,6 +20,8 @@ import scala.xml.NodeSeq
 
 trait IEMessage {
   def localReferenceNumber: Option[String]
+  def consignorId: String
+  def consigneeId: Option[String]
   def getType: String
   def toXml: NodeSeq
 

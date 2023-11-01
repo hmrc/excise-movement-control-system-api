@@ -28,6 +28,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
 
 import java.time.LocalDateTime
@@ -58,9 +59,10 @@ class ValidateConsignorActionSpec extends PlaySpec with TestXml with EitherValue
   "ValidateConsignorActionSpec" should {
     "return a request" in {
 
+      val ieMessage = mock[IEMessage]
       val erns = Set("GBWK002281023", "GBWK002181023", "GBWK002281022")
       val authorizedRequest = EnrolmentRequest(FakeRequest(), erns, "123")
-      val request = ParsedXmlRequest(authorizedRequest, message, erns, "123")
+      val request = ParsedXmlRequestCopy(authorizedRequest, ieMessage, erns, "123")
 
       val result = await(sut.refine(request))
 
@@ -74,7 +76,7 @@ class ValidateConsignorActionSpec extends PlaySpec with TestXml with EitherValue
     "an error" when {
       "ern does not match consignorId" in {
         val authorizedRequest = EnrolmentRequest(FakeRequest(), Set("12356"), "123")
-        val request = ParsedXmlRequest(authorizedRequest, message, Set("12356"), "123")
+        val request = ParsedXmlRequestCopy(authorizedRequest, mock[IEMessage], Set("12356"), "123")
 
         val result = await(sut.refine(request))
 

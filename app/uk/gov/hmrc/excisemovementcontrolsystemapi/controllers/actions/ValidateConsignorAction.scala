@@ -21,7 +21,7 @@ import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.Results.Forbidden
 import play.api.mvc.{ActionRefiner, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequest, ParsedXmlRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequest, ParsedXmlRequest, ParsedXmlRequestCopy}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
@@ -32,13 +32,15 @@ import scala.concurrent.{ExecutionContext, Future}
 class ValidateConsignorActionImpl @Inject()(implicit val executionContext: ExecutionContext, implicit val emcsUtils: EmcsUtils)
   extends ValidateConsignorAction
     with Logging {
-  override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, DataRequest[A]]] = {
+  override def refine[A](request: ParsedXmlRequestCopy[A]): Future[Either[Result, DataRequest[A]]] = {
 
-    val consignorId = request.ie815Message.Body.SubmittedDraftOfEADESAD.ConsignorTrader.TraderExciseNumber
+    request.ieMessage.consignorId
+    val consignorId = request.ieMessage.consignorId
 
     if (request.erns.contains(consignorId)) {
-      val consigneeId = request.ie815Message.Body.SubmittedDraftOfEADESAD.ConsigneeTrader.flatMap(_.Traderid)
-      val localRefNumber = request.ie815Message.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber
+      val consigneeId = request.ieMessage.consigneeId
+      //todo: some messages have no LRN. Should we throw an exception here?
+      val localRefNumber = request.ieMessage.localReferenceNumber.getOrElse(throw new RuntimeException("Local reference number is null"))
       Future.successful(Right(DataRequest(
         request,
         Movement(localRefNumber, consignorId, consigneeId),
@@ -65,6 +67,6 @@ class ValidateConsignorActionImpl @Inject()(implicit val executionContext: Execu
 }
 
 @ImplementedBy(classOf[ValidateConsignorActionImpl])
-trait ValidateConsignorAction extends ActionRefiner[ParsedXmlRequest, DataRequest] {
-  def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, DataRequest[A]]]
+trait ValidateConsignorAction extends ActionRefiner[ParsedXmlRequestCopy, DataRequest] {
+  def refine[A](request: ParsedXmlRequestCopy[A]): Future[Either[Result, DataRequest[A]]]
 }
