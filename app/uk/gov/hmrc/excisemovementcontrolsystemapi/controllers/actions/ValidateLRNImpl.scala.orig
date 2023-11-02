@@ -21,7 +21,11 @@ import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.Results.NotFound
 import play.api.mvc.{ActionRefiner, Result}
+<<<<<<< Updated upstream
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
+=======
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequestCopy
+>>>>>>> Stashed changes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 
@@ -64,7 +68,6 @@ trait ValidateLRNAction extends ActionRefiner[ParsedXmlRequest, ParsedXmlRequest
   def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]]
 }
 
-//todo: Mauro
 class ValidateLRNActionFactory @Inject()(implicit val executionContext: ExecutionContext, implicit val emcsUtils: EmcsUtils) {
   def apply(lrn: String, movementMessageService: MovementService): ValidateLRNAction =
     new ValidateLRNImpl(lrn, movementMessageService, executionContext, emcsUtils)

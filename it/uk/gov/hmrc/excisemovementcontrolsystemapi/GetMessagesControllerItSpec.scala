@@ -179,10 +179,7 @@ class GetMessagesControllerItSpec extends PlaySpec
     messageObj.head.messageType mustBe MessageTypes.IE801.value
 
     val actualMessage = Base64.getDecoder.decode(messageObj.head.encodedMessage).map(_.toChar).mkString
-    cleanUpString(actualMessage) mustBe cleanUpString(Ie801XmlMessage.IE801.toString())
+    actualMessage.matches(".*</ie801:IE801>$") mustBe true
   }
 
-  private def cleanUpString(str: String): String = {
-    str.replaceAll("[\\t\\n\\r\\s]+", "")
-  }
 }

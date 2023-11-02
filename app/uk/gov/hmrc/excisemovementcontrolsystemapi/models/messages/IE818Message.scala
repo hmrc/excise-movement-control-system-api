@@ -44,8 +44,7 @@ case class IE818Message
   override def messageType: String = MessageTypes.IE818.value
 
   override def toXml: NodeSeq = {
-    val ns: String = namespace.fold(generated.defaultScope.uri)(o => o)
-    scalaxb.toXML[IE818Type](obj, None, key, scalaxb.toScope(key -> ns))
+    scalaxb.toXML[IE818Type](obj, namespace, key, generated.defaultScope)
   }
 
   override def lrnEquals(lrn: String): Boolean = localReferenceNumber.contains(lrn)
