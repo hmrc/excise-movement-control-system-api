@@ -18,8 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction, ValidateErnsAction, ValidateLRNActionFactory}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction, ValidateErnsAction, ValidateLRNAction}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -31,9 +30,8 @@ class SubmitMessageController @Inject()(
                                          authAction: AuthAction,
                                          xmlParser: ParseXmlAction,
                                          validateErnsAction: ValidateErnsAction,
-                                         validateLRNAction: ValidateLRNActionFactory,
+                                         validateLRNAction: ValidateLRNAction,
                                          movementMessageConnector: EISSubmissionConnector,
-                                         movementService: MovementService,
                                          cc: ControllerComponents
                                        )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
@@ -42,7 +40,7 @@ class SubmitMessageController @Inject()(
     (authAction
       andThen xmlParser
       andThen validateErnsAction
-      andThen validateLRNAction(lrn, movementService)).async(parse.xml) {
+      andThen validateLRNAction(lrn)).async(parse.xml) {
       implicit request =>
         movementMessageConnector.submitMessage(request).flatMap {
           case Right(_) => Future.successful(Accepted(""))

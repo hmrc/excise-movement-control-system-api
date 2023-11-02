@@ -19,35 +19,44 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 import com.google.inject.ImplementedBy
 import play.api.Logging
 import play.api.libs.json.Json
-import play.api.mvc.Results.NotFound
-import play.api.mvc.{ActionRefiner, Result}
+import play.api.mvc.{ActionRefiner, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
+import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 
-class ValidateLRNImpl @Inject()(
-                                 val lrn: String,
-                                 val movementService: MovementService,
-                                 implicit val executionContext: ExecutionContext,
-                                 implicit val emcsUtils: EmcsUtils
-                               )
-  extends ValidateLRNAction
+class ValidateLRNImpl @Inject()
+(
+  val movementService: MovementService,
+  val emcsUtils: EmcsUtils,
+  cc: ControllerComponents
+)(implicit val ec: ExecutionContext)
+  extends BackendController(cc)
+    with ValidateLRNAction
     with Logging {
 
-  override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
+  override def apply(lrn: String): ActionRefiner[ParsedXmlRequest, ParsedXmlRequest] =
+    new ActionRefiner[ParsedXmlRequest, ParsedXmlRequest] {
 
-    movementService.getMovementMessagesByLRNAndERNIn(lrn, request.erns.toList).map {
-      case Some(_) => Right(request)
-      case _ => Left(NotFoundErrorResponse(request))
+      override val executionContext = ec
+
+      override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
+
+        movementService.getMovementMessagesByLRNAndERNIn(lrn, request.erns.toList).map {
+          case Some(_) => Right(request)
+          case _ => Left(NotFoundErrorResponse(lrn)(request))
+        }
+      }
+
     }
-  }
 
 
-  private def NotFoundErrorResponse[A](request: ParsedXmlRequest[A]): Result = {
+
+  private def NotFoundErrorResponse[A](lrn: String)(implicit request: ParsedXmlRequest[A]): Result = {
     NotFound(Json.toJson(
       ErrorResponse(
         emcsUtils.getCurrentDateTime,
@@ -59,13 +68,6 @@ class ValidateLRNImpl @Inject()(
 }
 
 @ImplementedBy(classOf[ValidateLRNImpl])
-trait ValidateLRNAction extends ActionRefiner[ParsedXmlRequest, ParsedXmlRequest] {
-
-  def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]]
-}
-
-//todo: Mauro
-class ValidateLRNActionFactory @Inject()(implicit val executionContext: ExecutionContext, implicit val emcsUtils: EmcsUtils) {
-  def apply(lrn: String, movementMessageService: MovementService): ValidateLRNAction =
-    new ValidateLRNImpl(lrn, movementMessageService, executionContext, emcsUtils)
+trait ValidateLRNAction  {
+  def apply(lrn: String):ActionRefiner[ParsedXmlRequest, ParsedXmlRequest]
 }

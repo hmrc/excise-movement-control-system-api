@@ -30,8 +30,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnsAction, FakeValidateLRNAction, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
@@ -48,7 +46,6 @@ class SubmitMessageControllerSpec
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val cc = stubControllerComponents()
   private val request = createRequest(IE818)
-  private val movementService = mock[MovementService]
   private val ieMessage = mock[IEMessage]
   private val connector = mock[EISSubmissionConnector]
 
@@ -58,8 +55,6 @@ class SubmitMessageControllerSpec
 
     when(connector.submitMessage(any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
-    when(movementService.getMovementMessagesByLRNAndERNIn(any, any))
-      .thenReturn(Future.successful(Some(Movement("lrn", "consignorId", None))))
 
     when(ieMessage.messageType).thenReturn("IE818")
     when(ieMessage.consigneeId).thenReturn(Some("GBWK002281023"))
@@ -114,11 +109,7 @@ class SubmitMessageControllerSpec
 
     "return a ern / lrn mismatch error" when {
       "lrn and ern are not in the database" in {
-
-        when(movementService.getMovementMessagesByLRNAndERNIn(any, any))
-          .thenReturn(Future.successful(None))
-
-        val result = createWithSuccessfulAuth.submit("LRN")(request)
+        val result = createWithLRNValidationError.submit("LRN")(request)
 
         status(result) mustBe NOT_FOUND
       }
@@ -132,7 +123,6 @@ class SubmitMessageControllerSpec
       FakeSuccessfulValidateErnsAction(ieMessage),
       FakeSuccessfulValidateLRNAction,
       connector,
-      movementService,
       cc
     )
 
@@ -149,7 +139,6 @@ class SubmitMessageControllerSpec
       FakeSuccessfulValidateErnsAction(ieMessage),
       FakeFailureValidateLRNAction,
       connector,
-      movementService,
       cc
     )
 
@@ -160,7 +149,6 @@ class SubmitMessageControllerSpec
       FakeSuccessfulValidateErnsAction(ieMessage),
       FakeFailureValidateLRNAction,
       connector,
-      movementService,
       cc
     )
 
@@ -171,7 +159,16 @@ class SubmitMessageControllerSpec
       FakeFailureValidateErnsAction,
       FakeFailureValidateLRNAction,
       connector,
-      movementService,
+      cc
+    )
+
+  private def createWithLRNValidationError =
+    new SubmitMessageController(
+      FakeSuccessAuthentication,
+      FakeSuccessXMLParser,
+      FakeSuccessfulValidateErnsAction(ieMessage),
+      FakeFailureValidateLRNAction,
+      connector,
       cc
     )
 

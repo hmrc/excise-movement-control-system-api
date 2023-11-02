@@ -33,7 +33,7 @@ import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{Ie801XmlMessage, NewMessagesXml, TestXml}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{NewMessagesXml, TestXml}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes

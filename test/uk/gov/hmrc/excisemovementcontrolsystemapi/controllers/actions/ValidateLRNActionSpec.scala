@@ -18,42 +18,44 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.when
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, EitherValues}
+import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
-import play.api.mvc.Results.NotFound
+import play.api.mvc.Results.{NotFound, Ok}
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
+import uk.gov.hmrc.play.bootstrap.tools.Stubs.stubMessagesControllerComponents
 
 import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
 
 
-class ValidateLRNActionSpec extends PlaySpec with TestXml with EitherValues with BeforeAndAfterAll with BeforeAndAfterEach {
+class ValidateLRNActionSpec
+  extends PlaySpec
+    with EitherValues
+    with BeforeAndAfterEach {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  implicit val emcsUtils: EmcsUtils = mock[EmcsUtils]
-  private val movementService = mock[MovementService]
+  private val emcsUtils: EmcsUtils = mock[EmcsUtils]
   private val currentDateTime = LocalDateTime.of(2023, 10, 18, 15, 33, 33)
-
   private val ieMessage = mock[IEMessage]
+  private val movementService = mock[MovementService]
+  private val sut = new ValidateLRNImpl(movementService, emcsUtils, stubMessagesControllerComponents())
 
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-    when(emcsUtils.getCurrentDateTime).thenReturn(currentDateTime)
-  }
+  def block(authRequest: ParsedXmlRequest[_]) =
+    Future.successful(Ok)
 
   override def beforeEach(): Unit = {
     super.beforeEach()
 
     when(ieMessage.consigneeId).thenReturn(Some("GBWK002181023"))
+    when(emcsUtils.getCurrentDateTime).thenReturn(currentDateTime)
   }
 
   "ValidateLRNActionSpec" should {
@@ -62,16 +64,18 @@ class ValidateLRNActionSpec extends PlaySpec with TestXml with EitherValues with
       when(movementService.getMovementMessagesByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Some(Movement("lrn", "consignorId", None))))
 
-      val sut = new ValidateLRNActionFactory().apply("lrn", movementService)
-
       val erns = Set("GBWK002281023", "GBWK002181023", "GBWK002281022")
       val request = ParsedXmlRequest(EnrolmentRequest(FakeRequest(), erns, "123"),
         ieMessage, erns, "123")
 
-      val result = await(sut.refine(request))
+      val block = (actual: ParsedXmlRequest[_]) => {
+        actual mustBe request
+        Future.successful(Ok)
+      }
 
-      result mustBe Right(request)
+      val result = await(sut.apply("lrn").invokeBlock(request, block))
 
+      result mustBe Ok
     }
 
     "an error" when {
@@ -80,18 +84,16 @@ class ValidateLRNActionSpec extends PlaySpec with TestXml with EitherValues with
           .thenReturn(Future.successful(None))
 
         when(ieMessage.consigneeId).thenReturn(Some("12356"))
-
-        val sut = new ValidateLRNActionFactory().apply("lrn", movementService)
         val request = ParsedXmlRequest(EnrolmentRequest(FakeRequest(), Set("12356"), "123"),
           ieMessage, Set("12356"), "123")
-        val result = await(sut.refine(request))
 
-        result.left.value mustBe NotFound(Json.toJson(ErrorResponse(
+        val result = await(sut.apply("lrn").invokeBlock(request, block))
+
+        result mustBe NotFound(Json.toJson(ErrorResponse(
           currentDateTime,
           "Local reference number not found",
           "Local reference number lrn is not found within the data for ERNs 12356"))
         )
-
       }
 
       "DB error occurs" in {
@@ -99,12 +101,11 @@ class ValidateLRNActionSpec extends PlaySpec with TestXml with EitherValues with
           .thenReturn(Future.failed(new RuntimeException("error")))
         when(ieMessage.consigneeId).thenReturn(Some("12356"))
 
-        val sut = new ValidateLRNActionFactory().apply("lrn", movementService)
         val request = ParsedXmlRequest(EnrolmentRequest(FakeRequest(), Set("12356"), "123"),
           ieMessage, Set("12356"), "123")
 
         intercept[RuntimeException] {
-          await(sut.refine(request))
+          await(sut.apply("lrn").invokeBlock(request, block))
         }.getMessage mustBe "error"
 
       }
