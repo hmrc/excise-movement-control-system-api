@@ -16,25 +16,24 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
-import generated.IE815Type
 import play.api.mvc.Result
 import play.api.mvc.Results.BadRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ParseXmlAction
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequestCopy}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 trait FakeXmlParsers {
   object FakeSuccessXMLParser extends ParseXmlAction {
-    override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequestCopy[A]]] = {
-      Future.successful(Right(ParsedXmlRequestCopy(EnrolmentRequest(request, Set.empty, "123"),null, Set.empty, "123")))
+    override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
+      Future.successful(Right(ParsedXmlRequest(EnrolmentRequest(request, Set.empty, "123"), null, Set.empty, "123")))
     }
 
     override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global
   }
 
   object FakeFailureXMLParser extends ParseXmlAction {
-    override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequestCopy[A]]] = {
+    override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
       Future.successful(Left(BadRequest("Invalid xml supplied")))
     }
 

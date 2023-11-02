@@ -16,10 +16,8 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import generated.IE818Type
-import org.mockito.ArgumentMatchersSugar.{any, eqTo}
+import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.{reset, verify, when}
-import org.mockito.captor.ArgCaptor
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
@@ -30,7 +28,6 @@ import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnsAction, FakeValidateLRNAction, FakeXmlParsers}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequestIE818
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
@@ -59,12 +56,12 @@ class SubmitMessageControllerSpec
     super.beforeEach()
     reset(connector)
 
-    when(connector.submitExciseMovement(any)(any))
+    when(connector.submitMessage(any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
     when(movementService.getMovementMessagesByLRNAndERNIn(any, any))
       .thenReturn(Future.successful(Some(Movement("lrn", "consignorId", None))))
 
-    when(ieMessage.messageType).thenReturn("IE815")
+    when(ieMessage.messageType).thenReturn("IE818")
     when(ieMessage.consigneeId).thenReturn(Some("GBWK002281023"))
   }
 
@@ -78,12 +75,12 @@ class SubmitMessageControllerSpec
 
       await(createWithSuccessfulAuth.submit("lrn")(request))
 
-      verify(connector).submitExciseMovement(any)(any)
+      verify(connector).submitMessage(any)(any)
 
     }
 
     "return an error when EIS error" in {
-      when(connector.submitExciseMovement(any)(any))
+      when(connector.submitMessage(any)(any))
         .thenReturn(Future.successful(Left(NotFound("not found"))))
 
       val result = createWithSuccessfulAuth.submit("lrn")(request)
@@ -107,8 +104,8 @@ class SubmitMessageControllerSpec
       }
     }
 
-    "return a consignor validation error" when {
-      "consignor is not valid" in {
+    "return an ern validation error" when {
+      "consignee is not valid" in {
         val result = createWithValidateConsignorActionFailure.submit("lrn")(request)
 
         status(result) mustBe FORBIDDEN

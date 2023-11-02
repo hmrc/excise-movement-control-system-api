@@ -19,18 +19,18 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 object EISErrorMessage {
 
   def apply(
-    createDateTime: String,
-    consignorId: String,
-    message: String,
-    correlationId: String,
-    messageTypes: String
+             createDateTime: String,
+             ern: String,
+             message: String,
+             correlationId: String,
+             messageTypes: String
   ): String = {
     s"""EIS error with message: $message,
     | messageId: $correlationId,
     | correlationId: $correlationId,
     | messageType: $messageTypes,
     | timestamp: $createDateTime,
-    | exciseId: $consignorId""".stripMargin
+    | exciseId: $ern""".stripMargin
   }
 
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
+package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
 import play.api.libs.json.{Json, OFormat}
 

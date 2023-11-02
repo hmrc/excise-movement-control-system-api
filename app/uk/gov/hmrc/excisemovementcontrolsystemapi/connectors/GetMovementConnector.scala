@@ -22,11 +22,11 @@ import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISConsumptionHeader, EISConsumptionResponse, EISErrorMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, MessageTypes}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISConsumptionHeader, EISConsumptionResponse, EISErrorMessage, EISErrorResponse, EISSubmissionHeader}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
+import uk.gov.hmrc.http.HttpReads.Implicits._
 
-import java.time.LocalDateTime
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -39,9 +39,9 @@ class GetMovementConnector @Inject()
 )(implicit val ec: ExecutionContext) extends EISConsumptionHeader with ResponseHandler with Logging {
 
   def get(
-    ern: String,
-    arc: String
-  )(implicit hc: HeaderCarrier): Future[Either[Result, EISConsumptionResponse]] = {
+           ern: String,
+           arc: String
+         )(implicit hc: HeaderCarrier): Future[Either[Result, EISConsumptionResponse]] = {
 
     val timer = metrics.defaultRegistry.timer("emcs.getmovements.timer").time()
     val correlationId = emcsUtils.generateCorrelationId
@@ -56,16 +56,16 @@ class GetMovementConnector @Inject()
       extractIfSuccessful[EISConsumptionResponse](response) match {
         case Right(eisResponse) => Right(eisResponse)
         case Left(_) =>
-          logger.warn(EISErrorMessage(createDateTime,ern, response.body, correlationId, MessageTypes.IE_MOVEMENT_FOR_TRADER.value))
+          logger.warn(EISErrorMessage(createDateTime, ern, response.body, correlationId, MessageTypes.IE_MOVEMENT_FOR_TRADER.value))
           Left(InternalServerError(response.body))
       }
     }
-      .andThen {case _ => timer.stop() }
+      .andThen { case _ => timer.stop() }
       .recover {
-      case ex: Throwable =>
-        logger.warn(EISErrorMessage(createDateTime,ern, ex.getMessage, correlationId, MessageTypes.IE_MOVEMENT_FOR_TRADER.value))
-        Left(InternalServerError(ex.getMessage))
-    }
+        case ex: Throwable =>
+          logger.warn(EISErrorMessage(createDateTime, ern, ex.getMessage, correlationId, MessageTypes.IE_MOVEMENT_FOR_TRADER.value))
+          Left(InternalServerError(ex.getMessage))
+      }
   }
 
 }

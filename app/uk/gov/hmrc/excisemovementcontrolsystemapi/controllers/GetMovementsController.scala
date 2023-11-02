@@ -20,6 +20,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GetMovementResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -40,7 +41,7 @@ class GetMovementsController @Inject()(
         val filter = MovementFilter.and(Seq("ern" -> ern, "lrn" -> lrn, "arc" -> arc))
         movementService.getMovementByErn(request.erns.toSeq, filter)
           .map { movement: Seq[Movement] =>
-            Ok(Json.toJson(movement.map(createResponseFrom(_))))
+            Ok(Json.toJson(movement.map(createResponseFrom)))
         }
     }
   }

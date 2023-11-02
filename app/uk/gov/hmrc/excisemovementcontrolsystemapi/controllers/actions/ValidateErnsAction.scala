@@ -22,7 +22,7 @@ import play.api.libs.json.Json
 import play.api.mvc.Results.Forbidden
 import play.api.mvc.{ActionRefiner, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequestCopy
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -30,7 +30,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class ValidateErnsActionImpl @Inject()(implicit val executionContext: ExecutionContext, implicit val emcsUtils: EmcsUtils)
   extends ValidateErnsAction
     with Logging {
-  override def refine[A](request: ParsedXmlRequestCopy[A]): Future[Either[Result, ParsedXmlRequestCopy[A]]] = {
+  override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
     val messageErns = request.ieMessage.getErns
 
     if (request.erns.intersect(messageErns).nonEmpty) {
@@ -56,6 +56,6 @@ class ValidateErnsActionImpl @Inject()(implicit val executionContext: ExecutionC
 }
 
 @ImplementedBy(classOf[ValidateErnsActionImpl])
-trait ValidateErnsAction extends ActionRefiner[ParsedXmlRequestCopy, ParsedXmlRequestCopy] {
-  def refine[A](request: ParsedXmlRequestCopy[A]): Future[Either[Result, ParsedXmlRequestCopy[A]]]
+trait ValidateErnsAction extends ActionRefiner[ParsedXmlRequest, ParsedXmlRequest] {
+  def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]]
 }

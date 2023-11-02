@@ -16,52 +16,19 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth
 
-import generated.{IE815Type, IE818Type}
 import play.api.mvc.{Request, WrappedRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Movement, MovementMessageIE818}
 
-//todo: can you definally have more then 1 ERN in the token
+//todo: can you definitely have more then 1 ERN in the token
 case class EnrolmentRequest[A](
-  request: Request[A],
-  erns: Set[String],
-  internalId: String) extends WrappedRequest[A](request)
-
-case class ParsedXmlRequestCopy[A]
-(
-  request: EnrolmentRequest[A],
-  ieMessage: IEMessage,
-  erns: Set[String],
-  internalId: String
-) extends WrappedRequest[A](request)
+                                request: Request[A],
+                                erns: Set[String],
+                                internalId: String) extends WrappedRequest[A](request)
 
 case class ParsedXmlRequest[A]
 (
   request: EnrolmentRequest[A],
-  ie815Message: IE815Type,
-  erns: Set[String],
-  internalId: String
-) extends WrappedRequest[A](request)
-
-case class ParsedXmlRequestIE818[A]
-(
-  request: EnrolmentRequest[A],
-  ie818Message: IE818Type,
-  erns: Set[String],
-  internalId: String
-) extends WrappedRequest[A](request)
-
-case class DataRequest[A]
-(
-  request: Request[A],
-  movementMessage: Movement,
-  internalId: String
-) extends WrappedRequest[A](request)
-
-case class DataRequestIE818[A]
-(
-  request: Request[A],
-  movementMessage: MovementMessageIE818,
+  ieMessage: IEMessage,
   erns: Set[String],
   internalId: String
 ) extends WrappedRequest[A](request)

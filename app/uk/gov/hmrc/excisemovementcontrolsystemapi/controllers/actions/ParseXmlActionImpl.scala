@@ -22,7 +22,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{ActionRefiner, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest, ParsedXmlRequestCopy}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
@@ -40,7 +40,7 @@ class ParseXmlActionImpl @Inject()
   with Logging {
 
 
-  override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequestCopy[A]]] = {
+  override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
 
     request.body match {
       case body: NodeSeq if body.nonEmpty => parseXml(body, request)
@@ -53,11 +53,11 @@ class ParseXmlActionImpl @Inject()
   def parseXml[A](
     xmlBody: NodeSeq,
     request: EnrolmentRequest[A]
-  ) : Future[Either[Result, ParsedXmlRequestCopy[A]]] = {
+  ) : Future[Either[Result, ParsedXmlRequest[A]]] = {
 
     val messageType = xmlBody.head.label
     Try(ieMessageFactory.createFromXml(messageType, xmlBody)) match {
-      case Success(value) => Future.successful(Right(ParsedXmlRequestCopy(request, value, request.erns, request.internalId)))
+      case Success(value) => Future.successful(Right(ParsedXmlRequest(request, value, request.erns, request.internalId)))
       case Failure(exception) =>
         logger.error(s"Not valid $messageType message: ${exception.getMessage}", exception)
         Future.successful(Left(BadRequest(Json.toJson(handleError(s"Not valid $messageType message", exception.getMessage)))))
@@ -74,6 +74,6 @@ class ParseXmlActionImpl @Inject()
 }
 
 @ImplementedBy(classOf[ParseXmlActionImpl])
-trait ParseXmlAction extends ActionRefiner[EnrolmentRequest, ParsedXmlRequestCopy] {
-  def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequestCopy[A]]]
+trait ParseXmlAction extends ActionRefiner[EnrolmentRequest, ParsedXmlRequest] {
+  def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]]
 }

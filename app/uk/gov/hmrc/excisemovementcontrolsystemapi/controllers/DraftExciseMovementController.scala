@@ -20,9 +20,9 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction, ValidateErnsAction}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequestCopy
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ExciseMovementResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -35,27 +35,27 @@ import scala.xml.NodeSeq
 class DraftExciseMovementController @Inject()(
                                                authAction: AuthAction,
                                                xmlParser: ParseXmlAction,
-                                               consignorValidatorAction: ValidateErnsAction,
+                                               validateErnsAction: ValidateErnsAction,
                                                movementMessageConnector: EISSubmissionConnector,
                                                movementMessageService: MovementService,
                                                cc: ControllerComponents
                                              )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
   def submit: Action[NodeSeq] =
-    (authAction andThen xmlParser andThen consignorValidatorAction).async(parse.xml) {
-      implicit request: ParsedXmlRequestCopy[NodeSeq] =>
-        movementMessageConnector.submitExciseMovement(request).flatMap {
+    (authAction andThen xmlParser andThen validateErnsAction).async(parse.xml) {
+      implicit request: ParsedXmlRequest[NodeSeq] =>
+        movementMessageConnector.submitMessage(request).flatMap {
           case Right(_) => handleSuccess
           case Left(error) => Future.successful(error)
         }
     }
 
 
-  private def handleSuccess(implicit request: ParsedXmlRequestCopy[NodeSeq]): Future[Result] = {
+  private def handleSuccess(implicit request: ParsedXmlRequest[NodeSeq]): Future[Result] = {
 
     val ieMessage = request.ieMessage
     val newMovement = ieMessage match {
-      case x:IE815Message => Movement(
+      case x: IE815Message => Movement(
         x.localReferenceNumber,
         x.consignorId,
         x.consigneeId,

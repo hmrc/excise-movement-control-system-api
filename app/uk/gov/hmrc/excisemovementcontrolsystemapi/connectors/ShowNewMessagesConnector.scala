@@ -16,25 +16,26 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
-import javax.inject.Inject
 import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
 import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISConsumptionHeader, EISConsumptionResponse, EISErrorMessage, EISSubmissionHeader}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISConsumptionHeader, EISConsumptionResponse, EISErrorMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, MessageTypes}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
+import uk.gov.hmrc.http.HttpReads.Implicits._
 
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class ShowNewMessagesConnector @Inject()(
-  httpClient: HttpClient,
-  override val appConfig: AppConfig,
-  emcsUtils: EmcsUtils,
-  metrics: Metrics
-)(implicit ec: ExecutionContext) extends EISConsumptionHeader with ResponseHandler with Logging {
+                                          httpClient: HttpClient,
+                                          override val appConfig: AppConfig,
+                                          emcsUtils: EmcsUtils,
+                                          metrics: Metrics
+                                        )(implicit ec: ExecutionContext) extends EISConsumptionHeader with ResponseHandler with Logging {
 
   def get(ern: String)(implicit hc: HeaderCarrier): Future[Either[Result, EISConsumptionResponse]] = {
 
@@ -51,14 +52,14 @@ class ShowNewMessagesConnector @Inject()(
       extractIfSuccessful[EISConsumptionResponse](response) match {
         case Right(eisResponse) => Right(eisResponse)
         case Left(_) =>
-          logger.warn(EISErrorMessage(dateTime,ern, response.body, correlationId, MessageTypes.IE_NEW_MESSAGES.value))
+          logger.warn(EISErrorMessage(dateTime, ern, response.body, correlationId, MessageTypes.IE_NEW_MESSAGES.value))
           Left(InternalServerError(response.body))
       }
     }
-      .andThen {case _ => timer.stop() }
+      .andThen { case _ => timer.stop() }
       .recover {
         case ex: Throwable =>
-          logger.warn(EISErrorMessage(dateTime,ern, ex.getMessage, correlationId, MessageTypes.IE_NEW_MESSAGES.value))
+          logger.warn(EISErrorMessage(dateTime, ern, ex.getMessage, correlationId, MessageTypes.IE_NEW_MESSAGES.value))
           Left(InternalServerError(ex.getMessage))
       }
   }

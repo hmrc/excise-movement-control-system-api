@@ -21,7 +21,7 @@ import play.api.mvc.Results.Forbidden
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{ValidateLRNAction, ValidateLRNActionFactory, ValidateLRNImpl}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequestIE818, ParsedXmlRequestCopy}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -41,7 +41,7 @@ trait FakeValidateLRNAction {
 
   object FakeFailureValidateLRNAction extends ValidateLRNActionFactory() with TestXml {
     override def apply(lrn: String, movementMessageService: MovementService): ValidateLRNAction = new ValidateLRNAction {
-      override def refine[A](request: ParsedXmlRequestCopy[A]): Future[Either[Result, ParsedXmlRequestCopy[A]]] = Future.successful(Left(Forbidden("Error")))
+      override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = Future.successful(Left(Forbidden("Error")))
 
       override protected def executionContext: ExecutionContext = ExecutionContext.global
     }

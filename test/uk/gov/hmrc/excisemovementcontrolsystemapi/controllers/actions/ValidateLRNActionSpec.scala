@@ -29,7 +29,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Movement, MovementMessageIE818}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 
 import java.time.LocalDateTime
@@ -65,8 +65,8 @@ class ValidateLRNActionSpec extends PlaySpec with TestXml with EitherValues with
       val sut = new ValidateLRNActionFactory().apply("lrn", movementService)
 
       val erns = Set("GBWK002281023", "GBWK002181023", "GBWK002281022")
-      val request = ParsedXmlRequestCopy(EnrolmentRequest(FakeRequest(), Set("12356"), "123"),
-        ieMessage, Set("12356"), "123")
+      val request = ParsedXmlRequest(EnrolmentRequest(FakeRequest(), erns, "123"),
+        ieMessage, erns, "123")
 
       val result = await(sut.refine(request))
 
@@ -82,7 +82,7 @@ class ValidateLRNActionSpec extends PlaySpec with TestXml with EitherValues with
         when(ieMessage.consigneeId).thenReturn(Some("12356"))
 
         val sut = new ValidateLRNActionFactory().apply("lrn", movementService)
-        val request = ParsedXmlRequestCopy(EnrolmentRequest(FakeRequest(), Set("12356"), "123"),
+        val request = ParsedXmlRequest(EnrolmentRequest(FakeRequest(), Set("12356"), "123"),
           ieMessage, Set("12356"), "123")
         val result = await(sut.refine(request))
 
@@ -100,8 +100,8 @@ class ValidateLRNActionSpec extends PlaySpec with TestXml with EitherValues with
         when(ieMessage.consigneeId).thenReturn(Some("12356"))
 
         val sut = new ValidateLRNActionFactory().apply("lrn", movementService)
-        val request = ParsedXmlRequestCopy(EnrolmentRequest(FakeRequest(), Set("12356"),"123"),
-          ieMessage,Set("12356"),"123")
+        val request = ParsedXmlRequest(EnrolmentRequest(FakeRequest(), Set("12356"), "123"),
+          ieMessage, Set("12356"), "123")
 
         intercept[RuntimeException] {
           await(sut.refine(request))

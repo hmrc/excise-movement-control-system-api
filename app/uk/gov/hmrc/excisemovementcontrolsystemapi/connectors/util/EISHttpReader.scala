@@ -30,9 +30,9 @@ import scala.reflect.runtime.universe.{TypeTag, typeOf}
 import scala.util.{Failure, Success, Try}
 
 class EISHttpReader(
-  correlationId: String,
-  consignorId: String,
-  createdDateTime: String
+                     correlationId: String,
+                     ern: String,
+                     createdDateTime: String
 ) extends HttpReads[Either[Result, EISSubmissionResponse]] with Logging {
 
     override def read(method: String, url: String, response: HttpResponse): Either[Result, EISSubmissionResponse] = {
@@ -48,7 +48,7 @@ class EISHttpReader(
     response: HttpResponse
   ): Result = {
 
-    logger.warn(EISErrorMessage(createdDateTime, consignorId, response.body, correlationId, MessageTypes.IE815.value))
+    logger.warn(EISErrorMessage(createdDateTime, ern, response.body, correlationId, MessageTypes.IE815.value))
 
     val messageAsJson = response.json
     response.status match {
@@ -72,10 +72,10 @@ class EISHttpReader(
 }
 
 object EISHttpReader {
-  def apply(correlationId: String, consignorId: String, createDateTime: String): EISHttpReader = {
+  def apply(correlationId: String, ern: String, createDateTime: String): EISHttpReader = {
     new EISHttpReader(
       correlationId: String,
-      consignorId: String,
+      ern: String,
       createDateTime: String
     )
   }

@@ -21,7 +21,7 @@ import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.Results.NotFound
 import play.api.mvc.{ActionRefiner, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequestIE818, ParsedXmlRequestCopy}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 
@@ -38,7 +38,7 @@ class ValidateLRNImpl @Inject()(
   extends ValidateLRNAction
     with Logging {
 
-  override def refine[A](request: ParsedXmlRequestCopy[A]): Future[Either[Result, ParsedXmlRequestCopy[A]]] = {
+  override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
 
     movementService.getMovementMessagesByLRNAndERNIn(lrn, request.erns.toList).map {
       case Some(_) => Right(request)
@@ -47,7 +47,7 @@ class ValidateLRNImpl @Inject()(
   }
 
 
-  private def NotFoundErrorResponse[A](request: ParsedXmlRequestCopy[A]): Result = {
+  private def NotFoundErrorResponse[A](request: ParsedXmlRequest[A]): Result = {
     NotFound(Json.toJson(
       ErrorResponse(
         emcsUtils.getCurrentDateTime,
@@ -59,9 +59,9 @@ class ValidateLRNImpl @Inject()(
 }
 
 @ImplementedBy(classOf[ValidateLRNImpl])
-trait ValidateLRNAction extends ActionRefiner[ParsedXmlRequestCopy, ParsedXmlRequestCopy] {
+trait ValidateLRNAction extends ActionRefiner[ParsedXmlRequest, ParsedXmlRequest] {
 
-  def refine[A](request: ParsedXmlRequestCopy[A]): Future[Either[Result, ParsedXmlRequestCopy[A]]]
+  def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]]
 }
 
 class ValidateLRNActionFactory @Inject()(implicit val executionContext: ExecutionContext, implicit val emcsUtils: EmcsUtils) {

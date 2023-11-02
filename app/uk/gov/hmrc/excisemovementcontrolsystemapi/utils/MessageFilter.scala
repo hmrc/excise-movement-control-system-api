@@ -18,9 +18,9 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
 
 import generated.NewMessagesDataResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE801Message, IE815Message, IE818Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 
 import javax.inject.Inject
@@ -39,7 +39,7 @@ class MessageFilter @Inject()
       .map { m =>
         val encodedMessage = emcsUtils.encode(m.toXml.toString())
         Message(encodedMessage, m.messageType, dateTimeService.now)
-    }
+      }
   }
 
   def extractMessages(encodedMessage: String): Seq[IEMessage] = {

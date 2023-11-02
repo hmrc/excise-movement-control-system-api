@@ -55,12 +55,12 @@ class ValidateErnsActionSpec extends PlaySpec with TestXml with EitherValues wit
   }
 
   //TODO: need to test for consignee too
-  "ValidateConsignorActionSpec" should {
+  "ValidateErnsAction" should {
     "return a request" in {
 
       val erns = Set("GBWK002281023", "GBWK002181023", "GBWK002281022")
       val authorizedRequest = EnrolmentRequest(FakeRequest(), erns, "123")
-      val request = ParsedXmlRequestCopy(authorizedRequest, message, erns, "123")
+      val request = ParsedXmlRequest(authorizedRequest, message, erns, "123")
 
       val result = await(sut.refine(request))
 
@@ -72,7 +72,7 @@ class ValidateErnsActionSpec extends PlaySpec with TestXml with EitherValues wit
       "ern does not match consignorId" in {
 
         val authorizedRequest = EnrolmentRequest(FakeRequest(), Set("12356"), "123")
-        val request = ParsedXmlRequestCopy(authorizedRequest, message, Set("12356"), "123")
+        val request = ParsedXmlRequest(authorizedRequest, message, Set("12356"), "123")
 
         val result = await(sut.refine(request))
 

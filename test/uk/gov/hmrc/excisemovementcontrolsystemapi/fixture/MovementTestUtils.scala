@@ -16,17 +16,16 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
-import play.api.http.Status.ACCEPTED
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.GetMovementResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GetMovementResponse
 
 trait MovementTestUtils {
 
   def createMovementResponse(
-    ern: String,
-    lrn: String,
-    arc: String,
-    consigneeId: Some[String]
-  ) = {
+                              ern: String,
+                              lrn: String,
+                              arc: String,
+                              consigneeId: Some[String]
+                            ): GetMovementResponse = {
     GetMovementResponse(
       ern,
       lrn,

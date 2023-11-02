@@ -18,8 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 
 import akka.actor.ActorSystem
-import generated.IE815Type
-import org.mockito.ArgumentMatchersSugar.{any, eqTo}
+import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.{reset, verify, when}
 import org.mockito.captor.ArgCaptor
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
@@ -34,7 +33,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnsAction, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GeneralMongoError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 
@@ -55,7 +54,6 @@ class DraftExciseMovementControllerSpec
   private val connector = mock[EISSubmissionConnector]
   private val movementMessageService = mock[MovementService]
   private val cc = stubControllerComponents()
-  private val ieMessage = scalaxb.fromXML[IE815Type](IE815)
   private val request = createRequest(IE815)
   private val mockIeMessage = mock[IE815Message]
 
@@ -63,7 +61,7 @@ class DraftExciseMovementControllerSpec
     super.beforeEach()
     reset(connector, movementMessageService)
 
-    when(connector.submitExciseMovement(any)(any)).thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
+    when(connector.submitMessage(any)(any)).thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
 
     when(mockIeMessage.consigneeId).thenReturn(Some("789"))
     when(mockIeMessage.consignorId).thenReturn("456")
@@ -85,7 +83,7 @@ class DraftExciseMovementControllerSpec
         .thenReturn(Future.successful(Right(Movement("", "", None))))
       await(createWithSuccessfulAuth.submit(request))
 
-      verify(connector).submitExciseMovement(any)(any)
+      verify(connector).submitMessage(any)(any)
 
     }
 
@@ -103,7 +101,7 @@ class DraftExciseMovementControllerSpec
     }
 
     "return an error when EIS error" in {
-      when(connector.submitExciseMovement(any)(any))
+      when(connector.submitMessage(any)(any))
         .thenReturn(Future.successful(Left(NotFound("not found"))))
 
       val result = createWithSuccessfulAuth.submit(request)

@@ -30,7 +30,7 @@ import scala.xml.NodeSeq
 class SubmitMessageController @Inject()(
                                          authAction: AuthAction,
                                          xmlParser: ParseXmlAction,
-                                         consignorValidatorAction: ValidateErnsAction,
+                                         validateErnsAction: ValidateErnsAction,
                                          validateLRNAction: ValidateLRNActionFactory,
                                          movementMessageConnector: EISSubmissionConnector,
                                          movementService: MovementService,
@@ -41,10 +41,10 @@ class SubmitMessageController @Inject()(
 
     (authAction
       andThen xmlParser
-      andThen consignorValidatorAction
+      andThen validateErnsAction
       andThen validateLRNAction(lrn, movementService)).async(parse.xml) {
       implicit request =>
-        movementMessageConnector.submitExciseMovement(request).flatMap {
+        movementMessageConnector.submitMessage(request).flatMap {
           case Right(_) => Future.successful(Accepted(""))
           case Left(error) => Future.successful(error)
         }

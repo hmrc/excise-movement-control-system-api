@@ -51,7 +51,7 @@ class MovementRepositorySpec extends PlaySpec
     stubClock
   )
 
-  protected def appBuilder =
+  protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
       .configure(
         "mongodb.uri" -> mongoUri
@@ -185,7 +185,6 @@ class MovementRepositorySpec extends PlaySpec
 
       result mustBe Seq.empty
     }
-
 
 
   }

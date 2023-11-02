@@ -36,7 +36,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequestCopy}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISRequest, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
@@ -96,8 +96,8 @@ class MovementConnectorSpec extends PlaySpec with BeforeAndAfterEach with Either
       val encodeMessage = encoder.encodeToString(message.getBytes(StandardCharsets.UTF_8))
       val eisRequest = EISRequest(emcsCorrelationId, "2023-09-17T09:32:50.345", messageType, "APIP", "user1", encodeMessage)
 
-      await(connector.submitExciseMovement(
-        ParsedXmlRequestCopy(
+      await(connector.submitMessage(
+        ParsedXmlRequest(
           EnrolmentRequest(FakeRequest().withBody(message), Set("123"), "124"),
           ie815Message,
           Set("123"),
@@ -177,7 +177,7 @@ class MovementConnectorSpec extends PlaySpec with BeforeAndAfterEach with Either
   }
 
   private def submitExciseMovement: Future[Either[Result, EISSubmissionResponse]] = {
-    connector.submitExciseMovement(ParsedXmlRequestCopy(
+    connector.submitMessage(ParsedXmlRequest(
       EnrolmentRequest(FakeRequest(), Set("123"), "124"),
       ie815Message,
       Set("123"),
