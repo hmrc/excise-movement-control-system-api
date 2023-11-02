@@ -78,6 +78,7 @@ class MovementConnectorSpec extends PlaySpec with BeforeAndAfterEach with Either
     when(ieMessage.consigneeId).thenReturn(None)
     when(ieMessage.consignorId).thenReturn(Some("123"))
     when(ieMessage.localReferenceNumber).thenReturn(Some("123"))
+    when(ieMessage.messageType).thenReturn("IE815")
   }
 
   "post" should {
@@ -95,9 +96,7 @@ class MovementConnectorSpec extends PlaySpec with BeforeAndAfterEach with Either
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "Success", emcsCorrelationId))))
 
-      when(ieMessage.consigneeId).thenReturn(None)
       when(ieMessage.consignorId).thenReturn(Some("234"))
-      when(ieMessage.localReferenceNumber).thenReturn(Some("123"))
 
       val encodeMessage = encoder.encodeToString(message.getBytes(StandardCharsets.UTF_8))
       val eisRequest = EISRequest(emcsCorrelationId, "2023-09-17T09:32:50.345", messageType, "APIP", "user1", encodeMessage)
@@ -108,8 +107,7 @@ class MovementConnectorSpec extends PlaySpec with BeforeAndAfterEach with Either
           ieMessage,
           Set.empty,
           "124"
-        ),
-        messageType)
+        ))
       )
 
       verify(appConfig).emcsReceiverMessageUrl
@@ -189,8 +187,7 @@ class MovementConnectorSpec extends PlaySpec with BeforeAndAfterEach with Either
       ieMessage,
       Set.empty,
       "124"
-    ),
-      messageType
+    )
     )
   }
 

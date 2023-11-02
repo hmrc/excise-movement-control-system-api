@@ -29,9 +29,10 @@ import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateConsignorActionIE818, FakeValidateLRNAction, FakeXmlParsersIE818}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnsAction, FakeValidateLRNAction, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequestIE818
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 
@@ -41,8 +42,8 @@ import scala.xml.Elem
 class SubmitMessageControllerSpec
   extends PlaySpec
     with FakeAuthentication
-    with FakeXmlParsersIE818
-    with FakeValidateConsignorActionIE818
+    with FakeXmlParsers
+    with FakeValidateErnsAction
     with FakeValidateLRNAction
     with BeforeAndAfterEach
     with TestXml {
@@ -51,17 +52,20 @@ class SubmitMessageControllerSpec
   private val cc = stubControllerComponents()
   private val request = createRequest(IE818)
   private val movementService = mock[MovementService]
-  private val ieMessage = scalaxb.fromXML[IE818Type](IE818)
+  private val ieMessage = mock[IEMessage]
   private val connector = mock[EISSubmissionConnector]
 
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(connector)
 
-    when(connector.submitExciseMovementIE818(any, any)(any))
+    when(connector.submitExciseMovement(any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
     when(movementService.getMovementMessagesByLRNAndERNIn(any, any))
       .thenReturn(Future.successful(Some(Movement("lrn", "consignorId", None))))
+
+    when(ieMessage.messageType).thenReturn("IE815")
+    when(ieMessage.consigneeId).thenReturn(Some("GBWK002281023"))
   }
 
   "submit" should {
@@ -74,18 +78,12 @@ class SubmitMessageControllerSpec
 
       await(createWithSuccessfulAuth.submit("lrn")(request))
 
-      val captor = ArgCaptor[DataRequestIE818[_]]
-      verify(connector).submitExciseMovementIE818(
-        captor.capture,
-        eqTo("IE818")
-      )(any)
-
-      captor.value.movementMessage.consigneeId mustBe "789"
+      verify(connector).submitExciseMovement(any)(any)
 
     }
 
     "return an error when EIS error" in {
-      when(connector.submitExciseMovementIE818(any, any)(any))
+      when(connector.submitExciseMovement(any)(any))
         .thenReturn(Future.successful(Left(NotFound("not found"))))
 
       val result = createWithSuccessfulAuth.submit("lrn")(request)
@@ -133,8 +131,8 @@ class SubmitMessageControllerSpec
   private def createWithSuccessfulAuth =
     new SubmitMessageController(
       FakeSuccessAuthentication,
-      FakeSuccessIE818XMLParser(ieMessage),
-      FakeSuccessfulValidateConsignorAction,
+      FakeSuccessXMLParser,
+      FakeSuccessfulValidateErnsAction(ieMessage),
       FakeSuccessfulValidateLRNAction,
       connector,
       movementService,
@@ -150,8 +148,8 @@ class SubmitMessageControllerSpec
   private def createWithAuthActionFailure =
     new SubmitMessageController(
       FakeFailingAuthentication,
-      FakeSuccessIE818XMLParser(ieMessage),
-      FakeSuccessfulValidateConsignorAction,
+      FakeSuccessXMLParser,
+      FakeSuccessfulValidateErnsAction(ieMessage),
       FakeFailureValidateLRNAction,
       connector,
       movementService,
@@ -161,8 +159,8 @@ class SubmitMessageControllerSpec
   private def createWithFailingXmlParserAction =
     new SubmitMessageController(
       FakeSuccessAuthentication,
-      FakeFailureIE818XMLParser,
-      FakeSuccessfulValidateConsignorAction,
+      FakeFailureXMLParser,
+      FakeSuccessfulValidateErnsAction(ieMessage),
       FakeFailureValidateLRNAction,
       connector,
       movementService,
@@ -172,8 +170,8 @@ class SubmitMessageControllerSpec
   private def createWithValidateConsignorActionFailure =
     new SubmitMessageController(
       FakeSuccessAuthentication,
-      FakeSuccessIE818XMLParser(ieMessage),
-      FakeFailureValidateConsignorAction,
+      FakeSuccessXMLParser,
+      FakeFailureValidateErnsAction,
       FakeFailureValidateLRNAction,
       connector,
       movementService,

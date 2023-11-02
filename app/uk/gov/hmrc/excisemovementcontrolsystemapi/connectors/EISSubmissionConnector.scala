@@ -42,7 +42,7 @@ class EISSubmissionConnector @Inject()
 )(implicit ec: ExecutionContext) extends EISSubmissionHeader with Logging {
 
 
-  def submitExciseMovement(request: ParsedXmlRequestCopy[_], messageType: String)(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
+  def submitExciseMovement(request: ParsedXmlRequestCopy[_])(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
 
     //TODO: remember to rename this
     val timer = metrics.defaultRegistry.timer("emcs.eiscontroller.timer").time()
@@ -51,6 +51,7 @@ class EISSubmissionConnector @Inject()
     val correlationId = emcsUtils.generateCorrelationId
     val createdDateTime = emcsUtils.getCurrentDateTimeString
     val encodedMessage = emcsUtils.createEncoder.encodeToString(request.body.toString.getBytes(StandardCharsets.UTF_8))
+    val messageType = request.ieMessage.messageType
     val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", encodedMessage)
     val consignorId = request.ieMessage.consignorId
 
@@ -76,7 +77,7 @@ class EISSubmissionConnector @Inject()
   }
 
   //TODO implement a more generic solution that doesn't involve duplicating all the code
-  def submitExciseMovementIE818(request: DataRequestIE818[_], messageType: String)
+  def submitExciseMovementIE818(request: ParsedXmlRequestCopy[_], messageType: String)
                                (implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
 
     val timer = metrics.defaultRegistry.timer("emcs.eiscontroller.timer").time()
@@ -86,7 +87,7 @@ class EISSubmissionConnector @Inject()
     val createdDateTime = emcsUtils.getCurrentDateTimeString
     val encodedMessage = emcsUtils.createEncoder.encodeToString(request.body.toString.getBytes(StandardCharsets.UTF_8))
     val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", encodedMessage)
-    val consigneeId = request.movementMessage.consigneeId
+    val consigneeId = request.ieMessage.consigneeId.getOrElse("TODO")
 
     httpClient.POST[EISRequest, Either[Result, EISSubmissionResponse]](
       appConfig.emcsReceiverMessageUrl,

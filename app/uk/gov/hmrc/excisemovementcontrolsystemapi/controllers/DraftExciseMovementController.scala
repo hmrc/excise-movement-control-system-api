@@ -43,7 +43,7 @@ class DraftExciseMovementController @Inject()(
   def submit: Action[NodeSeq] =
     (authAction andThen xmlParser andThen consignorValidatorAction).async(parse.xml) {
       implicit request: ParsedXmlRequestCopy[NodeSeq] =>
-        movementMessageConnector.submitExciseMovement(request, MessageTypes.IE815.value).flatMap {
+        movementMessageConnector.submitExciseMovement(request).flatMap {
           case Right(_) => handleSuccess
           case Left(error) => Future.successful(error)
         }

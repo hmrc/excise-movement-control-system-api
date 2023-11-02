@@ -25,7 +25,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest,
 import scala.concurrent.{ExecutionContext, Future}
 
 trait FakeXmlParsers {
-  case class FakeSuccessIE815XMLParser(ieMessage: IE815Type) extends ParseXmlAction {
+  object FakeSuccessXMLParser extends ParseXmlAction {
     override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequestCopy[A]]] = {
       Future.successful(Right(ParsedXmlRequestCopy(EnrolmentRequest(request, Set.empty, "123"),null, Set.empty, "123")))
     }
@@ -33,7 +33,7 @@ trait FakeXmlParsers {
     override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global
   }
 
-  object FakeFailureIE815XMLParser extends ParseXmlAction {
+  object FakeFailureXMLParser extends ParseXmlAction {
     override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequestCopy[A]]] = {
       Future.successful(Left(BadRequest("Invalid xml supplied")))
     }

@@ -36,7 +36,8 @@ case class IE818Message
   override def consigneeId: Option[String] =
     obj.Body.AcceptedOrRejectedReportOfReceiptExport.ConsigneeTrader.flatMap(_.Traderid)
 
-  override def administrativeReferenceCode: Option[String] = Some(obj.Body.AcceptedOrRejectedReportOfReceiptExport.ExciseMovement.AdministrativeReferenceCode)
+  override def administrativeReferenceCode: Option[String] =
+    Some(obj.Body.AcceptedOrRejectedReportOfReceiptExport.ExciseMovement.AdministrativeReferenceCode)
 
   override def messageType: String = MessageTypes.IE818.value
 

@@ -18,8 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseIE818XmlAction, ValidateConsignorActionIE818, ValidateLRNActionFactory}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction, ValidateErnsAction, ValidateLRNActionFactory}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -30,8 +29,8 @@ import scala.xml.NodeSeq
 @Singleton
 class SubmitMessageController @Inject()(
                                          authAction: AuthAction,
-                                         xmlParser: ParseIE818XmlAction,
-                                         consignorValidatorAction: ValidateConsignorActionIE818,
+                                         xmlParser: ParseXmlAction,
+                                         consignorValidatorAction: ValidateErnsAction,
                                          validateLRNAction: ValidateLRNActionFactory,
                                          movementMessageConnector: EISSubmissionConnector,
                                          movementService: MovementService,
@@ -45,7 +44,7 @@ class SubmitMessageController @Inject()(
       andThen consignorValidatorAction
       andThen validateLRNAction(lrn, movementService)).async(parse.xml) {
       implicit request =>
-        movementMessageConnector.submitExciseMovementIE818(request, MessageTypes.IE818.value).flatMap {
+        movementMessageConnector.submitExciseMovement(request).flatMap {
           case Right(_) => Future.successful(Accepted(""))
           case Left(error) => Future.successful(error)
         }

@@ -63,7 +63,7 @@ class DraftExciseMovementControllerSpec
     super.beforeEach()
     reset(connector, movementMessageService)
 
-    when(connector.submitExciseMovement(any, any)(any)).thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
+    when(connector.submitExciseMovement(any)(any)).thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
 
     when(mockIeMessage.consigneeId).thenReturn(Some("789"))
     when(mockIeMessage.consignorId).thenReturn(Some("456"))
@@ -85,20 +85,8 @@ class DraftExciseMovementControllerSpec
         .thenReturn(Future.successful(Right(Movement("", "", None))))
       await(createWithSuccessfulAuth.submit(request))
 
-      verify(connector).submitExciseMovement(
-        any,
-        eqTo("IE815")
-      )(any)
+      verify(connector).submitExciseMovement(any)(any)
 
-      //TODO if ieMessage is mocked what is the point of trying to capture it
-      // Crashes if you try and access the mock from the captor
-      //val captor = ArgCaptor[ParsedXmlRequestCopy[_]]
-      //verify(connector).submitExciseMovement(
-      // captor.capture,
-      // eqTo("IE815")
-      //)(any)
-
-      // verifyMessageData(captor.ieMessage)
     }
 
     "generate an ARC and save to the cache" in {
@@ -115,7 +103,7 @@ class DraftExciseMovementControllerSpec
     }
 
     "return an error when EIS error" in {
-      when(connector.submitExciseMovement(any, any)(any))
+      when(connector.submitExciseMovement(any)(any))
         .thenReturn(Future.successful(Left(NotFound("not found"))))
 
       val result = createWithSuccessfulAuth.submit(request)
@@ -166,7 +154,7 @@ class DraftExciseMovementControllerSpec
   private def createWithAuthActionFailure =
     new DraftExciseMovementController(
       FakeFailingAuthentication,
-      FakeSuccessIE815XMLParser(ieMessage),
+      FakeSuccessXMLParser,
       FakeSuccessfulValidateErnsAction(mockIeMessage),
       connector,
       movementMessageService,
@@ -176,7 +164,7 @@ class DraftExciseMovementControllerSpec
   private def createWithFailingXmlParserAction =
     new DraftExciseMovementController(
       FakeSuccessAuthentication,
-      FakeFailureIE815XMLParser,
+      FakeFailureXMLParser,
       FakeSuccessfulValidateErnsAction(mockIeMessage),
       connector,
       movementMessageService,
@@ -186,7 +174,7 @@ class DraftExciseMovementControllerSpec
   private def createWithSuccessfulAuth =
     new DraftExciseMovementController(
       FakeSuccessAuthentication,
-      FakeSuccessIE815XMLParser(ieMessage),
+      FakeSuccessXMLParser,
       FakeSuccessfulValidateErnsAction(mockIeMessage),
       connector,
       movementMessageService,
@@ -196,7 +184,7 @@ class DraftExciseMovementControllerSpec
   private def createWithValidateConsignorActionFailure =
     new DraftExciseMovementController(
       FakeSuccessAuthentication,
-      FakeSuccessIE815XMLParser(ieMessage),
+      FakeSuccessXMLParser,
       FakeFailureValidateErnsAction,
       connector,
       movementMessageService,
