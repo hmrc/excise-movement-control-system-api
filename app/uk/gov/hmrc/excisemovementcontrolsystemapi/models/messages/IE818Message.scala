@@ -29,12 +29,14 @@ case class IE818Message
   private val key: Option[String],
   private val namespace: Option[String]
 ) extends IEMessage {
-  override def localReferenceNumber: Option[String] = None
+  def localReferenceNumber: Option[String] = None
 
-  override def consignorId: Option[String] = None
+  def consignorId: Option[String] = None
 
   override def consigneeId: Option[String] =
     obj.Body.AcceptedOrRejectedReportOfReceiptExport.ConsigneeTrader.flatMap(_.Traderid)
+
+  override def getErns: Set[String] = Set(consignorId, consigneeId).flatten
 
   override def administrativeReferenceCode: Option[String] =
     Some(obj.Body.AcceptedOrRejectedReportOfReceiptExport.ExciseMovement.AdministrativeReferenceCode)
@@ -45,6 +47,8 @@ case class IE818Message
     val ns: String = namespace.fold(generated.defaultScope.uri)(o => o)
     scalaxb.toXML[IE818Type](obj, None, key, scalaxb.toScope(key -> ns))
   }
+
+  override def lrnEquals(lrn: String): Boolean = localReferenceNumber.contains(lrn)
 }
 
 object IE818Message {

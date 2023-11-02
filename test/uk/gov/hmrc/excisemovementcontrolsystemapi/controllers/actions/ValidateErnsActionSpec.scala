@@ -50,12 +50,11 @@ class ValidateErnsActionSpec extends PlaySpec with TestXml with EitherValues wit
     when(emcsUtils.getCurrentDateTime).thenReturn(currentDateTime)
     when(emcsUtils.generateCorrelationId).thenReturn("123")
 
-    when(message.consignorId).thenReturn(Some("GBWK002281023"))
     when(message.consigneeId).thenReturn(Some("GBWKQOZ8OVLYR"))
-    when(message.localReferenceNumber).thenReturn(Some("LRNQA20230909022221"))
     when(message.getErns).thenReturn(Set("GBWK002281023", "GBWKQOZ8OVLYR"))
   }
 
+  //TODO: need to test for consignee too
   "ValidateConsignorActionSpec" should {
     "return a request" in {
 
@@ -65,11 +64,8 @@ class ValidateErnsActionSpec extends PlaySpec with TestXml with EitherValues wit
 
       val result = await(sut.refine(request))
 
-      val parsedRequest = result.toOption.get
-      parsedRequest.internalId mustBe "123"
-      parsedRequest.ieMessage.localReferenceNumber mustBe Some("LRNQA20230909022221")
-      parsedRequest.ieMessage.consignorId mustBe Some("GBWK002281023")
-      parsedRequest.ieMessage.consigneeId mustBe Some("GBWKQOZ8OVLYR")
+      result mustBe Right(request)
+
     }
 
     "an error" when {

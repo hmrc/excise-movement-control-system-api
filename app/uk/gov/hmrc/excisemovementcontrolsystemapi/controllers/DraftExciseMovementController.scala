@@ -21,6 +21,7 @@ import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction, ValidateErnsAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequestCopy
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ExciseMovementResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
@@ -53,7 +54,15 @@ class DraftExciseMovementController @Inject()(
   private def handleSuccess(implicit request: ParsedXmlRequestCopy[NodeSeq]): Future[Result] = {
 
     val ieMessage = request.ieMessage
-    val newMovement = Movement(ieMessage.localReferenceNumber.getOrElse("TODO"), ieMessage.consignorId.getOrElse("TODO"), ieMessage.consigneeId, Some(generateRandomArc))
+    val newMovement = ieMessage match {
+      case x:IE815Message => Movement(
+        x.localReferenceNumber,
+        x.consignorId,
+        x.consigneeId,
+        Some(generateRandomArc)
+      )
+      case _ => throw new Exception("invalid message sent to draft excise movement controller")
+    }
 
     movementMessageService.saveMovementMessage(newMovement)
       .flatMap {

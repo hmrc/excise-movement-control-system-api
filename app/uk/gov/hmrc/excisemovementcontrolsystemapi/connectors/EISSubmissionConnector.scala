@@ -53,18 +53,21 @@ class EISSubmissionConnector @Inject()
     val encodedMessage = emcsUtils.createEncoder.encodeToString(request.body.toString.getBytes(StandardCharsets.UTF_8))
     val messageType = request.ieMessage.messageType
     val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", encodedMessage)
-    val consignorId = request.ieMessage.consignorId
+    //TODO: .head bad in case empty
+    val ern = {
+      request.erns.intersect(request.ieMessage.getErns).head
+    }
 
     httpClient.POST[EISRequest, Either[Result, EISSubmissionResponse]](
       appConfig.emcsReceiverMessageUrl,
       eisRequest,
       build(correlationId, createdDateTime)
-    )(EISRequest.format, EISHttpReader(correlationId, consignorId.getOrElse("TODO"), createdDateTime), hc, ec)
+    )(EISRequest.format, EISHttpReader(correlationId, ern, createdDateTime), hc, ec)
       .andThen { case _ => timer.stop() }
       .recover {
         case ex: Throwable =>
 
-          logger.warn(EISErrorMessage(createdDateTime, consignorId.getOrElse("TODO"), ex.getMessage, correlationId, messageType), ex)
+          logger.warn(EISErrorMessage(createdDateTime, ern, ex.getMessage, correlationId, messageType), ex)
 
           val error = EISErrorResponse(
             LocalDateTime.parse(createdDateTime),

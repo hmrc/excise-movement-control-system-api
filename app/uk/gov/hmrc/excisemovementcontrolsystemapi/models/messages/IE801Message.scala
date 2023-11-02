@@ -27,15 +27,17 @@ case class IE801Message
   private val key: Option[String],
   private val namespace: Option[String]
 ) extends IEMessage {
-  override def localReferenceNumber: Option[String] = {
+  def localReferenceNumber: Option[String] = {
     Some(obj.Body.EADESADContainer.EadEsad.LocalReferenceNumber)
   }
 
-  override def consignorId: Option[String] =
+  def consignorId: Option[String] =
     Some(obj.Body.EADESADContainer.ConsignorTrader.TraderExciseNumber)
 
   override def consigneeId: Option[String] =
     obj.Body.EADESADContainer.ConsigneeTrader.flatMap(_.Traderid)
+
+  override def getErns: Set[String] = Set(consignorId, consigneeId).flatten
 
   override def administrativeReferenceCode: Option[String] = Some(obj.Body.EADESADContainer.ExciseMovement.AdministrativeReferenceCode)
 
@@ -45,6 +47,9 @@ case class IE801Message
     val ns: String = namespace.fold(generated.defaultScope.uri)(o => o)
     scalaxb.toXML[IE801Type](obj, None, key, scalaxb.toScope(key -> ns))
   }
+
+  override def lrnEquals(lrn: String): Boolean = localReferenceNumber.contains(lrn)
+
 }
 
 object IE801Message {

@@ -63,7 +63,7 @@ class MovementConnectorSpec extends PlaySpec with BeforeAndAfterEach with Either
   private val messageType = "IE815"
   private val encoder = Base64.getEncoder
   private val timerContext = mock[Timer.Context]
-  private val ieMessage = mock[IE815Message]
+  private val ie815Message = mock[IE815Message]
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -74,11 +74,8 @@ class MovementConnectorSpec extends PlaySpec with BeforeAndAfterEach with Either
     when(appConfig.emcsReceiverMessageUrl).thenReturn("/eis/path")
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
     when(emcsUtils.createEncoder).thenReturn(encoder)
-
-    when(ieMessage.consigneeId).thenReturn(None)
-    when(ieMessage.consignorId).thenReturn(Some("123"))
-    when(ieMessage.localReferenceNumber).thenReturn(Some("123"))
-    when(ieMessage.messageType).thenReturn("IE815")
+    when(ie815Message.messageType).thenReturn("IE815")
+    when(ie815Message.getErns).thenReturn(Set("123"))
   }
 
   "post" should {
@@ -96,16 +93,14 @@ class MovementConnectorSpec extends PlaySpec with BeforeAndAfterEach with Either
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "Success", emcsCorrelationId))))
 
-      when(ieMessage.consignorId).thenReturn(Some("234"))
-
       val encodeMessage = encoder.encodeToString(message.getBytes(StandardCharsets.UTF_8))
       val eisRequest = EISRequest(emcsCorrelationId, "2023-09-17T09:32:50.345", messageType, "APIP", "user1", encodeMessage)
 
       await(connector.submitExciseMovement(
         ParsedXmlRequestCopy(
-          EnrolmentRequest(FakeRequest().withBody(message), Set.empty, "124"),
-          ieMessage,
-          Set.empty,
+          EnrolmentRequest(FakeRequest().withBody(message), Set("123"), "124"),
+          ie815Message,
+          Set("123"),
           "124"
         ))
       )
@@ -183,9 +178,9 @@ class MovementConnectorSpec extends PlaySpec with BeforeAndAfterEach with Either
 
   private def submitExciseMovement: Future[Either[Result, EISSubmissionResponse]] = {
     connector.submitExciseMovement(ParsedXmlRequestCopy(
-      EnrolmentRequest(FakeRequest(), Set.empty, "124"),
-      ieMessage,
-      Set.empty,
+      EnrolmentRequest(FakeRequest(), Set("123"), "124"),
+      ie815Message,
+      Set("123"),
       "124"
     )
     )

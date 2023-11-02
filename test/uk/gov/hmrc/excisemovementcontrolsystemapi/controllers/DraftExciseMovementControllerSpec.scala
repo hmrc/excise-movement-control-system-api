@@ -34,7 +34,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnsAction, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GeneralMongoError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 
@@ -57,7 +57,7 @@ class DraftExciseMovementControllerSpec
   private val cc = stubControllerComponents()
   private val ieMessage = scalaxb.fromXML[IE815Type](IE815)
   private val request = createRequest(IE815)
-  private val mockIeMessage = mock[IEMessage]
+  private val mockIeMessage = mock[IE815Message]
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -66,8 +66,8 @@ class DraftExciseMovementControllerSpec
     when(connector.submitExciseMovement(any)(any)).thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
 
     when(mockIeMessage.consigneeId).thenReturn(Some("789"))
-    when(mockIeMessage.consignorId).thenReturn(Some("456"))
-    when(mockIeMessage.localReferenceNumber).thenReturn(Some("123"))
+    when(mockIeMessage.consignorId).thenReturn("456")
+    when(mockIeMessage.localReferenceNumber).thenReturn("123")
   }
 
   "submit" should {
@@ -143,12 +143,6 @@ class DraftExciseMovementControllerSpec
 
       status(result) mustBe INTERNAL_SERVER_ERROR
     }
-  }
-
-  private def verifyMessageData(actual: IEMessage) = {
-    actual.consignorId mustBe Some("456")
-    actual.consigneeId mustBe Some("789")
-    actual.localReferenceNumber mustBe Some("123")
   }
 
   private def createWithAuthActionFailure =
