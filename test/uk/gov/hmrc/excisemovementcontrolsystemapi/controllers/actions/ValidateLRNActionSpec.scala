@@ -48,7 +48,7 @@ class ValidateLRNActionSpec
   private val movementService = mock[MovementService]
   private val sut = new ValidateLRNImpl(movementService, emcsUtils, stubMessagesControllerComponents())
 
-  def block(authRequest: ParsedXmlRequest[_]) =
+  def block(authRequest: ValidatedXmlRequest[_]) =
     Future.successful(Ok)
 
   override def beforeEach(): Unit = {
@@ -65,10 +65,10 @@ class ValidateLRNActionSpec
         .thenReturn(Future.successful(Some(Movement("lrn", "consignorId", None))))
 
       val erns = Set("GBWK002281023", "GBWK002181023", "GBWK002281022")
-      val request = ParsedXmlRequest(EnrolmentRequest(FakeRequest(), erns, "123"),
-        ieMessage, erns, "123")
+      val request = ValidatedXmlRequest(ParsedXmlRequest(EnrolmentRequest(FakeRequest(), erns, "123"),
+        ieMessage, erns, "123"), erns)
 
-      val block = (actual: ParsedXmlRequest[_]) => {
+      val block = (actual: ValidatedXmlRequest[_]) => {
         actual mustBe request
         Future.successful(Ok)
       }
@@ -84,8 +84,8 @@ class ValidateLRNActionSpec
           .thenReturn(Future.successful(None))
 
         when(ieMessage.consigneeId).thenReturn(Some("12356"))
-        val request = ParsedXmlRequest(EnrolmentRequest(FakeRequest(), Set("12356"), "123"),
-          ieMessage, Set("12356"), "123")
+        val request = ValidatedXmlRequest(ParsedXmlRequest(EnrolmentRequest(FakeRequest(), Set("12356"), "123"),
+          ieMessage, Set("12356"), "123"), Set("12356"))
 
         val result = await(sut.apply("lrn").invokeBlock(request, block))
 
@@ -101,8 +101,8 @@ class ValidateLRNActionSpec
           .thenReturn(Future.failed(new RuntimeException("error")))
         when(ieMessage.consigneeId).thenReturn(Some("12356"))
 
-        val request = ParsedXmlRequest(EnrolmentRequest(FakeRequest(), Set("12356"), "123"),
-          ieMessage, Set("12356"), "123")
+        val request = ValidatedXmlRequest(ParsedXmlRequest(EnrolmentRequest(FakeRequest(), Set("12356"), "123"),
+          ieMessage, Set("12356"), "123"), Set("12356"))
 
         intercept[RuntimeException] {
           await(sut.apply("lrn").invokeBlock(request, block))

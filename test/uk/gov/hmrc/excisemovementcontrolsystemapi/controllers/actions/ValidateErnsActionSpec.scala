@@ -50,11 +50,9 @@ class ValidateErnsActionSpec extends PlaySpec with TestXml with EitherValues wit
     when(emcsUtils.getCurrentDateTime).thenReturn(currentDateTime)
     when(emcsUtils.generateCorrelationId).thenReturn("123")
 
-    when(message.consigneeId).thenReturn(Some("GBWKQOZ8OVLYR"))
     when(message.getErns).thenReturn(Set("GBWK002281023", "GBWKQOZ8OVLYR"))
   }
 
-  //TODO: need to test for consignee too
   "ValidateErnsAction" should {
     "return a request" in {
 
@@ -64,12 +62,12 @@ class ValidateErnsActionSpec extends PlaySpec with TestXml with EitherValues wit
 
       val result = await(sut.refine(request))
 
-      result mustBe Right(request)
+      result mustBe Right(ValidatedXmlRequest(request, Set("GBWK002281023")))
 
     }
 
     "an error" when {
-      "ern does not match consignorId" in {
+      "ern does not match consignor or consignee Ids" in {
 
         val authorizedRequest = EnrolmentRequest(FakeRequest(), Set("12356"), "123")
         val request = ParsedXmlRequest(authorizedRequest, message, Set("12356"), "123")

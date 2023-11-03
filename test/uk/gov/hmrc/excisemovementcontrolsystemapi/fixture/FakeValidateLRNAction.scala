@@ -20,7 +20,7 @@ import play.api.mvc.Results.NotFound
 import play.api.mvc.{ActionRefiner, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateLRNAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{ParsedXmlRequest, ValidatedXmlRequest}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -28,12 +28,12 @@ trait FakeValidateLRNAction {
 
   object FakeSuccessfulValidateLRNAction extends ValidateLRNAction with TestXml {
 
-    override def apply(lrn: String): ActionRefiner[ParsedXmlRequest, ParsedXmlRequest] = {
-      new ActionRefiner[ParsedXmlRequest, ParsedXmlRequest] {
+    override def apply(lrn: String): ActionRefiner[ValidatedXmlRequest, ValidatedXmlRequest] = {
+      new ActionRefiner[ValidatedXmlRequest, ValidatedXmlRequest] {
 
-        override val executionContext = ExecutionContext.Implicits.global
+        override val executionContext: ExecutionContext = ExecutionContext.Implicits.global
 
-        override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
+        override def refine[A](request: ValidatedXmlRequest[A]): Future[Either[Result, ValidatedXmlRequest[A]]] = {
           Future.successful(Right(request))
         }
       }
@@ -41,12 +41,12 @@ trait FakeValidateLRNAction {
   }
 
   object FakeFailureValidateLRNAction extends ValidateLRNAction {
-    override def apply(lrn: String): ActionRefiner[ParsedXmlRequest, ParsedXmlRequest] = {
-      new ActionRefiner[ParsedXmlRequest, ParsedXmlRequest] {
+    override def apply(lrn: String): ActionRefiner[ValidatedXmlRequest, ValidatedXmlRequest] = {
+      new ActionRefiner[ValidatedXmlRequest, ValidatedXmlRequest] {
 
-        override val executionContext = ExecutionContext.Implicits.global
+        override val executionContext: ExecutionContext = ExecutionContext.Implicits.global
 
-        override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
+        override def refine[A](request: ValidatedXmlRequest[A]): Future[Either[Result, ValidatedXmlRequest[A]]] = {
           Future.successful(Left(NotFound("Error")))
         }
       }

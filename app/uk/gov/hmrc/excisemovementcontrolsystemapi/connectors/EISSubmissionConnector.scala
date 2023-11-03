@@ -24,8 +24,9 @@ import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{ParsedXmlRequest, ValidatedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE801Message, IE815Message, IE818Message}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import java.nio.charset.StandardCharsets
@@ -41,8 +42,7 @@ class EISSubmissionConnector @Inject()
   metrics: Metrics
 )(implicit ec: ExecutionContext) extends EISSubmissionHeader with Logging {
 
-
-  def submitMessage(request: ParsedXmlRequest[_])(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
+  def submitMessage(request: ValidatedXmlRequest[_])(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
 
     //TODO: remember to rename this
     val timer = metrics.defaultRegistry.timer("emcs.eiscontroller.timer").time()
@@ -51,11 +51,40 @@ class EISSubmissionConnector @Inject()
     val correlationId = emcsUtils.generateCorrelationId
     val createdDateTime = emcsUtils.getCurrentDateTimeString
     val encodedMessage = emcsUtils.createEncoder.encodeToString(request.body.toString.getBytes(StandardCharsets.UTF_8))
-    val messageType = request.ieMessage.messageType
+    val messageType = request.parsedRequest.ieMessage.messageType
     val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", encodedMessage)
     //TODO: .head bad in case empty
+
+    //Store the valid Set from action
+    //Check if consignor is in set
+    //If not, check consignee
+    // If not, ????
+
+//    val actualErn = {
+//      request.ieMessage match {
+//        case x: IE815Message => if (matchedErns.contains(x.consignorId)) {
+//          x.consignorId
+//        } else if (matchedErns.contains(x.consigneeId.get)) { //TODO not this
+//          x.consigneeId.get
+//        } else {
+//          //TODO exception?
+//        }
+//
+//        case _ =>
+//      }
+//
+    //val ern = {
+      //request.parsedRequest.erns.intersect(request.parsedRequest.ieMessage.getErns).head
+    //}
+
     val ern = {
-      request.erns.intersect(request.ieMessage.getErns).head
+      request.parsedRequest.ieMessage match {
+        case x: IE801Message if (request.validErns.contains(x.consignorId.getOrElse("TODO"))) => x.consignorId.get
+        case x: IE801Message if (request.validErns.contains(x.consigneeId.getOrElse("TODO"))) => x.consigneeId.get
+        case x: IE815Message => x.consignorId
+        case x: IE818Message => x.consigneeId.getOrElse("TODO")
+        case _ => ???
+      }
     }
 
     httpClient.POST[EISRequest, Either[Result, EISSubmissionResponse]](

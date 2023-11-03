@@ -20,7 +20,7 @@ import play.api.mvc.Result
 import play.api.mvc.Results.Forbidden
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateErnsAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{ParsedXmlRequest, ValidatedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -29,9 +29,9 @@ trait FakeValidateErnsAction {
 
   case class FakeSuccessfulValidateErnsAction(mockIeMessage: IEMessage) extends ValidateErnsAction with TestXml {
 
-    override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
+    override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ValidatedXmlRequest[A]]] = {
       Future.successful(Right(
-        request.copy(ieMessage = mockIeMessage)
+        ValidatedXmlRequest(request.copy(ieMessage = mockIeMessage), Set.empty)
       ))
     }
 
@@ -39,7 +39,7 @@ trait FakeValidateErnsAction {
   }
 
   object FakeFailureValidateErnsAction extends ValidateErnsAction with TestXml {
-    override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
+    override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ValidatedXmlRequest[A]]] = {
       Future.successful(Left(Forbidden("Error")))
     }
 

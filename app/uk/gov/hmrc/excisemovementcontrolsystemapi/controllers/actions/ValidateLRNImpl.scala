@@ -20,7 +20,7 @@ import com.google.inject.ImplementedBy
 import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{ActionRefiner, ControllerComponents, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{ParsedXmlRequest, ValidatedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -39,14 +39,14 @@ class ValidateLRNImpl @Inject()
     with ValidateLRNAction
     with Logging {
 
-  override def apply(lrn: String): ActionRefiner[ParsedXmlRequest, ParsedXmlRequest] =
-    new ActionRefiner[ParsedXmlRequest, ParsedXmlRequest] {
+  override def apply(lrn: String): ActionRefiner[ValidatedXmlRequest, ValidatedXmlRequest] =
+    new ActionRefiner[ValidatedXmlRequest, ValidatedXmlRequest] {
 
-      override val executionContext = ec
+      override val executionContext: ExecutionContext = ec
 
-      override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
+      override def refine[A](request: ValidatedXmlRequest[A]): Future[Either[Result, ValidatedXmlRequest[A]]] = {
 
-        movementService.getMovementMessagesByLRNAndERNIn(lrn, request.erns.toList).map {
+        movementService.getMovementMessagesByLRNAndERNIn(lrn, request.parsedRequest.erns.toList).map {
           case Some(_) => Right(request)
           case _ => Left(NotFoundErrorResponse(lrn)(request))
         }
@@ -56,12 +56,12 @@ class ValidateLRNImpl @Inject()
 
 
 
-  private def NotFoundErrorResponse[A](lrn: String)(implicit request: ParsedXmlRequest[A]): Result = {
+  private def NotFoundErrorResponse[A](lrn: String)(implicit request: ValidatedXmlRequest[A]): Result = {
     NotFound(Json.toJson(
       ErrorResponse(
         emcsUtils.getCurrentDateTime,
         "Local reference number not found",
-        s"Local reference number $lrn is not found within the data for ERNs ${request.erns.mkString("/")}"
+        s"Local reference number $lrn is not found within the data for ERNs ${request.parsedRequest.erns.mkString("/")}"
       )
     ))
   }
@@ -69,5 +69,5 @@ class ValidateLRNImpl @Inject()
 
 @ImplementedBy(classOf[ValidateLRNImpl])
 trait ValidateLRNAction  {
-  def apply(lrn: String):ActionRefiner[ParsedXmlRequest, ParsedXmlRequest]
+  def apply(lrn: String):ActionRefiner[ValidatedXmlRequest, ValidatedXmlRequest]
 }

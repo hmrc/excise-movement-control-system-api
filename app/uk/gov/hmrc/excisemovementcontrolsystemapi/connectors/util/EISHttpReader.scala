@@ -30,9 +30,9 @@ import scala.reflect.runtime.universe.{TypeTag, typeOf}
 import scala.util.{Failure, Success, Try}
 
 class EISHttpReader(
-                     correlationId: String,
-                     ern: String,
-                     createdDateTime: String
+                     val correlationId: String,
+                     val ern: String,
+                     val createdDateTime: String
 ) extends HttpReads[Either[Result, EISSubmissionResponse]] with Logging {
 
     override def read(method: String, url: String, response: HttpResponse): Either[Result, EISSubmissionResponse] = {

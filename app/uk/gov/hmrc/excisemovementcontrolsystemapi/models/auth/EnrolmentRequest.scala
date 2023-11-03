@@ -32,3 +32,10 @@ case class ParsedXmlRequest[A]
   erns: Set[String],
   internalId: String
 ) extends WrappedRequest[A](request)
+
+case class ValidatedXmlRequest[A]
+(
+  parsedRequest: ParsedXmlRequest[A],
+  validErns: Set[String],
+) extends WrappedRequest[A](parsedRequest)
+

@@ -22,7 +22,8 @@ import play.api.libs.json.Json
 import play.api.mvc.Results.Forbidden
 import play.api.mvc.{ActionRefiner, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{ParsedXmlRequest, ValidatedXmlRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -30,11 +31,13 @@ import scala.concurrent.{ExecutionContext, Future}
 class ValidateErnsActionImpl @Inject()(implicit val executionContext: ExecutionContext, implicit val emcsUtils: EmcsUtils)
   extends ValidateErnsAction
     with Logging {
-  override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
-    val messageErns = request.ieMessage.getErns
+  override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ValidatedXmlRequest[A]]] = {
+    val messageErns = request.ieMessage.getErns //todo 815 just get consignor?
 
-    if (request.erns.intersect(messageErns).nonEmpty) {
-      Future.successful(Right(request))
+    val matchedErns: Set[String] = request.erns.intersect(messageErns)
+
+    if (matchedErns.nonEmpty) {
+      Future.successful(Right(ValidatedXmlRequest(request, matchedErns)))
     }
     else {
       logger.error("[ValidateErnAction] - Invalid Excise Number")
@@ -56,6 +59,6 @@ class ValidateErnsActionImpl @Inject()(implicit val executionContext: ExecutionC
 }
 
 @ImplementedBy(classOf[ValidateErnsActionImpl])
-trait ValidateErnsAction extends ActionRefiner[ParsedXmlRequest, ParsedXmlRequest] {
-  def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]]
+trait ValidateErnsAction extends ActionRefiner[ParsedXmlRequest, ValidatedXmlRequest] {
+  def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ValidatedXmlRequest[A]]]
 }

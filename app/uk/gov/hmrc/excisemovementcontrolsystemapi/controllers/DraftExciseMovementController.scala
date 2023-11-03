@@ -21,7 +21,7 @@ import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction, ValidateErnsAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{ParsedXmlRequest, ValidatedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
@@ -43,7 +43,7 @@ class DraftExciseMovementController @Inject()(
 
   def submit: Action[NodeSeq] =
     (authAction andThen xmlParser andThen validateErnsAction).async(parse.xml) {
-      implicit request: ParsedXmlRequest[NodeSeq] =>
+      implicit request: ValidatedXmlRequest[NodeSeq] =>
         movementMessageConnector.submitMessage(request).flatMap {
           case Right(_) => handleSuccess
           case Left(error) => Future.successful(error)
@@ -51,9 +51,9 @@ class DraftExciseMovementController @Inject()(
     }
 
 
-  private def handleSuccess(implicit request: ParsedXmlRequest[NodeSeq]): Future[Result] = {
+  private def handleSuccess(implicit request: ValidatedXmlRequest[NodeSeq]): Future[Result] = {
 
-    val ieMessage = request.ieMessage
+    val ieMessage = request.parsedRequest.ieMessage
     val newMovement = ieMessage match {
       case x: IE815Message => Movement(
         x.localReferenceNumber,
