@@ -26,7 +26,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/AcceptHeader"
       requestBody:
-        description: The body for this request should be an XML body that conforms to the [IE815 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie815-v16-0.xsd)
+        description: The body for this request should be an XML body that conforms to the [IE815 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie815.xsd)
         required: true
         content:
           application/vnd.hmrc.1.0+xml:

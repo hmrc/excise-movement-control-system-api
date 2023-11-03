@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:tcl="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TCL:V3.01" targetNamespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TCL:V3.01" version="16.0" elementFormDefault="qualified" attributeFormDefault="unqualified">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:tcl="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TCL:V3.01" targetNamespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TCL:V3.01" elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.00">
+  <!--=========================================-->
+  <!--===== Common Request Type =====-->
+  <!--=========================================-->
   <xs:simpleType name="CommonRequestType">
     <xs:annotation>
       <xs:documentation>Common Request Type</xs:documentation>
@@ -52,6 +55,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Request Message Name =====-->
+  <!--=========================================-->
   <xs:simpleType name="RequestMessageName">
     <xs:annotation>
       <xs:documentation>Request Message Name</xs:documentation>
@@ -74,6 +80,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Primary Criterion Type Code =====-->
+  <!--=========================================-->
   <xs:simpleType name="PrimaryCriterionTypeCode">
     <xs:annotation>
       <xs:documentation>Primary Criterion Type Code</xs:documentation>
@@ -341,6 +350,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Statistics Type =====-->
+  <!--=========================================-->
   <xs:simpleType name="StatisticsType">
     <xs:annotation>
       <xs:documentation>Statistics Type</xs:documentation>
@@ -373,6 +385,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Common Request Rejection Reason =====-->
+  <!--=========================================-->
   <xs:simpleType name="CommonRequestRejectionReason">
     <xs:annotation>
       <xs:documentation>Common Request Rejection Reason</xs:documentation>
@@ -430,6 +445,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Requested List of Codes (external) =====-->
+  <!--=========================================-->
   <xs:simpleType name="RequestedListOfCodesExternal">
     <xs:annotation>
       <xs:documentation>Requested List of Codes (external)</xs:documentation>
@@ -562,6 +580,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Global Conclusion Of Receipt =====-->
+  <!--=========================================-->
   <xs:simpleType name="GlobalConclusionOfReceipt">
     <xs:annotation>
       <xs:documentation>Global Conclusion Of Receipt</xs:documentation>
@@ -604,6 +625,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Customs Rejection Reason Code =====-->
+  <!--=========================================-->
   <xs:simpleType name="CustomsRejectionReasonCode">
     <xs:annotation>
       <xs:documentation>Customs Rejection Reason Code</xs:documentation>
@@ -636,6 +660,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== SEED Message Type =====-->
+  <!--=========================================-->
   <xs:simpleType name="SeedMessageType">
     <xs:annotation>
       <xs:documentation>SEED Message Type</xs:documentation>
@@ -663,6 +690,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Modification Type =====-->
+  <!--=========================================-->
   <xs:simpleType name="ModificationType">
     <xs:annotation>
       <xs:documentation>Modification Type</xs:documentation>
@@ -690,6 +720,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Requested List of Codes (full) =====-->
+  <!--=========================================-->
   <xs:simpleType name="RequestedListOfCodesFull">
     <xs:annotation>
       <xs:documentation>Requested List of Codes (full)</xs:documentation>
@@ -902,6 +935,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Flag =====-->
+  <!--=========================================-->
   <xs:simpleType name="Flag">
     <xs:annotation>
       <xs:documentation>Flag</xs:documentation>
@@ -919,16 +955,14 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Guarantor Type Code =====-->
+  <!--=========================================-->
   <xs:simpleType name="GuarantorTypeCode">
     <xs:annotation>
       <xs:documentation>Guarantor Type Code</xs:documentation>
     </xs:annotation>
     <xs:restriction base="xs:nonNegativeInteger">
-      <xs:enumeration value="0">
-        <xs:annotation>
-          <xs:documentation>Guarantor not required (qualifying UK to UK movements)</xs:documentation>
-        </xs:annotation>
-      </xs:enumeration>
       <xs:enumeration value="1">
         <xs:annotation>
           <xs:documentation>Consignor</xs:documentation>
@@ -1011,6 +1045,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Origin Type Code =====-->
+  <!--=========================================-->
   <xs:simpleType name="OriginTypeCode">
     <xs:annotation>
       <xs:documentation>Origin Type Code</xs:documentation>
@@ -1028,11 +1065,14 @@
       </xs:enumeration>
       <xs:enumeration value="3">
         <xs:annotation>
-          <xs:documentation>Origin - Duty Paid</xs:documentation>
+          <xs:documentation>Origin – Duty Paid</xs:documentation>
         </xs:annotation>
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Destination Type Code =====-->
+  <!--=========================================-->
   <xs:simpleType name="DestinationTypeCode">
     <xs:annotation>
       <xs:documentation>Destination Type Code</xs:documentation>
@@ -1045,12 +1085,12 @@
       </xs:enumeration>
       <xs:enumeration value="10">
         <xs:annotation>
-          <xs:documentation>Destination - Temporary Certified Consignee</xs:documentation>
+          <xs:documentation>Destination – Temporary Certified Consignee</xs:documentation>
         </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="11">
         <xs:annotation>
-          <xs:documentation>Destination - Return to the place of dispatch of the Consignor</xs:documentation>
+          <xs:documentation>Destination-Return to the place of dispatch of the Consignor</xs:documentation>
         </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="2">
@@ -1090,11 +1130,14 @@
       </xs:enumeration>
       <xs:enumeration value="9">
         <xs:annotation>
-          <xs:documentation>Destination - Certified Consignee</xs:documentation>
+          <xs:documentation>Destination – Certified Consignee</xs:documentation>
         </xs:annotation>
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Category of Wine Product =====-->
+  <!--=========================================-->
   <xs:simpleType name="CategoryOfWineProduct">
     <xs:annotation>
       <xs:documentation>Category of Wine Product</xs:documentation>
@@ -1127,6 +1170,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Notification Type =====-->
+  <!--=========================================-->
   <xs:simpleType name="NotificationType">
     <xs:annotation>
       <xs:documentation>Notification Type</xs:documentation>
@@ -1144,6 +1190,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Indicator of Shortage or Excess =====-->
+  <!--=========================================-->
   <xs:simpleType name="IndicatorOfShortageOrExcess">
     <xs:annotation>
       <xs:documentation>Indicator of Shortage or Excess</xs:documentation>
@@ -1161,6 +1210,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Reminder Message Type =====-->
+  <!--=========================================-->
   <xs:simpleType name="ReminderMessageType">
     <xs:annotation>
       <xs:documentation>Reminder Message Type</xs:documentation>
@@ -1183,6 +1235,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Functional Error Codes =====-->
+  <!--=========================================-->
   <xs:simpleType name="FunctionalErrorCodes">
     <xs:annotation>
       <xs:documentation>Functional Error Codes</xs:documentation>
@@ -1240,6 +1295,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Status Type =====-->
+  <!--=========================================-->
   <xs:simpleType name="StatusType">
     <xs:annotation>
       <xs:documentation>Status Type</xs:documentation>
@@ -1312,6 +1370,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Technical Message Type =====-->
+  <!--=========================================-->
   <xs:simpleType name="TechnicalMessageType">
     <xs:annotation>
       <xs:documentation>Technical Message Type</xs:documentation>
@@ -1404,6 +1465,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Submitter Type =====-->
+  <!--=========================================-->
   <xs:simpleType name="SubmitterType">
     <xs:annotation>
       <xs:documentation>Submitter Type</xs:documentation>
@@ -1421,6 +1485,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Reason to refuse update of economic operators =====-->
+  <!--=========================================-->
   <xs:simpleType name="ReasonToRefuseUpdateOfEconomicOperators">
     <xs:annotation>
       <xs:documentation>Reason to refuse update of economic operators</xs:documentation>
@@ -1513,6 +1580,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Requested Message Type =====-->
+  <!--=========================================-->
   <xs:simpleType name="RequestedMessageType">
     <xs:annotation>
       <xs:documentation>Requested Message Type</xs:documentation>
@@ -1580,6 +1650,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Operator Type Code =====-->
+  <!--=========================================-->
   <xs:simpleType name="OperatorTypeCode">
     <xs:annotation>
       <xs:documentation>Operator Type Code</xs:documentation>
@@ -1612,6 +1685,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Operator Role Code =====-->
+  <!--=========================================-->
   <xs:simpleType name="OperatorRoleCode">
     <xs:annotation>
       <xs:documentation>Operator Role Code</xs:documentation>
@@ -1629,6 +1705,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Transport Arrangement =====-->
+  <!--=========================================-->
   <xs:simpleType name="TransportArrangement">
     <xs:annotation>
       <xs:documentation>Transport Arrangement</xs:documentation>
@@ -1656,6 +1735,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Submission Type =====-->
+  <!--=========================================-->
   <xs:simpleType name="SubmissionType">
     <xs:annotation>
       <xs:documentation>Submission Type</xs:documentation>
@@ -1678,6 +1760,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Diagnosis Code =====-->
+  <!--=========================================-->
   <xs:simpleType name="DiagnosisCode">
     <xs:annotation>
       <xs:documentation>Diagnosis Code</xs:documentation>
@@ -1715,6 +1800,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Message Role Code =====-->
+  <!--=========================================-->
   <xs:simpleType name="MessageRoleCode">
     <xs:annotation>
       <xs:documentation>Message Role Code</xs:documentation>
@@ -1732,6 +1820,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Status Request Message Type =====-->
+  <!--=========================================-->
   <xs:simpleType name="StatusRequestMessageType">
     <xs:annotation>
       <xs:documentation>Status Request Message Type</xs:documentation>
@@ -1749,6 +1840,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Changed Destination Type Code =====-->
+  <!--=========================================-->
   <xs:simpleType name="ChangedDestinationTypeCode">
     <xs:annotation>
       <xs:documentation>Changed Destination Type Code</xs:documentation>
@@ -1761,12 +1855,12 @@
       </xs:enumeration>
       <xs:enumeration value="10">
         <xs:annotation>
-          <xs:documentation>Destination - Temporary Certified Consignee</xs:documentation>
+          <xs:documentation>Destination – Temporary Certified Consignee</xs:documentation>
         </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="11">
         <xs:annotation>
-          <xs:documentation>Destination - Return to the place of dispatch of the Consignor</xs:documentation>
+          <xs:documentation>Destination-Return to the place of dispatch of the Consignor</xs:documentation>
         </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="2">
@@ -1806,11 +1900,14 @@
       </xs:enumeration>
       <xs:enumeration value="9">
         <xs:annotation>
-          <xs:documentation>Destination - Certified Consignee</xs:documentation>
+          <xs:documentation>Destination – Certified Consignee</xs:documentation>
         </xs:annotation>
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Finding at Destination =====-->
+  <!--=========================================-->
   <xs:simpleType name="FindingAtDestination">
     <xs:annotation>
       <xs:documentation>Finding at Destination</xs:documentation>
@@ -1903,6 +2000,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Control Type =====-->
+  <!--=========================================-->
   <xs:simpleType name="ControlType">
     <xs:annotation>
       <xs:documentation>Control Type</xs:documentation>
@@ -1920,6 +2020,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Reason for Control =====-->
+  <!--=========================================-->
   <xs:simpleType name="ReasonForControl">
     <xs:annotation>
       <xs:documentation>Reason for Control</xs:documentation>
@@ -1957,6 +2060,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Global Control Conclusion =====-->
+  <!--=========================================-->
   <xs:simpleType name="GlobalControlConclusion">
     <xs:annotation>
       <xs:documentation>Global Control Conclusion</xs:documentation>
@@ -1989,6 +2095,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Performed Control Action =====-->
+  <!--=========================================-->
   <xs:simpleType name="PerformedControlAction">
     <xs:annotation>
       <xs:documentation>Performed Control Action</xs:documentation>
@@ -2056,6 +2165,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Report Message Type =====-->
+  <!--=========================================-->
   <xs:simpleType name="ReportMessageType">
     <xs:annotation>
       <xs:documentation>Report Message Type</xs:documentation>
@@ -2073,6 +2185,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Answer Message Type =====-->
+  <!--=========================================-->
   <xs:simpleType name="AnswerMessageType">
     <xs:annotation>
       <xs:documentation>Answer Message Type</xs:documentation>
@@ -2090,6 +2205,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Business Process Code =====-->
+  <!--=========================================-->
   <xs:simpleType name="BusinessProcessCode">
     <xs:annotation>
       <xs:documentation>Business Process Code</xs:documentation>
@@ -2122,6 +2240,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Unavailability Schedule Message Type =====-->
+  <!--=========================================-->
   <xs:simpleType name="UnavailabilityScheduleMessageType">
     <xs:annotation>
       <xs:documentation>Unavailability Schedule Message Type</xs:documentation>
@@ -2139,6 +2260,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== System Unavailability Type =====-->
+  <!--=========================================-->
   <xs:simpleType name="SystemUnavailabilityType">
     <xs:annotation>
       <xs:documentation>System Unavailability Type</xs:documentation>
@@ -2161,6 +2285,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== ACO Request Type =====-->
+  <!--=========================================-->
   <xs:simpleType name="AcoRequestType">
     <xs:annotation>
       <xs:documentation>ACO Request Type</xs:documentation>
@@ -2178,6 +2305,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== ACO Reminder Message Type =====-->
+  <!--=========================================-->
   <xs:simpleType name="AcoReminderMessageType">
     <xs:annotation>
       <xs:documentation>ACO Reminder Message Type</xs:documentation>
@@ -2195,6 +2325,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Semester =====-->
+  <!--=========================================-->
   <xs:simpleType name="Semester">
     <xs:annotation>
       <xs:documentation>Semester</xs:documentation>
@@ -2212,6 +2345,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Quarter =====-->
+  <!--=========================================-->
   <xs:simpleType name="Quarter">
     <xs:annotation>
       <xs:documentation>Quarter</xs:documentation>
@@ -2239,6 +2375,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Month =====-->
+  <!--=========================================-->
   <xs:simpleType name="Month">
     <xs:annotation>
       <xs:documentation>Month</xs:documentation>
@@ -2306,6 +2445,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Splitting Destination Type Code =====-->
+  <!--=========================================-->
   <xs:simpleType name="SplittingDestinationTypeCode">
     <xs:annotation>
       <xs:documentation>Splitting Destination Type Code</xs:documentation>
@@ -2353,6 +2495,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Control Report Message Type =====-->
+  <!--=========================================-->
   <xs:simpleType name="ControlReportMessageType">
     <xs:annotation>
       <xs:documentation>Control Report Message Type</xs:documentation>
@@ -2365,6 +2510,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== MV Request Type =====-->
+  <!--=========================================-->
   <xs:simpleType name="MvRequestType">
     <xs:annotation>
       <xs:documentation>MV Request Type</xs:documentation>
@@ -2382,6 +2530,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Result Code =====-->
+  <!--=========================================-->
   <xs:simpleType name="ResultCode">
     <xs:annotation>
       <xs:documentation>Result Code</xs:documentation>
@@ -2404,6 +2555,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Feedback Requested or Provided =====-->
+  <!--=========================================-->
   <xs:simpleType name="FeedbackRequestedOrProvided">
     <xs:annotation>
       <xs:documentation>Feedback Requested or Provided</xs:documentation>
@@ -2426,6 +2580,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Trader Person Type =====-->
+  <!--=========================================-->
   <xs:simpleType name="TraderPersonType">
     <xs:annotation>
       <xs:documentation>Trader Person Type</xs:documentation>
@@ -2463,6 +2620,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Other Accompanying Document Type =====-->
+  <!--=========================================-->
   <xs:simpleType name="OtherAccompanyingDocumentType">
     <xs:annotation>
       <xs:documentation>Other Accompanying Document Type</xs:documentation>
@@ -2480,6 +2640,9 @@
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
+  <!--=========================================-->
+  <!--===== Temporary Operator Type Code =====-->
+  <!--=========================================-->
   <xs:simpleType name="TemporaryOperatorTypeCode">
     <xs:annotation>
       <xs:documentation>Temporary Operator Type Code</xs:documentation>
@@ -2503,3 +2666,4 @@
     </xs:restriction>
   </xs:simpleType>
 </xs:schema>
+
