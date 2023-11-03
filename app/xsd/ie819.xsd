@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:ie="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE829:V3.01" xmlns:emcs="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:EMCS:V3.01" xmlns:tms="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01" xmlns:tcl="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TCL:V3.01" xmlns:doc="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:DOC:V3.01" targetNamespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE829:V3.01" elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.00">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:ie="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE819:V3.01" xmlns:emcs="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:EMCS:V3.01" xmlns:tms="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01" xmlns:tcl="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TCL:V3.01" xmlns:doc="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:DOC:V3.01" targetNamespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE819:V3.01" elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.00">
   <!--=========================================-->
-  <!--===== IE829:C_EXP_NOT -->
-  <!--===== NOTIFICATION OF ACCEPTED EXPORT -->
+  <!--===== IE819:C_REJ_DAT -->
+  <!--===== ALERT OR REJECTION OF AN E-AD/E-SAD -->
   <!--=========================================-->
   <!--===== Imports =====-->
   <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:EMCS:V3.01" schemaLocation="types.xsd" />
@@ -10,9 +10,9 @@
   <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TCL:V3.01" schemaLocation="tcl.xsd" />
   <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:DOC:V3.01" schemaLocation="doc.xsd" />
   <!--===== Root Element =====-->
-  <xs:element name="IE829" type="ie:IE829Type" />
+  <xs:element name="IE819" type="ie:IE819Type" />
   <!--===== EMCS Data Groups Declarations =====-->
-  <xs:complexType name="IE829Type">
+  <xs:complexType name="IE819Type">
     <xs:sequence>
       <xs:element name="Header" type="tms:HeaderType" />
       <xs:element name="Body" type="ie:BodyType" />
@@ -21,21 +21,22 @@
   <!--===== IE Specific Data Groups Declarations =====-->
   <xs:complexType name="BodyType">
     <xs:sequence>
-      <xs:element name="NotificationOfAcceptedExport" type="ie:NotificationOfAcceptedExportType" />
+      <xs:element name="AlertOrRejectionOfEADESAD" type="ie:AlertOrRejectionOfEADESADType" />
     </xs:sequence>
   </xs:complexType>
-  <xs:complexType name="NotificationOfAcceptedExportType">
+  <xs:complexType name="AlertOrRejectionOfEADESADType">
     <xs:sequence>
       <xs:element name="Attributes" type="ie:AttributesType" />
       <xs:element name="ConsigneeTrader" type="ie:ConsigneeTraderType" minOccurs="0" />
-      <xs:element name="ExciseMovementEad" type="ie:ExciseMovementEadType" maxOccurs="99" />
-      <xs:element name="ExportPlaceCustomsOffice" type="ie:ExportPlaceCustomsOfficeType" minOccurs="0" />
-      <xs:element name="ExportAcceptance" type="ie:ExportAcceptanceType" />
+      <xs:element name="ExciseMovement" type="ie:ExciseMovementType" />
+      <xs:element name="DestinationOffice" type="ie:DestinationOfficeType" />
+      <xs:element name="AlertOrRejection" type="ie:AlertOrRejectionType" />
+      <xs:element name="AlertOrRejectionOfEadEsadReason" type="ie:AlertOrRejectionOfEadEsadReasonType" minOccurs="0" maxOccurs="9" />
     </xs:sequence>
   </xs:complexType>
   <xs:complexType name="AttributesType">
     <xs:sequence>
-      <xs:element name="DateAndTimeOfIssuance" type="emcs:DateTimeType" />
+      <xs:element name="DateAndTimeOfValidationOfAlertRejection" type="emcs:DateTimeType" minOccurs="0" />
     </xs:sequence>
   </xs:complexType>
   <xs:complexType name="ConsigneeTraderType">
@@ -55,10 +56,10 @@
     </xs:sequence>
     <xs:attribute name="language" type="emcs:LanguageCodeType" use="required" />
   </xs:complexType>
-  <xs:complexType name="ExciseMovementEadType">
+  <xs:complexType name="ExciseMovementType">
     <xs:annotation>
       <xs:documentation>
-        <doc:description value="EXCISE MOVEMENT E-AD" />
+        <doc:description value="EXCISE MOVEMENT" />
       </xs:documentation>
     </xs:annotation>
     <xs:sequence>
@@ -66,28 +67,44 @@
       <xs:element name="SequenceNumber" type="emcs:SequenceNumberType" />
     </xs:sequence>
   </xs:complexType>
-  <xs:complexType name="ExportPlaceCustomsOfficeType">
+  <xs:complexType name="DestinationOfficeType">
     <xs:annotation>
       <xs:documentation>
-        <doc:description value="(EXPORT PLACE) CUSTOMS OFFICE" />
+        <doc:description value="(DESTINATION) OFFICE" />
       </xs:documentation>
     </xs:annotation>
     <xs:sequence>
       <xs:element name="ReferenceNumber" type="emcs:ExciseOfficeCodeType" />
     </xs:sequence>
   </xs:complexType>
-  <xs:complexType name="ExportAcceptanceType">
+  <xs:complexType name="AlertOrRejectionType">
     <xs:annotation>
       <xs:documentation>
-        <doc:description value="EXPORT ACCEPTANCE" />
+        <doc:description value="ALERT OR REJECTION" />
       </xs:documentation>
     </xs:annotation>
     <xs:sequence>
-      <xs:element name="ReferenceNumberOfSenderCustomsOffice" type="emcs:ExciseOfficeCodeType" />
-      <xs:element name="IdentificationOfSenderCustomsOfficer" type="emcs:IdentificationOfSenderCustomsOfficerType" minOccurs="0" />
-      <xs:element name="DateOfAcceptance" type="emcs:DateType" />
-      <xs:element name="DocumentReferenceNumber" type="emcs:DocumentReferenceNumberType" />
+      <xs:element name="DateOfAlertOrRejection" type="emcs:DateType" />
+      <xs:element name="EadEsadRejectedFlag" type="tcl:Flag" />
     </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="AlertOrRejectionOfEadEsadReasonType">
+    <xs:annotation>
+      <xs:documentation>
+        <doc:description value="ALERT OR REJECTION OF E-AD/E-SAD REASON" />
+      </xs:documentation>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="AlertOrRejectionOfMovementReasonCode" type="emcs:AlertOrRejectionOfMovementReasonCodeType" />
+      <xs:element name="ComplementaryInformation" type="ie:LSDComplementaryInformationType" minOccurs="0" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="LSDComplementaryInformationType">
+    <xs:simpleContent>
+      <xs:extension base="emcs:ComplementaryInformationType">
+        <xs:attribute name="language" type="emcs:LanguageCodeType" use="required" />
+      </xs:extension>
+    </xs:simpleContent>
   </xs:complexType>
 </xs:schema>
 
