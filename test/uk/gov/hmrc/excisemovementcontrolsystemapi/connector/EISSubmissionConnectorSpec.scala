@@ -38,13 +38,16 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest, ValidatedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISRequest, EISSubmissionResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE801Message, IE815Message, IE818Message}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE801Message, IE815Message, IE818Message, IEMessage}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
+import org.scalatest.prop.TableDrivenPropertyChecks._
 
 import java.nio.charset.StandardCharsets
 import java.time.LocalDateTime
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
+import scala.reflect.runtime.universe
+import scala.reflect.runtime.universe.{TypeTag, typeOf}
 
 class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with EitherValues {
 
@@ -80,7 +83,6 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
 
   "post" should {
     "return successful EISResponse" in {
-
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "Success", emcsCorrelationId))))
 
@@ -90,35 +92,35 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
     }
 
     "use the right request parameters in http client for IE815" in {
-      when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
-        .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "Success", emcsCorrelationId))))
+        when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
+          .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "Success", emcsCorrelationId))))
 
-      val encodeMessage = encoder.encodeToString(message.getBytes(StandardCharsets.UTF_8))
-      val eisRequest = EISRequest(emcsCorrelationId, "2023-09-17T09:32:50.345", "IE815", "APIP", "user1", encodeMessage)
+        val encodeMessage = encoder.encodeToString(message.getBytes(StandardCharsets.UTF_8))
+        val eisRequest = EISRequest(emcsCorrelationId, "2023-09-17T09:32:50.345", "IE815", "APIP", "user1", encodeMessage)
 
-      await(connector.submitMessage(
-        ValidatedXmlRequest(ParsedXmlRequest(
-          EnrolmentRequest(FakeRequest().withBody(message), Set("123"), "124"),
-          ie815Message,
-          Set("123"),
-          "124"
-        ), Set("123"))
-      ))
+        await(connector.submitMessage(
+          ValidatedXmlRequest(ParsedXmlRequest(
+            EnrolmentRequest(FakeRequest().withBody(message), Set("123"), "124"),
+            ie815Message,
+            Set("123"),
+            "124"
+          ), Set("123"))
+        ))
 
-      verify(appConfig).emcsReceiverMessageUrl
+        verify(appConfig).emcsReceiverMessageUrl
 
-      val captor = ArgCaptor[EISHttpReader]
-      verify(mockHttpClient).POST(
-        eqTo("/eis/path"),
-        eqTo(eisRequest),
-        eqTo(expectedHeader)
-      )(any, captor.capture, any, any)
+        val captor = ArgCaptor[EISHttpReader]
+        verify(mockHttpClient).POST(
+          eqTo("/eis/path"),
+          eqTo(eisRequest),
+          eqTo(expectedHeader)
+        )(any, captor.capture, any, any)
 
-      val eisHttpReader: EISHttpReader = captor.value
+        val eisHttpReader: EISHttpReader = captor.value
 
-      eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
-      eisHttpReader.ern mustBe "123"
-    }
+        eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
+        eisHttpReader.ern mustBe "123"
+      }
 
     "use the right request parameters in http client for IE818" in {
       val ie818Message = mock[IE818Message]
@@ -280,8 +282,8 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
 
       await(submitExciseMovement)
 
-      verify(metrics.defaultRegistry).timer(eqTo("emcs.eiscontroller.timer"))
-      verify(metrics.defaultRegistry.timer(eqTo("emcs.eiscontroller.timer"))).time()
+      verify(metrics.defaultRegistry).timer(eqTo("emcs.submission.connector.timer"))
+      verify(metrics.defaultRegistry.timer(eqTo("emcs.submission.connector.timer"))).time()
       verify(timerContext).stop()
     }
 
