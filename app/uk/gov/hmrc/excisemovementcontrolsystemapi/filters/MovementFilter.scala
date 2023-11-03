@@ -67,7 +67,6 @@ object MovementFilter {
 
   def and(filter: Seq[(String, Option[String])]): MovementFilter = {
 
-    //TODO not exhaustive
     MovementFilter(
       filter match {
         case Nil => Seq(new FilterNothing)
@@ -79,6 +78,7 @@ object MovementFilter {
             case _ => new FilterNothing
           }
         )
+        case _ => Seq(new FilterNothing)
     })
   }
 }

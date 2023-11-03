@@ -19,7 +19,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth
 import play.api.mvc.{Request, WrappedRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 
-//todo: can you definitely have more then 1 ERN in the token
 case class EnrolmentRequest[A](
                                 request: Request[A],
                                 erns: Set[String],

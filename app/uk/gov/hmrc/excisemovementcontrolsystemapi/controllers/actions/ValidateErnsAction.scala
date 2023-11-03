@@ -32,9 +32,8 @@ class ValidateErnsActionImpl @Inject()(implicit val executionContext: ExecutionC
   extends ValidateErnsAction
     with Logging {
   override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ValidatedXmlRequest[A]]] = {
-    val messageErns = request.ieMessage.getErns //todo 815 just get consignor?
 
-    val matchedErns: Set[String] = request.erns.intersect(messageErns)
+    val matchedErns: Set[String] = request.erns.intersect(request.ieMessage.getErns)
 
     if (matchedErns.nonEmpty) {
       Future.successful(Right(ValidatedXmlRequest(request, matchedErns)))

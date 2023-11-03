@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.filters
 import org.scalatestplus.play.PlaySpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
-class FilterMovementSpec extends PlaySpec {
+class MovementFilterSpec extends PlaySpec {
 
   private val m1 = Movement("lrn3", "test1", Some("consigneeId"), Some("arc1"))
   private val m2 = Movement("2", "test2", Some("consigneeId2"), Some("arc2"))

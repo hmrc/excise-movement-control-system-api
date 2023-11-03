@@ -22,7 +22,7 @@ case class GetMovementResponse(
   consignorId: String,
   localReferenceNumber: String,
   consigneeId: Option[String],
-  administrativeReferenceCode: Option[String],//todo: Should this be empty? I supect no, but double check
+  administrativeReferenceCode: Option[String],
   status: String
 )
 

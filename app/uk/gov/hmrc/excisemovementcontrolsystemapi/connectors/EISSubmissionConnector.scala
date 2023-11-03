@@ -76,6 +76,10 @@ class EISSubmissionConnector @Inject()
       }
   }
 
+  /*
+    The illegal state exception for IE801 and IE801 message should never happen here,
+    because these should have been caught previously during the validation.
+  */
   private def getSingleErnFromMessage(message: IEMessage, validErns: Set[String]) = {
     message match {
       case x: IE801Message => matchErn(x.consignorId, x.consigneeId, validErns, x.messageType)

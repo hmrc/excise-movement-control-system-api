@@ -22,7 +22,7 @@ import com.kenshoo.play.metrics.Metrics
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.mockito.MockitoSugar.{reset, verify, when}
-import org.mockito.captor.{ArgCaptor, Captor}
+import org.mockito.captor.ArgCaptor
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
@@ -40,14 +40,12 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISRequest, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE801Message, IE815Message, IE818Message, IEMessage}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
-import org.scalatest.prop.TableDrivenPropertyChecks._
 
 import java.nio.charset.StandardCharsets
 import java.time.LocalDateTime
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
-import scala.reflect.runtime.universe
-import scala.reflect.runtime.universe.{TypeTag, typeOf}
+import scala.xml.NodeSeq
 
 class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with EitherValues {
 
@@ -157,6 +155,21 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
 
       eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
       eisHttpReader.ern mustBe "456"
+    }
+
+    "throw an error if unsupported message" in {
+      class NonSupportedMessage extends IEMessage {
+        override def consigneeId: Option[String] = None
+        override def administrativeReferenceCode: Option[String] = None
+        override def messageType: String = "any-type"
+        override def toXml: NodeSeq = NodeSeq.Empty
+        override def getErns: Set[String] = Set.empty
+        override def lrnEquals(lrn: String): Boolean = false
+      }
+
+      the [RuntimeException] thrownBy
+        submitExciseMovementWithParams(xml, new NonSupportedMessage(), Set("123"), Set("456")) must
+        have message "[EISSubmissionConnector] - Unsupported Message Type: any-type"
     }
 
 
