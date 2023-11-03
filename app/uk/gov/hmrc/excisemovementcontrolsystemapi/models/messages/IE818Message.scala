@@ -29,8 +29,6 @@ case class IE818Message
   private val key: Option[String],
   private val namespace: Option[String]
 ) extends IEMessage {
-  def localReferenceNumber: Option[String] = None
-
   def consignorId: Option[String] = None
 
   override def consigneeId: Option[String] =
@@ -47,7 +45,7 @@ case class IE818Message
     scalaxb.toXML[IE818Type](obj, namespace, key, generated.defaultScope)
   }
 
-  override def lrnEquals(lrn: String): Boolean = localReferenceNumber.contains(lrn)
+  override def lrnEquals(lrn: String): Boolean = false
 }
 
 object IE818Message {

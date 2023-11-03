@@ -19,15 +19,10 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 import scala.xml.NodeSeq
 
 trait IEMessage {
-  // def not val as will be evaluated straight away
-//  def localReferenceNumber: Option[String]
-//  def consignorId: Option[String]
   def consigneeId: Option[String]
   def administrativeReferenceCode: Option[String]
   def messageType: String
   def toXml: NodeSeq
-  def getErns: Set[String] //= Set(consignorId, consigneeId).flatten
-
+  def getErns: Set[String]
   def lrnEquals(lrn: String): Boolean
-
 }
