@@ -22,7 +22,7 @@ import com.kenshoo.play.metrics.Metrics
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.mockito.MockitoSugar.{reset, verify, when}
-import org.mockito.captor.ArgCaptor
+import org.mockito.captor.{ArgCaptor, Captor}
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
@@ -62,7 +62,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
 
   private val connector = new EISSubmissionConnector(mockHttpClient, emcsUtils, appConfig, metrics)
   private val emcsCorrelationId = "1234566"
-  private val message = "<IE815></IE815>"
+  private val xml = "<IE815></IE815>"
   private val encoder = Base64.getEncoder
   private val timerContext = mock[Timer.Context]
   private val ie815Message = mock[IE815Message]
@@ -71,6 +71,8 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
     super.beforeEach()
     reset(mockHttpClient, appConfig, metrics, timerContext)
 
+    when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
+      .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "Success", emcsCorrelationId))))
     when(emcsUtils.getCurrentDateTimeString).thenReturn("2023-09-17T09:32:50.345")
     when(emcsUtils.generateCorrelationId).thenReturn(emcsCorrelationId)
     when(appConfig.emcsReceiverMessageUrl).thenReturn("/eis/path")
@@ -83,75 +85,47 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
 
   "post" should {
     "return successful EISResponse" in {
-      when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
-        .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "Success", emcsCorrelationId))))
-
-      val result: Either[Result, EISSubmissionResponse] = await(submitExciseMovement)
+      val result: Either[Result, EISSubmissionResponse] = await(submitExciseMovementForIE815)
 
       result mustBe Right(EISSubmissionResponse("ok", "Success", emcsCorrelationId))
     }
 
+    "get URL from appConfig" in {
+      submitExciseMovementWithParams(xml, ie815Message, Set("123"), Set("123"))
+
+      verify(appConfig).emcsReceiverMessageUrl
+    }
+
+    "send a request with the right parameters" in {
+      val encodeMessage = encoder.encodeToString(xml.getBytes(StandardCharsets.UTF_8))
+      val eisRequest = EISRequest(emcsCorrelationId, "2023-09-17T09:32:50.345", "IE815", "APIP", "user1", encodeMessage)
+
+      submitExciseMovementWithParams(xml, ie815Message, Set("123"), Set("123"))
+
+      verify(mockHttpClient).POST(
+        eqTo("/eis/path"),
+        eqTo(eisRequest),
+        eqTo(expectedHeader)
+      )(any, any, any, any)
+    }
+
     "use the right request parameters in http client for IE815" in {
-        when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
-          .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "Success", emcsCorrelationId))))
+      submitExciseMovementWithParams(xml, ie815Message, Set("123"), Set("123"))
 
-        val encodeMessage = encoder.encodeToString(message.getBytes(StandardCharsets.UTF_8))
-        val eisRequest = EISRequest(emcsCorrelationId, "2023-09-17T09:32:50.345", "IE815", "APIP", "user1", encodeMessage)
+      val eisHttpReader: EISHttpReader = verifyHttpHeader
 
-        await(connector.submitMessage(
-          ValidatedXmlRequest(ParsedXmlRequest(
-            EnrolmentRequest(FakeRequest().withBody(message), Set("123"), "124"),
-            ie815Message,
-            Set("123"),
-            "124"
-          ), Set("123"))
-        ))
-
-        verify(appConfig).emcsReceiverMessageUrl
-
-        val captor = ArgCaptor[EISHttpReader]
-        verify(mockHttpClient).POST(
-          eqTo("/eis/path"),
-          eqTo(eisRequest),
-          eqTo(expectedHeader)
-        )(any, captor.capture, any, any)
-
-        val eisHttpReader: EISHttpReader = captor.value
-
-        eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
-        eisHttpReader.ern mustBe "123"
-      }
+      eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
+      eisHttpReader.ern mustBe "123"
+    }
 
     "use the right request parameters in http client for IE818" in {
       val ie818Message = mock[IE818Message]
       when(ie818Message.messageType).thenReturn("IE818")
       when(ie818Message.consigneeId).thenReturn(Some("123"))
 
-      when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
-        .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "Success", emcsCorrelationId))))
+      submitExciseMovementWithParams(xml, ie818Message, Set("123"), Set("123"))
 
-      val encodeMessage = encoder.encodeToString(message.getBytes(StandardCharsets.UTF_8))
-      val eisRequest = EISRequest(emcsCorrelationId, "2023-09-17T09:32:50.345", "IE818", "APIP", "user1", encodeMessage)
-
-      await(connector.submitMessage(
-        ValidatedXmlRequest(ParsedXmlRequest(
-          EnrolmentRequest(FakeRequest().withBody(message), Set("123"), "124"),
-          ie818Message,
-          Set("123"),
-          "124"
-        ), Set("123"))
-      ))
-
-      verify(appConfig).emcsReceiverMessageUrl
-
-      val captor = ArgCaptor[EISHttpReader]
-      verify(mockHttpClient).POST(
-        eqTo("/eis/path"),
-        eqTo(eisRequest),
-        eqTo(expectedHeader)
-      )(any, captor.capture, any, any)
-
-      val eisHttpReader: EISHttpReader = captor.value
+      val eisHttpReader = verifyHttpHeader
 
       eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
       eisHttpReader.ern mustBe "123"
@@ -163,31 +137,9 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
       when(ie801Message.consignorId).thenReturn(Some("123"))
       when(ie801Message.consigneeId).thenReturn(Some("456"))
 
-      when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
-        .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "Success", emcsCorrelationId))))
+      submitExciseMovementWithParams(xml, ie801Message, Set("123"), Set("123"))
 
-      val encodeMessage = encoder.encodeToString(message.getBytes(StandardCharsets.UTF_8))
-      val eisRequest = EISRequest(emcsCorrelationId, "2023-09-17T09:32:50.345", "IE801", "APIP", "user1", encodeMessage)
-
-      await(connector.submitMessage(
-        ValidatedXmlRequest(ParsedXmlRequest(
-          EnrolmentRequest(FakeRequest().withBody(message), Set("123"), "124"),
-          ie801Message,
-          Set("123"),
-          "124"
-        ), Set("123"))
-      ))
-
-      verify(appConfig).emcsReceiverMessageUrl
-
-      val captor = ArgCaptor[EISHttpReader]
-      verify(mockHttpClient).POST(
-        eqTo("/eis/path"),
-        eqTo(eisRequest),
-        eqTo(expectedHeader)
-      )(any, captor.capture, any, any)
-
-      val eisHttpReader: EISHttpReader = captor.value
+      val eisHttpReader: EISHttpReader = verifyHttpHeader
 
       eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
       eisHttpReader.ern mustBe "123"
@@ -199,31 +151,9 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
       when(ie801Message.consignorId).thenReturn(Some("123"))
       when(ie801Message.consigneeId).thenReturn(Some("456"))
 
-      when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
-        .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "Success", emcsCorrelationId))))
+      submitExciseMovementWithParams(xml, ie801Message, Set("123"), Set("456"))
 
-      val encodeMessage = encoder.encodeToString(message.getBytes(StandardCharsets.UTF_8))
-      val eisRequest = EISRequest(emcsCorrelationId, "2023-09-17T09:32:50.345", "IE801", "APIP", "user1", encodeMessage)
-
-      await(connector.submitMessage(
-        ValidatedXmlRequest(ParsedXmlRequest(
-          EnrolmentRequest(FakeRequest().withBody(message), Set("123"), "124"),
-          ie801Message,
-          Set("123"),
-          "124"
-        ), Set("456"))
-      ))
-
-      verify(appConfig).emcsReceiverMessageUrl
-
-      val captor = ArgCaptor[EISHttpReader]
-      verify(mockHttpClient).POST(
-        eqTo("/eis/path"),
-        eqTo(eisRequest),
-        eqTo(expectedHeader)
-      )(any, captor.capture, any, any)
-
-      val eisHttpReader: EISHttpReader = captor.value
+      val eisHttpReader: EISHttpReader = verifyHttpHeader
 
       eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
       eisHttpReader.ern mustBe "456"
@@ -234,7 +164,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(Future.successful(Left(BadRequest("any error"))))
 
-      val result = await(submitExciseMovement)
+      val result = await(submitExciseMovementForIE815)
 
       result.left.value mustBe BadRequest("any error")
     }
@@ -242,7 +172,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
     "return 500 if post request fail" in {
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(Future.failed(new RuntimeException("error")))
-      val result = await(submitExciseMovement)
+      val result = await(submitExciseMovementForIE815)
 
       result.left.value mustBe InternalServerError(
         Json.toJson(EISErrorResponse(LocalDateTime.parse("2023-09-17T09:32:50.345"),
@@ -253,7 +183,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(Future.successful(Left(NotFound("error"))))
 
-      val result = await(submitExciseMovement)
+      val result = await(submitExciseMovementForIE815)
 
       result.left.value mustBe NotFound("error")
     }
@@ -262,7 +192,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(Future.successful(Left(ServiceUnavailable("any error"))))
 
-      val result = await(submitExciseMovement)
+      val result = await(submitExciseMovementForIE815)
 
       result.left.value mustBe ServiceUnavailable("any error")
     }
@@ -271,7 +201,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(Future.successful(Left(InternalServerError("any error"))))
 
-      val result = await(submitExciseMovement)
+      val result = await(submitExciseMovementForIE815)
 
       result.left.value mustBe InternalServerError("any error")
     }
@@ -280,22 +210,39 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(Future.successful(Left(BadRequest("any error"))))
 
-      await(submitExciseMovement)
+      await(submitExciseMovementForIE815)
 
       verify(metrics.defaultRegistry).timer(eqTo("emcs.submission.connector.timer"))
       verify(metrics.defaultRegistry.timer(eqTo("emcs.submission.connector.timer"))).time()
       verify(timerContext).stop()
     }
-
   }
 
-  private def submitExciseMovement: Future[Either[Result, EISSubmissionResponse]] = {
+  private def verifyHttpHeader: EISHttpReader = {
+    val captor = ArgCaptor[EISHttpReader]
+    verify(mockHttpClient).POST(any, any, any)(any, captor.capture, any, any)
+
+    val eisHttpReader = captor.value
+    eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
+    eisHttpReader
+  }
+
+  private def submitExciseMovementForIE815: Future[Either[Result, EISSubmissionResponse]] = {
+    submitExciseMovementWithParams(xml, ie815Message, Set("123"), Set("123"))
+  }
+
+  private def submitExciseMovementWithParams(
+    xml: String,
+    message: IEMessage,
+    enrolledErns: Set[String],
+    validatedErns: Set[String]
+  ): Future[Either[Result, EISSubmissionResponse]] = {
     connector.submitMessage(ValidatedXmlRequest(ParsedXmlRequest(
-      EnrolmentRequest(FakeRequest(), Set("123"), "124"),
-      ie815Message,
-      Set("123"),
+      EnrolmentRequest(FakeRequest().withBody(xml), enrolledErns, "124"),
+      message,
+      enrolledErns,
       "124"
-    ), Set("123")
+    ), validatedErns
     ))
   }
 
