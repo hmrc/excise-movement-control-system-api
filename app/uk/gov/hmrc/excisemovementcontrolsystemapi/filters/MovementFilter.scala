@@ -78,6 +78,7 @@ object MovementFilter {
             case _ => new FilterNothing
           }
         )
+        case _ => Seq(new FilterNothing)
     })
   }
 }

@@ -19,167 +19,243 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.data
 object Ie801XmlMessage {
 
   lazy val IE801 =
-    <IE801 xmlns:IE801="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.01">
-      <IE801:Header>
-        <MessageSender>token</MessageSender>
-        <MessageRecipient>token</MessageRecipient>
-        <DateOfPreparation>2018-11-01</DateOfPreparation>
-        <TimeOfPreparation>02:02:49+01:00</TimeOfPreparation>
-        <MessageIdentifier>token</MessageIdentifier>
-        <CorrelationIdentifier>token</CorrelationIdentifier>
-      </IE801:Header>
-      <IE801:Body>
-        <IE801:EADESADContainer>
-          <IE801:ConsigneeTrader language="to">
-            <IE801:Traderid>token</IE801:Traderid>
-            <IE801:TraderName>token</IE801:TraderName>
-            <IE801:StreetName>token</IE801:StreetName>
-            <IE801:StreetNumber>token</IE801:StreetNumber>
-            <IE801:Postcode>token</IE801:Postcode>
-            <IE801:City>token</IE801:City>
-            <IE801:EoriNumber>token</IE801:EoriNumber>
-          </IE801:ConsigneeTrader>
-          <IE801:ExciseMovement>
-            <IE801:AdministrativeReferenceCode>tokentokentokentokent</IE801:AdministrativeReferenceCode>
-            <IE801:DateAndTimeOfValidationOfEadEsad>2002-11-05T08:01:03</IE801:DateAndTimeOfValidationOfEadEsad>
-          </IE801:ExciseMovement>
-          <IE801:ConsignorTrader language="to">
-            <IE801:TraderExciseNumber>tokentokentok</IE801:TraderExciseNumber>
-            <IE801:TraderName>token</IE801:TraderName>
-            <IE801:StreetName>token</IE801:StreetName>
-            <IE801:StreetNumber>token</IE801:StreetNumber>
-            <IE801:Postcode>token</IE801:Postcode>
-            <IE801:City>token</IE801:City>
-          </IE801:ConsignorTrader>
-          <IE801:PlaceOfDispatchTrader language="to">
-            <IE801:ReferenceOfTaxWarehouse>tokentokentok</IE801:ReferenceOfTaxWarehouse>
-            <IE801:TraderName>token</IE801:TraderName>
-            <IE801:StreetName>token</IE801:StreetName>
-            <IE801:StreetNumber>token</IE801:StreetNumber>
-            <IE801:Postcode>token</IE801:Postcode>
-            <IE801:City>token</IE801:City>
-          </IE801:PlaceOfDispatchTrader>
-          <IE801:DispatchImportOffice>
-            <IE801:ReferenceNumber>tokentok</IE801:ReferenceNumber>
-          </IE801:DispatchImportOffice>
-          <IE801:ComplementConsigneeTrader>
-            <IE801:MemberStateCode>to</IE801:MemberStateCode>
-            <IE801:SerialNumberOfCertificateOfExemption>token</IE801:SerialNumberOfCertificateOfExemption>
-          </IE801:ComplementConsigneeTrader>
-          <IE801:DeliveryPlaceTrader language="to">
-            <IE801:Traderid>token</IE801:Traderid>
-            <IE801:TraderName>token</IE801:TraderName>
-            <IE801:StreetName>token</IE801:StreetName>
-            <IE801:StreetNumber>token</IE801:StreetNumber>
-            <IE801:Postcode>token</IE801:Postcode>
-            <IE801:City>token</IE801:City>
-          </IE801:DeliveryPlaceTrader>
-          <IE801:DeliveryPlaceCustomsOffice>
-            <IE801:ReferenceNumber>tokentok</IE801:ReferenceNumber>
-          </IE801:DeliveryPlaceCustomsOffice>
-          <IE801:CompetentAuthorityDispatchOffice>
-            <IE801:ReferenceNumber>tokentok</IE801:ReferenceNumber>
-          </IE801:CompetentAuthorityDispatchOffice>
-          <IE801:TransportArrangerTrader language="to">
-            <IE801:VatNumber>token</IE801:VatNumber>
-            <IE801:TraderName>token</IE801:TraderName>
-            <IE801:StreetName>token</IE801:StreetName>
-            <IE801:StreetNumber>token</IE801:StreetNumber>
-            <IE801:Postcode>token</IE801:Postcode>
-            <IE801:City>token</IE801:City>
-          </IE801:TransportArrangerTrader>
-          <IE801:FirstTransporterTrader language="to">
-            <IE801:VatNumber>token</IE801:VatNumber>
-            <IE801:TraderName>token</IE801:TraderName>
-            <IE801:StreetName>token</IE801:StreetName>
-            <IE801:StreetNumber>token</IE801:StreetNumber>
-            <IE801:Postcode>token</IE801:Postcode>
-            <IE801:City>token</IE801:City>
-          </IE801:FirstTransporterTrader>
-          <IE801:DocumentCertificate>
-            <IE801:DocumentType>toke</IE801:DocumentType>
-            <IE801:DocumentReference>token</IE801:DocumentReference>
-            <IE801:DocumentDescription language="to">token</IE801:DocumentDescription>
-            <IE801:ReferenceOfDocument language="to">token</IE801:ReferenceOfDocument>
-          </IE801:DocumentCertificate>
-          <IE801:EadEsad>
-            <IE801:LocalReferenceNumber>token</IE801:LocalReferenceNumber>
-            <IE801:InvoiceNumber>token</IE801:InvoiceNumber>
-            <IE801:InvoiceDate>2002-06-24+01:00</IE801:InvoiceDate>
-            <IE801:OriginTypeCode>3</IE801:OriginTypeCode>
-            <IE801:DateOfDispatch>2012-01-07</IE801:DateOfDispatch>
-            <IE801:TimeOfDispatch>09:44:59</IE801:TimeOfDispatch>
-            <IE801:UpstreamArc>tokentokentokentokent</IE801:UpstreamArc>
-            <IE801:ImportSad>
-              <IE801:ImportSadNumber>token</IE801:ImportSadNumber>
-            </IE801:ImportSad>
-          </IE801:EadEsad>
-          <IE801:HeaderEadEsad>
-            <IE801:SequenceNumber>to</IE801:SequenceNumber>
-            <IE801:DateAndTimeOfUpdateValidation>2013-06-17T18:14:58</IE801:DateAndTimeOfUpdateValidation>
-            <IE801:DestinationTypeCode>10</IE801:DestinationTypeCode>
-            <IE801:JourneyTime>tok</IE801:JourneyTime>
-            <IE801:TransportArrangement>4</IE801:TransportArrangement>
-          </IE801:HeaderEadEsad>
-          <IE801:TransportMode>
-            <IE801:TransportModeCode>to</IE801:TransportModeCode>
-            <IE801:ComplementaryInformation language="to">token</IE801:ComplementaryInformation>
-          </IE801:TransportMode>
-          <IE801:MovementGuarantee>
-            <IE801:GuarantorTypeCode>12</IE801:GuarantorTypeCode>
-            <IE801:GuarantorTrader language="to">
-              <IE801:TraderExciseNumber>tokentokentok</IE801:TraderExciseNumber>
-              <IE801:TraderName>token</IE801:TraderName>
-              <IE801:StreetName>token</IE801:StreetName>
-              <IE801:StreetNumber>token</IE801:StreetNumber>
-              <IE801:City>token</IE801:City>
-              <IE801:Postcode>token</IE801:Postcode>
-              <IE801:VatNumber>token</IE801:VatNumber>
-            </IE801:GuarantorTrader>
-          </IE801:MovementGuarantee>
-          <IE801:BodyEadEsad>
-            <IE801:BodyRecordUniqueReference>tok</IE801:BodyRecordUniqueReference>
-            <IE801:ExciseProductCode>toke</IE801:ExciseProductCode>
-            <IE801:CnCode>tokentok</IE801:CnCode>
-            <IE801:Quantity>1000.00000000000</IE801:Quantity>
-            <IE801:GrossMass>1000.000000000000</IE801:GrossMass>
-            <IE801:NetMass>1000.000000000000</IE801:NetMass>
-            <IE801:AlcoholicStrengthByVolumeInPercentage>1000.00</IE801:AlcoholicStrengthByVolumeInPercentage>
-            <IE801:DegreePlato>1000.00</IE801:DegreePlato>
-            <IE801:FiscalMark language="to">token</IE801:FiscalMark>
-            <IE801:FiscalMarkUsedFlag>1</IE801:FiscalMarkUsedFlag>
-            <IE801:DesignationOfOrigin language="to">token</IE801:DesignationOfOrigin>
-            <IE801:SizeOfProducer>token</IE801:SizeOfProducer>
-            <IE801:Density>1000.00</IE801:Density>
-            <IE801:CommercialDescription language="to">token</IE801:CommercialDescription>
-            <IE801:BrandNameOfProducts language="to">token</IE801:BrandNameOfProducts>
-            <IE801:MaturationPeriodOrAgeOfProducts>token</IE801:MaturationPeriodOrAgeOfProducts>
-            <IE801:Package>
-              <IE801:KindOfPackages>to</IE801:KindOfPackages>
-              <IE801:NumberOfPackages>token</IE801:NumberOfPackages>
-              <IE801:ShippingMarks>token</IE801:ShippingMarks>
-              <IE801:CommercialSealIdentification>token</IE801:CommercialSealIdentification>
-              <IE801:SealInformation language="to">token</IE801:SealInformation>
-            </IE801:Package>
-            <IE801:WineProduct>
-              <IE801:WineProductCategory>2</IE801:WineProductCategory>
-              <IE801:WineGrowingZoneCode>to</IE801:WineGrowingZoneCode>
-              <IE801:ThirdCountryOfOrigin>to</IE801:ThirdCountryOfOrigin>
-              <IE801:OtherInformation language="to">token</IE801:OtherInformation>
-              <IE801:WineOperation>
-                <IE801:WineOperationCode>to</IE801:WineOperationCode>
-              </IE801:WineOperation>
-            </IE801:WineProduct>
-          </IE801:BodyEadEsad>
-          <IE801:TransportDetails>
-            <IE801:TransportUnitCode>to</IE801:TransportUnitCode>
-            <IE801:IdentityOfTransportUnits>token</IE801:IdentityOfTransportUnits>
-            <IE801:CommercialSealIdentification>token</IE801:CommercialSealIdentification>
-            <IE801:ComplementaryInformation language="to">token</IE801:ComplementaryInformation>
-            <IE801:SealInformation language="to">token</IE801:SealInformation>
-          </IE801:TransportDetails>
-        </IE801:EADESADContainer>
-      </IE801:Body>
-    </IE801>
+    <urn:IE801
+        xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.01"
+        xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01">
+      <urn:Header>
+        <urn1:MessageSender>token</urn1:MessageSender>
+        <urn1:MessageRecipient>token</urn1:MessageRecipient>
+        <urn1:DateOfPreparation>2008-09-29</urn1:DateOfPreparation>
+        <urn1:TimeOfPreparation>00:18:33</urn1:TimeOfPreparation>
+        <urn1:MessageIdentifier>token</urn1:MessageIdentifier>
+        <!--Optional:-->
+        <urn1:CorrelationIdentifier>token</urn1:CorrelationIdentifier>
+      </urn:Header>
+      <urn:Body>
+        <urn:EADESADContainer>
+          <!--Optional:-->
+          <urn:ConsigneeTrader language="to">
+            <!--Optional:-->
+            <urn:Traderid>token</urn:Traderid>
+            <urn:TraderName>token</urn:TraderName>
+            <urn:StreetName>token</urn:StreetName>
+            <!--Optional:-->
+            <urn:StreetNumber>token</urn:StreetNumber>
+            <urn:Postcode>token</urn:Postcode>
+            <urn:City>token</urn:City>
+            <!--Optional:-->
+            <urn:EoriNumber>token</urn:EoriNumber>
+          </urn:ConsigneeTrader>
+          <urn:ExciseMovement>
+            <urn:AdministrativeReferenceCode>tokentokentokentokent</urn:AdministrativeReferenceCode>
+            <urn:DateAndTimeOfValidationOfEadEsad>2006-08-19T18:27:14+01:00</urn:DateAndTimeOfValidationOfEadEsad>
+          </urn:ExciseMovement>
+          <urn:ConsignorTrader language="to">
+            <urn:TraderExciseNumber>tokentokentok</urn:TraderExciseNumber>
+            <urn:TraderName>token</urn:TraderName>
+            <urn:StreetName>token</urn:StreetName>
+            <!--Optional:-->
+            <urn:StreetNumber>token</urn:StreetNumber>
+            <urn:Postcode>token</urn:Postcode>
+            <urn:City>token</urn:City>
+          </urn:ConsignorTrader>
+          <!--Optional:-->
+          <urn:PlaceOfDispatchTrader language="to">
+            <!--Optional:-->
+            <urn:ReferenceOfTaxWarehouse>tokentokentok</urn:ReferenceOfTaxWarehouse>
+            <!--Optional:-->
+            <urn:TraderName>token</urn:TraderName>
+            <!--Optional:-->
+            <urn:StreetName>token</urn:StreetName>
+            <!--Optional:-->
+            <urn:StreetNumber>token</urn:StreetNumber>
+            <!--Optional:-->
+            <urn:Postcode>token</urn:Postcode>
+            <!--Optional:-->
+            <urn:City>token</urn:City>
+          </urn:PlaceOfDispatchTrader>
+          <!--Optional:-->
+          <urn:DispatchImportOffice>
+            <urn:ReferenceNumber>tokentok</urn:ReferenceNumber>
+          </urn:DispatchImportOffice>
+          <!--Optional:-->
+          <urn:ComplementConsigneeTrader>
+            <urn:MemberStateCode>to</urn:MemberStateCode>
+            <!--Optional:-->
+            <urn:SerialNumberOfCertificateOfExemption>token</urn:SerialNumberOfCertificateOfExemption>
+          </urn:ComplementConsigneeTrader>
+          <!--Optional:-->
+          <urn:DeliveryPlaceTrader language="to">
+            <!--Optional:-->
+            <urn:Traderid>token</urn:Traderid>
+            <!--Optional:-->
+            <urn:TraderName>token</urn:TraderName>
+            <!--Optional:-->
+            <urn:StreetName>token</urn:StreetName>
+            <!--Optional:-->
+            <urn:StreetNumber>token</urn:StreetNumber>
+            <!--Optional:-->
+            <urn:Postcode>token</urn:Postcode>
+            <!--Optional:-->
+            <urn:City>token</urn:City>
+          </urn:DeliveryPlaceTrader>
+          <!--Optional:-->
+          <urn:DeliveryPlaceCustomsOffice>
+            <urn:ReferenceNumber>tokentok</urn:ReferenceNumber>
+          </urn:DeliveryPlaceCustomsOffice>
+          <urn:CompetentAuthorityDispatchOffice>
+            <urn:ReferenceNumber>tokentok</urn:ReferenceNumber>
+          </urn:CompetentAuthorityDispatchOffice>
+          <!--Optional:-->
+          <urn:TransportArrangerTrader language="to">
+            <!--Optional:-->
+            <urn:VatNumber>token</urn:VatNumber>
+            <urn:TraderName>token</urn:TraderName>
+            <urn:StreetName>token</urn:StreetName>
+            <!--Optional:-->
+            <urn:StreetNumber>token</urn:StreetNumber>
+            <urn:Postcode>token</urn:Postcode>
+            <urn:City>token</urn:City>
+          </urn:TransportArrangerTrader>
+          <!--Optional:-->
+          <urn:FirstTransporterTrader language="to">
+            <!--Optional:-->
+            <urn:VatNumber>token</urn:VatNumber>
+            <urn:TraderName>token</urn:TraderName>
+            <urn:StreetName>token</urn:StreetName>
+            <!--Optional:-->
+            <urn:StreetNumber>token</urn:StreetNumber>
+            <urn:Postcode>token</urn:Postcode>
+            <urn:City>token</urn:City>
+          </urn:FirstTransporterTrader>
+          <!--0 to 9 repetitions:-->
+          <urn:DocumentCertificate>
+            <!--Optional:-->
+            <urn:DocumentType>toke</urn:DocumentType>
+            <!--Optional:-->
+            <urn:DocumentReference>token</urn:DocumentReference>
+            <!--Optional:-->
+            <urn:DocumentDescription language="to">token</urn:DocumentDescription>
+            <!--Optional:-->
+            <urn:ReferenceOfDocument language="to">token</urn:ReferenceOfDocument>
+          </urn:DocumentCertificate>
+          <urn:EadEsad>
+            <urn:LocalReferenceNumber>token</urn:LocalReferenceNumber>
+            <urn:InvoiceNumber>token</urn:InvoiceNumber>
+            <!--Optional:-->
+            <urn:InvoiceDate>2009-05-16</urn:InvoiceDate>
+            <urn:OriginTypeCode>2</urn:OriginTypeCode>
+            <urn:DateOfDispatch>2002-11-05+00:00</urn:DateOfDispatch>
+            <!--Optional:-->
+            <urn:TimeOfDispatch>16:46:32+01:00</urn:TimeOfDispatch>
+            <!--Optional:-->
+            <urn:UpstreamArc>tokentokentokentokent</urn:UpstreamArc>
+            <!--0 to 9 repetitions:-->
+            <urn:ImportSad>
+              <urn:ImportSadNumber>token</urn:ImportSadNumber>
+            </urn:ImportSad>
+          </urn:EadEsad>
+          <urn:HeaderEadEsad>
+            <urn:SequenceNumber>to</urn:SequenceNumber>
+            <urn:DateAndTimeOfUpdateValidation>2016-02-20T14:56:29+00:00</urn:DateAndTimeOfUpdateValidation>
+            <urn:DestinationTypeCode>7</urn:DestinationTypeCode>
+            <urn:JourneyTime>tok</urn:JourneyTime>
+            <urn:TransportArrangement>1</urn:TransportArrangement>
+          </urn:HeaderEadEsad>
+          <urn:TransportMode>
+            <urn:TransportModeCode>to</urn:TransportModeCode>
+            <!--Optional:-->
+            <urn:ComplementaryInformation language="to">token</urn:ComplementaryInformation>
+          </urn:TransportMode>
+          <urn:MovementGuarantee>
+            <urn:GuarantorTypeCode>234</urn:GuarantorTypeCode>
+            <!--0 to 2 repetitions:-->
+            <urn:GuarantorTrader language="to">
+              <!--Optional:-->
+              <urn:TraderExciseNumber>tokentokentok</urn:TraderExciseNumber>
+              <!--Optional:-->
+              <urn:TraderName>token</urn:TraderName>
+              <!--Optional:-->
+              <urn:StreetName>token</urn:StreetName>
+              <!--Optional:-->
+              <urn:StreetNumber>token</urn:StreetNumber>
+              <!--Optional:-->
+              <urn:City>token</urn:City>
+              <!--Optional:-->
+              <urn:Postcode>token</urn:Postcode>
+              <!--Optional:-->
+              <urn:VatNumber>token</urn:VatNumber>
+            </urn:GuarantorTrader>
+          </urn:MovementGuarantee>
+          <!--1 or more repetitions:-->
+          <urn:BodyEadEsad>
+            <urn:BodyRecordUniqueReference>tok</urn:BodyRecordUniqueReference>
+            <urn:ExciseProductCode>toke</urn:ExciseProductCode>
+            <urn:CnCode>tokentok</urn:CnCode>
+            <urn:Quantity>1000.00000000000</urn:Quantity>
+            <urn:GrossMass>1000.000000000000</urn:GrossMass>
+            <urn:NetMass>1000.000000000000</urn:NetMass>
+            <!--Optional:-->
+            <urn:AlcoholicStrengthByVolumeInPercentage>1000.00</urn:AlcoholicStrengthByVolumeInPercentage>
+            <!--Optional:-->
+            <urn:DegreePlato>1000.00</urn:DegreePlato>
+            <!--Optional:-->
+            <urn:FiscalMark language="to">token</urn:FiscalMark>
+            <!--Optional:-->
+            <urn:FiscalMarkUsedFlag>0</urn:FiscalMarkUsedFlag>
+            <!--Optional:-->
+            <urn:DesignationOfOrigin language="to">token</urn:DesignationOfOrigin>
+            <!--Optional:-->
+            <urn:SizeOfProducer>token</urn:SizeOfProducer>
+            <!--Optional:-->
+            <urn:Density>1000.00</urn:Density>
+            <!--Optional:-->
+            <urn:CommercialDescription language="to">token</urn:CommercialDescription>
+            <!--Optional:-->
+            <urn:BrandNameOfProducts language="to">token</urn:BrandNameOfProducts>
+            <!--Optional:-->
+            <urn:MaturationPeriodOrAgeOfProducts>token</urn:MaturationPeriodOrAgeOfProducts>
+            <!--1 to 99 repetitions:-->
+            <urn:Package>
+              <urn:KindOfPackages>to</urn:KindOfPackages>
+              <!--Optional:-->
+              <urn:NumberOfPackages>token</urn:NumberOfPackages>
+              <!--Optional:-->
+              <urn:ShippingMarks>token</urn:ShippingMarks>
+              <!--Optional:-->
+              <urn:CommercialSealIdentification>token</urn:CommercialSealIdentification>
+              <!--Optional:-->
+              <urn:SealInformation language="to">token</urn:SealInformation>
+            </urn:Package>
+            <!--Optional:-->
+            <urn:WineProduct>
+              <urn:WineProductCategory>4</urn:WineProductCategory>
+              <!--Optional:-->
+              <urn:WineGrowingZoneCode>to</urn:WineGrowingZoneCode>
+              <!--Optional:-->
+              <urn:ThirdCountryOfOrigin>to</urn:ThirdCountryOfOrigin>
+              <!--Optional:-->
+              <urn:OtherInformation language="to">token</urn:OtherInformation>
+              <!--0 to 99 repetitions:-->
+              <urn:WineOperation>
+                <urn:WineOperationCode>to</urn:WineOperationCode>
+              </urn:WineOperation>
+            </urn:WineProduct>
+          </urn:BodyEadEsad>
+          <!--1 to 99 repetitions:-->
+          <urn:TransportDetails>
+            <urn:TransportUnitCode>to</urn:TransportUnitCode>
+            <!--Optional:-->
+            <urn:IdentityOfTransportUnits>token</urn:IdentityOfTransportUnits>
+            <!--Optional:-->
+            <urn:CommercialSealIdentification>token</urn:CommercialSealIdentification>
+            <!--Optional:-->
+            <urn:ComplementaryInformation language="to">token</urn:ComplementaryInformation>
+            <!--Optional:-->
+            <urn:SealInformation language="to">token</urn:SealInformation>
+          </urn:TransportDetails>
+        </urn:EADESADContainer>
+      </urn:Body>
+    </urn:IE801>
 
 }

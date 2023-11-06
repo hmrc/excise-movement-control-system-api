@@ -16,92 +16,68 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
-import generated.IE818Type
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.mockito.MockitoSugar.when
 import org.scalatest.{BeforeAndAfterAll, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
-import play.api.mvc.Results.{BadRequest, Forbidden}
+import play.api.mvc.Results.Forbidden
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
 
 import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext
 
 
-class ValidateConsignorActionIE818Spec extends PlaySpec with TestXml with EitherValues with BeforeAndAfterAll {
+class ValidateErnsActionSpec extends PlaySpec with TestXml with EitherValues with BeforeAndAfterAll {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val emcsUtils: EmcsUtils = mock[EmcsUtils]
 
-  private val message = mock[IE818Type](RETURNS_DEEP_STUBS)
+  val sut = new ValidateErnsActionImpl()
+
+  private val message = mock[IEMessage](RETURNS_DEEP_STUBS)
   private val currentDateTime = LocalDateTime.of(2023, 10, 18, 15, 33, 33)
+
 
   override def beforeAll(): Unit = {
     super.beforeAll()
     when(emcsUtils.getCurrentDateTime).thenReturn(currentDateTime)
     when(emcsUtils.generateCorrelationId).thenReturn("123")
+
+    when(message.getErns).thenReturn(Set("GBWK002281023", "GBWKQOZ8OVLYR"))
   }
 
-  val sut = new ValidateConsignorActionIE818Impl()
-
-  "ValidateConsignorActionIE818Spec" should {
+  "ValidateErnsAction" should {
     "return a request" in {
-      when(message.Body.AcceptedOrRejectedReportOfReceiptExport.ConsigneeTrader.get.Traderid).thenReturn(Some("GBWK002281023"))
+
       val erns = Set("GBWK002281023", "GBWK002181023", "GBWK002281022")
       val authorizedRequest = EnrolmentRequest(FakeRequest(), erns, "123")
-      val request = ParsedXmlRequestIE818(authorizedRequest, message, erns, "123")
+      val request = ParsedXmlRequest(authorizedRequest, message, erns, "123")
 
       val result = await(sut.refine(request))
 
-      val dataRequest = result.toOption.get
-      dataRequest.internalId mustBe "123"
-      dataRequest.movementMessage.consigneeId mustBe "GBWK002281023"
+      result mustBe Right(ValidatedXmlRequest(request, Set("GBWK002281023")))
+
     }
 
     "an error" when {
-      "ern does not match the consignorId" in {
+      "ern does not match consignor or consignee Ids" in {
 
-        when(message.Body.AcceptedOrRejectedReportOfReceiptExport.ConsigneeTrader.get.Traderid).thenReturn(Some("GBWK002281023"))
         val authorizedRequest = EnrolmentRequest(FakeRequest(), Set("12356"), "123")
-        val request = ParsedXmlRequestIE818(authorizedRequest, message, Set("12356"), "123")
+        val request = ParsedXmlRequest(authorizedRequest, message, Set("12356"), "123")
 
         val result = await(sut.refine(request))
 
-        result.left.value mustBe Forbidden(Json.toJson(createErrorResponse))
-      }
+        result.left.value mustBe Forbidden(Json.toJson(ErrorResponse(currentDateTime, "ERN validation error",
+          "Excise number in message does not match authenticated excise number")))
 
-      "message has not consignorId" in {
-        when(message.Body.AcceptedOrRejectedReportOfReceiptExport.ConsigneeTrader).thenReturn(None)
-
-        val authorizedRequest = EnrolmentRequest(FakeRequest(), Set("12356"), "123")
-        val request = ParsedXmlRequestIE818(authorizedRequest, message, Set("12356"), "123")
-
-        val result = await(sut.refine(request))
-
-        result.left.value mustBe BadRequest(Json.toJson(createErrorResponseForBadRequest))
       }
     }
-  }
-
-  private def createErrorResponse = {
-    ErrorResponse(
-      currentDateTime,
-      "ERN validation error",
-      "Excise number in message does not match authenticated excise number"
-    )
-  }
-
-  private def createErrorResponseForBadRequest: ErrorResponse = {
-    ErrorResponse(
-      currentDateTime,
-      "ERN validation error",
-      "Consignee ID should be supplied in the message"
-    )
   }
 }

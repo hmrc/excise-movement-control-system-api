@@ -22,17 +22,29 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import scala.xml.NodeSeq
 
 case class IE815Message (private val obj: IE815Type) extends IEMessage {
-  override def localReferenceNumber: Option[String] =
-    Some(obj.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber)
+  def localReferenceNumber: String =
+    obj.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber
 
-  override def getType: String = MessageTypes.IE815.value
+  def consignorId: String =
+    obj.Body.SubmittedDraftOfEADESAD.ConsignorTrader.TraderExciseNumber
+
+  override def consigneeId: Option[String] =
+    obj.Body.SubmittedDraftOfEADESAD.ConsigneeTrader.flatMap(_.Traderid)
+
+  override def getErns: Set[String] = Set(Some(consignorId), consigneeId).flatten
+  override def administrativeReferenceCode: Option[String] = None
+
+  override def messageType: String = MessageTypes.IE815.value
 
   override def toXml: NodeSeq =
     scalaxb.toXML[IE815Type](obj, MessageTypes.IE815.value, generated.defaultScope)
+
+  override def lrnEquals(lrn: String): Boolean = localReferenceNumber.equals(lrn)
+
 }
 
 object IE815Message {
-  def apply(message: IE815Type): IE815Message = {
-    IE815Message(message)
+  def createFromXml(xml: NodeSeq): IE815Message = {
+    IE815Message(scalaxb.fromXML[IE815Type](xml))
   }
 }

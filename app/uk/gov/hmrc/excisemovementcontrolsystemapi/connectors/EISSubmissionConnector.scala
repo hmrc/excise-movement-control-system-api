@@ -24,8 +24,9 @@ import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequest, DataRequestIE818}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE801Message, IE815Message, IE818Message, IEMessage}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import java.nio.charset.StandardCharsets
@@ -41,29 +42,29 @@ class EISSubmissionConnector @Inject()
   metrics: Metrics
 )(implicit ec: ExecutionContext) extends EISSubmissionHeader with Logging {
 
+  def submitMessage(request: ValidatedXmlRequest[_])(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
 
-  def submitExciseMovement(request: DataRequest[_], messageType: String)(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
-
-    //TODO: remember to rename this
-    val timer = metrics.defaultRegistry.timer("emcs.eiscontroller.timer").time()
+    val timer = metrics.defaultRegistry.timer("emcs.submission.connector.timer").time()
 
     //todo: add retry
     val correlationId = emcsUtils.generateCorrelationId
     val createdDateTime = emcsUtils.getCurrentDateTimeString
     val encodedMessage = emcsUtils.createEncoder.encodeToString(request.body.toString.getBytes(StandardCharsets.UTF_8))
+    val messageType = request.parsedRequest.ieMessage.messageType
     val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", encodedMessage)
-    val consignorId = request.movementMessage.consignorId
+
+    val ern = getSingleErnFromMessage(request.parsedRequest.ieMessage, request.validErns)
 
     httpClient.POST[EISRequest, Either[Result, EISSubmissionResponse]](
       appConfig.emcsReceiverMessageUrl,
       eisRequest,
       build(correlationId, createdDateTime)
-    )(EISRequest.format, EISHttpReader(correlationId, consignorId, createdDateTime), hc, ec)
+    )(EISRequest.format, EISHttpReader(correlationId, ern, createdDateTime), hc, ec)
       .andThen { case _ => timer.stop() }
       .recover {
         case ex: Throwable =>
 
-          logger.warn(EISErrorMessage(createdDateTime, consignorId, ex.getMessage, correlationId, messageType), ex)
+          logger.warn(EISErrorMessage(createdDateTime, ern, ex.getMessage, correlationId, messageType), ex)
 
           val error = EISErrorResponse(
             LocalDateTime.parse(createdDateTime),
@@ -75,37 +76,29 @@ class EISSubmissionConnector @Inject()
       }
   }
 
-  //TODO implement a more generic solution that doesn't involve duplicating all the code
-  def submitExciseMovementIE818(request: DataRequestIE818[_], messageType: String)
-                               (implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
+  /*
+    The illegal state exception for IE801 and IE801 message should never happen here,
+    because these should have been caught previously during the validation.
+  */
+  private def getSingleErnFromMessage(message: IEMessage, validErns: Set[String]) = {
+    message match {
+      case x: IE801Message => matchErn(x.consignorId, x.consigneeId, validErns, x.messageType)
+      case x: IE815Message => x.consignorId
+      case x: IE818Message => x.consigneeId.getOrElse(throw new IllegalStateException(s"[EISSubmissionConnector] - ern not supplied for message: ${x.messageType}"))
+      case _ => throw new RuntimeException(s"[EISSubmissionConnector] - Unsupported Message Type: ${message.messageType}")
+    }
+  }
 
-    val timer = metrics.defaultRegistry.timer("emcs.eiscontroller.timer").time()
+  private def matchErn(
+    consignorId: Option[String],
+    consigneeId: Option[String],
+    erns: Set[String],
+    messageType: String
+  ): String = {
+    val messageErn: Set[String] = Set(consignorId, consigneeId).flatten
+    val availableErn = erns.intersect(messageErn)
 
-    //todo: add retry
-    val correlationId = emcsUtils.generateCorrelationId
-    val createdDateTime = emcsUtils.getCurrentDateTimeString
-    val encodedMessage = emcsUtils.createEncoder.encodeToString(request.body.toString.getBytes(StandardCharsets.UTF_8))
-    val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", encodedMessage)
-    val consigneeId = request.movementMessage.consigneeId
-
-    httpClient.POST[EISRequest, Either[Result, EISSubmissionResponse]](
-      appConfig.emcsReceiverMessageUrl,
-      eisRequest,
-      build(correlationId, createdDateTime)
-    )(EISRequest.format, EISHttpReader(correlationId, consigneeId, createdDateTime), hc, ec)
-      .andThen { case _ => timer.stop() }
-      .recover {
-        case ex: Throwable =>
-
-          logger.warn(EISErrorMessage(createdDateTime, consigneeId, ex.getMessage, correlationId, messageType), ex)
-
-          val error = EISErrorResponse(
-            LocalDateTime.parse(createdDateTime),
-            "Exception",
-            ex.getMessage,
-            correlationId
-          )
-          Left(InternalServerError(Json.toJson(error)))
-      }
+    if(availableErn.nonEmpty) availableErn.head
+    else throw new IllegalStateException(s"[EISSubmissionConnector] - ern not supplied for message: $messageType")
   }
 }

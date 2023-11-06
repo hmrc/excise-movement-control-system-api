@@ -18,9 +18,9 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
 
 import generated.NewMessagesDataResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 
 import javax.inject.Inject
@@ -35,19 +35,20 @@ class MessageFilter @Inject()
   def filter(encodedMessage: EISConsumptionResponse, lrnToFilterBy: String): Seq[Message] = {
 
     extractMessages(encodedMessage.message)
-      .filter(m => m.localReferenceNumber.contains(lrnToFilterBy))
+      .filter(_.lrnEquals(lrnToFilterBy))
       .map { m =>
         val encodedMessage = emcsUtils.encode(m.toXml.toString())
-        Message(encodedMessage, m.getType, dateTimeService.now)
-    }
+        Message(encodedMessage, m.messageType, dateTimeService.now)
+      }
   }
 
   def extractMessages(encodedMessage: String): Seq[IEMessage] = {
     getNewMessageDataResponse(emcsUtils.decode(encodedMessage))
-      .Messages.messagesoption.map(factory.createIEMessage(_))
+      .Messages.messagesoption.map(factory.createIEMessage)
   }
 
   private def getNewMessageDataResponse(decodedMessage: String) = {
-    scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
+    val t = scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
+    t
   }
 }

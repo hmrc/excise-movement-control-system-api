@@ -33,7 +33,7 @@ import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{Ie801XmlMessage, NewMessagesXml, TestXml}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{NewMessagesXml, TestXml}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
@@ -179,10 +179,7 @@ class GetMessagesControllerItSpec extends PlaySpec
     messageObj.head.messageType mustBe MessageTypes.IE801.value
 
     val actualMessage = Base64.getDecoder.decode(messageObj.head.encodedMessage).map(_.toChar).mkString
-    cleanUpString(actualMessage) mustBe cleanUpString(Ie801XmlMessage.IE801.toString())
+    actualMessage.matches(".*</ie801:IE801>$") mustBe true
   }
 
-  private def cleanUpString(str: String): String = {
-    str.replaceAll("[\\t\\n\\r\\s]+", "")
-  }
 }

@@ -16,34 +16,40 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
-import play.api.mvc.Result
-import play.api.mvc.Results.Forbidden
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{ValidateLRNAction, ValidateLRNActionFactory, ValidateLRNImpl}
+import play.api.mvc.Results.NotFound
+import play.api.mvc.{ActionRefiner, Result}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateLRNAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequestIE818
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{ParsedXmlRequest, ValidatedXmlRequest}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 trait FakeValidateLRNAction {
 
-  implicit def executionContext: ExecutionContext = ExecutionContext.global
+  object FakeSuccessfulValidateLRNAction extends ValidateLRNAction with TestXml {
 
-  implicit def emcsUtils: EmcsUtils = new EmcsUtils
+    override def apply(lrn: String): ActionRefiner[ValidatedXmlRequest, ValidatedXmlRequest] = {
+      new ActionRefiner[ValidatedXmlRequest, ValidatedXmlRequest] {
 
-  object FakeSuccessfulValidateLRNAction extends ValidateLRNActionFactory() with TestXml {
+        override val executionContext: ExecutionContext = ExecutionContext.Implicits.global
 
-    override def apply(lrn: String, movementMessageService: MovementService): ValidateLRNAction =
-      new ValidateLRNImpl(lrn, movementMessageService, executionContext, emcsUtils)
-
+        override def refine[A](request: ValidatedXmlRequest[A]): Future[Either[Result, ValidatedXmlRequest[A]]] = {
+          Future.successful(Right(request))
+        }
+      }
+    }
   }
 
-  object FakeFailureValidateLRNAction extends ValidateLRNActionFactory() with TestXml {
-    override def apply(lrn: String, movementMessageService: MovementService): ValidateLRNAction = new ValidateLRNAction {
-      override def refine[A](request: DataRequestIE818[A]): Future[Either[Result, DataRequestIE818[A]]] = Future.successful(Left(Forbidden("Error")))
+  object FakeFailureValidateLRNAction extends ValidateLRNAction {
+    override def apply(lrn: String): ActionRefiner[ValidatedXmlRequest, ValidatedXmlRequest] = {
+      new ActionRefiner[ValidatedXmlRequest, ValidatedXmlRequest] {
 
-      override protected def executionContext: ExecutionContext = ExecutionContext.global
+        override val executionContext: ExecutionContext = ExecutionContext.Implicits.global
+
+        override def refine[A](request: ValidatedXmlRequest[A]): Future[Either[Result, ValidatedXmlRequest[A]]] = {
+          Future.successful(Left(NotFound("Error")))
+        }
+      }
     }
   }
 }

@@ -16,10 +16,8 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import generated.IE818Type
-import org.mockito.ArgumentMatchersSugar.{any, eqTo}
+import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.{reset, verify, when}
-import org.mockito.captor.ArgCaptor
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
@@ -29,11 +27,9 @@ import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateConsignorActionIE818, FakeValidateLRNAction, FakeXmlParsersIE818}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequestIE818
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnsAction, FakeValidateLRNAction, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
@@ -41,8 +37,8 @@ import scala.xml.Elem
 class SubmitMessageControllerSpec
   extends PlaySpec
     with FakeAuthentication
-    with FakeXmlParsersIE818
-    with FakeValidateConsignorActionIE818
+    with FakeXmlParsers
+    with FakeValidateErnsAction
     with FakeValidateLRNAction
     with BeforeAndAfterEach
     with TestXml {
@@ -50,18 +46,18 @@ class SubmitMessageControllerSpec
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val cc = stubControllerComponents()
   private val request = createRequest(IE818)
-  private val movementService = mock[MovementService]
-  private val ieMessage = scalaxb.fromXML[IE818Type](IE818)
+  private val ieMessage = mock[IEMessage]
   private val connector = mock[EISSubmissionConnector]
 
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(connector)
 
-    when(connector.submitExciseMovementIE818(any, any)(any))
+    when(connector.submitMessage(any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
-    when(movementService.getMovementMessagesByLRNAndERNIn(any, any))
-      .thenReturn(Future.successful(Some(Movement("lrn", "consignorId", None))))
+
+    when(ieMessage.messageType).thenReturn("IE818")
+    when(ieMessage.consigneeId).thenReturn(Some("GBWK002281023"))
   }
 
   "submit" should {
@@ -74,18 +70,12 @@ class SubmitMessageControllerSpec
 
       await(createWithSuccessfulAuth.submit("lrn")(request))
 
-      val captor = ArgCaptor[DataRequestIE818[_]]
-      verify(connector).submitExciseMovementIE818(
-        captor.capture,
-        eqTo("IE818")
-      )(any)
-
-      captor.value.movementMessage.consigneeId mustBe "789"
+      verify(connector).submitMessage(any)(any)
 
     }
 
     "return an error when EIS error" in {
-      when(connector.submitExciseMovementIE818(any, any)(any))
+      when(connector.submitMessage(any)(any))
         .thenReturn(Future.successful(Left(NotFound("not found"))))
 
       val result = createWithSuccessfulAuth.submit("lrn")(request)
@@ -109,8 +99,8 @@ class SubmitMessageControllerSpec
       }
     }
 
-    "return a consignor validation error" when {
-      "consignor is not valid" in {
+    "return an ern validation error" when {
+      "consignee is not valid" in {
         val result = createWithValidateConsignorActionFailure.submit("lrn")(request)
 
         status(result) mustBe FORBIDDEN
@@ -119,11 +109,7 @@ class SubmitMessageControllerSpec
 
     "return a ern / lrn mismatch error" when {
       "lrn and ern are not in the database" in {
-
-        when(movementService.getMovementMessagesByLRNAndERNIn(any, any))
-          .thenReturn(Future.successful(None))
-
-        val result = createWithSuccessfulAuth.submit("LRN")(request)
+        val result = createWithLRNValidationError.submit("LRN")(request)
 
         status(result) mustBe NOT_FOUND
       }
@@ -133,11 +119,10 @@ class SubmitMessageControllerSpec
   private def createWithSuccessfulAuth =
     new SubmitMessageController(
       FakeSuccessAuthentication,
-      FakeSuccessIE818XMLParser(ieMessage),
-      FakeSuccessfulValidateConsignorAction,
+      FakeSuccessXMLParser,
+      FakeSuccessfulValidateErnsAction(ieMessage),
       FakeSuccessfulValidateLRNAction,
       connector,
-      movementService,
       cc
     )
 
@@ -150,33 +135,40 @@ class SubmitMessageControllerSpec
   private def createWithAuthActionFailure =
     new SubmitMessageController(
       FakeFailingAuthentication,
-      FakeSuccessIE818XMLParser(ieMessage),
-      FakeSuccessfulValidateConsignorAction,
+      FakeSuccessXMLParser,
+      FakeSuccessfulValidateErnsAction(ieMessage),
       FakeFailureValidateLRNAction,
       connector,
-      movementService,
       cc
     )
 
   private def createWithFailingXmlParserAction =
     new SubmitMessageController(
       FakeSuccessAuthentication,
-      FakeFailureIE818XMLParser,
-      FakeSuccessfulValidateConsignorAction,
+      FakeFailureXMLParser,
+      FakeSuccessfulValidateErnsAction(ieMessage),
       FakeFailureValidateLRNAction,
       connector,
-      movementService,
       cc
     )
 
   private def createWithValidateConsignorActionFailure =
     new SubmitMessageController(
       FakeSuccessAuthentication,
-      FakeSuccessIE818XMLParser(ieMessage),
-      FakeFailureValidateConsignorAction,
+      FakeSuccessXMLParser,
+      FakeFailureValidateErnsAction,
       FakeFailureValidateLRNAction,
       connector,
-      movementService,
+      cc
+    )
+
+  private def createWithLRNValidationError =
+    new SubmitMessageController(
+      FakeSuccessAuthentication,
+      FakeSuccessXMLParser,
+      FakeSuccessfulValidateErnsAction(ieMessage),
+      FakeFailureValidateLRNAction,
+      connector,
       cc
     )
 

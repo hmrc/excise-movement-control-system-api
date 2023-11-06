@@ -18,30 +18,28 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
 import play.api.mvc.Result
 import play.api.mvc.Results.Forbidden
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateConsignorActionIE818
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateErnsAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequestIE818, ParsedXmlRequestIE818}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementMessageIE818
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{ParsedXmlRequest, ValidatedXmlRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait FakeValidateConsignorActionIE818 {
+trait FakeValidateErnsAction {
 
-  object FakeSuccessfulValidateConsignorAction extends ValidateConsignorActionIE818 with TestXml {
-    override def refine[A](request: ParsedXmlRequestIE818[A]): Future[Either[Result, DataRequestIE818[A]]] = {
-      Future.successful(Right(DataRequestIE818(
-        request,
-        MovementMessageIE818("789"),
-        Set(),
-        "1234"))
-      )
+  case class FakeSuccessfulValidateErnsAction(mockIeMessage: IEMessage) extends ValidateErnsAction with TestXml {
+
+    override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ValidatedXmlRequest[A]]] = {
+      Future.successful(Right(
+        ValidatedXmlRequest(request.copy(ieMessage = mockIeMessage), Set.empty)
+      ))
     }
 
     override protected def executionContext: ExecutionContext = ExecutionContext.global
   }
 
-  object FakeFailureValidateConsignorAction extends ValidateConsignorActionIE818 with TestXml {
-    override def refine[A](request: ParsedXmlRequestIE818[A]): Future[Either[Result, DataRequestIE818[A]]] = {
+  object FakeFailureValidateErnsAction extends ValidateErnsAction with TestXml {
+    override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ValidatedXmlRequest[A]]] = {
       Future.successful(Left(Forbidden("Error")))
     }
 

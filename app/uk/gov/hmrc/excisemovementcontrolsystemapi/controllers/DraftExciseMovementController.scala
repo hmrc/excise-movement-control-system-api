@@ -19,40 +19,51 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseIE815XmlAction, ValidateConsignorAction}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ExciseMovementResponse, MessageTypes}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.DataRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction, ValidateErnsAction}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Random
 import scala.xml.NodeSeq
 
 @Singleton
 class DraftExciseMovementController @Inject()(
                                                authAction: AuthAction,
-                                               xmlParser: ParseIE815XmlAction,
-                                               consignorValidatorAction: ValidateConsignorAction,
+                                               xmlParser: ParseXmlAction,
+                                               validateErnsAction: ValidateErnsAction,
                                                movementMessageConnector: EISSubmissionConnector,
                                                movementMessageService: MovementService,
                                                cc: ControllerComponents
                                              )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
   def submit: Action[NodeSeq] =
-    (authAction andThen xmlParser andThen consignorValidatorAction).async(parse.xml) {
-      implicit request: DataRequest[NodeSeq] =>
-        movementMessageConnector.submitExciseMovement(request, MessageTypes.IE815.value).flatMap {
+    (authAction andThen xmlParser andThen validateErnsAction).async(parse.xml) {
+      implicit request: ValidatedXmlRequest[NodeSeq] =>
+        movementMessageConnector.submitMessage(request).flatMap {
           case Right(_) => handleSuccess
           case Left(error) => Future.successful(error)
         }
     }
 
 
-  private def handleSuccess(implicit request: DataRequest[NodeSeq]): Future[Result] = {
+  private def handleSuccess(implicit request: ValidatedXmlRequest[NodeSeq]): Future[Result] = {
 
-    val newMovement = request.movementMessage.copy(administrativeReferenceCode = Some(generateRandomArc))
+    val ieMessage = request.parsedRequest.ieMessage
+    val newMovement = ieMessage match {
+      case x: IE815Message => Movement(
+        x.localReferenceNumber,
+        x.consignorId,
+        x.consigneeId,
+        Some(generateRandomArc)
+      )
+      case _ => throw new Exception("invalid message sent to draft excise movement controller")
+    }
+
     movementMessageService.saveMovementMessage(newMovement)
       .flatMap {
         case Right(msg) => Future.successful(Accepted(Json.toJson(ExciseMovementResponse("Accepted", msg.localReferenceNumber, msg.consignorId, msg.consigneeId))))

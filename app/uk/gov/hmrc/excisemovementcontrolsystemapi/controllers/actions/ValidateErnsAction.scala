@@ -21,29 +21,21 @@ import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.Results.Forbidden
 import play.api.mvc.{ActionRefiner, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{DataRequest, ParsedXmlRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{ParsedXmlRequest, ValidatedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-
-class ValidateConsignorActionImpl @Inject()(implicit val executionContext: ExecutionContext, implicit val emcsUtils: EmcsUtils)
-  extends ValidateConsignorAction
+class ValidateErnsActionImpl @Inject()(implicit val executionContext: ExecutionContext, implicit val emcsUtils: EmcsUtils)
+  extends ValidateErnsAction
     with Logging {
-  override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, DataRequest[A]]] = {
+  override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ValidatedXmlRequest[A]]] = {
 
-    val consignorId = request.ie815Message.Body.SubmittedDraftOfEADESAD.ConsignorTrader.TraderExciseNumber
+    val matchedErns: Set[String] = request.erns.intersect(request.ieMessage.getErns)
 
-    if (request.erns.contains(consignorId)) {
-      val consigneeId = request.ie815Message.Body.SubmittedDraftOfEADESAD.ConsigneeTrader.flatMap(_.Traderid)
-      val localRefNumber = request.ie815Message.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber
-      Future.successful(Right(DataRequest(
-        request,
-        Movement(localRefNumber, consignorId, consigneeId),
-        request.internalId))
-      )
+    if (matchedErns.nonEmpty) {
+      Future.successful(Right(ValidatedXmlRequest(request, matchedErns)))
     }
     else {
       logger.error("[ValidateErnAction] - Invalid Excise Number")
@@ -64,7 +56,7 @@ class ValidateConsignorActionImpl @Inject()(implicit val executionContext: Execu
   }
 }
 
-@ImplementedBy(classOf[ValidateConsignorActionImpl])
-trait ValidateConsignorAction extends ActionRefiner[ParsedXmlRequest, DataRequest] {
-  def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, DataRequest[A]]]
+@ImplementedBy(classOf[ValidateErnsActionImpl])
+trait ValidateErnsAction extends ActionRefiner[ParsedXmlRequest, ValidatedXmlRequest] {
+  def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ValidatedXmlRequest[A]]]
 }

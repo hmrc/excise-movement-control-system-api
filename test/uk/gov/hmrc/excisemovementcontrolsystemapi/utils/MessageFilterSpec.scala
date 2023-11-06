@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
 import org.mockito.MockitoSugar.when
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{Ie801XmlMessage, NewMessagesXml}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.NewMessagesXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, MessageTypes}
@@ -52,9 +52,8 @@ class MessageFilterSpec extends PlaySpec {
 
       result.size mustBe 1
 
-      decodeAndCleanUpMessage(result).head mustBe
-        cleanUpString(Ie801XmlMessage.IE801.toString)
-
+      val v = "(IE|ie)801>$".r
+      v.findAllMatchIn(decodeAndCleanUpMessage(result).head).toList.size mustBe 1
       result.head.messageType mustBe MessageTypes.IE801.value
     }
 

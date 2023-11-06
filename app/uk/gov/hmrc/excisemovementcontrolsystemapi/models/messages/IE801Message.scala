@@ -27,20 +27,37 @@ case class IE801Message
   private val key: Option[String],
   private val namespace: Option[String]
 ) extends IEMessage {
-  override def localReferenceNumber: Option[String] = {
+  def localReferenceNumber: Option[String] = {
     Some(obj.Body.EADESADContainer.EadEsad.LocalReferenceNumber)
   }
 
-  override def getType: String = MessageTypes.IE801.value
+  def consignorId: Option[String] =
+    Some(obj.Body.EADESADContainer.ConsignorTrader.TraderExciseNumber)
+
+  override def consigneeId: Option[String] =
+    obj.Body.EADESADContainer.ConsigneeTrader.flatMap(_.Traderid)
+
+  override def getErns: Set[String] = Set(consignorId, consigneeId).flatten
+
+  override def administrativeReferenceCode: Option[String] = Some(obj.Body.EADESADContainer.ExciseMovement.AdministrativeReferenceCode)
+
+  override def messageType: String = MessageTypes.IE801.value
 
   override def toXml: NodeSeq = {
-    val ns: String = namespace.fold(generated.defaultScope.uri)(o => o)
-    scalaxb.toXML[IE801Type](obj, None, key, scalaxb.toScope(key -> ns))
+    scalaxb.toXML[IE801Type](obj, namespace, key, generated.defaultScope)
   }
+
+  override def lrnEquals(lrn: String): Boolean = localReferenceNumber.contains(lrn)
+
 }
 
 object IE801Message {
   def apply(message: DataRecord[MessagesOption]): IE801Message = {
     IE801Message(message.as[IE801Type], message.key, message.namespace)
+  }
+
+  def createFromXml(xml: NodeSeq): IE801Message = {
+    val ie801: IE801Type = scalaxb.fromXML[IE801Type](xml)
+    IE801Message(ie801, Some(ie801.productPrefix), None)
   }
 }

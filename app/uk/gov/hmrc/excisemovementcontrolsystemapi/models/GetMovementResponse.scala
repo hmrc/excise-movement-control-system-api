@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
+package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
 import play.api.libs.json.{Json, OFormat}
 
@@ -22,7 +22,7 @@ case class GetMovementResponse(
   consignorId: String,
   localReferenceNumber: String,
   consigneeId: Option[String],
-  administrativeReferenceCode: Option[String],//todo: Should this be empty? I supect no, but double check
+  administrativeReferenceCode: Option[String],
   status: String
 )
 

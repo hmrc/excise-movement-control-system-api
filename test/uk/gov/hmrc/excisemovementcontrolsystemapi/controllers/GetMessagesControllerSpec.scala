@@ -30,7 +30,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.ShowNewMessagesConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateConsignorAction, FakeXmlParsers}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnsAction, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
@@ -42,7 +42,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class GetMessagesControllerSpec extends PlaySpec
   with FakeAuthentication
   with FakeXmlParsers
-  with FakeValidateConsignorAction
+  with FakeValidateErnsAction
   with TestXml
   with EitherValues
   with BeforeAndAfterEach

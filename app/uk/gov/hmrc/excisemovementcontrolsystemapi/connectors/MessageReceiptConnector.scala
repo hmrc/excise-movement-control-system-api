@@ -22,9 +22,10 @@ import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISConsumptionHeader, EISErrorMessage, EISSubmissionHeader}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISConsumptionHeader, EISErrorMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, MessageReceiptResponse, MessageTypes}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
+import uk.gov.hmrc.http.HttpReads.Implicits._
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -52,14 +53,14 @@ class MessageReceiptConnector @Inject()
         extractIfSuccessful[MessageReceiptResponse](response) match {
           case Right(eisResponse) => Right(eisResponse)
           case Left(error) =>
-            logger.error(EISErrorMessage(dateTime,ern, response.body, correlationId, MessageTypes.IE_MESSAGE_RECEIPT.value))
+            logger.error(EISErrorMessage(dateTime, ern, response.body, correlationId, MessageTypes.IE_MESSAGE_RECEIPT.value))
             Left(InternalServerError(error.body))
         }
     }
       .andThen(_ => timer.stop())
       .recover {
         case ex: Throwable =>
-          logger.error(EISErrorMessage(dateTime,ern, ex.getMessage, correlationId, MessageTypes.IE_MESSAGE_RECEIPT.value), ex)
+          logger.error(EISErrorMessage(dateTime, ern, ex.getMessage, correlationId, MessageTypes.IE_MESSAGE_RECEIPT.value), ex)
           Left(InternalServerError(ex.getMessage))
       }
   }
