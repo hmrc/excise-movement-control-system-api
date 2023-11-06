@@ -26,7 +26,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE801Message, IE815Message, IE818Message, IEMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import java.nio.charset.StandardCharsets
@@ -85,20 +85,21 @@ class EISSubmissionConnector @Inject()
       case x: IE801Message => matchErn(x.consignorId, x.consigneeId, validErns, x.messageType)
       case x: IE815Message => x.consignorId
       case x: IE818Message => x.consigneeId.getOrElse(throw new IllegalStateException(s"[EISSubmissionConnector] - ern not supplied for message: ${x.messageType}"))
+      case x: IE837Message => matchErn(x.consignorId, x.consigneeId, validErns, x.messageType)
       case _ => throw new RuntimeException(s"[EISSubmissionConnector] - Unsupported Message Type: ${message.messageType}")
     }
   }
 
   private def matchErn(
-    consignorId: Option[String],
-    consigneeId: Option[String],
-    erns: Set[String],
-    messageType: String
-  ): String = {
+                        consignorId: Option[String],
+                        consigneeId: Option[String],
+                        erns: Set[String],
+                        messageType: String
+                      ): String = {
     val messageErn: Set[String] = Set(consignorId, consigneeId).flatten
     val availableErn = erns.intersect(messageErn)
 
-    if(availableErn.nonEmpty) availableErn.head
+    if (availableErn.nonEmpty) availableErn.head
     else throw new IllegalStateException(s"[EISSubmissionConnector] - ern not supplied for message: $messageType")
   }
 }
