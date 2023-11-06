@@ -147,6 +147,12 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       postRequest(IE815).status mustBe FORBIDDEN
     }
 
+    "return forbidden (403) when the consignor is empty" in {
+      withAuthorizedTrader(consigneeId)
+
+      postRequest(IE815NoConsignor).status mustBe FORBIDDEN
+    }
+
     "return a Unauthorized (401) when no authorized trader" in {
       withUnauthorizedTrader(InternalError("A general auth failure"))
 
