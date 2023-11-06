@@ -38,7 +38,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest, ValidatedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISRequest, EISSubmissionResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE801Message, IE815Message, IE818Message, IEMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import java.nio.charset.StandardCharsets
@@ -157,6 +157,34 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
       eisHttpReader.ern mustBe "456"
     }
 
+    "use the right request parameters in http client for IE837 with consignor" in {
+      val ie837Message = mock[IE837Message]
+      when(ie837Message.messageType).thenReturn("IE837")
+      when(ie837Message.consignorId).thenReturn(Some("123"))
+      when(ie837Message.consigneeId).thenReturn(None)
+
+      submitExciseMovementWithParams(xml, ie837Message, Set("123"), Set("123"))
+
+      val eisHttpReader: EISHttpReader = verifyHttpHeader
+
+      eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
+      eisHttpReader.ern mustBe "123"
+    }
+
+    "use the right request parameters in http client for IE837 with consignee" in {
+      val ie837Message = mock[IE837Message]
+      when(ie837Message.messageType).thenReturn("IE837")
+      when(ie837Message.consignorId).thenReturn(None)
+      when(ie837Message.consigneeId).thenReturn(Some("123"))
+
+      submitExciseMovementWithParams(xml, ie837Message, Set("123"), Set("123"))
+
+      val eisHttpReader: EISHttpReader = verifyHttpHeader
+
+      eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
+      eisHttpReader.ern mustBe "123"
+    }
+
     "throw an error if unsupported message" in {
       class NonSupportedMessage extends IEMessage {
         override def consigneeId: Option[String] = None
@@ -167,7 +195,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
         override def lrnEquals(lrn: String): Boolean = false
       }
 
-      the [RuntimeException] thrownBy
+      the[RuntimeException] thrownBy
         submitExciseMovementWithParams(xml, new NonSupportedMessage(), Set("123"), Set("456")) must
         have message "[EISSubmissionConnector] - Unsupported Message Type: any-type"
     }
@@ -245,11 +273,11 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
   }
 
   private def submitExciseMovementWithParams(
-    xml: String,
-    message: IEMessage,
-    enrolledErns: Set[String],
-    validatedErns: Set[String]
-  ): Future[Either[Result, EISSubmissionResponse]] = {
+                                              xml: String,
+                                              message: IEMessage,
+                                              enrolledErns: Set[String],
+                                              validatedErns: Set[String]
+                                            ): Future[Either[Result, EISSubmissionResponse]] = {
     connector.submitMessage(ValidatedXmlRequest(ParsedXmlRequest(
       EnrolmentRequest(FakeRequest().withBody(xml), enrolledErns, "124"),
       message,

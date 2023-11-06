@@ -105,7 +105,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
     }
 
-    "return not found if EIS return not found" in {
+    "return not found if EIS returns not found" in {
       withAuthorizedTrader("GBWK002281023")
       val eisErrorResponse = createEISErrorResponseBodyAsJson("NOT_FOUND")
       stubEISErrorResponse(NOT_FOUND, eisErrorResponse.toString())
@@ -194,6 +194,21 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
       postRequest(IE818).status mustBe FORBIDDEN
     }
+  }
+
+  "Submit IE837 Report of Receipt Movement" should {
+
+    "return 202" in {
+      withAuthorizedTrader("GBWK240176600")
+      stubEISSuccessfulRequest()
+
+      val result = postRequest(IE837WithConsignee)
+
+      result.status mustBe ACCEPTED
+      result.body.isEmpty mustBe true
+
+    }
+
   }
 
   private def createEISErrorResponseBodyAsJson(message: String): JsValue = {

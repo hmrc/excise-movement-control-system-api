@@ -29,7 +29,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 class IEMessageFactorySpec
   extends PlaySpec
     with TestXml
-    with BeforeAndAfterEach{
+    with BeforeAndAfterEach {
 
   private val message = mock[DataRecord[MessagesOption]]
   private val sut = IEMessageFactory()
@@ -68,6 +68,11 @@ class IEMessageFactorySpec
       when(message.key).thenReturn(Some("IE818"))
       sut.createIEMessage(message).isInstanceOf[IE818Message] mustBe true
     }
+
+    "return an instance of IE837Message" in {
+      when(message.key).thenReturn(Some("IE837"))
+      sut.createIEMessage(message).isInstanceOf[IE837Message] mustBe true
+    }
   }
 
   "createfromType" should {
@@ -81,15 +86,45 @@ class IEMessageFactorySpec
     }
 
     "return an instance of IE801Message" in {
-        sut.createFromXml("IE801", IE801).isInstanceOf[IE801Message] mustBe true
-    }
-
-    "return an instance of IE818Message" in {
-      sut.createFromXml("IE818", IE818).isInstanceOf[IE818Message] mustBe true
+      val result = sut.createFromXml("IE801", IE801).asInstanceOf[IE801Message]
+      result.isInstanceOf[IE801Message] mustBe true
+      result.consignorId mustBe Some("tokentokentok")
+      result.consigneeId mustBe Some("token")
+      result.administrativeReferenceCode mustBe Some("tokentokentokentokent")
+      result.localReferenceNumber mustBe Some("token")
     }
 
     "return an instance of IE815Message" in {
-      sut.createFromXml("IE815", IE815).isInstanceOf[IE815Message] mustBe true
+      val result = sut.createFromXml("IE815", IE815).asInstanceOf[IE815Message]
+      result.isInstanceOf[IE815Message] mustBe true
+      result.consignorId mustBe "GBWK002281023"
+      result.consigneeId mustBe Some("GBWKQOZ8OVLYR")
+      result.administrativeReferenceCode mustBe None
+      result.localReferenceNumber mustBe "LRNQA20230909022221"
+    }
+
+    "return an instance of IE818Message" in {
+      val result = sut.createFromXml("IE818", IE818).asInstanceOf[IE818Message]
+      result.isInstanceOf[IE818Message] mustBe true
+      result.consignorId mustBe None
+      result.consigneeId mustBe Some("GBWK002281023")
+      result.administrativeReferenceCode mustBe Some("23GB00000000000378553")
+    }
+
+    "return an instance of IE837Message with Consignor" in {
+      val result = sut.createFromXml("IE837", IE837WithConsignor).asInstanceOf[IE837Message]
+      result.isInstanceOf[IE837Message] mustBe true
+      result.consignorId mustBe Some("GBWK240176600")
+      result.consigneeId mustBe None
+      result.administrativeReferenceCode mustBe Some("16GB00000000000192223")
+    }
+
+    "return an instance of IE837Message with Consignee" in {
+      val result = sut.createFromXml("IE837", IE837WithConsignee).asInstanceOf[IE837Message]
+      result.isInstanceOf[IE837Message] mustBe true
+      result.consignorId mustBe None
+      result.consigneeId mustBe Some("GBWK240176600")
+      result.administrativeReferenceCode mustBe Some("16GB00000000000192223")
     }
   }
 }

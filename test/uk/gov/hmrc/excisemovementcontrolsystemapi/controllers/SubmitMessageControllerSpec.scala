@@ -56,8 +56,6 @@ class SubmitMessageControllerSpec
     when(connector.submitMessage(any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
 
-    when(ieMessage.messageType).thenReturn("IE818")
-    when(ieMessage.consigneeId).thenReturn(Some("GBWK002281023"))
   }
 
   "submit" should {
