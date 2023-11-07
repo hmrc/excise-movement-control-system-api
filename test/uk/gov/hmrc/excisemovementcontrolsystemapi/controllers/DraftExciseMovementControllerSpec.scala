@@ -54,7 +54,7 @@ class DraftExciseMovementControllerSpec
   private val connector = mock[EISSubmissionConnector]
   private val movementMessageService = mock[MovementService]
   private val cc = stubControllerComponents()
-  private val request = createRequest(IE815)
+  private val request = createRequest(IE815())
   private val mockIeMessage = mock[IE815Message]
 
   override def beforeEach(): Unit = {

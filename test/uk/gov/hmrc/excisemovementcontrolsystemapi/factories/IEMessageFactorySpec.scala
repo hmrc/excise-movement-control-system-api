@@ -97,7 +97,7 @@ class IEMessageFactorySpec
     }
 
     "return an instance of IE815Message" in {
-      val result = sut.createFromXml("IE815", IE815).asInstanceOf[IE815Message]
+      val result = sut.createFromXml("IE815", IE815()).asInstanceOf[IE815Message]
       result.isInstanceOf[IE815Message] mustBe true
       result.consignorId mustBe "GBWK002281023"
       result.consigneeId mustBe Some("GBWKQOZ8OVLYR")
