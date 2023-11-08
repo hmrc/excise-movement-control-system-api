@@ -68,6 +68,10 @@ class MovementRepository @Inject()
       ))
       .toFuture()
   }
+
+  def getMovementByARC(arc: String): Future[Seq[Movement]] = {
+    collection.find(in("administrativeReferenceCode", arc)).toFuture()
+  }
 }
 
 object MovementMessageRepository {
@@ -87,6 +91,11 @@ object MovementMessageRepository {
         IndexOptions().name("lrn_consignor_index")
           .background(true)
           .unique(true)
+      ),
+      IndexModel(
+        Indexes.ascending("administrativeReferenceCode"),
+        IndexOptions().name("arc_index")
+          .background(true)
       )
     )
 }

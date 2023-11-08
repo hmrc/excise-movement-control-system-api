@@ -40,8 +40,6 @@ case class IE837Message
       Some(obj.Body.ExplanationOnDelayForDelivery.AttributesValue.SubmitterIdentification)
     } else None
 
-  override def getErns: Set[String] = Set(consignorId, consigneeId).flatten
-
   override def administrativeReferenceCode: Option[String] =
     Some(obj.Body.ExplanationOnDelayForDelivery.ExciseMovement.AdministrativeReferenceCode)
 

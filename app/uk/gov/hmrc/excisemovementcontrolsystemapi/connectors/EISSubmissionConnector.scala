@@ -77,12 +77,15 @@ class EISSubmissionConnector @Inject()
   }
 
   /*
-    The illegal state exception for IE801 and IE801 message should never happen here,
+    The illegal state exception for IE818 message should never happen here,
     because these should have been caught previously during the validation.
+
+    We are trying to get the ERN to use in the logs here, so want the one that is both in the auth and the message
   */
   private def getSingleErnFromMessage(message: IEMessage, validErns: Set[String]) = {
     message match {
       case x: IE801Message => matchErn(x.consignorId, x.consigneeId, validErns, x.messageType)
+      case _: IE810Message => validErns.head //For 810 we have no ERN in message so just use auth
       case x: IE815Message => x.consignorId
       case x: IE818Message => x.consigneeId.getOrElse(throw new IllegalStateException(s"[EISSubmissionConnector] - ern not supplied for message: ${x.messageType}"))
       case x: IE837Message => matchErn(x.consignorId, x.consigneeId, validErns, x.messageType)

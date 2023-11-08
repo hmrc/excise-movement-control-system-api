@@ -15,6 +15,7 @@
  */
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
+
 import generated.{IE801Type, MessagesOption}
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
@@ -36,8 +37,6 @@ case class IE801Message
 
   override def consigneeId: Option[String] =
     obj.Body.EADESADContainer.ConsigneeTrader.flatMap(_.Traderid)
-
-  override def getErns: Set[String] = Set(consignorId, consigneeId).flatten
 
   override def administrativeReferenceCode: Option[String] = Some(obj.Body.EADESADContainer.ExciseMovement.AdministrativeReferenceCode)
 

@@ -21,7 +21,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 
 import scala.xml.NodeSeq
 
-case class IE815Message (private val obj: IE815Type) extends IEMessage {
+case class IE815Message(private val obj: IE815Type) extends IEMessage {
   def localReferenceNumber: String =
     obj.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber
 
@@ -31,7 +31,6 @@ case class IE815Message (private val obj: IE815Type) extends IEMessage {
   override def consigneeId: Option[String] =
     obj.Body.SubmittedDraftOfEADESAD.ConsigneeTrader.flatMap(_.Traderid)
 
-  override def getErns: Set[String] = Set(consignorId)
   override def administrativeReferenceCode: Option[String] = None
 
   override def messageType: String = MessageTypes.IE815.value

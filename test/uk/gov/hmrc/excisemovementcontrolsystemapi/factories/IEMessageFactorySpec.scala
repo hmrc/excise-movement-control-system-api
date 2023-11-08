@@ -64,6 +64,11 @@ class IEMessageFactorySpec
       sut.createIEMessage(message).isInstanceOf[IE801Message] mustBe true
     }
 
+    "return an instance of IE810Message" in {
+      when(message.key).thenReturn(Some("IE810"))
+      sut.createIEMessage(message).isInstanceOf[IE810Message] mustBe true
+    }
+
     "return an instance of IE818Message" in {
       when(message.key).thenReturn(Some("IE818"))
       sut.createIEMessage(message).isInstanceOf[IE818Message] mustBe true
@@ -94,6 +99,16 @@ class IEMessageFactorySpec
       result.localReferenceNumber mustBe Some("token")
 
       result.getErns mustBe Set("tokentokentok", "token")
+    }
+
+    "return an instance of IE810Message" in {
+
+      val result = sut.createFromXml("IE810", IE810).asInstanceOf[IE810Message]
+      result.isInstanceOf[IE810Message] mustBe true
+      result.consignorId mustBe None
+      result.consigneeId mustBe None
+      result.administrativeReferenceCode mustBe Some("23GB00000000000377161")
+      result.localReferenceNumber mustBe None
     }
 
     "return an instance of IE815Message" in {

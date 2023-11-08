@@ -92,6 +92,40 @@ class SubmitMessageControllerItSpec extends PlaySpec
     wireMock.stop()
   }
 
+  "Submit IE810 Cancellation" should {
+
+    "return 202 when submitted by consignor" in {
+
+      when(movementRepository.getMovementByARC("23GB00000000000377161"))
+        .thenReturn(Future.successful(Seq(Movement("LRNQA20230909022221", "consignor", Some("consignee"), Some("23GB00000000000377161")))))
+
+      withAuthorizedTrader("consignor")
+      stubEISSuccessfulRequest()
+
+      val result = postRequest(IE810)
+
+      result.status mustBe ACCEPTED
+      result.body.isEmpty mustBe true
+
+    }
+
+    "return 202 when submitted by consignee" in {
+
+      when(movementRepository.getMovementByARC("23GB00000000000377161"))
+        .thenReturn(Future.successful(Seq(Movement("LRNQA20230909022221", "consignor", Some("consignee"), Some("23GB00000000000377161")))))
+
+      withAuthorizedTrader("consignee")
+      stubEISSuccessfulRequest()
+
+      val result = postRequest(IE810)
+
+      result.status mustBe ACCEPTED
+      result.body.isEmpty mustBe true
+
+    }
+
+  }
+
   "Submit IE818 Report of Receipt Movement" should {
 
     "return 202" in {

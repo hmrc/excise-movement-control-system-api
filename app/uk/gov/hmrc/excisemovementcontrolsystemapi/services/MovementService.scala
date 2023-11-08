@@ -41,7 +41,7 @@ class MovementService @Inject()(
     movementRepository.getMovementByLRNAndERNIn(lrn, erns).map {
       case Seq()  => None
       case head :: Nil => Some(head)
-      case _ => throw new RuntimeException(s"Multiple movement found for local reference number: $lrn")
+      case _ => throw new RuntimeException(s"[MovementService] - Multiple movement found for local reference number: $lrn")
     }
   }
 
@@ -49,7 +49,7 @@ class MovementService @Inject()(
     movementRepository.getMovementByLRNAndERNIn(lrn, erns).map {
       case Seq()  => None
       case head :: Nil => matchingERN(head, erns)
-      case _ => throw new RuntimeException(s"Multiple movement found for local reference number: $lrn")
+      case _ => throw new RuntimeException(s"[MovementService] - Multiple movements found for local reference number: $lrn")
     }
   }
 

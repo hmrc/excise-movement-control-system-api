@@ -29,6 +29,7 @@ case class IEMessageFactory() {
 
     MessageTypes.withValueOpt(messageType) match {
       case Some(MessageTypes.IE801) => IE801Message(message)
+      case Some(MessageTypes.IE810) => IE810Message(message)
       case Some(MessageTypes.IE818) => IE818Message(message)
       case Some(MessageTypes.IE837) => IE837Message(message)
       case _ => throw new RuntimeException(s"Could not create Message object. Unsupported message: $messageType")
@@ -38,6 +39,7 @@ case class IEMessageFactory() {
   def createFromXml(messageType: String, xml: NodeSeq): IEMessage = {
     MessageTypes.withValueOpt(messageType) match {
       case Some(MessageTypes.IE801) => IE801Message.createFromXml(xml)
+      case Some(MessageTypes.IE810) => IE810Message.createFromXml(xml)
       case Some(MessageTypes.IE815) => IE815Message.createFromXml(xml)
       case Some(MessageTypes.IE818) => IE818Message.createFromXml(xml)
       case Some(MessageTypes.IE837) => IE837Message.createFromXml(xml)
