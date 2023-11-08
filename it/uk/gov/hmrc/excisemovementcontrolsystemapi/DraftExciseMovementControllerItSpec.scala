@@ -90,7 +90,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       when(movementRepository.saveMovement(any))
         .thenReturn(Future.successful(true))
 
-      val result = postRequest(IE815())
+      val result = postRequest(IE815)
 
       result.status mustBe ACCEPTED
 
@@ -105,7 +105,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       val eisErrorResponse = createEISErrorResponseBodyAsJson("NOT_FOUND")
       stubEISErrorResponse(NOT_FOUND, eisErrorResponse.toString())
 
-      val result = postRequest(IE815())
+      val result = postRequest(IE815)
 
       result.status mustBe NOT_FOUND
 
@@ -118,45 +118,45 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       withAuthorizedTrader(consignorId)
       stubEISErrorResponse(BAD_REQUEST, createEISErrorResponseBodyAsJson("BAD_REQUEST").toString())
 
-      postRequest(IE815()).status mustBe BAD_REQUEST
+      postRequest(IE815).status mustBe BAD_REQUEST
     }
 
     "return 500 if EIS returns 500" in {
       withAuthorizedTrader(consignorId)
       stubEISErrorResponse(INTERNAL_SERVER_ERROR, createEISErrorResponseBodyAsJson("INTERNAL_SERVER_ERROR").toString())
 
-      postRequest(IE815()).status mustBe INTERNAL_SERVER_ERROR
+      postRequest(IE815).status mustBe INTERNAL_SERVER_ERROR
     }
 
     "return 500 if EIS returns bad json" in {
       withAuthorizedTrader(consignorId)
       stubEISErrorResponse(INTERNAL_SERVER_ERROR, """"{"json": "is-bad"}""")
 
-      postRequest(IE815()).status mustBe INTERNAL_SERVER_ERROR
+      postRequest(IE815).status mustBe INTERNAL_SERVER_ERROR
     }
 
     "return forbidden (403) when there are no authorized ERN" in {
       withUnAuthorizedERN()
 
-      postRequest(IE815()).status mustBe FORBIDDEN
+      postRequest(IE815).status mustBe FORBIDDEN
     }
 
     "return forbidden (403) when the consignee is trying to send in an IE815" in {
       withAuthorizedTrader(consigneeId)
 
-      postRequest(IE815()).status mustBe FORBIDDEN
+      postRequest(IE815).status mustBe FORBIDDEN
     }
 
     "return forbidden (403) when the consignor is empty" in {
       withAuthorizedTrader(consignorId)
 
-      postRequest(IE815("")).status mustBe FORBIDDEN
+      postRequest(IE815WithNoCosignor).status mustBe FORBIDDEN
     }
 
     "return a Unauthorized (401) when no authorized trader" in {
       withUnauthorizedTrader(InternalError("A general auth failure"))
 
-      postRequest(IE815()).status mustBe UNAUTHORIZED
+      postRequest(IE815).status mustBe UNAUTHORIZED
     }
 
     "return bad request (400) when xml cannot be parsed" in {
@@ -186,7 +186,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     "return forbidden (403) when consignor id cannot be validate" in {
       withAuthorizedTrader("123")
 
-      postRequest(IE815()).status mustBe FORBIDDEN
+      postRequest(IE815).status mustBe FORBIDDEN
     }
   }
 
@@ -199,7 +199,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     ))
   }
 
-  private def postRequest(xml: NodeSeq = IE815(), contentType: String = """application/vnd.hmrc.1.0+xml""") = {
+  private def postRequest(xml: NodeSeq = IE815, contentType: String = """application/vnd.hmrc.1.0+xml""") = {
     await(wsClient.url(url)
       .addHttpHeaders(
         HeaderNames.AUTHORIZATION -> "TOKEN",

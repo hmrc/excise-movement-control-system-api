@@ -19,7 +19,11 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.data
 import scala.xml.Elem
 
 trait TestXml {
-  def IE815(consignor: String = "GBWK002281023"): Elem = <urn:IE815 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.01"
+
+  lazy val IE815: Elem = IE815Template("GBWK002281023")
+  lazy val IE815WithNoCosignor: Elem = IE815Template("")
+
+  private def IE815Template(consignor: String): Elem = <urn:IE815 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.01"
                                     xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
                                     xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                                     xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
