@@ -19,10 +19,11 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.data
 import scala.xml.Elem
 
 trait TestXml {
-  // Can we use this in the test?
-  // This isn't a string, it's an XML nodeSeq I think
-  // I borrowed this idea from common-transit-traders
-  lazy val IE815: Elem = <urn:IE815 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.01"
+
+  lazy val IE815: Elem = IE815Template("GBWK002281023")
+  lazy val IE815WithNoCosignor: Elem = IE815Template("")
+
+  private def IE815Template(consignor: String): Elem = <urn:IE815 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.01"
                                     xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
                                     xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                                     xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
@@ -49,7 +50,7 @@ trait TestXml {
           <urn:City>l8WSaHS9</urn:City>
         </urn:ConsigneeTrader>
         <urn:ConsignorTrader language="en">
-          <urn:TraderExciseNumber>GBWK002281023</urn:TraderExciseNumber>
+          <urn:TraderExciseNumber>{consignor}</urn:TraderExciseNumber>
           <urn:TraderName>DIAGEO PLC</urn:TraderName>
           <urn:StreetName>msfvZUL1Oe</urn:StreetName>
           <urn:StreetNumber>25</urn:StreetNumber>

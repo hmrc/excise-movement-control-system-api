@@ -34,7 +34,7 @@ case class IE818Message
   override def consigneeId: Option[String] =
     obj.Body.AcceptedOrRejectedReportOfReceiptExport.ConsigneeTrader.flatMap(_.Traderid)
 
-  override def getErns: Set[String] = Set(consignorId, consigneeId).flatten
+  override def getErns: Set[String] = Set(consigneeId).flatten
 
   override def administrativeReferenceCode: Option[String] =
     Some(obj.Body.AcceptedOrRejectedReportOfReceiptExport.ExciseMovement.AdministrativeReferenceCode)

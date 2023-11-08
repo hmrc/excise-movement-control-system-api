@@ -92,6 +92,8 @@ class IEMessageFactorySpec
       result.consigneeId mustBe Some("token")
       result.administrativeReferenceCode mustBe Some("tokentokentokentokent")
       result.localReferenceNumber mustBe Some("token")
+
+      result.getErns mustBe Set("tokentokentok", "token")
     }
 
     "return an instance of IE815Message" in {
@@ -101,6 +103,8 @@ class IEMessageFactorySpec
       result.consigneeId mustBe Some("GBWKQOZ8OVLYR")
       result.administrativeReferenceCode mustBe None
       result.localReferenceNumber mustBe "LRNQA20230909022221"
+
+      result.getErns mustBe Set("GBWK002281023")
     }
 
     "return an instance of IE818Message" in {
@@ -109,6 +113,8 @@ class IEMessageFactorySpec
       result.consignorId mustBe None
       result.consigneeId mustBe Some("GBWK002281023")
       result.administrativeReferenceCode mustBe Some("23GB00000000000378553")
+
+      result.getErns mustBe Set("GBWK002281023")
     }
 
     "return an instance of IE837Message with Consignor" in {
@@ -117,6 +123,8 @@ class IEMessageFactorySpec
       result.consignorId mustBe Some("GBWK240176600")
       result.consigneeId mustBe None
       result.administrativeReferenceCode mustBe Some("16GB00000000000192223")
+
+      result.getErns mustBe Set("GBWK240176600")
     }
 
     "return an instance of IE837Message with Consignee" in {
@@ -125,6 +133,8 @@ class IEMessageFactorySpec
       result.consignorId mustBe None
       result.consigneeId mustBe Some("GBWK240176600")
       result.administrativeReferenceCode mustBe Some("16GB00000000000192223")
+
+      result.getErns mustBe Set("GBWK240176600")
     }
   }
 }

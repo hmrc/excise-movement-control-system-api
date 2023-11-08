@@ -56,6 +56,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   private val url = s"http://localhost:$port/movements"
   private val eisUrl = "/emcs/digital-submit-new-message/v1"
   private val consignorId = "GBWK002281023"
+  private val consigneeId = "GBWKQOZ8OVLYR"
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
@@ -99,8 +100,8 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       }
     }
 
-    "return not found if EIS return not found" in {
-      withAuthorizedTrader("GBWK002281023")
+    "return not found if EIS returns not found" in {
+      withAuthorizedTrader(consignorId)
       val eisErrorResponse = createEISErrorResponseBodyAsJson("NOT_FOUND")
       stubEISErrorResponse(NOT_FOUND, eisErrorResponse.toString())
 
@@ -113,21 +114,21 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       }
     }
 
-    "return bad request if EIS return BAD_REQUEST" in {
-      withAuthorizedTrader("GBWK002281023")
+    "return bad request if EIS returns BAD_REQUEST" in {
+      withAuthorizedTrader(consignorId)
       stubEISErrorResponse(BAD_REQUEST, createEISErrorResponseBodyAsJson("BAD_REQUEST").toString())
 
       postRequest(IE815).status mustBe BAD_REQUEST
     }
 
-    "return 500 if EIS return 500" in {
+    "return 500 if EIS returns 500" in {
       withAuthorizedTrader(consignorId)
       stubEISErrorResponse(INTERNAL_SERVER_ERROR, createEISErrorResponseBodyAsJson("INTERNAL_SERVER_ERROR").toString())
 
       postRequest(IE815).status mustBe INTERNAL_SERVER_ERROR
     }
 
-    "return 500 if EIS return bad json" in {
+    "return 500 if EIS returns bad json" in {
       withAuthorizedTrader(consignorId)
       stubEISErrorResponse(INTERNAL_SERVER_ERROR, """"{"json": "is-bad"}""")
 
@@ -138,6 +139,18 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       withUnAuthorizedERN()
 
       postRequest(IE815).status mustBe FORBIDDEN
+    }
+
+    "return forbidden (403) when the consignee is trying to send in an IE815" in {
+      withAuthorizedTrader(consigneeId)
+
+      postRequest(IE815).status mustBe FORBIDDEN
+    }
+
+    "return forbidden (403) when the consignor is empty" in {
+      withAuthorizedTrader(consignorId)
+
+      postRequest(IE815WithNoCosignor).status mustBe FORBIDDEN
     }
 
     "return a Unauthorized (401) when no authorized trader" in {
