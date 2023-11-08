@@ -27,39 +27,31 @@ class MessageService @Inject()(movementRepository: MovementRepository, implicit 
 
   private def getErnsUsingArc(arc: String): Future[Set[String]] = {
 
-    val movementFuture = movementRepository.getMovementByARC(arc)
-
-    val singleMovement = movementFuture.map {
+    movementRepository.getMovementByARC(arc).map {
       case Seq() => throw new RuntimeException(s"[MessageService] - Zero movements found for administrative reference code $arc")
-      case head :: Nil => head
+      case head :: Nil => Set(Some(head.consignorId), head.consigneeId).flatten
       case _ => throw new RuntimeException(s"[MessageService] - Multiple movements found for administrative reference code $arc")
     }
-
-    singleMovement.map(movement => Set(Some(movement.consignorId), movement.consigneeId).flatten)
 
   }
 
   def getErns(ieMessage: IEMessage): Future[Set[String]] = {
 
-    ieMessage.messageType match {
-      case IE801.value =>
-        val iE801Message = ieMessage.asInstanceOf[IE801Message]
-        Future.successful(Set(iE801Message.consigneeId, iE801Message.consignorId).flatten)
+    ieMessage match {
+      case ie801Message: IE801Message =>
+        Future.successful(Set(ie801Message.consigneeId, ie801Message.consignorId).flatten)
 
-      case IE810.value =>
-        val arc = ieMessage.administrativeReferenceCode.getOrElse(throw new RuntimeException("put sensible message here"))
+      case _: IE810Message =>
+        val arc = ieMessage.administrativeReferenceCode.getOrElse(throw new RuntimeException("IE810 message must have an administrative reference code"))
         getErnsUsingArc(arc)
 
-      case IE815.value =>
-        val ie815Message = ieMessage.asInstanceOf[IE815Message]
+      case ie815Message: IE815Message =>
         Future.successful(Set(ie815Message.consignorId))
 
-      case IE818.value =>
-        val ie818Message = ieMessage.asInstanceOf[IE818Message]
+      case ie818Message: IE818Message =>
         Future.successful(Set(ie818Message.consigneeId).flatten)
 
-      case IE837.value =>
-        val ie837Message = ieMessage.asInstanceOf[IE837Message]
+      case ie837Message: IE837Message =>
         Future.successful(Set(ie837Message.consignorId, ie837Message.consigneeId).flatten)
 
       case _ => throw new RuntimeException(s"[MessageService] - Unsupported Message Type: ${ieMessage.messageType}")
