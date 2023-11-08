@@ -109,5 +109,25 @@ class MovementFilterSpec extends PlaySpec {
 
       filter.filterMovement(movements) mustBe movements
     }
+
+    "ignore cases" when {
+      "filtering by LRN" in {
+        val filter = MovementFilter.and(Seq("lrn" -> Some("lrN3")))
+
+        filter.filterMovement(movements) mustBe Seq(m1)
+      }
+
+      "filtering by ERN" in {
+        val filter = MovementFilter.and(Seq("ern" -> Some("teSt1")))
+
+        filter.filterMovement(movements) mustBe Seq(m1)
+      }
+
+      "filtering by ARC" in {
+        val filter = MovementFilter.and(Seq("arc" -> Some("aRC1")))
+
+        filter.filterMovement(movements) mustBe Seq(m1)
+      }
+    }
   }
 }

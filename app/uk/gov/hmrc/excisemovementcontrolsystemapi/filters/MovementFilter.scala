@@ -25,7 +25,7 @@ sealed trait Filter {
 case class FilterErn(ern: Option[String] = None) extends Filter {
   def filter(movements: Seq[Movement]): Seq[Movement] = {
     ern.fold[Seq[Movement]](movements)(e =>
-      movements.filter(o => o.consignorId.equals(e))
+      movements.filter(o => o.consignorId.equalsIgnoreCase(e))
     )
   }
 
@@ -33,7 +33,7 @@ case class FilterErn(ern: Option[String] = None) extends Filter {
 case class FilterLrn(lrn: Option[String] = None) extends Filter {
   def filter(movements: Seq[Movement]): Seq[Movement] = {
     lrn.fold[Seq[Movement]](movements)(l =>
-      movements.filter(o => o.localReferenceNumber.equals(l))
+      movements.filter(o => o.localReferenceNumber.equalsIgnoreCase(l))
     )
   }
 }
@@ -41,7 +41,7 @@ case class FilterLrn(lrn: Option[String] = None) extends Filter {
 case class FilterArc(arc: Option[String] = None) extends Filter {
   def filter(movements: Seq[Movement]): Seq[Movement] = {
     arc.fold[Seq[Movement]](movements)(a =>
-      movements.filter(o => o.administrativeReferenceCode.contains(a))
+      movements.filter(o => o.administrativeReferenceCode.exists(_.equalsIgnoreCase(a)))
     )
   }
 }
