@@ -61,6 +61,19 @@ class MessageServiceSpec extends PlaySpec with EitherValues with TestXml {
 
     }
 
+    "return the consignor from the associated movement for an IE813" in {
+
+      val testArc = "23GB00000000000378126"
+
+      when(movementRepository.getMovementByARC(testArc)).thenReturn(Future.successful(
+        Seq(Movement("lrn", "consignor", Some("consignee"), Some(testArc)))))
+
+      val ie813Message = IE813Message.createFromXml(IE813)
+
+      await(messageService.getErns(ie813Message)) mustEqual Set("consignor")
+
+    }
+
     "return the consignor from the message for an IE815" in {
 
       val ie815Message = IE815Message.createFromXml(IE815)

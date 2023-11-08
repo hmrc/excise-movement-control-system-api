@@ -126,6 +126,40 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
   }
 
+  "Submit IE813 Change of Destination" should {
+
+    "return 202 when submitted by consignor" in {
+
+      when(movementRepository.getMovementByARC("23GB00000000000378126"))
+        .thenReturn(Future.successful(Seq(Movement("LRNQA20230909022221", "consignor", Some("consignee"), Some("23GB00000000000378126")))))
+
+      withAuthorizedTrader("consignor")
+      stubEISSuccessfulRequest()
+
+      val result = postRequest(IE813)
+
+      result.status mustBe ACCEPTED
+      result.body.isEmpty mustBe true
+
+    }
+
+    "return 403 error when submitted by consignee" in {
+
+      when(movementRepository.getMovementByARC("23GB00000000000378126"))
+        .thenReturn(Future.successful(Seq(Movement("LRNQA20230909022221", "consignor", Some("consignee"), Some("23GB00000000000378126")))))
+
+      withAuthorizedTrader("consignee")
+      stubEISSuccessfulRequest()
+
+      val result = postRequest(IE813)
+
+      result.status mustBe FORBIDDEN
+
+      result.body.contains("Excise number in message does not match authenticated excise number") mustBe true
+    }
+
+  }
+
   "Submit IE818 Report of Receipt Movement" should {
 
     "return 202" in {

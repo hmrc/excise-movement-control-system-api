@@ -85,7 +85,9 @@ class EISSubmissionConnector @Inject()
   private def getSingleErnFromMessage(message: IEMessage, validErns: Set[String]) = {
     message match {
       case x: IE801Message => matchErn(x.consignorId, x.consigneeId, validErns, x.messageType)
-      case _: IE810Message => validErns.head //For 810 we have no ERN in message so just use auth
+      //For 810 & 813 we have no ERN in message so just use auth
+      case _: IE810Message => validErns.head
+      case _: IE813Message => validErns.head
       case x: IE815Message => x.consignorId
       case x: IE818Message => x.consigneeId.getOrElse(throw new IllegalStateException(s"[EISSubmissionConnector] - ern not supplied for message: ${x.messageType}"))
       case x: IE837Message => matchErn(x.consignorId, x.consigneeId, validErns, x.messageType)
