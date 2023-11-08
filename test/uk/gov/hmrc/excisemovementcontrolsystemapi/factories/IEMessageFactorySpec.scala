@@ -69,6 +69,11 @@ class IEMessageFactorySpec
       sut.createIEMessage(message).isInstanceOf[IE810Message] mustBe true
     }
 
+    "return an instance of IE813Message" in {
+      when(message.key).thenReturn(Some("IE813"))
+      sut.createIEMessage(message).isInstanceOf[IE813Message] mustBe true
+    }
+
     "return an instance of IE818Message" in {
       when(message.key).thenReturn(Some("IE818"))
       sut.createIEMessage(message).isInstanceOf[IE818Message] mustBe true
@@ -116,6 +121,14 @@ class IEMessageFactorySpec
       result.consigneeId mustBe Some("GBWKQOZ8OVLYR")
       result.administrativeReferenceCode mustBe None
       result.localReferenceNumber mustBe "LRNQA20230909022221"
+    }
+
+    "return an instance of IE813Message" in {
+      val result = sut.createFromXml("IE813", IE813).asInstanceOf[IE813Message]
+      result.isInstanceOf[IE813Message] mustBe true
+      result.consignorId mustBe None
+      result.consigneeId mustBe None
+      result.administrativeReferenceCode mustBe Some("23GB00000000000378126")
     }
 
     "return an instance of IE818Message" in {
