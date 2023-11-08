@@ -35,6 +35,6 @@ case class ParsedXmlRequest[A]
 case class ValidatedXmlRequest[A]
 (
   parsedRequest: ParsedXmlRequest[A],
-  validErns: Set[String],
+  validErns: Set[String], //The ERNs that are both in the message and in the authentication
 ) extends WrappedRequest[A](parsedRequest)
 

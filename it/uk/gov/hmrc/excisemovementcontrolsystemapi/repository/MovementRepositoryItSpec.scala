@@ -31,7 +31,7 @@ import java.time.{Clock, Instant, ZoneId}
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 
-class MovementRepositorySpec extends PlaySpec
+class MovementRepositoryItSpec extends PlaySpec
   with CleanMongoCollectionSupport
   with PlayMongoRepositorySupport[Movement]
   with IntegrationPatience
@@ -187,6 +187,25 @@ class MovementRepositorySpec extends PlaySpec
     }
 
 
+  }
+
+  "getMovementByArc" should {
+    "return a list of movement" when {
+      "arc matches the supplied arc " in {
+        val expectedMovement1 = Movement("lrn", "ern1", None, Some("arc1"))
+        val expectedMovement2 = Movement("lrn", "ern2", None, Some("arc2"))
+        val expectedMovement3 = Movement("lrn1", "ern1", None, Some("arc3"))
+        val expectedMovement4 = Movement("lrn4", "ern4", None, Some("arc4"))
+        saveMovement(expectedMovement1)
+        saveMovement(expectedMovement2)
+        saveMovement(expectedMovement3)
+        saveMovement(expectedMovement4)
+
+        val result = repository.getMovementByARC("arc2").futureValue
+
+        result mustBe Seq(expectedMovement2)
+      }
+    }
   }
 
   private def saveMovement(movement: Movement) = {

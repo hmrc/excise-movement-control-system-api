@@ -107,31 +107,8 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
       )(any, any, any, any)
     }
 
-    "use the right request parameters in http client for IE815" in {
-      submitExciseMovementWithParams(xml, ie815Message, Set("123"), Set("123"))
-
-      val eisHttpReader: EISHttpReader = verifyHttpHeader
-
-      eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
-      eisHttpReader.ern mustBe "123"
-    }
-
-    "use the right request parameters in http client for IE818" in {
-      val ie818Message = mock[IE818Message]
-      when(ie818Message.messageType).thenReturn("IE818")
-      when(ie818Message.consigneeId).thenReturn(Some("123"))
-
-      submitExciseMovementWithParams(xml, ie818Message, Set("123"), Set("123"))
-
-      val eisHttpReader = verifyHttpHeader
-
-      eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
-      eisHttpReader.ern mustBe "123"
-    }
-
     "use the right request parameters in http client for IE801 with consignor" in {
       val ie801Message = mock[IE801Message]
-      when(ie801Message.messageType).thenReturn("IE801")
       when(ie801Message.consignorId).thenReturn(Some("123"))
       when(ie801Message.consigneeId).thenReturn(Some("456"))
 
@@ -145,7 +122,6 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
 
     "use the right request parameters in http client for IE801 with consignee" in {
       val ie801Message = mock[IE801Message]
-      when(ie801Message.messageType).thenReturn("IE801")
       when(ie801Message.consignorId).thenReturn(Some("123"))
       when(ie801Message.consigneeId).thenReturn(Some("456"))
 
@@ -157,9 +133,42 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
       eisHttpReader.ern mustBe "456"
     }
 
+    "use the right request parameters in http client for IE810" in {
+      val ie810Message = mock[IE810Message]
+      when(ie810Message.consignorId).thenReturn(Some("123"))
+      when(ie810Message.consigneeId).thenReturn(Some("456"))
+
+      submitExciseMovementWithParams(xml, ie810Message, Set("123"), Set("123"))
+
+      val eisHttpReader: EISHttpReader = verifyHttpHeader
+
+      eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
+      eisHttpReader.ern mustBe "123"
+    }
+
+    "use the right request parameters in http client for IE815" in {
+      submitExciseMovementWithParams(xml, ie815Message, Set("123"), Set("123"))
+
+      val eisHttpReader: EISHttpReader = verifyHttpHeader
+
+      eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
+      eisHttpReader.ern mustBe "123"
+    }
+
+    "use the right request parameters in http client for IE818" in {
+      val ie818Message = mock[IE818Message]
+      when(ie818Message.consigneeId).thenReturn(Some("123"))
+
+      submitExciseMovementWithParams(xml, ie818Message, Set("123"), Set("123"))
+
+      val eisHttpReader = verifyHttpHeader
+
+      eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
+      eisHttpReader.ern mustBe "123"
+    }
+
     "use the right request parameters in http client for IE837 with consignor" in {
       val ie837Message = mock[IE837Message]
-      when(ie837Message.messageType).thenReturn("IE837")
       when(ie837Message.consignorId).thenReturn(Some("123"))
       when(ie837Message.consigneeId).thenReturn(None)
 
@@ -173,7 +182,6 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
 
     "use the right request parameters in http client for IE837 with consignee" in {
       val ie837Message = mock[IE837Message]
-      when(ie837Message.messageType).thenReturn("IE837")
       when(ie837Message.consignorId).thenReturn(None)
       when(ie837Message.consigneeId).thenReturn(Some("123"))
 
@@ -188,10 +196,13 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
     "throw an error if unsupported message" in {
       class NonSupportedMessage extends IEMessage {
         override def consigneeId: Option[String] = None
+
         override def administrativeReferenceCode: Option[String] = None
+
         override def messageType: String = "any-type"
+
         override def toXml: NodeSeq = NodeSeq.Empty
-        override def getErns: Set[String] = Set.empty
+
         override def lrnEquals(lrn: String): Boolean = false
       }
 

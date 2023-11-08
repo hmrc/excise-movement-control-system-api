@@ -20,9 +20,12 @@ import scala.xml.NodeSeq
 
 trait IEMessage {
   def consigneeId: Option[String]
+
   def administrativeReferenceCode: Option[String]
+
   def messageType: String
+
   def toXml: NodeSeq
-  def getErns: Set[String]
+
   def lrnEquals(lrn: String): Boolean
 }

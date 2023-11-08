@@ -23,23 +23,27 @@ import play.api.mvc.Results.Forbidden
 import play.api.mvc.{ActionRefiner, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{ParsedXmlRequest, ValidatedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-class ValidateErnsActionImpl @Inject()(implicit val executionContext: ExecutionContext, implicit val emcsUtils: EmcsUtils)
-  extends ValidateErnsAction
-    with Logging {
+class ValidateErnsActionImpl @Inject()(messageService: MessageService)(
+  implicit val executionContext: ExecutionContext,
+  implicit val emcsUtils: EmcsUtils
+) extends ValidateErnsAction
+  with Logging {
   override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ValidatedXmlRequest[A]]] = {
 
-    val matchedErns: Set[String] = request.erns.intersect(request.ieMessage.getErns)
+    val matchedErns: Future[Set[String]] =
+      messageService.getErns(request.ieMessage).map(ernsFromMessage => request.erns.intersect(ernsFromMessage))
 
-    if (matchedErns.nonEmpty) {
-      Future.successful(Right(ValidatedXmlRequest(request, matchedErns)))
-    }
-    else {
-      logger.error("[ValidateErnAction] - Invalid Excise Number")
-      Future.successful(
+    matchedErns.map(erns => {
+      if (erns.nonEmpty) {
+        Right(ValidatedXmlRequest(request, erns))
+      }
+      else {
+        logger.error("[ValidateErnAction] - Invalid Excise Number")
         Left(
           Forbidden(
             Json.toJson(
@@ -51,8 +55,9 @@ class ValidateErnsActionImpl @Inject()(implicit val executionContext: ExecutionC
             )
           )
         )
-      )
-    }
+      }
+    })
+
   }
 }
 

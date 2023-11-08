@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
+import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.mockito.MockitoSugar.when
 import org.scalatest.{BeforeAndAfterAll, EitherValues}
@@ -29,17 +30,19 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService
 
 import java.time.LocalDateTime
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 
 class ValidateErnsActionSpec extends PlaySpec with TestXml with EitherValues with BeforeAndAfterAll {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val emcsUtils: EmcsUtils = mock[EmcsUtils]
+  val messageService: MessageService = mock[MessageService]
 
-  val sut = new ValidateErnsActionImpl()
+  val sut = new ValidateErnsActionImpl(messageService)
 
   private val message = mock[IEMessage](RETURNS_DEEP_STUBS)
   private val currentDateTime = LocalDateTime.of(2023, 10, 18, 15, 33, 33)
@@ -50,7 +53,7 @@ class ValidateErnsActionSpec extends PlaySpec with TestXml with EitherValues wit
     when(emcsUtils.getCurrentDateTime).thenReturn(currentDateTime)
     when(emcsUtils.generateCorrelationId).thenReturn("123")
 
-    when(message.getErns).thenReturn(Set("GBWK002281023", "GBWKQOZ8OVLYR"))
+    when(messageService.getErns(any)).thenReturn(Future.successful(Set("GBWK002281023", "GBWKQOZ8OVLYR")))
   }
 
   "ValidateErnsAction" should {
