@@ -90,6 +90,7 @@ class EISSubmissionConnector @Inject()
       case _: IE813Message => validErns.head
       case x: IE815Message => x.consignorId
       case x: IE818Message => x.consigneeId.getOrElse(throw new IllegalStateException(s"[EISSubmissionConnector] - ern not supplied for message: ${x.messageType}"))
+      case x: IE819Message => x.consigneeId.getOrElse(throw new IllegalStateException(s"[EISSubmissionConnector] - ern not supplied for message: ${x.messageType}"))
       case x: IE837Message => matchErn(x.consignorId, x.consigneeId, validErns, x.messageType)
       case _ => throw new RuntimeException(s"[EISSubmissionConnector] - Unsupported Message Type: ${message.messageType}")
     }

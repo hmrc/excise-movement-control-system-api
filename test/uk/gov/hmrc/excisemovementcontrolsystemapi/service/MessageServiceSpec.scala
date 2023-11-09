@@ -90,6 +90,14 @@ class MessageServiceSpec extends PlaySpec with EitherValues with TestXml {
 
     }
 
+    "return the consignee from the message for an IE819" in {
+
+      val ie819Message = IE819Message.createFromXml(IE819)
+
+      await(messageService.getErns(ie819Message)) mustBe Set("GBWK002281023")
+
+    }
+
     "return the consignee from the message for an IE837 if consignee sent" in {
 
       val ie837Message = IE837Message.createFromXml(IE837WithConsignee)

@@ -67,6 +67,9 @@ class MessageService @Inject()(movementRepository: MovementRepository, implicit 
       case ie818Message: IE818Message =>
         Future.successful(Set(ie818Message.consigneeId).flatten)
 
+      case ie819Message: IE819Message =>
+        Future.successful(Set(ie819Message.consigneeId).flatten)
+
       case ie837Message: IE837Message =>
         Future.successful(Set(ie837Message.consignorId, ie837Message.consigneeId).flatten)
 
