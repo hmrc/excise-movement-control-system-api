@@ -135,10 +135,19 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
 
     "use the right request parameters in http client for IE810" in {
       val ie810Message = mock[IE810Message]
-      when(ie810Message.consignorId).thenReturn(Some("123"))
-      when(ie810Message.consigneeId).thenReturn(Some("456"))
 
       submitExciseMovementWithParams(xml, ie810Message, Set("123"), Set("123"))
+
+      val eisHttpReader: EISHttpReader = verifyHttpHeader
+
+      eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
+      eisHttpReader.ern mustBe "123"
+    }
+
+    "use the right request parameters in http client for IE813" in {
+      val ie813Message = mock[IE813Message]
+
+      submitExciseMovementWithParams(xml, ie813Message, Set("123"), Set("123"))
 
       val eisHttpReader: EISHttpReader = verifyHttpHeader
 
