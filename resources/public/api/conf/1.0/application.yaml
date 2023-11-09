@@ -8,7 +8,7 @@ info:
 
     Testing instructions can be found in the [EMCS API testing guide](/guides/emcs-api-testing-guide/).
   contact: {}
-  version: "0.0.1"
+  version: "1.0.0"
 servers:
   - url: https://test-api.service.hmrc.gov.uk
     description: Sandbox
@@ -25,15 +25,16 @@ paths:
       tags:
         - Movements
       summary: Submit a new draft excise movement
-      description: Submit a new draft excise movement. </br></br>**Existing SOAP API equivalent:** SubmitDraftMovement </br></br>**Note:** The consignor ID must match an excise reference number (ERN) in the bearer token that you use for API authentication. If it does not, a 403 Forbidden error will be thrown.
+      description: Submit a new draft excise movement. </br></br>**Note:** The consignor ID in the IE815 message must match an excise reference number (ERN) in the bearer token that you use for API authentication. If it does not, a 403 Forbidden error will be thrown.
       operationId: submitMovement
       parameters:
         - $ref: "#/components/parameters/AcceptHeader"
+        - $ref: "#/components/parameters/ContentTypeHeader"
       requestBody:
         description: The body for this request should be an XML body that conforms to the [IE815 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie815.xsd)
         required: true
         content:
-          application/vnd.hmrc.1.0+xml:
+          application/xml:
             schema:
               $ref: '#/components/schemas/IE815'
             examples:
@@ -117,49 +118,55 @@ paths:
       tags:
         - Movements
       summary: Get excise movements
-      description: Get excise movements. </br></br>**Existing SOAP API equivalent:** GetMovementForTrader  </br></br>**Note:** The consignor ID or consignee ID must match an excise reference number (ERN) in the bearer token that you use for API authentication. If it does not, a 403 Forbidden error will be thrown.
+      description: Get excise movements. </br></br>**Note:** You will only be able to retrieve movements where the consignor ID or consignee ID of the movement matches any of your excise reference numbers (ERNs) in the bearer token that you use for API authentication.
       operationId: getAllMovements
       parameters:
         - $ref: "#/components/parameters/AcceptHeader"
-        - name: ERN
+        - name: ern
           in: query
           description: Filter excise movements by excise reference number (consignor ID/consignee ID). If you do not provide an excise reference number (ERN) as a query parameter, you will get a list for all ERNs in your bearer token.
           required: false
           schema:
             type: string
-        - name: ARC
+        - name: arc
           in: query
-          description: Filter excise movements by administrative reference code (ARC)
+          description: Filter excise movements by administrative reference code (ARC). This will return one movement in the list.
           required: false
           schema:
             type: string
-        - name: LRN
+        - name: lrn
           in: query
           description: Filter excise movements by local reference number (LRN)
           required: false
           schema:
             type: string
+        - name: updatedSince
+          in: query
+          description: Filter excise movements modified after provided timestamp.<br/>This can be used to poll for any updated movements.<br/>For each updated movement that gets returned, you can then call the get messages endpoint and pass in the same value for its "updatedSince" query parameter to get the messages that have been received since you last polled.
+          required: false
+          schema:
+            $ref: "#/components/schemas/DateTime"
       responses:
         '200':
-          description: Successful operation
+          description: Successful operation. If there are no movements for any of your excise reference numbers (ERNs) in your bearer token or because of the filters, this will return an empty list.
           content:
             application/vnd.hmrc.1.0+json:
+              example:
+               - consignorId: "GBWK002281023"
+                 consigneeId: "GBWKQOZ8OVLYR"
+                 localReferenceNumber: "LRNQA20230909022221"
+                 administrativeReferenceCode: "35WE3B5EDSYSZ86STVKH8"
+                 status: "Accepted"
+               - consignorId: "GBWK002281023"
+                 consigneeId: "GBWKQOZ8OVLYQ"
+                 localReferenceNumber: "LRNQA20230909022224"
+                 status: "None"
               schema:
                 type: array
-                items:
-                  $ref: '#/components/schemas/ExciseMovement'
-            application/vnd.hmrc.1.0+xml:
-              schema:
-                type: array
-                xml:
-                  wrapped: true
-                  name: exciseMovements
                 items:
                   $ref: '#/components/schemas/ExciseMovement'
         '401':
           description: Consignor or Consignee not authorized. Invalid enrolment parameter.
-        '404':
-          description: No excise movements found for ERN
       security:
         - userRestricted:
             - excise-movement-control-system
@@ -170,20 +177,13 @@ paths:
       summary: Submit a message for an excise movement.
       description: |
         Submit a message for a specific excise movement. </br></br>
-        **Existing SOAP API equivalents:** 
-        + SubmitReportofReceipt
-        + SubmitExplainDelayToDelivery
-        + SubmitCancellation
-        + SubmitChangeOfDestination
-        + SubmitAlertOrRejectionMovement
-        + SubmitSplitMovement
-        + SubmitReasonForShortage
-        
         The **X-Message-Type** header **must** be the same as the message body e.g. for an **IE818 (Record of receipt) message** the **X-Message-Type** header also needs to be **IE818**
         
-        **Note:** The consignor ID or consignee ID must match an excise reference number (ERN) in the bearer token that you use for API authentication. If it does not, a 403 Forbidden error will be thrown.
+        **Note:** The consignor ID or consignee ID in the message must match an excise reference number (ERN) in the bearer token that you use for API authentication. If it does not, a 403 Forbidden error will be thrown.
       operationId: postMessage
       parameters:
+        - $ref: '#/components/parameters/AcceptHeader'
+        - $ref: '#/components/parameters/ContentTypeHeader'
         - name: localReferenceNumber
           in: path
           description: The excise movement identifier
@@ -199,7 +199,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/vnd.hmrc.1.0+xml:
+          application/xml:
             schema:
               # I tried to use a "oneOf" here but the examples didn't work so using a GenericXML object instead.
               type: object
@@ -208,24 +208,32 @@ paths:
             examples:
               cancellation:
                 summary: Submit cancellation (IE810)
+                description: The body for this request should be an XML body that conforms to the [IE810 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie810.xsd)
                 value: '<IE810><!-- Example IE810 message --></IE810>'
               changeOfDestination:
                 summary: Submit change of destination (IE813)
+                description: The body for this request should be an XML body that conforms to the [IE813 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie813.xsd)
                 value: '<IE813><!-- Example IE813 message --></IE813>'
               reportOfReceipt:
                 summary: Submit report of receipt (IE818)
+                description: The body for this request should be an XML body that conforms to the [IE818 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie818.xsd)
                 value: '<IE818><!-- Example IE818 message --></IE818>'
               alertOrRejection:
                 summary: Submit alert or rejection (IE819)
+                description: The body for this request should be an XML body that conforms to the [IE819 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie819.xsd)
                 value: '<IE819><!-- Example IE819 message --></IE819>'
-              split:
-                summary: Submit split movement (IE825)
-                value: '<IE825><!-- Example IE825 message --></IE825>'
+#              Temporarily commented out until MVP+
+#              split:
+#                summary: Submit split movement (IE825)
+#                description: The body for this request should be an XML body that conforms to the [IE825 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie825.xsd)
+#                value: '<IE825><!-- Example IE825 message --></IE825>'
               explainDelayToDelivery:
                 summary: Submit explain delay to delivery (IE837)
+                description: The body for this request should be an XML body that conforms to the [IE837 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie837.xsd)
                 value: '<IE837><!-- Example IE837 message --></IE837>'
               reasonForShortage:
                 summary: Submit reason for shortage (IE871)
+                description: The body for this request should be an XML body that conforms to the [IE871 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie871.xsd)
                 value: '<IE871><!-- Example IE871 message --></IE871>'
       responses:
         '202':
@@ -244,7 +252,7 @@ paths:
         '401':
           description: Consignor or Consignee not authorized. Invalid enrolment parameter.
         '403':
-          description: Consignor ID or consignee ID is not in authorisation bearer token
+          description: Consignor ID or consignee ID in submitted message is not in authorisation bearer token
         '404':
           description: Unknown excise movement identifier
           content:
@@ -283,16 +291,22 @@ paths:
       tags:
         - Movements
       summary: Get all messages for an excise movement using the localReferenceNumber
-      description: Get all messages for a specific excise movement. </br></br>There could be filter query parameters applied here to filter on date range, message type etc.</br></br>**Existing SOAP API equivalent:** GetNewMessages  </br></br>**Note:** The consignor ID or consignee ID must match an excise reference number (ERN) in the bearer token that you use for API authentication. If it does not, a 403 Forbidden error will be thrown.
+      description: Get all messages for a specific excise movement. </br></br>**Note:** The consignor ID or consignee ID must match an excise reference number (ERN) in the bearer token that you use for API authentication. If it does not, a 403 Forbidden error will be thrown.
       operationId: getAllMessages
       parameters:
         - $ref: "#/components/parameters/AcceptHeader"
         - name: localReferenceNumber
           in: path
-          description: The excise movement identifier
+          description: The local reference number of the movement
           required: true
           schema:
             type: string
+        - name: updatedSince
+          in: query
+          description: Filter messages received after provided timestamp.<br/>This can be used to poll for new messages per ERN/LRN combination.<br/>You can also poll on the get movements endpoint which allows a more efficient way to poll as that can first give you a list of movements that have new messages and then use this endpoint to retrieve the updated messages for those movements.
+          required: false
+          schema:
+            $ref: "#/components/schemas/DateTime"
       responses:
         '200':
           description: Successful operation
@@ -309,38 +323,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/MessageWithType'
-            application/vnd.hmrc.1.0+xml:
-              example: |
-                <?xml version="1.0" encoding="UTF-8"?>
-                <messages>
-                  <message>
-                    <id>1</id>
-                    <body>
-                      <IE815><!-- Example IE815 message --></IE815>
-                    </body>
-                    <type>IE815</type>
-                  </message>
-                  <message>
-                    <id>2</id>
-                    <body>
-                      <IE801><!-- Example IE801 message --></IE801>
-                    </body>
-                    <type>IE801</type>
-                  </message>
-                </messages>
-              schema:
-                type: array
-                xml:
-                  wrapped: true
-                  name: messages
-                items:
-                  $ref: '#/components/schemas/MessageWithType'
         '401':
           description: Consignor or Consignee not authorized. Invalid enrolment parameter.
         '403':
-          description: Consignor ID or consignee ID is not in authorisation bearer token
+          description: The requested movement's consignor ID or consignee ID is not in authorisation bearer token
         '404':
-          description: Unknown excise movement identifier
+          description: Unknown movement, based on the provided local reference number
       security:
         - userRestricted:
             - excise-movement-control-system
@@ -350,7 +338,7 @@ paths:
       tags:
         - Traders
       summary: Get information relating to an excise trader
-      description: Get information relating to an excise trader. </br></br>**Existing SOAP API equivalent:** PreValidateTrader
+      description: Get information relating to an excise trader.
       operationId: prevalidateTrader
       parameters:
         - $ref: "#/components/parameters/AcceptHeader"
@@ -408,6 +396,15 @@ components:
         enum: [
           "application/vnd.hmrc.1.0+json"
         ]
+    ContentTypeHeader:
+      name: Content-Type
+      in: header
+      description: The media type of the request body.
+      schema:
+        type: string
+        enum:
+          - application/xml
+      required: true
   schemas:
     AdministrativeReferenceCode:
       type: string
@@ -439,7 +436,7 @@ components:
         - Stopped
     DateTime:
       type: string
-      pattern: ^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[01]|0[1-9]|[12][0-9])T(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])(.[0-9]+)?(Z)?$
+      format: date-time
       example: '2021-12-17T09:30:47Z'
     CorrelationId:
       type: string
@@ -595,7 +592,8 @@ components:
         - IE813
         - IE818
         - IE819
-        - IE825
+#        Temporarily commented out until MVP+
+#        - IE825
         - IE837
         - IE871
       xml:
@@ -631,8 +629,7 @@ components:
           type: string
           format: byte
         createdOn:
-          type: string
-          format: date-time
+          $ref: "#/components/schemas/DateTime"
       xml:
         name: message
     MessageWithType:
