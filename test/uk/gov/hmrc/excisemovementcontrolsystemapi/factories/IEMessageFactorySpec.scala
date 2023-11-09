@@ -88,6 +88,12 @@ class IEMessageFactorySpec
       when(message.key).thenReturn(Some("IE837"))
       sut.createIEMessage(message).isInstanceOf[IE837Message] mustBe true
     }
+
+    "return an instance of IE871Message" in {
+      when(message.key).thenReturn(Some("IE871"))
+      sut.createIEMessage(message).isInstanceOf[IE871Message] mustBe true
+    }
+
   }
 
   "createfromType" should {
@@ -166,6 +172,14 @@ class IEMessageFactorySpec
       result.consignorId mustBe None
       result.consigneeId mustBe Some("GBWK240176600")
       result.administrativeReferenceCode mustBe Some("16GB00000000000192223")
+    }
+
+    "return an instance of IE871Message" in {
+      val result = sut.createFromXml("IE871", IE871).asInstanceOf[IE871Message]
+      result.isInstanceOf[IE871Message] mustBe true
+      result.consignorId mustBe Some("GBWK240176600")
+      result.consigneeId mustBe None
+      result.administrativeReferenceCode mustBe Some("23GB00000000000377768")
     }
   }
 }

@@ -294,6 +294,21 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
   }
 
+  "Submit IE871 Explanation On Shortage" should {
+
+    "return 202" in {
+      withAuthorizedTrader("GBWK240176600")
+      stubEISSuccessfulRequest()
+
+      val result = postRequest(IE871)
+
+      result.status mustBe ACCEPTED
+      result.body.isEmpty mustBe true
+
+    }
+
+  }
+
   private def createEISErrorResponseBodyAsJson(message: String): JsValue = {
     Json.toJson(EISErrorResponse(
       LocalDateTime.of(2023, 12, 5, 12, 5, 6),

@@ -73,6 +73,9 @@ class MessageService @Inject()(movementRepository: MovementRepository, implicit 
       case ie837Message: IE837Message =>
         Future.successful(Set(ie837Message.consignorId, ie837Message.consigneeId).flatten)
 
+      case ie871Message: IE871Message =>
+        Future.successful(Set(ie871Message.consignorId).flatten)
+
       case _ => throw new RuntimeException(s"[MessageService] - Unsupported Message Type: ${ieMessage.messageType}")
     }
 
