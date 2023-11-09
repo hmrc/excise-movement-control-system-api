@@ -93,6 +93,14 @@ class MessageServiceSpec extends PlaySpec with EitherValues with TestXml {
 
     }
 
+    "return the consignor from the message for an IE871" in {
+
+      val ie871Message = IE871Message.createFromXml(IE871)
+
+      await(messageService.getErns(ie871Message)) mustBe Set("GBWK240176600")
+
+    }
+
     "throw an error if unsupported message" in {
       class NonSupportedMessage extends IEMessage {
         override def consigneeId: Option[String] = None

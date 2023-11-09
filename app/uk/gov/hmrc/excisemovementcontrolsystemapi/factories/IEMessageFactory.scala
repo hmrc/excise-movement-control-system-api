@@ -32,6 +32,7 @@ case class IEMessageFactory() {
       case Some(MessageTypes.IE810) => IE810Message(message)
       case Some(MessageTypes.IE818) => IE818Message(message)
       case Some(MessageTypes.IE837) => IE837Message(message)
+      case Some(MessageTypes.IE871) => IE871Message(message)
       case _ => throw new RuntimeException(s"Could not create Message object. Unsupported message: $messageType")
     }
   }
@@ -43,6 +44,7 @@ case class IEMessageFactory() {
       case Some(MessageTypes.IE815) => IE815Message.createFromXml(xml)
       case Some(MessageTypes.IE818) => IE818Message.createFromXml(xml)
       case Some(MessageTypes.IE837) => IE837Message.createFromXml(xml)
+      case Some(MessageTypes.IE871) => IE871Message.createFromXml(xml)
       case _ => throw new RuntimeException(s"Could not create Message object. Unsupported message: $messageType")
     }
   }

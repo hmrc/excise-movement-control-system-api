@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes.{IE801, IE810, IE815, IE818, IE837}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 
@@ -53,6 +52,9 @@ class MessageService @Inject()(movementRepository: MovementRepository, implicit 
 
       case ie837Message: IE837Message =>
         Future.successful(Set(ie837Message.consignorId, ie837Message.consigneeId).flatten)
+
+      case ie871Message: IE871Message =>
+        Future.successful(Set(ie871Message.consignorId).flatten)
 
       case _ => throw new RuntimeException(s"[MessageService] - Unsupported Message Type: ${ieMessage.messageType}")
     }

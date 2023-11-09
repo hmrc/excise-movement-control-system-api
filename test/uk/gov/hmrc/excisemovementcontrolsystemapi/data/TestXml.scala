@@ -278,4 +278,42 @@ trait TestXml {
       </urn:Body>
     </urn:IE837>
 
+  lazy val IE871: Elem =
+    <urn:IE871 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE871:V3.01"
+               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
+               xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
+               xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
+               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <urn:Header>
+        <urn1:MessageSender>NDEA.GB</urn1:MessageSender>
+        <urn1:MessageRecipient>NDEA.GB</urn1:MessageRecipient>
+        <urn1:DateOfPreparation>2023-08-15</urn1:DateOfPreparation>
+        <urn1:TimeOfPreparation>09:57:17</urn1:TimeOfPreparation>
+        <urn1:MessageIdentifier>GB100000000302708</urn1:MessageIdentifier>
+        <urn1:CorrelationIdentifier>PORTAL56f290f317b947c79ee93b806800351b</urn1:CorrelationIdentifier>
+      </urn:Header> <urn:Body>
+      <urn:ExplanationOnReasonForShortage>
+        <urn:Attributes>
+          <urn:SubmitterType>1</urn:SubmitterType>
+          <urn:DateAndTimeOfValidationOfExplanationOnShortage>2023-08-15T09:57:19</urn:DateAndTimeOfValidationOfExplanationOnShortage>
+        </urn:Attributes>
+        <urn:ExciseMovement>
+          <urn:AdministrativeReferenceCode>23GB00000000000377768</urn:AdministrativeReferenceCode>
+          <urn:SequenceNumber>1</urn:SequenceNumber>
+        </urn:ExciseMovement>
+        <urn:ConsignorTrader language="en">
+          <urn:TraderExciseNumber>GBWK240176600</urn:TraderExciseNumber>
+          <urn:TraderName>CHARLES HASWELL AND PARTNERS LTD</urn:TraderName>
+          <urn:StreetName>1</urn:StreetName>
+          <urn:Postcode>AA11AA</urn:Postcode>
+          <urn:City>1</urn:City>
+        </urn:ConsignorTrader>
+        <urn:Analysis>
+          <urn:DateOfAnalysis>2023-08-15</urn:DateOfAnalysis>
+          <urn:GlobalExplanation language="en">Courier drank the wine</urn:GlobalExplanation>
+        </urn:Analysis>
+      </urn:ExplanationOnReasonForShortage>
+    </urn:Body>
+    </urn:IE871>
+
 }
