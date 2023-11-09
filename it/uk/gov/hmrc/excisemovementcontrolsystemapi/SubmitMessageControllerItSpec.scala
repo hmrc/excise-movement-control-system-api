@@ -264,6 +264,21 @@ class SubmitMessageControllerItSpec extends PlaySpec
     }
   }
 
+  "Submit IE819 Alert or Rejection" should {
+
+    "return 202" in {
+      withAuthorizedTrader("GBWK002281023")
+      stubEISSuccessfulRequest()
+
+      val result = postRequest(IE819)
+
+      result.status mustBe ACCEPTED
+      result.body.isEmpty mustBe true
+
+    }
+
+  }
+
   "Submit IE837 Report of Receipt Movement" should {
 
     "return 202" in {
