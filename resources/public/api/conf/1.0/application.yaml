@@ -75,6 +75,8 @@ paths:
                         errorMessage: "The Date of Dispatch you entered is incorrect. It must be today or later. Please amend your entry and resubmit."
                         location: "/urn:IE815[1]/urn:Body[1]/urn:SubmittedDraftOfEADESAD[1]/urn:EadEsadDraft[1]/urn:DateOfDispatch[1]"
                         value: "2023-09-09"
+        '401':
+          description: Consignor not authorized. Invalid enrolment parameter.
         '403':
           description: Consignor ID is not in authorisation bearer token
         '404':
@@ -154,6 +156,8 @@ paths:
                   name: exciseMovements
                 items:
                   $ref: '#/components/schemas/ExciseMovement'
+        '401':
+          description: Consignor or Consignee not authorized. Invalid enrolment parameter.
         '404':
           description: No excise movements found for ERN
       security:
@@ -237,6 +241,8 @@ paths:
                 message: "Json validation failed"
                 debugMessage: "user is missing but it is required"
                 emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+        '401':
+          description: Consignor or Consignee not authorized. Invalid enrolment parameter.
         '403':
           description: Consignor ID or consignee ID is not in authorisation bearer token
         '404':
@@ -329,6 +335,8 @@ paths:
                   name: messages
                 items:
                   $ref: '#/components/schemas/MessageWithType'
+        '401':
+          description: Consignor or Consignee not authorized. Invalid enrolment parameter.
         '403':
           description: Consignor ID or consignee ID is not in authorisation bearer token
         '404':
@@ -378,6 +386,8 @@ paths:
             application/vnd.hmrc.1.0+xml:
               schema:
                 $ref: '#/components/schemas/ExciseTrader'
+        '401':
+          description: Consignor or Consignee not authorized. Invalid enrolment parameter.
         '404':
           description: Unknown Trader
       security:
