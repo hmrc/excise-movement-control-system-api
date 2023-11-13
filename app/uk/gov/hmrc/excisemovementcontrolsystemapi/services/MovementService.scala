@@ -18,17 +18,23 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.Singleton
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GeneralMongoError
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, GeneralMongoError}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
+import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class MovementService @Inject()(
-                                 movementRepository: MovementRepository
-                                      )(implicit ec: ExecutionContext) {
+class MovementService @Inject()
+(
+  movementRepository: MovementRepository,
+  emcsUtils: EmcsUtils,
+  dateTimeService: DateTimeService
+)(implicit ec: ExecutionContext) {
   def saveMovementMessage(movementMessage: Movement): Future[Either[GeneralMongoError, Movement]] = {
     movementRepository.saveMovement(movementMessage)
       .map(_ => Right(movementMessage))
@@ -60,6 +66,45 @@ class MovementService @Inject()(
 
     movementRepository.getMovementByERN(ern).map {
       movements =>filter.filterMovement(movements)
+    }
+  }
+
+  def updateMovement(message: IEMessage, consignorId: String): Future[Boolean] = {
+
+    movementRepository.getAllBy(consignorId).flatMap(cachedMovement => {
+      val arc = message.administrativeReferenceCode
+      //todo get LRN using pattern match
+      val lrn = message.localReferenceNumber.getOrElse("")
+      val movementWithArc = cachedMovement.filter(o => o.administrativeReferenceCode.equals(arc)).headOption
+      val movementWithLrn = cachedMovement.filter(m => m.localReferenceNumber.equals(lrn)).headOption
+
+      (movementWithArc, movementWithLrn) match {
+        case (Some(mArc), _) => saveDistinctMessage(mArc, message)
+        case (None, Some(mLrn)) => saveDistinctMessage(mLrn, message)
+        case _ => throw new RuntimeException("Cannot retrieve a movement. Local reference number or administration reference code are not present")
+      }
+    })
+  }
+
+  private def saveDistinctMessage(movement: Movement, newMessage: IEMessage): Future[Boolean] = {
+
+
+    val encodedMessage = emcsUtils.createEncoder.encodeToString(newMessage.toXml.toString.getBytes(StandardCharsets.UTF_8))
+    val messages = Seq(Message(encodedMessage, newMessage.messageType, dateTimeService))
+
+    //todo: compare the hash and take just the duplicate
+    //   val allMessages: Seq[Message] = movement.messages ++ messages.diff(movement.messages)
+    val allMessages = (movement.messages ++ messages).distinctBy(_.hash)
+    val newArc = newMessage.administrativeReferenceCode.orElse(movement.administrativeReferenceCode)
+
+    val newMovement = movement.copy(
+      administrativeReferenceCode = newArc,
+      messages = allMessages
+    )
+
+    movementMessageRepository.save(newMovement).map {
+      case true => true
+      case _ => false
     }
   }
 

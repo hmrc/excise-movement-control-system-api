@@ -72,6 +72,12 @@ class MovementRepository @Inject()
   def getMovementByARC(arc: String): Future[Seq[Movement]] = {
     collection.find(in("administrativeReferenceCode", arc)).toFuture()
   }
+
+  def getAllBy(consignorId: String): Future[Seq[Movement]] = {
+    collection
+      .find(and(equal("consignorId", consignorId)))
+      .toFuture()
+  }
 }
 
 object MovementMessageRepository {

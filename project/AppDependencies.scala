@@ -4,12 +4,12 @@ object AppDependencies {
 
   private val bootstrapVersion = "7.19.0"
   val dispatchVersion        = "1.2.0"
-  lazy val mongoVersion = "0.74.0"
+  lazy val mongoVersion = "1.3.0"
 
 
   val compile = Seq(
     "uk.gov.hmrc"             %% "bootstrap-backend-play-28"  % bootstrapVersion,
-    "uk.gov.hmrc.mongo"       %% "hmrc-mongo-play-28"         % mongoVersion,
+    "uk.gov.hmrc.mongo"       %% "hmrc-mongo-work-item-repo-play-28" % mongoVersion,
     // required for scalaxb
     "org.scala-lang.modules"  %% "scala-xml"                  % "1.3.0",
     "org.scala-lang.modules"  %% "scala-parser-combinators"   % "1.1.2",

@@ -20,7 +20,8 @@ import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
-import scala.concurrent.duration.Duration
+import java.util.concurrent.TimeUnit.{MINUTES, SECONDS}
+import scala.concurrent.duration.{Duration, FiniteDuration}
 
 @Singleton
 class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig) {
@@ -31,6 +32,12 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
 
   lazy val eisHost: String = servicesConfig.baseUrl("eis")
   lazy val systemApplication: String = config.get[String]("system.application")
+  lazy val interval = config.getOptional[String]("pollingNewMessageJob.interval").map(Duration.create(_).asInstanceOf[FiniteDuration])
+    .getOrElse(FiniteDuration(5, MINUTES))
+
+  lazy  val initialDelay = config.getOptional[String]("pollingNewMessageJob.initialDelay").map(Duration.create(_).asInstanceOf[FiniteDuration])
+    .getOrElse(FiniteDuration(60, SECONDS))
+
 
   def emcsReceiverMessageUrl: String =
     s"$eisHost/emcs/digital-submit-new-message/v1"

@@ -30,7 +30,11 @@ case class Movement(
                      messages: Seq[Message] = Seq.empty
                    )
 
-case class Message(encodedMessage: String, messageType: String, createdOn: Instant = Instant.now)
+case class Message(
+  encodedMessage: String,
+  messageType: String,
+  createdOn: Instant = Instant.now
+)
 
 object Movement {
   implicit val instantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
