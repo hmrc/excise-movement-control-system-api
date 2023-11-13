@@ -46,11 +46,7 @@ class MovementMessageService @Inject()(
         case (None, Some(mLrn)) => saveDistinctMessage(mLrn, message)
         case _ => throw new RuntimeException("Cannot retrieve a movement. Local reference number or administration reference code are not present")
       }
-    }).recover{
-      case ex: Throwable =>
-        logger.info("error:", ex)
-        return Future.successful(false)
-    }
+    })
   }
 
   def saveMovementMessage(movementMessage: Movement): Future[Either[MongoError, Movement]] = {

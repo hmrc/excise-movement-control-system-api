@@ -19,10 +19,9 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 import akka.http.scaladsl.util.FastFuture.successful
 import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageTypes, ShowNewMessageResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageTypes, ShowNewMessageResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ExciseNumberQueueWorkItemRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{DateTimeService, GetNewMessageService, MovementMessageService, ShowNewMessageParser}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
@@ -31,12 +30,11 @@ import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{Failed, Succeeded, ToDo}
 
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
-import scala.util.{Failure, Success, Try}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
-class PollingNewMessageWithWorkItem @Inject()
+class PollingNewMessageWithWorkItemJob @Inject()
 (
   mongoLockRepository: MongoLockRepository,
   newMessageService: GetNewMessageService,
