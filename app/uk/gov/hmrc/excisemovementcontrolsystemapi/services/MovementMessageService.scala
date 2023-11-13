@@ -17,13 +17,13 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.Singleton
+import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, ErrorResponse, MessageTypes, MongoError, NotFoundError}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisUtils, ErrorResponse, MongoError, NotFoundError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 
 import java.nio.charset.StandardCharsets
-import java.time.Instant
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -32,7 +32,7 @@ class MovementMessageService @Inject()(
     movementMessageRepository: MovementMessageRepository,
     eisUtils: EisUtils,
     dateTimeService: DateTimeService
-)(implicit ec: ExecutionContext) {
+)(implicit ec: ExecutionContext) extends Logging {
   def updateMovement(message: IEMessage, consignorId: String): Future[Boolean] = {
 
     movementMessageRepository.getAllBy(consignorId).flatMap(cachedMovement => {
@@ -46,7 +46,11 @@ class MovementMessageService @Inject()(
         case (None, Some(mLrn)) => saveDistinctMessage(mLrn, message)
         case _ => throw new RuntimeException("Cannot retrieve a movement. Local reference number or administration reference code are not present")
       }
-    })
+    }).recover{
+      case ex: Throwable =>
+        logger.info("error:", ex)
+        return Future.successful(false)
+    }
   }
 
   def saveMovementMessage(movementMessage: Movement): Future[Either[MongoError, Movement]] = {

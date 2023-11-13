@@ -40,6 +40,7 @@ class PollingNewMessagesJob @Inject()(
 )(implicit ec: ExecutionContext) extends ScheduledMongoJob
     with Logging {
 
+  override val enabled: Boolean = false
   override def name: String = "polling-new-message"
   override def interval: FiniteDuration = appConfig.interval
   override def initialDelay: FiniteDuration = appConfig.initialDelay

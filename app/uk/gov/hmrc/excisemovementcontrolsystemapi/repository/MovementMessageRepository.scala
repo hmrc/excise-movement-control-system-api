@@ -98,7 +98,6 @@ class MovementMessageRepository @Inject()
   }
 
   def getAllBy(consignorId: String): Future[Seq[Movement]] = {
-
     collection
       .find(and(equal("consignorId", consignorId)))
       .toFuture()
@@ -122,6 +121,11 @@ object MovementMessageRepository {
         IndexOptions().name("lrn_consignor_index")
           .background(true)
           .unique(true)
+      ),
+      IndexModel(
+        Indexes.ascending("consignorId"),
+        IndexOptions()
+          .name("consignorId_ttl_idx")
       )
     )
 }

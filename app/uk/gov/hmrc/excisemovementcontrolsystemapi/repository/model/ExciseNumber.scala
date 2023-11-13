@@ -18,12 +18,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model
 
 import play.api.libs.json.{Json, OFormat}
 
-import java.time.Instant
-
 case class ExciseNumber(
-  exciseNumber: String,
-  localReferenceNumber: String,
-  lastUpdated: Instant = Instant.now
+  exciseNumber: String
 )
 
 object ExciseNumber {

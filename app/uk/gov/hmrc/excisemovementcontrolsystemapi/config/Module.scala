@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.config
 import com.google.inject.AbstractModule
 import play.api.Application
 import play.api.inject.ApplicationLifecycle
-import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.{PollingNewMessagesJob, RunningOfScheduledJobs, ScheduledJob}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.{PollingNewMessageWithWorkItem, PollingNewMessagesJob, RunningOfScheduledJobs, ScheduledJob}
 
 import java.time.{Clock, ZoneOffset}
 import javax.inject.{Inject, Singleton}
@@ -37,9 +37,13 @@ class Module extends AbstractModule {
 @Singleton
 class Scheduler @Inject()(
   pollingNewMessageJob: PollingNewMessagesJob,
+  pollingNewMessageWorkItemJob: PollingNewMessageWithWorkItem,
   override val applicationLifecycle: ApplicationLifecycle,
   override val application: Application
 )(implicit val ec: ExecutionContext)
   extends RunningOfScheduledJobs {
-  override lazy val scheduledJobs: Seq[ScheduledJob] = Seq(pollingNewMessageJob)
+  override lazy val scheduledJobs: Seq[ScheduledJob] = Seq(
+    pollingNewMessageJob,
+    pollingNewMessageWorkItemJob
+  ).filter(_.enabled)
 }
