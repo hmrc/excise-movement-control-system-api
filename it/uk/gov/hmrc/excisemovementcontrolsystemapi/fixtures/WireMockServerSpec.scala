@@ -31,4 +31,13 @@ trait WireMockServerSpec {
     )
   }
 
+  def configureWithNrsServer: Map[String, Any] = {
+    Map(
+      "microservice.services.eis.host" -> wireHost,
+      "microservice.services.eis.port" -> wireMock.port(),
+      "microservice.services.nrs.host" -> wireHost,
+      "microservice.services.nrs.port" -> wireMock.port()
+    )
+  }
+
 }

@@ -17,7 +17,12 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 
+<<<<<<< HEAD
 
+import org.mockito.ArgumentMatchersSugar.any
+=======
+import akka.actor.ActorSystem
+>>>>>>> d948446 (added NRS connector)
 import org.mockito.MockitoSugar.{reset, verify, when}
 import org.mongodb.scala.MongoException
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
@@ -47,7 +52,12 @@ class DraftExciseMovementControllerSpec
     with EitherValues {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
+<<<<<<< HEAD
+  private val connector = mock[EISSubmissionConnector]
+=======
+  implicit val sys: ActorSystem = ActorSystem("DraftExciseMovementControllerSpec")
   private val submissionMessageService = mock[SubmissionMessageService]
+>>>>>>> d948446 (added NRS connector)
   private val movementMessageService = mock[MovementService]
   private val cc = stubControllerComponents()
   private val request = createRequest(IE815)
@@ -156,7 +166,12 @@ class DraftExciseMovementControllerSpec
     new DraftExciseMovementController(
       FakeFailingAuthentication,
       FakeSuccessXMLParser,
+<<<<<<< HEAD
       FakeSuccessfulValidateErnInMessageAction(mockIeMessage),
+      connector,
+=======
+      FakeSuccessfulValidateErnsAction(mockIeMessage),
+>>>>>>> d948446 (added NRS connector)
       movementMessageService,
       workItemService,
       submissionMessageService,
@@ -167,7 +182,12 @@ class DraftExciseMovementControllerSpec
     new DraftExciseMovementController(
       FakeSuccessAuthentication,
       FakeFailureXMLParser,
+<<<<<<< HEAD
       FakeSuccessfulValidateErnInMessageAction(mockIeMessage),
+      connector,
+=======
+      FakeSuccessfulValidateErnsAction(mockIeMessage),
+>>>>>>> d948446 (added NRS connector)
       movementMessageService,
       workItemService,
       submissionMessageService,
@@ -178,7 +198,12 @@ class DraftExciseMovementControllerSpec
     new DraftExciseMovementController(
       FakeSuccessAuthentication,
       FakeSuccessXMLParser,
+<<<<<<< HEAD
       FakeSuccessfulValidateErnInMessageAction(mockIeMessage),
+      connector,
+=======
+      FakeSuccessfulValidateErnsAction(mockIeMessage),
+>>>>>>> d948446 (added NRS connector)
       movementMessageService,
       workItemService,
       submissionMessageService,
@@ -189,7 +214,12 @@ class DraftExciseMovementControllerSpec
     new DraftExciseMovementController(
       FakeSuccessAuthentication,
       FakeSuccessXMLParser,
+<<<<<<< HEAD
       FakeFailureValidateErnInMessageAction,
+      connector,
+=======
+      FakeFailureValidateErnsAction,
+>>>>>>> d948446 (added NRS connector)
       movementMessageService,
       workItemService,
       submissionMessageService,

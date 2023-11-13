@@ -26,6 +26,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.ErnsMapper
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import java.time.LocalDateTime
@@ -38,7 +39,8 @@ class EISSubmissionConnector @Inject()
   httpClient: HttpClient,
   emcsUtils: EmcsUtils,
   appConfig: AppConfig,
-  metrics: Metrics
+  metrics: Metrics,
+  ernsMapper: ErnsMapper
 )(implicit ec: ExecutionContext) extends EISSubmissionHeaders with Logging {
 
   def submitMessage(request: ValidatedXmlRequest[NodeSeq])(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
@@ -49,10 +51,9 @@ class EISSubmissionConnector @Inject()
     val correlationId = emcsUtils.generateCorrelationId
     val createdDateTime = emcsUtils.getCurrentDateTimeString
     val wrappedXml = wrapXmlInControlDocument(request.parsedRequest.ieMessage.messageIdentifier, request.body)
-    val encodedMessage = emcsUtils.encode(wrappedXml.toString)
-    val messageType = request.parsedRequest.ieMessage.messageType
+val messageType = request.message.messageType    val encodedMessage = emcsUtils.encode(wrappedXml.toString)
 
-    val ern = emcsUtils.getSingleErnFromMessage(request.parsedRequest.ieMessage, request.validErns)
+    val ern = ernsMapper.getSingleErnFromMessage(request.message, request.validErns)
     val eisRequest = EISSubmissionRequest(ern, messageType, encodedMessage)
 
     httpClient.POST[EISSubmissionRequest, Either[Result, EISSubmissionResponse]](
@@ -93,6 +94,4 @@ class EISSubmissionConnector @Inject()
         </con:ReturnData>
       </con:OperationRequest>
     </con:Control>
-  }
-
 }

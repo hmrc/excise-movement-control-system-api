@@ -66,8 +66,13 @@ class ValidateLRNActionSpec
         .thenReturn(Future.successful(Some(Movement("lrn", "consignorId", None))))
 
       val erns = Set("GBWK002281023", "GBWK002181023", "GBWK002281022")
-      val request = ValidatedXmlRequest(ParsedXmlRequest(EnrolmentRequest(FakeRequest(), erns, "123"),
-        ieMessage, erns, "123"), erns)
+      val request = ValidatedXmlRequest(
+        ParsedXmlRequest(
+          EnrolmentRequest(FakeRequest(), erns, "123"),
+          ieMessage,
+          erns, "123"
+        ),
+        erns)
 
       val block = (actual: ValidatedXmlRequest[_]) => {
         actual mustBe request
@@ -85,8 +90,14 @@ class ValidateLRNActionSpec
           .thenReturn(Future.successful(None))
 
         when(ieMessage.consigneeId).thenReturn(Some("12356"))
-        val request = ValidatedXmlRequest(ParsedXmlRequest(EnrolmentRequest(FakeRequest(), Set("12356"), "123"),
-          ieMessage, Set("12356"), "123"), Set("12356"))
+        val request = ValidatedXmlRequest(
+          ParsedXmlRequest(
+            EnrolmentRequest(FakeRequest(), Set("12356"), "123"),
+            ieMessage,
+            Set("12356"),
+            "123"
+          ),
+          Set("12356"))
 
         val result = await(sut.apply("lrn").invokeBlock(request, block))
 
@@ -102,8 +113,14 @@ class ValidateLRNActionSpec
           .thenReturn(Future.failed(new RuntimeException("error")))
         when(ieMessage.consigneeId).thenReturn(Some("12356"))
 
-        val request = ValidatedXmlRequest(ParsedXmlRequest(EnrolmentRequest(FakeRequest(), Set("12356"), "123"),
-          ieMessage, Set("12356"), "123"), Set("12356"))
+        val request = ValidatedXmlRequest(
+          ParsedXmlRequest(
+            EnrolmentRequest(FakeRequest(), Set("12356"), "123"),
+            ieMessage,
+            Set("12356"),
+            "123"
+          ),
+          Set("12356"))
 
         intercept[RuntimeException] {
           await(sut.apply("lrn").invokeBlock(request, block))

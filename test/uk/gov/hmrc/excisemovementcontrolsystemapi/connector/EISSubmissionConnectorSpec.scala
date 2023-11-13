@@ -40,13 +40,13 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionRequest, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.ErnsMapper
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import java.nio.charset.StandardCharsets
 import java.time.LocalDateTime
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
-import scala.xml.NodeSeq
 
 class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with EitherValues {
 
@@ -59,7 +59,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
 
   private val metrics = mock[Metrics](RETURNS_DEEP_STUBS)
 
-  private val connector = new EISSubmissionConnector(mockHttpClient, emcsUtils, appConfig, metrics)
+  private val connector = new EISSubmissionConnector(mockHttpClient, emcsUtils, appConfig, metrics, new ErnsMapper)
   private val emcsCorrelationId = "1234566"
   private val xml = <IE815></IE815>
   private val controlWrappedXml =

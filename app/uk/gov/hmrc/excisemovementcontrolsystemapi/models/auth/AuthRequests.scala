@@ -34,7 +34,13 @@ case class ParsedXmlRequest[A]
 
 case class ValidatedXmlRequest[A]
 (
-  parsedRequest: ParsedXmlRequest[A],
-  validErns: Set[String], //The ERNs that are both in the message and in the authentication
-) extends WrappedRequest[A](parsedRequest)
+  private val parsedRequest: ParsedXmlRequest[A],
+  validErns: Set[String]
+) extends WrappedRequest[A](parsedRequest) {
+
+  def message = parsedRequest.ieMessage
+
+  def headersAsMap: Map[String, String] =
+    parsedRequest.request.request.headers.headers.toMap
+}
 

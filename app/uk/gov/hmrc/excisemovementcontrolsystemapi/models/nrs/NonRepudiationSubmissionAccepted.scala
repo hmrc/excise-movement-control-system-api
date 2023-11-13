@@ -14,24 +14,12 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
+package uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs
 
-object EISErrorMessage {
+import play.api.libs.json.{Json, OFormat}
 
-  def apply(
-             createDateTime: String,
-             ern: String,
-             message: String,
-             correlationId: String,
-             messageTypes: String,
-  ): String = {
-    //todo: Sore messageIdentifier from the header of the message as meesageId
-    s"""EIS error with message: $message,
-    | messageId: $correlationId,
-    | correlationId: $correlationId,
-    | messageType: $messageTypes,
-    | timestamp: $createDateTime,
-    | exciseId: $ern""".stripMargin
-  }
+case class NonRepudiationSubmissionAccepted(nrSubmissionId: String)
 
+object NonRepudiationSubmissionAccepted {
+  implicit val format: OFormat[NonRepudiationSubmissionAccepted] = Json.format[NonRepudiationSubmissionAccepted]
 }
