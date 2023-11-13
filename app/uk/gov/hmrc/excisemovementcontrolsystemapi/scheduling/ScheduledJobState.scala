@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
 trait ScheduledJobState { e: ScheduledJob =>
   sealed trait RunningOfJobSuccessful
+
   case object RunningOfJobSuccessful extends RunningOfJobSuccessful
 
   case class RunningOfJobFailed(jobName: String, wrappedCause: Throwable) extends RuntimeException {

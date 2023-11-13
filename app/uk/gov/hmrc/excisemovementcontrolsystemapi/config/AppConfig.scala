@@ -20,9 +20,9 @@ import play.api.Configuration
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import java.time.{Duration => JavaDuration}
-import java.util.concurrent.TimeUnit.MINUTES
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.{DAYS, Duration, FiniteDuration, SECONDS}
+import java.util.concurrent.TimeUnit.{MINUTES, SECONDS}
 
 @Singleton
 class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig) {
