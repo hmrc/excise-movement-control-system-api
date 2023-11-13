@@ -343,7 +343,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         await(movementMessageService.updateMovement(newMessage, consignorId))
 
         val encodeMessage = Base64.getEncoder.encodeToString("<IE818>test</IE818>".getBytes(StandardCharsets.UTF_8))
-        val expectedMessage = Message(encodeMessage, MessageTypes.IE818.value, dateTimeService)
+        val expectedMessage = Message(encodeMessage, MessageTypes.IE818.value)
 
         verify(mockMovementMessageRepository).updateMovement(
           eqTo(Movement("123", consignorId, None, Some("456"), now, Seq(expectedMessage))))
@@ -355,7 +355,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         await(movementMessageService.updateMovement(newMessage, consignorId))
 
         val encodeMessage = Base64.getEncoder.encodeToString("<IE818>test</IE818>".getBytes(StandardCharsets.UTF_8))
-        val expectedMessage = Message(encodeMessage, MessageTypes.IE818.value, dateTimeService)
+        val expectedMessage = Message(encodeMessage, MessageTypes.IE818.value)
 
         verify(mockMovementMessageRepository).updateMovement(
           eqTo(Movement("123", consignorId, None, Some("456"), now, Seq(expectedMessage))))
@@ -367,7 +367,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         await(movementMessageService.updateMovement(newMessage, consignorId))
 
         val encodeMessage = Base64.getEncoder.encodeToString("<IE818>test</IE818>".getBytes(StandardCharsets.UTF_8))
-        val expectedMessage = Message(encodeMessage, MessageTypes.IE818.value, dateTimeService)
+        val expectedMessage = Message(encodeMessage, MessageTypes.IE818.value)
 
         verify(mockMovementMessageRepository).updateMovement(
           eqTo(Movement("345", consignorId, None, Some("89"), now, Seq(expectedMessage))))
