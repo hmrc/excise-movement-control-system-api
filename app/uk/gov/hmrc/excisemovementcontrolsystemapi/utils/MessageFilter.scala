@@ -23,6 +23,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionRespo
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 
+import java.time.Instant
 import javax.inject.Inject
 
 class MessageFilter @Inject()
@@ -38,7 +39,7 @@ class MessageFilter @Inject()
       .filter(_.lrnEquals(lrnToFilterBy))
       .map { m =>
         val encodedMessage = emcsUtils.encode(m.toXml.toString())
-        Message(encodedMessage, m.messageType, dateTimeService.now)
+        Message(encodedMessage, m.messageType, Instant.now)
       }
   }
 

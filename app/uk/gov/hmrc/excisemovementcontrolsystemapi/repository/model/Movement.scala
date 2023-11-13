@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model
 
 import play.api.libs.json.{Format, Json, OFormat}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 import java.time.Instant
@@ -30,17 +31,28 @@ case class Movement(
                      messages: Seq[Message] = Seq.empty
                    )
 
-case class Message(
-  encodedMessage: String,
-  messageType: String,
-  createdOn: Instant = Instant.now
-)
 
 object Movement {
   implicit val instantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
   implicit val format: OFormat[Movement] = Json.format[Movement]
 }
 
+//todo remove hash from message. Hash can calculate on the go
+case class Message private(
+  hash: Int,
+  encodedMessage: String,
+  messageType: String,
+  createdOn: Instant
+)
+
 object Message {
+  def apply(
+             encodedMessage: String,
+             messageType: String,
+             createdOn: Instant = Instant.now): Message = {
+
+    Message(encodedMessage.hashCode(), encodedMessage, messageType, createdOn)
+  }
+
   implicit val format: OFormat[Message] = Json.format[Message]
 }

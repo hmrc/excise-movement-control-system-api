@@ -14,22 +14,14 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
+package uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model
 
-trait ScheduledJobState { e: ScheduledJob =>
-  sealed trait RunningOfJobSuccessful
+import play.api.libs.json.{Json, OFormat}
 
-  case object RunningOfJobSuccessful extends RunningOfJobSuccessful
+case class ExciseNumberWorkItem(
+                         exciseNumber: String
+                       )
 
-  case class RunningOfJobFailed(jobName: String, wrappedCause: Throwable) extends RuntimeException {
-
-    def asResult: Result = {
-      Result(
-        s"""The execution of scheduled job $jobName failed with error '${wrappedCause.getMessage}'.
-           |The next execution of the job will do retry."""
-          .stripMargin
-          .replace('\n', ' ')
-      )
-    }
-  }
+object ExciseNumberWorkItem {
+  implicit val format: OFormat[ExciseNumberWorkItem] = Json.format[ExciseNumberWorkItem]
 }

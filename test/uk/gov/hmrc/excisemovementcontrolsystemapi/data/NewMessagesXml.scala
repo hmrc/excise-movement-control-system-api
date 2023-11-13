@@ -746,6 +746,99 @@ object NewMessagesXml {
     <ns:CountOfMessagesAvailable>2</ns:CountOfMessagesAvailable>
   </ns:NewMessagesDataResponse>
 
+  lazy val newMessageWith818And802: Elem = <ns:NewMessagesDataResponse
+  xmlns:ns="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/NewMessagesData/3"
+  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
+  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE818:V3.01"
+  xmlns:urn2="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE802:V3.01">
+    <ns:Messages>
+      <urn1:IE818>
+        <urn1:Header>
+          <urn:MessageSender>token</urn:MessageSender>
+          <urn:MessageRecipient>token</urn:MessageRecipient>
+          <urn:DateOfPreparation>2008-09-29</urn:DateOfPreparation>
+          <urn:TimeOfPreparation>00:18:33</urn:TimeOfPreparation>
+          <urn:MessageIdentifier>token</urn:MessageIdentifier>
+          <urn:CorrelationIdentifier>token</urn:CorrelationIdentifier>
+        </urn1:Header>
+        <urn1:Body>
+          <urn1:AcceptedOrRejectedReportOfReceiptExport>
+            <urn1:Attributes>
+              <urn1:DateAndTimeOfValidationOfReportOfReceiptExport>2006-08-19T18:27:14+01:00</urn1:DateAndTimeOfValidationOfReportOfReceiptExport>
+            </urn1:Attributes>
+            <urn1:ConsigneeTrader language="to">
+              <urn1:Traderid>token</urn1:Traderid>
+              <urn1:TraderName>token</urn1:TraderName>
+              <urn1:StreetName>token</urn1:StreetName>
+              <urn1:StreetNumber>token</urn1:StreetNumber>
+              <urn1:Postcode>token</urn1:Postcode>
+              <urn1:City>token</urn1:City>
+              <urn1:EoriNumber>token</urn1:EoriNumber>
+            </urn1:ConsigneeTrader>
+            <urn1:ExciseMovement>
+              <urn1:AdministrativeReferenceCode>tokentokentokentokent</urn1:AdministrativeReferenceCode>
+              <urn1:SequenceNumber>to</urn1:SequenceNumber>
+            </urn1:ExciseMovement>
+            <urn1:DeliveryPlaceTrader language="to">
+              <urn1:Traderid>token</urn1:Traderid>
+              <urn1:TraderName>token</urn1:TraderName>
+              <urn1:StreetName>token</urn1:StreetName>
+              <urn1:StreetNumber>token</urn1:StreetNumber>
+              <urn1:Postcode>token</urn1:Postcode>
+              <urn1:City>token</urn1:City>
+            </urn1:DeliveryPlaceTrader>
+            <urn1:DestinationOffice>
+              <urn1:ReferenceNumber>tokentok</urn1:ReferenceNumber>
+            </urn1:DestinationOffice>
+            <urn1:ReportOfReceiptExport>
+              <urn1:DateOfArrivalOfExciseProducts>2009-05-16</urn1:DateOfArrivalOfExciseProducts>
+              <urn1:GlobalConclusionOfReceipt>3</urn1:GlobalConclusionOfReceipt>
+              <urn1:ComplementaryInformation language="to">token</urn1:ComplementaryInformation>
+            </urn1:ReportOfReceiptExport>
+            <urn1:BodyReportOfReceiptExport>
+              <urn1:BodyRecordUniqueReference>tok</urn1:BodyRecordUniqueReference>
+              <urn1:IndicatorOfShortageOrExcess>E</urn1:IndicatorOfShortageOrExcess>
+              <urn1:ObservedShortageOrExcess>1000.00000000000</urn1:ObservedShortageOrExcess>
+              <urn1:ExciseProductCode>toke</urn1:ExciseProductCode>
+              <urn1:RefusedQuantity>1000.00000000000</urn1:RefusedQuantity>
+              <urn1:UnsatisfactoryReason>
+                <urn1:UnsatisfactoryReasonCode>to</urn1:UnsatisfactoryReasonCode>
+                <urn1:ComplementaryInformation language="to">token</urn1:ComplementaryInformation>
+              </urn1:UnsatisfactoryReason>
+            </urn1:BodyReportOfReceiptExport>
+          </urn1:AcceptedOrRejectedReportOfReceiptExport>
+        </urn1:Body>
+      </urn1:IE818>
+      <urn2:IE802>
+        <urn2:Header>
+          <urn:MessageSender>token</urn:MessageSender>
+          <urn:MessageRecipient>token</urn:MessageRecipient>
+          <urn:DateOfPreparation>2015-08-24</urn:DateOfPreparation>
+          <urn:TimeOfPreparation>23:07:00+01:00</urn:TimeOfPreparation>
+          <urn:MessageIdentifier>token</urn:MessageIdentifier>
+          <!--Optional:-->
+          <urn:CorrelationIdentifier>token</urn:CorrelationIdentifier>
+        </urn2:Header>
+        <urn2:Body>
+          <urn2:ReminderMessageForExciseMovement>
+            <urn2:Attributes>
+              <urn2:DateAndTimeOfIssuanceOfReminder>2000-04-21T01:36:55+01:00</urn2:DateAndTimeOfIssuanceOfReminder>
+              <!--Optional:-->
+              <urn2:ReminderInformation language="to">token</urn2:ReminderInformation>
+              <urn2:LimitDateAndTime>2017-04-19T15:38:57+01:00</urn2:LimitDateAndTime>
+              <urn2:ReminderMessageType>1</urn2:ReminderMessageType>
+            </urn2:Attributes>
+            <urn2:ExciseMovement>
+              <urn2:AdministrativeReferenceCode>tokentokentokentokent</urn2:AdministrativeReferenceCode>
+              <urn2:SequenceNumber>to</urn2:SequenceNumber>
+            </urn2:ExciseMovement>
+          </urn2:ReminderMessageForExciseMovement>
+        </urn2:Body>
+      </urn2:IE802>
+    </ns:Messages>
+    <ns:CountOfMessagesAvailable>2</ns:CountOfMessagesAvailable>
+  </ns:NewMessagesDataResponse>
+
   lazy val emptyNewMessageDataXml: Elem = <ns:NewMessagesDataResponse
   xmlns:ns="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/NewMessagesData/3">
     <ns:Messages>

@@ -25,6 +25,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Mov
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import java.nio.charset.StandardCharsets
+import java.time.Instant
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -74,7 +75,7 @@ class MovementService @Inject()
     movementRepository.getAllBy(consignorId).flatMap(cachedMovement => {
       val arc = message.administrativeReferenceCode
       //todo get LRN using pattern match
-      val lrn = message.localReferenceNumber.getOrElse("")
+      val lrn = "123" //message.localReferenceNumber.getOrElse("")
       val movementWithArc = cachedMovement.filter(o => o.administrativeReferenceCode.equals(arc)).headOption
       val movementWithLrn = cachedMovement.filter(m => m.localReferenceNumber.equals(lrn)).headOption
 
@@ -89,11 +90,10 @@ class MovementService @Inject()
   private def saveDistinctMessage(movement: Movement, newMessage: IEMessage): Future[Boolean] = {
 
 
-    val encodedMessage = emcsUtils.createEncoder.encodeToString(newMessage.toXml.toString.getBytes(StandardCharsets.UTF_8))
-    val messages = Seq(Message(encodedMessage, newMessage.messageType, dateTimeService))
+    val encodedMessage = emcsUtils.encode(newMessage.toXml.toString)
+    val messages = Seq(Message(encodedMessage, newMessage.messageType, Instant.now))
 
-    //todo: compare the hash and take just the duplicate
-    //   val allMessages: Seq[Message] = movement.messages ++ messages.diff(movement.messages)
+    //todo: remove hash from message class. Hash can calculate on the go in here
     val allMessages = (movement.messages ++ messages).distinctBy(_.hash)
     val newArc = newMessage.administrativeReferenceCode.orElse(movement.administrativeReferenceCode)
 
@@ -102,7 +102,7 @@ class MovementService @Inject()
       messages = allMessages
     )
 
-    movementMessageRepository.save(newMovement).map {
+    movementRepository.updateMovement(newMovement).map {
       case true => true
       case _ => false
     }

@@ -16,15 +16,18 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
+import org.mockito.MockitoSugar.when
 import org.mongodb.scala.model.Filters
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, OptionValues}
+import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 
 import java.time.{Clock, Instant, ZoneId}
@@ -42,13 +45,13 @@ class MovementRepositoryItSpec extends PlaySpec
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val appConfig = app.injector.instanceOf[AppConfig]
-  private val instant = Instant.now
-  private val stubClock = Clock.fixed(instant, ZoneId.systemDefault)
+  private val dateTimeService = mock[DateTimeService]
+  private val timestamp = Instant.parse("2018-11-30T18:35:24.00Z")
 
   protected override val repository = new MovementRepository(
     mongoComponent,
     appConfig,
-    stubClock
+    dateTimeService
   )
 
   protected def appBuilder: GuiceApplicationBuilder =
@@ -61,6 +64,7 @@ class MovementRepositoryItSpec extends PlaySpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
+    when(dateTimeService.now).thenReturn(timestamp)
   }
 
   override def afterAll(): Unit = {

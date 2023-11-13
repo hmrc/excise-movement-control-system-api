@@ -135,7 +135,7 @@ class GetMessagesControllerItSpec extends PlaySpec
     // for a combination of lrn consignorId/consigneeId
     "return 500 when multiple movements messages are found" in {
       withAuthorizedTrader(consignorId)
-      val movementMessage = Movement("", "", None, None, timestamp, Seq(Message("", "", timestamp)))
+      val movementMessage = Movement("", "", None, None, timestamp, Seq(Message("", "")))
       when(movementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(movementMessage, movementMessage)))
 

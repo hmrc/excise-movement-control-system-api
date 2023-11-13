@@ -19,16 +19,17 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.service
 import dispatch.Future
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{verify, when}
-import org.scalatest.EitherValues
+import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{GeneralMongoError, MessageTypes}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, GeneralMongoError, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.nio.charset.StandardCharsets
@@ -36,19 +37,27 @@ import java.time.Instant
 import java.util.Base64
 import scala.concurrent.ExecutionContext
 
-class MovementServiceSpec extends PlaySpec with EitherValues {
+class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfterEach {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
 
   private val mockMovementMessageRepository = mock[MovementRepository]
+  private val emcsUtils = mock[EmcsUtils]
+  private val dateTimeService = mock[DateTimeService]
 
-  private val movementMessageService = new MovementService(mockMovementMessageRepository)
+  private val movementMessageService = new MovementService(mockMovementMessageRepository, new EmcsUtils, dateTimeService)
 
   private val lrn = "123"
   private val consignorId = "ABC"
   private val consigneeId = "ABC123"
   private val now = Instant.parse("2018-11-30T18:35:24.00Z")
+
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+
+  }
+
 
   "saveMovementMessage" should {
     "return a MovementMessage" in {
@@ -261,8 +270,8 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
   "updateMovement" should {
 
     val newMessage = mock[IEMessage]
-    val cachedMessage1 = Message("<IE801>test</IE801>", MessageTypes.IE801.value, dateTimeService)
-    val cachedMessage2 = Message("<IE802>test</IE802>", MessageTypes.IE802.value, dateTimeService)
+    val cachedMessage1 = Message("<IE801>test</IE801>", MessageTypes.IE801.value)
+    val cachedMessage2 = Message("<IE802>test</IE802>", MessageTypes.IE802.value)
 
     val cachedMovements = Seq(
       Movement("123", consignorId, None, Some("456"), now, Seq.empty),
@@ -277,10 +286,10 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
         await(movementMessageService.updateMovement(newMessage, consignorId))
 
         val encodeMessage = Base64.getEncoder.encodeToString("<IE818>test</IE818>".getBytes(StandardCharsets.UTF_8))
-        val expectedMessage = Message(encodeMessage, MessageTypes.IE818.value, dateTimeService)
+        val expectedMessage = Message(encodeMessage, MessageTypes.IE818.value)
 
-        verify(mockMovementMessageRepository).save(
-          eqTo(Movement("123", consignorId, None, Some("456"), Seq(expectedMessage), now)))
+        verify(mockMovementMessageRepository).updateMovement(
+          eqTo(Movement("123", consignorId, None, Some("456"), now, Seq(expectedMessage))))
       }
 
       "message contains Both Administration Reference Code (ARC) and Local Ref Number (LRN)" in {
@@ -289,10 +298,10 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
         await(movementMessageService.updateMovement(newMessage, consignorId))
 
         val encodeMessage = Base64.getEncoder.encodeToString("<IE818>test</IE818>".getBytes(StandardCharsets.UTF_8))
-        val expectedMessage = Message(encodeMessage, MessageTypes.IE818.value, dateTimeService)
+        val expectedMessage = Message(encodeMessage, MessageTypes.IE818.value)
 
-        verify(mockMovementMessageRepository).save(
-          eqTo(Movement("123", consignorId, None, Some("456"), Seq(expectedMessage), now)))
+        verify(mockMovementMessageRepository).updateMovement(
+          eqTo(Movement("123", consignorId, None, Some("456"), now, Seq(expectedMessage))))
       }
 
       "message contains Local Ref Number (LRN)" in {
@@ -301,29 +310,29 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
         await(movementMessageService.updateMovement(newMessage, consignorId))
 
         val encodeMessage = Base64.getEncoder.encodeToString("<IE818>test</IE818>".getBytes(StandardCharsets.UTF_8))
-        val expectedMessage = Message(encodeMessage, MessageTypes.IE818.value, dateTimeService)
+        val expectedMessage = Message(encodeMessage, MessageTypes.IE818.value)
 
-        verify(mockMovementMessageRepository).save(
-          eqTo(Movement("345", consignorId, None, Some("89"), Seq(expectedMessage), now)))
+        verify(mockMovementMessageRepository).updateMovement(
+          eqTo(Movement("345", consignorId, None, Some("89"), now, Seq(expectedMessage))))
       }
 
       "test message" in {
         setUpForUpdateMovement(newMessage, Some("456"), None, "<IE818>test</IE818>", cachedMovements)
 
         when(newMessage.toXml).thenReturn(scala.xml.XML.loadString("<IE818>test</IE818>"))
-        when(newMessage.getType).thenReturn(MessageTypes.IE818.value)
+        when(newMessage.messageType).thenReturn(MessageTypes.IE818.value)
         val movement = Seq(
-          Movement("123", consignorId, None, Some("456"), Seq(cachedMessage1, cachedMessage2), now),
+          Movement("123", consignorId, None, Some("456"), now, Seq(cachedMessage1, cachedMessage2)),
         )
         when(mockMovementMessageRepository.getAllBy(any))
           .thenReturn(Future.successful(movement))
         await(movementMessageService.updateMovement(newMessage, consignorId))
 
         val encodeMessage = Base64.getEncoder.encodeToString("<IE818>test</IE818>".getBytes(StandardCharsets.UTF_8))
-        val expectedMessage = Message(encodeMessage, MessageTypes.IE818.value, dateTimeService)
+        val expectedMessage = Message(encodeMessage, MessageTypes.IE818.value)
 
-        verify(mockMovementMessageRepository).save(
-          eqTo(Movement("123", consignorId, None, Some("456"), Seq(cachedMessage1, cachedMessage2, expectedMessage), now)))
+        verify(mockMovementMessageRepository).updateMovement(
+          eqTo(Movement("123", consignorId, None, Some("456"), now, Seq(cachedMessage1, cachedMessage2, expectedMessage))))
 
       }
     }
@@ -350,32 +359,32 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
 
       setUpForUpdateMovement(newMessage, None, Some("123"), "<foo>test</foo>", cachedMovements)
       when(mockMovementMessageRepository.getAllBy(any))
-        .thenReturn(Future.successful(Seq(Movement(lrn, consignorId, None, None, Seq(cachedMessage, cachedMessage1, cachedMessage2), now))))
+        .thenReturn(Future.successful(Seq(Movement(lrn, consignorId, None, None, now, Seq(cachedMessage, cachedMessage1, cachedMessage2)))))
 
       await(movementMessageService.updateMovement(newMessage, consignorId))
 
-      val expectedMovement = Movement(lrn, consignorId, None, None, Seq(cachedMessage, cachedMessage1, cachedMessage2), now)
-      verify(mockMovementMessageRepository).save(eqTo(expectedMovement))
+      val expectedMovement = Movement(lrn, consignorId, None, None, now, Seq(cachedMessage, cachedMessage1, cachedMessage2))
+      verify(mockMovementMessageRepository).updateMovement(eqTo(expectedMovement))
     }
 
     "save to DB when message has different content but the same message type" in {
       val cachedMessage: Message = createMessage("<foo>different content</foo>", MessageTypes.IE801.value)
       setUpForUpdateMovement(newMessage, None, Some("123"), "<foo>test</foo>", cachedMovements)
-      when(mockMovementMessageRepository.save(any)).thenReturn(Future.successful(true))
+      when(mockMovementMessageRepository.updateMovement(any)).thenReturn(Future.successful(true))
       when(mockMovementMessageRepository.getAllBy(any))
-        .thenReturn(Future.successful(Seq(Movement(lrn, consignorId, None, None, Seq(cachedMessage, cachedMessage1), now))))
+        .thenReturn(Future.successful(Seq(Movement(lrn, consignorId, None, None, now, Seq(cachedMessage, cachedMessage1)))))
 
       await(movementMessageService.updateMovement(newMessage, consignorId))
 
       val expectedNewMessage = createMessage("<foo>test</foo>", MessageTypes.IE818.value)
-      verify(mockMovementMessageRepository).save(
-        eqTo(Movement(lrn, consignorId, None, None, Seq(cachedMessage, cachedMessage1, expectedNewMessage), now))
+      verify(mockMovementMessageRepository).updateMovement(
+        eqTo(Movement(lrn, consignorId, None, None, now, Seq(cachedMessage, cachedMessage1, expectedNewMessage)))
       )
     }
 
     "return false if did not save the message" in {
       setUpForUpdateMovement(newMessage, None, Some("123"), "<foo>test</foo>", cachedMovements)
-      when(mockMovementMessageRepository.save(any)).thenReturn(Future.successful(false))
+      when(mockMovementMessageRepository.updateMovement(any)).thenReturn(Future.successful(false))
 
       val result = await(movementMessageService.updateMovement(newMessage, consignorId))
 
@@ -393,11 +402,17 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
   ): Unit = {
    // when(emcsUtils.createEncoder).thenReturn(Base64.getEncoder)
     when(message.administrativeReferenceCode).thenReturn(arc)
-    when(message.localReferenceNumber).thenReturn(lrn)
+    //todo: get lrn in another way
+   // when(message.localReferenceNumber).thenReturn(lrn)
     when(message.toXml).thenReturn(scala.xml.XML.loadString(messageXml))
     when(message.messageType).thenReturn(MessageTypes.IE818.value)
     when(mockMovementMessageRepository.getAllBy(any))
       .thenReturn(Future.successful(cachedMovements))
-    when(mockMovementMessageRepository.save(any)).thenReturn(Future.successful(true))
+    when(mockMovementMessageRepository.updateMovement(any)).thenReturn(Future.successful(true))
+  }
+
+  private def createMessage(xml: String, messageType: String) = {
+    val encodeMessage = Base64.getEncoder.encodeToString(xml.getBytes(StandardCharsets.UTF_8))
+    Message(encodeMessage, messageType)
   }
 }

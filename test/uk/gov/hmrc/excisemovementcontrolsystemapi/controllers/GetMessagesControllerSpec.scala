@@ -34,7 +34,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, F
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.MessageFilter
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, MessageFilter}
 
 import java.time.{Instant, LocalDateTime}
 import scala.concurrent.{ExecutionContext, Future}
@@ -54,7 +54,10 @@ class GetMessagesControllerSpec extends PlaySpec
   private val showNewMessagesConnector = mock[ShowNewMessagesConnector]
   private val messageFilter = mock[MessageFilter]
   private val lrn = "LRN1234"
-  private val timeStamp = Instant.now
+  private val timeStamp = Instant.now()
+  private val dateTimeService = mock[DateTimeService]
+ // private val timeStamp = Instant.parse("2018-11-30T18:35:24.00Z")
+
   private val newMessage = EISConsumptionResponse(
     LocalDateTime.of(2023, 5, 5, 6, 6, 2),
     ern,
@@ -62,11 +65,12 @@ class GetMessagesControllerSpec extends PlaySpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(showNewMessagesConnector, movementService,messageFilter)
+    reset(showNewMessagesConnector, movementService, messageFilter, dateTimeService)
 
-  when(movementService.getMatchingERN(any, any))
-    .thenReturn(Future.successful(Some(ern)))
+    when(movementService.getMatchingERN(any, any))
+      .thenReturn(Future.successful(Some(ern)))
 
+    when(dateTimeService.now).thenReturn(timeStamp)
     when(messageFilter.filter(any, any)).thenReturn(Seq(Message("message","IE801", timeStamp)))
   }
 

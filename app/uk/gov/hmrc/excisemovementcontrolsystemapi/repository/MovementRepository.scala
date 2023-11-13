@@ -16,17 +16,18 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
+import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Filters.{and, equal, in, or}
-import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
+import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes, ReplaceOptions}
 import play.api.Logging
 import play.api.libs.json.Json
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository.mongoIndexes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
-import java.time.{Clock, Instant}
 import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.Duration
@@ -37,7 +38,7 @@ class MovementRepository @Inject()
 (
   mongo: MongoComponent,
   appConfig: AppConfig,
-  clock: Clock
+  timeService: DateTimeService
 )(implicit ec: ExecutionContext) extends
   PlayMongoRepository[Movement](
     collectionName = "movements",
@@ -47,12 +48,32 @@ class MovementRepository @Inject()
     replaceIndexes = true
   ) with Logging {
 
+  private def filterBy(localReferenceNumber: String, consignorId: String, consigneeId: Option[String]): Bson = {
+    val erns = Seq(consignorId) ++ consigneeId.fold[Seq[String]](Seq.empty)(o => Seq(o))
+
+    and(
+      equal("localReferenceNumber", localReferenceNumber),
+      or(in("consignorId", erns: _*),
+        in("consigneeId", erns: _*))
+    )
+  }
+
   def saveMovement(movement: Movement): Future[Boolean] = {
-    collection.insertOne(movement.copy(createdOn = Instant.now(clock)))
+    collection.insertOne(movement.copy(createdOn = timeService.now))
       .toFuture()
       .map(_ => true)
   }
 
+  def updateMovement(movementMessage: Movement): Future[Boolean] = {
+    val updatedMovement = movementMessage copy(createdOn = timeService.now)
+
+    collection.replaceOne(
+      filter = filterBy(movementMessage.localReferenceNumber, movementMessage.consignorId, movementMessage.consigneeId),
+      replacement = updatedMovement,
+      options = ReplaceOptions().upsert(true)
+    ).toFuture()
+      .map(_ => true)
+  }
   def getMovementByLRNAndERNIn(lrn: String, erns: List[String]): Future[Seq[Movement]] = {
     //TODO case where returns more than one (e.g. consignee has the same LRN for two different consignors)
     // IN this case would this be the same movement? So we are ok to get the head?
