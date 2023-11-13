@@ -27,6 +27,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, GeneralMongoError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.mongo.TimestampSupport
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}

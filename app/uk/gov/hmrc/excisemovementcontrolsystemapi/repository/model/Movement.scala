@@ -31,28 +31,17 @@ case class Movement(
                      messages: Seq[Message] = Seq.empty
                    )
 
+case class Message(
+  encodedMessage: String,
+  messageType: String,
+  createdOn: Instant = Instant.now
+)
 
 object Movement {
   implicit val instantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
   implicit val format: OFormat[Movement] = Json.format[Movement]
 }
 
-//todo remove hash from message. Hash can calculate on the go
-case class Message private(
-  hash: Int,
-  encodedMessage: String,
-  messageType: String,
-  createdOn: Instant
-)
-
 object Message {
-  def apply(
-             encodedMessage: String,
-             messageType: String,
-             dateTimeService: TimestampSupport): Message = {
-
-    Message(encodedMessage.hashCode(), encodedMessage, messageType, dateTimeService.timestamp())
-  }
-
   implicit val format: OFormat[Message] = Json.format[Message]
 }
