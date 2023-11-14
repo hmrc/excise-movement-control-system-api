@@ -66,9 +66,6 @@ class PollingNewMessageWithWorkItemJob @Inject()
       .flatMap {
         case None => Future.successful(RunningOfJobSuccessful) // there is no more - we've finished
         case Some(wi) => getNewMessages(wi.item.exciseNumber).flatMap { success => // call your function to process a WorkItem
-          if(!success._1) {
-            println(s"exciseNumber ==> ${wi.item.exciseNumber}")
-          }
           success match {
             case (true, Succeeded) =>
               workItemRepository.complete(wi.id, ProcessingStatus.Succeeded)
@@ -95,18 +92,13 @@ class PollingNewMessageWithWorkItemJob @Inject()
 
 
   private def getNewMessages(consignorId: String): Future[(Boolean, ProcessingStatus)] = {
-
-    println("#####")
     newMessageService.getNewMessagesAndAcknowledge(consignorId)
       .flatMap(message =>
         message match {
           case Some(response) if response.message.nonEmpty =>
-            println(s"2) => $consignorId")
             saveToDB(consignorId, response).map(result => (result, ToDo))
-          case _ =>
-            println(s"3) => $consignorId")
-            Future.successful((true, Succeeded))
-        }) //        message.fold[Future[Boolean]](successful(false))(m => saveToDB(consignorId, m)))
+          case _ => Future.successful((true, Succeeded))
+        })
       .recover {
         case NonFatal(e) =>
           logger.error(s"Could not get messages for ern: ${consignorId} with message: ${e.getMessage}. Will retry later", e)
@@ -120,7 +112,6 @@ class PollingNewMessageWithWorkItemJob @Inject()
     newMessageResponse: EISConsumptionResponse
   )(implicit ec: ExecutionContext): Future[Boolean] = {
 
-    println("%%%%%")
     val messages = messageParser.extractMessages(newMessageResponse.message)
 
     //! process IE801 or IE704 first if any.We are Processing message in sequence (not in parallel)
@@ -134,16 +125,6 @@ class PollingNewMessageWithWorkItemJob @Inject()
         }
       }
 
-    //    Future.sequence(processFirst
-    //      .map(o => save(o, consignorId)))
-    //      .map(_ => successful(()))
-
-    //    Future.sequence(
-    //      messages
-    //        .filterNot(isAcceptedOrRefusalMessage(_))
-    //        .map(o => save(o, consignorId)))
-    //      .map(_ => successful(()))
-
     messages
       .filterNot(isAcceptedOrRefusalMessage(_))
       .foldLeft(successful(true)) { case (acc, x) =>
@@ -154,7 +135,6 @@ class PollingNewMessageWithWorkItemJob @Inject()
   }
 
   private def save(message: IEMessage, consignorId: String)(implicit ec: ExecutionContext): Future[Boolean] = {
-    println(s"****** $consignorId")
     movementService.updateMovement( message, consignorId)
       .flatMap {
         case true => successful(true)

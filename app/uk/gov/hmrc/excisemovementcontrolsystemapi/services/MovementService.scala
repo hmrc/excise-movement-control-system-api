@@ -18,14 +18,12 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.Singleton
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, GeneralMongoError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, GeneralMongoError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
-import java.nio.charset.StandardCharsets
-import java.time.Instant
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -75,12 +73,9 @@ class MovementService @Inject()
     movementRepository.getAllBy(consignorId).flatMap(cachedMovement => {
 
       val arc = message.administrativeReferenceCode
-      //todo get LRN using pattern match
-//      val lrn = "123" //message.localReferenceNumber.getOrElse("")
       val movementWithArc = cachedMovement.filter(o => o.administrativeReferenceCode.equals(arc)).headOption
       val movementWithLrn = cachedMovement.filter(m => message.lrnEquals(m.localReferenceNumber)).headOption
 
-      println(s"===== $consignorId, cached: $cachedMovement, arc from message: $arc, ARCList => $movementWithArc, LRNList => $movementWithLrn")
       (movementWithArc, movementWithLrn) match {
         case (Some(mArc), _) => saveDistinctMessage(mArc, message)
         case (None, Some(mLrn)) => saveDistinctMessage(mLrn, message)
@@ -90,7 +85,6 @@ class MovementService @Inject()
   }
 
   private def saveDistinctMessage(movement: Movement, newMessage: IEMessage): Future[Boolean] = {
-    println("&&&&&&")
     val encodedMessage = emcsUtils.encode(newMessage.toXml.toString)
     val messages = Seq(Message(encodedMessage, newMessage.messageType, dateTimeService))
 
@@ -98,8 +92,6 @@ class MovementService @Inject()
     val allMessages = (movement.messages ++ messages).distinctBy(_.hash)
     val newArc = newMessage.administrativeReferenceCode.orElse(movement.administrativeReferenceCode)
 
-    println(s"1)=> movement: $movement")
-    println(s"1)=> message: $newMessage")
     val newMovement = movement.copy(
       administrativeReferenceCode = newArc,
       messages = allMessages

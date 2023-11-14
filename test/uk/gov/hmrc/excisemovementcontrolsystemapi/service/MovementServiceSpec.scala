@@ -342,7 +342,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
       intercept[RuntimeException] {
         await(movementMessageService.updateMovement(newMessage, consignorId))
-      }.getMessage mustBe "Cannot retrieve a movement. Local reference number or administration reference code are not present"
+      }.getMessage mustBe "Cannot retrieve a movement. Local reference number or administration reference code are not present for ERN: ABC"
     }
 
     "return false if cannot retrieve message1" in {
@@ -350,7 +350,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
       intercept[RuntimeException] {
         await(movementMessageService.updateMovement(newMessage, consignorId))
-      }.getMessage mustBe "Cannot retrieve a movement. Local reference number or administration reference code are not present"
+      }
     }
 
 

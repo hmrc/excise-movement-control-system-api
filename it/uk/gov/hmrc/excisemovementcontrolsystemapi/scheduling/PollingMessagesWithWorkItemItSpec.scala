@@ -31,7 +31,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.{Application, Configuration}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{Ie704XmlMessage, NewMessagesXml, SchedulingTestData}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{NewMessagesXml, SchedulingTestData}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.WireMockServerSpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptResponse, MessageTypes}
@@ -144,8 +144,6 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
   }
 
   private def assertResults(actual: Movement, expected: Movement) = {
-    println(s"actual: $actual")
-    println(s"expected: $expected")
     actual.localReferenceNumber mustBe expected.localReferenceNumber
     actual.consignorId mustBe expected.consignorId
     actual.administrativeReferenceCode mustBe expected.administrativeReferenceCode
