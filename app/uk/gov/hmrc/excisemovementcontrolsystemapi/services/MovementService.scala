@@ -118,6 +118,7 @@ class MovementService @Inject()(
   }
 
   private def saveDistinctMessage(movement: Movement, newMessage: IEMessage): Future[Boolean] = {
+
     val encodedMessage = emcsUtils.encode(newMessage.toXml.toString)
     val messages = Seq(Message(encodedMessage, newMessage.messageType, dateTimeService))
 
