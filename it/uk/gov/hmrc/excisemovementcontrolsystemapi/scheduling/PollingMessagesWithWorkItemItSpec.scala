@@ -147,6 +147,48 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
       assertResults(movements.find(_.consignorId.equals("3")).get, Movement("token", "3", None, Some("tokentokentokentokent"), Instant.now, expectedMessage.take(1)))
       assertResults(movements.find(_.consignorId.equals("4")).get, Movement("token", "4", None, Some("tokentokentokentokent"), Instant.now, Seq(createMessage(SchedulingTestData.ie704, MessageTypes.IE704.value))))
     }
+
+    "return Successful if nothing in queue " in {
+
+      prepareDatabase()
+
+      movementRepository.updateMovement(Movement("token", "1", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.updateMovement(Movement("token", "3", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.updateMovement(Movement("token", "4", None, None, Instant.now, Seq.empty)).futureValue
+
+      // start application
+      app
+
+      // todo: not a very good way to wait for the thread to do is job. Tried eventually but it does not
+      // work. Try to find a better way.
+      Thread.sleep(6000)
+      eventually {
+        wireMock.verify(0, getRequestedFor(urlEqualTo(s"$showNewMessageUrl?exciseregistrationnumber=1")))
+      }
+      eventually {
+        wireMock.verify(0,getRequestedFor(urlEqualTo(s"$showNewMessageUrl?exciseregistrationnumber=3")))
+      }
+      eventually {
+        wireMock.verify(0,getRequestedFor(urlEqualTo(s"$showNewMessageUrl?exciseregistrationnumber=4")))
+      }
+      eventually {
+        wireMock.verify(0,putRequestedFor(urlEqualTo(s"${messageReceiptUrl}1")))
+      }
+      eventually {
+        wireMock.verify(0,putRequestedFor(urlEqualTo(s"${messageReceiptUrl}3")))
+      }
+      eventually {
+        wireMock.verify(0,putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))
+      }
+
+
+      val movements = movementRepository.collection.find.toFuture().futureValue
+
+      movements.size mustBe 3
+      assertResults(movements.find(_.consignorId.equals("1")).get, Movement("token", "1", None, None, Instant.now, Seq.empty))
+      assertResults(movements.find(_.consignorId.equals("3")).get, Movement("token", "3", None, None, Instant.now, Seq.empty))
+      assertResults(movements.find(_.consignorId.equals("4")).get, Movement("token", "4", None, None, Instant.now, Seq.empty))
+    }
   }
 
   private def assertResults(actual: Movement, expected: Movement) = {
