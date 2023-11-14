@@ -51,7 +51,7 @@ object Message {
              messageType: String,
              dateTimeService: DateTimeService): Message = {
 
-    Message(encodedMessage.hashCode(), encodedMessage, messageType, dateTimeService.instant())
+    Message(encodedMessage.hashCode(), encodedMessage, messageType, dateTimeService.instant)
   }
 
   implicit val format: OFormat[Message] = Json.format[Message]

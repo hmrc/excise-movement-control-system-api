@@ -51,6 +51,7 @@ class GetMessagesControllerItSpec extends PlaySpec
   with GuiceOneServerPerSuite
   with AuthTestSupport
   with TestXml
+  with NewMessagesXml
   with WireMockServerSpec
   with RepositoryTestStub
   with BeforeAndAfterAll {
@@ -66,7 +67,7 @@ class GetMessagesControllerItSpec extends PlaySpec
   private val responseFromEis = EISConsumptionResponse(
     LocalDateTime.of(2023, 1, 2, 3, 4, 5),
     consignorId,
-    Base64.getEncoder.encodeToString(NewMessagesXml.newMessageWithIE801.toString().getBytes(StandardCharsets.UTF_8)),
+    Base64.getEncoder.encodeToString(newMessageWithIE801.toString().getBytes(StandardCharsets.UTF_8)),
   )
 
   override lazy val app: Application = {

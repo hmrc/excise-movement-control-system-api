@@ -43,7 +43,6 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
 
   private val mockMovementMessageRepository = mock[MovementRepository]
-  private val emcsUtils = mock[EmcsUtils]
   private val dateTimeService = mock[DateTimeService]
 
   private val movementMessageService = new MovementService(mockMovementMessageRepository, new EmcsUtils, dateTimeService)
@@ -401,7 +400,6 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
     messageXml: String,
     cachedMovements: Seq[Movement]
   ): Unit = {
-   // when(emcsUtils.createEncoder).thenReturn(Base64.getEncoder)
     when(message.administrativeReferenceCode).thenReturn(arc)
     when(message.lrnEquals(eqTo(lrn.getOrElse("")))).thenReturn(lrn.isDefined)
     when(message.toXml).thenReturn(scala.xml.XML.loadString(messageXml))

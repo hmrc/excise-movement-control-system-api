@@ -29,7 +29,7 @@ import java.nio.charset.StandardCharsets
 import java.time.{Instant, LocalDateTime}
 import java.util.Base64
 
-class MessageFilterSpec extends PlaySpec {
+class MessageFilterSpec extends PlaySpec with NewMessagesXml {
 
   private val dateTimeService = mock[DateTimeService]
   private val emcsUtils = new EmcsUtils
@@ -43,7 +43,7 @@ class MessageFilterSpec extends PlaySpec {
 
       val messageFilter = new MessageFilter(dateTimeService, emcsUtils = emcsUtils, factory = messageFactory)
 
-      val xml = scala.xml.XML.loadString(NewMessagesXml.newMessageWith2IE801sXml.toString())
+      val xml = scala.xml.XML.loadString(newMessageWith2IE801sXml.toString())
       val encodeXml = Base64.getEncoder.encodeToString(xml.toString.getBytes(StandardCharsets.UTF_8))
 
       val message: EISConsumptionResponse = EISConsumptionResponse(LocalDateTime.now(), "123", encodeXml)
@@ -61,7 +61,7 @@ class MessageFilterSpec extends PlaySpec {
 
       val messageFilter = new MessageFilter(dateTimeService, emcsUtils = emcsUtils, factory = messageFactory)
 
-      val xml = scala.xml.XML.loadString(NewMessagesXml.newMessageWith2IE801sXml.toString())
+      val xml = scala.xml.XML.loadString(newMessageWith2IE801sXml.toString())
       val encodeXml = Base64.getEncoder.encodeToString(xml.toString.getBytes(StandardCharsets.UTF_8))
 
       val message: EISConsumptionResponse = EISConsumptionResponse(LocalDateTime.now(), "123", encodeXml)
@@ -76,7 +76,7 @@ class MessageFilterSpec extends PlaySpec {
 
       val messageFilter = new MessageFilter(dateTimeService, emcsUtils = emcsUtils, factory = messageFactory)
 
-      val xml = scala.xml.XML.loadString(NewMessagesXml.emptyNewMessageDataXml.toString())
+      val xml = scala.xml.XML.loadString(emptyNewMessageDataXml.toString())
       val encodeXml = Base64.getEncoder.encodeToString(xml.toString.getBytes(StandardCharsets.UTF_8))
 
       val message: EISConsumptionResponse = EISConsumptionResponse(LocalDateTime.now(), "123", encodeXml)

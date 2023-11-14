@@ -30,7 +30,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 
-import java.time.{Clock, Instant, ZoneId}
+import java.time.Instant
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 

@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.data
 
 import scala.xml.Elem
 
-object NewMessagesXml {
+trait NewMessagesXml {
 
   lazy val newMessageWithIE801: Elem = <ns:NewMessagesDataResponse
   xmlns:ns="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/NewMessagesData/3"

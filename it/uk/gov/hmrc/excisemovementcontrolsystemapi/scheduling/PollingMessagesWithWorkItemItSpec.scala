@@ -1,3 +1,19 @@
+/*
+ * Copyright 2023 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
 import com.github.tomakehurst.wiremock.client.WireMock
@@ -15,8 +31,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.{Application, Configuration}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.NewMessagesXml.{emptyNewMessageDataXml, newMessageWith818And802, newMessageWithIE801, newMessageXmlWithIE704}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{Ie704XmlMessage, Ie801XmlMessage, Ie802XmlMessage, Ie818XmlMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{Ie704XmlMessage, Ie801XmlMessage, Ie802XmlMessage, Ie818XmlMessage, NewMessagesXml}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.WireMockServerSpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptResponse, MessageTypes}
@@ -37,6 +52,7 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
   with DefaultPlayMongoRepositorySupport[WorkItem[ExciseNumberWorkItem]]
   with CleanMongoCollectionSupport
   with WireMockServerSpec
+  with NewMessagesXml
   with MockitoSugar
   with ScalaFutures
   with IntegrationPatience
@@ -85,9 +101,9 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
     wireMock.resetAll()
 
     setUpWireMockStubs()
-    when(timeService.instant()).thenReturn(Instant.parse("2018-11-30T18:35:24.00Z"))
+    when(timeService.instant).thenReturn(Instant.parse("2018-11-30T18:35:24.00Z"))
     when(appConfig.getMovementTTL).thenReturn(Duration.create(30, MINUTES))
-    when(timeService.instant()).thenReturn(availableBefore)
+    when(timeService.instant).thenReturn(availableBefore)
   }
 
 
@@ -118,9 +134,6 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
       eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}1")))}
       eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}3")))}
       eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))}
-
-
-      val result: Seq[WorkItem[ExciseNumberWorkItem]] = findAll().futureValue
 
       val movements = repo.collection.find.toFuture().futureValue
 

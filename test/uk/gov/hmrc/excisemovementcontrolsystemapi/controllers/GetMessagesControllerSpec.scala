@@ -69,7 +69,7 @@ class GetMessagesControllerSpec extends PlaySpec
     when(movementService.getMatchingERN(any, any))
       .thenReturn(Future.successful(Some(ern)))
 
-    when(dateTimeService.instant()).thenReturn(timeStamp)
+    when(dateTimeService.instant).thenReturn(timeStamp)
   }
 
   "getMessagesForMovement" should {

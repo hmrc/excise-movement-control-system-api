@@ -21,18 +21,17 @@ import org.mockito.MockitoSugar.{times, verify, when}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.NewMessagesXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.NewMessagesXml.newMessageWith818And802
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NewMessageParserService
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 
 class ShowNewMessageParserServiceSpec
-  extends PlaySpec {
+  extends PlaySpec
+    with NewMessagesXml {
 
   private val messageFactory = mock[IEMessageFactory]
   private val parser = new NewMessageParserService(messageFactory, new EmcsUtils())
@@ -40,7 +39,7 @@ class ShowNewMessageParserServiceSpec
   "countOfMessagesAvailable" should {
     "return the number of messages" in {
       val encodeGetNewMessage = Base64.getEncoder.encodeToString(
-        NewMessagesXml.newMessageWith2IE801sXml.toString.getBytes(StandardCharsets.UTF_8)
+        newMessageWith2IE801sXml.toString.getBytes(StandardCharsets.UTF_8)
       )
 
       parser.countOfMessagesAvailable(encodeGetNewMessage) mustBe 2

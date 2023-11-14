@@ -16,18 +16,16 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
 
+import com.google.inject.ImplementedBy
+
 import java.time.Instant
 import javax.inject.Inject
 
-//class DateTimeService @Inject()() {
-//
-//  def now: Instant = Instant.now
-//}
-
-trait DateTimeService {
-  def instant(): Instant
+class DateTimeServiceImpl @Inject()() extends DateTimeService {
+  override def instant: Instant = Instant.now()
 }
 
-class DateTimeServiceImpl @Inject()() extends DateTimeService {
-  override def instant(): Instant = Instant.now()
+@ImplementedBy(classOf[DateTimeServiceImpl])
+trait DateTimeService {
+  def instant: Instant
 }
