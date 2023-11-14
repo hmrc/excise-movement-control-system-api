@@ -40,7 +40,7 @@ class ExciseNumberQueueWorkItemRepository @Inject()
   extraIndexes   = Seq(
     IndexModel(
       Indexes.ascending("updatedAt"),
-      IndexOptions().expireAfter(appConfig.getMovementTTLInDays.toSeconds, TimeUnit.SECONDS)
+      IndexOptions().expireAfter(appConfig.getMovementTTL.toSeconds, TimeUnit.SECONDS)
     )
   )
 ) {
