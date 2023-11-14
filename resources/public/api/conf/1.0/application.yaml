@@ -31,7 +31,11 @@ paths:
         - $ref: "#/components/parameters/AcceptHeader"
         - $ref: "#/components/parameters/ContentTypeHeader"
       requestBody:
-        description: The body for this request should be an XML body that conforms to the [IE815 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie815.xsd)
+        description: |
+          The body for this request should be an XML body that conforms to the [IE815 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie815.xsd)
+          
+          An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE815.xml)
+
         required: true
         content:
           application/xml:
@@ -208,19 +212,31 @@ paths:
             examples:
               cancellation:
                 summary: Submit cancellation (IE810)
-                description: The body for this request should be an XML body that conforms to the [IE810 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie810.xsd)
+                description: |
+                  The body for this request should be an XML body that conforms to the [IE810 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie810.xsd)
+          
+                  An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE810.xml)
                 value: '<IE810><!-- Example IE810 message --></IE810>'
               changeOfDestination:
                 summary: Submit change of destination (IE813)
-                description: The body for this request should be an XML body that conforms to the [IE813 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie813.xsd)
+                description: |
+                  The body for this request should be an XML body that conforms to the [IE813 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie813.xsd)
+                  
+                  An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE813.xml)
                 value: '<IE813><!-- Example IE813 message --></IE813>'
               reportOfReceipt:
                 summary: Submit report of receipt (IE818)
-                description: The body for this request should be an XML body that conforms to the [IE818 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie818.xsd)
+                description: |
+                  The body for this request should be an XML body that conforms to the [IE818 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie818.xsd)
+                  
+                  An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE818.xml)
                 value: '<IE818><!-- Example IE818 message --></IE818>'
               alertOrRejection:
                 summary: Submit alert or rejection (IE819)
-                description: The body for this request should be an XML body that conforms to the [IE819 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie819.xsd)
+                description: |
+                  The body for this request should be an XML body that conforms to the [IE819 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie819.xsd)
+                  
+                  An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE819.xml)
                 value: '<IE819><!-- Example IE819 message --></IE819>'
 #              Temporarily commented out until MVP+
 #              split:
@@ -229,11 +245,19 @@ paths:
 #                value: '<IE825><!-- Example IE825 message --></IE825>'
               explainDelayToDelivery:
                 summary: Submit explain delay to delivery (IE837)
-                description: The body for this request should be an XML body that conforms to the [IE837 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie837.xsd)
+                description: |
+                  The body for this request should be an XML body that conforms to the [IE837 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie837.xsd)
+                  
+                  An example submitted by the consignor can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE837_consignor.xml)
+                  
+                  An example submitted by the consignee can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE837_consignee.xml)
                 value: '<IE837><!-- Example IE837 message --></IE837>'
               reasonForShortage:
                 summary: Submit reason for shortage (IE871)
-                description: The body for this request should be an XML body that conforms to the [IE871 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie871.xsd)
+                description: |
+                  The body for this request should be an XML body that conforms to the [IE871 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie871.xsd)
+                  
+                  An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE871.xml)
                 value: '<IE871><!-- Example IE871 message --></IE871>'
       responses:
         '202':

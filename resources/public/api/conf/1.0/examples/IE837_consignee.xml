@@ -1,0 +1,30 @@
+<urn:IE837 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE837:V3.01"
+           xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
+           xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
+           xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <urn:Header>
+        <urn1:MessageSender>NDEA.GB</urn1:MessageSender>
+        <urn1:MessageRecipient>NDEA.EU</urn1:MessageRecipient>
+        <urn1:DateOfPreparation>2023-08-10</urn1:DateOfPreparation>
+        <urn1:TimeOfPreparation>09:56:40.695540</urn1:TimeOfPreparation>
+        <urn1:MessageIdentifier>GB100000000302681</urn1:MessageIdentifier>
+        <urn1:CorrelationIdentifier>a2f65a81-c297-4117-bea5-556129529463</urn1:CorrelationIdentifier>
+    </urn:Header>
+    <urn:Body>
+        <urn:ExplanationOnDelayForDelivery>
+            <urn:Attributes>
+                <urn:SubmitterIdentification>GBWKQOZ8OVLYR</urn:SubmitterIdentification>
+                <urn:SubmitterType>2</urn:SubmitterType>
+                <urn:ExplanationCode>6</urn:ExplanationCode>
+                <urn:ComplementaryInformation language="en">Accident on M5</urn:ComplementaryInformation>
+                <urn:MessageRole>1</urn:MessageRole>
+                <urn:DateAndTimeOfValidationOfExplanationOnDelay>2023-08-10T10:56:42</urn:DateAndTimeOfValidationOfExplanationOnDelay>
+            </urn:Attributes>
+            <urn:ExciseMovement>
+                <urn:AdministrativeReferenceCode>16GB00000000000192223</urn:AdministrativeReferenceCode>
+                <urn:SequenceNumber>2</urn:SequenceNumber>
+            </urn:ExciseMovement>
+        </urn:ExplanationOnDelayForDelivery>
+    </urn:Body>
+</urn:IE837>

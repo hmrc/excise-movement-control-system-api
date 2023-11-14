@@ -1,0 +1,44 @@
+<urn:IE819 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE819:V3.01"
+           xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
+           xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
+           xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <urn:Header>
+        <urn1:MessageSender>NDEA.GB</urn1:MessageSender>
+        <urn1:MessageRecipient>NDEA.GB</urn1:MessageRecipient>
+        <urn1:DateOfPreparation>2023-08-31</urn1:DateOfPreparation>
+        <urn1:TimeOfPreparation>11:32:45</urn1:TimeOfPreparation>
+        <urn1:MessageIdentifier>GB100000000302820</urn1:MessageIdentifier>
+        <urn1:CorrelationIdentifier>PORTAL1a027311ecef42ef90e40d7201b4f5a7</urn1:CorrelationIdentifier>
+    </urn:Header>
+    <urn:Body>
+        <urn:AlertOrRejectionOfEADESAD>
+            <urn:Attributes>
+                <urn:DateAndTimeOfValidationOfAlertRejection>2023-08-31T11:32:47</urn:DateAndTimeOfValidationOfAlertRejection>
+            </urn:Attributes>
+            <urn:ConsigneeTrader language="en">
+                <urn:Traderid>GBWK002281023</urn:Traderid>
+                <urn:TraderName>Roms PLC</urn:TraderName>
+                <urn:StreetName>Bellhouston Road</urn:StreetName>
+                <urn:StreetNumber>420</urn:StreetNumber>
+                <urn:Postcode>G41 5BS</urn:Postcode>
+                <urn:City>Glasgow</urn:City>
+            </urn:ConsigneeTrader>
+            <urn:ExciseMovement>
+                <urn:AdministrativeReferenceCode>23GB00000000000378574</urn:AdministrativeReferenceCode>
+                <urn:SequenceNumber>1</urn:SequenceNumber>
+            </urn:ExciseMovement>
+            <urn:DestinationOffice>
+                <urn:ReferenceNumber>GB004098</urn:ReferenceNumber>
+            </urn:DestinationOffice>
+            <urn:AlertOrRejection>
+                <urn:DateOfAlertOrRejection>2023-08-31</urn:DateOfAlertOrRejection>
+                <urn:EadEsadRejectedFlag>1</urn:EadEsadRejectedFlag>
+            </urn:AlertOrRejection>
+            <urn:AlertOrRejectionOfEadEsadReason>
+                <urn:AlertOrRejectionOfMovementReasonCode>2</urn:AlertOrRejectionOfMovementReasonCode>
+                <urn:ComplementaryInformation language="en">test</urn:ComplementaryInformation>
+            </urn:AlertOrRejectionOfEadEsadReason>
+        </urn:AlertOrRejectionOfEADESAD>
+    </urn:Body>
+</urn:IE819>
