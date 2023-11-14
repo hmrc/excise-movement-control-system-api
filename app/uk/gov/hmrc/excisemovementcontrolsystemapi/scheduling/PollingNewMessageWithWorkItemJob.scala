@@ -50,8 +50,8 @@ class PollingNewMessageWithWorkItemJob @Inject()
 
   override val enabled: Boolean = true
   override def name: String = "polling-new-message-wi"
-  override def interval: FiniteDuration = appConfig.intervalInMinutes
-  override def initialDelay: FiniteDuration = appConfig.initialDelayInMinutes
+  override def interval: FiniteDuration = appConfig.interval
+  override def initialDelay: FiniteDuration = appConfig.initialDelay
   implicit val hc: HeaderCarrier = HeaderCarrier()
   lazy override val lockKeeper: LockService = LockService(mongoLockRepository, lockId = "PollingNewMessageWithWorkItem", ttl = 1.hour)
 

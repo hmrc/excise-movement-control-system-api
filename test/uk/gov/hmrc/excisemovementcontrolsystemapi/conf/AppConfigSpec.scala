@@ -1,3 +1,19 @@
+/*
+ * Copyright 2023 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package uk.gov.hmrc.excisemovementcontrolsystemapi.conf
 
 import com.typesafe.config.ConfigFactory
@@ -15,9 +31,9 @@ class AppConfigSpec extends PlaySpec {
     """
       |appName=excise-movement-control-system-api
       |mongodb.uri="mongodb://localhost:27017/plastic-packaging-tax-returns"
-      |mongodb.movement.TTLInDays=10
-      |pollingNewMessageJob.intervalInMinutes=4
-      |pollingNewMessageJob.initialDelayInMinutes=4
+      |mongodb.movement.TTL=10days
+      |scheduler.pollingNewMessageJob.interval=4 minutes
+      |scheduler.pollingNewMessageJob.initialDelay=4 minutes
       |queue.retryAfterMinutes=4
     """.stripMargin
 
@@ -31,15 +47,15 @@ class AppConfigSpec extends PlaySpec {
 
   "AppConfig" should {
     "return config for TTL for Movement Mongo collection" in{
-      configService.getMovementTTLInDays mustBe Duration.create(10, DAYS)
+      configService.getMovementTTL mustBe Duration.create(10, DAYS)
     }
 
     "return config for PollingNewMessageJob interval" in {
-      configService.intervalInMinutes mustBe Duration.create(4, MINUTES)
+      configService.interval mustBe Duration.create(4, MINUTES)
     }
 
     "return config for PollingNewMessageJob initialDelay" in {
-      configService.initialDelayInMinutes mustBe Duration.create(4, MINUTES)
+      configService.initialDelay mustBe Duration.create(4, MINUTES)
     }
 
     "return config for the queue retryAfter" in {

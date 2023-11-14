@@ -22,8 +22,7 @@ import com.github.tomakehurst.wiremock.stubbing.{Scenario, StubMapping}
 import org.bson.types.ObjectId
 import org.mockito.MockitoSugar.when
 import org.scalatest.BeforeAndAfterEach
-import org.scalatest.concurrent.Eventually.eventually
-import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
+import org.scalatest.concurrent.{Eventually, IntegrationPatience, ScalaFutures}
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.inject.bind
@@ -54,9 +53,11 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
   with NewMessagesXml
   with MockitoSugar
   with ScalaFutures
+  with Eventually
   with IntegrationPatience
   with BeforeAndAfterEach {
 
+  protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val showNewMessageUrl = "/apip-emcs/messages/v1/show-new-messages"
   private val messageReceiptUrl = "/apip-emcs/messages/v1/message-receipt?exciseregistrationnumber="
   private val expectedMessage = Seq(
@@ -67,7 +68,10 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
 
   private lazy val timeService = mock[DateTimeService]
   private val availableBefore = Instant.now
-  protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
+
+  // This is used by repository and movementRepository to set the databases before
+  // the application start. Once the application has started, the app will load a real
+  // instance of AppConfig using the application.test.conf
   private lazy val appConfig = mock[AppConfig]
   protected override lazy val repository = new ExciseNumberQueueWorkItemRepository(
     appConfig,
@@ -75,7 +79,7 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
     timeService
   )
 
-  lazy val repo = new MovementRepository(
+  lazy val movementRepository = new MovementRepository(
     mongoComponent,
     appConfig,
     timeService
@@ -100,10 +104,9 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
 
     setUpWireMockStubs()
     when(timeService.instant).thenReturn(Instant.parse("2018-11-30T18:35:24.00Z"))
-    when(appConfig.getMovementTTLInDays).thenReturn(Duration.create(30, DAYS))
+    when(appConfig.getMovementTTL).thenReturn(Duration.create(30, DAYS))
     when(timeService.instant).thenReturn(availableBefore)
   }
-
 
   override def afterEach(): Unit = {
     super.afterEach()
@@ -111,20 +114,22 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
   }
 
   "Scheduler" should {
-    "start Polling show new message copy" in {
+    "start Polling show new message" in {
 
       prepareDatabase()
       insert(createWorkItem("1")).futureValue
       insert(createWorkItem("3")).futureValue
       insert(createWorkItem("4")).futureValue
 
-      repo.updateMovement(Movement("token", "1", None, None, Instant.now, Seq.empty)).futureValue
-      repo.updateMovement(Movement("token", "3", None, None, Instant.now, Seq.empty)).futureValue
-      repo.updateMovement(Movement("token", "4", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.updateMovement(Movement("token", "1", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.updateMovement(Movement("token", "3", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.updateMovement(Movement("token", "4", None, None, Instant.now, Seq.empty)).futureValue
 
+      // start application
       app
 
-
+      // todo: not a very good way to wait for the thread to do is job. Tried eventually but it does not
+      // work. Try to find a better way.
       Thread.sleep(6000)
       eventually { wireMock.verify( getRequestedFor(urlEqualTo(s"$showNewMessageUrl?exciseregistrationnumber=1")))}
       eventually { wireMock.verify(getRequestedFor(urlEqualTo(s"$showNewMessageUrl?exciseregistrationnumber=3")))}
@@ -133,7 +138,9 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
       eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}3")))}
       eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))}
 
-      val movements = repo.collection.find.toFuture().futureValue
+
+
+      val movements = movementRepository.collection.find.toFuture().futureValue
 
       movements.size mustBe 3
       assertResults(movements.find(_.consignorId.equals("1")).get, Movement("token", "1", None, Some("tokentokentokentokent"), Instant.now, expectedMessage))

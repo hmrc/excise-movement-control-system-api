@@ -22,7 +22,7 @@ import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import java.time.{Duration => JavaDuration}
 import java.util.concurrent.TimeUnit.MINUTES
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.duration.{DAYS, Duration, FiniteDuration}
+import scala.concurrent.duration.{DAYS, Duration, FiniteDuration, SECONDS}
 
 @Singleton
 class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig) {
@@ -31,21 +31,19 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
 
   lazy val eisHost: String = servicesConfig.baseUrl("eis")
   lazy val systemApplication: String = config.get[String]("system.application")
-
-  lazy val intervalInMinutes: FiniteDuration = config.getOptional[Long]("pollingNewMessageJob.intervalInMinutes")
-    .map(Duration.create(_, MINUTES))
+  lazy val interval = config.getOptional[String]("scheduler.pollingNewMessageJob.interval")
+    .map(Duration.create(_).asInstanceOf[FiniteDuration])
     .getOrElse(FiniteDuration(5, MINUTES))
 
-  lazy val initialDelayInMinutes: FiniteDuration = config.getOptional[Long]("pollingNewMessageJob.initialDelayInMinutes")
-    .map(Duration.create(_, MINUTES))
-    .getOrElse(Duration.create(5, MINUTES))
+  lazy  val initialDelay = config.getOptional[String]("scheduler.pollingNewMessageJob.initialDelay")
+    .map(Duration.create(_).asInstanceOf[FiniteDuration])
+    .getOrElse(FiniteDuration(60, SECONDS))
 
   lazy val retryAfterMinutes: JavaDuration = config.getOptional[Long]("queue.retryAfterMinutes")
     .fold(JavaDuration.ofMinutes(5L))(JavaDuration.ofMinutes(_))
 
-
-  def getMovementTTLInDays: Duration = config.getOptional[Long]("mongodb.movement.TTLInDays")
-    .fold(Duration.create(30, DAYS))(Duration.create(_, DAYS))
+  def getMovementTTL: Duration = config.getOptional[String]("mongodb.movement.TTL")
+    .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
 
   def emcsReceiverMessageUrl: String = s"$eisHost/emcs/digital-submit-new-message/v1"
   def showNewMessageUrl: String = s"$eisHost/apip-emcs/messages/v1/show-new-messages"
