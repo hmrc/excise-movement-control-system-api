@@ -1,0 +1,62 @@
+<urn:IE813 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE813:V3.01"
+           xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
+           xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
+           xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <urn:Header>
+        <urn1:MessageSender>NDEA.GB</urn1:MessageSender>
+        <urn1:MessageRecipient>NDEA.GB</urn1:MessageRecipient>
+        <urn1:DateOfPreparation>2023-08-15</urn1:DateOfPreparation>
+        <urn1:TimeOfPreparation>11:54:25</urn1:TimeOfPreparation>
+        <urn1:MessageIdentifier>GB100000000302715</urn1:MessageIdentifier>
+        <urn1:CorrelationIdentifier>PORTAL906384fb126d43e787a802683c03b44c</urn1:CorrelationIdentifier>
+    </urn:Header>
+    <urn:Body>
+        <urn:ChangeOfDestination>
+            <urn:Attributes>
+                <urn:DateAndTimeOfValidationOfChangeOfDestination>2023-08-15T11:54:32</urn:DateAndTimeOfValidationOfChangeOfDestination>
+            </urn:Attributes>
+            <urn:UpdateEadEsad>
+                <urn:AdministrativeReferenceCode>23GB00000000000378126</urn:AdministrativeReferenceCode>
+                <urn:JourneyTime>D02</urn:JourneyTime>
+                <urn:ChangedTransportArrangement>1</urn:ChangedTransportArrangement>
+                <urn:SequenceNumber>3</urn:SequenceNumber>
+                <urn:InvoiceNumber>5678</urn:InvoiceNumber>
+                <urn:TransportModeCode>4</urn:TransportModeCode>
+            </urn:UpdateEadEsad>
+            <urn:DestinationChanged>
+                <urn:DestinationTypeCode>1</urn:DestinationTypeCode>
+                <urn:NewConsigneeTrader language="en">
+                    <urn:Traderid>GBWK240176600</urn:Traderid>
+                    <urn:TraderName>pqr</urn:TraderName>
+                    <urn:StreetName>Tattenhoe Park</urn:StreetName>
+                    <urn:StreetNumber>18 Priestly</urn:StreetNumber>
+                    <urn:Postcode>MK4 4NW</urn:Postcode>
+                    <urn:City>Milton Keynes</urn:City>
+                </urn:NewConsigneeTrader>
+                <urn:DeliveryPlaceTrader language="en">
+                    <urn:Traderid>GB00240176601</urn:Traderid>
+                    <urn:TraderName>lmn</urn:TraderName>
+                    <urn:StreetName>Tattenhoe Park</urn:StreetName>
+                    <urn:StreetNumber>18 Priestl</urn:StreetNumber>
+                    <urn:Postcode>MK4 4NW</urn:Postcode>
+                    <urn:City>Milton Keynes</urn:City>
+                </urn:DeliveryPlaceTrader>
+                <urn:MovementGuarantee>
+                    <urn:GuarantorTypeCode>1</urn:GuarantorTypeCode>
+                </urn:MovementGuarantee>
+            </urn:DestinationChanged>
+            <urn:NewTransporterTrader language="en">
+                <urn:TraderName>pqr</urn:TraderName>
+                <urn:StreetName>Tattenhoe Park</urn:StreetName>
+                <urn:StreetNumber>18 Priestly</urn:StreetNumber>
+                <urn:Postcode>MK4 4NW</urn:Postcode>
+                <urn:City>Milton Keynes</urn:City>
+            </urn:NewTransporterTrader>
+            <urn:TransportDetails>
+                <urn:TransportUnitCode>1</urn:TransportUnitCode>
+                <urn:IdentityOfTransportUnits>1</urn:IdentityOfTransportUnits>
+            </urn:TransportDetails>
+        </urn:ChangeOfDestination>
+    </urn:Body>
+</urn:IE813>
