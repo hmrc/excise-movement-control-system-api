@@ -59,13 +59,13 @@ class MovementRepository @Inject()
   }
 
   def saveMovement(movement: Movement): Future[Boolean] = {
-    collection.insertOne(movement.copy(createdOn = timeService.now))
+    collection.insertOne(movement.copy(createdOn = timeService.instant))
       .toFuture()
       .map(_ => true)
   }
 
   def updateMovement(movementMessage: Movement): Future[Boolean] = {
-    val updatedMovement = movementMessage copy(createdOn = timeService.now)
+    val updatedMovement = movementMessage copy(createdOn = timeService.instant)
 
     collection.replaceOne(
       filter = filterBy(movementMessage.localReferenceNumber, movementMessage.consignorId, movementMessage.consigneeId),

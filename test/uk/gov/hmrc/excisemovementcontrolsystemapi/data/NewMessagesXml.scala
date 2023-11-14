@@ -265,6 +265,48 @@ object NewMessagesXml {
     <ns:CountOfMessagesAvailable>1</ns:CountOfMessagesAvailable>
   </ns:NewMessagesDataResponse>
 
+  lazy val newMessageXmlWithIE704: Elem = <ns:NewMessagesDataResponse
+  xmlns:ns="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/NewMessagesData/3"
+  xmlns:ns1="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3"
+  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01">
+    <ns:Messages>
+      <ns1:IE704>
+        <ns1:Header>
+          <urn:MessageSender>token</urn:MessageSender>
+          <urn:MessageRecipient>token</urn:MessageRecipient>
+          <urn:DateOfPreparation>2008-09-29</urn:DateOfPreparation>
+          <urn:TimeOfPreparation>00:18:33</urn:TimeOfPreparation>
+          <urn:MessageIdentifier>token</urn:MessageIdentifier>
+          <!--Optional:-->
+          <urn:CorrelationIdentifier>token</urn:CorrelationIdentifier>
+        </ns1:Header>
+        <ns1:Body>
+          <ns1:GenericRefusalMessage>
+            <!--Optional:-->
+            <ns1:Attributes>
+              <!--Optional:-->
+              <ns1:AdministrativeReferenceCode>tokentokentokentokent</ns1:AdministrativeReferenceCode>
+              <!--Optional:-->
+              <ns1:SequenceNumber>to</ns1:SequenceNumber>
+              <!--Optional:-->
+              <ns1:LocalReferenceNumber>token</ns1:LocalReferenceNumber>
+            </ns1:Attributes>
+            <!--1 or more repetitions:-->
+            <ns1:FunctionalError>
+              <ns1:ErrorType>4518</ns1:ErrorType>
+              <ns1:ErrorReason>token</ns1:ErrorReason>
+              <!--Optional:-->
+              <ns1:ErrorLocation>token</ns1:ErrorLocation>
+              <!--Optional:-->
+              <ns1:OriginalAttributeValue>token</ns1:OriginalAttributeValue>
+            </ns1:FunctionalError>
+          </ns1:GenericRefusalMessage>
+        </ns1:Body>
+      </ns1:IE704>
+    </ns:Messages>
+    <ns:CountOfMessagesAvailable>1</ns:CountOfMessagesAvailable>
+  </ns:NewMessagesDataResponse>
+
   lazy val newMessageWith2IE801sXml: Elem = <ns:NewMessagesDataResponse
   xmlns:ns="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/NewMessagesData/3"
   xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.01"

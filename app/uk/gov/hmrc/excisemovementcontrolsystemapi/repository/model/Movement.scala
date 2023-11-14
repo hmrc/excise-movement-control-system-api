@@ -49,9 +49,9 @@ object Message {
   def apply(
              encodedMessage: String,
              messageType: String,
-             createdOn: Instant = Instant.now): Message = {
+             dateTimeService: DateTimeService): Message = {
 
-    Message(encodedMessage.hashCode(), encodedMessage, messageType, createdOn)
+    Message(encodedMessage.hashCode(), encodedMessage, messageType, dateTimeService.instant())
   }
 
   implicit val format: OFormat[Message] = Json.format[Message]

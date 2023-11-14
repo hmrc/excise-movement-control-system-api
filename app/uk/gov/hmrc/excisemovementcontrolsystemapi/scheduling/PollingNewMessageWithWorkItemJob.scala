@@ -61,8 +61,8 @@ class PollingNewMessageWithWorkItemJob @Inject()
   }
 
   private def process: Future[RunningOfJobSuccessful] = {
-    val availableBefore = dateTimeService.now
-    workItemRepository.pullOutstanding(failedBefore = dateTimeService.now.minus(1, ChronoUnit.DAYS), availableBefore = availableBefore) // grab the next WorkItem
+    val availableBefore = dateTimeService.instant
+    workItemRepository.pullOutstanding(failedBefore = dateTimeService.instant.minus(1, ChronoUnit.DAYS), availableBefore = availableBefore) // grab the next WorkItem
       .flatMap {
         case None => Future.successful(RunningOfJobSuccessful) // there is no more - we've finished
         case Some(wi) => getNewMessages(wi.item.exciseNumber).flatMap { success => // call your function to process a WorkItem

@@ -64,7 +64,7 @@ class MovementRepositoryItSpec extends PlaySpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    when(dateTimeService.now).thenReturn(timestamp)
+    when(dateTimeService.instant).thenReturn(timestamp)
   }
 
   override def afterAll(): Unit = {

@@ -36,7 +36,7 @@ class MessageFilterSpec extends PlaySpec {
   private val messageFactory = new IEMessageFactory
 
   private val timestamp = Instant.parse("2018-11-30T18:35:24.00Z")
-  when(dateTimeService.now).thenReturn(timestamp)
+  when(dateTimeService.instant).thenReturn(timestamp)
 
   "filter" should {
     "filter a message by LRN when multiple LRNs are in the NewMessagesXml" in {

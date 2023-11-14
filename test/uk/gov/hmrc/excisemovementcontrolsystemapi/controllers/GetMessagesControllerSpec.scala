@@ -54,9 +54,8 @@ class GetMessagesControllerSpec extends PlaySpec
   private val showNewMessagesConnector = mock[ShowNewMessagesConnector]
   private val messageFilter = mock[MessageFilter]
   private val lrn = "LRN1234"
-  private val timeStamp = Instant.now()
   private val dateTimeService = mock[DateTimeService]
- // private val timeStamp = Instant.parse("2018-11-30T18:35:24.00Z")
+  private val timeStamp = Instant.parse("2018-11-30T18:35:24.00Z")
 
   private val newMessage = EISConsumptionResponse(
     LocalDateTime.of(2023, 5, 5, 6, 6, 2),
@@ -70,23 +69,25 @@ class GetMessagesControllerSpec extends PlaySpec
     when(movementService.getMatchingERN(any, any))
       .thenReturn(Future.successful(Some(ern)))
 
-    when(dateTimeService.now).thenReturn(timeStamp)
-    when(messageFilter.filter(any, any)).thenReturn(Seq(Message("message","IE801", timeStamp)))
+    when(dateTimeService.instant()).thenReturn(timeStamp)
   }
 
   "getMessagesForMovement" should {
     "return 200" in {
-
+      val message = Message("message","IE801", dateTimeService)
+      when(messageFilter.filter(any, any)).thenReturn(Seq(message))
       when(showNewMessagesConnector.get(any)(any))
         .thenReturn(Future.successful(Right(newMessage)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest())
 
       status(result) mustBe OK
-      contentAsJson(result) mustBe Json.toJson(Seq(Message("message","IE801", timeStamp)))
+      contentAsJson(result) mustBe Json.toJson(Seq(message))
     }
 
     "get all the new messages" in {
+      val message = Message("message","IE801", dateTimeService)
+      when(messageFilter.filter(any, any)).thenReturn(Seq(message))
         when(showNewMessagesConnector.get(any)(any))
           .thenReturn(Future.successful(Right(newMessage)))
 
@@ -96,6 +97,8 @@ class GetMessagesControllerSpec extends PlaySpec
       }
 
     "filter messages by lrn" in {
+      val message = Message("message","IE801", dateTimeService)
+      when(messageFilter.filter(any, any)).thenReturn(Seq(message))
       when(showNewMessagesConnector.get(any)(any))
         .thenReturn(Future.successful(Right(newMessage)))
 

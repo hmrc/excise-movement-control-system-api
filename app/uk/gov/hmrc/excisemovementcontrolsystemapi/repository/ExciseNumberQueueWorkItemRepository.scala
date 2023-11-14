@@ -46,7 +46,7 @@ class ExciseNumberQueueWorkItemRepository @Inject()
   )
 ) {
 
-  override def now(): Instant = timeService.now
+  override def now(): Instant = timeService.instant
 
   override val inProgressRetryAfter: Duration = {
     //todo: get this from config settings

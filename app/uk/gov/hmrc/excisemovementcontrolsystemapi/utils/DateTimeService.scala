@@ -16,11 +16,18 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
 
-import java.time.{Clock, Instant}
-import javax.inject.{Inject, Singleton}
+import java.time.Instant
+import javax.inject.Inject
 
-@Singleton
-class DateTimeService @Inject()(clock: Clock) {
+//class DateTimeService @Inject()() {
+//
+//  def now: Instant = Instant.now
+//}
 
-  def now: Instant = Instant.now(clock)
+trait DateTimeService {
+  def instant(): Instant
+}
+
+class DateTimeServiceImpl @Inject()() extends DateTimeService {
+  override def instant(): Instant = Instant.now()
 }

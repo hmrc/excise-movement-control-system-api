@@ -75,9 +75,9 @@ class MovementService @Inject()
     movementRepository.getAllBy(consignorId).flatMap(cachedMovement => {
       val arc = message.administrativeReferenceCode
       //todo get LRN using pattern match
-      val lrn = "123" //message.localReferenceNumber.getOrElse("")
+//      val lrn = "123" //message.localReferenceNumber.getOrElse("")
       val movementWithArc = cachedMovement.filter(o => o.administrativeReferenceCode.equals(arc)).headOption
-      val movementWithLrn = cachedMovement.filter(m => m.localReferenceNumber.equals(lrn)).headOption
+      val movementWithLrn = cachedMovement.filter(m => message.lrnEquals(m.localReferenceNumber)).headOption
 
       (movementWithArc, movementWithLrn) match {
         case (Some(mArc), _) => saveDistinctMessage(mArc, message)
@@ -91,7 +91,7 @@ class MovementService @Inject()
 
 
     val encodedMessage = emcsUtils.encode(newMessage.toXml.toString)
-    val messages = Seq(Message(encodedMessage, newMessage.messageType, Instant.now))
+    val messages = Seq(Message(encodedMessage, newMessage.messageType, dateTimeService))
 
     //todo: remove hash from message class. Hash can calculate on the go in here
     val allMessages = (movement.messages ++ messages).distinctBy(_.hash)
