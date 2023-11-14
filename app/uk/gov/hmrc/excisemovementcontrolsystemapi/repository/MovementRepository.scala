@@ -44,7 +44,7 @@ class MovementRepository @Inject()
     collectionName = "movements",
     mongoComponent = mongo,
     domainFormat = Json.format[Movement],
-    indexes = mongoIndexes(appConfig.getMovementTTL),
+    indexes = mongoIndexes(appConfig.getMovementTTLInDays),
     replaceIndexes = true
   ) with Logging {
 
