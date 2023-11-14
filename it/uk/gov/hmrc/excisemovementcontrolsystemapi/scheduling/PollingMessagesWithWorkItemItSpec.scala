@@ -31,7 +31,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.{Application, Configuration}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{Ie704XmlMessage, Ie801XmlMessage, Ie802XmlMessage, Ie818XmlMessage, NewMessagesXml}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{Ie704XmlMessage, NewMessagesXml, SchedulingTestData}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.WireMockServerSpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptResponse, MessageTypes}
@@ -61,11 +61,10 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
   private val showNewMessageUrl = "/apip-emcs/messages/v1/show-new-messages"
   private val messageReceiptUrl = "/apip-emcs/messages/v1/message-receipt?exciseregistrationnumber="
   private val expectedMessage = Seq(
-    createMessage(Ie801XmlMessage.IE801, MessageTypes.IE801.value),
-    createMessage(Ie818XmlMessage.IE818, MessageTypes.IE818.value),
-    createMessage(Ie802XmlMessage.IE802, MessageTypes.IE802.value)
+    createMessage(SchedulingTestData.ie801, MessageTypes.IE801.value),
+    createMessage(SchedulingTestData.ie818, MessageTypes.IE818.value),
+    createMessage(SchedulingTestData.ie802, MessageTypes.IE802.value)
   )
-
 
   private lazy val timeService = mock[DateTimeService]
   private val availableBefore = Instant.now
@@ -140,11 +139,13 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
       movements.size mustBe 3
       assertResults(movements.find(_.consignorId.equals("1")).get, Movement("token", "1", None, Some("tokentokentokentokent"), Instant.now, expectedMessage))
       assertResults(movements.find(_.consignorId.equals("3")).get, Movement("token", "3", None, Some("tokentokentokentokent"), Instant.now, expectedMessage.take(1)))
-      assertResults(movements.find(_.consignorId.equals("4")).get, Movement("token", "4", None, Some("tokentokentokentokent"), Instant.now, Seq(createMessage(Ie704XmlMessage.IE704, MessageTypes.IE704.value))))
+      assertResults(movements.find(_.consignorId.equals("4")).get, Movement("token", "4", None, Some("tokentokentokentokent"), Instant.now, Seq(createMessage(SchedulingTestData.ie704, MessageTypes.IE704.value))))
     }
   }
 
   private def assertResults(actual: Movement, expected: Movement) = {
+    println(s"actual: $actual")
+    println(s"expected: $expected")
     actual.localReferenceNumber mustBe expected.localReferenceNumber
     actual.consignorId mustBe expected.consignorId
     actual.administrativeReferenceCode mustBe expected.administrativeReferenceCode
@@ -166,14 +167,6 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
     stubMessageReceiptRequest("3")
     stubMessageReceiptRequest("4")
 
-  }
-
-  private def createMessage(xml: NodeSeq, messageType: String): Message = {
-    Message(
-      Base64.getEncoder.encodeToString(xml.toString.getBytes(StandardCharsets.UTF_8)),
-      messageType,
-      timeService
-    )
   }
 
   private def stubShowNewMessageRequestForConsignorId3 = {
@@ -305,6 +298,14 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
       status       = ProcessingStatus.ToDo,
       failureCount = 0,
       item         = ExciseNumberWorkItem(ern)
+    )
+  }
+
+  private def createMessage(xml: String, messageType: String): Message = {
+    Message(
+      Base64.getEncoder.encodeToString(xml.getBytes(StandardCharsets.UTF_8)),
+      messageType,
+      timeService
     )
   }
 }

@@ -23,12 +23,15 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 
 import scala.xml.NodeSeq
 
+//todo: add support for the following messages: IE803, IE807, IE829, IE839, IE840, IE881, IE905
 case class IEMessageFactory() {
   def createIEMessage(message: DataRecord[MessagesOption]): IEMessage = {
     val messageType = message.key.getOrElse(throw new RuntimeException("Could not create Message object. Message type is empty"))
 
     MessageTypes.withValueOpt(messageType) match {
+      case Some(MessageTypes.IE704) => IE704Message(message)
       case Some(MessageTypes.IE801) => IE801Message(message)
+      case Some(MessageTypes.IE802) => IE802Message(message)
       case Some(MessageTypes.IE810) => IE810Message(message)
       case Some(MessageTypes.IE813) => IE813Message(message)
       case Some(MessageTypes.IE818) => IE818Message(message)
@@ -41,7 +44,9 @@ case class IEMessageFactory() {
 
   def createFromXml(messageType: String, xml: NodeSeq): IEMessage = {
     MessageTypes.withValueOpt(messageType) match {
+      case Some(MessageTypes.IE704) => IE704Message.createFromXml(xml)
       case Some(MessageTypes.IE801) => IE801Message.createFromXml(xml)
+      case Some(MessageTypes.IE802) => IE802Message.createFromXml(xml)
       case Some(MessageTypes.IE810) => IE810Message.createFromXml(xml)
       case Some(MessageTypes.IE813) => IE813Message.createFromXml(xml)
       case Some(MessageTypes.IE815) => IE815Message.createFromXml(xml)

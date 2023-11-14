@@ -66,30 +66,31 @@ class MovementService @Inject()
   ): Future[Seq[Movement]] = {
 
     movementRepository.getMovementByERN(ern).map {
-      movements =>filter.filterMovement(movements)
+      movements => filter.filterMovement(movements)
     }
   }
 
   def updateMovement(message: IEMessage, consignorId: String): Future[Boolean] = {
 
     movementRepository.getAllBy(consignorId).flatMap(cachedMovement => {
+
       val arc = message.administrativeReferenceCode
       //todo get LRN using pattern match
 //      val lrn = "123" //message.localReferenceNumber.getOrElse("")
       val movementWithArc = cachedMovement.filter(o => o.administrativeReferenceCode.equals(arc)).headOption
       val movementWithLrn = cachedMovement.filter(m => message.lrnEquals(m.localReferenceNumber)).headOption
 
+      println(s"===== $consignorId, cached: $cachedMovement, arc from message: $arc, ARCList => $movementWithArc, LRNList => $movementWithLrn")
       (movementWithArc, movementWithLrn) match {
         case (Some(mArc), _) => saveDistinctMessage(mArc, message)
         case (None, Some(mLrn)) => saveDistinctMessage(mLrn, message)
-        case _ => throw new RuntimeException("Cannot retrieve a movement. Local reference number or administration reference code are not present")
+        case _ => throw new RuntimeException(s"Cannot retrieve a movement. Local reference number or administration reference code are not present for ERN: $consignorId")
       }
     })
   }
 
   private def saveDistinctMessage(movement: Movement, newMessage: IEMessage): Future[Boolean] = {
-
-
+    println("&&&&&&")
     val encodedMessage = emcsUtils.encode(newMessage.toXml.toString)
     val messages = Seq(Message(encodedMessage, newMessage.messageType, dateTimeService))
 
@@ -97,6 +98,8 @@ class MovementService @Inject()
     val allMessages = (movement.messages ++ messages).distinctBy(_.hash)
     val newArc = newMessage.administrativeReferenceCode.orElse(movement.administrativeReferenceCode)
 
+    println(s"1)=> movement: $movement")
+    println(s"1)=> message: $newMessage")
     val newMovement = movement.copy(
       administrativeReferenceCode = newArc,
       messages = allMessages

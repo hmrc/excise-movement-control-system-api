@@ -59,6 +59,16 @@ class IEMessageFactorySpec
       }
     }
 
+    "return an instance of IE704Message" in {
+      when(message.key).thenReturn(Some("IE704"))
+      sut.createIEMessage(message).isInstanceOf[IE704Message] mustBe true
+    }
+
+    "return an instance of IE802Message" in {
+      when(message.key).thenReturn(Some("IE802"))
+      sut.createIEMessage(message).isInstanceOf[IE802Message] mustBe true
+    }
+
     "return an instance of IE801Message" in {
       when(message.key).thenReturn(Some("IE801"))
       sut.createIEMessage(message).isInstanceOf[IE801Message] mustBe true

@@ -1,0 +1,196 @@
+<urn:IE717 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE717:V3.01" xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01">
+  <urn:Header>
+    <urn1:MessageSender>token</urn1:MessageSender>
+    <urn1:MessageRecipient>token</urn1:MessageRecipient>
+    <urn1:DateOfPreparation>2008-09-29</urn1:DateOfPreparation>
+    <urn1:TimeOfPreparation>00:18:33</urn1:TimeOfPreparation>
+    <urn1:MessageIdentifier>token</urn1:MessageIde  ntifier>
+    <!--Optional:-->
+    <urn1:CorrelationIdentifier>token</urn1:CorrelationIdentifier>
+  </urn:Header>
+  <urn:Body>
+    <urn:ControlReportEnvelope>
+      <urn:Attributes>
+        <urn:ControlReportMessageType>1</urn:ControlReportMessageType>
+        <!--Optional:-->
+        <urn:DateAndTimeOfValidationOfControlReport>2018-11-01T05:36:46+00:00</urn:DateAndTimeOfValidationOfControlReport>
+      </urn:Attributes>
+      <urn:HeaderControlReport>
+        <urn:ControlReportReference>tokentokentokent</urn:ControlReportReference>
+        <urn:ControlOffice language="to">
+          <!--Optional:-->
+          <urn:ReferenceNumberOfControlOffice>tokentok</urn:ReferenceNumberOfControlOffice>
+          <!--Optional:-->
+          <urn:MemberStateCode>to</urn:MemberStateCode>
+          <!--Optional:-->
+          <urn:ControlOfficeName>token</urn:ControlOfficeName>
+          <!--Optional:-->
+          <urn:StreetName>token</urn:StreetName>
+          <!--Optional:-->
+          <urn:StreetNumber>token</urn:StreetNumber>
+          <!--Optional:-->
+          <urn:Postcode>token</urn:Postcode>
+          <!--Optional:-->
+          <urn:City>token</urn:City>
+          <!--Optional:-->
+          <urn:PhoneNumber>token</urn:PhoneNumber>
+          <!--Optional:-->
+          <urn:FaxNumber>token</urn:FaxNumber>
+          <!--Optional:-->
+          <urn:EmailAddress>token</urn:EmailAddress>
+        </urn:ControlOffice>
+      </urn:HeaderControlReport>
+      <!--Optional:-->
+      <urn:ExciseMovement>
+        <urn:AdministrativeReferenceCode>tokentokentokentokent</urn:AdministrativeReferenceCode>
+        <urn:SequenceNumber>to</urn:SequenceNumber>
+      </urn:ExciseMovement>
+      <!--Optional:-->
+      <urn:OtherAccompanyingDocument>
+        <urn:OtherAccompanyingDocumentType>0</urn:OtherAccompanyingDocumentType>
+        <!--Optional:-->
+        <urn:ShortDescriptionOfOtherAccompanyingDocument language="to">token</urn:ShortDescriptionOfOtherAccompanyingDocument>
+        <urn:OtherAccompanyingDocumentNumber>token</urn:OtherAccompanyingDocumentNumber>
+        <urn:OtherAccompanyingDocumentDate>2017-05-15</urn:OtherAccompanyingDocumentDate>
+        <!--Optional:-->
+        <urn:ImageOfOtherAccompanyingDocument>ZnJlbXVudA==</urn:ImageOfOtherAccompanyingDocument>
+        <urn:MemberStateOfDispatch>to</urn:MemberStateOfDispatch>
+        <urn:MemberStateOfDestination>to</urn:MemberStateOfDestination>
+        <!--0 to 9 repetitions:-->
+        <urn:PersonInvolvedInMovementTrader language="to">
+          <!--Optional:-->
+          <urn:TraderExciseNumber>tokentokentok</urn:TraderExciseNumber>
+          <!--Optional:-->
+          <urn:Traderid>token</urn:Traderid>
+          <!--Optional:-->
+          <urn:TraderName>token</urn:TraderName>
+          <!--Optional:-->
+          <urn:TraderPersonType>5</urn:TraderPersonType>
+          <!--Optional:-->
+          <urn:MemberStateCode>to</urn:MemberStateCode>
+          <!--Optional:-->
+          <urn:StreetName>token</urn:StreetName>
+          <!--Optional:-->
+          <urn:StreetNumber>token</urn:StreetNumber>
+          <!--Optional:-->
+          <urn:Postcode>token</urn:Postcode>
+          <!--Optional:-->
+          <urn:City>token</urn:City>
+          <!--Optional:-->
+          <urn:PhoneNumber>token</urn:PhoneNumber>
+          <!--Optional:-->
+          <urn:FaxNumber>token</urn:FaxNumber>
+          <!--Optional:-->
+          <urn:EmailAddress>token</urn:EmailAddress>
+        </urn:PersonInvolvedInMovementTrader>
+        <!--Zero or more repetitions:-->
+        <urn:GoodsItem>
+          <!--Optional:-->
+          <urn:DescriptionOfTheGoods>token</urn:DescriptionOfTheGoods>
+          <!--Optional:-->
+          <urn:CnCode>tokentok</urn:CnCode>
+          <!--Optional:-->
+          <urn:CommercialDescriptionOfTheGoods>token</urn:CommercialDescriptionOfTheGoods>
+          <!--Optional:-->
+          <urn:AdditionalCode>token</urn:AdditionalCode>
+          <!--Optional:-->
+          <urn:Quantity>1000.00000000000</urn:Quantity>
+          <!--Optional:-->
+          <urn:UnitOfMeasureCode>to</urn:UnitOfMeasureCode>
+          <!--Optional:-->
+          <urn:GrossMass>1000.000000000000</urn:GrossMass>
+          <!--Optional:-->
+          <urn:NetMass>1000.000000000000</urn:NetMass>
+        </urn:GoodsItem>
+        <!--Optional:-->
+        <urn:MeansOfTransport>
+          <urn:TraderName>token</urn:TraderName>
+          <urn:StreetName>token</urn:StreetName>
+          <!--Optional:-->
+          <urn:StreetNumber>token</urn:StreetNumber>
+          <urn:TransporterCountry>to</urn:TransporterCountry>
+          <urn:Postcode>token</urn:Postcode>
+          <urn:City>token</urn:City>
+          <urn:TransportModeCode>to</urn:TransportModeCode>
+          <!--Optional:-->
+          <urn:AcoComplementaryInformation language="to">token</urn:AcoComplementaryInformation>
+          <urn:Registration>token</urn:Registration>
+          <urn:CountryOfRegistration>to</urn:CountryOfRegistration>
+        </urn:MeansOfTransport>
+      </urn:OtherAccompanyingDocument>
+      <urn:ControlReport>
+        <urn:DateOfControl>2002-06-24+01:00</urn:DateOfControl>
+        <urn:PlaceOfControl language="to">token</urn:PlaceOfControl>
+        <urn:ControlType>1</urn:ControlType>
+        <urn:ReasonForControl>2</urn:ReasonForControl>
+        <!--Optional:-->
+        <urn:ComplementaryOriginReference language="to">token</urn:ComplementaryOriginReference>
+        <urn:ControlOfficerIdentity language="to">token</urn:ControlOfficerIdentity>
+        <urn:GlobalControlConclusion>3</urn:GlobalControlConclusion>
+        <urn:ControlAtArrivalRequired>0</urn:ControlAtArrivalRequired>
+        <urn:Flag>0</urn:Flag>
+        <!--Optional:-->
+        <urn:Comments language="to">token</urn:Comments>
+        <!--1 to 99 repetitions:-->
+        <urn:PerformedControlAction>
+          <urn:PerformedControlAction>10</urn:PerformedControlAction>
+          <!--Optional:-->
+          <urn:OtherControlAction language="to">token</urn:OtherControlAction>
+        </urn:PerformedControlAction>
+        <!--0 to 9 repetitions:-->
+        <urn:SupportingEvidence>
+          <!--Optional:-->
+          <urn:IssuingAuthority language="to">token</urn:IssuingAuthority>
+          <urn:EvidenceTypeCode>to</urn:EvidenceTypeCode>
+          <!--Optional:-->
+          <urn:EvidenceTypeComplement language="to">token</urn:EvidenceTypeComplement>
+          <!--Optional:-->
+          <urn:ReferenceOfEvidence language="to">token</urn:ReferenceOfEvidence>
+          <!--Optional:-->
+          <urn:ImageOfEvidence>YmVsbGE=</urn:ImageOfEvidence>
+        </urn:SupportingEvidence>
+        <!--0 to 9 repetitions:-->
+        <urn:UnsatisfactoryReason>
+          <urn:UnsatisfactoryReasonCode>to</urn:UnsatisfactoryReasonCode>
+          <!--Optional:-->
+          <urn:ComplementaryInformation language="to">token</urn:ComplementaryInformation>
+        </urn:UnsatisfactoryReason>
+        <!--0 to 99 repetitions:-->
+        <urn:TransportDetails>
+          <urn:TransportUnitCode>to</urn:TransportUnitCode>
+          <!--Optional:-->
+          <urn:IdentityOfTransportUnits>token</urn:IdentityOfTransportUnits>
+          <!--Optional:-->
+          <urn:CommercialSealIdentification>token</urn:CommercialSealIdentification>
+          <!--Optional:-->
+          <urn:SealInformation language="to">token</urn:SealInformation>
+          <!--Optional:-->
+          <urn:ComplementaryInformation language="to">token</urn:ComplementaryInformation>
+        </urn:TransportDetails>
+        <!--0 to 99 repetitions:-->
+        <urn:BodyControlReport>
+          <!--Optional:-->
+          <urn:BodyRecordUniqueReference>tok</urn:BodyRecordUniqueReference>
+          <!--Optional:-->
+          <urn:DescriptionOfTheGoods>token</urn:DescriptionOfTheGoods>
+          <!--Optional:-->
+          <urn:CnCode>tokentok</urn:CnCode>
+          <!--Optional:-->
+          <urn:AdditionalCode>token</urn:AdditionalCode>
+          <!--Optional:-->
+          <urn:IndicatorOfShortageOrExcess>S</urn:IndicatorOfShortageOrExcess>
+          <!--Optional:-->
+          <urn:ObservedShortageOrExcess>1000.00000000000</urn:ObservedShortageOrExcess>
+          <!--Optional:-->
+          <urn:Comments language="to">token</urn:Comments>
+          <!--0 to 9 repetitions:-->
+          <urn:UnsatisfactoryReason>
+            <urn:UnsatisfactoryReasonCode>to</urn:UnsatisfactoryReasonCode>
+            <!--Optional:-->
+            <urn:ComplementaryInformation language="to">token</urn:ComplementaryInformation>
+          </urn:UnsatisfactoryReason>
+        </urn:BodyControlReport>
+      </urn:ControlReport>
+    </urn:ControlReportEnvelope>
+  </urn:Body>
+</urn:IE717>

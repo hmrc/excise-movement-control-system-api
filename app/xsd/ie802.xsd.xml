@@ -1,0 +1,26 @@
+<urn:IE802 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE802:V3.01" xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01">
+  <urn:Header>
+    <urn1:MessageSender>token</urn1:MessageSender>
+    <urn1:MessageRecipient>token</urn1:MessageRecipient>
+    <urn1:DateOfPreparation>2008-09-29</urn1:DateOfPreparation>
+    <urn1:TimeOfPreparation>00:18:33</urn1:TimeOfPreparation>
+    <urn1:MessageIdentifier>token</urn1:MessageIdentifier>
+    <!--Optional:-->
+    <urn1:CorrelationIdentifier>token</urn1:CorrelationIdentifier>
+  </urn:Header>
+  <urn:Body>
+    <urn:ReminderMessageForExciseMovement>
+      <urn:Attributes>
+        <urn:DateAndTimeOfIssuanceOfReminder>2006-08-19T18:27:14+01:00</urn:DateAndTimeOfIssuanceOfReminder>
+        <!--Optional:-->
+        <urn:ReminderInformation language="to">token</urn:ReminderInformation>
+        <urn:LimitDateAndTime>2009-05-16T13:42:28</urn:LimitDateAndTime>
+        <urn:ReminderMessageType>2</urn:ReminderMessageType>
+      </urn:Attributes>
+      <urn:ExciseMovement>
+        <urn:AdministrativeReferenceCode>tokentokentokentokent</urn:AdministrativeReferenceCode>
+        <urn:SequenceNumber>to</urn:SequenceNumber>
+      </urn:ExciseMovement>
+    </urn:ReminderMessageForExciseMovement>
+  </urn:Body>
+</urn:IE802>

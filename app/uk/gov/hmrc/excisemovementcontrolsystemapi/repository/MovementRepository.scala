@@ -123,6 +123,11 @@ object MovementMessageRepository {
         Indexes.ascending("administrativeReferenceCode"),
         IndexOptions().name("arc_index")
           .background(true)
+      ),
+      IndexModel(
+        Indexes.ascending("consignorId"),
+        IndexOptions()
+          .name("consignorId_ttl_idx")
       )
     )
 }
