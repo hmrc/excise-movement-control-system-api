@@ -41,7 +41,7 @@ class ExciseNumberQueueWorkItemRepository @Inject()
   extraIndexes   = Seq(
     IndexModel(
       Indexes.ascending("updatedAt"),
-      IndexOptions().expireAfter(appConfig.getMovementTTL.toSeconds, TimeUnit.SECONDS)
+      IndexOptions().expireAfter(appConfig.getMovementTTLInDays.toSeconds, TimeUnit.SECONDS)
     )
   )
 ) {
@@ -49,9 +49,7 @@ class ExciseNumberQueueWorkItemRepository @Inject()
   override def now(): Instant = timeService.instant
 
   override val inProgressRetryAfter: Duration = {
-    //todo: get this from config settings
-    Duration.ofMinutes(1)
-    //    configuration.getDuration("queue.retryAfter")
+    appConfig.retryAfterMinutes
   }
 
 }

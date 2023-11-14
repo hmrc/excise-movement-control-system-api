@@ -16,32 +16,38 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.config
 
-import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
-import java.util.concurrent.TimeUnit.{MINUTES, SECONDS}
-import scala.concurrent.duration.{Duration, FiniteDuration}
+import java.time.{Duration => JavaDuration}
+import java.util.concurrent.TimeUnit.MINUTES
+import javax.inject.{Inject, Singleton}
+import scala.concurrent.duration.{DAYS, Duration, FiniteDuration}
 
 @Singleton
 class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig) {
 
   val appName: String = config.get[String]("appName")
 
-  def getMovementTTL: Duration = Duration(config.get[String]("mongodb.movement.TTL"))
-
   lazy val eisHost: String = servicesConfig.baseUrl("eis")
   lazy val systemApplication: String = config.get[String]("system.application")
-  lazy val interval = config.getOptional[String]("pollingNewMessageJob.interval").map(Duration.create(_).asInstanceOf[FiniteDuration])
+
+  lazy val intervalInMinutes: FiniteDuration = config.getOptional[Long]("pollingNewMessageJob.intervalInMinutes")
+    .map(Duration.create(_, MINUTES))
     .getOrElse(FiniteDuration(5, MINUTES))
 
-  lazy  val initialDelay = config.getOptional[String]("pollingNewMessageJob.initialDelay").map(Duration.create(_).asInstanceOf[FiniteDuration])
-    .getOrElse(FiniteDuration(60, SECONDS))
+  lazy val initialDelayInMinutes: FiniteDuration = config.getOptional[Long]("pollingNewMessageJob.initialDelayInMinutes")
+    .map(Duration.create(_, MINUTES))
+    .getOrElse(Duration.create(5, MINUTES))
+
+  lazy val retryAfterMinutes: JavaDuration = config.getOptional[Long]("queue.retryAfterMinutes")
+    .fold(JavaDuration.ofMinutes(5L))(JavaDuration.ofMinutes(_))
 
 
-  def emcsReceiverMessageUrl: String =
-    s"$eisHost/emcs/digital-submit-new-message/v1"
+  def getMovementTTLInDays: Duration = config.getOptional[Long]("mongodb.movement.TTLInDays")
+    .fold(Duration.create(30, DAYS))(Duration.create(_, DAYS))
 
+  def emcsReceiverMessageUrl: String = s"$eisHost/emcs/digital-submit-new-message/v1"
   def showNewMessageUrl: String = s"$eisHost/apip-emcs/messages/v1/show-new-messages"
   def messageReceiptUrl(ern: String): String =
     s"$eisHost/apip-emcs/messages/v1/message-receipt?exciseregistrationnumber=$ern"

@@ -45,8 +45,7 @@ import java.nio.charset.StandardCharsets
 import java.time.{Instant, LocalDateTime}
 import java.util.Base64
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.{Duration, MINUTES}
-import scala.xml.NodeSeq
+import scala.concurrent.duration.{DAYS, Duration}
 
 class PollingMessagesWithWorkItemItSpec extends PlaySpec
   with DefaultPlayMongoRepositorySupport[WorkItem[ExciseNumberWorkItem]]
@@ -101,7 +100,7 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
 
     setUpWireMockStubs()
     when(timeService.instant).thenReturn(Instant.parse("2018-11-30T18:35:24.00Z"))
-    when(appConfig.getMovementTTL).thenReturn(Duration.create(30, MINUTES))
+    when(appConfig.getMovementTTLInDays).thenReturn(Duration.create(30, DAYS))
     when(timeService.instant).thenReturn(availableBefore)
   }
 
