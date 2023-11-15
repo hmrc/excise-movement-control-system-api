@@ -1,8 +1,5 @@
 <urn:IE815 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.01"
-           xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
-           xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
-           xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
-           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+           xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01">
     <urn:Header>
         <urn1:MessageSender>NDEA.GB</urn1:MessageSender>
         <urn1:MessageRecipient>NDEA.GB</urn1:MessageRecipient>
@@ -26,7 +23,7 @@
             </urn:ConsigneeTrader>
             <urn:ConsignorTrader language="en">
                 <urn:TraderExciseNumber>GBWK002281023</urn:TraderExciseNumber>
-                <urn:TraderName>DIAGEO PLC</urn:TraderName>
+                <urn:TraderName>QWSdscdiw4f</urn:TraderName>
                 <urn:StreetName>msfvZUL1Oe</urn:StreetName>
                 <urn:StreetNumber>25</urn:StreetNumber>
                 <urn:Postcode>A1 1AA</urn:Postcode>
