@@ -37,7 +37,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 import uk.gov.hmrc.mongo.workitem.{WorkItem, WorkItemRepository}
 
-import java.time.LocalDateTime
+import java.time.{Instant, LocalDateTime}
 import scala.concurrent.Future.successful
 import scala.concurrent.duration.{Duration, SECONDS}
 import scala.concurrent.{ExecutionContext, Future}
@@ -84,6 +84,8 @@ class PollingNewMessagesWithWorkItemJobSpec
 
     when(lockRepository.takeLock(any,any,any)).thenReturn(Future.successful(true))
     when(lockRepository.releaseLock(any,any)).thenReturn(successful(()))
+
+    when(dateTimeService.instant).thenReturn(Instant.now())
   }
 
   "Job" should {
