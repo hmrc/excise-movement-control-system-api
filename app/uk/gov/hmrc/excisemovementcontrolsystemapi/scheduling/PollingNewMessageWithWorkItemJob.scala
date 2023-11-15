@@ -68,25 +68,16 @@ class PollingNewMessageWithWorkItemJob @Inject()
         case Some(wi) => getNewMessages(wi.item.exciseNumber).flatMap { success => // call your function to process a WorkItem
           success match {
             case (true, Succeeded) =>
+              //No messages found so nothing else to do right now
               workItemRepository.complete(wi.id, ProcessingStatus.Succeeded)
             case (true, ToDo) =>
               workItemRepository.markAs(wi.id, ProcessingStatus.ToDo)
-            case (false, _ )
+            case (false, _)
 
               if wi.failureCount < 3 => workItemRepository.markAs(wi.id, ProcessingStatus.Failed)
             case _ => workItemRepository.markAs(wi.id, ProcessingStatus.PermanentlyFailed)
-
-
-            //              if(success._1) {
-            //                workItemRepository.complete(wi.id, ProcessingStatus.Succeeded)
-            //                // mark as completed
-            //                //workItemRepository.completeAndDelete(wi.id) // alternatively, remove from mongo
-            //              } else if(!success && wi.failureCount < 3) {
-            //                workItemRepository.markAs(wi.id, ProcessingStatus.Failed)
-            //              } // mark as failed - it will be reprocessed after a duration specified by `inProgressRetryAfterProperty`
-            //              else workItemRepository.markAs(wi.id, ProcessingStatus.PermanentlyFailed)
-          } // you can also mark as any other status defined by `ProcessingStatus`
-        }.flatMap(_ => process) // and repeat
+          }
+        }.flatMap(_ => process)
       }
   }
 
