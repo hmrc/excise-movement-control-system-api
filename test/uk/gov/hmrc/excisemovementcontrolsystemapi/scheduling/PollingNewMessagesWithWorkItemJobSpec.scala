@@ -35,7 +35,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementService, NewMessageParserService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
-import uk.gov.hmrc.mongo.workitem.WorkItemRepository
+import uk.gov.hmrc.mongo.workitem.{WorkItem, WorkItemRepository}
 
 import java.time.LocalDateTime
 import scala.concurrent.Future.successful
@@ -101,6 +101,7 @@ class PollingNewMessagesWithWorkItemJobSpec
     }
 
     "acquire a mongo lock" in {
+      when(workItemRepository.pullOutstanding(any, any)).thenReturn(Future.successful(None))
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
         .thenReturn(Future.successful(Some(newMessageResponse)))
       await(job.executeInMutex)
@@ -114,6 +115,7 @@ class PollingNewMessagesWithWorkItemJobSpec
     }
 
     "parse the messages" in {
+      when(workItemRepository.pullOutstanding(any, any)).thenReturn(Future.successful(None))
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
         .thenReturn(Future.successful(Some(newMessageResponse)))
       when(shoeNewMessageParser.extractMessages(any)).thenReturn(Seq(mock[IEMessage]))
@@ -127,6 +129,7 @@ class PollingNewMessagesWithWorkItemJobSpec
       val message1 = mock[IEMessage]
       val message2 = mock[IEMessage]
 
+      when(workItemRepository.pullOutstanding(any, any)).thenReturn(Future.successful(None))
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
         .thenReturn(Future.successful(Some(newMessageResponse)))
       when(shoeNewMessageParser.extractMessages(any))
@@ -170,6 +173,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 //    }
 
     "not process any message if no pending message exist" in {
+      when(workItemRepository.pullOutstanding(any, any)).thenReturn(Future.successful(None))
 
       val result = await(job.executeInMutex)
 
@@ -179,6 +183,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
 
     "not change status in the database if show new message API has errors" in {
+      when(workItemRepository.pullOutstanding(any, any)).thenReturn(Future.successful(None))
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
         .thenReturn(Future.successful(None))
 
@@ -190,6 +195,7 @@ class PollingNewMessagesWithWorkItemJobSpec
     }
 
     "carry on polling if GetNewMessage Api fails" in {
+      when(workItemRepository.pullOutstanding(any, any)).thenReturn(Future.successful(None))
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any)).thenReturn(Future.successful(None))
 
       val result = await(job.executeInMutex)
@@ -199,7 +205,7 @@ class PollingNewMessagesWithWorkItemJobSpec
     }
 
     "return an error if there is an exception" in {
-
+      when(workItemRepository.pullOutstanding(any, any)).thenReturn(Future.successful(None))
       val result = await(job.executeInMutex)
 
       result.message mustBe "The execution of scheduled job polling-new-message failed with error 'error'. The next execution of the job will do retry."
