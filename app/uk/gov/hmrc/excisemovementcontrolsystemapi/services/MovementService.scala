@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.Singleton
+import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GeneralMongoError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
@@ -28,12 +29,18 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class MovementService @Inject()(
                                  movementRepository: MovementRepository
-                                      )(implicit ec: ExecutionContext) {
+                                      )(implicit ec: ExecutionContext) extends Logging {
   def saveMovementMessage(movementMessage: Movement): Future[Either[GeneralMongoError, Movement]] = {
+
+    //movementRepository.getMovementByLRNAndERNIn()
+
     movementRepository.saveMovement(movementMessage)
       .map(_ => Right(movementMessage))
       .recover {
-        case ex: Throwable => Left(GeneralMongoError(ex.getMessage))
+        case ex: Throwable =>
+          logger.error(s"[MovementService] - Error occurred while saving movement message: ${ex.getMessage}")
+          //TODO use actual error format
+          Left(GeneralMongoError("Error occurred while saving movement message"))
       }
   }
 
