@@ -61,7 +61,7 @@ class ValidateLRNActionSpec
   "ValidateLRNActionSpec" should {
     "return a request when valid LRN/ERN combo in database" in {
 
-      when(movementService.getMovementMessagesByLRNAndERNIn(any, any))
+      when(movementService.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Some(Movement("lrn", "consignorId", None))))
 
       val erns = Set("GBWK002281023", "GBWK002181023", "GBWK002281022")
@@ -80,7 +80,7 @@ class ValidateLRNActionSpec
 
     "an error" when {
       "LRN/ERN combo is not in the db" in {
-        when(movementService.getMovementMessagesByLRNAndERNIn(any, any))
+        when(movementService.getMovementByLRNAndERNIn(any, any))
           .thenReturn(Future.successful(None))
 
         when(ieMessage.consigneeId).thenReturn(Some("12356"))
@@ -97,7 +97,7 @@ class ValidateLRNActionSpec
       }
 
       "DB error occurs" in {
-        when(movementService.getMovementMessagesByLRNAndERNIn(any, any))
+        when(movementService.getMovementByLRNAndERNIn(any, any))
           .thenReturn(Future.failed(new RuntimeException("error")))
         when(ieMessage.consigneeId).thenReturn(Some("12356"))
 

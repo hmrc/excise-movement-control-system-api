@@ -22,15 +22,17 @@ import org.mockito.MockitoSugar.when
 import org.scalatest.EitherValues
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
+import play.api.libs.json.Json
+import play.api.mvc.Results.{BadRequest, InternalServerError}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GeneralMongoError
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 import uk.gov.hmrc.http.HeaderCarrier
 
-import java.time.Instant
+import java.time.{Instant, LocalDateTime}
 import scala.concurrent.ExecutionContext
 
 class MovementServiceSpec extends PlaySpec with EitherValues {
@@ -39,8 +41,11 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
 
   private val mockMovementRepository = mock[MovementRepository]
+  private val emcsUtils = mock[EmcsUtils]
+  private val testDateTime: LocalDateTime = LocalDateTime.of(2023, 11, 15, 17, 2, 34)
+  when(emcsUtils.getCurrentDateTime).thenReturn(testDateTime)
 
-  private val movementService = new MovementService(mockMovementRepository)
+  private val movementService = new MovementService(mockMovementRepository, emcsUtils)
 
   private val lrn = "123"
   private val consignorId = "ABC"
@@ -51,6 +56,9 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
   "saveMovementMessage" should {
     "return a MovementMessage" in {
       val successMovementMessage = exampleMovement
+      when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(Seq.empty))
+
       when(mockMovementRepository.saveMovement(any))
         .thenReturn(Future.successful(true))
 
@@ -60,22 +68,30 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
     }
 
     "throw an error when database throws a runtime exception" in {
+      when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(Seq.empty))
+
       when(mockMovementRepository.saveMovement(any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
       val result = await(movementService.saveMovementMessage(exampleMovement))
 
-      result.left.value mustBe GeneralMongoError("Error occurred while saving movement message")
+      val expectedError = ErrorResponse(testDateTime, "Database error", "Error occurred while saving movement message")
+
+      result.left.value mustBe InternalServerError(Json.toJson(expectedError))
     }
 
-//    "throw an error when LRN is already in database with an ARC" in {
-//      when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
-//        .thenReturn(Future.successful(Seq(exampleMovement)))
-//
-//      val result = await(movementService.saveMovementMessage(exampleMovement))
-//
-//      result.left.value mustBe GeneralMongoError("error")
-//    }
+    "throw an error when LRN is already in database with an ARC" in {
+      when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(Seq(exampleMovement)))
+
+      val result = await(movementService.saveMovementMessage(exampleMovement))
+
+val expectedError = ErrorResponse(testDateTime, "Duplicate LRN error", "The local reference number 123 has already been used for another movement")
+
+
+          result.left.value mustBe BadRequest(Json.toJson(expectedError))
+    }
 
   }
 
@@ -87,7 +103,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
       when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(movement)))
 
-      val result = await(movementService.getMovementMessagesByLRNAndERNIn(lrn, List(consignorId)))
+      val result = await(movementService.getMovementByLRNAndERNIn(lrn, List(consignorId)))
 
       result mustBe Some(movement)
     }
@@ -100,7 +116,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
         )))
 
       intercept[RuntimeException] {
-        await(movementService.getMovementMessagesByLRNAndERNIn(lrn, List(consignorId)))
+        await(movementService.getMovementByLRNAndERNIn(lrn, List(consignorId)))
       }.getMessage mustBe s"[MovementService] - Multiple movement found for local reference number: $lrn"
 
 
@@ -112,7 +128,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
       when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq.empty))
 
-      val result = await(movementService.getMovementMessagesByLRNAndERNIn(lrn, List(consignorId)))
+      val result = await(movementService.getMovementByLRNAndERNIn(lrn, List(consignorId)))
 
       result mustBe None
     }

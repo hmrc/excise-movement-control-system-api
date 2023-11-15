@@ -25,13 +25,12 @@ import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
-import play.api.mvc.Results.NotFound
+import play.api.mvc.Results.{InternalServerError, NotFound}
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnsAction, FakeXmlParsers}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GeneralMongoError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
@@ -135,7 +134,7 @@ class DraftExciseMovementControllerSpec
 
     "return 500 when message saving movement fails" in {
       when(movementMessageService.saveMovementMessage(any))
-        .thenReturn(Future.successful(Left(GeneralMongoError("error"))))
+        .thenReturn(Future.successful(Left(InternalServerError("error"))))
 
       val result = createWithSuccessfulAuth.submit(request)
 
