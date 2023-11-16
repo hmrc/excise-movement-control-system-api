@@ -64,7 +64,7 @@ class DraftExciseMovementController @Inject()(
       case _ => throw new Exception("invalid message sent to draft excise movement controller")
     }
 
-    movementMessageService.saveMovementMessage(newMovement)
+    movementMessageService.saveNewMovementMessage(newMovement)
       .flatMap {
         case Right(msg) => Future.successful(Accepted(Json.toJson(ExciseMovementResponse("Accepted", msg.localReferenceNumber, msg.consignorId, msg.consigneeId))))
         case Left(error) => Future.successful(error)

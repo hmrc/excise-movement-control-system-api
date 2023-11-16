@@ -33,25 +33,27 @@ import scala.concurrent.{ExecutionContext, Future}
 class MovementService @Inject()(
                                  movementRepository: MovementRepository,
                                  emcsUtils: EmcsUtils
-                                      )(implicit ec: ExecutionContext) extends Logging {
-  def saveMovementMessage(movement: Movement): Future[Either[Result, Movement]] = {
+                               )(implicit ec: ExecutionContext) extends Logging {
+  def saveNewMovementMessage(movement: Movement): Future[Either[Result, Movement]] = {
 
-    getMovementByLRNAndERNIn(movement.localReferenceNumber,List(movement.consignorId)).
-      flatMap{
-        case Some(_) => Future.successful(Left(BadRequest(Json.toJson(
-          ErrorResponse(
-            emcsUtils.getCurrentDateTime,
-            "Duplicate LRN error",
-            s"The local reference number ${movement.localReferenceNumber} has already been used for another movement"
-          )
-        ))))
+    getMovementByLRNAndERNIn(movement.localReferenceNumber, List(movement.consignorId)).
+      flatMap {
+        case Some(movementFromDb: Movement) if movementFromDb.administrativeReferenceCode.isDefined || movementFromDb.consigneeId != movement.consigneeId =>
+          //If we already have an arc this movement is already in process. Don't rewrite it
+          // If we don't have an arc but the consignee is different, don't rewrite it
+          Future.successful(Left(BadRequest(Json.toJson(
+            ErrorResponse(
+              emcsUtils.getCurrentDateTime,
+              "Duplicate LRN error",
+              s"The local reference number ${movement.localReferenceNumber} has already been used for another movement"
+            )
+          ))))
         case _ =>
           movementRepository.saveMovement(movement)
             .map(_ => Right(movement))
             .recover {
               case ex: Throwable =>
                 logger.error(s"[MovementService] - Error occurred while saving movement message: ${ex.getMessage}")
-                //TODO use actual error format
                 Left(InternalServerError(Json.toJson(
                   ErrorResponse(
                     emcsUtils.getCurrentDateTime,
@@ -67,7 +69,7 @@ class MovementService @Inject()(
 
   def getMovementByLRNAndERNIn(lrn: String, erns: List[String]): Future[Option[Movement]] = {
     movementRepository.getMovementByLRNAndERNIn(lrn, erns).map {
-      case Seq()  => None
+      case Seq() => None
       case head :: Nil => Some(head)
       case _ => throw new RuntimeException(s"[MovementService] - Multiple movement found for local reference number: $lrn")
     }
@@ -75,19 +77,19 @@ class MovementService @Inject()(
 
   def getMatchingERN(lrn: String, erns: List[String]): Future[Option[String]] = {
     movementRepository.getMovementByLRNAndERNIn(lrn, erns).map {
-      case Seq()  => None
+      case Seq() => None
       case head :: Nil => matchingERN(head, erns)
       case _ => throw new RuntimeException(s"[MovementService] - Multiple movements found for local reference number: $lrn")
     }
   }
 
   def getMovementByErn(
-    ern: Seq[String],
-    filter: MovementFilter = MovementFilter.empty
-  ): Future[Seq[Movement]] = {
+                        ern: Seq[String],
+                        filter: MovementFilter = MovementFilter.empty
+                      ): Future[Seq[Movement]] = {
 
     movementRepository.getMovementByERN(ern).map {
-      movements =>filter.filterMovement(movements)
+      movements => filter.filterMovement(movements)
     }
   }
 

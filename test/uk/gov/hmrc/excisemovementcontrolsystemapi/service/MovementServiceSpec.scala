@@ -53,18 +53,18 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
 
   private val exampleMovement: Movement = Movement(lrn, consignorId, Some(consigneeId))
 
-  "saveMovementMessage" should {
-    "return a MovementMessage" in {
-      val successMovementMessage = exampleMovement
+  "saveMovement" should {
+    "return a Movement" in {
+      val successMovement = exampleMovement
       when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq.empty))
 
       when(mockMovementRepository.saveMovement(any))
         .thenReturn(Future.successful(true))
 
-      val result = await(movementService.saveMovementMessage(successMovementMessage))
+      val result = await(movementService.saveNewMovementMessage(successMovement))
 
-      result mustBe Right(successMovementMessage)
+      result mustBe Right(successMovement)
     }
 
     "throw an error when database throws a runtime exception" in {
@@ -74,7 +74,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
       when(mockMovementRepository.saveMovement(any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
-      val result = await(movementService.saveMovementMessage(exampleMovement))
+      val result = await(movementService.saveNewMovementMessage(exampleMovement))
 
       val expectedError = ErrorResponse(testDateTime, "Database error", "Error occurred while saving movement message")
 
@@ -82,15 +82,41 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
     }
 
     "throw an error when LRN is already in database with an ARC" in {
+      val exampleMovementWithArc = exampleMovement.copy(administrativeReferenceCode =  Some("arc"))
+
+      when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(Seq(exampleMovementWithArc)))
+
+      val result = await(movementService.saveNewMovementMessage(exampleMovement))
+
+      val expectedError = ErrorResponse(testDateTime, "Duplicate LRN error", "The local reference number 123 has already been used for another movement")
+
+      result.left.value mustBe BadRequest(Json.toJson(expectedError))
+    }
+
+    "throw an error when LRN is already in database with no ARC for different consignee" in {
+      val exampleMovementWithDifferentConsignee = exampleMovement.copy(consigneeId = Some("1234"))
+
+      when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(Seq(exampleMovementWithDifferentConsignee)))
+
+      val result = await(movementService.saveNewMovementMessage(exampleMovement))
+
+      val expectedError = ErrorResponse(testDateTime, "Duplicate LRN error", "The local reference number 123 has already been used for another movement")
+
+      result.left.value mustBe BadRequest(Json.toJson(expectedError))
+    }
+
+    "return a Movement when LRN is already in database with no ARC for same consignee" in {
       when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(exampleMovement)))
 
-      val result = await(movementService.saveMovementMessage(exampleMovement))
+      when(mockMovementRepository.saveMovement(any))
+        .thenReturn(Future.successful(true))
 
-val expectedError = ErrorResponse(testDateTime, "Duplicate LRN error", "The local reference number 123 has already been used for another movement")
+      val result = await(movementService.saveNewMovementMessage(exampleMovement))
 
-
-          result.left.value mustBe BadRequest(Json.toJson(expectedError))
+      result mustBe Right(exampleMovement)
     }
 
   }
