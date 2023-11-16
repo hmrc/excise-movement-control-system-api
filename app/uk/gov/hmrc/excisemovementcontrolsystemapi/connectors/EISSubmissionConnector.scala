@@ -60,7 +60,11 @@ class EISSubmissionConnector @Inject()
       eisRequest,
       build(correlationId, createdDateTime)
     )(EISRequest.format, EISHttpReader(correlationId, ern, createdDateTime), hc, ec)
-      .andThen { case _ => timer.stop() }
+      .andThen { case _ =>
+
+
+
+        timer.stop() }
       .recover {
         case ex: Throwable =>
 
