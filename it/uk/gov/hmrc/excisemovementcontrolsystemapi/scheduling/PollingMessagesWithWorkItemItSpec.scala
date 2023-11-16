@@ -126,9 +126,9 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
       insert(createWorkItem("3")).futureValue
       insert(createWorkItem("4")).futureValue
 
-      movementRepository.updateMovement(Movement("token", "1", None, None, Instant.now, Seq.empty)).futureValue
-      movementRepository.updateMovement(Movement("token", "3", None, None, Instant.now, Seq.empty)).futureValue
-      movementRepository.updateMovement(Movement("token", "4", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.saveMovement(Movement("token", "1", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.saveMovement(Movement("token", "3", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.saveMovement(Movement("token", "4", None, None, Instant.now, Seq.empty)).futureValue
 
       // start application
       app
@@ -161,9 +161,9 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
         timeService
       )
 
-      movementRepository.updateMovement(Movement("token", "1", None, None, Instant.now, Seq.empty)).futureValue
-      movementRepository.updateMovement(Movement("token", "3", None, None, Instant.now, Seq.empty)).futureValue
-      movementRepository.updateMovement(Movement("token", "4", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.saveMovement(Movement("token", "1", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.saveMovement(Movement("token", "3", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.saveMovement(Movement("token", "4", None, None, Instant.now, Seq.empty)).futureValue
 
       // start application
       app
@@ -210,9 +210,9 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
       insert(createWorkItem("3")).futureValue
       insert(createWorkItem("4")).futureValue
 
-      movementRepository.updateMovement(Movement("token", "1", None, None, Instant.now, Seq.empty)).futureValue
-      movementRepository.updateMovement(Movement("token", "3", None, None, Instant.now, Seq.empty)).futureValue
-      movementRepository.updateMovement(Movement("token", "4", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.saveMovement(Movement("token", "1", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.saveMovement(Movement("token", "3", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.saveMovement(Movement("token", "4", None, None, Instant.now, Seq.empty)).futureValue
 
       // start application
       app

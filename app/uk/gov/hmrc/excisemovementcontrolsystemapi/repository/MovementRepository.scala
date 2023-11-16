@@ -18,7 +18,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Filters.{and, equal, in, or}
-import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes, ReplaceOptions}
+import org.mongodb.scala.model.Updates.{combine, set}
+import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
 import play.api.Logging
 import play.api.libs.json.Json
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
@@ -26,7 +27,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepo
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 
 import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Singleton}
@@ -64,16 +65,21 @@ class MovementRepository @Inject()
       .map(_ => true)
   }
 
-  def updateMovement(movementMessage: Movement): Future[Boolean] = {
-    val updatedMovement = movementMessage copy(createdOn = timeService.instant)
+  def updateMovement(movement: Movement): Future[Boolean] = {
 
-    collection.replaceOne(
-      filter = filterBy(movementMessage.localReferenceNumber, movementMessage.consignorId, movementMessage.consigneeId),
-      replacement = updatedMovement,
-      options = ReplaceOptions().upsert(true)
+    val update = combine(
+      set("consigneeId",  Codecs.toBson(movement.consigneeId)),
+      set("administrativeReferenceCode", Codecs.toBson(movement.administrativeReferenceCode)),
+      set("createdOn", Codecs.toBson(timeService.instant)),
+      set("messages", Codecs.toBson(movement.messages))
+    )
+    collection.updateOne(
+      filter = filterBy(movement.localReferenceNumber, movement.consignorId, movement.consigneeId),
+      update
     ).toFuture()
       .map(_ => true)
   }
+
   def getMovementByLRNAndERNIn(lrn: String, erns: List[String]): Future[Seq[Movement]] = {
     //TODO case where returns more than one (e.g. consignee has the same LRN for two different consignors)
     // IN this case would this be the same movement? So we are ok to get the head?
