@@ -36,7 +36,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionRespo
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, MovementRepository}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, DefaultPlayMongoRepositorySupport}
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
@@ -66,7 +66,7 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
     createMessage(SchedulingTestData.ie802, MessageTypes.IE802.value)
   )
 
-  private lazy val timeService = mock[DateTimeService]
+  private lazy val timeService = mock[TimestampSupport]
   private val availableBefore = Instant.now
 
   // This is used by repository and movementRepository to set the databases before
@@ -87,7 +87,7 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
       .configure(configureServer ++ Map("mongodb.uri" -> mongoUri))
       .loadConfig(env => Configuration.load(env, Map("config.resource" -> "application.test.conf")))
       .overrides(
-        bind[DateTimeService].to(timeService)
+        bind[TimestampSupport].to(timeService)
       )
 
   }
@@ -98,9 +98,8 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
     wireMock.resetAll()
 
     setUpWireMockStubs()
-    when(timeService.instant).thenReturn(Instant.parse("2018-11-30T18:35:24.00Z"))
     when(appConfig.getMovementTTL).thenReturn(Duration.create(30, DAYS))
-    when(timeService.instant).thenReturn(availableBefore)
+    when(timeService.timestamp()).thenReturn(availableBefore)
 
     prepareDatabase()
 

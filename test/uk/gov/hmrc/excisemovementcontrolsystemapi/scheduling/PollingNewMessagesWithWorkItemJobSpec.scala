@@ -33,7 +33,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ExciseNumberQueueWorkItemRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementService, NewMessageParserService}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
@@ -55,7 +55,7 @@ class PollingNewMessagesWithWorkItemJobSpec
   private val shoeNewMessageParser = mock[NewMessageParserService]
   private val lockRepository = mock[MongoLockRepository]
   private val workItemRepository = mock[ExciseNumberQueueWorkItemRepository]
-  private val dateTimeService = mock[DateTimeService]
+  private val dateTimeService = mock[TimestampSupport]
   private val message = mock[IEMessage]
   private val newMessageResponse = EISConsumptionResponse(
     LocalDateTime.of(2023, 5, 6, 9,10,13),
@@ -79,7 +79,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
     when(lockRepository.takeLock(any,any,any)).thenReturn(Future.successful(true))
     when(lockRepository.releaseLock(any,any)).thenReturn(successful(()))
-    when(dateTimeService.instant).thenReturn(Instant.now())
+    when(dateTimeService.timestamp()).thenReturn(Instant.now())
     when(appConfig.retryAttempt).thenReturn(3)
   }
 

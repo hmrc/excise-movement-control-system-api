@@ -25,8 +25,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ExciseNumberQueueWorkItemRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.PollingNewMessageWithWorkItemJob.{MessageError, MessageReceived, NewMessageResult, NoMessageFound}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementService, NewMessageParserService}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus
 
@@ -45,7 +45,7 @@ class PollingNewMessageWithWorkItemJob @Inject()
   movementService: MovementService,
   messageParser: NewMessageParserService,
   appConfig: AppConfig,
-  dateTimeService: DateTimeService
+  dateTimeService: TimestampSupport
 )(implicit ec: ExecutionContext) extends ScheduledMongoJob
   with Logging {
 
@@ -57,7 +57,7 @@ class PollingNewMessageWithWorkItemJob @Inject()
   lazy override val lockKeeper: LockService = LockService(mongoLockRepository, lockId = "PollingNewMessageWithWorkItem", ttl = 1.hour)
 
   override def runJob(implicit ec: ExecutionContext): Future[RunningOfJobSuccessful] = {
-    val now = dateTimeService.instant
+    val now = dateTimeService.timestamp
     process(now.minus(1, ChronoUnit.DAYS), now, appConfig.retryAttempt)
   }
 

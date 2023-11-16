@@ -33,10 +33,6 @@ trait ScheduledMongoJob extends ExclusiveScheduledJob with ScheduledJobState wit
     } map {
       case Some(_) => Result(s"$name Job ran successfully.")
       case _       => Result(s"$name did not run because repository was locked by another instance of the scheduler.")
-    } recover {
-      case failure: RunningOfJobFailed =>
-        logger.error("The execution of the job failed.", failure.wrappedCause)
-        failure.asResult
     }
   }
 

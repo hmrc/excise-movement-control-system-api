@@ -29,8 +29,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.mongo.TimestampSupport
 
 import java.nio.charset.StandardCharsets
 import java.time.Instant
@@ -43,7 +43,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
 
   private val mockMovementMessageRepository = mock[MovementRepository]
-  private val dateTimeService = mock[DateTimeService]
+  private val dateTimeService = mock[TimestampSupport]
 
   private val movementMessageService = new MovementService(mockMovementMessageRepository, new EmcsUtils, dateTimeService)
 

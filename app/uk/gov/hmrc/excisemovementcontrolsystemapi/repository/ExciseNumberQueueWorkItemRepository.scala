@@ -19,8 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
-import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.{MongoComponent, TimestampSupport}
 import uk.gov.hmrc.mongo.workitem.{WorkItemFields, WorkItemRepository}
 
 import java.time.{Duration, Instant}
@@ -32,7 +31,7 @@ class ExciseNumberQueueWorkItemRepository @Inject()
 (
   appConfig: AppConfig,
   mongoComponent: MongoComponent,
-  timeService: DateTimeService
+  timeService: TimestampSupport
 ) (implicit ec: ExecutionContext) extends WorkItemRepository[ExciseNumberWorkItem](
   collectionName = "excise-number-work-item",
   mongoComponent = mongoComponent,
@@ -46,7 +45,7 @@ class ExciseNumberQueueWorkItemRepository @Inject()
   )
 ) {
 
-  override def now(): Instant = timeService.instant
+  override def now(): Instant = timeService.timestamp
 
   override val inProgressRetryAfter: Duration = {
     appConfig.retryAfterMinutes

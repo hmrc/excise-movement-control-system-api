@@ -25,8 +25,7 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository.mongoIndexes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
-import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.{MongoComponent, TimestampSupport}
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 
 import java.util.concurrent.TimeUnit
@@ -39,7 +38,7 @@ class MovementRepository @Inject()
 (
   mongo: MongoComponent,
   appConfig: AppConfig,
-  timeService: DateTimeService
+  timeService: TimestampSupport
 )(implicit ec: ExecutionContext) extends
   PlayMongoRepository[Movement](
     collectionName = "movements",
@@ -60,7 +59,7 @@ class MovementRepository @Inject()
   }
 
   def saveMovement(movement: Movement): Future[Boolean] = {
-    collection.insertOne(movement.copy(createdOn = timeService.instant))
+    collection.insertOne(movement.copy(createdOn = timeService.timestamp))
       .toFuture()
       .map(_ => true)
   }
@@ -70,7 +69,7 @@ class MovementRepository @Inject()
     val update = combine(
       set("consigneeId",  Codecs.toBson(movement.consigneeId)),
       set("administrativeReferenceCode", Codecs.toBson(movement.administrativeReferenceCode)),
-      set("createdOn", Codecs.toBson(timeService.instant)),
+      set("createdOn", Codecs.toBson(timeService.timestamp)),
       set("messages", Codecs.toBson(movement.messages))
     )
     collection.updateOne(
