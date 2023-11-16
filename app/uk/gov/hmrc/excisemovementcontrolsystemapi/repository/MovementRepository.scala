@@ -104,6 +104,7 @@ class MovementRepository @Inject()
   }
 }
 
+
 object MovementMessageRepository {
   def mongoIndexes(ttl: Duration): Seq[IndexModel] =
     Seq(
