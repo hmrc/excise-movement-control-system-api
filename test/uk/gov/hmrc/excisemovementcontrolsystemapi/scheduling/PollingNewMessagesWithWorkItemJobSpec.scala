@@ -120,6 +120,22 @@ class PollingNewMessagesWithWorkItemJobSpec
       verify(workItemRepository).complete(eqTo(workItem.id),eqTo(ProcessingStatus.Succeeded))
     }
 
+    "catch exception Mongo throw and error" in {
+      val workItem = createWorkItem()
+      setUpWithTwoWorkItem(workItem)
+      when(workItemRepository.pullOutstanding(any, any)).thenReturn(
+        Future.failed(new RuntimeException("error"))
+      )
+
+      val result = await(job.executeInMutex)
+
+      result.message mustBe
+        """The execution of scheduled job polling-new-messages failed with error 'error'.
+          |The next execution of the job will do retry."""
+          .stripMargin
+          .replace('\n', ' ')
+    }
+
     "retry failing EIS and mark a workItem as Failed" in {
       val workItem = createWorkItem()
       setUpWithTwoWorkItem(workItem)

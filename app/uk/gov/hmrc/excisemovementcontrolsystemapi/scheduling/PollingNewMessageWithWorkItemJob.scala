@@ -74,6 +74,11 @@ class PollingNewMessageWithWorkItemJob @Inject()
           }
         }.flatMap(_ => process(failedBefore, availableBefore, retryAttempt))
       }
+      .recoverWith {
+        case NonFatal(e) =>
+          logger.error("[PollingNewMessageWithWorkItemJob] - Failed to collect and process ann the movement", e)
+          Future.failed(RunningOfJobFailed(name, e))
+      }
   }
 
 
