@@ -129,6 +129,12 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
       )(any, any, any, any)
     }
 
+    "create a work item for the ern" in {
+
+
+
+    }
+
     "use the right request parameters in http client for IE801 with consignor" in {
       val ie801Message = mock[IE801Message]
       when(ie801Message.consignorId).thenReturn(Some("123"))
