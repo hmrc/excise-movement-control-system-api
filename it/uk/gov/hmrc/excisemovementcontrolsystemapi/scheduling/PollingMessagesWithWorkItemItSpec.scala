@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
 import com.github.tomakehurst.wiremock.client.WireMock
-import com.github.tomakehurst.wiremock.client.WireMock.{ok, _}
+import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.{Scenario, StubMapping}
 import org.bson.types.ObjectId
 import org.mockito.MockitoSugar.when
@@ -28,7 +28,6 @@ import org.scalatestplus.play.PlaySpec
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
-import play.api.mvc.Results.InternalServerError
 import play.api.{Application, Configuration}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{NewMessagesXml, SchedulingTestData}
@@ -145,7 +144,7 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
 
 
 
-      val movements = movementRepository.collection.find.toFuture().futureValue
+      val movements = movementRepository.collection.find().toFuture().futureValue
 
       movements.size mustBe 3
       assertResults(movements.find(_.consignorId.equals("1")).get, Movement("token", "1", None, Some("tokentokentokentokent"), Instant.now, expectedMessage))
@@ -188,7 +187,7 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
       }
 
 
-      val movements = movementRepository.collection.find.toFuture().futureValue
+      val movements = movementRepository.collection.find().toFuture().futureValue
 
       movements.size mustBe 3
       assertResults(movements.find(_.consignorId.equals("1")).get, Movement("token", "1", None, None, Instant.now, Seq.empty))
@@ -221,7 +220,7 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
       // work. Try to find a better way.
       Thread.sleep(6000)
 
-      val movements = movementRepository.collection.find.toFuture().futureValue
+      val movements = movementRepository.collection.find().toFuture().futureValue
 
       movements.size mustBe 3
       assertResults(movements.find(_.consignorId.equals("1")).get, Movement("token", "1", None, None, Instant.now, Seq.empty))

@@ -18,7 +18,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
 import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
-import org.mockito.Mockito
 import org.mockito.Mockito.never
 import org.mockito.MockitoSugar.{reset, times, verify, verifyZeroInteractions, when}
 import org.mockito.captor.ArgCaptor
@@ -28,15 +27,15 @@ import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.NewMessagesXml
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ExciseNumberQueueWorkItemRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementService, NewMessageParserService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
-import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem, WorkItemRepository}
+import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.{Instant, LocalDateTime}
 import scala.concurrent.Future.successful
@@ -62,12 +61,6 @@ class PollingNewMessagesWithWorkItemJobSpec
     LocalDateTime.of(2023, 5, 6, 9,10,13),
     "123",
     "any message"
-  )
-
-  private val cachedMovements = Seq(
-    Movement("2","1", None),
-    Movement("3","3", None),
-    Movement("4","4", None)
   )
 
   private val job = new PollingNewMessageWithWorkItemJob(

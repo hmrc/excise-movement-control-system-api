@@ -29,7 +29,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NewMessageParserServi
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 
-class ShowNewMessageParserServiceSpec
+class NewMessageParserServiceSpec
   extends PlaySpec
     with NewMessagesXml {
 

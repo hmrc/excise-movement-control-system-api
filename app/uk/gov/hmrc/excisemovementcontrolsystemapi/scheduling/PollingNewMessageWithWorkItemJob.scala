@@ -19,9 +19,9 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 import akka.http.scaladsl.util.FastFuture.successful
 import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ExciseNumberQueueWorkItemRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.PollingNewMessageWithWorkItemJob.{MessageError, MessageReceived, NewMessageResult, NoMessageFound}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementService, NewMessageParserService}
@@ -29,7 +29,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{Failed, Succeeded, ToDo}
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -96,7 +95,7 @@ class PollingNewMessageWithWorkItemJob @Inject()
   private def saveToDB(
     exciseNumber: String,
     newMessageResponse: EISConsumptionResponse
-  )(implicit ec: ExecutionContext): Future[Boolean] = {
+  ): Future[Boolean] = {
 
     val messages = messageParser.extractMessages(newMessageResponse.message)
 

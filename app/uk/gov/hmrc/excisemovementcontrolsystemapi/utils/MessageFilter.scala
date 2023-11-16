@@ -23,7 +23,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionRespo
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 
-import java.time.Instant
 import javax.inject.Inject
 
 class MessageFilter @Inject()
