@@ -23,6 +23,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionRespo
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ExciseNumberQueueWorkItemRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.PollingNewMessageWithWorkItemJob.{MessageError, MessageReceived, NewMessageResult, NoMessageFound}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementService, NewMessageParserService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
@@ -30,6 +31,7 @@ import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{Failed, Succeeded, ToDo}
 
+import java.time.Instant
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
@@ -49,57 +51,50 @@ class PollingNewMessageWithWorkItemJob @Inject()
   with Logging {
 
   override val enabled: Boolean = true
-  override def name: String = "polling-new-message-wi"
+  override def name: String = "polling-new-messages"
   override def interval: FiniteDuration = appConfig.interval
   override def initialDelay: FiniteDuration = appConfig.initialDelay
   implicit val hc: HeaderCarrier = HeaderCarrier()
   lazy override val lockKeeper: LockService = LockService(mongoLockRepository, lockId = "PollingNewMessageWithWorkItem", ttl = 1.hour)
 
   override def runJob(implicit ec: ExecutionContext): Future[RunningOfJobSuccessful] = {
-    //todo: we may want to get the consigneeId too here
-    process
+    val now = dateTimeService.instant
+    process(now.minus(1, ChronoUnit.DAYS), now, appConfig.retryAttempt)
   }
 
-  private def process: Future[RunningOfJobSuccessful] = {
-    val availableBefore = dateTimeService.instant
-    workItemRepository.pullOutstanding(failedBefore = dateTimeService.instant.minus(1, ChronoUnit.DAYS), availableBefore = availableBefore) // grab the next WorkItem
+  private def process(failedBefore: Instant, availableBefore: Instant, retryAttempt: Int): Future[RunningOfJobSuccessful] = {
+    workItemRepository.pullOutstanding(failedBefore, availableBefore)
       .flatMap {
-        case None => Future.successful(RunningOfJobSuccessful) // there is no more - we've finished
+        case None => Future.successful(RunningOfJobSuccessful)
         case Some(wi) => getNewMessages(wi.item.exciseNumber).flatMap { success => // call your function to process a WorkItem
           success match {
-            case (true, Succeeded) =>
-              //No messages found so nothing else to do right now
-              workItemRepository.complete(wi.id, ProcessingStatus.Succeeded)
-            case (true, ToDo) =>
-              workItemRepository.markAs(wi.id, ProcessingStatus.ToDo)
-            case (false, _)
-
-              if wi.failureCount < 3 => workItemRepository.markAs(wi.id, ProcessingStatus.Failed)
+            case (true, NoMessageFound) => workItemRepository.complete(wi.id, ProcessingStatus.Succeeded)
+            case (true, MessageReceived) => workItemRepository.markAs(wi.id, ProcessingStatus.ToDo)
+            case (false, _) if wi.failureCount < retryAttempt => workItemRepository.markAs(wi.id, ProcessingStatus.Failed)
             case _ => workItemRepository.markAs(wi.id, ProcessingStatus.PermanentlyFailed)
           }
-        }.flatMap(_ => process)
+        }.flatMap(_ => process(failedBefore, availableBefore, retryAttempt))
       }
   }
 
 
-  private def getNewMessages(consignorId: String): Future[(Boolean, ProcessingStatus)] = {
-    newMessageService.getNewMessagesAndAcknowledge(consignorId)
+  private def getNewMessages(exciseNumber: String): Future[(Boolean, NewMessageResult)] = {
+    newMessageService.getNewMessagesAndAcknowledge(exciseNumber)
       .flatMap(message =>
         message match {
           case Some(response) if response.message.nonEmpty =>
-            saveToDB(consignorId, response).map(result => (result, ToDo))
-          case _ => Future.successful((true, Succeeded))
+            saveToDB(exciseNumber, response).map(result => (result, MessageReceived))
+          case _ => Future.successful((true, NoMessageFound))
         })
       .recover {
         case NonFatal(e) =>
-          logger.error(s"Could not get messages for ern: ${consignorId} with message: ${e.getMessage}. Will retry later", e)
-          (false, Failed)
+          logger.error(s"[PollingNewMessageWithWorkItemJob] - Could not get messages for ern: ${exciseNumber} with message: ${e.getMessage}. Will retry later", e)
+          (false, MessageError)
       }
   }
 
-  private def saveToDB
-  (
-    consignorId: String,
+  private def saveToDB(
+    exciseNumber: String,
     newMessageResponse: EISConsumptionResponse
   )(implicit ec: ExecutionContext): Future[Boolean] = {
 
@@ -109,34 +104,49 @@ class PollingNewMessageWithWorkItemJob @Inject()
     // If we want to process them in parallel we need to put a lock on mongo when reading
     // and writing. As we could read just before  or while writing and the next time we write we
     // may do not write the up to date info. At the moment we have a mongo lock on the Job.
-    messages.filter(isAcceptedOrRefusalMessage(_))
-      .foldLeft(successful(true)) { case (acc, x) =>
-        acc.flatMap {
-          _ => save(x, consignorId)
-        }
-      }
-
-    messages
-      .filterNot(isAcceptedOrRefusalMessage(_))
-      .foldLeft(successful(true)) { case (acc, x) =>
-        acc.flatMap {
-          _ => save(x, consignorId)
-        }
-      }
+    saveAcceptedOrRefusalMessage(exciseNumber, messages)
+    saveRestOfMessages(exciseNumber, messages)
   }
 
-  private def save(message: IEMessage, consignorId: String)(implicit ec: ExecutionContext): Future[Boolean] = {
-    movementService.updateMovement( message, consignorId)
+  private def save(message: IEMessage, exciseNumber: String)(implicit ec: ExecutionContext): Future[Boolean] = {
+    movementService.updateMovement( message, exciseNumber)
       .flatMap {
-        case true => successful(true)
+        case true =>
+          successful(true)
         case _ =>
-          logger.warn(s"Could not update movement for ern: $consignorId")
+          logger.warn(s"[PollingNewMessageWithWorkItemJob] - Could not update movement for ern: $exciseNumber")
           successful(false)
       }
   }
 
+  private def saveAcceptedOrRefusalMessage(exciseNumber: String, messages: Seq[IEMessage]): Future[Boolean] = {
+    messages.filter(isAcceptedOrRefusalMessage(_))
+      .foldLeft(successful(true)) { case (acc, x) =>
+        acc.flatMap {
+          _ => save(x, exciseNumber)
+        }
+      }
+  }
+
+  private def saveRestOfMessages(exciseNumber: String, messages: Seq[IEMessage]): Future[Boolean] = {
+    messages
+      .filterNot(isAcceptedOrRefusalMessage(_))
+      .foldLeft(successful(true)) { case (acc, x) =>
+        acc.flatMap {
+          _ => save(x, exciseNumber)
+        }
+      }
+  }
   private def isAcceptedOrRefusalMessage(message: IEMessage): Boolean =
     message.messageType.equals(MessageTypes.IE801.value) ||
       message.messageType.equals(MessageTypes.IE704.value)
 
+}
+
+object PollingNewMessageWithWorkItemJob {
+
+  sealed trait NewMessageResult
+  case object MessageReceived extends NewMessageResult
+  case object NoMessageFound extends NewMessageResult
+  case object MessageError extends NewMessageResult
 }

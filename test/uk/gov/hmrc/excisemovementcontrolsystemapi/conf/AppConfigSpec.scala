@@ -34,7 +34,8 @@ class AppConfigSpec extends PlaySpec {
       |mongodb.movement.TTL=10days
       |scheduler.pollingNewMessageJob.interval=4 minutes
       |scheduler.pollingNewMessageJob.initialDelay=4 minutes
-      |queue.retryAfterMinutes=4
+      |scheduler.queue.retryAfterMinutes=4
+      |scheduler.queue.retryAttempt=2
     """.stripMargin
 
   private def createAppConfig = {
@@ -58,8 +59,12 @@ class AppConfigSpec extends PlaySpec {
       configService.initialDelay mustBe Duration.create(4, MINUTES)
     }
 
-    "return config for the queue retryAfter" in {
+    "return config for the queue retryAfterMinutes" in {
       configService.retryAfterMinutes mustBe JavaDuration.ofMinutes(4)
+    }
+
+    "return config for the queue retryAttempt" in {
+      configService.retryAttempt mustBe 2
     }
   }
 }

@@ -39,8 +39,10 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
     .map(Duration.create(_).asInstanceOf[FiniteDuration])
     .getOrElse(FiniteDuration(60, SECONDS))
 
-  lazy val retryAfterMinutes: JavaDuration = config.getOptional[Long]("queue.retryAfterMinutes")
+  lazy val retryAfterMinutes: JavaDuration = config.getOptional[Long]("scheduler.queue.retryAfterMinutes")
     .fold(JavaDuration.ofMinutes(5L))(JavaDuration.ofMinutes(_))
+
+  lazy val retryAttempt = config.getOptional[Int]("scheduler.queue.retryAttempt").getOrElse(3)
 
   def getMovementTTL: Duration = config.getOptional[String]("mongodb.movement.TTL")
     .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
