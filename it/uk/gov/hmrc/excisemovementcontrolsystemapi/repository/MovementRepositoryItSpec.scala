@@ -205,10 +205,10 @@ class MovementRepositoryItSpec extends PlaySpec
   "getMovementByErn" should {
     "return a list of movement" when {
       "ern match the consignorId " in {
-        val expectedMovement1 = Movement("lrn", "ern1", None, Some("arc1"))
-        val expectedMovement2 = Movement("lrn", "ern2", None, Some("arc2"))
-        val expectedMovement3 = Movement("lrn1", "ern1", None, Some("arc3"))
-        val expectedMovement4 = Movement("lrn4", "ern4", None, Some("arc4"))
+        val expectedMovement1 = Movement("1", "ern1", None, Some("arc1"))
+        val expectedMovement2 = Movement("1", "ern2", None, Some("arc2"))
+        val expectedMovement3 = Movement("2", "ern1", None, Some("arc3"))
+        val expectedMovement4 = Movement("3", "ern4", None, Some("arc4"))
         insertMovement(expectedMovement1)
         insertMovement(expectedMovement2)
         insertMovement(expectedMovement3)
@@ -216,14 +216,14 @@ class MovementRepositoryItSpec extends PlaySpec
 
         val result = repository.getMovementByERN(Seq("ern1", "ern2")).futureValue
 
-        result mustBe Seq(expectedMovement1, expectedMovement2, expectedMovement3)
+        result.sortBy(_.localReferenceNumber) mustBe Seq(expectedMovement1, expectedMovement2, expectedMovement3)
       }
 
       "ern match consignorId and consigneeId" in {
-        val expectedMovement1 = Movement("lrn", "consignorId1", Some("ern1"), Some("arc1"))
-        val expectedMovement2 = Movement("lrn3", "ern1", Some("ern2"), Some("arc2"))
-        val expectedMovement3 = Movement("lrn1", "consignorId1", Some("ern1"), Some("arc3"))
-        val expectedMovement4 = Movement("lrn4", "ern4", None, Some("arc4"))
+        val expectedMovement1 = Movement("1", "consignorId1", Some("ern1"), Some("arc1"))
+        val expectedMovement2 = Movement("2", "ern1", Some("ern2"), Some("arc2"))
+        val expectedMovement3 = Movement("3", "consignorId1", Some("ern1"), Some("arc3"))
+        val expectedMovement4 = Movement("4", "ern4", None, Some("arc4"))
         insertMovement(expectedMovement1)
         insertMovement(expectedMovement2)
         insertMovement(expectedMovement3)
@@ -231,7 +231,9 @@ class MovementRepositoryItSpec extends PlaySpec
 
         val result = repository.getMovementByERN(Seq("ern1")).futureValue
 
-        result mustBe Seq(expectedMovement1, expectedMovement2, expectedMovement3)
+        result.sortBy(_.localReferenceNumber) mustBe Seq(
+          expectedMovement1, expectedMovement2, expectedMovement3
+        )
       }
     }
 
@@ -267,6 +269,47 @@ class MovementRepositoryItSpec extends PlaySpec
 
         result mustBe Seq(expectedMovement2)
       }
+    }
+  }
+
+  "getAll" should {
+    "get all record for a consignorId" in {
+      val instant = Instant.now
+      insertMovement(Movement("1", "345", Some("789"), None, instant))
+      insertMovement(Movement("2", "897", Some("456"), None, instant))
+      insertMovement(Movement("6", "345", Some("523"), None, instant))
+
+      val result = repository.getAllBy("345").futureValue
+
+      result mustBe Seq(
+        Movement("1", "345", Some("789"), None, instant),
+        Movement("6", "345", Some("523"), None, instant)
+      )
+    }
+
+    "get all record for a consignee" in {
+      val instant = Instant.now
+      insertMovement(Movement("1", "345", Some("789"), None, instant))
+      insertMovement(Movement("2", "897", Some("456"), None, instant))
+      insertMovement(Movement("6", "345", Some("523"), None, instant))
+      insertMovement(Movement("1", "564", Some("456"), None, instant))
+
+      val result = repository.getAllBy("456").futureValue
+
+      result mustBe Seq(
+        Movement("2", "897", Some("456"), None, instant),
+        Movement("1", "564", Some("456"), None, instant)
+      )
+    }
+
+    "return an empty list if there are no matching records" in {
+      insertMovement(Movement("1", "345", Some("789"), None))
+      insertMovement(Movement("2", "897", Some("456"), None))
+      insertMovement(Movement("6", "345", Some("523"), None))
+
+      val result = repository.getAllBy("896").futureValue
+
+      result mustBe Seq.empty
     }
   }
 

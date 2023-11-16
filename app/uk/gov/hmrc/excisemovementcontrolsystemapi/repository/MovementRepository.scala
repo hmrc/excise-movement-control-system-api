@@ -100,12 +100,11 @@ class MovementRepository @Inject()
     collection.find(in("administrativeReferenceCode", arc)).toFuture()
   }
 
-  def getAllBy(consignorId: String): Future[Seq[Movement]] = {
-    collection
-      .find(and(equal("consignorId", consignorId)))
-      .toFuture()
+  def getAllBy(ern: String): Future[Seq[Movement]] = {
+    getMovementByERN(Seq(ern))
   }
 }
+
 
 object MovementMessageRepository {
   def mongoIndexes(ttl: Duration): Seq[IndexModel] =
@@ -125,15 +124,23 @@ object MovementMessageRepository {
           .background(true)
           .unique(true)
       ),
-      IndexModel(
-        Indexes.ascending("administrativeReferenceCode"),
-        IndexOptions().name("arc_index")
-          .background(true)
-      ),
-      IndexModel(
-        Indexes.ascending("consignorId"),
-        IndexOptions()
-          .name("consignorId_ttl_idx")
-      )
+      createIndexWithBackground("administrativeReferenceCode", "arc_index"),
+      createIndex("consignorId", "consignorId_ttl_idx"),
+      createIndex("consigneeId", "consigneeId_ttl_idx")
     )
+
+  def createIndex(fieldName: String, indexName: String): IndexModel = {
+    IndexModel(
+      Indexes.ascending(fieldName),
+      IndexOptions().name(indexName)
+    )
+  }
+
+  def createIndexWithBackground(fieldName: String, indexName: String): IndexModel = {
+    IndexModel(
+      Indexes.ascending(fieldName),
+      IndexOptions().name(indexName)
+        .background(true)
+    )
+  }
 }
