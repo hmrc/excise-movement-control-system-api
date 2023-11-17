@@ -62,7 +62,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
       when(mockMovementRepository.saveMovement(any))
         .thenReturn(Future.successful(true))
 
-      val result = await(movementService.saveNewMovementMessage(successMovement))
+      val result = await(movementService.saveNewMovement(successMovement))
 
       result mustBe Right(successMovement)
     }
@@ -74,7 +74,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
       when(mockMovementRepository.saveMovement(any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
-      val result = await(movementService.saveNewMovementMessage(exampleMovement))
+      val result = await(movementService.saveNewMovement(exampleMovement))
 
       val expectedError = ErrorResponse(testDateTime, "Database error", "Error occurred while saving movement message")
 
@@ -87,7 +87,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
       when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(exampleMovementWithArc)))
 
-      val result = await(movementService.saveNewMovementMessage(exampleMovement))
+      val result = await(movementService.saveNewMovement(exampleMovement))
 
       val expectedError = ErrorResponse(testDateTime, "Duplicate LRN error", "The local reference number 123 has already been used for another movement")
 
@@ -100,7 +100,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
       when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(exampleMovementWithDifferentConsignee)))
 
-      val result = await(movementService.saveNewMovementMessage(exampleMovement))
+      val result = await(movementService.saveNewMovement(exampleMovement))
 
       val expectedError = ErrorResponse(testDateTime, "Duplicate LRN error", "The local reference number 123 has already been used for another movement")
 
@@ -116,7 +116,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
       when(mockMovementRepository.saveMovement(any))
         .thenReturn(Future.successful(true))
 
-      val result = await(movementService.saveNewMovementMessage(exampleMovement))
+      val result = await(movementService.saveNewMovement(exampleMovement))
 
       result mustBe Right(movementInDB)
     }

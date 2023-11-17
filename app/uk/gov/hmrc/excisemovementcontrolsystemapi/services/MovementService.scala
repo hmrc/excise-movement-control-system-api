@@ -34,7 +34,7 @@ class MovementService @Inject()(
                                  movementRepository: MovementRepository,
                                  emcsUtils: EmcsUtils
                                )(implicit ec: ExecutionContext) extends Logging {
-  def saveNewMovementMessage(movement: Movement): Future[Either[Result, Movement]] = {
+  def saveNewMovement(movement: Movement): Future[Either[Result, Movement]] = {
 
     getMovementByLRNAndERNIn(movement.localReferenceNumber, List(movement.consignorId)).
       flatMap {

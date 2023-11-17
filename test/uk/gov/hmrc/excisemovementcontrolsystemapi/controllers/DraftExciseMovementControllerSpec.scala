@@ -69,7 +69,7 @@ class DraftExciseMovementControllerSpec
 
   "submit" should {
     "return 200" in {
-      when(movementMessageService.saveNewMovementMessage(any))
+      when(movementMessageService.saveNewMovement(any))
         .thenReturn(Future.successful(Right(Movement("", "", None))))
       val result = createWithSuccessfulAuth.submit(request)
 
@@ -78,7 +78,7 @@ class DraftExciseMovementControllerSpec
     }
 
     "send a request to EIS" in {
-      when(movementMessageService.saveNewMovementMessage(any))
+      when(movementMessageService.saveNewMovement(any))
         .thenReturn(Future.successful(Right(Movement("", "", None))))
       await(createWithSuccessfulAuth.submit(request))
 
@@ -88,13 +88,13 @@ class DraftExciseMovementControllerSpec
 
     "generate an ARC and save to the cache" in {
       val movement = Movement("lrn", ern, None)
-      when(movementMessageService.saveNewMovementMessage(any))
+      when(movementMessageService.saveNewMovement(any))
         .thenReturn(Future.successful(Right(movement)))
 
       await(createWithSuccessfulAuth.submit(request))
 
       val captor = ArgCaptor[Movement]
-      verify(movementMessageService).saveNewMovementMessage(captor)
+      verify(movementMessageService).saveNewMovement(captor)
 
       captor.value.administrativeReferenceCode.isDefined mustBe true
     }
@@ -133,7 +133,7 @@ class DraftExciseMovementControllerSpec
     }
 
     "return 500 when message saving movement fails" in {
-      when(movementMessageService.saveNewMovementMessage(any))
+      when(movementMessageService.saveNewMovement(any))
         .thenReturn(Future.successful(Left(InternalServerError("error"))))
 
       val result = createWithSuccessfulAuth.submit(request)
