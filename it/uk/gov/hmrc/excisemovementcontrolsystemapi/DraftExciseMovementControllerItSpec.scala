@@ -90,6 +90,9 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       when(movementRepository.saveMovement(any))
         .thenReturn(Future.successful(true))
 
+      when(movementRepository.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(Seq.empty))
+
       val result = postRequest(IE815)
 
       result.status mustBe ACCEPTED
