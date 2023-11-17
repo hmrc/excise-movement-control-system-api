@@ -82,7 +82,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
     }
 
     "throw an error when LRN is already in database with an ARC" in {
-      val exampleMovementWithArc = exampleMovement.copy(administrativeReferenceCode =  Some("arc"))
+      val exampleMovementWithArc = exampleMovement.copy(administrativeReferenceCode = Some("arc"))
 
       when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(exampleMovementWithArc)))
@@ -107,16 +107,18 @@ class MovementServiceSpec extends PlaySpec with EitherValues {
       result.left.value mustBe BadRequest(Json.toJson(expectedError))
     }
 
-    "return a Movement when LRN is already in database with no ARC for same consignee" in {
+    "return the database movement when LRN is already in database with no ARC for same consignee" in {
+      val movementInDB = exampleMovement.copy(createdOn = Instant.now)
+
       when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq(exampleMovement)))
+        .thenReturn(Future.successful(Seq(movementInDB)))
 
       when(mockMovementRepository.saveMovement(any))
         .thenReturn(Future.successful(true))
 
       val result = await(movementService.saveNewMovementMessage(exampleMovement))
 
-      result mustBe Right(exampleMovement)
+      result mustBe Right(movementInDB)
     }
 
   }

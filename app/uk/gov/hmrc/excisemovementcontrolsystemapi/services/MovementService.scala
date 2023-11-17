@@ -48,6 +48,10 @@ class MovementService @Inject()(
               s"The local reference number ${movement.localReferenceNumber} has already been used for another movement"
             )
           ))))
+        case Some(movementFromDb: Movement) =>
+          //Already in db with the same details (same consignor, consignee, lrn)
+          //So just return what we have
+          Future(Right(movementFromDb))
         case _ =>
           movementRepository.saveMovement(movement)
             .map(_ => Right(movement))
