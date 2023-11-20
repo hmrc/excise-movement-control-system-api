@@ -25,12 +25,13 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ExciseNumberQueueWorkItemRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.WorkItemService
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
-import uk.gov.hmrc.mongo.workitem.{WorkItem, WorkItemRepository}
+import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext
@@ -41,7 +42,7 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  private val mockWorkItemRepo = mock[WorkItemRepository[ExciseNumberWorkItem]]
+  private val mockWorkItemRepo = mock[ExciseNumberQueueWorkItemRepository]
   private val timestampSupport = mock[TimestampSupport]
   private val appConfig = mock[AppConfig]
   private val timestamp = Instant.parse("2023-11-30T18:35:24.00Z")

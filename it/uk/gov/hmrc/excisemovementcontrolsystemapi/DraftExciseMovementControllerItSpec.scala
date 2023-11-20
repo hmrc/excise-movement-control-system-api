@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, ok, post, urlEqualTo}
+import com.google.inject.TypeLiteral
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.when
 import org.scalatest.BeforeAndAfterAll
@@ -37,7 +38,9 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, MovementRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
+import uk.gov.hmrc.mongo.workitem.WorkItemRepository
 
 import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
@@ -67,7 +70,8 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       .configure(configureServer)
       .overrides(
         bind[AuthConnector].to(authConnector),
-        bind[MovementRepository].to(movementRepository)
+        bind[MovementRepository].to(movementRepository),
+        bind[ExciseNumberQueueWorkItemRepository].to(workItemRepository)
       )
       .build()
   }
