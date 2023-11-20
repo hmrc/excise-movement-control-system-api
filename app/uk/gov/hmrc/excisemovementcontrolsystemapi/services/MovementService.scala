@@ -17,8 +17,12 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.Singleton
+import play.api.Logging
+import play.api.libs.json.Json
+import play.api.mvc.Result
+import play.api.mvc.Results.{BadRequest, InternalServerError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GeneralMongoError
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
@@ -27,19 +31,49 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class MovementService @Inject()(
-                                 movementRepository: MovementRepository
-                                      )(implicit ec: ExecutionContext) {
-  def saveMovementMessage(movementMessage: Movement): Future[Either[GeneralMongoError, Movement]] = {
-    movementRepository.saveMovement(movementMessage)
-      .map(_ => Right(movementMessage))
-      .recover {
-        case ex: Throwable => Left(GeneralMongoError(ex.getMessage))
+                                 movementRepository: MovementRepository,
+                                 emcsUtils: EmcsUtils
+                               )(implicit ec: ExecutionContext) extends Logging {
+  def saveNewMovement(movement: Movement): Future[Either[Result, Movement]] = {
+
+    getMovementByLRNAndERNIn(movement.localReferenceNumber, List(movement.consignorId)).
+      flatMap {
+        case Some(movementFromDb: Movement) if movementFromDb.administrativeReferenceCode.isDefined || movementFromDb.consigneeId != movement.consigneeId =>
+          //If we already have an arc this movement is already in process. Don't rewrite it
+          // If we don't have an arc but the consignee is different, don't rewrite it
+          Future.successful(Left(BadRequest(Json.toJson(
+            ErrorResponse(
+              emcsUtils.getCurrentDateTime,
+              "Duplicate LRN error",
+              s"The local reference number ${movement.localReferenceNumber} has already been used for another movement"
+            )
+          ))))
+        case Some(movementFromDb: Movement) =>
+          //Already in db with the same details (same consignor, consignee, lrn)
+          //So just return what we have
+          Future(Right(movementFromDb))
+        case _ =>
+          movementRepository.saveMovement(movement)
+            .map(_ => Right(movement))
+            .recover {
+              case ex: Throwable =>
+                logger.error(s"[MovementService] - Error occurred while saving movement message: ${ex.getMessage}")
+                Left(InternalServerError(Json.toJson(
+                  ErrorResponse(
+                    emcsUtils.getCurrentDateTime,
+                    "Database error",
+                    "Error occurred while saving movement message"
+                  )
+                )))
+            }
       }
+
+
   }
 
-  def getMovementMessagesByLRNAndERNIn(lrn: String, erns: List[String]): Future[Option[Movement]] = {
+  def getMovementByLRNAndERNIn(lrn: String, erns: List[String]): Future[Option[Movement]] = {
     movementRepository.getMovementByLRNAndERNIn(lrn, erns).map {
-      case Seq()  => None
+      case Seq() => None
       case head :: Nil => Some(head)
       case _ => throw new RuntimeException(s"[MovementService] - Multiple movement found for local reference number: $lrn")
     }
@@ -47,19 +81,19 @@ class MovementService @Inject()(
 
   def getMatchingERN(lrn: String, erns: List[String]): Future[Option[String]] = {
     movementRepository.getMovementByLRNAndERNIn(lrn, erns).map {
-      case Seq()  => None
+      case Seq() => None
       case head :: Nil => matchingERN(head, erns)
       case _ => throw new RuntimeException(s"[MovementService] - Multiple movements found for local reference number: $lrn")
     }
   }
 
   def getMovementByErn(
-    ern: Seq[String],
-    filter: MovementFilter = MovementFilter.empty
-  ): Future[Seq[Movement]] = {
+                        ern: Seq[String],
+                        filter: MovementFilter = MovementFilter.empty
+                      ): Future[Seq[Movement]] = {
 
     movementRepository.getMovementByERN(ern).map {
-      movements =>filter.filterMovement(movements)
+      movements => filter.filterMovement(movements)
     }
   }
 

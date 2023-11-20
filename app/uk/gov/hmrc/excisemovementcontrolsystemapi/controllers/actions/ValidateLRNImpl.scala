@@ -46,7 +46,7 @@ class ValidateLRNImpl @Inject()
 
       override def refine[A](request: ValidatedXmlRequest[A]): Future[Either[Result, ValidatedXmlRequest[A]]] = {
 
-        movementService.getMovementMessagesByLRNAndERNIn(lrn, request.parsedRequest.erns.toList).map {
+        movementService.getMovementByLRNAndERNIn(lrn, request.parsedRequest.erns.toList).map {
           case Some(_) => Right(request)
           case _ => Left(NotFoundErrorResponse(lrn)(request))
         }
