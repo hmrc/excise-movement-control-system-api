@@ -61,7 +61,7 @@ class GetNewMessageServiceSpec
       val result = await(sut.getNewMessagesAndAcknowledge("123"))
 
       verify(showNewMessageConnector).get(eqTo("123"))(any)
-      result mustBe Some(EISConsumptionResponse(dateTime, "123", "any message"))
+      result mustBe Some((EISConsumptionResponse(dateTime, "123", "any message"), 10))
 
       withClue("acknowledge the messages") {
         verify(messageReceiptConnector).put(eqTo("123"))(any)
@@ -83,7 +83,7 @@ class GetNewMessageServiceSpec
     }
 
     "return message if message-receipt fails" in {
-      when(showNewMessageParser.countOfMessagesAvailable(any)).thenReturn(10)
+      when(showNewMessageParser.countOfMessagesAvailable(any)).thenReturn(7)
       when(showNewMessageConnector.get(any)(any))
         .thenReturn(Future.successful(Right(EISConsumptionResponse(dateTime, "123", "any message"))))
       when(messageReceiptConnector.put(any)(any))
@@ -91,7 +91,7 @@ class GetNewMessageServiceSpec
 
       val result = await(sut.getNewMessagesAndAcknowledge("123"))
 
-      result mustBe Some(EISConsumptionResponse(dateTime, "123", "any message"))
+      result mustBe Some((EISConsumptionResponse(dateTime, "123", "any message"), 7))
     }
 
     "return No messages" when {
