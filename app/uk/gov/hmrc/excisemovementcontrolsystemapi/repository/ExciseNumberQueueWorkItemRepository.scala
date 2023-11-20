@@ -16,14 +16,11 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
-import org.bson.types.ObjectId
-import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.{Filters, IndexModel, IndexOptions, Indexes, Updates}
+import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
+import uk.gov.hmrc.mongo.workitem.{WorkItemFields, WorkItemRepository}
 import uk.gov.hmrc.mongo.{MongoComponent, TimestampSupport}
-import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItemFields, WorkItemRepository}
 
 import java.time.{Duration, Instant}
 import java.util.concurrent.TimeUnit
@@ -35,12 +32,12 @@ class ExciseNumberQueueWorkItemRepository @Inject()
   appConfig: AppConfig,
   mongoComponent: MongoComponent,
   timeService: TimestampSupport
-) (implicit ec: ExecutionContext) extends WorkItemRepository[ExciseNumberWorkItem](
+)(implicit ec: ExecutionContext) extends WorkItemRepository[ExciseNumberWorkItem](
   collectionName = "excise-number-work-item",
   mongoComponent = mongoComponent,
-  itemFormat     = ExciseNumberWorkItem.format,
+  itemFormat = ExciseNumberWorkItem.format,
   workItemFields = WorkItemFields.default,
-  extraIndexes   = Seq(
+  extraIndexes = Seq(
     IndexModel(
       Indexes.ascending("updatedAt"),
       IndexOptions().expireAfter(appConfig.getMovementTTL.toSeconds, TimeUnit.SECONDS)
