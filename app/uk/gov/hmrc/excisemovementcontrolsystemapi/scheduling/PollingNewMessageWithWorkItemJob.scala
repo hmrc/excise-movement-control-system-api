@@ -81,10 +81,19 @@ class PollingNewMessageWithWorkItemJob @Inject()
 
             case (true, NoMessageFound) =>
 
-              workItemRepository.markAs(wi.id, ProcessingStatus.PermanentlyFailed)
+              workItemRepository.completeAndDelete(wi.id)
 
             case (true, MessageReceived) =>
-              workItemRepository.completeAndDelete(wi.id)
+              // workItemRepository.markAs(wi.id, ProcessingStatus.ToDo, Some(nextRunTime))
+
+              // If there are more messages waiting, get them
+                      // Set WI back to TODO
+
+
+              //If there aren't, done
+
+
+               workItemRepository.completeAndDelete(wi.id)
 
             case (false, _) if wi.failureCount < maximumRetries =>
               workItemRepository.markAs(wi.id, ProcessingStatus.Failed, Some(nextRunTime))
@@ -142,6 +151,8 @@ object PollingNewMessageWithWorkItemJob {
   sealed trait NewMessageResult
 
   case object MessageReceived extends NewMessageResult
+
+  case object MoreMessage extends NewMessageResult
 
   case object NoMessageFound extends NewMessageResult
 
