@@ -58,10 +58,10 @@ class PollingNewMessageWithWorkItemJob @Inject()
 
   override def runJob(implicit ec: ExecutionContext): Future[RunningOfJobSuccessful] = {
     val now = dateTimeService.timestamp
-    process(now.minus(1, ChronoUnit.DAYS), now, appConfig.retryAttempt)
+    process(now.minus(1, ChronoUnit.DAYS), now, appConfig.retryAttempts)
   }
 
-  private def process(failedBefore: Instant, availableBefore: Instant, retryAttempt: Int): Future[RunningOfJobSuccessful] = {
+  private def process(failedBefore: Instant, availableBefore: Instant, retryAttempts: Int): Future[RunningOfJobSuccessful] = {
     workItemRepository.pullOutstanding(failedBefore, availableBefore)
       .flatMap {
         case None => Future.successful(RunningOfJobSuccessful)
@@ -69,10 +69,10 @@ class PollingNewMessageWithWorkItemJob @Inject()
           success match {
             case (true, NoMessageFound) => workItemRepository.complete(wi.id, ProcessingStatus.Succeeded)
             case (true, MessageReceived) => workItemRepository.markAs(wi.id, ProcessingStatus.ToDo)
-            case (false, _) if wi.failureCount < retryAttempt => workItemRepository.markAs(wi.id, ProcessingStatus.Failed)
+            case (false, _) if wi.failureCount < retryAttempts => workItemRepository.markAs(wi.id, ProcessingStatus.Failed)
             case _ => workItemRepository.markAs(wi.id, ProcessingStatus.PermanentlyFailed)
           }
-        }.flatMap(_ => process(failedBefore, availableBefore, retryAttempt))
+        }.flatMap(_ => process(failedBefore, availableBefore, retryAttempts))
       }
       .recoverWith {
         case NonFatal(e) =>
@@ -124,7 +124,7 @@ class PollingNewMessageWithWorkItemJob @Inject()
   }
 
   private def saveAcceptedOrRefusalMessage(exciseNumber: String, messages: Seq[IEMessage]): Future[Boolean] = {
-    messages.filter(isAcceptedOrRefusalMessage(_))
+    messages.filter(isAcceptedOrRefusalMessage)
       .foldLeft(successful(true)) { case (acc, x) =>
         acc.flatMap {
           _ => save(x, exciseNumber)
@@ -134,7 +134,7 @@ class PollingNewMessageWithWorkItemJob @Inject()
 
   private def saveRestOfMessages(exciseNumber: String, messages: Seq[IEMessage]): Future[Boolean] = {
     messages
-      .filterNot(isAcceptedOrRefusalMessage(_))
+      .filterNot(isAcceptedOrRefusalMessage)
       .foldLeft(successful(true)) { case (acc, x) =>
         acc.flatMap {
           _ => save(x, exciseNumber)

@@ -64,7 +64,7 @@ class AppConfigSpec extends PlaySpec {
     }
 
     "return config for the queue retryAttempt" in {
-      configService.retryAttempt mustBe 2
+      configService.retryAttempts mustBe 2
     }
   }
 }

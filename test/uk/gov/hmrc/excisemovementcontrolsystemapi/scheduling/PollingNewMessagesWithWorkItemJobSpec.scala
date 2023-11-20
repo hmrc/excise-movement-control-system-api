@@ -80,7 +80,7 @@ class PollingNewMessagesWithWorkItemJobSpec
     when(lockRepository.takeLock(any,any,any)).thenReturn(Future.successful(true))
     when(lockRepository.releaseLock(any,any)).thenReturn(successful(()))
     when(dateTimeService.timestamp()).thenReturn(Instant.now())
-    when(appConfig.retryAttempt).thenReturn(3)
+    when(appConfig.retryAttempts).thenReturn(3)
   }
 
   "Job" should {
@@ -156,7 +156,7 @@ class PollingNewMessagesWithWorkItemJobSpec
       val retryAttempt = 2
       val workItem = createWorkItem(retryAttempt)
       setUpWithTwoWorkItem(workItem)
-      when(appConfig.retryAttempt).thenReturn(retryAttempt)
+      when(appConfig.retryAttempts).thenReturn(retryAttempt)
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
@@ -190,32 +190,6 @@ class PollingNewMessagesWithWorkItemJobSpec
       }
 
     }
-
-//    "process IE801 and IE704 first " in {
-//      val message1 = mock[IEMessage]
-//      when(message1.getType).thenReturn(MessageTypes.IE810.value)
-//      val message2 = mock[IEMessage]
-//      when(message2.getType).thenReturn(MessageTypes.IE801.value)
-//      val message3 = mock[IEMessage]
-//      when(message3.getType).thenReturn(MessageTypes.IE704.value)
-//
-//
-//      when(movementService.getUniqueConsignorId)
-//        .thenReturn(Future.successful(Seq(Movement("12", "1", None))))
-//      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
-//        .thenReturn(Future.successful(Some(newMessageResponse)))
-//
-//      when(shoeNewMessageParser.extractMessages(any))
-//        .thenReturn(Seq(message1, message2, message3))
-//      when(movementService.updateMovement(any, any)).thenReturn(Future.successful(true))
-//
-//      await(job.executeInMutex)
-//
-//      val orderForIE818 = Mockito.inOrder(movementService)
-//      orderForIE818.verify(movementService).updateMovement(eqTo(message2), eqTo("1"))
-//      orderForIE818.verify(movementService).updateMovement(eqTo(message3), eqTo("1"))
-//      orderForIE818.verify(movementService).updateMovement(eqTo(message1), eqTo("1"))
-//    }
 
     "not process any message if no pending message exist" in {
       when(workItemRepository.pullOutstanding(any, any)).thenReturn(Future.successful(None))
