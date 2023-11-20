@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.Singleton
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
@@ -27,18 +28,19 @@ import java.time.Instant
 import javax.inject.Inject
 import scala.concurrent.duration.{DurationInt, MINUTES}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.DurationConverters.ScalaDurationOps
 import scala.language.postfixOps
 
 @Singleton
 class WorkItemService @Inject()
 (
   workItemRepository: WorkItemRepository[ExciseNumberWorkItem],
+  appConfig: AppConfig,
   timestampService: TimestampSupport
 )(implicit ec: ExecutionContext) {
 
   def createWorkItem(ern: String): Future[WorkItem[ExciseNumberWorkItem]] = {
-    //TODO replace with app config
-    workItemRepository.pushNew(ExciseNumberWorkItem(ern),timestampService.timestamp().plusSeconds(5 * 60))
+    workItemRepository.pushNew(ExciseNumberWorkItem(ern),timestampService.timestamp().plus(appConfig.runSubmissionWorkItemAfter.toJava))
   }
 
 }

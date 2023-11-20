@@ -24,6 +24,7 @@ import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.WorkItemService
 import uk.gov.hmrc.http.HeaderCarrier
@@ -33,6 +34,7 @@ import uk.gov.hmrc.mongo.workitem.{WorkItem, WorkItemRepository}
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.{Duration, MINUTES}
 
 class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfterEach {
 
@@ -40,15 +42,17 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
 
   private val mockWorkItemRepo = mock[WorkItemRepository[ExciseNumberWorkItem]]
-private val timestampSupport = mock[TimestampSupport]
+  private val timestampSupport = mock[TimestampSupport]
+  private val appConfig = mock[AppConfig]
   private val timestamp = Instant.parse("2023-11-30T18:35:24.00Z")
 
-  private val workItemService = new WorkItemService(mockWorkItemRepo, timestampSupport)
+  private val workItemService = new WorkItemService(mockWorkItemRepo, appConfig, timestampSupport)
 
   override def beforeEach(): Unit = {
     super.beforeEach()
 
     when(timestampSupport.timestamp()).thenReturn(Instant.from(timestamp))
+    when(appConfig.runSubmissionWorkItemAfter).thenReturn(Duration.create(3, MINUTES))
 
     reset(mockWorkItemRepo)
   }
@@ -61,7 +65,8 @@ private val timestampSupport = mock[TimestampSupport]
       val expectedWorkItem = ExciseNumberWorkItem(ern)
 
       //Test we are creating it for the right time in the future from the config
-      when(mockWorkItemRepo.pushNew(eqTo(expectedWorkItem), eqTo(timestamp.plusSeconds(5*60)), any)).thenReturn(Future.successful(createWorkItem(expectedWorkItem)))
+      when(mockWorkItemRepo.pushNew(eqTo(expectedWorkItem), eqTo(timestamp.plusSeconds(3 * 60)), any))
+        .thenReturn(Future.successful(createWorkItem(expectedWorkItem)))
 
       val result = await(workItemService.createWorkItem(ern))
 
@@ -76,7 +81,7 @@ private val timestampSupport = mock[TimestampSupport]
       id = new ObjectId(),
       receivedAt = timestamp,
       updatedAt = timestamp,
-      availableAt = timestamp.plusSeconds(5*60),
+      availableAt = timestamp.plusSeconds(3 * 60),
       status = ToDo,
       failureCount = 0,
       item = exciseNumberWorkItem
