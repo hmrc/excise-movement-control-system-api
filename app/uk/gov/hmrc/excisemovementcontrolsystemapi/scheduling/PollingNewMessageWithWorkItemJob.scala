@@ -23,7 +23,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ExciseNumberQueueWorkItemRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.PollingNewMessageWithWorkItemJob.{MessageError, MessageReceived, NewMessageResult, NoMessageFound}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.PollingNewMessageWithWorkItemJob.{MessageError, MessageReceived, MoreMessagesToGet, NewMessageResult, NoMessageFound}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementService, NewMessageParserService}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.TimestampSupport
@@ -84,16 +84,10 @@ class PollingNewMessageWithWorkItemJob @Inject()
               workItemRepository.completeAndDelete(wi.id)
 
             case (true, MessageReceived) =>
-              // workItemRepository.markAs(wi.id, ProcessingStatus.ToDo, Some(nextRunTime))
+              workItemRepository.completeAndDelete(wi.id)
 
-              // If there are more messages waiting, get them
-                      // Set WI back to TODO
-
-
-              //If there aren't, done
-
-
-               workItemRepository.completeAndDelete(wi.id)
+            case (true, MoreMessagesToGet) =>
+              workItemRepository.markAs(wi.id, ProcessingStatus.ToDo, Some(nextRunTime))
 
             case (false, _) if wi.failureCount < maximumRetries =>
               workItemRepository.markAs(wi.id, ProcessingStatus.Failed, Some(nextRunTime))
@@ -108,12 +102,15 @@ class PollingNewMessageWithWorkItemJob @Inject()
 
   private def getNewMessages(exciseNumber: String): Future[(Boolean, NewMessageResult)] = {
     newMessageService.getNewMessagesAndAcknowledge(exciseNumber)
-      .flatMap(message =>
-        message match {
-          case Some(response) if response.message.nonEmpty =>
-            saveToDB(exciseNumber, response).map(result => (result, MessageReceived))
-          case _ => Future.successful((true, NoMessageFound))
-        })
+      .flatMap {
+        case Some((response, messageCount)) if messageCount > 10 && response.message.nonEmpty =>
+          saveToDB(exciseNumber, response).map(result => (result, MoreMessagesToGet))
+
+        case Some((response, _)) if response.message.nonEmpty =>
+          saveToDB(exciseNumber, response).map(result => (result, MessageReceived))
+
+        case _ => Future.successful((true, NoMessageFound))
+      }
       .recover {
         case NonFatal(e) =>
           logger.error(s"[PollingNewMessageWithWorkItemJob] - Could not get messages for ern: ${exciseNumber} with message: ${e.getMessage}. Will retry later", e)
@@ -152,7 +149,7 @@ object PollingNewMessageWithWorkItemJob {
 
   case object MessageReceived extends NewMessageResult
 
-  case object MoreMessage extends NewMessageResult
+  case object MoreMessagesToGet extends NewMessageResult
 
   case object NoMessageFound extends NewMessageResult
 
