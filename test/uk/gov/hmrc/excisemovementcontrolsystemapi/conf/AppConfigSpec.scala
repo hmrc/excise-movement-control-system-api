@@ -36,6 +36,7 @@ class AppConfigSpec extends PlaySpec {
       |scheduler.pollingNewMessageJob.initialDelay=4 minutes
       |scheduler.queue.retryAfterMinutes=4
       |scheduler.queue.retryAttempt=2
+      |scheduler.submissionWorkItems.runWorkItemAfter=3 minutes
     """.stripMargin
 
   private def createAppConfig = {
@@ -64,7 +65,11 @@ class AppConfigSpec extends PlaySpec {
     }
 
     "return config for the queue retryAttempt" in {
-      configService.retryAttempts mustBe 2
+      configService.maxRetryAttempts mustBe 2
+    }
+
+    "return config for Submission Work Items runWorkItemsAfter" in {
+      configService.runSubmissionWorkItemAfter mustBe Duration.create(3, MINUTES)
     }
   }
 }

@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.service
 
 import dispatch.Future
 import org.bson.types.ObjectId
-import org.mockito.ArgumentMatchersSugar.any
+import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, when}
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
@@ -27,6 +27,7 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.WorkItemService
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.mongo.workitem.{WorkItem, WorkItemRepository}
 
@@ -39,11 +40,15 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
 
   private val mockWorkItemRepo = mock[WorkItemRepository[ExciseNumberWorkItem]]
+private val timestampSupport = mock[TimestampSupport]
+  private val timestamp = Instant.parse("2023-11-30T18:35:24.00Z")
 
-  private val workItemService = new WorkItemService(mockWorkItemRepo)
+  private val workItemService = new WorkItemService(mockWorkItemRepo, timestampSupport)
 
   override def beforeEach(): Unit = {
     super.beforeEach()
+
+    when(timestampSupport.timestamp()).thenReturn(Instant.from(timestamp))
 
     reset(mockWorkItemRepo)
   }
@@ -55,7 +60,8 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       val ern = "ern123"
       val expectedWorkItem = ExciseNumberWorkItem(ern)
 
-      when(mockWorkItemRepo.pushNew(any, any, any)).thenReturn(Future.successful(createWorkItem(expectedWorkItem)))
+      //Test we are creating it for the right time in the future from the config
+      when(mockWorkItemRepo.pushNew(eqTo(expectedWorkItem), eqTo(timestamp.plusSeconds(5*60)), any)).thenReturn(Future.successful(createWorkItem(expectedWorkItem)))
 
       val result = await(workItemService.createWorkItem(ern))
 
@@ -68,9 +74,9 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
   private def createWorkItem(exciseNumberWorkItem: ExciseNumberWorkItem) = {
     WorkItem(
       id = new ObjectId(),
-      receivedAt = Instant.now,
-      updatedAt = Instant.now,
-      availableAt = Instant.now,
+      receivedAt = timestamp,
+      updatedAt = timestamp,
+      availableAt = timestamp.plusSeconds(5*60),
       status = ToDo,
       failureCount = 0,
       item = exciseNumberWorkItem

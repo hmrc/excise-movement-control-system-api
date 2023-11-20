@@ -22,6 +22,7 @@ import org.mockito.Mockito.never
 import org.mockito.MockitoSugar.{reset, times, verify, verifyZeroInteractions, when}
 import org.mockito.captor.ArgCaptor
 import org.scalatest.BeforeAndAfterEach
+import org.scalatest.time.Minutes
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
@@ -39,7 +40,7 @@ import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.{Instant, LocalDateTime}
 import scala.concurrent.Future.successful
-import scala.concurrent.duration.{Duration, SECONDS}
+import scala.concurrent.duration.{Duration, MINUTES, SECONDS}
 import scala.concurrent.{ExecutionContext, Future}
 
 class PollingNewMessagesWithWorkItemJobSpec
@@ -52,7 +53,7 @@ class PollingNewMessagesWithWorkItemJobSpec
   private val appConfig = mock[AppConfig]
   private val newMessageService = mock[GetNewMessageService]
   private val movementService = mock[MovementService]
-  private val shoeNewMessageParser = mock[NewMessageParserService]
+  private val newMessageParserService = mock[NewMessageParserService]
   private val lockRepository = mock[MongoLockRepository]
   private val workItemRepository = mock[ExciseNumberQueueWorkItemRepository]
   private val dateTimeService = mock[TimestampSupport]
@@ -68,19 +69,20 @@ class PollingNewMessagesWithWorkItemJobSpec
     newMessageService,
     workItemRepository,
     movementService,
-    shoeNewMessageParser,
+    newMessageParserService,
     appConfig,
     dateTimeService
   )
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(movementService, appConfig, newMessageService, shoeNewMessageParser, lockRepository, workItemRepository)
+    reset(movementService, appConfig, newMessageService, newMessageParserService, lockRepository, workItemRepository)
 
     when(lockRepository.takeLock(any,any,any)).thenReturn(Future.successful(true))
     when(lockRepository.releaseLock(any,any)).thenReturn(successful(()))
     when(dateTimeService.timestamp()).thenReturn(Instant.now())
-    when(appConfig.retryAttempts).thenReturn(3)
+    when(appConfig.maxRetryAttempts).thenReturn(3)
+    when(appConfig.runSubmissionWorkItemAfter).thenReturn(Duration.create(5, MINUTES))
   }
 
   "Job" should {
@@ -88,7 +90,7 @@ class PollingNewMessagesWithWorkItemJobSpec
     "have interval defined" in {
       val interval = Duration.create(5, SECONDS)
       when(appConfig.interval).thenReturn(interval)
-      job.interval mustBe interval
+      job.intervalBetweenJobRunning mustBe interval
     }
 
     "have initial delay defined" in {
@@ -110,14 +112,39 @@ class PollingNewMessagesWithWorkItemJobSpec
       }
     }
 
-    "should process workItem in ToDO status" in {
+    "should complete workItem in ToDo status when there are messages found" in {
       val workItem = createWorkItem()
       setUpWithTwoWorkItem(workItem)
 
       await(job.executeInMutex)
 
-      verify(workItemRepository).markAs(eqTo(workItem.id),eqTo(ProcessingStatus.ToDo), any)
-      verify(workItemRepository).complete(eqTo(workItem.id),eqTo(ProcessingStatus.Succeeded))
+      verify(workItemRepository).completeAndDelete(eqTo(workItem.id))
+    }
+
+    "should mark as failed Work Item in ToDo when there are no messages found" in {
+
+      val now = Instant.parse("2023-11-30T18:35:24.00Z")
+      val fiveMinutesAfterNow = Instant.parse("2023-11-30T18:40:24.00Z")
+
+
+      val workItem = createWorkItem(availableAt = now)
+      setUpWithTwoWorkItem(workItem)
+
+      await(job.executeInMutex)
+
+      verify(workItemRepository).markAs(eqTo(workItem.id), eqTo(ProcessingStatus.Failed), eqTo(Some(fiveMinutesAfterNow)))
+    }
+
+    "should mark as permanently failed Work Item when there are no messages found three times" in {
+
+      when(appConfig.maxRetryAttempts).thenReturn(2)
+
+      val workItem = createWorkItem(failureCount = 2)
+      setUpWithOneWorkItem(workItem)
+
+      await(job.executeInMutex)
+
+      verify(workItemRepository).markAs(eqTo(workItem.id), eqTo(ProcessingStatus.PermanentlyFailed), any)
     }
 
     "catch exception Mongo throw and error" in {
@@ -152,11 +179,11 @@ class PollingNewMessagesWithWorkItemJobSpec
       )
     }
 
-    "set the workItem state to PermanentlyFailed" in {
+    "set the workItem state to PermanentlyFailed when failed three times" in {
       val retryAttempt = 2
       val workItem = createWorkItem(retryAttempt)
       setUpWithTwoWorkItem(workItem)
-      when(appConfig.retryAttempts).thenReturn(retryAttempt)
+      when(appConfig.maxRetryAttempts).thenReturn(retryAttempt)
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
@@ -170,7 +197,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
       await(job.executeInMutex)
 
-      verify(shoeNewMessageParser).extractMessages(eqTo("any message"))
+      verify(newMessageParserService).extractMessages(eqTo("any message"))
     }
 
     "send getNewMessage request for each pending ern" in {
@@ -201,7 +228,7 @@ class PollingNewMessagesWithWorkItemJobSpec
     }
 
 
-    "not not save message in the movement database" when {
+    "not save message in the movement database" when {
       "API has no message" in {
         setUpWithTwoWorkItem(createWorkItem())
         when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
@@ -240,18 +267,38 @@ class PollingNewMessagesWithWorkItemJobSpec
         Future.successful(None)
       )
 
-    when(shoeNewMessageParser.extractMessages(any)).thenReturn(Seq(message))
+    when(newMessageParserService.extractMessages(any)).thenReturn(Seq(message))
     when(movementService.updateMovement(any, any)).thenReturn(Future.successful(true))
     when(workItemRepository.complete(any, any)).thenReturn(Future.successful(true))
     when(workItemRepository.markAs(any, any, any)).thenReturn(Future.successful(true))
+    when(workItemRepository.completeAndDelete(any)).thenReturn(Future.successful(true))
   }
 
-  private def createWorkItem(failureCount: Int = 0): WorkItem[ExciseNumberWorkItem] = {
+  //TODO generalise all this stuff
+  private def setUpWithOneWorkItem(workItem: WorkItem[ExciseNumberWorkItem]): Unit = {
+    when(message.messageType).thenReturn(MessageTypes.IE802.value)
+    when(workItemRepository.pullOutstanding(any, any)).thenReturn(
+      Future.successful(Some(workItem)),
+      Future.successful(None)
+    )
+    when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+      .thenReturn(
+        Future.successful(None),
+      )
+
+    when(newMessageParserService.extractMessages(any)).thenReturn(Seq(message))
+    when(movementService.updateMovement(any, any)).thenReturn(Future.successful(true))
+    when(workItemRepository.complete(any, any)).thenReturn(Future.successful(true))
+    when(workItemRepository.markAs(any, any, any)).thenReturn(Future.successful(true))
+    when(workItemRepository.completeAndDelete(any)).thenReturn(Future.successful(true))
+  }
+
+  private def createWorkItem(failureCount: Int = 0, availableAt: Instant = Instant.now): WorkItem[ExciseNumberWorkItem] = {
     WorkItem(
       id = new ObjectId(),
       receivedAt = Instant.now,
       updatedAt = Instant.now,
-      availableAt = Instant.now,
+      availableAt = availableAt,
       status = ProcessingStatus.ToDo,
       failureCount = failureCount,
       item = ExciseNumberWorkItem("123")

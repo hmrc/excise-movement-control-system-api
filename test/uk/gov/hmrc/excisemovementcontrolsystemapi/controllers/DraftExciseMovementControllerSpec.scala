@@ -18,7 +18,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 
 import akka.actor.ActorSystem
-import org.mockito.ArgumentMatchersSugar.any
+import org.bson.types.ObjectId
+import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, verify, when}
 import org.mockito.captor.ArgCaptor
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
@@ -33,9 +34,12 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnsAction, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
+import uk.gov.hmrc.mongo.workitem.WorkItem
 
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
 
@@ -55,12 +59,26 @@ class DraftExciseMovementControllerSpec
   private val cc = stubControllerComponents()
   private val request = createRequest(IE815)
   private val mockIeMessage = mock[IE815Message]
+  private val workItemService = mock[WorkItemService]
+
+  private val workItem =
+    WorkItem(
+      id = new ObjectId(),
+      receivedAt = Instant.now,
+      updatedAt = Instant.now,
+      availableAt = Instant.now,
+      status = ToDo,
+      failureCount = 0,
+      item = ExciseNumberWorkItem(ern)
+    )
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(connector, movementMessageService)
+    reset(connector, movementMessageService, workItemService)
 
     when(connector.submitMessage(any)(any)).thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
+
+    when(workItemService.createWorkItem(eqTo(ern))).thenReturn(Future.successful(workItem))
 
     when(mockIeMessage.consigneeId).thenReturn(Some("789"))
     when(mockIeMessage.consignorId).thenReturn("456")
@@ -98,6 +116,29 @@ class DraftExciseMovementControllerSpec
 
       captor.value.administrativeReferenceCode.isDefined mustBe true
     }
+
+    "create a work item and save it to the db" in {
+
+      when(movementMessageService.saveMovementMessage(any))
+        .thenReturn(Future.successful(Right(Movement("lrn", ern, None))))
+
+      await(createWithSuccessfulAuth.submit(request))
+
+      verify(workItemService).createWorkItem("456")
+
+    }
+
+    //TODO implement
+//    "return an error when work item service fails" in {
+//      when(movementMessageService.saveMovementMessage(any))
+//        .thenReturn(Future.successful(Right(Movement("lrn", ern, None))))
+//
+//      when(workItemService.createWorkItem(any)).thenReturn(Future.failed(new RuntimeException()))
+//
+//      val result = createWithSuccessfulAuth.submit(request)
+//
+//      status(result) mustBe INTERNAL_SERVER_ERROR
+//    }
 
     "return an error when EIS error" in {
       when(connector.submitMessage(any)(any))
@@ -149,6 +190,7 @@ class DraftExciseMovementControllerSpec
       FakeSuccessfulValidateErnsAction(mockIeMessage),
       connector,
       movementMessageService,
+      workItemService,
       cc
     )
 
@@ -159,6 +201,7 @@ class DraftExciseMovementControllerSpec
       FakeSuccessfulValidateErnsAction(mockIeMessage),
       connector,
       movementMessageService,
+      workItemService,
       cc
     )
 
@@ -169,6 +212,7 @@ class DraftExciseMovementControllerSpec
       FakeSuccessfulValidateErnsAction(mockIeMessage),
       connector,
       movementMessageService,
+      workItemService,
       cc
     )
 
@@ -179,6 +223,7 @@ class DraftExciseMovementControllerSpec
       FakeFailureValidateErnsAction,
       connector,
       movementMessageService,
+      workItemService,
       cc
     )
 
