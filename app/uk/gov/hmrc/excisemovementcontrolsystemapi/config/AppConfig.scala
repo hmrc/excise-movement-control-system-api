@@ -31,25 +31,28 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
 
   lazy val eisHost: String = servicesConfig.baseUrl("eis")
   lazy val systemApplication: String = config.get[String]("system.application")
-  lazy val interval = config.getOptional[String]("scheduler.pollingNewMessageJob.interval")
+  lazy val interval: FiniteDuration = config.getOptional[String]("scheduler.pollingNewMessageJob.interval")
     .map(Duration.create(_).asInstanceOf[FiniteDuration])
     .getOrElse(FiniteDuration(5, MINUTES))
 
-  lazy  val initialDelay = config.getOptional[String]("scheduler.pollingNewMessageJob.initialDelay")
+  lazy  val initialDelay: FiniteDuration = config.getOptional[String]("scheduler.pollingNewMessageJob.initialDelay")
     .map(Duration.create(_).asInstanceOf[FiniteDuration])
     .getOrElse(FiniteDuration(60, SECONDS))
 
   lazy val retryAfterMinutes: JavaDuration = config.getOptional[Long]("scheduler.queue.retryAfterMinutes")
-    .fold(JavaDuration.ofMinutes(5L))(JavaDuration.ofMinutes(_))
+    .fold(JavaDuration.ofMinutes(5L))(JavaDuration.ofMinutes)
 
-  def submissionBearerToken: String = servicesConfig.getConfString("eis.submission-bearer-token", "dummySubmissionBearerToken")
+  lazy val maxRetryAttempts: Int = config.getOptional[Int]("scheduler.queue.retryAttempt").getOrElse(3)
 
-  lazy val retryAttempts = config.getOptional[Int]("scheduler.queue.retryAttempt").getOrElse(3)
+  lazy val runSubmissionWorkItemAfter: FiniteDuration = config.getOptional[String]("scheduler.submissionWorkItems.runWorkItemAfter")
+    .map(Duration.create(_).asInstanceOf[FiniteDuration])
+    .getOrElse(FiniteDuration(5, MINUTES))
 
   def getMovementTTL: Duration = config.getOptional[String]("mongodb.movement.TTL")
     .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
 
   def emcsReceiverMessageUrl: String = s"$eisHost/emcs/digital-submit-new-message/v1"
+  def submissionBearerToken: String = servicesConfig.getConfString("eis.submission-bearer-token", "dummySubmissionBearerToken")
   def showNewMessageUrl: String = s"$eisHost/apip-emcs/messages/v1/show-new-messages"
   def showNewMessagesBearerToken: String = servicesConfig.getConfString("eis.show-new-messages-bearer-token", "dummyShowNewMessagesBearerToken")
   def messageReceiptUrl(ern: String): String =

@@ -32,9 +32,9 @@ trait ScheduledJob {
 
   def initialDelay: FiniteDuration
 
-  def interval: FiniteDuration
+  def intervalBetweenJobRunning: FiniteDuration
 
-  override def toString() = s"$name after $initialDelay every $interval"
+  override def toString() = s"$name after $initialDelay every $intervalBetweenJobRunning"
 }
 ========
 

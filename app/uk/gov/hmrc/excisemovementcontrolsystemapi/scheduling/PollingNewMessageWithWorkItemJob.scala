@@ -35,6 +35,7 @@ import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.DurationConverters.ScalaDurationOps
 import scala.util.control.NonFatal
 
 class PollingNewMessageWithWorkItemJob @Inject()
@@ -50,34 +51,48 @@ class PollingNewMessageWithWorkItemJob @Inject()
   with Logging {
 
   override val enabled: Boolean = true
+
   override def name: String = "polling-new-messages"
-  override def interval: FiniteDuration = appConfig.interval
+
+  override def intervalBetweenJobRunning: FiniteDuration = appConfig.interval
+
   override def initialDelay: FiniteDuration = appConfig.initialDelay
+
   implicit val hc: HeaderCarrier = HeaderCarrier()
   lazy override val lockKeeper: LockService = LockService(mongoLockRepository, lockId = "PollingNewMessageWithWorkItem", ttl = 1.hour)
 
   override def runJob(implicit ec: ExecutionContext): Future[RunningOfJobSuccessful] = {
-    val now = dateTimeService.timestamp
-    process(now.minus(1, ChronoUnit.DAYS), now, appConfig.retryAttempts)
+    val now = dateTimeService.timestamp()
+    process(now.minus(1, ChronoUnit.DAYS), now, appConfig.maxRetryAttempts)
   }
 
-  private def process(failedBefore: Instant, availableBefore: Instant, retryAttempts: Int): Future[RunningOfJobSuccessful] = {
+  private def process(failedBefore: Instant, availableBefore: Instant, maximumRetries: Int): Future[RunningOfJobSuccessful] = {
     workItemRepository.pullOutstanding(failedBefore, availableBefore)
       .flatMap {
         case None => Future.successful(RunningOfJobSuccessful)
-        case Some(wi) => getNewMessages(wi.item.exciseNumber).flatMap { success => // call your function to process a WorkItem
-          success match {
-            case (true, NoMessageFound) => workItemRepository.complete(wi.id, ProcessingStatus.Succeeded)
-            case (true, MessageReceived) => workItemRepository.markAs(wi.id, ProcessingStatus.ToDo)
-            case (false, _) if wi.failureCount < retryAttempts => workItemRepository.markAs(wi.id, ProcessingStatus.Failed)
-            case _ => workItemRepository.markAs(wi.id, ProcessingStatus.PermanentlyFailed)
-          }
-        }.flatMap(_ => process(failedBefore, availableBefore, retryAttempts))
-      }
-      .recoverWith {
-        case NonFatal(e) =>
-          logger.error("[PollingNewMessageWithWorkItemJob] - Failed to collect and process ann the movement", e)
-          Future.failed(RunningOfJobFailed(name, e))
+        case Some(wi) =>
+          lazy val nextRunTime = wi.availableAt.plus(appConfig.runSubmissionWorkItemAfter.toJava)
+
+          getNewMessages(wi.item.exciseNumber).flatMap {
+
+            case (true, NoMessageFound) if wi.failureCount < maximumRetries =>
+
+              workItemRepository.markAs(wi.id, ProcessingStatus.Failed, Some(nextRunTime))
+
+            case (true, NoMessageFound) =>
+
+              workItemRepository.markAs(wi.id, ProcessingStatus.PermanentlyFailed)
+
+            case (true, MessageReceived) =>
+              workItemRepository.completeAndDelete(wi.id)
+
+            case (false, _) if wi.failureCount < maximumRetries =>
+              workItemRepository.markAs(wi.id, ProcessingStatus.Failed, Some(nextRunTime))
+
+            case _ =>
+              workItemRepository.markAs(wi.id, ProcessingStatus.PermanentlyFailed)
+
+          }.flatMap(_ => process(failedBefore, availableBefore, maximumRetries))
       }
   }
 
@@ -98,9 +113,9 @@ class PollingNewMessageWithWorkItemJob @Inject()
   }
 
   private def saveToDB(
-    exciseNumber: String,
-    newMessageResponse: EISConsumptionResponse
-  ): Future[Boolean] = {
+                        exciseNumber: String,
+                        newMessageResponse: EISConsumptionResponse
+                      ): Future[Boolean] = {
 
     messageParser.extractMessages(newMessageResponse.message)
       .foldLeft(successful(true)) { case (acc, x) =>
@@ -111,7 +126,7 @@ class PollingNewMessageWithWorkItemJob @Inject()
   }
 
   private def save(message: IEMessage, exciseNumber: String)(implicit ec: ExecutionContext): Future[Boolean] = {
-    movementService.updateMovement( message, exciseNumber)
+    movementService.updateMovement(message, exciseNumber)
       .flatMap {
         case true =>
           successful(true)
@@ -125,7 +140,10 @@ class PollingNewMessageWithWorkItemJob @Inject()
 object PollingNewMessageWithWorkItemJob {
 
   sealed trait NewMessageResult
+
   case object MessageReceived extends NewMessageResult
+
   case object NoMessageFound extends NewMessageResult
+
   case object MessageError extends NewMessageResult
 }

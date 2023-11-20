@@ -23,17 +23,22 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberW
 import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.workitem.{WorkItem, WorkItemRepository}
 
+import java.time.Instant
 import javax.inject.Inject
+import scala.concurrent.duration.{DurationInt, MINUTES}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.language.postfixOps
 
 @Singleton
 class WorkItemService @Inject()
 (
   workItemRepository: WorkItemRepository[ExciseNumberWorkItem],
+  timestampService: TimestampSupport
 )(implicit ec: ExecutionContext) {
 
   def createWorkItem(ern: String): Future[WorkItem[ExciseNumberWorkItem]] = {
-    workItemRepository.pushNew(ExciseNumberWorkItem(ern),now + 5 minutes)
+    //TODO replace with app config
+    workItemRepository.pushNew(ExciseNumberWorkItem(ern),timestampService.timestamp().plusSeconds(5 * 60))
   }
 
 }
