@@ -102,14 +102,12 @@ class PollingNewMessageWithWorkItemJob @Inject()
     newMessageResponse: EISConsumptionResponse
   ): Future[Boolean] = {
 
-    val messages = messageParser.extractMessages(newMessageResponse.message)
-
-    //! process IE801 or IE704 first if any.We are Processing message in sequence (not in parallel)
-    // If we want to process them in parallel we need to put a lock on mongo when reading
-    // and writing. As we could read just before  or while writing and the next time we write we
-    // may do not write the up to date info. At the moment we have a mongo lock on the Job.
-    saveAcceptedOrRefusalMessage(exciseNumber, messages)
-    saveRestOfMessages(exciseNumber, messages)
+    messageParser.extractMessages(newMessageResponse.message)
+      .foldLeft(successful(true)) { case (acc, x) =>
+        acc.flatMap {
+          _ => save(x, exciseNumber)
+        }
+      }
   }
 
   private def save(message: IEMessage, exciseNumber: String)(implicit ec: ExecutionContext): Future[Boolean] = {
@@ -122,29 +120,6 @@ class PollingNewMessageWithWorkItemJob @Inject()
           successful(false)
       }
   }
-
-  private def saveAcceptedOrRefusalMessage(exciseNumber: String, messages: Seq[IEMessage]): Future[Boolean] = {
-    messages.filter(isAcceptedOrRefusalMessage)
-      .foldLeft(successful(true)) { case (acc, x) =>
-        acc.flatMap {
-          _ => save(x, exciseNumber)
-        }
-      }
-  }
-
-  private def saveRestOfMessages(exciseNumber: String, messages: Seq[IEMessage]): Future[Boolean] = {
-    messages
-      .filterNot(isAcceptedOrRefusalMessage)
-      .foldLeft(successful(true)) { case (acc, x) =>
-        acc.flatMap {
-          _ => save(x, exciseNumber)
-        }
-      }
-  }
-  private def isAcceptedOrRefusalMessage(message: IEMessage): Boolean =
-    message.messageType.equals(MessageTypes.IE801.value) ||
-      message.messageType.equals(MessageTypes.IE704.value)
-
 }
 
 object PollingNewMessageWithWorkItemJob {
