@@ -59,7 +59,7 @@ class MovementRepository @Inject()
   }
 
   def saveMovement(movement: Movement): Future[Boolean] = {
-    collection.insertOne(movement.copy(lastUpdated = timeService.timestamp))
+    collection.insertOne(movement.copy(lastUpdated = timeService.timestamp()))
       .toFuture()
       .map(_ => true)
   }
@@ -69,7 +69,7 @@ class MovementRepository @Inject()
     val update = combine(
       set("consigneeId", Codecs.toBson(movement.consigneeId)),
       set("administrativeReferenceCode", Codecs.toBson(movement.administrativeReferenceCode)),
-      set("lastUpdated", Codecs.toBson(timeService.timestamp)),
+      set("lastUpdated", Codecs.toBson(timeService.timestamp())),
       set("messages", Codecs.toBson(movement.messages))
     )
     collection.updateOne(

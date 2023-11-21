@@ -119,7 +119,7 @@ class DraftExciseMovementControllerSpec
 
     "create a work item and save it to the db" in {
 
-      when(movementMessageService.saveMovementMessage(any))
+      when(movementMessageService.saveNewMovement(any))
         .thenReturn(Future.successful(Right(Movement("lrn", ern, None))))
 
       await(createWithSuccessfulAuth.submit(request))
@@ -129,7 +129,7 @@ class DraftExciseMovementControllerSpec
     }
 
     "allow the error to be thrown if work item service fails" in {
-      when(movementMessageService.saveMovementMessage(any))
+      when(movementMessageService.saveNewMovement(any))
         .thenReturn(Future.successful(Right(Movement("lrn", ern, None))))
 
       when(workItemService.createWorkItem(any)).thenReturn(Future.failed(new RuntimeException("error")))

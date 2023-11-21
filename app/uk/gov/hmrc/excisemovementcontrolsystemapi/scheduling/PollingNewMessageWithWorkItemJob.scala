@@ -19,7 +19,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 import akka.http.scaladsl.util.FastFuture.successful
 import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ExciseNumberQueueWorkItemRepository
@@ -95,7 +94,13 @@ class PollingNewMessageWithWorkItemJob @Inject()
             case _ =>
               workItemRepository.markAs(wi.id, ProcessingStatus.PermanentlyFailed)
 
-          }.flatMap(_ => process(failedBefore, availableBefore, maximumRetries))
+          }
+            .flatMap(_ => process(failedBefore, availableBefore, maximumRetries))
+      }
+      .recoverWith {
+        case NonFatal(e) =>
+          logger.error("[PollingNewMessageWithWorkItemJob] - Failed to collect and process the movement", e)
+          Future.failed(RunningOfJobFailed(name, e))
       }
   }
 

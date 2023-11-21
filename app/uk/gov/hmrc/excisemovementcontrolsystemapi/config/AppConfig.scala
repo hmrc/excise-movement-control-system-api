@@ -21,8 +21,7 @@ import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import java.time.{Duration => JavaDuration}
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.duration.{DAYS, Duration, FiniteDuration, SECONDS}
-import java.util.concurrent.TimeUnit.{MINUTES, SECONDS}
+import scala.concurrent.duration.{DAYS, Duration, FiniteDuration, MINUTES, SECONDS}
 
 @Singleton
 class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig) {
@@ -42,7 +41,7 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   lazy val retryAfterMinutes: JavaDuration = config.getOptional[Long]("scheduler.queue.retryAfterMinutes")
     .fold(JavaDuration.ofMinutes(5L))(JavaDuration.ofMinutes)
 
-  lazy val maxRetryAttempts: Int = config.getOptional[Int]("scheduler.queue.retryAttempt").getOrElse(3)
+  lazy val maxRetryAttempts: Int = config.getOptional[Int]("scheduler.queue.retryAttempts").getOrElse(3)
 
   lazy val runSubmissionWorkItemAfter: FiniteDuration = config.getOptional[String]("scheduler.submissionWorkItems.runWorkItemAfter")
     .map(Duration.create(_).asInstanceOf[FiniteDuration])

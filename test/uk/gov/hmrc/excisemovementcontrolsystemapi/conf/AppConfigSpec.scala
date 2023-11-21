@@ -35,7 +35,7 @@ class AppConfigSpec extends PlaySpec {
       |scheduler.pollingNewMessageJob.interval=4 minutes
       |scheduler.pollingNewMessageJob.initialDelay=4 minutes
       |scheduler.queue.retryAfterMinutes=4
-      |scheduler.queue.retryAttempt=2
+      |scheduler.queue.retryAttempts=2
       |scheduler.submissionWorkItems.runWorkItemAfter=3 minutes
     """.stripMargin
 
@@ -64,7 +64,7 @@ class AppConfigSpec extends PlaySpec {
       configService.retryAfterMinutes mustBe JavaDuration.ofMinutes(4)
     }
 
-    "return config for the queue retryAttempt" in {
+    "return config for the queue retryAttempts" in {
       configService.maxRetryAttempts mustBe 2
     }
 
