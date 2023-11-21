@@ -24,6 +24,7 @@ trait ScheduledJob {
   def execute(implicit ec: ExecutionContext): Future[Result]
   def isRunning: Future[Boolean]
 
+<<<<<<<< HEAD:app/uk/gov/hmrc/excisemovementcontrolsystemapi/scheduling/ScheduledJob.scala
   case class Result(message: String)
 
   val enabled: Boolean
@@ -35,3 +36,6 @@ trait ScheduledJob {
 
   override def toString() = s"$name after $initialDelay every $interval"
 }
+========
+
+>>>>>>>> d81b057 (Emcs message polling (#42)):app/uk/gov/hmrc/excisemovementcontrolsystemapi/models/MongoError.scala
