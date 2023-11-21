@@ -51,7 +51,7 @@ trait RunningOfScheduledJobs extends Logging {
           case Success(job.Result(message)) =>
             stopWatch.stop()
             logger.info(s"Completed job ${job.name} in $stopWatch: $message")
-          case Failure(throwable)           =>
+          case Failure(throwable) =>
             stopWatch.stop()
             logger.error(s"Exception running job ${job.name} after $stopWatch", throwable)
         }

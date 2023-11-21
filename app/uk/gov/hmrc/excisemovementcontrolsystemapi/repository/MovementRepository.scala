@@ -67,7 +67,7 @@ class MovementRepository @Inject()
   def updateMovement(movement: Movement): Future[Boolean] = {
 
     val update = combine(
-      set("consigneeId",  Codecs.toBson(movement.consigneeId)),
+      set("consigneeId", Codecs.toBson(movement.consigneeId)),
       set("administrativeReferenceCode", Codecs.toBson(movement.administrativeReferenceCode)),
       set("lastUpdated", Codecs.toBson(timeService.timestamp)),
       set("messages", Codecs.toBson(movement.messages))

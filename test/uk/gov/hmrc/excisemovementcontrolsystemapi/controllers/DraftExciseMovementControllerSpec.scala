@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import akka.actor.ActorSystem
 import org.bson.types.ObjectId
-import org.mockito.ArgumentMatchersSugar.{any, eqTo}
+import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.{reset, verify, when}
 import org.mockito.captor.ArgCaptor
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
@@ -78,7 +78,7 @@ class DraftExciseMovementControllerSpec
 
     when(connector.submitMessage(any)(any)).thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
 
-    when(workItemService.createWorkItem(eqTo(ern))).thenReturn(Future.successful(workItem))
+    when(workItemService.createWorkItem(any)).thenReturn(Future.successful(workItem))
 
     when(mockIeMessage.consigneeId).thenReturn(Some("789"))
     when(mockIeMessage.consignorId).thenReturn("456")
@@ -128,17 +128,17 @@ class DraftExciseMovementControllerSpec
 
     }
 
-    //TODO implement
-//    "return an error when work item service fails" in {
-//      when(movementMessageService.saveMovementMessage(any))
-//        .thenReturn(Future.successful(Right(Movement("lrn", ern, None))))
-//
-//      when(workItemService.createWorkItem(any)).thenReturn(Future.failed(new RuntimeException()))
-//
-//      val result = createWithSuccessfulAuth.submit(request)
-//
-//      status(result) mustBe INTERNAL_SERVER_ERROR
-//    }
+    "allow the error to be thrown if work item service fails" in {
+      when(movementMessageService.saveMovementMessage(any))
+        .thenReturn(Future.successful(Right(Movement("lrn", ern, None))))
+
+      when(workItemService.createWorkItem(any)).thenReturn(Future.failed(new RuntimeException("error")))
+
+      intercept[RuntimeException] {
+        await(createWithSuccessfulAuth.submit(request))
+      }.getMessage mustBe "error"
+
+    }
 
     "return an error when EIS error" in {
       when(connector.submitMessage(any)(any))

@@ -30,7 +30,7 @@ class NewMessageParserService @Inject()
 ) {
 
 
-  def countOfMessagesAvailable(encodedMessage: String): Long ={
+  def countOfMessagesAvailable(encodedMessage: String): Long = {
     val newMessage = scala.xml.XML.loadString(emcsUtils.decode(encodedMessage))
     (newMessage \ "CountOfMessagesAvailable").text.toLong
   }

@@ -35,7 +35,7 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
     .map(Duration.create(_).asInstanceOf[FiniteDuration])
     .getOrElse(FiniteDuration(5, MINUTES))
 
-  lazy  val initialDelay: FiniteDuration = config.getOptional[String]("scheduler.pollingNewMessageJob.initialDelay")
+  lazy val initialDelay: FiniteDuration = config.getOptional[String]("scheduler.pollingNewMessageJob.initialDelay")
     .map(Duration.create(_).asInstanceOf[FiniteDuration])
     .getOrElse(FiniteDuration(60, SECONDS))
 
@@ -52,7 +52,9 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
     .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
 
   def emcsReceiverMessageUrl: String = s"$eisHost/emcs/digital-submit-new-message/v1"
+
   def showNewMessageUrl: String = s"$eisHost/apip-emcs/messages/v1/show-new-messages"
+
   def messageReceiptUrl(ern: String): String =
     s"$eisHost/apip-emcs/messages/v1/message-receipt?exciseregistrationnumber=$ern"
 

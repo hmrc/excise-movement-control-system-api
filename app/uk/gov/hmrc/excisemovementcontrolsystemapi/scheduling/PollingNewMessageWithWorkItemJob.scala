@@ -23,7 +23,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ExciseNumberQueueWorkItemRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.PollingNewMessageWithWorkItemJob.{MessageError, MessageReceived, MoreMessagesToGet, NewMessageResult, NoMessageFound}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.PollingNewMessageWithWorkItemJob._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementService, NewMessageParserService}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.TimestampSupport
@@ -113,7 +113,7 @@ class PollingNewMessageWithWorkItemJob @Inject()
       }
       .recover {
         case NonFatal(e) =>
-          logger.error(s"[PollingNewMessageWithWorkItemJob] - Could not get messages for ern: ${exciseNumber} with message: ${e.getMessage}. Will retry later", e)
+          logger.error(s"[PollingNewMessageWithWorkItemJob] - Could not get messages for ern: $exciseNumber with message: ${e.getMessage}. Will retry later", e)
           (false, MessageError)
       }
   }

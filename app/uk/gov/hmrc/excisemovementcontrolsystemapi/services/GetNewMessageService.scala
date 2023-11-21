@@ -55,8 +55,8 @@ class GetNewMessageServiceImpl @Inject()(
       Future.successful(None)
     } else {
       messageReceiptConnector.put(exciseNumber).map {
-        case Right(_) => Some(newMessageResponse, messageCount)
-        case Left(_) if hasMessage => Some(newMessageResponse, messageCount)
+        case Right(_) => Some((newMessageResponse, messageCount))
+        case Left(_) if hasMessage => Some((newMessageResponse, messageCount))
         case Left(_) => None
       }
     }
