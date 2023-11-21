@@ -232,6 +232,38 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
 
     }
 
+    "if finds nothing mark work item as failed so can be retried" in {
+
+      val movementRepository = new MovementRepository(
+        mongoComponent,
+        appConfig,
+        timeService
+      )
+
+      wireMock.resetAll()
+      stubForEmptyMessageData("1")
+
+      insert(createWorkItem("1")).futureValue
+
+      movementRepository.saveMovement(Movement("token", "1", None, None, Instant.now, Seq.empty)).futureValue
+
+      // start application
+      app
+
+      // todo: not a very good way to wait for the thread to do is job. Tried eventually but it does not
+      // work. Try to find a better way.
+      Thread.sleep(100)
+
+      val movements = movementRepository.collection.find().toFuture().futureValue
+
+      movements.size mustBe 1
+      assertResults(movements.find(_.consignorId.equals("1")).get, Movement("token", "1", None, None, Instant.now, Seq.empty))
+
+      val workItems = findAll().futureValue
+
+      workItems.find(_.item.exciseNumber.equals("1")).get.status.equals(ProcessingStatus.Failed)
+    }
+
 
   }
 
@@ -268,25 +300,13 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
           EISConsumptionResponse(
             LocalDateTime.of(2023, 1, 2, 3, 4, 5),
             "3",
-            Base64.getEncoder.encodeToString(newMessageWithIE801.toString().getBytes(StandardCharsets.UTF_8)),
+            Base64.getEncoder.encodeToString(newMessageWithIE801().toString().getBytes(StandardCharsets.UTF_8)),
           )).toString()
         ))
         .willSetStateTo(s"new-message-response-for-ern-3")
     )
 
-    wireMock.stubFor(
-      WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=3")
-        .inScenario("requesting-new-message-for-ern-3")
-        .whenScenarioStateIs(s"new-message-response-for-ern-3")
-        .willSetStateTo("end-of-stubbing")
-        .willReturn(ok().withBody(Json.toJson(
-          EISConsumptionResponse(
-            LocalDateTime.of(2024, 1, 2, 3, 4, 5),
-            "3",
-            Base64.getEncoder.encodeToString(emptyNewMessageDataXml.toString().getBytes(StandardCharsets.UTF_8)),
-          )).toString()
-        ))
-    )
+    stubForEmptyMessageData("3")
   }
 
   private def stubShowNewMessageRequestForConsignorId4 = {
@@ -304,19 +324,7 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
         .willSetStateTo(s"new-message-response-for-ern-4")
     )
 
-    wireMock.stubFor(
-      WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=4")
-        .inScenario("requesting-new-message-for-ern-4")
-        .whenScenarioStateIs(s"new-message-response-for-ern-4")
-        .willSetStateTo("end-of-stubbing")
-        .willReturn(ok().withBody(Json.toJson(
-          EISConsumptionResponse(
-            LocalDateTime.of(2024, 1, 2, 3, 4, 5),
-            "4",
-            Base64.getEncoder.encodeToString(emptyNewMessageDataXml.toString().getBytes(StandardCharsets.UTF_8)),
-          )).toString()
-        ))
-    )
+    stubForEmptyMessageData("4")
   }
 
   private def stubMultipleShowNewMessageRequest(exciseNumber: String) = {
@@ -328,7 +336,8 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
           EISConsumptionResponse(
             LocalDateTime.of(2023, 1, 2, 3, 4, 5),
             exciseNumber,
-            Base64.getEncoder.encodeToString(newMessageWithIE801.toString().getBytes(StandardCharsets.UTF_8)),
+            //Set the new message count so it will poll again and get the item below
+            Base64.getEncoder.encodeToString(newMessageWithIE801(11).toString().getBytes(StandardCharsets.UTF_8)),
           )).toString()
         ))
         .willSetStateTo("new-message-response")
@@ -348,6 +357,17 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
         ))
     )
 
+    stubForEmptyMessageData(exciseNumber)
+  }
+
+  private def stubForThrowingError(exciseNumber: String) = {
+    wireMock.stubFor(
+      WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=$exciseNumber")
+        .willReturn(serverError().withBody("Internal server error"))
+    )
+  }
+
+  private def stubForEmptyMessageData(exciseNumber: String) = {
     wireMock.stubFor(
       WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=$exciseNumber")
         .inScenario("requesting-new-message")
@@ -359,13 +379,6 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
             Base64.getEncoder.encodeToString(emptyNewMessageDataXml.toString().getBytes(StandardCharsets.UTF_8)),
           )).toString()
         ))
-    )
-  }
-
-  private def stubForThrowingError(exciseNumber: String) = {
-    wireMock.stubFor(
-      WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=$exciseNumber")
-        .willReturn(serverError().withBody("Internal server error"))
     )
   }
 
