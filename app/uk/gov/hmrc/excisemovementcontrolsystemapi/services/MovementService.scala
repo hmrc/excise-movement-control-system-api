@@ -24,7 +24,7 @@ import play.api.mvc.Results.{BadRequest, InternalServerError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -94,6 +94,41 @@ class MovementService @Inject()(
 
     movementRepository.getMovementByERN(ern).map {
       movements => filter.filterMovement(movements)
+    }
+  }
+
+  def updateMovement(message: IEMessage, consignorId: String): Future[Boolean] = {
+
+    movementRepository.getAllBy(consignorId).flatMap(cachedMovement => {
+
+      val arc = message.administrativeReferenceCode
+      val movementWithArc = cachedMovement.filter(o => o.administrativeReferenceCode.equals(arc)).headOption
+      val movementWithLrn = cachedMovement.filter(m => message.lrnEquals(m.localReferenceNumber)).headOption
+
+      (movementWithArc, movementWithLrn) match {
+        case (Some(mArc), _) => saveDistinctMessage(mArc, message)
+        case (None, Some(mLrn)) => saveDistinctMessage(mLrn, message)
+        case _ => throw new RuntimeException(s"Cannot retrieve a movement. Local reference number or administration reference code are not present for ERN: $consignorId")
+      }
+    })
+  }
+
+  private def saveDistinctMessage(movement: Movement, newMessage: IEMessage): Future[Boolean] = {
+    val encodedMessage = emcsUtils.encode(newMessage.toXml.toString)
+    val messages = Seq(Message(encodedMessage, newMessage.messageType, dateTimeService))
+
+    //todo: remove hash from message class. Hash can calculate on the go in here
+    val allMessages = (movement.messages ++ messages).distinctBy(_.hash)
+    val newArc = newMessage.administrativeReferenceCode.orElse(movement.administrativeReferenceCode)
+
+    val newMovement = movement.copy(
+      administrativeReferenceCode = newArc,
+      messages = allMessages
+    )
+
+    movementRepository.updateMovement(newMovement).map {
+      case true => true
+      case _ => false
     }
   }
 

@@ -14,42 +14,37 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
+package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import generated.NewMessagesDataResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
-import uk.gov.hmrc.mongo.TimestampSupport
 
 import javax.inject.Inject
 
-class MessageFilter @Inject()
+class NewMessageParserService @Inject()
 (
-  dateTimeService: TimestampSupport,
-  emcsUtils: EmcsUtils,
-  factory: IEMessageFactory
+  factory: IEMessageFactory,
+  emcsUtils: EmcsUtils
 ) {
 
-  def filter(encodedMessage: EISConsumptionResponse, lrnToFilterBy: String): Seq[Message] = {
 
-    extractMessages(encodedMessage.message)
-      .filter(_.lrnEquals(lrnToFilterBy))
-      .map { m =>
-        val encodedMessage = emcsUtils.encode(m.toXml.toString())
-        Message(encodedMessage, m.messageType, dateTimeService)
-      }
+  def countOfMessagesAvailable(encodedMessage: String): Long ={
+    val newMessage = scala.xml.XML.loadString(emcsUtils.decode(encodedMessage))
+    (newMessage \ "CountOfMessagesAvailable").text.toLong
   }
 
   def extractMessages(encodedMessage: String): Seq[IEMessage] = {
-    getNewMessageDataResponse(emcsUtils.decode(encodedMessage))
-      .Messages.messagesoption.map(factory.createIEMessage)
+    val decodedMessage: String = emcsUtils.decode(encodedMessage)
+
+    getNewMessageDataResponse(decodedMessage)
+      .Messages.messagesoption.map(factory.createIEMessage(_))
   }
 
   private def getNewMessageDataResponse(decodedMessage: String) = {
-    val t = scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
-    t
+    scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
   }
 }
+
+

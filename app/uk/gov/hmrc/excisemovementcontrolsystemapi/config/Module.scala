@@ -17,14 +17,32 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.config
 
 import com.google.inject.AbstractModule
+import play.api.Application
+import play.api.inject.ApplicationLifecycle
+import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.{PollingNewMessageWithWorkItemJob, RunningOfScheduledJobs, ScheduledJob}
 
 import java.time.{Clock, ZoneOffset}
+import javax.inject.{Inject, Singleton}
+import scala.concurrent.ExecutionContext
 
 class Module extends AbstractModule {
 
   override def configure(): Unit = {
 
     bind(classOf[AppConfig]).asEagerSingleton()
+    bind(classOf[Scheduler]).asEagerSingleton()
     bind(classOf[Clock]).toInstance(Clock.systemDefaultZone.withZone(ZoneOffset.UTC))
   }
+}
+
+@Singleton
+class Scheduler @Inject()(
+                           pollingNewMessageWorkItemJob: PollingNewMessageWithWorkItemJob,
+                           override val applicationLifecycle: ApplicationLifecycle,
+                           override val application: Application
+                         )(implicit val ec: ExecutionContext)
+  extends RunningOfScheduledJobs {
+  override lazy val scheduledJobs: Seq[ScheduledJob] = Seq(
+    pollingNewMessageWorkItemJob
+  ).filter(_.enabled)
 }

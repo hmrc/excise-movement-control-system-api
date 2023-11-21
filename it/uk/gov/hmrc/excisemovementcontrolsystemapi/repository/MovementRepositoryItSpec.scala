@@ -16,18 +16,22 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
+import org.mockito.MockitoSugar.when
 import org.mongodb.scala.model.Filters
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, OptionValues}
+import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 
-import java.time.{Clock, Instant, ZoneId}
+import java.time.Instant
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 
@@ -42,13 +46,13 @@ class MovementRepositoryItSpec extends PlaySpec
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val appConfig = app.injector.instanceOf[AppConfig]
-  private val instant = Instant.now
-  private val stubClock = Clock.fixed(instant, ZoneId.systemDefault)
+  private val dateTimeService = mock[TimestampSupport]
+  private val timestamp = Instant.parse("2018-11-30T18:35:24.00Z")
 
   protected override val repository = new MovementRepository(
     mongoComponent,
     appConfig,
-    stubClock
+    dateTimeService
   )
 
   protected def appBuilder: GuiceApplicationBuilder =
@@ -61,6 +65,7 @@ class MovementRepositoryItSpec extends PlaySpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
+    when(dateTimeService.timestamp()).thenReturn(timestamp)
   }
 
   override def afterAll(): Unit = {
@@ -89,6 +94,63 @@ class MovementRepositoryItSpec extends PlaySpec
     }
   }
 
+  "updateMovement" should {
+    "update a movement by lrn and consignorId" in {
+      insertMovement(Movement("1", "345", Some("789"), None, timestamp))
+      insertMovement(Movement("2", "897", Some("456"), None))
+
+      val message =  Message("any, message", MessageTypes.IE801.value, dateTimeService)
+      val result = repository.updateMovement(Movement("2", "897", Some("321"), Some("arc"), Instant.now, Seq(message))).futureValue
+
+      val records = findAll().futureValue
+
+      val expected = Seq(
+        Movement("1", "345", Some("789"), None, timestamp),
+        Movement("2", "897", Some("321"), Some("arc"), timestamp, Seq(message))
+      )
+      assertUpdateMovementResult(records, expected, result)
+    }
+
+    "update a movement by lrn and consigneeId" in {
+      insertMovement(Movement("1", "345", Some("789"), None, timestamp))
+      insertMovement(Movement("2", "897", Some("456"), None))
+
+      val message =  Message("any, message", MessageTypes.IE801.value, dateTimeService)
+      val result = repository.updateMovement(Movement("2", "78", Some("456"), Some("arc"), Instant.now, Seq(message))).futureValue
+
+      val records = findAll().futureValue
+
+      val expected = Seq(
+        Movement("1", "345", Some("789"), None, timestamp),
+        Movement("2", "897", Some("456"), Some("arc"), timestamp, Seq(message))
+      )
+      assertUpdateMovementResult(records, expected, result)
+    }
+
+    "not update the movement if record not found" in {
+      val instant = Instant.now
+      insertMovement(Movement("1", "345", Some("789"), None, instant))
+      insertMovement(Movement("2", "897", Some("456"), None, instant))
+
+      val message =  Message("any, message", MessageTypes.IE801.value, dateTimeService)
+      val result = repository.updateMovement(Movement("4", "897", Some("321"), Some("arc"), Instant.now, Seq(message))).futureValue
+
+      val records = findAll().futureValue
+
+      val expected = Seq(
+        Movement("1", "345", Some("789"), None, instant),
+        Movement("2", "897", Some("456"), None, instant)
+      )
+      assertUpdateMovementResult(records, expected, result)
+    }
+  }
+
+  private def assertUpdateMovementResult(actual: Seq[Movement], expected: Seq[Movement], result: Boolean) = {
+    result mustBe true
+    actual.size mustBe 2
+    actual.sortBy(_.localReferenceNumber) mustBe expected
+  }
+
   "getMovementByLRNAndERNIn" should {
     val lrn = "123"
     val consignorId = "Abc"
@@ -97,43 +159,43 @@ class MovementRepositoryItSpec extends PlaySpec
 
 
     "return movement with valid lrn and consignorId combination" in {
-      saveMovement(movement)
+      insertMovement(movement)
       val result = repository.getMovementByLRNAndERNIn(lrn, List(consignorId)).futureValue
 
       result mustBe Seq(movement)
     }
 
     "return movement with valid lrn and consigneeId combination" in {
-      saveMovement(movement)
+      insertMovement(movement)
       val result = repository.getMovementByLRNAndERNIn(lrn, List(consigneeId)).futureValue
 
       result mustBe Seq(movement)
     }
 
     "return movement with valid lrn and list of consignor and consignee Ids combination" in {
-      saveMovement(movement)
+      insertMovement(movement)
       val result = repository.getMovementByLRNAndERNIn(lrn, List(consignorId, consigneeId)).futureValue
 
       result mustBe Seq(movement)
     }
 
     "return movement with valid lrn and only one valid ern combination in the list of erns" in {
-      saveMovement(movement)
+      insertMovement(movement)
       val result = repository.getMovementByLRNAndERNIn(lrn, List(consignorId, "hhh", "222", "mmm")).futureValue
 
       result mustBe Seq(movement)
     }
 
     "return one movement with valid lrn and ern combination when multiple movements are available" in {
-      saveMovement(movement)
-      saveMovement(Movement("Test3333", consignorId, Some(consigneeId), None))
+      insertMovement(movement)
+      insertMovement(Movement("Test3333", consignorId, Some(consigneeId), None))
       val result = repository.getMovementByLRNAndERNIn(lrn, List(consignorId)).futureValue
 
       result mustBe Seq(movement)
     }
 
     "return empty list with invalid lrn and ern combination" in {
-      saveMovement(movement)
+      insertMovement(movement)
       val result = repository.getMovementByLRNAndERNIn("1111", List(consignorId)).futureValue
 
       result mustBe Seq.empty
@@ -143,33 +205,35 @@ class MovementRepositoryItSpec extends PlaySpec
   "getMovementByErn" should {
     "return a list of movement" when {
       "ern match the consignorId " in {
-        val expectedMovement1 = Movement("lrn", "ern1", None, Some("arc1"))
-        val expectedMovement2 = Movement("lrn", "ern2", None, Some("arc2"))
-        val expectedMovement3 = Movement("lrn1", "ern1", None, Some("arc3"))
-        val expectedMovement4 = Movement("lrn4", "ern4", None, Some("arc4"))
-        saveMovement(expectedMovement1)
-        saveMovement(expectedMovement2)
-        saveMovement(expectedMovement3)
-        saveMovement(expectedMovement4)
+        val expectedMovement1 = Movement("1", "ern1", None, Some("arc1"))
+        val expectedMovement2 = Movement("1", "ern2", None, Some("arc2"))
+        val expectedMovement3 = Movement("2", "ern1", None, Some("arc3"))
+        val expectedMovement4 = Movement("3", "ern4", None, Some("arc4"))
+        insertMovement(expectedMovement1)
+        insertMovement(expectedMovement2)
+        insertMovement(expectedMovement3)
+        insertMovement(expectedMovement4)
 
         val result = repository.getMovementByERN(Seq("ern1", "ern2")).futureValue
 
-        result mustBe Seq(expectedMovement1, expectedMovement2, expectedMovement3)
+        result.sortBy(_.localReferenceNumber) mustBe Seq(expectedMovement1, expectedMovement2, expectedMovement3)
       }
 
       "ern match consignorId and consigneeId" in {
-        val expectedMovement1 = Movement("lrn", "consignorId1", Some("ern1"), Some("arc1"))
-        val expectedMovement2 = Movement("lrn3", "ern1", Some("ern2"), Some("arc2"))
-        val expectedMovement3 = Movement("lrn1", "consignorId1", Some("ern1"), Some("arc3"))
-        val expectedMovement4 = Movement("lrn4", "ern4", None, Some("arc4"))
-        saveMovement(expectedMovement1)
-        saveMovement(expectedMovement2)
-        saveMovement(expectedMovement3)
-        saveMovement(expectedMovement4)
+        val expectedMovement1 = Movement("1", "consignorId1", Some("ern1"), Some("arc1"))
+        val expectedMovement2 = Movement("2", "ern1", Some("ern2"), Some("arc2"))
+        val expectedMovement3 = Movement("3", "consignorId1", Some("ern1"), Some("arc3"))
+        val expectedMovement4 = Movement("4", "ern4", None, Some("arc4"))
+        insertMovement(expectedMovement1)
+        insertMovement(expectedMovement2)
+        insertMovement(expectedMovement3)
+        insertMovement(expectedMovement4)
 
         val result = repository.getMovementByERN(Seq("ern1")).futureValue
 
-        result mustBe Seq(expectedMovement1, expectedMovement2, expectedMovement3)
+        result.sortBy(_.localReferenceNumber) mustBe Seq(
+          expectedMovement1, expectedMovement2, expectedMovement3
+        )
       }
     }
 
@@ -177,9 +241,9 @@ class MovementRepositoryItSpec extends PlaySpec
       val expectedMovement1 = Movement("lrn", "consignorId1", Some("ern1"), Some("arc1"))
       val expectedMovement2 = Movement("lrn", "consignorId2", Some("ern2"), Some("arc2"))
       val expectedMovement3 = Movement("lrn1", "consignorId1", Some("ern1"), Some("arc3"))
-      saveMovement(expectedMovement1)
-      saveMovement(expectedMovement2)
-      saveMovement(expectedMovement3)
+      insertMovement(expectedMovement1)
+      insertMovement(expectedMovement2)
+      insertMovement(expectedMovement3)
 
       val result = repository.getMovementByERN(Seq("ern3")).futureValue
 
@@ -196,10 +260,10 @@ class MovementRepositoryItSpec extends PlaySpec
         val expectedMovement2 = Movement("lrn", "ern2", None, Some("arc2"))
         val expectedMovement3 = Movement("lrn1", "ern1", None, Some("arc3"))
         val expectedMovement4 = Movement("lrn4", "ern4", None, Some("arc4"))
-        saveMovement(expectedMovement1)
-        saveMovement(expectedMovement2)
-        saveMovement(expectedMovement3)
-        saveMovement(expectedMovement4)
+        insertMovement(expectedMovement1)
+        insertMovement(expectedMovement2)
+        insertMovement(expectedMovement3)
+        insertMovement(expectedMovement4)
 
         val result = repository.getMovementByARC("arc2").futureValue
 
@@ -208,7 +272,48 @@ class MovementRepositoryItSpec extends PlaySpec
     }
   }
 
-  private def saveMovement(movement: Movement) = {
+  "getAll" should {
+    "get all record for a consignorId" in {
+      val instant = Instant.now
+      insertMovement(Movement("1", "345", Some("789"), None, instant))
+      insertMovement(Movement("2", "897", Some("456"), None, instant))
+      insertMovement(Movement("6", "345", Some("523"), None, instant))
+
+      val result = repository.getAllBy("345").futureValue
+
+      result mustBe Seq(
+        Movement("1", "345", Some("789"), None, instant),
+        Movement("6", "345", Some("523"), None, instant)
+      )
+    }
+
+    "get all record for a consignee" in {
+      val instant = Instant.now
+      insertMovement(Movement("1", "345", Some("789"), None, instant))
+      insertMovement(Movement("2", "897", Some("456"), None, instant))
+      insertMovement(Movement("6", "345", Some("523"), None, instant))
+      insertMovement(Movement("1", "564", Some("456"), None, instant))
+
+      val result = repository.getAllBy("456").futureValue
+
+      result mustBe Seq(
+        Movement("2", "897", Some("456"), None, instant),
+        Movement("1", "564", Some("456"), None, instant)
+      )
+    }
+
+    "return an empty list if there are no matching records" in {
+      insertMovement(Movement("1", "345", Some("789"), None))
+      insertMovement(Movement("2", "897", Some("456"), None))
+      insertMovement(Movement("6", "345", Some("523"), None))
+
+      val result = repository.getAllBy("896").futureValue
+
+      result mustBe Seq.empty
+    }
+  }
+
+  private def insertMovement(movement: Movement) = {
     insert(movement).futureValue
   }
 }

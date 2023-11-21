@@ -14,13 +14,24 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
+package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
-import java.time.{Clock, Instant}
-import javax.inject.{Inject, Singleton}
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{ExecutionContext, Future}
 
-@Singleton
-class DateTimeService @Inject()(clock: Clock) {
+trait ScheduledJob {
+  def name: String
+  def execute(implicit ec: ExecutionContext): Future[Result]
+  def isRunning: Future[Boolean]
 
-  def now: Instant = Instant.now(clock)
+  case class Result(message: String)
+
+  val enabled: Boolean
+  def configKey: String = name
+
+  def initialDelay: FiniteDuration
+
+  def interval: FiniteDuration
+
+  override def toString() = s"$name after $initialDelay every $interval"
 }
