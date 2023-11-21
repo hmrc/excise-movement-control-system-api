@@ -16,17 +16,18 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
+import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Filters.{and, equal, in, or}
+import org.mongodb.scala.model.Updates.{combine, set}
 import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
 import play.api.Logging
 import play.api.libs.json.Json
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository.mongoIndexes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
+import uk.gov.hmrc.mongo.{MongoComponent, TimestampSupport}
 
-import java.time.{Clock, Instant}
 import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.Duration
@@ -37,7 +38,7 @@ class MovementRepository @Inject()
 (
   mongo: MongoComponent,
   appConfig: AppConfig,
-  clock: Clock
+  timeService: TimestampSupport
 )(implicit ec: ExecutionContext) extends
   PlayMongoRepository[Movement](
     collectionName = "movements",
@@ -47,9 +48,34 @@ class MovementRepository @Inject()
     replaceIndexes = true
   ) with Logging {
 
+  private def filterBy(localReferenceNumber: String, consignorId: String, consigneeId: Option[String]): Bson = {
+    val erns = Seq(consignorId) ++ consigneeId.fold[Seq[String]](Seq.empty)(o => Seq(o))
+
+    and(
+      equal("localReferenceNumber", localReferenceNumber),
+      or(in("consignorId", erns: _*),
+        in("consigneeId", erns: _*))
+    )
+  }
+
   def saveMovement(movement: Movement): Future[Boolean] = {
-    collection.insertOne(movement.copy(createdOn = Instant.now(clock)))
+    collection.insertOne(movement.copy(lastUpdated = timeService.timestamp))
       .toFuture()
+      .map(_ => true)
+  }
+
+  def updateMovement(movement: Movement): Future[Boolean] = {
+
+    val update = combine(
+      set("consigneeId",  Codecs.toBson(movement.consigneeId)),
+      set("administrativeReferenceCode", Codecs.toBson(movement.administrativeReferenceCode)),
+      set("lastUpdated", Codecs.toBson(timeService.timestamp)),
+      set("messages", Codecs.toBson(movement.messages))
+    )
+    collection.updateOne(
+      filter = filterBy(movement.localReferenceNumber, movement.consignorId, movement.consigneeId),
+      update
+    ).toFuture()
       .map(_ => true)
   }
 
@@ -72,7 +98,12 @@ class MovementRepository @Inject()
   def getMovementByARC(arc: String): Future[Seq[Movement]] = {
     collection.find(in("administrativeReferenceCode", arc)).toFuture()
   }
+
+  def getAllBy(ern: String): Future[Seq[Movement]] = {
+    getMovementByERN(Seq(ern))
+  }
 }
+
 
 object MovementMessageRepository {
   def mongoIndexes(ttl: Duration): Seq[IndexModel] =
@@ -92,10 +123,23 @@ object MovementMessageRepository {
           .background(true)
           .unique(true)
       ),
-      IndexModel(
-        Indexes.ascending("administrativeReferenceCode"),
-        IndexOptions().name("arc_index")
-          .background(true)
-      )
+      createIndexWithBackground("administrativeReferenceCode", "arc_index"),
+      createIndex("consignorId", "consignorId_ttl_idx"),
+      createIndex("consigneeId", "consigneeId_ttl_idx")
     )
+
+  def createIndex(fieldName: String, indexName: String): IndexModel = {
+    IndexModel(
+      Indexes.ascending(fieldName),
+      IndexOptions().name(indexName)
+    )
+  }
+
+  def createIndexWithBackground(fieldName: String, indexName: String): IndexModel = {
+    IndexModel(
+      Indexes.ascending(fieldName),
+      IndexOptions().name(indexName)
+        .background(true)
+    )
+  }
 }

@@ -40,7 +40,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.mongo.TimestampSupport
 
 import java.nio.charset.StandardCharsets
 import java.time.{Instant, LocalDateTime}
@@ -51,6 +51,7 @@ class GetMessagesControllerItSpec extends PlaySpec
   with GuiceOneServerPerSuite
   with AuthTestSupport
   with TestXml
+  with NewMessagesXml
   with WireMockServerSpec
   with RepositoryTestStub
   with BeforeAndAfterAll {
@@ -61,12 +62,12 @@ class GetMessagesControllerItSpec extends PlaySpec
   private val consignorId = "GBWK002281023"
   private val lrn = "token"
   private val url = s"http://localhost:$port/movements/$lrn/messages"
-  private lazy val dateTimeService: DateTimeService = mock[DateTimeService]
+  private lazy val dateTimeService: TimestampSupport = mock[TimestampSupport]
   private val timestamp = Instant.parse("2018-11-30T18:35:24.00Z")
   private val responseFromEis = EISConsumptionResponse(
     LocalDateTime.of(2023, 1, 2, 3, 4, 5),
     consignorId,
-    Base64.getEncoder.encodeToString(NewMessagesXml.newMessageWithIE801.toString().getBytes(StandardCharsets.UTF_8)),
+    Base64.getEncoder.encodeToString(newMessageWithIE801.toString().getBytes(StandardCharsets.UTF_8)),
   )
 
   override lazy val app: Application = {
@@ -78,7 +79,7 @@ class GetMessagesControllerItSpec extends PlaySpec
       .overrides(
         bind[AuthConnector].to(authConnector),
         bind[MovementRepository].to(movementRepository),
-        bind[DateTimeService].to(dateTimeService)
+        bind[TimestampSupport].to(dateTimeService)
       )
       .build()
   }
@@ -99,7 +100,7 @@ class GetMessagesControllerItSpec extends PlaySpec
       stubShowNewMessageRequest(consignorId)
       when(movementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(Movement(lrn, consignorId, None, None, Instant.now, Seq.empty))))
-      when(dateTimeService.now).thenReturn(timestamp)
+      when(dateTimeService.timestamp()).thenReturn(timestamp)
 
       val result = getRequest
 
@@ -135,7 +136,7 @@ class GetMessagesControllerItSpec extends PlaySpec
     // for a combination of lrn consignorId/consigneeId
     "return 500 when multiple movements messages are found" in {
       withAuthorizedTrader(consignorId)
-      val movementMessage = Movement("", "", None, None, timestamp, Seq(Message("", "", timestamp)))
+      val movementMessage = Movement("", "", None, None, timestamp, Seq(Message("", "", dateTimeService)))
       when(movementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(movementMessage, movementMessage)))
 

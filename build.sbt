@@ -19,16 +19,19 @@ lazy val microservice = Project("excise-movement-control-system-api", file("."))
     Compile / scalaxb / scalaxbPackageName := "generated",
   )
   .configs(IntegrationTest)
+  .settings(
+    Test / parallelExecution := true
+  )
   .settings(integrationTestSettings(): _*)
   .settings(resolvers += Resolver.jcenterRepo)
-  .settings(scoverageSettings)
+  .settings(scoverageSettings: _*)
   .settings(
     Compile / unmanagedResourceDirectories += baseDirectory.value / "resources",
   )
   .disablePlugins(JUnitXmlReportPlugin) //Required to prevent https://github.com/scalatest/scalatest/issues/1427
 
 lazy val scoverageSettings: Seq[Setting[_]] = Seq(
-  coverageExcludedPackages := List("<empty>",
+  ScoverageKeys.coverageExcludedPackages := List("<empty>",
     "Reverse.*",
     "domain\\..*",
     "models\\..*",
@@ -37,8 +40,7 @@ lazy val scoverageSettings: Seq[Setting[_]] = Seq(
     "generated\\..*",
     "scalaxb\\..*"
   ).mkString(";"),
-  coverageMinimumStmtTotal := 90,
-  coverageFailOnMinimum := true,
-  coverageHighlighting := true,
-  parallelExecution in Test := false
+  ScoverageKeys.coverageMinimumStmtTotal := 90,
+  ScoverageKeys.coverageFailOnMinimum := true,
+  ScoverageKeys.coverageHighlighting := true
 )
