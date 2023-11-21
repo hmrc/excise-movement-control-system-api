@@ -177,7 +177,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
     "catch exception Mongo throw and error" in {
       val workItem = createWorkItem()
-      setUpWithTwoWorkItem(workItem)
+      addOneItemToMockQueue(workItem)
       when(workItemRepository.pullOutstanding(any, any)).thenReturn(
         Future.failed(new RuntimeException("error"))
       )
