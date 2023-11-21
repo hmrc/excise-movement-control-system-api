@@ -23,6 +23,8 @@ import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, GeneralMongoError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 
