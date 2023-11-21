@@ -27,7 +27,7 @@ case class Movement(
                      consignorId: String,
                      consigneeId: Option[String],
                      administrativeReferenceCode: Option[String] = None,
-                     createdOn: Instant = Instant.now,
+                     lastUpdated: Instant = Instant.now,
                      messages: Seq[Message] = Seq.empty
                    )
 

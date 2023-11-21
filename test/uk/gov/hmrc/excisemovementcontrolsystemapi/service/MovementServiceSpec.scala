@@ -66,7 +66,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       when(mockMovementMessageRepository.saveMovement(any))
         .thenReturn(Future.successful(true))
 
-      val result = await(movementMessageService.saveMovementMessage(successMovementMessage))
+      val result = await(movementMessageService.saveMovement(successMovementMessage))
 
       result mustBe Right(successMovementMessage)
     }
@@ -75,7 +75,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       when(mockMovementMessageRepository.saveMovement(any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
-      val result = await(movementMessageService.saveMovementMessage(Movement(lrn, consignorId, Some(consigneeId))))
+      val result = await(movementMessageService.saveMovement(Movement(lrn, consignorId, Some(consigneeId))))
 
       result.left.value mustBe GeneralMongoError("error")
     }

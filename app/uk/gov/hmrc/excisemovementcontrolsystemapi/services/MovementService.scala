@@ -34,7 +34,7 @@ class MovementService @Inject()
   emcsUtils: EmcsUtils,
   dateTimeService: TimestampSupport
 )(implicit ec: ExecutionContext) {
-  def saveMovementMessage(movementMessage: Movement): Future[Either[GeneralMongoError, Movement]] = {
+  def saveMovement(movementMessage: Movement): Future[Either[GeneralMongoError, Movement]] = {
     movementRepository.saveMovement(movementMessage)
       .map(_ => Right(movementMessage))
       .recover {
