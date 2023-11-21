@@ -48,7 +48,7 @@ class AppConfigSpec extends PlaySpec {
   val configService: AppConfig = createAppConfig
 
   "AppConfig" should {
-    "return config for TTL for Movement Mongo collection" in{
+    "return config for TTL for Movement Mongo collection" in {
       configService.getMovementTTL mustBe Duration.create(10, DAYS)
     }
 

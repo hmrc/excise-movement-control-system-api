@@ -143,7 +143,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
       await(job.executeInMutex)
 
-      verify(workItemRepository).markAs(eqTo(workItem.id), eqTo(ProcessingStatus.ToDo),eqTo(Some(fiveMinutesAfterNow)))
+      verify(workItemRepository).markAs(eqTo(workItem.id), eqTo(ProcessingStatus.ToDo), eqTo(Some(fiveMinutesAfterNow)))
     }
 
     "should mark as failed Work Item in ToDo when there are no messages found" in {
@@ -294,7 +294,7 @@ class PollingNewMessagesWithWorkItemJobSpec
         .thenReturn(Future.successful(None))
     } else {
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
-        .thenReturn(Future.successful(Some(newMessageResponse, messageCount)))
+        .thenReturn(Future.successful(Some((newMessageResponse, messageCount))))
     }
   }
 
@@ -307,7 +307,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
   }
 
-  private def addTwoItemsToMockQueue(workItem1: WorkItem[ExciseNumberWorkItem] = createWorkItem(), workItem2: WorkItem[ExciseNumberWorkItem]): Unit = {
+  private def addTwoItemsToMockQueue(workItem1: WorkItem[ExciseNumberWorkItem], workItem2: WorkItem[ExciseNumberWorkItem]): Unit = {
 
     when(workItemRepository.pullOutstanding(any, any)).thenReturn(
       Future.successful(Some(workItem1)),

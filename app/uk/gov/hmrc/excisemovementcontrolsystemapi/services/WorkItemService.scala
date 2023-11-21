@@ -24,9 +24,8 @@ import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import scala.jdk.DurationConverters.ScalaDurationOps
-import scala.language.postfixOps
 
 @Singleton
 class WorkItemService @Inject()
@@ -34,7 +33,7 @@ class WorkItemService @Inject()
   workItemRepository: ExciseNumberQueueWorkItemRepository,
   appConfig: AppConfig,
   timestampService: TimestampSupport
-)(implicit ec: ExecutionContext) {
+) {
 
   def createWorkItem(ern: String): Future[WorkItem[ExciseNumberWorkItem]] = {
     workItemRepository.pushNew(ExciseNumberWorkItem(ern), timestampService.timestamp().plus(appConfig.runSubmissionWorkItemAfter.toJava))

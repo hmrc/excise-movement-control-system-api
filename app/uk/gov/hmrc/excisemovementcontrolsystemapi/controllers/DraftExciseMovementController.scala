@@ -23,7 +23,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthActio
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -65,14 +65,13 @@ class DraftExciseMovementController @Inject()(
       case _ => throw new Exception("invalid message sent to draft excise movement controller")
     }
 
-    //TODO handle if this Future fails
-   val test = workItemService.createWorkItem(newMovement.consignorId)
-
-        movementMessageService.saveMovementMessage(newMovement)
-          .flatMap {
-            case Right(msg) => Future.successful(Accepted(Json.toJson(ExciseMovementResponse("Accepted", msg.localReferenceNumber, msg.consignorId, msg.consigneeId))))
-            case Left(error) => Future.successful(InternalServerError(error.message))
-          }
+    workItemService.createWorkItem(newMovement.consignorId).flatMap { _ =>
+      movementMessageService.saveMovementMessage(newMovement)
+        .flatMap {
+          case Right(msg) => Future.successful(Accepted(Json.toJson(ExciseMovementResponse("Accepted", msg.localReferenceNumber, msg.consignorId, msg.consigneeId))))
+          case Left(error) => Future.successful(InternalServerError(error.message))
+        }
+    }
 
   }
 

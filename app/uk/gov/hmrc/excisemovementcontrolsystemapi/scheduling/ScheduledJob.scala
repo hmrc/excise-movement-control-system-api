@@ -21,13 +21,16 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait ScheduledJob {
   def name: String
+
   def execute(implicit ec: ExecutionContext): Future[Result]
+
   def isRunning: Future[Boolean]
 
 <<<<<<<< HEAD:app/uk/gov/hmrc/excisemovementcontrolsystemapi/scheduling/ScheduledJob.scala
   case class Result(message: String)
 
   val enabled: Boolean
+
   def configKey: String = name
 
   def initialDelay: FiniteDuration

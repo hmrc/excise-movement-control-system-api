@@ -21,8 +21,8 @@ import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.{Scenario, StubMapping}
 import org.bson.types.ObjectId
 import org.mockito.MockitoSugar.when
-import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{Eventually, IntegrationPatience, ScalaFutures}
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.inject.bind
@@ -55,7 +55,8 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
   with ScalaFutures
   with Eventually
   with IntegrationPatience
-  with BeforeAndAfterEach {
+  with BeforeAndAfterEach
+  with BeforeAndAfterAll {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val showNewMessageUrl = "/apip-emcs/messages/v1/show-new-messages"
@@ -79,7 +80,7 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
     timeService
   )
 
-  protected def appBuilder = {
+  protected def appBuilder: GuiceApplicationBuilder = {
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
 
@@ -110,6 +111,11 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
     app.stop()
   }
 
+  override def afterAll(): Unit = {
+    super.afterAll()
+    dropDatabase()
+  }
+
   "Scheduler" should {
 
     "start Polling show new message" in {
@@ -134,13 +140,24 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
       // todo: not a very good way to wait for the thread to do is job. Tried eventually but it does not
       // work. Try to find a better way.
       Thread.sleep(6000)
-      eventually { wireMock.verify( getRequestedFor(urlEqualTo(s"$showNewMessageUrl?exciseregistrationnumber=1")))}
-      eventually { wireMock.verify(getRequestedFor(urlEqualTo(s"$showNewMessageUrl?exciseregistrationnumber=3")))}
-      eventually { wireMock.verify(getRequestedFor(urlEqualTo(s"$showNewMessageUrl?exciseregistrationnumber=4")))}
-      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}1")))}
-      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}3")))}
-      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))}
-
+      eventually {
+        wireMock.verify(getRequestedFor(urlEqualTo(s"$showNewMessageUrl?exciseregistrationnumber=1")))
+      }
+      eventually {
+        wireMock.verify(getRequestedFor(urlEqualTo(s"$showNewMessageUrl?exciseregistrationnumber=3")))
+      }
+      eventually {
+        wireMock.verify(getRequestedFor(urlEqualTo(s"$showNewMessageUrl?exciseregistrationnumber=4")))
+      }
+      eventually {
+        wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}1")))
+      }
+      eventually {
+        wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}3")))
+      }
+      eventually {
+        wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))
+      }
 
 
       val movements = movementRepository.collection.find().toFuture().futureValue
@@ -278,7 +295,7 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
   private def decodeAndCleanUpMessage(messages: Seq[Message]): Seq[String] = {
     messages
       .map(o => Base64.getDecoder.decode(o.encodedMessage).map(_.toChar).mkString)
-      .map(cleanUpString(_))
+      .map(cleanUpString)
   }
 
   private def setUpWireMockStubs(): Unit = {
@@ -401,13 +418,13 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
 
   private def createWorkItem(ern: String): WorkItem[ExciseNumberWorkItem] = {
     WorkItem(
-      id           = new ObjectId(),
-      receivedAt   = availableBefore.minusSeconds(60),
-      updatedAt    = availableBefore.minusSeconds(60),
-      availableAt  = availableBefore.minusSeconds(60),
-      status       = ProcessingStatus.ToDo,
+      id = new ObjectId(),
+      receivedAt = availableBefore.minusSeconds(60),
+      updatedAt = availableBefore.minusSeconds(60),
+      availableAt = availableBefore.minusSeconds(60),
+      status = ProcessingStatus.ToDo,
       failureCount = 0,
-      item         = ExciseNumberWorkItem(ern)
+      item = ExciseNumberWorkItem(ern)
     )
   }
 
