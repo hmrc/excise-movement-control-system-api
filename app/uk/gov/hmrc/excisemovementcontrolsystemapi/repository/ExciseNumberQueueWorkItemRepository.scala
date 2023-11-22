@@ -36,10 +36,10 @@ class ExciseNumberQueueWorkItemRepository @Inject()
   collectionName = "excise-number-work-item",
   mongoComponent = mongoComponent,
   itemFormat = ExciseNumberWorkItem.format,
-  workItemFields = WorkItemFields.default,
+  workItemFields = WorkItemFields.default.copy(availableAt = "availableAt",receivedAt = "lastSubmitted"),
   extraIndexes = Seq(
     IndexModel(
-      Indexes.ascending("updatedAt"),
+      Indexes.ascending("lastSubmitted"),
       IndexOptions().expireAfter(appConfig.getMovementTTL.toSeconds, TimeUnit.SECONDS)
     )
   )
