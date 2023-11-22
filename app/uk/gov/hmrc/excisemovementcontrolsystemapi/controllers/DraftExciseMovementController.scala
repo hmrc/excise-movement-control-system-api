@@ -65,6 +65,8 @@ class DraftExciseMovementController @Inject()(
       case _ => throw new Exception("invalid message sent to draft excise movement controller")
     }
 
+    //TODO shouldn't create work item here. should do db saving first to catch duplicates LRN submissions.
+    // But possibly a moot point once checks for ERN uniqueness in WI queue are in place.
     workItemService.createWorkItem(newMovement.consignorId).flatMap { _ =>
       movementMessageService.saveNewMovement(newMovement)
         .flatMap {

@@ -37,6 +37,7 @@ class SubmitMessageController @Inject()(
 
   def submit(lrn: String): Action[NodeSeq] = {
 
+    //TODO need to create WI / update WI on submission success
     (authAction
       andThen xmlParser
       andThen validateErnsAction

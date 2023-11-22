@@ -36,6 +36,11 @@ class WorkItemService @Inject()
 ) {
 
   def createWorkItem(ern: String): Future[WorkItem[ExciseNumberWorkItem]] = {
+    //TODO need to check if one exists before pushing a new one.
+
+    //TODO if exists, update available time to MIN(available time, now + fast interval)
+    //TODO set retries to 3
+    //TODO update lastSubmitted timestamp
     workItemRepository.pushNew(ExciseNumberWorkItem(ern), timestampService.timestamp().plus(appConfig.runSubmissionWorkItemAfter.toJava))
   }
 

@@ -74,24 +74,36 @@ class PollingNewMessageWithWorkItemJob @Inject()
 
           getNewMessages(wi.item.exciseNumber).flatMap {
 
+                //TODO for the true case, we don't want to use failureCount here. We want a new retry value.
+                //TODO Probably need a fail retry and a fast retry count in app Config
             case (true, NoMessageFound) if wi.failureCount < maximumRetries =>
 
+              //TODO Don't mark as failed mark as ToDo
+              // TODO decrement num Retries
+              //TODO nextRunTime is availableAt + fastInterval
               workItemRepository.markAs(wi.id, ProcessingStatus.Failed, Some(nextRunTime))
 
             case (true, NoMessageFound) =>
+            // TODO this becomes case where wi.retryCount == 0
+              //TODO nextRunTime is availableAt + slowInterval
+              //TODO status to ToDo
 
               workItemRepository.completeAndDelete(wi.id)
 
             case (true, MessageReceived) =>
+              //TODO case merges with above case
               workItemRepository.completeAndDelete(wi.id)
 
             case (true, MoreMessagesToGet) =>
+              //TODO this now needs to poll again immedately
               workItemRepository.markAs(wi.id, ProcessingStatus.ToDo, Some(nextRunTime))
 
             case (false, _) if wi.failureCount < maximumRetries =>
+              //TODO this can stay the same?
               workItemRepository.markAs(wi.id, ProcessingStatus.Failed, Some(nextRunTime))
 
             case _ =>
+              //TODO this can stay the same
               workItemRepository.markAs(wi.id, ProcessingStatus.PermanentlyFailed)
 
           }
