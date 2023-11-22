@@ -32,10 +32,11 @@ case class Movement(
                    )
 
 case class Message(
-  encodedMessage: String,
-  messageType: String,
-  createdOn: Instant = Instant.now
-)
+                    hash: Int,
+                    encodedMessage: String,
+                    messageType: String,
+                    createdOn: Instant = Instant.now
+                  )
 
 object Movement {
   implicit val instantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
@@ -43,5 +44,13 @@ object Movement {
 }
 
 object Message {
+  def apply(
+             encodedMessage: String,
+             messageType: String,
+             dateTimeService: TimestampSupport): Message = {
+
+    Message(encodedMessage.hashCode(), encodedMessage, messageType, dateTimeService.timestamp())
+  }
+
   implicit val format: OFormat[Message] = Json.format[Message]
 }

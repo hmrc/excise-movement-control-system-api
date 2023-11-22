@@ -19,8 +19,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
-import uk.gov.hmrc.mongo.{MongoComponent, TimestampSupport}
 import uk.gov.hmrc.mongo.workitem.{WorkItemFields, WorkItemRepository}
+import uk.gov.hmrc.mongo.{MongoComponent, TimestampSupport}
 
 import java.time.{Duration, Instant}
 import java.util.concurrent.TimeUnit
@@ -32,12 +32,12 @@ class ExciseNumberQueueWorkItemRepository @Inject()
   appConfig: AppConfig,
   mongoComponent: MongoComponent,
   timeService: TimestampSupport
-) (implicit ec: ExecutionContext) extends WorkItemRepository[ExciseNumberWorkItem](
+)(implicit ec: ExecutionContext) extends WorkItemRepository[ExciseNumberWorkItem](
   collectionName = "excise-number-work-item",
   mongoComponent = mongoComponent,
-  itemFormat     = ExciseNumberWorkItem.format,
+  itemFormat = ExciseNumberWorkItem.format,
   workItemFields = WorkItemFields.default,
-  extraIndexes   = Seq(
+  extraIndexes = Seq(
     IndexModel(
       Indexes.ascending("updatedAt"),
       IndexOptions().expireAfter(appConfig.getMovementTTL.toSeconds, TimeUnit.SECONDS)
@@ -45,11 +45,10 @@ class ExciseNumberQueueWorkItemRepository @Inject()
   )
 ) {
 
-  override def now(): Instant = timeService.timestamp
+  override def now(): Instant = timeService.timestamp()
 
   override val inProgressRetryAfter: Duration = {
     appConfig.retryAfterMinutes
   }
-
 }
 

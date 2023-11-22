@@ -24,7 +24,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -38,6 +38,7 @@ class DraftExciseMovementController @Inject()(
                                                validateErnsAction: ValidateErnsAction,
                                                movementMessageConnector: EISSubmissionConnector,
                                                movementMessageService: MovementService,
+                                               workItemService: WorkItemService,
                                                cc: ControllerComponents
                                              )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
@@ -64,11 +65,14 @@ class DraftExciseMovementController @Inject()(
       case _ => throw new Exception("invalid message sent to draft excise movement controller")
     }
 
-    movementMessageService.saveNewMovement(newMovement)
-      .flatMap {
-        case Right(msg) => Future.successful(Accepted(Json.toJson(ExciseMovementResponse("Accepted", msg.localReferenceNumber, msg.consignorId, msg.consigneeId))))
-        case Left(error) => Future.successful(error)
-      }
+    workItemService.createWorkItem(newMovement.consignorId).flatMap { _ =>
+      movementMessageService.saveNewMovement(newMovement)
+        .flatMap {
+          case Right(msg) => Future.successful(Accepted(Json.toJson(ExciseMovementResponse("Accepted", msg.localReferenceNumber, msg.consignorId, msg.consigneeId))))
+          case Left(error) => Future.successful(error)
+        }
+    }
+
   }
 
   //todo: this will be removed at a later time when we will do the polling

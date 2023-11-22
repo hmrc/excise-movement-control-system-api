@@ -22,12 +22,10 @@ import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, GeneralMongoError}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.mongo.TimestampSupport
 
 import javax.inject.Inject
@@ -36,7 +34,8 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class MovementService @Inject()(
                                  movementRepository: MovementRepository,
-                                 emcsUtils: EmcsUtils
+                                 emcsUtils: EmcsUtils,
+                                 timestampSupport: TimestampSupport
                                )(implicit ec: ExecutionContext) extends Logging {
   def saveNewMovement(movement: Movement): Future[Either[Result, Movement]] = {
 
@@ -120,7 +119,7 @@ class MovementService @Inject()(
   private def saveDistinctMessage(movement: Movement, newMessage: IEMessage): Future[Boolean] = {
 
     val encodedMessage = emcsUtils.encode(newMessage.toXml.toString)
-    val messages = Seq(Message(encodedMessage, newMessage.messageType, dateTimeService))
+    val messages = Seq(Message(encodedMessage, newMessage.messageType, timestampSupport))
 
     //todo: remove hash from message class. Hash can calculate on the go in here
     val allMessages = (movement.messages ++ messages).distinctBy(_.hash)

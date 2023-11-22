@@ -30,4 +30,3 @@ case class EISConsumptionResponse
 object EISConsumptionResponse {
   implicit val format: OFormat[EISConsumptionResponse] = Json.format[EISConsumptionResponse]
 }
-

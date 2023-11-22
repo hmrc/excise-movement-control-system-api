@@ -19,8 +19,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model
 import play.api.libs.json.{Json, OFormat}
 
 case class ExciseNumberWorkItem(
-                         exciseNumber: String
-                       )
+                                 exciseNumber: String
+                               )
 
 object ExciseNumberWorkItem {
   implicit val format: OFormat[ExciseNumberWorkItem] = Json.format[ExciseNumberWorkItem]

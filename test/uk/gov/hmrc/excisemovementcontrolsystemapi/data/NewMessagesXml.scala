@@ -20,7 +20,7 @@ import scala.xml.Elem
 
 trait NewMessagesXml {
 
-  lazy val newMessageWithIE801: Elem = <ns:NewMessagesDataResponse
+  def newMessageWithIE801(messageCount: Int = 1): Elem = <ns:NewMessagesDataResponse
   xmlns:ns="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/NewMessagesData/3"
   xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.01"
   xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01">
@@ -262,7 +262,7 @@ trait NewMessagesXml {
         </urn1:Body>
       </urn1:IE801>
     </ns:Messages>
-    <ns:CountOfMessagesAvailable>1</ns:CountOfMessagesAvailable>
+    <ns:CountOfMessagesAvailable>{messageCount}</ns:CountOfMessagesAvailable>
   </ns:NewMessagesDataResponse>
 
   lazy val newMessageXmlWithIE704: Elem = <ns:NewMessagesDataResponse

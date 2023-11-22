@@ -33,7 +33,7 @@ class GetNewMessageServiceImpl @Inject()(
 
   def getNewMessagesAndAcknowledge(
                                     exciseNumber: String
-                                  )(implicit hc: HeaderCarrier): Future[Option[EISConsumptionResponse]] = {
+                                  )(implicit hc: HeaderCarrier): Future[Option[(EISConsumptionResponse, Long)]] = {
     showNewMessageConnector.get(exciseNumber).flatMap(response =>
       response.fold(
         _ => Future.successful(None),
@@ -45,17 +45,18 @@ class GetNewMessageServiceImpl @Inject()(
   private def handleSuccess(
                              exciseNumber: String,
                              newMessageResponse: EISConsumptionResponse
-                           )(implicit hc: HeaderCarrier): Future[Option[EISConsumptionResponse]] = {
+                           )(implicit hc: HeaderCarrier): Future[Option[(EISConsumptionResponse, Long)]] = {
 
-    val hasMessage = newMessageParserService.countOfMessagesAvailable(newMessageResponse.message) > 0
+    val messageCount = newMessageParserService.countOfMessagesAvailable(newMessageResponse.message)
+    val hasMessage = messageCount  > 0
 
     if(!hasMessage) {
-      logger.info(s"No more new message available for Excise Registration Number: $exciseNumber")
+      logger.info(s"No new messages available for Excise Registration Number: $exciseNumber")
       Future.successful(None)
     } else {
       messageReceiptConnector.put(exciseNumber).map {
-        case Right(_) => Some(newMessageResponse)
-        case Left(_) if hasMessage => Some(newMessageResponse)
+        case Right(_) => Some((newMessageResponse, messageCount))
+        case Left(_) if hasMessage => Some((newMessageResponse, messageCount))
         case Left(_) => None
       }
     }
@@ -64,6 +65,6 @@ class GetNewMessageServiceImpl @Inject()(
 
 @ImplementedBy(classOf[GetNewMessageServiceImpl])
 trait GetNewMessageService {
-  def getNewMessagesAndAcknowledge(exciseNumber: String)(implicit hc: HeaderCarrier): Future[Option[EISConsumptionResponse]]
+  def getNewMessagesAndAcknowledge(exciseNumber: String)(implicit hc: HeaderCarrier): Future[Option[(EISConsumptionResponse, Long)]]
 }
 

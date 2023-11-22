@@ -35,7 +35,8 @@ class AppConfigSpec extends PlaySpec {
       |scheduler.pollingNewMessageJob.interval=4 minutes
       |scheduler.pollingNewMessageJob.initialDelay=4 minutes
       |scheduler.queue.retryAfterMinutes=4
-      |scheduler.queue.retryAttempt=2
+      |scheduler.queue.retryAttempts=2
+      |scheduler.submissionWorkItems.runWorkItemAfter=3 minutes
     """.stripMargin
 
   private def createAppConfig = {
@@ -47,7 +48,7 @@ class AppConfigSpec extends PlaySpec {
   val configService: AppConfig = createAppConfig
 
   "AppConfig" should {
-    "return config for TTL for Movement Mongo collection" in{
+    "return config for TTL for Movement Mongo collection" in {
       configService.getMovementTTL mustBe Duration.create(10, DAYS)
     }
 
@@ -63,8 +64,12 @@ class AppConfigSpec extends PlaySpec {
       configService.retryAfterMinutes mustBe JavaDuration.ofMinutes(4)
     }
 
-    "return config for the queue retryAttempt" in {
-      configService.retryAttempts mustBe 2
+    "return config for the queue retryAttempts" in {
+      configService.maxRetryAttempts mustBe 2
+    }
+
+    "return config for Submission Work Items runWorkItemsAfter" in {
+      configService.runSubmissionWorkItemAfter mustBe Duration.create(3, MINUTES)
     }
   }
 }
