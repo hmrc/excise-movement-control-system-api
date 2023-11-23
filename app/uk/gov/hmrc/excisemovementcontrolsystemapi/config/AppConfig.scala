@@ -42,12 +42,18 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
     .map(Duration.create(_).asInstanceOf[FiniteDuration])
     .getOrElse(FiniteDuration(5, MINUTES))
 
+  // When a work item fails, this is how many times to retry it before permanently failing
   lazy val maxFailureRetryAttempts: Int = config.getOptional[Int]("scheduler.workItems.failureRetryAttempts").getOrElse(3)
 
+  // When on the fast interval, how many times to fast poll before switching to slow poll
+  lazy val fastIntervalRetryAttempts: Int = config.getOptional[Int]("scheduler.workItems.fastIntervalRetryAttempts").getOrElse(3)
+
+  // The fast interval is used after submitting a message
   lazy val workItemFastInterval: FiniteDuration = config.getOptional[String]("scheduler.workItems.fastInterval")
     .map(Duration.create(_).asInstanceOf[FiniteDuration])
     .getOrElse(FiniteDuration(5, MINUTES))
 
+  // The slow interval is used once fastInterval has been used for fastIntervalRetryAttempts times
   lazy val workItemSlowInterval: FiniteDuration = config.getOptional[String]("scheduler.workItems.slowInterval")
     .map(Duration.create(_).asInstanceOf[FiniteDuration])
     .getOrElse(FiniteDuration(1, HOURS))

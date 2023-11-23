@@ -69,7 +69,7 @@ class DraftExciseMovementControllerSpec
       availableAt = Instant.now,
       status = ToDo,
       failureCount = 0,
-      item = ExciseNumberWorkItem(ern)
+      item = ExciseNumberWorkItem(ern, 3)
     )
 
   override def beforeEach(): Unit = {
@@ -78,7 +78,7 @@ class DraftExciseMovementControllerSpec
 
     when(connector.submitMessage(any)(any)).thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
 
-    when(workItemService.createWorkItem(any)).thenReturn(Future.successful(workItem))
+    when(workItemService.addWorkItemForErn(any)).thenReturn(Future.successful(workItem))
 
     when(mockIeMessage.consigneeId).thenReturn(Some("789"))
     when(mockIeMessage.consignorId).thenReturn("456")
@@ -117,14 +117,14 @@ class DraftExciseMovementControllerSpec
       captor.value.administrativeReferenceCode.isDefined mustBe true
     }
 
-    "create a work item and save it to the db" in {
+    "call the add work item routine to create or update the database" in {
 
       when(movementMessageService.saveNewMovement(any))
         .thenReturn(Future.successful(Right(Movement("lrn", ern, None))))
 
       await(createWithSuccessfulAuth.submit(request))
 
-      verify(workItemService).createWorkItem("456")
+      verify(workItemService).addWorkItemForErn("456")
 
     }
 
@@ -132,7 +132,7 @@ class DraftExciseMovementControllerSpec
       when(movementMessageService.saveNewMovement(any))
         .thenReturn(Future.successful(Right(Movement("lrn", ern, None))))
 
-      when(workItemService.createWorkItem(any)).thenReturn(Future.failed(new RuntimeException("error")))
+      when(workItemService.addWorkItemForErn(any)).thenReturn(Future.failed(new RuntimeException("error")))
 
       intercept[RuntimeException] {
         await(createWithSuccessfulAuth.submit(request))

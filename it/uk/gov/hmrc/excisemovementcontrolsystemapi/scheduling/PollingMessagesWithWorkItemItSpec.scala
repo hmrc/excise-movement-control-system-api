@@ -427,7 +427,7 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
       availableAt = availableBefore.minusSeconds(60),
       status = ProcessingStatus.ToDo,
       failureCount = 0,
-      item = ExciseNumberWorkItem(ern)
+      item = ExciseNumberWorkItem(ern, 3)
     )
   }
 

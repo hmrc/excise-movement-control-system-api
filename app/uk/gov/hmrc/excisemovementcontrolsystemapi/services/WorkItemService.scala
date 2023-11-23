@@ -21,10 +21,11 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ExciseNumberQueueWorkItemRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
 import uk.gov.hmrc.mongo.TimestampSupport
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import javax.inject.Inject
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.DurationConverters.ScalaDurationOps
 
 @Singleton
@@ -33,15 +34,52 @@ class WorkItemService @Inject()
   workItemRepository: ExciseNumberQueueWorkItemRepository,
   appConfig: AppConfig,
   timestampService: TimestampSupport
-) {
+)(implicit val executionContext: ExecutionContext) {
 
-  def createWorkItem(ern: String): Future[WorkItem[ExciseNumberWorkItem]] = {
-    //TODO need to check if one exists before pushing a new one.
+  def addWorkItemForErn(ern: String): Future[WorkItem[ExciseNumberWorkItem]] = {
 
-    //TODO if exists, update available time to MIN(available time, now + fast interval)
-    //TODO set retries to 3
-    //TODO update lastSubmitted timestamp
-    workItemRepository.pushNew(ExciseNumberWorkItem(ern), timestampService.timestamp().plus(appConfig.workItemFastInterval.toJava))
+    workItemRepository.getWorkItemForErn(ern).flatMap {
+      case seq if seq == Seq.empty =>     createWorkItem(ern)
+      case seq: Seq[WorkItem[ExciseNumberWorkItem]] => updateWorkItemToRunOnFastIntervals(seq.head)
+    }
+
+  }
+
+  private def createWorkItem(ern: String): Future[WorkItem[ExciseNumberWorkItem]] = {
+
+    val nextAvailableAt = timestampService.timestamp().plus(appConfig.workItemFastInterval.toJava)
+
+    workItemRepository.pushNew(ExciseNumberWorkItem(ern, appConfig.fastIntervalRetryAttempts), nextAvailableAt)
+  }
+
+  private def updateWorkItemToRunOnFastIntervals(workItemToUpdate: WorkItem[ExciseNumberWorkItem]): Future[WorkItem[ExciseNumberWorkItem]] = {
+
+    val itemToUpdate = workItemToUpdate.item
+    val ern = itemToUpdate.exciseNumber
+    val updatedItem = itemToUpdate.copy(fastPollRetriesLeft = appConfig.fastIntervalRetryAttempts)
+
+    val fastIntervalRunningTime = timestampService.timestamp().plus(appConfig.workItemFastInterval.toJava)
+
+    val nextAvailableAt = if (fastIntervalRunningTime.isBefore(workItemToUpdate.availableAt)) {
+      fastIntervalRunningTime
+    } else {
+      workItemToUpdate.availableAt
+    }
+
+    val updatedWorkItem = workItemToUpdate.copy(
+      item = updatedItem,
+      availableAt = nextAvailableAt,
+      receivedAt = timestampService.timestamp(), //lastSubmitted
+      status = ToDo,
+      failureCount = 0
+    )
+
+    //TODO what happens if Work Item is locked in the db because the job is running at the same time as we get a submission???
+
+    workItemRepository.saveUpdatedWorkItem(updatedWorkItem).flatMap(_ => workItemRepository.getWorkItemForErn(ern))
+      .map { case seq if seq == Seq.empty => throw new RuntimeException("TODO")//TODO exception
+      case seq: Seq[WorkItem[ExciseNumberWorkItem]] => seq.head //Only one entry expected
+      }
   }
 
 }

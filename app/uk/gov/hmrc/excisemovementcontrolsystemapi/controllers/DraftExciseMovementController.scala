@@ -67,7 +67,7 @@ class DraftExciseMovementController @Inject()(
 
     //TODO shouldn't create work item here. should do db saving first to catch duplicates LRN submissions.
     // But possibly a moot point once checks for ERN uniqueness in WI queue are in place.
-    workItemService.createWorkItem(newMovement.consignorId).flatMap { _ =>
+    workItemService.addWorkItemForErn(newMovement.consignorId).flatMap { _ =>
       movementMessageService.saveNewMovement(newMovement)
         .flatMap {
           case Right(msg) => Future.successful(Accepted(Json.toJson(ExciseMovementResponse("Accepted", msg.localReferenceNumber, msg.consignorId, msg.consigneeId))))
