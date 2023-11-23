@@ -62,7 +62,7 @@ class PollingNewMessageWithWorkItemJob @Inject()
 
   override def runJob(implicit ec: ExecutionContext): Future[RunningOfJobSuccessful] = {
     val now = dateTimeService.timestamp()
-    process(now.minus(1, ChronoUnit.DAYS), now, appConfig.maxRetryAttempts)
+    process(now.minus(1, ChronoUnit.DAYS), now, appConfig.maxFailureRetryAttempts)
   }
 
   private def process(failedBefore: Instant, availableBefore: Instant, maximumRetries: Int): Future[RunningOfJobSuccessful] = {
@@ -70,7 +70,7 @@ class PollingNewMessageWithWorkItemJob @Inject()
       .flatMap {
         case None => Future.successful(RunningOfJobSuccessful)
         case Some(wi) =>
-          lazy val nextRunTime = wi.availableAt.plus(appConfig.runSubmissionWorkItemAfter.toJava)
+          lazy val nextRunTime = wi.availableAt.plus(appConfig.workItemFastInterval.toJava)
 
           getNewMessages(wi.item.exciseNumber).flatMap {
 

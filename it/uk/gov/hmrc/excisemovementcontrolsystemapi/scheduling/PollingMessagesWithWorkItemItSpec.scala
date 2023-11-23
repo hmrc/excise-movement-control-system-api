@@ -44,7 +44,7 @@ import java.nio.charset.StandardCharsets
 import java.time.{Instant, LocalDateTime}
 import java.util.Base64
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.{DAYS, Duration}
+import scala.concurrent.duration.{DAYS, Duration, MINUTES}
 
 class PollingMessagesWithWorkItemItSpec extends PlaySpec
   with DefaultPlayMongoRepositorySupport[WorkItem[ExciseNumberWorkItem]]
@@ -73,9 +73,9 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
   // This is used by repository and movementRepository to set the databases before
   // the application start. Once the application has started, the app will load a real
   // instance of AppConfig using the application.test.conf
-  private lazy val appConfig = mock[AppConfig]
+  private lazy val mongoAppConfig = mock[AppConfig]
   protected override lazy val repository = new ExciseNumberQueueWorkItemRepository(
-    appConfig,
+    mongoAppConfig,
     mongoComponent,
     timeService
   )
@@ -99,7 +99,10 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
     wireMock.resetAll()
 
     setUpWireMockStubs()
-    when(appConfig.getMovementTTL).thenReturn(Duration.create(30, DAYS))
+
+    when(mongoAppConfig.movementTTL).thenReturn(Duration.create(30, DAYS))
+    when(mongoAppConfig.workItemTTL).thenReturn(Duration.create(30, DAYS))
+    when(mongoAppConfig.workItemInProgressTimeOut).thenReturn(Duration.create(5, MINUTES))
     when(timeService.timestamp()).thenReturn(availableBefore)
 
     prepareDatabase()
@@ -122,7 +125,7 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
 
       val movementRepository = new MovementRepository(
         mongoComponent,
-        appConfig,
+        mongoAppConfig,
         timeService
       )
 
@@ -172,7 +175,7 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
 
       val movementRepository = new MovementRepository(
         mongoComponent,
-        appConfig,
+        mongoAppConfig,
         timeService
       )
 
@@ -215,7 +218,7 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
 
       val movementRepository = new MovementRepository(
         mongoComponent,
-        appConfig,
+        mongoAppConfig,
         timeService
       )
 
@@ -253,7 +256,7 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
 
       val movementRepository = new MovementRepository(
         mongoComponent,
-        appConfig,
+        mongoAppConfig,
         timeService
       )
 

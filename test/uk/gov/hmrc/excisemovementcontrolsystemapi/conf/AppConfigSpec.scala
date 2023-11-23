@@ -34,9 +34,11 @@ class AppConfigSpec extends PlaySpec {
       |mongodb.movement.TTL=10days
       |scheduler.pollingNewMessageJob.interval=4 minutes
       |scheduler.pollingNewMessageJob.initialDelay=4 minutes
-      |scheduler.queue.retryAfterMinutes=4
-      |scheduler.queue.retryAttempts=2
-      |scheduler.submissionWorkItems.runWorkItemAfter=3 minutes
+      |scheduler.workItems.inProgressTimeOut=4 minutes
+      |scheduler.workItems.failureRetryAttempts=2
+      |scheduler.workItems.fastInterval=3 minutes
+      |scheduler.workItems.slowInterval=32 minutes
+      |mongodb.workItem.TTL = 10 days
     """.stripMargin
 
   private def createAppConfig = {
@@ -49,7 +51,11 @@ class AppConfigSpec extends PlaySpec {
 
   "AppConfig" should {
     "return config for TTL for Movement Mongo collection" in {
-      configService.getMovementTTL mustBe Duration.create(10, DAYS)
+      configService.movementTTL mustBe Duration.create(10, DAYS)
+    }
+
+    "return config for TTL for Work Item Mongo collection" in {
+      configService.workItemTTL mustBe Duration.create(10, DAYS)
     }
 
     "return config for PollingNewMessageJob interval" in {
@@ -60,16 +66,20 @@ class AppConfigSpec extends PlaySpec {
       configService.initialDelay mustBe Duration.create(4, MINUTES)
     }
 
-    "return config for the queue retryAfterMinutes" in {
-      configService.retryAfterMinutes mustBe JavaDuration.ofMinutes(4)
+    "return config for the Work Item in progress time out" in {
+      configService.workItemInProgressTimeOut mustBe Duration.create(4, MINUTES)
     }
 
-    "return config for the queue retryAttempts" in {
-      configService.maxRetryAttempts mustBe 2
+    "return config for the Work Item failure retry attempts" in {
+      configService.maxFailureRetryAttempts mustBe 2
     }
 
-    "return config for Submission Work Items runWorkItemsAfter" in {
-      configService.runSubmissionWorkItemAfter mustBe Duration.create(3, MINUTES)
+    "return config for Work Item fast interval" in {
+      configService.workItemFastInterval mustBe Duration.create(3, MINUTES)
+    }
+
+    "return config for Work Item slow interval" in {
+      configService.workItemSlowInterval mustBe Duration.create(32, MINUTES)
     }
   }
 }
