@@ -19,9 +19,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.config
 import play.api.Configuration
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
-import java.time.{Duration => JavaDuration}
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.duration.{DAYS, Duration, FiniteDuration, MINUTES, SECONDS}
+import scala.concurrent.duration.{DAYS, Duration, FiniteDuration, HOURS, MINUTES, SECONDS}
 
 @Singleton
 class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig) {
@@ -30,24 +29,33 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
 
   lazy val eisHost: String = servicesConfig.baseUrl("eis")
   lazy val systemApplication: String = config.get[String]("system.application")
+
   lazy val interval: FiniteDuration = config.getOptional[String]("scheduler.pollingNewMessageJob.interval")
     .map(Duration.create(_).asInstanceOf[FiniteDuration])
-    .getOrElse(FiniteDuration(5, MINUTES))
+    .getOrElse(FiniteDuration(1, MINUTES))
 
   lazy val initialDelay: FiniteDuration = config.getOptional[String]("scheduler.pollingNewMessageJob.initialDelay")
     .map(Duration.create(_).asInstanceOf[FiniteDuration])
     .getOrElse(FiniteDuration(60, SECONDS))
 
-  lazy val retryAfterMinutes: JavaDuration = config.getOptional[Long]("scheduler.queue.retryAfterMinutes")
-    .fold(JavaDuration.ofMinutes(5L))(JavaDuration.ofMinutes)
-
-  lazy val maxRetryAttempts: Int = config.getOptional[Int]("scheduler.queue.retryAttempts").getOrElse(3)
-
-  lazy val runSubmissionWorkItemAfter: FiniteDuration = config.getOptional[String]("scheduler.submissionWorkItems.runWorkItemAfter")
+  lazy val workItemInProgressTimeOut: FiniteDuration = config.getOptional[String]("scheduler.workItems.inProgressTimeOut")
     .map(Duration.create(_).asInstanceOf[FiniteDuration])
     .getOrElse(FiniteDuration(5, MINUTES))
 
-  def getMovementTTL: Duration = config.getOptional[String]("mongodb.movement.TTL")
+  lazy val maxFailureRetryAttempts: Int = config.getOptional[Int]("scheduler.workItems.failureRetryAttempts").getOrElse(3)
+
+  lazy val workItemFastInterval: FiniteDuration = config.getOptional[String]("scheduler.workItems.fastInterval")
+    .map(Duration.create(_).asInstanceOf[FiniteDuration])
+    .getOrElse(FiniteDuration(5, MINUTES))
+
+  lazy val workItemSlowInterval: FiniteDuration = config.getOptional[String]("scheduler.workItems.slowInterval")
+    .map(Duration.create(_).asInstanceOf[FiniteDuration])
+    .getOrElse(FiniteDuration(1, HOURS))
+
+  lazy val movementTTL: Duration = config.getOptional[String]("mongodb.movement.TTL")
+    .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
+
+  lazy val workItemTTL: Duration = config.getOptional[String]("mongodb.workItem.TTL")
     .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
 
   def emcsReceiverMessageUrl: String = s"$eisHost/emcs/digital-submit-new-message/v1"

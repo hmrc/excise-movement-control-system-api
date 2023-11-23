@@ -80,8 +80,8 @@ class PollingNewMessagesWithWorkItemJobSpec
     when(lockRepository.takeLock(any, any, any)).thenReturn(Future.successful(true))
     when(lockRepository.releaseLock(any, any)).thenReturn(successful(()))
     when(dateTimeService.timestamp()).thenReturn(Instant.now())
-    when(appConfig.maxRetryAttempts).thenReturn(3)
-    when(appConfig.runSubmissionWorkItemAfter).thenReturn(Duration.create(5, MINUTES))
+    when(appConfig.maxFailureRetryAttempts).thenReturn(3)
+    when(appConfig.workItemFastInterval).thenReturn(Duration.create(5, MINUTES))
 
     when(message.messageType).thenReturn(MessageTypes.IE802.value)
     when(newMessageParserService.extractMessages(any)).thenReturn(Seq(message))
@@ -163,7 +163,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
     "should mark as completed Work Item when there are no messages found three times" in {
 
-      when(appConfig.maxRetryAttempts).thenReturn(2)
+      when(appConfig.maxFailureRetryAttempts).thenReturn(2)
 
       val workItem = createWorkItem(failureCount = 2)
       addOneItemToMockQueue(workItem)
@@ -212,7 +212,7 @@ class PollingNewMessagesWithWorkItemJobSpec
       val workItem = createWorkItem(retryAttempt)
       addOneItemToMockQueue(workItem)
 
-      when(appConfig.maxRetryAttempts).thenReturn(retryAttempt)
+      when(appConfig.maxFailureRetryAttempts).thenReturn(retryAttempt)
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 

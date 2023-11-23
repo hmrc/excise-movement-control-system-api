@@ -41,7 +41,7 @@ class WorkItemService @Inject()
     //TODO if exists, update available time to MIN(available time, now + fast interval)
     //TODO set retries to 3
     //TODO update lastSubmitted timestamp
-    workItemRepository.pushNew(ExciseNumberWorkItem(ern), timestampService.timestamp().plus(appConfig.runSubmissionWorkItemAfter.toJava))
+    workItemRepository.pushNew(ExciseNumberWorkItem(ern), timestampService.timestamp().plus(appConfig.workItemFastInterval.toJava))
   }
 
 }

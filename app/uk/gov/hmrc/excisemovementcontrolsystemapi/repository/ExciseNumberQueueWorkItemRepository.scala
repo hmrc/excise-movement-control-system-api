@@ -25,6 +25,7 @@ import uk.gov.hmrc.mongo.{MongoComponent, TimestampSupport}
 import java.time.{Duration, Instant}
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import scala.compat.java8.DurationConverters.FiniteDurationops
 import scala.concurrent.ExecutionContext
 
 class ExciseNumberQueueWorkItemRepository @Inject()
@@ -40,7 +41,7 @@ class ExciseNumberQueueWorkItemRepository @Inject()
   extraIndexes = Seq(
     IndexModel(
       Indexes.ascending("lastSubmitted"),
-      IndexOptions().expireAfter(appConfig.getMovementTTL.toSeconds, TimeUnit.SECONDS)
+      IndexOptions().expireAfter(appConfig.workItemTTL.toSeconds, TimeUnit.SECONDS)
     )
   )
 ) {
@@ -48,7 +49,7 @@ class ExciseNumberQueueWorkItemRepository @Inject()
   override def now(): Instant = timeService.timestamp()
 
   override val inProgressRetryAfter: Duration = {
-    appConfig.retryAfterMinutes
+    appConfig.workItemInProgressTimeOut.toJava
   }
 }
 

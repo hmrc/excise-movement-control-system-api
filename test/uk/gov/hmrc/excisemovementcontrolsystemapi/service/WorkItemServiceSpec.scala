@@ -53,7 +53,7 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
     super.beforeEach()
 
     when(timestampSupport.timestamp()).thenReturn(Instant.from(timestamp))
-    when(appConfig.runSubmissionWorkItemAfter).thenReturn(Duration.create(3, MINUTES))
+    when(appConfig.workItemFastInterval).thenReturn(Duration.create(3, MINUTES))
 
     reset(mockWorkItemRepo)
   }
