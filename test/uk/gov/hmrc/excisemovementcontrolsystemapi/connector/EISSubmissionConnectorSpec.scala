@@ -35,11 +35,11 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest, ValidatedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionRequest, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import java.nio.charset.StandardCharsets
@@ -97,6 +97,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
     when(ie815Message.messageType).thenReturn("IE815")
     when(ie815Message.consignorId).thenReturn("123")
+    when(emcsUtils.getSingleErnFromMessage(any, any)).thenReturn("123")
     when(ie815Message.messageIdentifier).thenReturn("DummyIdentifier")
 
   }
@@ -129,65 +130,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
       )(any, any, any, any)
     }
 
-    "create a work item for the ern" in {
-
-
-
-    }
-
-    "use the right request parameters in http client for IE801 with consignor" in {
-      val ie801Message = mock[IE801Message]
-      when(ie801Message.consignorId).thenReturn(Some("123"))
-      when(ie801Message.consigneeId).thenReturn(Some("456"))
-      when(ie801Message.messageIdentifier).thenReturn("DummyIdentifier")
-
-      submitExciseMovementWithParams(xml, ie801Message, Set("123"), Set("123"))
-
-      val eisHttpReader: EISHttpReader = verifyHttpHeader
-
-      eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
-      eisHttpReader.ern mustBe "123"
-    }
-
-    "use the right request parameters in http client for IE801 with consignee" in {
-      val ie801Message = mock[IE801Message]
-      when(ie801Message.consignorId).thenReturn(Some("123"))
-      when(ie801Message.consigneeId).thenReturn(Some("456"))
-      when(ie801Message.messageIdentifier).thenReturn("DummyIdentifier")
-
-      submitExciseMovementWithParams(xml, ie801Message, Set("123"), Set("456"))
-
-      val eisHttpReader: EISHttpReader = verifyHttpHeader
-
-      eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
-      eisHttpReader.ern mustBe "456"
-    }
-
-    "use the right request parameters in http client for IE810" in {
-      val ie810Message = mock[IE810Message]
-      when(ie810Message.messageIdentifier).thenReturn("DummyIdentifier")
-
-      submitExciseMovementWithParams(xml, ie810Message, Set("123"), Set("123"))
-
-      val eisHttpReader: EISHttpReader = verifyHttpHeader
-
-      eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
-      eisHttpReader.ern mustBe "123"
-    }
-
-    "use the right request parameters in http client for IE813" in {
-      val ie813Message = mock[IE813Message]
-      when(ie813Message.messageIdentifier).thenReturn("DummyIdentifier")
-
-      submitExciseMovementWithParams(xml, ie813Message, Set("123"), Set("123"))
-
-      val eisHttpReader: EISHttpReader = verifyHttpHeader
-
-      eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
-      eisHttpReader.ern mustBe "123"
-    }
-
-    "use the right request parameters in http client for IE815" in {
+    "use the right request parameters in http client" in {
       submitExciseMovementWithParams(xml, ie815Message, Set("123"), Set("123"))
 
       val eisHttpReader: EISHttpReader = verifyHttpHeader
@@ -195,81 +138,6 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
       eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
       eisHttpReader.ern mustBe "123"
     }
-
-    "use the right request parameters in http client for IE818" in {
-      val ie818Message = mock[IE818Message]
-      when(ie818Message.consigneeId).thenReturn(Some("123"))
-      when(ie818Message.messageIdentifier).thenReturn("DummyIdentifier")
-
-      submitExciseMovementWithParams(xml, ie818Message, Set("123"), Set("123"))
-
-      val eisHttpReader = verifyHttpHeader
-
-      eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
-      eisHttpReader.ern mustBe "123"
-    }
-
-    "use the right request parameters in http client for IE819" in {
-      val ie819Message = mock[IE819Message]
-      when(ie819Message.consigneeId).thenReturn(Some("123"))
-      when(ie819Message.messageIdentifier).thenReturn("DummyIdentifier")
-
-      submitExciseMovementWithParams(xml, ie819Message, Set("123"), Set("123"))
-
-      val eisHttpReader = verifyHttpHeader
-
-      eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
-      eisHttpReader.ern mustBe "123"
-    }
-
-    "use the right request parameters in http client for IE837 with consignor" in {
-      val ie837Message = mock[IE837Message]
-      when(ie837Message.consignorId).thenReturn(Some("123"))
-      when(ie837Message.consigneeId).thenReturn(None)
-      when(ie837Message.messageIdentifier).thenReturn("DummyIdentifier")
-
-      submitExciseMovementWithParams(xml, ie837Message, Set("123"), Set("123"))
-
-      val eisHttpReader: EISHttpReader = verifyHttpHeader
-
-      eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
-      eisHttpReader.ern mustBe "123"
-    }
-
-    "use the right request parameters in http client for IE837 with consignee" in {
-      val ie837Message = mock[IE837Message]
-      when(ie837Message.consignorId).thenReturn(None)
-      when(ie837Message.consigneeId).thenReturn(Some("123"))
-      when(ie837Message.messageIdentifier).thenReturn("DummyIdentifier")
-
-      submitExciseMovementWithParams(xml, ie837Message, Set("123"), Set("123"))
-
-      val eisHttpReader: EISHttpReader = verifyHttpHeader
-
-      eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
-      eisHttpReader.ern mustBe "123"
-    }
-
-    "throw an error if unsupported message" in {
-      class NonSupportedMessage extends IEMessage {
-        override def consigneeId: Option[String] = None
-
-        override def administrativeReferenceCode: Option[String] = None
-
-        override def messageType: String = "any-type"
-
-        override def toXml: NodeSeq = NodeSeq.Empty
-
-        override def lrnEquals(lrn: String): Boolean = false
-
-        override def messageIdentifier: String = "fake-id"
-      }
-
-      the[RuntimeException] thrownBy
-        submitExciseMovementWithParams(xml, new NonSupportedMessage(), Set("123"), Set("456")) must
-        have message "[EISSubmissionConnector] - Unsupported Message Type: any-type"
-    }
-
 
     "return Bad request error" in {
       when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))

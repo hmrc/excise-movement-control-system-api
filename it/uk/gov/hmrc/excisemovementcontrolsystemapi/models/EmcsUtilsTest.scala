@@ -16,12 +16,9 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
+import org.scalatest.funsuite.AnyFunSuiteLike
 
-import java.nio.charset.StandardCharsets
-import java.time.LocalDateTime
-import java.util.{Base64, UUID}
-
-class EmcsUtils {
+class EmcsUtilsTest extends AnyFunSuiteLike {
 
   def getCurrentDateTime: LocalDateTime = LocalDateTime.now()
   def getCurrentDateTimeString: String = getCurrentDateTime.toString
