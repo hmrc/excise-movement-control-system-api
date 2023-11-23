@@ -121,6 +121,7 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
 
   "Scheduler" should {
 
+    //TODO this is very tempermental test
     "start Polling show new message" in {
 
       val movementRepository = new MovementRepository(

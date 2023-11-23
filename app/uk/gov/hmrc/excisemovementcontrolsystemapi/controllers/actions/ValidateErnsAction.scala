@@ -22,8 +22,9 @@ import play.api.libs.json.Json
 import play.api.mvc.Results.Forbidden
 import play.api.mvc.{ActionRefiner, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{ParsedXmlRequest, ValidatedXmlRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, ErrorResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}

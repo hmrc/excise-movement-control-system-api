@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
+import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.{reset, verify, when}
 import org.scalatest.BeforeAndAfterEach
@@ -30,7 +31,13 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnsAction, FakeValidateLRNAction, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.WorkItemService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
+import uk.gov.hmrc.mongo.workitem.WorkItem
 
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
 
@@ -48,13 +55,30 @@ class SubmitMessageControllerSpec
   private val request = createRequest(IE818)
   private val ieMessage = mock[IEMessage]
   private val connector = mock[EISSubmissionConnector]
+  private val workItemService = mock[WorkItemService]
+  private val emcsUtils = mock[EmcsUtils]
+
+  private val workItem =
+    WorkItem(
+      id = new ObjectId(),
+      receivedAt = Instant.now,
+      updatedAt = Instant.now,
+      availableAt = Instant.now,
+      status = ToDo,
+      failureCount = 0,
+      item = ExciseNumberWorkItem(ern, 3)
+    )
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(connector)
+    reset(connector, workItemService)
 
     when(connector.submitMessage(any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
+
+    when(workItemService.addWorkItemForErn(any)).thenReturn(Future.successful(workItem))
+
+    when(emcsUtils.getSingleErnFromMessage(any, any)).thenReturn("testErn")
 
   }
 
@@ -69,6 +93,14 @@ class SubmitMessageControllerSpec
       await(createWithSuccessfulAuth.submit("lrn")(request))
 
       verify(connector).submitMessage(any)(any)
+
+    }
+
+    "call the add work item routine to create or update the database" in {
+
+      await(createWithSuccessfulAuth.submit("LRN")(request))
+
+      verify(workItemService).addWorkItemForErn("testErn")
 
     }
 
@@ -121,6 +153,8 @@ class SubmitMessageControllerSpec
       FakeSuccessfulValidateErnsAction(ieMessage),
       FakeSuccessfulValidateLRNAction,
       connector,
+      workItemService,
+      emcsUtils,
       cc
     )
 
@@ -137,6 +171,8 @@ class SubmitMessageControllerSpec
       FakeSuccessfulValidateErnsAction(ieMessage),
       FakeFailureValidateLRNAction,
       connector,
+      workItemService,
+      emcsUtils,
       cc
     )
 
@@ -147,6 +183,8 @@ class SubmitMessageControllerSpec
       FakeSuccessfulValidateErnsAction(ieMessage),
       FakeFailureValidateLRNAction,
       connector,
+      workItemService,
+      emcsUtils,
       cc
     )
 
@@ -157,6 +195,8 @@ class SubmitMessageControllerSpec
       FakeFailureValidateErnsAction,
       FakeFailureValidateLRNAction,
       connector,
+      workItemService,
+      emcsUtils,
       cc
     )
 
@@ -167,6 +207,8 @@ class SubmitMessageControllerSpec
       FakeSuccessfulValidateErnsAction(ieMessage),
       FakeFailureValidateLRNAction,
       connector,
+      workItemService,
+      emcsUtils,
       cc
     )
 

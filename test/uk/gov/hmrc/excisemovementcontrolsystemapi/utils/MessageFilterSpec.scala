@@ -22,7 +22,7 @@ import org.scalatestplus.play.PlaySpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.NewMessagesXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, MessageTypes}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 import uk.gov.hmrc.mongo.TimestampSupport
 

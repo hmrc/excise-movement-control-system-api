@@ -18,8 +18,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import generated.NewMessagesDataResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 
 import javax.inject.Inject
 

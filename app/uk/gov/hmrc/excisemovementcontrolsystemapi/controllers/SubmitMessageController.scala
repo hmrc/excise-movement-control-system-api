@@ -19,6 +19,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction, ValidateErnsAction, ValidateLRNAction}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.WorkItemService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -32,20 +34,25 @@ class SubmitMessageController @Inject()(
                                          validateErnsAction: ValidateErnsAction,
                                          validateLRNAction: ValidateLRNAction,
                                          movementMessageConnector: EISSubmissionConnector,
+                                         workItemService: WorkItemService,
+                                         emcsUtils: EmcsUtils,
                                          cc: ControllerComponents
                                        )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
   def submit(lrn: String): Action[NodeSeq] = {
 
-    //TODO need to create WI / update WI on submission success
     (authAction
       andThen xmlParser
       andThen validateErnsAction
       andThen validateLRNAction(lrn)).async(parse.xml) {
       implicit request =>
-        movementMessageConnector.submitMessage(request).flatMap {
-          case Right(_) => Future.successful(Accepted(""))
-          case Left(error) => Future.successful(error)
+        val ern = emcsUtils.getSingleErnFromMessage(request.parsedRequest.ieMessage, request.validErns)
+
+        workItemService.addWorkItemForErn(ern).flatMap { _ =>
+          movementMessageConnector.submitMessage(request).flatMap {
+            case Right(_) => Future.successful(Accepted(""))
+            case Left(error) => Future.successful(error)
+          }
         }
 
     }

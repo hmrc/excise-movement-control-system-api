@@ -16,23 +16,8 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
+import org.scalatest.funsuite.AnyFunSuiteLike
 
-import java.nio.charset.StandardCharsets
-import java.time.LocalDateTime
-import java.util.{Base64, UUID}
+class EmcsUtilsTest extends AnyFunSuiteLike {
 
-class EmcsUtils {
-
-  def getCurrentDateTime: LocalDateTime = LocalDateTime.now()
-  def getCurrentDateTimeString: String = getCurrentDateTime.toString
-  def generateCorrelationId: String = UUID.randomUUID().toString
-  def createEncoder: Base64.Encoder = Base64.getEncoder
-
-  def encode(str: String): String = {
-    Base64.getEncoder.encodeToString(str.getBytes(StandardCharsets.UTF_8))
-  }
-
-  def decode(str: String): String = {
-    Base64.getDecoder.decode(str).map(_.toChar).mkString
-  }
 }
