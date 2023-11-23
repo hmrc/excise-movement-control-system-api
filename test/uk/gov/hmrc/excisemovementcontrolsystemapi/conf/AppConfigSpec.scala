@@ -36,6 +36,7 @@ class AppConfigSpec extends PlaySpec {
       |scheduler.pollingNewMessageJob.initialDelay=4 minutes
       |scheduler.workItems.inProgressTimeOut=4 minutes
       |scheduler.workItems.failureRetryAttempts=2
+      |scheduler.workItems.fastIntervalRetryAttempts=2
       |scheduler.workItems.fastInterval=3 minutes
       |scheduler.workItems.slowInterval=32 minutes
       |mongodb.workItem.TTL = 10 days
@@ -72,6 +73,10 @@ class AppConfigSpec extends PlaySpec {
 
     "return config for the Work Item failure retry attempts" in {
       configService.maxFailureRetryAttempts mustBe 2
+    }
+
+    "return config for the fast interval retry attempts" in {
+      configService.fastIntervalRetryAttempts mustBe 2
     }
 
     "return config for Work Item fast interval" in {

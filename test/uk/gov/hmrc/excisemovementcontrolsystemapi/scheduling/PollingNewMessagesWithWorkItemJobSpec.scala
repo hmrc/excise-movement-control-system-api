@@ -325,7 +325,7 @@ class PollingNewMessagesWithWorkItemJobSpec
       availableAt = availableAt,
       status = ProcessingStatus.ToDo,
       failureCount = failureCount,
-      item = ExciseNumberWorkItem(ern)
+      item = ExciseNumberWorkItem(ern, 3)
     )
   }
 }
