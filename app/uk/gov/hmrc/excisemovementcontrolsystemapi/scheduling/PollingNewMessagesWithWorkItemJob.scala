@@ -21,27 +21,25 @@ import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ExciseNumberQueueWorkItemRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.PollingNewMessageWithWorkItemJob._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementService, NewMessageParserService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.PollingNewMessagesWithWorkItemJob._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementService, NewMessageParserService, WorkItemService}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus
 
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.DurationConverters.ScalaDurationOps
 import scala.util.control.NonFatal
 
-class PollingNewMessageWithWorkItemJob @Inject()
+class PollingNewMessagesWithWorkItemJob @Inject()
 (
   mongoLockRepository: MongoLockRepository,
   newMessageService: GetNewMessageService,
-  workItemRepository: ExciseNumberQueueWorkItemRepository,
+  workItemService: WorkItemService,
   movementService: MovementService,
   messageParser: NewMessageParserService,
   appConfig: AppConfig,
@@ -62,49 +60,37 @@ class PollingNewMessageWithWorkItemJob @Inject()
 
   override def runJob(implicit ec: ExecutionContext): Future[RunningOfJobSuccessful] = {
     val now = dateTimeService.timestamp()
-    process(now.minus(1, ChronoUnit.DAYS), now, appConfig.maxFailureRetryAttempts)
+    process(now.minus(appConfig.failureRetryAfter.toJava), now, appConfig.maxFailureRetryAttempts)
   }
 
   private def process(failedBefore: Instant, availableBefore: Instant, maximumRetries: Int): Future[RunningOfJobSuccessful] = {
-    workItemRepository.pullOutstanding(failedBefore, availableBefore)
+    workItemService.pullOutstanding(failedBefore, availableBefore)
       .flatMap {
-        case None => Future.successful(RunningOfJobSuccessful)
+        case None =>
+          Future.successful(RunningOfJobSuccessful)
+
         case Some(wi) =>
-          lazy val nextRunTime = wi.availableAt.plus(appConfig.workItemFastInterval.toJava)
 
-          getNewMessages(wi.item.exciseNumber).flatMap {
+          val ern = wi.item.exciseNumber
 
-                //TODO for the true case, we don't want to use failureCount here. We want a new retry value.
-                //TODO Probably need a fail retry and a fast retry count in app Config
-            case (true, NoMessageFound) if wi.failureCount < maximumRetries =>
+          getNewMessages(ern).flatMap {
 
-              //TODO Don't mark as failed mark as ToDo
-              // TODO decrement num Retries
-              //TODO nextRunTime is availableAt + fastInterval
-              workItemRepository.markAs(wi.id, ProcessingStatus.Failed, Some(nextRunTime))
+            case MoreMessagesToGet =>
+              logger.info(s"[PollingNewMessageWithWorkItemJob] - Work item for ERN $ern has further outstanding messages and has been added back to the queue")
+              workItemService.markAs(wi.id, ProcessingStatus.ToDo, Some(wi.availableAt))
 
-            case (true, NoMessageFound) =>
-            // TODO this becomes case where wi.retryCount == 0
-              //TODO nextRunTime is availableAt + slowInterval
-              //TODO status to ToDo
+            case Processed =>
+              logger.info(s"[PollingNewMessageWithWorkItemJob] - Work item for ERN $ern processed and rescheduled")
+              workItemService.rescheduleWorkItem(wi)
 
-              workItemRepository.completeAndDelete(wi.id)
-
-            case (true, MessageReceived) =>
-              //TODO case merges with above case
-              workItemRepository.completeAndDelete(wi.id)
-
-            case (true, MoreMessagesToGet) =>
-              //TODO this now needs to poll again immedately
-              workItemRepository.markAs(wi.id, ProcessingStatus.ToDo, Some(nextRunTime))
-
-            case (false, _) if wi.failureCount < maximumRetries =>
-              //TODO this can stay the same?
-              workItemRepository.markAs(wi.id, ProcessingStatus.Failed, Some(nextRunTime))
+            case PollingFailed if wi.failureCount < maximumRetries =>
+              logger.error(s"[PollingNewMessageWithWorkItemJob] - Work item for ERN $ern has failed")
+              workItemService.markAs(wi.id, ProcessingStatus.Failed)
 
             case _ =>
-              //TODO this can stay the same
-              workItemRepository.markAs(wi.id, ProcessingStatus.PermanentlyFailed)
+              logger.error(s"[PollingNewMessageWithWorkItemJob] - Work item for ERN $ern has" +
+                s"failed $maximumRetries times and has been moved to the slower polling interval")
+              workItemService.rescheduleWorkItemForceSlow(wi)
 
           }
             .flatMap(_ => process(failedBefore, availableBefore, maximumRetries))
@@ -116,22 +102,27 @@ class PollingNewMessageWithWorkItemJob @Inject()
       }
   }
 
-
-  private def getNewMessages(exciseNumber: String): Future[(Boolean, NewMessageResult)] = {
+  private def getNewMessages(exciseNumber: String): Future[NewMessageResult] = {
     newMessageService.getNewMessagesAndAcknowledge(exciseNumber)
       .flatMap {
         case Some((response, messageCount)) if messageCount > 10 && response.message.nonEmpty =>
-          saveToDB(exciseNumber, response).map(result => (result, MoreMessagesToGet))
+          saveToDB(exciseNumber, response).map(_ => MoreMessagesToGet)
 
         case Some((response, _)) if response.message.nonEmpty =>
-          saveToDB(exciseNumber, response).map(result => (result, MessageReceived))
+          saveToDB(exciseNumber, response).map(_ => Processed)
 
-        case _ => Future.successful((true, NoMessageFound))
+        case Some((_, _)) =>
+          // No messages returned
+          Future.successful(Processed)
+
+        case _ =>
+          logger.error(s"[PollingNewMessageWithWorkItemJob] - Could not get messages for ern: $exciseNumber. Will retry later")
+          Future.successful(PollingFailed)
       }
       .recover {
         case NonFatal(e) =>
           logger.error(s"[PollingNewMessageWithWorkItemJob] - Could not get messages for ern: $exciseNumber with message: ${e.getMessage}. Will retry later", e)
-          (false, MessageError)
+          PollingFailed
       }
   }
 
@@ -160,15 +151,13 @@ class PollingNewMessageWithWorkItemJob @Inject()
   }
 }
 
-object PollingNewMessageWithWorkItemJob {
+object PollingNewMessagesWithWorkItemJob {
 
-  sealed trait NewMessageResult
+  private sealed trait NewMessageResult
 
-  case object MessageReceived extends NewMessageResult
+  private case object Processed extends NewMessageResult
 
-  case object MoreMessagesToGet extends NewMessageResult
+  private case object MoreMessagesToGet extends NewMessageResult
 
-  case object NoMessageFound extends NewMessageResult
-
-  case object MessageError extends NewMessageResult
+  private case object PollingFailed extends NewMessageResult
 }

@@ -30,7 +30,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberW
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.WorkItemService
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.TimestampSupport
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{Failed, ToDo}
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{Failed, InProgress, ToDo}
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.Instant
@@ -48,8 +48,11 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
   private val appConfig = mock[AppConfig]
   private val timestamp = Instant.parse("2023-11-30T18:35:24.00Z")
   private val timestampPlusFastInterval = timestamp.plusSeconds(3 * 60)
+  private val timestampPlusSlowInterval = timestamp.plusSeconds(2 * 60 * 60)
 
   private val workItemService = new WorkItemService(mockWorkItemRepo, appConfig, timestampSupport)
+
+  private val ern = "ern123"
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -57,13 +60,12 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
     when(timestampSupport.timestamp()).thenReturn(Instant.from(timestamp))
     when(appConfig.workItemFastInterval).thenReturn(Duration.create(3, MINUTES))
     when(appConfig.fastIntervalRetryAttempts).thenReturn(6)
+    when(appConfig.workItemSlowInterval).thenReturn(Duration.create(2, HOURS))
 
     reset(mockWorkItemRepo)
   }
 
-
   "add work item for ern" should {
-    val ern = "ern123"
 
     "create and return the work item when none for that ern already in the database" in {
 
@@ -177,6 +179,144 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
     }
 
+  }
+
+  "reschedule work item" should {
+
+    "reschedule for fast interval when count is greater than 1" in {
+      val workItemAlreadyInDb = createTestWorkItem(
+        exciseNumberWorkItem = ExciseNumberWorkItem(ern, 2),
+        availableAt = timestamp,
+        status = InProgress,
+      )
+
+      val expectedWorkItemAfterUpdate = workItemAlreadyInDb.copy(
+        item = ExciseNumberWorkItem(ern, 1),
+        availableAt = timestampPlusFastInterval,
+        status = ToDo
+      )
+
+      when(mockWorkItemRepo.getWorkItemForErn(any))
+        .thenReturn(Future.successful(Seq(expectedWorkItemAfterUpdate)))
+      when(mockWorkItemRepo.saveUpdatedWorkItem(any)).thenReturn(Future.successful(true))
+
+      val result = await(workItemService.rescheduleWorkItem(workItemAlreadyInDb))
+
+      withClue("should update the database with the right details") {
+        // The details being that
+        // * Fast retries is decremented
+        // * availableAt is currentTime + fastInterval
+        // * status is To Do
+        verify(mockWorkItemRepo).saveUpdatedWorkItem(eqTo(expectedWorkItemAfterUpdate))
+      }
+
+      withClue("should return the work item that was saved into the db") {
+        result mustBe expectedWorkItemAfterUpdate
+      }
+
+    }
+
+    "reschedule for slow interval when count is 1" in {
+      val workItemAlreadyInDb = createTestWorkItem(
+        exciseNumberWorkItem = ExciseNumberWorkItem(ern, 1),
+        availableAt = timestamp,
+        status = InProgress,
+      )
+
+      val expectedWorkItemAfterUpdate = workItemAlreadyInDb.copy(
+        item = ExciseNumberWorkItem(ern, 0),
+        availableAt = timestampPlusSlowInterval,
+        status = ToDo
+      )
+
+      when(mockWorkItemRepo.getWorkItemForErn(any))
+        .thenReturn(Future.successful(Seq(expectedWorkItemAfterUpdate)))
+      when(mockWorkItemRepo.saveUpdatedWorkItem(any)).thenReturn(Future.successful(true))
+
+      val result = await(workItemService.rescheduleWorkItem(workItemAlreadyInDb))
+
+      withClue("should update the database with the right details") {
+        // The details being that
+        // * Fast retries is now zero
+        // * availableAt is currentTime + slowInterval
+        // * status is To Do
+        verify(mockWorkItemRepo).saveUpdatedWorkItem(eqTo(expectedWorkItemAfterUpdate))
+      }
+
+      withClue("should return the work item that was saved into the db") {
+        result mustBe expectedWorkItemAfterUpdate
+      }
+
+    }
+
+    "reschedule for slow interval when count is 0, and keep count at 0" in {
+      val workItemAlreadyInDb = createTestWorkItem(
+        exciseNumberWorkItem = ExciseNumberWorkItem(ern, 0),
+        availableAt = timestamp,
+        status = InProgress,
+      )
+
+      val expectedWorkItemAfterUpdate = workItemAlreadyInDb.copy(
+        item = ExciseNumberWorkItem(ern, 0),
+        availableAt = timestampPlusSlowInterval,
+        status = ToDo
+      )
+
+      when(mockWorkItemRepo.getWorkItemForErn(any))
+        .thenReturn(Future.successful(Seq(expectedWorkItemAfterUpdate)))
+      when(mockWorkItemRepo.saveUpdatedWorkItem(any)).thenReturn(Future.successful(true))
+
+      val result = await(workItemService.rescheduleWorkItem(workItemAlreadyInDb))
+
+      withClue("should update the database with the right details") {
+        // The details being that
+        // * Fast retries is now zero
+        // * availableAt is currentTime + slowInterval
+        // * status is To Do
+        verify(mockWorkItemRepo).saveUpdatedWorkItem(eqTo(expectedWorkItemAfterUpdate))
+      }
+
+      withClue("should return the work item that was saved into the db") {
+        result mustBe expectedWorkItemAfterUpdate
+      }
+
+    }
+
+  }
+
+  "reschedule work item force slow poll" should {
+
+    "reschedule for slow interval even if count is greater than 1" in {
+      val workItemAlreadyInDb = createTestWorkItem(
+        exciseNumberWorkItem = ExciseNumberWorkItem(ern, 2),
+        availableAt = timestamp,
+        status = InProgress,
+      )
+
+      val expectedWorkItemAfterUpdate = workItemAlreadyInDb.copy(
+        item = ExciseNumberWorkItem(ern, 0),
+        availableAt = timestampPlusSlowInterval,
+        status = ToDo
+      )
+
+      when(mockWorkItemRepo.getWorkItemForErn(any))
+        .thenReturn(Future.successful(Seq(expectedWorkItemAfterUpdate)))
+      when(mockWorkItemRepo.saveUpdatedWorkItem(any)).thenReturn(Future.successful(true))
+
+      val result = await(workItemService.rescheduleWorkItemForceSlow(workItemAlreadyInDb))
+
+      withClue("should update the database with the right details") {
+        // The details being that
+        // * Fast retries is zero
+        // * availableAt is currentTime + slowInterval
+        // * status is To Do
+        verify(mockWorkItemRepo).saveUpdatedWorkItem(eqTo(expectedWorkItemAfterUpdate))
+      }
+
+      withClue("should return the work item that was saved into the db") {
+        result mustBe expectedWorkItemAfterUpdate
+      }
+    }
   }
 
   private def createTestWorkItem(

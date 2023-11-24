@@ -45,6 +45,13 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   // When a work item fails, this is how many times to retry it before permanently failing
   lazy val maxFailureRetryAttempts: Int = config.getOptional[Int]("scheduler.workItems.failureRetryAttempts").getOrElse(3)
 
+  //How long after a failure should we wait before retrying it?
+  // (It will only be retried if it was BOTH last updated before Now-failureRetryAfter and availableAt before Now)
+  lazy val failureRetryAfter: FiniteDuration = config.getOptional[String]("scheduler.workItems.failureRetryAfter")
+    .map(Duration.create(_).asInstanceOf[FiniteDuration])
+    .getOrElse(FiniteDuration(5, MINUTES))
+
+
   // When on the fast interval, how many times to fast poll before switching to slow poll
   lazy val fastIntervalRetryAttempts: Int = config.getOptional[Int]("scheduler.workItems.fastIntervalRetryAttempts").getOrElse(3)
 

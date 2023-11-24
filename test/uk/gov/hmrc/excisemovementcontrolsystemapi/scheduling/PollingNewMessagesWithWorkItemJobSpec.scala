@@ -27,19 +27,18 @@ import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.NewMessagesXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ExciseNumberQueueWorkItemRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementService, NewMessageParserService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementService, NewMessageParserService, WorkItemService}
 import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.{Instant, LocalDateTime}
 import scala.concurrent.Future.successful
-import scala.concurrent.duration.{Duration, MINUTES, SECONDS}
+import scala.concurrent.duration.{Duration, HOURS, MINUTES, SECONDS}
 import scala.concurrent.{ExecutionContext, Future}
 
 class PollingNewMessagesWithWorkItemJobSpec
@@ -54,7 +53,7 @@ class PollingNewMessagesWithWorkItemJobSpec
   private val movementService = mock[MovementService]
   private val newMessageParserService = mock[NewMessageParserService]
   private val lockRepository = mock[MongoLockRepository]
-  private val workItemRepository = mock[ExciseNumberQueueWorkItemRepository]
+  private val workItemService = mock[WorkItemService]
   private val dateTimeService = mock[TimestampSupport]
   private val message = mock[IEMessage]
   private val newMessageResponse = EISConsumptionResponse(
@@ -63,10 +62,10 @@ class PollingNewMessagesWithWorkItemJobSpec
     "any message"
   )
 
-  private val job = new PollingNewMessageWithWorkItemJob(
+  private val job = new PollingNewMessagesWithWorkItemJob(
     lockRepository,
     newMessageService,
-    workItemRepository,
+    workItemService,
     movementService,
     newMessageParserService,
     appConfig,
@@ -75,20 +74,21 @@ class PollingNewMessagesWithWorkItemJobSpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(movementService, appConfig, newMessageService, newMessageParserService, lockRepository, workItemRepository)
+    reset(movementService, appConfig, newMessageService, newMessageParserService, lockRepository, workItemService)
 
     when(lockRepository.takeLock(any, any, any)).thenReturn(Future.successful(true))
     when(lockRepository.releaseLock(any, any)).thenReturn(successful(()))
     when(dateTimeService.timestamp()).thenReturn(Instant.now())
+
     when(appConfig.maxFailureRetryAttempts).thenReturn(3)
     when(appConfig.workItemFastInterval).thenReturn(Duration.create(5, MINUTES))
+    when(appConfig.workItemSlowInterval).thenReturn(Duration.create(1, HOURS))
+    when(appConfig.failureRetryAfter).thenReturn(Duration.create(5, MINUTES))
 
-    when(message.messageType).thenReturn(MessageTypes.IE802.value)
     when(newMessageParserService.extractMessages(any)).thenReturn(Seq(message))
     when(movementService.updateMovement(any, any)).thenReturn(Future.successful(true))
-    when(workItemRepository.complete(any, any)).thenReturn(Future.successful(true))
-    when(workItemRepository.markAs(any, any, any)).thenReturn(Future.successful(true))
-    when(workItemRepository.completeAndDelete(any)).thenReturn(Future.successful(true))
+    when(workItemService.markAs(any, any, any)).thenReturn(Future.successful(true))
+    when(workItemService.rescheduleWorkItem(any)).thenReturn(Future.successful(createWorkItem()))
 
   }
 
@@ -107,7 +107,7 @@ class PollingNewMessagesWithWorkItemJobSpec
     }
 
     "acquire a mongo lock" in {
-      when(workItemRepository.pullOutstanding(any, any)).thenReturn(Future.successful(None))
+      when(workItemService.pullOutstanding(any, any)).thenReturn(Future.successful(None))
       setGetNewMessagesAndAcknowledgeResponse(5)
       await(job.executeInMutex)
 
@@ -118,7 +118,7 @@ class PollingNewMessagesWithWorkItemJobSpec
       }
     }
 
-    "should complete workItem in ToDo status when there are messages found and no more messages to fetch (count <= 10)" in {
+    "should reschedule workItem when successfully run" in {
 
       val workItem = createWorkItem()
 
@@ -128,57 +128,26 @@ class PollingNewMessagesWithWorkItemJobSpec
 
       await(job.executeInMutex)
 
-      verify(workItemRepository).completeAndDelete(eqTo(workItem.id))
+      verify(workItemService).rescheduleWorkItem(eqTo(workItem))
     }
 
-    "should mark as ToDo workItem in when there are messages found and more messages to fetch (count > 10)" in {
-      val now = Instant.parse("2023-11-30T18:35:24.00Z")
-      val fiveMinutesAfterNow = Instant.parse("2023-11-30T18:40:24.00Z")
+    "should immediately add workItem back to queue when successfully run and remaining messages" in {
 
-      val workItem = createWorkItem(availableAt = now)
+      val workItem = createWorkItem()
 
       addOneItemToMockQueue(workItem)
 
-      setGetNewMessagesAndAcknowledgeResponse(11)
+      setGetNewMessagesAndAcknowledgeResponse(17)
 
       await(job.executeInMutex)
 
-      verify(workItemRepository).markAs(eqTo(workItem.id), eqTo(ProcessingStatus.ToDo), eqTo(Some(fiveMinutesAfterNow)))
+      verify(workItemService).markAs(eqTo(workItem.id), eqTo(ToDo), eqTo(Some(workItem.availableAt)))
     }
 
-    "should mark as failed Work Item in ToDo when there are no messages found" in {
-
-      val now = Instant.parse("2023-11-30T18:35:24.00Z")
-      val fiveMinutesAfterNow = Instant.parse("2023-11-30T18:40:24.00Z")
-
-      val workItem = createWorkItem(availableAt = now)
-      addOneItemToMockQueue(workItem)
-
-      setGetNewMessagesAndAcknowledgeResponse()
-
-      await(job.executeInMutex)
-
-      verify(workItemRepository).markAs(eqTo(workItem.id), eqTo(ProcessingStatus.Failed), eqTo(Some(fiveMinutesAfterNow)))
-    }
-
-    "should mark as completed Work Item when there are no messages found three times" in {
-
-      when(appConfig.maxFailureRetryAttempts).thenReturn(2)
-
-      val workItem = createWorkItem(failureCount = 2)
-      addOneItemToMockQueue(workItem)
-
-      setGetNewMessagesAndAcknowledgeResponse()
-
-      await(job.executeInMutex)
-
-      verify(workItemRepository).completeAndDelete(eqTo(workItem.id))
-    }
-
-    "catch exception Mongo throw and error" in {
+    "catch any exception Mongo throws and error" in {
       val workItem = createWorkItem()
       addOneItemToMockQueue(workItem)
-      when(workItemRepository.pullOutstanding(any, any)).thenReturn(
+      when(workItemService.pullOutstanding(any, any)).thenReturn(
         Future.failed(new RuntimeException("error"))
       )
 
@@ -200,14 +169,14 @@ class PollingNewMessagesWithWorkItemJobSpec
 
       await(job.executeInMutex)
 
-      verify(workItemRepository).markAs(
+      verify(workItemService).markAs(
         eqTo(workItem.id),
         eqTo(ProcessingStatus.Failed),
         any
       )
     }
 
-    "set the workItem state to PermanentlyFailed when failed three times" in {
+    "set the workItem state to slow poll when failed three times" in {
       val retryAttempt = 2
       val workItem = createWorkItem(retryAttempt)
       addOneItemToMockQueue(workItem)
@@ -218,7 +187,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
       await(job.executeInMutex)
 
-      verify(workItemRepository).markAs(eqTo(workItem.id), eqTo(ProcessingStatus.PermanentlyFailed), any)
+      verify(workItemService).rescheduleWorkItemForceSlow(eqTo(workItem))
     }
 
     "parse the messages" in {
@@ -253,14 +222,13 @@ class PollingNewMessagesWithWorkItemJobSpec
     }
 
     "not process any message if no pending message exist" in {
-      when(workItemRepository.pullOutstanding(any, any)).thenReturn(Future.successful(None))
+      when(workItemService.pullOutstanding(any, any)).thenReturn(Future.successful(None))
 
       val result = await(job.executeInMutex)
 
       result.message mustBe "polling-new-messages Job ran successfully."
       verifyZeroInteractions(newMessageService)
     }
-
 
     "not save message in the movement database" when {
       "API has no message" in {
@@ -288,7 +256,6 @@ class PollingNewMessagesWithWorkItemJobSpec
   }
 
   private def setGetNewMessagesAndAcknowledgeResponse(messageCount: Int = 0): Unit = {
-
     if (messageCount == 0) {
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
         .thenReturn(Future.successful(None))
@@ -300,7 +267,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
   private def addOneItemToMockQueue(workItem1: WorkItem[ExciseNumberWorkItem] = createWorkItem()): Unit = {
 
-    when(workItemRepository.pullOutstanding(any, any)).thenReturn(
+    when(workItemService.pullOutstanding(any, any)).thenReturn(
       Future.successful(Some(workItem1)),
       Future.successful(None)
     )
@@ -309,7 +276,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
   private def addTwoItemsToMockQueue(workItem1: WorkItem[ExciseNumberWorkItem], workItem2: WorkItem[ExciseNumberWorkItem]): Unit = {
 
-    when(workItemRepository.pullOutstanding(any, any)).thenReturn(
+    when(workItemService.pullOutstanding(any, any)).thenReturn(
       Future.successful(Some(workItem1)),
       Future.successful(Some(workItem2)),
       Future.successful(None)
@@ -317,7 +284,9 @@ class PollingNewMessagesWithWorkItemJobSpec
 
   }
 
-  private def createWorkItem(failureCount: Int = 0, availableAt: Instant = Instant.now, ern: String = "123"): WorkItem[ExciseNumberWorkItem] = {
+  private def createWorkItem(failureCount: Int = 0,
+                             availableAt: Instant = Instant.now,
+                             ern: String = "123"): WorkItem[ExciseNumberWorkItem] = {
     WorkItem(
       id = new ObjectId(),
       receivedAt = Instant.now,
