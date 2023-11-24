@@ -308,15 +308,15 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
 
   private def setUpWireMockStubs(): Unit = {
     stubMultipleShowNewMessageRequest("1")
-    stubShowNewMessageRequestForConsignorId3
-    stubShowNewMessageRequestForConsignorId4
+    stubShowNewMessageRequestForConsignorId3()
+    stubShowNewMessageRequestForConsignorId4()
     stubMessageReceiptRequest("1")
     stubMessageReceiptRequest("3")
     stubMessageReceiptRequest("4")
 
   }
 
-  private def stubShowNewMessageRequestForConsignorId3 = {
+  private def stubShowNewMessageRequestForConsignorId3(): Unit = {
     wireMock.stubFor(
       WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=3")
         .inScenario(s"requesting-new-message-for-ern-3")
@@ -334,7 +334,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
     stubForEmptyMessageData("3")
   }
 
-  private def stubShowNewMessageRequestForConsignorId4 = {
+  private def stubShowNewMessageRequestForConsignorId4(): Unit = {
     wireMock.stubFor(
       WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=4")
         .inScenario(s"requesting-new-message-for-ern-4")
@@ -352,7 +352,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
     stubForEmptyMessageData("4")
   }
 
-  private def stubMultipleShowNewMessageRequest(exciseNumber: String) = {
+  private def stubMultipleShowNewMessageRequest(exciseNumber: String): Unit = {
     wireMock.stubFor(
       WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=$exciseNumber")
         .inScenario("requesting-new-message")
@@ -392,7 +392,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
     )
   }
 
-  private def stubForEmptyMessageData(exciseNumber: String) = {
+  private def stubForEmptyMessageData(exciseNumber: String): Unit = {
     wireMock.stubFor(
       WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=$exciseNumber")
         .inScenario("requesting-new-message")
@@ -404,7 +404,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
             Base64.getEncoder.encodeToString(emptyNewMessageDataXml.toString().getBytes(StandardCharsets.UTF_8)),
           )).toString()
         ))
-    ).shouldBePersisted()
+    ).setPersistent(true)
   }
 
   private def stubMessageReceiptRequest(exciseNumber: String): StubMapping = {
