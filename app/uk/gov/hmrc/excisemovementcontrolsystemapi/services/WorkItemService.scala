@@ -17,13 +17,15 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.Singleton
+import org.bson.types.ObjectId
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ExciseNumberQueueWorkItemRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
 import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
-import uk.gov.hmrc.mongo.workitem.WorkItem
+import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
+import java.time.Instant
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.DurationConverters.ScalaDurationOps
@@ -39,11 +41,45 @@ class WorkItemService @Inject()
   def addWorkItemForErn(ern: String): Future[WorkItem[ExciseNumberWorkItem]] = {
 
     workItemRepository.getWorkItemForErn(ern).flatMap {
-      case seq if seq == Seq.empty =>     createWorkItem(ern)
+      case seq if seq == Seq.empty => createWorkItem(ern)
       case seq: Seq[WorkItem[ExciseNumberWorkItem]] => updateWorkItemToRunOnFastIntervals(seq.head)
     }
 
   }
+
+  def rescheduleWorkItem(workItem: WorkItem[ExciseNumberWorkItem]): Future[WorkItem[ExciseNumberWorkItem]] = {
+
+    val ern = workItem.item.exciseNumber
+    val newFastPollRetriesLeft = Math.max(workItem.item.fastPollRetriesLeft - 1, 0)
+    val updatedItem = workItem.item.copy(fastPollRetriesLeft = newFastPollRetriesLeft)
+    val newAvailableAtTime = if (newFastPollRetriesLeft > 0) {
+      workItem.availableAt.plus(appConfig.workItemFastInterval.toJava)
+    } else {
+      workItem.availableAt.plus(appConfig.workItemSlowInterval.toJava)
+    }
+
+    val updatedWorkItem = workItem.copy(
+      item = updatedItem,
+      availableAt = newAvailableAtTime,
+      status = ToDo
+    )
+
+    workItemRepository.saveUpdatedWorkItem(updatedWorkItem)
+      .flatMap(_ => workItemRepository.getWorkItemForErn(ern))
+      .map { case seq if seq == Seq.empty => throw new RuntimeException("TODO") //TODO exception
+      case seq: Seq[WorkItem[ExciseNumberWorkItem]] => seq.head //Only one entry expected
+      }
+  }
+
+  def rescheduleWorkItemForceSlow(workItem: WorkItem[ExciseNumberWorkItem]): Future[WorkItem[ExciseNumberWorkItem]] = {
+    rescheduleWorkItem(workItem.copy(item = workItem.item.copy(fastPollRetriesLeft = 0)))
+  }
+
+  def markAs(id: ObjectId, status: ProcessingStatus, availableAt: Option[Instant] = None): Future[Boolean] =
+    workItemRepository.markAs(id, status, availableAt)
+
+  def pullOutstanding(failedBefore: Instant, availableBefore: Instant): Future[Option[WorkItem[ExciseNumberWorkItem]]] =
+    workItemRepository.pullOutstanding(failedBefore, availableBefore)
 
   private def createWorkItem(ern: String): Future[WorkItem[ExciseNumberWorkItem]] = {
 
@@ -54,9 +90,8 @@ class WorkItemService @Inject()
 
   private def updateWorkItemToRunOnFastIntervals(workItemToUpdate: WorkItem[ExciseNumberWorkItem]): Future[WorkItem[ExciseNumberWorkItem]] = {
 
-    val itemToUpdate = workItemToUpdate.item
-    val ern = itemToUpdate.exciseNumber
-    val updatedItem = itemToUpdate.copy(fastPollRetriesLeft = appConfig.fastIntervalRetryAttempts)
+    val updatedItem = workItemToUpdate.item.copy(fastPollRetriesLeft = appConfig.fastIntervalRetryAttempts)
+    val ern = updatedItem.exciseNumber
 
     val fastIntervalRunningTime = timestampService.timestamp().plus(appConfig.workItemFastInterval.toJava)
 
@@ -76,10 +111,13 @@ class WorkItemService @Inject()
 
     //TODO what happens if Work Item is locked in the db because the job is running at the same time as we get a submission???
 
-    workItemRepository.saveUpdatedWorkItem(updatedWorkItem).flatMap(_ => workItemRepository.getWorkItemForErn(ern))
-      .map { case seq if seq == Seq.empty => throw new RuntimeException("TODO")//TODO exception
-      case seq: Seq[WorkItem[ExciseNumberWorkItem]] => seq.head //Only one entry expected
+    workItemRepository.saveUpdatedWorkItem(updatedWorkItem)
+      .flatMap(_ => workItemRepository.getWorkItemForErn(ern))
+      .map {
+        case seq if seq == Seq.empty => throw new RuntimeException(s"Database error: Should have returned the Work Item for ERN $ern")
+        case seq: Seq[WorkItem[ExciseNumberWorkItem]] => seq.head //Only one entry expected
       }
   }
+
 
 }

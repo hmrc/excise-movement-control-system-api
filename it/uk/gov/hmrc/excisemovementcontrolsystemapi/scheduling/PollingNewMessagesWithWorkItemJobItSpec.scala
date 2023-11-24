@@ -41,12 +41,13 @@ import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, DefaultPlayMongoRepo
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.nio.charset.StandardCharsets
+import java.time.temporal.ChronoUnit
 import java.time.{Instant, LocalDateTime}
 import java.util.Base64
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{DAYS, Duration, MINUTES}
 
-class PollingMessagesWithWorkItemItSpec extends PlaySpec
+class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
   with DefaultPlayMongoRepositorySupport[WorkItem[ExciseNumberWorkItem]]
   with CleanMongoCollectionSupport
   with WireMockServerSpec
@@ -61,19 +62,27 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val showNewMessageUrl = "/apip-emcs/messages/v1/show-new-messages"
   private val messageReceiptUrl = "/apip-emcs/messages/v1/message-receipt?exciseregistrationnumber="
+
+  private lazy val timeService = mock[TimestampSupport]
+  // The DB truncates it to milliseconds so to make exact comparisons in the asserts we need to ditch the nanos
+  private val availableBefore = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+  when(timeService.timestamp()).thenReturn(availableBefore)
+
   private val expectedMessage = Seq(
     createMessage(SchedulingTestData.ie801, MessageTypes.IE801.value),
     createMessage(SchedulingTestData.ie818, MessageTypes.IE818.value),
     createMessage(SchedulingTestData.ie802, MessageTypes.IE802.value)
   )
 
-  private lazy val timeService = mock[TimestampSupport]
-  private val availableBefore = Instant.now
 
   // This is used by repository and movementRepository to set the databases before
   // the application start. Once the application has started, the app will load a real
   // instance of AppConfig using the application.test.conf
   private lazy val mongoAppConfig = mock[AppConfig]
+  when(mongoAppConfig.movementTTL).thenReturn(Duration.create(30, DAYS))
+  when(mongoAppConfig.workItemTTL).thenReturn(Duration.create(30, DAYS))
+  when(mongoAppConfig.workItemInProgressTimeOut).thenReturn(Duration.create(5, MINUTES))
+
   protected override lazy val repository = new ExciseNumberQueueWorkItemRepository(
     mongoAppConfig,
     mongoComponent,
@@ -98,20 +107,16 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
   override def beforeEach(): Unit = {
     wireMock.resetAll()
 
-    setUpWireMockStubs()
-
-    when(mongoAppConfig.movementTTL).thenReturn(Duration.create(30, DAYS))
-    when(mongoAppConfig.workItemTTL).thenReturn(Duration.create(30, DAYS))
-    when(mongoAppConfig.workItemInProgressTimeOut).thenReturn(Duration.create(5, MINUTES))
-    when(timeService.timestamp()).thenReturn(availableBefore)
-
     prepareDatabase()
 
   }
 
   override def afterEach(): Unit = {
     super.afterEach()
-    app.stop()
+
+    //TODO Doing this breaks the timestamp check in "if fails three times work item marked as ToDo with a slow interval"
+    // Do we still need to do this??
+    //app.stop()
   }
 
   override def afterAll(): Unit = {
@@ -121,7 +126,6 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
 
   "Scheduler" should {
 
-    //TODO this is very tempermental test
     "start Polling show new message" in {
 
       val movementRepository = new MovementRepository(
@@ -129,6 +133,8 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
         mongoAppConfig,
         timeService
       )
+
+      setUpWireMockStubs()
 
       insert(createWorkItem("1")).futureValue
       insert(createWorkItem("3")).futureValue
@@ -144,6 +150,7 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
       // todo: not a very good way to wait for the thread to do is job. Tried eventually but it does not
       // work. Try to find a better way.
       Thread.sleep(6000)
+
       eventually {
         wireMock.verify(getRequestedFor(urlEqualTo(s"$showNewMessageUrl?exciseregistrationnumber=1")))
       }
@@ -180,6 +187,8 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
         timeService
       )
 
+      setUpWireMockStubs()
+
       movementRepository.saveMovement(Movement("token", "1", None, None, Instant.now, Seq.empty)).futureValue
       movementRepository.saveMovement(Movement("token", "3", None, None, Instant.now, Seq.empty)).futureValue
       movementRepository.saveMovement(Movement("token", "4", None, None, Instant.now, Seq.empty)).futureValue
@@ -215,7 +224,7 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
       assertResults(movements.find(_.consignorId.equals("4")).get, Movement("token", "4", None, None, Instant.now, Seq.empty))
     }
 
-    "if fails three times work item marked as permanently failed" in {
+    "if fails three times work item marked as ToDo with a slow interval" in {
 
       val movementRepository = new MovementRepository(
         mongoComponent,
@@ -225,13 +234,10 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
 
       stubForThrowingError("1")
 
-      insert(createWorkItem("1")).futureValue
-      insert(createWorkItem("3")).futureValue
-      insert(createWorkItem("4")).futureValue
+      val createdWorkItem = createWorkItem("1")
+      insert(createdWorkItem).futureValue
 
       movementRepository.saveMovement(Movement("token", "1", None, None, Instant.now, Seq.empty)).futureValue
-      movementRepository.saveMovement(Movement("token", "3", None, None, Instant.now, Seq.empty)).futureValue
-      movementRepository.saveMovement(Movement("token", "4", None, None, Instant.now, Seq.empty)).futureValue
 
       // start application
       app
@@ -242,18 +248,18 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
 
       val movements = movementRepository.collection.find().toFuture().futureValue
 
-      movements.size mustBe 3
+      movements.size mustBe 1
       assertResults(movements.find(_.consignorId.equals("1")).get, Movement("token", "1", None, None, Instant.now, Seq.empty))
 
       val workItems = findAll().futureValue
 
-      workItems.find(_.item.exciseNumber.equals("1")).get.status.equals(ProcessingStatus.PermanentlyFailed)
-      workItems.find(_.item.exciseNumber.equals("3")).get.status.equals(ProcessingStatus.Succeeded)
-      workItems.find(_.item.exciseNumber.equals("4")).get.status.equals(ProcessingStatus.Succeeded)
+      val workItem = workItems.find(_.item.exciseNumber.equals("1")).get
+      workItem.status mustBe ProcessingStatus.ToDo
+      workItem.availableAt mustBe createdWorkItem.availableAt.plusSeconds(2 * 60)
 
     }
 
-    "if finds nothing mark work item as failed so can be retried" in {
+    "if fails mark work item as failed so can be retried" in {
 
       val movementRepository = new MovementRepository(
         mongoComponent,
@@ -261,8 +267,7 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
         timeService
       )
 
-      wireMock.resetAll()
-      stubForEmptyMessageData("1")
+      stubForThrowingError("1")
 
       insert(createWorkItem("1")).futureValue
 
@@ -282,9 +287,8 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
 
       val workItems = findAll().futureValue
 
-      workItems.find(_.item.exciseNumber.equals("1")).get.status.equals(ProcessingStatus.Failed)
+      workItems.find(_.item.exciseNumber.equals("1")).get.status mustBe ProcessingStatus.ToDo
     }
-
 
   }
 
@@ -400,7 +404,7 @@ class PollingMessagesWithWorkItemItSpec extends PlaySpec
             Base64.getEncoder.encodeToString(emptyNewMessageDataXml.toString().getBytes(StandardCharsets.UTF_8)),
           )).toString()
         ))
-    )
+    ).shouldBePersisted()
   }
 
   private def stubMessageReceiptRequest(exciseNumber: String): StubMapping = {
