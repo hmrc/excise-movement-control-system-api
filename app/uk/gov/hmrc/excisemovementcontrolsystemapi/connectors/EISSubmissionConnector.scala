@@ -33,6 +33,7 @@ import java.nio.charset.StandardCharsets
 import java.time.LocalDateTime
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
+import scala.xml.NodeSeq
 
 class EISSubmissionConnector @Inject()
 (
@@ -49,7 +50,8 @@ class EISSubmissionConnector @Inject()
     //todo: add retry
     val correlationId = emcsUtils.generateCorrelationId
     val createdDateTime = emcsUtils.getCurrentDateTimeString
-    val encodedMessage = emcsUtils.createEncoder.encodeToString(request.body.toString.getBytes(StandardCharsets.UTF_8))
+    val wrappedXml: NodeSeq = wrapXmlInControlDocument(request)
+    val encodedMessage = emcsUtils.createEncoder.encodeToString(wrappedXml.toString.getBytes(StandardCharsets.UTF_8))
     val messageType = request.parsedRequest.ieMessage.messageType
     val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", encodedMessage)
 
@@ -76,12 +78,33 @@ class EISSubmissionConnector @Inject()
       }
   }
 
-  /*
-    The illegal state exception for IE818 message should never happen here,
-    because these should have been caught previously during the validation.
+  private def wrapXmlInControlDocument(request: ValidatedXmlRequest[_]): NodeSeq = {
+    <con:Control xmlns:con="http://www.govtalk.gov.uk/taxation/InternationalTrade/Common/ControlDocument">
+      <con:MetaData>
+        <con:MessageId>
+          {request.parsedRequest.ieMessage.messageIdentifier}
+        </con:MessageId>
+        <con:Source>APIP</con:Source>
+      </con:MetaData>
+      <con:OperationRequest>
+        <con:Parameters>
+          <con:Parameter Name="message">
+            {scala.xml.PCData(request.body.toString)}
+          </con:Parameter>
+        </con:Parameters>
+        <con:ReturnData>
+          <con:Data Name="schema"/>
+        </con:ReturnData>
+      </con:OperationRequest>
+    </con:Control>
+  }
 
-    We are trying to get the ERN to use in the logs here, so want the one that is both in the auth and the message
-  */
+  /*
+        The illegal state exception for IE818 message should never happen here,
+        because these should have been caught previously during the validation.
+
+        We are trying to get the ERN to use in the logs here, so want the one that is both in the auth and the message
+      */
   private def getSingleErnFromMessage(message: IEMessage, validErns: Set[String]) = {
     message match {
       case x: IE801Message => matchErn(x.consignorId, x.consigneeId, validErns, x.messageType)
