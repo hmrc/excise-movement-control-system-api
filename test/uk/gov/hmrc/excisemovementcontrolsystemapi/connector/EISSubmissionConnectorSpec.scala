@@ -78,6 +78,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
     when(emcsUtils.createEncoder).thenReturn(encoder)
     when(ie815Message.messageType).thenReturn("IE815")
     when(ie815Message.consignorId).thenReturn("123")
+    when(ie815Message.messageIdentifier).thenReturn("DummyIdentifier")
 
   }
 
@@ -111,6 +112,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
       val ie801Message = mock[IE801Message]
       when(ie801Message.consignorId).thenReturn(Some("123"))
       when(ie801Message.consigneeId).thenReturn(Some("456"))
+      when(ie801Message.messageIdentifier).thenReturn("DummyIdentifier")
 
       submitExciseMovementWithParams(xml, ie801Message, Set("123"), Set("123"))
 
@@ -124,6 +126,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
       val ie801Message = mock[IE801Message]
       when(ie801Message.consignorId).thenReturn(Some("123"))
       when(ie801Message.consigneeId).thenReturn(Some("456"))
+      when(ie801Message.messageIdentifier).thenReturn("DummyIdentifier")
 
       submitExciseMovementWithParams(xml, ie801Message, Set("123"), Set("456"))
 
@@ -135,6 +138,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
 
     "use the right request parameters in http client for IE810" in {
       val ie810Message = mock[IE810Message]
+      when(ie810Message.messageIdentifier).thenReturn("DummyIdentifier")
 
       submitExciseMovementWithParams(xml, ie810Message, Set("123"), Set("123"))
 
@@ -146,6 +150,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
 
     "use the right request parameters in http client for IE813" in {
       val ie813Message = mock[IE813Message]
+      when(ie813Message.messageIdentifier).thenReturn("DummyIdentifier")
 
       submitExciseMovementWithParams(xml, ie813Message, Set("123"), Set("123"))
 
@@ -167,6 +172,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
     "use the right request parameters in http client for IE818" in {
       val ie818Message = mock[IE818Message]
       when(ie818Message.consigneeId).thenReturn(Some("123"))
+      when(ie818Message.messageIdentifier).thenReturn("DummyIdentifier")
 
       submitExciseMovementWithParams(xml, ie818Message, Set("123"), Set("123"))
 
@@ -179,6 +185,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
     "use the right request parameters in http client for IE819" in {
       val ie819Message = mock[IE819Message]
       when(ie819Message.consigneeId).thenReturn(Some("123"))
+      when(ie819Message.messageIdentifier).thenReturn("DummyIdentifier")
 
       submitExciseMovementWithParams(xml, ie819Message, Set("123"), Set("123"))
 
@@ -192,6 +199,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
       val ie837Message = mock[IE837Message]
       when(ie837Message.consignorId).thenReturn(Some("123"))
       when(ie837Message.consigneeId).thenReturn(None)
+      when(ie837Message.messageIdentifier).thenReturn("DummyIdentifier")
 
       submitExciseMovementWithParams(xml, ie837Message, Set("123"), Set("123"))
 
@@ -205,6 +213,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
       val ie837Message = mock[IE837Message]
       when(ie837Message.consignorId).thenReturn(None)
       when(ie837Message.consigneeId).thenReturn(Some("123"))
+      when(ie837Message.messageIdentifier).thenReturn("DummyIdentifier")
 
       submitExciseMovementWithParams(xml, ie837Message, Set("123"), Set("123"))
 
@@ -225,6 +234,8 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
         override def toXml: NodeSeq = NodeSeq.Empty
 
         override def lrnEquals(lrn: String): Boolean = false
+
+        override def messageIdentifier: String = "fake-id"
       }
 
       the[RuntimeException] thrownBy

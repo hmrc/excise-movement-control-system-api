@@ -44,6 +44,7 @@ case class IE871Message(
 
   override def lrnEquals(lrn: String): Boolean = false
 
+  override def messageIdentifier: String = obj.Header.MessageIdentifier
 }
 
 object IE871Message {

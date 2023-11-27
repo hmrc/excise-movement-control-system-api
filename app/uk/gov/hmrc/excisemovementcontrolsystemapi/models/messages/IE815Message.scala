@@ -40,6 +40,7 @@ case class IE815Message(private val obj: IE815Type) extends IEMessage {
 
   override def lrnEquals(lrn: String): Boolean = localReferenceNumber.equals(lrn)
 
+  override def messageIdentifier: String = obj.Header.MessageIdentifier
 }
 
 object IE815Message {

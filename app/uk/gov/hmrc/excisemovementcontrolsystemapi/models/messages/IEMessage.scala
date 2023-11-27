@@ -19,6 +19,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 import scala.xml.NodeSeq
 
 trait IEMessage {
+  def messageIdentifier: String
+
   def consigneeId: Option[String]
 
   def administrativeReferenceCode: Option[String]
