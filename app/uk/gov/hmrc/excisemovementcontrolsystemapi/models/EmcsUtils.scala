@@ -26,7 +26,6 @@ class EmcsUtils {
   def getCurrentDateTime: LocalDateTime = LocalDateTime.now()
   def getCurrentDateTimeString: String = getCurrentDateTime.toString
   def generateCorrelationId: String = UUID.randomUUID().toString
-  def createEncoder: Base64.Encoder = Base64.getEncoder
 
   def encode(str: String): String = {
     Base64.getEncoder.encodeToString(str.getBytes(StandardCharsets.UTF_8))

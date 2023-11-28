@@ -60,13 +60,11 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
 
   private val connector = new EISSubmissionConnector(mockHttpClient, emcsUtils, appConfig, metrics)
   private val emcsCorrelationId = "1234566"
-  private val xml = "<IE815></IE815>"
+  private val xml = <IE815></IE815>
   private val controlWrappedXml =
     <con:Control xmlns:con="http://www.govtalk.gov.uk/taxation/InternationalTrade/Common/ControlDocument">
       <con:MetaData>
-        <con:MessageId>
-          DummyIdentifier
-        </con:MessageId>
+        <con:MessageId>DummyIdentifier</con:MessageId>
         <con:Source>APIP</con:Source>
       </con:MetaData>
       <con:OperationRequest>
@@ -80,7 +78,6 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
         </con:ReturnData>
       </con:OperationRequest>
     </con:Control>
-  private val encoder = Base64.getEncoder
   private val timerContext = mock[Timer.Context]
   private val ie815Message = mock[IE815Message]
 
@@ -94,7 +91,6 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
     when(emcsUtils.generateCorrelationId).thenReturn(emcsCorrelationId)
     when(appConfig.emcsReceiverMessageUrl).thenReturn("/eis/path")
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
-    when(emcsUtils.createEncoder).thenReturn(encoder)
     when(ie815Message.messageType).thenReturn("IE815")
     when(ie815Message.consignorId).thenReturn("123")
     when(ie815Message.messageIdentifier).thenReturn("DummyIdentifier")
@@ -115,14 +111,16 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
     }
 
     "send a request with the right parameters" in {
-      val encodeMessage = encoder.encodeToString(controlWrappedXml.toString.getBytes(StandardCharsets.UTF_8))
-      val eisRequest = EISRequest(emcsCorrelationId, "2023-09-17T09:32:50.345", "IE815", "APIP", "user1", encodeMessage)
+      val controlDocAsString = controlWrappedXml.toString
+      val expectedEncodedMessage = Base64.getEncoder.encodeToString(controlDocAsString.getBytes(StandardCharsets.UTF_8))
+      when(emcsUtils.encode(controlDocAsString)).thenReturn(expectedEncodedMessage)
+      val expectedRequest = EISRequest(emcsCorrelationId, "2023-09-17T09:32:50.345", "IE815", "APIP", "user1", expectedEncodedMessage)
 
       submitExciseMovementWithParams(xml, ie815Message, Set("123"), Set("123"))
 
       verify(mockHttpClient).POST(
         eqTo("/eis/path"),
-        eqTo(eisRequest),
+        eqTo(expectedRequest),
         eqTo(expectedHeader)
       )(any, any, any, any)
     }
@@ -335,7 +333,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
   }
 
   private def submitExciseMovementWithParams(
-                                              xml: String,
+                                              xml: NodeSeq,
                                               message: IEMessage,
                                               enrolledErns: Set[String],
                                               validatedErns: Set[String]

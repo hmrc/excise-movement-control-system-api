@@ -43,15 +43,15 @@ class EISSubmissionConnector @Inject()
   metrics: Metrics
 )(implicit ec: ExecutionContext) extends EISSubmissionHeader with Logging {
 
-  def submitMessage(request: ValidatedXmlRequest[_])(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
+  def submitMessage(request: ValidatedXmlRequest[NodeSeq])(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
 
     val timer = metrics.defaultRegistry.timer("emcs.submission.connector.timer").time()
 
     //todo: add retry
     val correlationId = emcsUtils.generateCorrelationId
     val createdDateTime = emcsUtils.getCurrentDateTimeString
-    val wrappedXml: NodeSeq = wrapXmlInControlDocument(request)
-    val encodedMessage = emcsUtils.createEncoder.encodeToString(wrappedXml.toString.getBytes(StandardCharsets.UTF_8))
+    val wrappedXml = wrapXmlInControlDocument(request.parsedRequest.ieMessage.messageIdentifier, request.body)
+    val encodedMessage = emcsUtils.encode(wrappedXml.toString)
     val messageType = request.parsedRequest.ieMessage.messageType
     val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", encodedMessage)
 
@@ -78,18 +78,16 @@ class EISSubmissionConnector @Inject()
       }
   }
 
-  private def wrapXmlInControlDocument(request: ValidatedXmlRequest[_]): NodeSeq = {
+  private def wrapXmlInControlDocument(messageIdentifier: String, innerXml: NodeSeq): NodeSeq = {
     <con:Control xmlns:con="http://www.govtalk.gov.uk/taxation/InternationalTrade/Common/ControlDocument">
       <con:MetaData>
-        <con:MessageId>
-          {request.parsedRequest.ieMessage.messageIdentifier}
-        </con:MessageId>
+        <con:MessageId>{messageIdentifier}</con:MessageId>
         <con:Source>APIP</con:Source>
       </con:MetaData>
       <con:OperationRequest>
         <con:Parameters>
           <con:Parameter Name="message">
-            {scala.xml.PCData(request.body.toString)}
+            {scala.xml.PCData(innerXml.toString)}
           </con:Parameter>
         </con:Parameters>
         <con:ReturnData>
