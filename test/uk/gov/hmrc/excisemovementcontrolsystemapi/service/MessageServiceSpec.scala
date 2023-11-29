@@ -133,6 +133,8 @@ class MessageServiceSpec extends PlaySpec with EitherValues with TestXml {
         override def toXml: NodeSeq = NodeSeq.Empty
 
         override def lrnEquals(lrn: String): Boolean = false
+
+        override def messageIdentifier: String = "fake-id"
       }
 
       the[RuntimeException] thrownBy

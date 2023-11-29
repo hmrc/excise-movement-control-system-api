@@ -48,6 +48,7 @@ case class IE801Message
 
   override def lrnEquals(lrn: String): Boolean = localReferenceNumber.contains(lrn)
 
+  override def messageIdentifier: String = obj.Header.MessageIdentifier
 }
 
 object IE801Message {
