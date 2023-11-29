@@ -22,7 +22,6 @@ import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.when
 import org.scalatest.BeforeAndAfterAll
-import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -122,7 +121,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         .thenReturn(Future.successful(true))
 
       when(workItemRepository.pushNew(any, any, any)).thenReturn(Future.successful(workItem))
-      when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(Seq.empty))
+      when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
 
       when(movementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq.empty))

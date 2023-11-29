@@ -41,8 +41,8 @@ class WorkItemService @Inject()
   def addWorkItemForErn(ern: String): Future[WorkItem[ExciseNumberWorkItem]] = {
 
     workItemRepository.getWorkItemForErn(ern).flatMap {
-      case seq if seq == Seq.empty => createWorkItem(ern)
-      case seq: Seq[WorkItem[ExciseNumberWorkItem]] => updateWorkItemToRunOnFastIntervals(seq.head)
+      case None => createWorkItem(ern)
+      case Some(workItem) => updateWorkItemToRunOnFastIntervals(workItem)
     }
 
   }
@@ -65,10 +65,7 @@ class WorkItemService @Inject()
     )
 
     workItemRepository.saveUpdatedWorkItem(updatedWorkItem)
-      .flatMap(_ => workItemRepository.getWorkItemForErn(ern))
-      .map { case seq if seq == Seq.empty => throw new RuntimeException("TODO") //TODO exception
-      case seq: Seq[WorkItem[ExciseNumberWorkItem]] => seq.head //Only one entry expected
-      }
+      .map { _ => updatedWorkItem }
   }
 
   def rescheduleWorkItemForceSlow(workItem: WorkItem[ExciseNumberWorkItem]): Future[WorkItem[ExciseNumberWorkItem]] = {
@@ -114,8 +111,8 @@ class WorkItemService @Inject()
     workItemRepository.saveUpdatedWorkItem(updatedWorkItem)
       .flatMap(_ => workItemRepository.getWorkItemForErn(ern))
       .map {
-        case seq if seq == Seq.empty => throw new RuntimeException(s"Database error: Should have returned the Work Item for ERN $ern")
-        case seq: Seq[WorkItem[ExciseNumberWorkItem]] => seq.head //Only one entry expected
+        case None => throw new RuntimeException(s"Database error: Should have returned the Work Item for ERN $ern")
+        case Some(wi) => wi
       }
   }
 

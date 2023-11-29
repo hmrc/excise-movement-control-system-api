@@ -61,14 +61,13 @@ class ExciseNumberQueueWorkItemRepository @Inject()
     appConfig.workItemInProgressTimeOut.toJava
   }
 
-  def getWorkItemForErn(ern: String): Future[Seq[WorkItem[ExciseNumberWorkItem]]] = {
-    //Returns a Seq but should only ever be one or zero, as "item.exciseNumber" is a unique index
+  def getWorkItemForErn(ern: String): Future[Option[WorkItem[ExciseNumberWorkItem]]] = {
 
     collection
       .find(
         in("item.exciseNumber", ern),
       )
-      .toFuture()
+      .toFuture().map(x => x.headOption)
   }
 
   def saveUpdatedWorkItem(updatedWI: WorkItem[ExciseNumberWorkItem]): Future[Boolean] = {
@@ -81,7 +80,7 @@ class ExciseNumberQueueWorkItemRepository @Inject()
       set("updatedAt", timeService.timestamp())
     )
 
-    collection.updateOne(filter = equal("_id", updatedWI.id),update).toFuture().map(_=>true)
+    collection.updateOne(filter = equal("_id", updatedWI.id), update).toFuture().map(_ => true)
   }
 }
 

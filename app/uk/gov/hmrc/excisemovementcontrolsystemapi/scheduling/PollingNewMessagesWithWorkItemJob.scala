@@ -75,7 +75,7 @@ class PollingNewMessagesWithWorkItemJob @Inject()
 
           getNewMessages(ern).flatMap {
 
-            case MoreMessagesToGet =>
+            case MessagesOutstanding =>
               logger.info(s"[PollingNewMessageWithWorkItemJob] - Work item for ERN $ern has further outstanding messages and has been added back to the queue")
               workItemService.markAs(wi.id, ProcessingStatus.ToDo, Some(wi.availableAt))
 
@@ -105,15 +105,11 @@ class PollingNewMessagesWithWorkItemJob @Inject()
   private def getNewMessages(exciseNumber: String): Future[NewMessageResult] = {
     newMessageService.getNewMessagesAndAcknowledge(exciseNumber)
       .flatMap {
-        case Some((response, messageCount)) if messageCount > 10 && response.message.nonEmpty =>
-          saveToDB(exciseNumber, response).map(_ => MoreMessagesToGet)
+        case Some((consumptionResponse, messageCount)) if messageCount > 10 =>
+          saveToDB(exciseNumber, consumptionResponse).map(_ => MessagesOutstanding)
 
-        case Some((response, _)) if response.message.nonEmpty =>
-          saveToDB(exciseNumber, response).map(_ => Processed)
-
-        case Some((_, _)) =>
-          // No messages returned
-          Future.successful(Processed)
+        case Some((consumptionResponse, _))  =>
+          saveToDB(exciseNumber, consumptionResponse).map(_ => Processed)
 
         case _ =>
           logger.error(s"[PollingNewMessageWithWorkItemJob] - Could not get messages for ern: $exciseNumber. Will retry later")
@@ -128,10 +124,10 @@ class PollingNewMessagesWithWorkItemJob @Inject()
 
   private def saveToDB(
                         exciseNumber: String,
-                        newMessageResponse: EISConsumptionResponse
+                        consumptionResponse: EISConsumptionResponse
                       ): Future[Boolean] = {
 
-    messageParser.extractMessages(newMessageResponse.message)
+    messageParser.extractMessages(consumptionResponse.message)
       .foldLeft(successful(true)) { case (acc, x) =>
         acc.flatMap {
           _ => save(x, exciseNumber)
@@ -157,7 +153,7 @@ object PollingNewMessagesWithWorkItemJob {
 
   private case object Processed extends NewMessageResult
 
-  private case object MoreMessagesToGet extends NewMessageResult
+  private case object MessagesOutstanding extends NewMessageResult
 
   private case object PollingFailed extends NewMessageResult
 }

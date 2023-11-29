@@ -61,6 +61,11 @@ class PollingNewMessagesWithWorkItemJobSpec
     "123",
     "any message"
   )
+  private val newMessageResponseEmpty = EISConsumptionResponse(
+    LocalDateTime.of(2023, 5, 6, 9, 10, 13),
+"123",
+    emptyNewMessageDataXml.toString()
+  )
 
   private val job = new PollingNewMessagesWithWorkItemJob(
     lockRepository,
@@ -221,7 +226,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
     }
 
-    "not process any message if no pending message exist" in {
+    "not process any Work Items if no Work Items exist" in {
       when(workItemService.pullOutstanding(any, any)).thenReturn(Future.successful(None))
 
       val result = await(job.executeInMutex)
@@ -231,9 +236,22 @@ class PollingNewMessagesWithWorkItemJobSpec
     }
 
     "not save message in the movement database" when {
-      "API has no message" in {
+      "API response has no messages inside" in {
         addOneItemToMockQueue()
         setGetNewMessagesAndAcknowledgeResponse()
+
+        when(newMessageParserService.extractMessages(any)).thenReturn(Seq.empty)
+
+        val result = await(job.executeInMutex)
+
+        result.message mustBe "polling-new-messages Job ran successfully."
+        verify(movementService, never()).updateMovement(any, any)
+      }
+
+      "API returns no message" in {
+        addOneItemToMockQueue()
+        when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+          .thenReturn(Future.successful(None))
 
         val result = await(job.executeInMutex)
 
@@ -258,7 +276,7 @@ class PollingNewMessagesWithWorkItemJobSpec
   private def setGetNewMessagesAndAcknowledgeResponse(messageCount: Int = 0): Unit = {
     if (messageCount == 0) {
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
-        .thenReturn(Future.successful(None))
+        .thenReturn(Future.successful(Some(newMessageResponseEmpty, 0)))
     } else {
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
         .thenReturn(Future.successful(Some((newMessageResponse, messageCount))))

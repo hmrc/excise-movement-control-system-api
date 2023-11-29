@@ -100,7 +100,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       .thenReturn(Future.successful(Seq(Movement("LRNQA20230909022221", "", Some("23GB00000000000378553")))))
 
     when(workItemRepository.pushNew(any, any, any)).thenReturn(Future.successful(workItem))
-    when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(Seq.empty))
+    when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
 
   }
 
