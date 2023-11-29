@@ -17,9 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import org.bson.types.ObjectId
-import org.mockito.MockitoSugar.{reset, when}
-import org.mongodb.scala.MongoWriteException
-import org.mongodb.scala.model.Filters
+import org.mockito.MockitoSugar.when
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, OptionValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
@@ -28,8 +26,7 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
 import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{InProgress, ToDo}
@@ -84,15 +81,14 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
 
       val result = repository.getWorkItemForErn("ern123").futureValue
 
-      result mustBe Seq(expectedWorkItem)
+      result mustBe Some(expectedWorkItem)
     }
 
     "return empty list if that ern does not exist in db" in {
-      val expectedWorkItem = insertWorkItemForErn("ern123")
 
       val result = repository.getWorkItemForErn("ern124").futureValue
 
-      result mustBe Seq.empty
+      result mustBe None
     }
 
   }

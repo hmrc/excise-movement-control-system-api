@@ -60,6 +60,15 @@ class NewMessageParserServiceSpec
       parser.extractMessages(encodeGetNewMessage) mustBe Seq(message1, message2)
       verify(messageFactory, times(2)).createIEMessage(any)
     }
+
+    "handle an empty list of messages" in {
+
+      val encodeGetNewMessage = Base64.getEncoder.encodeToString(
+        emptyNewMessageDataXml.toString.getBytes(StandardCharsets.UTF_8)
+      )
+
+      parser.extractMessages(encodeGetNewMessage) mustBe Seq.empty
+    }
   }
 }
 

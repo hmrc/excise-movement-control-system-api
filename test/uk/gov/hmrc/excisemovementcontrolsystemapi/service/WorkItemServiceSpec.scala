@@ -75,7 +75,7 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       when(mockWorkItemRepo.pushNew(any, any, any))
         .thenReturn(Future.successful(expectedWorkItem))
 
-      when(mockWorkItemRepo.getWorkItemForErn(any)).thenReturn(Future.successful(Seq.empty))
+      when(mockWorkItemRepo.getWorkItemForErn(any)).thenReturn(Future.successful(None))
 
       val result = await(workItemService.addWorkItemForErn(ern))
 
@@ -128,8 +128,8 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
       when(mockWorkItemRepo.getWorkItemForErn(any))
         .thenReturn(
-          Future.successful(Seq(workItemAlreadyInDb)),
-          Future.successful(Seq(expectedWorkItemAfterUpdate))
+          Future.successful(Some(workItemAlreadyInDb)),
+          Future.successful(Some(expectedWorkItemAfterUpdate))
         )
 
       when(mockWorkItemRepo.saveUpdatedWorkItem(any)).thenReturn(Future.successful(true))
@@ -165,8 +165,8 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
       when(mockWorkItemRepo.getWorkItemForErn(any))
         .thenReturn(
-          Future.successful(Seq(workItemAlreadyInDb)),
-          Future.successful(Seq(expectedWorkItem))
+          Future.successful(Some(workItemAlreadyInDb)),
+          Future.successful(Some(expectedWorkItem))
         )
 
       when(mockWorkItemRepo.saveUpdatedWorkItem(any)).thenReturn(Future.successful(true))
@@ -197,7 +197,7 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       )
 
       when(mockWorkItemRepo.getWorkItemForErn(any))
-        .thenReturn(Future.successful(Seq(expectedWorkItemAfterUpdate)))
+        .thenReturn(Future.successful(Some(expectedWorkItemAfterUpdate)))
       when(mockWorkItemRepo.saveUpdatedWorkItem(any)).thenReturn(Future.successful(true))
 
       val result = await(workItemService.rescheduleWorkItem(workItemAlreadyInDb))
@@ -230,7 +230,7 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       )
 
       when(mockWorkItemRepo.getWorkItemForErn(any))
-        .thenReturn(Future.successful(Seq(expectedWorkItemAfterUpdate)))
+        .thenReturn(Future.successful(Some(expectedWorkItemAfterUpdate)))
       when(mockWorkItemRepo.saveUpdatedWorkItem(any)).thenReturn(Future.successful(true))
 
       val result = await(workItemService.rescheduleWorkItem(workItemAlreadyInDb))
@@ -263,7 +263,7 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       )
 
       when(mockWorkItemRepo.getWorkItemForErn(any))
-        .thenReturn(Future.successful(Seq(expectedWorkItemAfterUpdate)))
+        .thenReturn(Future.successful(Some(expectedWorkItemAfterUpdate)))
       when(mockWorkItemRepo.saveUpdatedWorkItem(any)).thenReturn(Future.successful(true))
 
       val result = await(workItemService.rescheduleWorkItem(workItemAlreadyInDb))
@@ -300,7 +300,7 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       )
 
       when(mockWorkItemRepo.getWorkItemForErn(any))
-        .thenReturn(Future.successful(Seq(expectedWorkItemAfterUpdate)))
+        .thenReturn(Future.successful(Some(expectedWorkItemAfterUpdate)))
       when(mockWorkItemRepo.saveUpdatedWorkItem(any)).thenReturn(Future.successful(true))
 
       val result = await(workItemService.rescheduleWorkItemForceSlow(workItemAlreadyInDb))

@@ -404,7 +404,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
             Base64.getEncoder.encodeToString(emptyNewMessageDataXml.toString().getBytes(StandardCharsets.UTF_8)),
           )).toString()
         ))
-    ).setPersistent(true)
+    )
   }
 
   private def stubMessageReceiptRequest(exciseNumber: String): StubMapping = {
