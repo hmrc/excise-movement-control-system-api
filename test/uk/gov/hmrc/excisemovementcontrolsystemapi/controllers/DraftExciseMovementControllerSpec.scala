@@ -79,7 +79,7 @@ class DraftExciseMovementControllerSpec
 
     when(connector.submitMessage(any)(any)).thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
 
-    when(workItemService.addWorkItemForErn(any)).thenReturn(Future.successful(workItem))
+    when(workItemService.addWorkItemForErn(any,any)).thenReturn(Future.successful(workItem))
 
     when(mockIeMessage.consigneeId).thenReturn(Some("789"))
     when(mockIeMessage.consignorId).thenReturn("456")
@@ -125,15 +125,15 @@ class DraftExciseMovementControllerSpec
 
       await(createWithSuccessfulAuth.submit(request))
 
-      verify(workItemService).addWorkItemForErn("456")
+      verify(workItemService).addWorkItemForErn("456",fastMode = true)
 
     }
 
-    "catch the error to be thrown if Work Item service fails and continue" in {
+    "catch the error thrown if Work Item service fails and continue" in {
       when(movementMessageService.saveNewMovement(any))
         .thenReturn(Future.successful(Right(Movement("lrn", ern, None))))
 
-      when(workItemService.addWorkItemForErn(any)).thenThrow(new RuntimeException("error"))
+      when(workItemService.addWorkItemForErn(any,any)).thenThrow(new RuntimeException("error"))
 
         val result = createWithSuccessfulAuth.submit(request)
 
@@ -147,7 +147,7 @@ class DraftExciseMovementControllerSpec
       when(movementMessageService.saveNewMovement(any))
         .thenReturn(Future.successful(Right(Movement("lrn", ern, None))))
 
-      when(workItemService.addWorkItemForErn(any)).thenReturn(Future.failed(new MongoException("Oh no!")))
+      when(workItemService.addWorkItemForErn(any,any)).thenReturn(Future.failed(new MongoException("Oh no!")))
 
       val result = createWithSuccessfulAuth.submit(request)
 

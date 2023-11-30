@@ -77,7 +77,7 @@ class SubmitMessageControllerSpec
     when(connector.submitMessage(any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
 
-    when(workItemService.addWorkItemForErn(any)).thenReturn(Future.successful(workItem))
+    when(workItemService.addWorkItemForErn(any,any)).thenReturn(Future.successful(workItem))
 
     when(emcsUtils.getSingleErnFromMessage(any, any)).thenReturn("testErn")
 
@@ -101,7 +101,7 @@ class SubmitMessageControllerSpec
 
       await(createWithSuccessfulAuth.submit("LRN")(request))
 
-      verify(workItemService).addWorkItemForErn("testErn")
+      verify(workItemService).addWorkItemForErn("testErn",fastMode = true)
 
     }
 
@@ -146,9 +146,9 @@ class SubmitMessageControllerSpec
       }
     }
 
-    "catch mongo error from Work Item service and log it but still process submission" in {
+    "catch error from Work Item service and log it but still process submission" in {
 
-      when(workItemService.addWorkItemForErn(any)).thenThrow(new MongoException("Database error happened"))
+      when(workItemService.addWorkItemForErn(any,any)).thenThrow(new MongoException("Database error happened"))
 
       val result = createWithSuccessfulAuth.submit("lrn")(request)
 
@@ -159,7 +159,7 @@ class SubmitMessageControllerSpec
 
     "catch Future failure from Work Item service and log it but still process submission" in {
 
-      when(workItemService.addWorkItemForErn(any)).thenReturn(Future.failed(new MongoException("Oh no!")))
+      when(workItemService.addWorkItemForErn(any,any)).thenReturn(Future.failed(new MongoException("Oh no!")))
 
       val result = createWithSuccessfulAuth.submit("lrn")(request)
 

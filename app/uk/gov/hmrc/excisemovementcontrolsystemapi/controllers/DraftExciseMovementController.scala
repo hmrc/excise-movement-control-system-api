@@ -69,8 +69,19 @@ class DraftExciseMovementController @Inject()(
     }
     val ern = newMovement.consignorId
 
+    addWorkItem(ern)
+
+    movementMessageService.saveNewMovement(newMovement)
+      .flatMap {
+        case Right(msg) => Future.successful(Accepted(Json.toJson(ExciseMovementResponse("Accepted", msg.localReferenceNumber, msg.consignorId, msg.consigneeId))))
+        case Left(error) => Future.successful(error)
+      }
+
+  }
+
+  private def addWorkItem(ern: String) = {
     try {
-      workItemService.addWorkItemForErn(ern).recover {
+      workItemService.addWorkItemForErn(ern, fastMode = true).recover {
         case ex: Throwable =>
           logger.error(s"[DraftExciseMovementController] - Failed to create Work Item for ERN $ern: ${ex.getMessage}")
           //TODO compiler warning on type here
@@ -80,14 +91,6 @@ class DraftExciseMovementController @Inject()(
     catch {
       case ex: Exception => logger.error(s"[DraftExciseMovementController] - Database error while creating Work Item for ERN $ern: ${ex.getMessage}")
     }
-
-
-    movementMessageService.saveNewMovement(newMovement)
-      .flatMap {
-        case Right(msg) => Future.successful(Accepted(Json.toJson(ExciseMovementResponse("Accepted", msg.localReferenceNumber, msg.consignorId, msg.consigneeId))))
-        case Left(error) => Future.successful(error)
-      }
-
   }
 
   //todo: this will be removed at a later time when we will do the polling
