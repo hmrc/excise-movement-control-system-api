@@ -65,120 +65,197 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
     reset(mockWorkItemRepo)
   }
 
-  "add work item for ern" should {
+  "add work item for ern" when {
 
-    "create and return the work item when none for that ern already in the database" in {
+    "in fast mode" should {
 
-      val expectedExciseNumberWorkItem = ExciseNumberWorkItem(ern, 6)
-      val expectedWorkItem = createTestWorkItem(expectedExciseNumberWorkItem, timestampPlusFastInterval)
+      "create and return the work item when none for that ern already in the database" in {
 
-      when(mockWorkItemRepo.pushNew(any, any, any))
-        .thenReturn(Future.successful(expectedWorkItem))
+        val expectedExciseNumberWorkItem = ExciseNumberWorkItem(ern, 6)
+        val expectedWorkItem = createTestWorkItem(expectedExciseNumberWorkItem, timestampPlusFastInterval)
 
-      when(mockWorkItemRepo.getWorkItemForErn(any)).thenReturn(Future.successful(None))
+        when(mockWorkItemRepo.pushNew(any, any, any))
+          .thenReturn(Future.successful(expectedWorkItem))
 
-      val result = await(workItemService.addWorkItemForErn(ern))
+        when(mockWorkItemRepo.getWorkItemForErn(any)).thenReturn(Future.successful(None))
 
-      withClue("should check the database for duplicates") {
-        verify(mockWorkItemRepo).getWorkItemForErn(eqTo(ern))
+        val result = await(workItemService.addWorkItemForErn(ern,fastMode = true))
+
+        withClue("should check the database for duplicates") {
+          verify(mockWorkItemRepo).getWorkItemForErn(eqTo(ern))
+        }
+
+        withClue("should save to db") {
+          verify(mockWorkItemRepo).pushNew(eqTo(expectedExciseNumberWorkItem), eqTo(timestampPlusFastInterval), any)
+        }
+
+        withClue("should return the Work Item for this ern") {
+          result.item.exciseNumber mustBe ern
+        }
+
+        withClue("create it with fast retries set to the app config value") {
+          result.item.fastPollRetriesLeft mustBe 6
+        }
+
+        withClue("set the availableAt time to be currentTime + fast interval") {
+          result.availableAt mustBe timestampPlusFastInterval
+        }
+
+        withClue("set the receivedAt / lastSubmitted to now") {
+          result.receivedAt mustBe timestamp
+        }
+
       }
 
-      withClue("should save to db") {
-        verify(mockWorkItemRepo).pushNew(eqTo(expectedExciseNumberWorkItem), eqTo(timestampPlusFastInterval), any)
-      }
+      "update work item when entry for that ern already in the database and it is next scheduled further away than fast interval" in {
 
-      withClue("should return the Work Item for this ern") {
-        result.item.exciseNumber mustBe ern
-      }
-
-      withClue("create it with fast retries set to the app config value") {
-        result.item.fastPollRetriesLeft mustBe 6
-      }
-
-      withClue("set the availableAt time to be currentTime + fast interval") {
-        result.availableAt mustBe timestampPlusFastInterval
-      }
-
-      withClue("set the receivedAt / lastSubmitted to now") {
-        result.receivedAt mustBe timestamp
-      }
-
-    }
-
-    "update work item when entry for that ern already in the database and it is next scheduled further away than fast interval" in {
-
-      // Work Item has already been processed so fast interval retries < app config value
-      // And Work Item is on slow interval so has a further away availableAt
-      val workItemAlreadyInDb = createTestWorkItem(
-        exciseNumberWorkItem = ExciseNumberWorkItem(ern, 2),
-        availableAt = timestamp.plus(Duration(1, HOURS).toJava),
-        receivedAt = timestamp.minusSeconds(10),
-        updatedAt = timestamp.minusSeconds(10),
-        status = Failed,
-        failureCount = 132
-      )
-
-      val expectedWorkItemAfterUpdate = workItemAlreadyInDb.copy(
-        item = ExciseNumberWorkItem(ern, 6),
-        availableAt = timestampPlusFastInterval,
-        receivedAt = timestamp,
-        status = ToDo,
-        failureCount = 0
-      )
-
-      when(mockWorkItemRepo.getWorkItemForErn(any))
-        .thenReturn(
-          Future.successful(Some(workItemAlreadyInDb)),
-          Future.successful(Some(expectedWorkItemAfterUpdate))
+        // Work Item has already been processed so fast interval retries < app config value
+        // And Work Item is on slow interval so has a further away availableAt
+        val workItemAlreadyInDb = createTestWorkItem(
+          exciseNumberWorkItem = ExciseNumberWorkItem(ern, 2),
+          availableAt = timestamp.plus(Duration(1, HOURS).toJava),
+          receivedAt = timestamp.minusSeconds(10),
+          updatedAt = timestamp.minusSeconds(10),
+          status = Failed,
+          failureCount = 132
         )
 
-      when(mockWorkItemRepo.saveUpdatedWorkItem(any)).thenReturn(Future.successful(true))
-
-      val result = await(workItemService.addWorkItemForErn(ern))
-
-      withClue("should check the database for duplicates") {
-        verify(mockWorkItemRepo, times(2)).getWorkItemForErn(eqTo(ern))
-      }
-
-      withClue("should update the database with the right details") {
-        // The details being that
-        // * Fast retries reset to app config value
-        // * availableAt is currentTime + fastInterval
-        // * receivedAt/lastSubmitted is currentTime
-        // * status is To Do
-        // * failureCount is reset to 0
-        verify(mockWorkItemRepo).saveUpdatedWorkItem(eqTo(expectedWorkItemAfterUpdate))
-      }
-
-      withClue("should return the work item that was saved into the db") {
-        result mustBe expectedWorkItemAfterUpdate
-      }
-
-    }
-
-    "update work item when entry for that ern already in the database and is next scheduled closer than fast interval" in {
-      val thirtySecondsLater = timestamp.plus(Duration(30, SECONDS).toJava)
-
-      // Work Item already fast interval so will run soon. So we don't want to update availableAt
-      val workItemAlreadyInDb = createTestWorkItem(ExciseNumberWorkItem(ern, 6), thirtySecondsLater)
-      val expectedWorkItem = workItemAlreadyInDb
-
-      when(mockWorkItemRepo.getWorkItemForErn(any))
-        .thenReturn(
-          Future.successful(Some(workItemAlreadyInDb)),
-          Future.successful(Some(expectedWorkItem))
+        val expectedWorkItemAfterUpdate = workItemAlreadyInDb.copy(
+          item = ExciseNumberWorkItem(ern, 6),
+          availableAt = timestampPlusFastInterval,
+          receivedAt = timestamp,
+          status = ToDo,
+          failureCount = 0
         )
 
-      when(mockWorkItemRepo.saveUpdatedWorkItem(any)).thenReturn(Future.successful(true))
+        when(mockWorkItemRepo.getWorkItemForErn(any))
+          .thenReturn(
+            Future.successful(Some(workItemAlreadyInDb)),
+            Future.successful(Some(expectedWorkItemAfterUpdate))
+          )
 
-      val result = await(workItemService.addWorkItemForErn(ern))
+        when(mockWorkItemRepo.saveUpdatedWorkItem(any)).thenReturn(Future.successful(true))
 
-      withClue("set the availableAt time to be currentTime + fast interval") {
-        result.availableAt mustBe thirtySecondsLater
+        val result = await(workItemService.addWorkItemForErn(ern,fastMode = true))
+
+        withClue("should check the database for duplicates") {
+          verify(mockWorkItemRepo, times(2)).getWorkItemForErn(eqTo(ern))
+        }
+
+        withClue("should update the database with the right details") {
+          // The details being that
+          // * Fast retries reset to app config value
+          // * availableAt is currentTime + fastInterval
+          // * receivedAt/lastSubmitted is currentTime
+          // * status is To Do
+          // * failureCount is reset to 0
+          verify(mockWorkItemRepo).saveUpdatedWorkItem(eqTo(expectedWorkItemAfterUpdate))
+        }
+
+        withClue("should return the work item that was saved into the db") {
+          result mustBe expectedWorkItemAfterUpdate
+        }
+
+      }
+
+      "update work item when entry for that ern already in the database and is next scheduled closer than fast interval" in {
+        val thirtySecondsLater = timestamp.plus(Duration(30, SECONDS).toJava)
+
+        // Work Item already fast interval so will run soon. So we don't want to update availableAt
+        val workItemAlreadyInDb = createTestWorkItem(ExciseNumberWorkItem(ern, 6), thirtySecondsLater)
+        val expectedWorkItem = workItemAlreadyInDb
+
+        when(mockWorkItemRepo.getWorkItemForErn(any))
+          .thenReturn(
+            Future.successful(Some(workItemAlreadyInDb)),
+            Future.successful(Some(expectedWorkItem))
+          )
+
+        when(mockWorkItemRepo.saveUpdatedWorkItem(any)).thenReturn(Future.successful(true))
+
+        val result = await(workItemService.addWorkItemForErn(ern,fastMode = true))
+
+        withClue("set the availableAt time to be currentTime + fast interval") {
+          result.availableAt mustBe thirtySecondsLater
+        }
+
       }
 
     }
 
+    "in slow mode" should {
+
+      "create and return the work item when none for that ern already in the database" in {
+
+        val expectedExciseNumberWorkItem = ExciseNumberWorkItem(ern, 0)
+        val expectedWorkItem = createTestWorkItem(expectedExciseNumberWorkItem, timestampPlusFastInterval)
+
+        when(mockWorkItemRepo.pushNew(any, any, any))
+          .thenReturn(Future.successful(expectedWorkItem))
+
+        when(mockWorkItemRepo.getWorkItemForErn(any)).thenReturn(Future.successful(None))
+
+        val result = await(workItemService.addWorkItemForErn(ern, fastMode = false))
+
+        withClue("should check the database for duplicates") {
+          verify(mockWorkItemRepo).getWorkItemForErn(eqTo(ern))
+        }
+
+        withClue("should save to db") {
+          verify(mockWorkItemRepo).pushNew(eqTo(expectedExciseNumberWorkItem), eqTo(timestampPlusFastInterval), any)
+        }
+
+        withClue("should return the Work Item for this ern") {
+          result.item.exciseNumber mustBe ern
+        }
+
+        withClue("create it with fast retries set to 0 so it falls back to the slow interval after one call") {
+          result.item.fastPollRetriesLeft mustBe 0
+        }
+
+        withClue("set the availableAt time to be currentTime + fast interval") {
+          result.availableAt mustBe timestampPlusFastInterval
+        }
+
+        withClue("set the receivedAt / lastSubmitted to now") {
+          result.receivedAt mustBe timestamp
+        }
+
+      }
+
+      "don't update work item if already exists" in {
+
+        val workItemAlreadyInDb = createTestWorkItem(
+          exciseNumberWorkItem = ExciseNumberWorkItem(ern, 2),
+          availableAt = timestamp.plus(Duration(1, HOURS).toJava),
+          receivedAt = timestamp.minusSeconds(10),
+          updatedAt = timestamp.minusSeconds(10),
+          status = Failed,
+          failureCount = 132
+        )
+
+        when(mockWorkItemRepo.getWorkItemForErn(any))
+          .thenReturn(Future.successful(Some(workItemAlreadyInDb)))
+
+        when(mockWorkItemRepo.saveUpdatedWorkItem(any)).thenReturn(Future.successful(true))
+
+        val result = await(workItemService.addWorkItemForErn(ern, fastMode = false))
+
+        withClue("should check the database for duplicates") {
+          verify(mockWorkItemRepo).getWorkItemForErn(eqTo(ern))
+        }
+
+        withClue("should not update the database") {
+          verify(mockWorkItemRepo, times(0)).saveUpdatedWorkItem(any)
+        }
+
+        withClue("should return the work item that is already there in the db") {
+          result mustBe workItemAlreadyInDb
+        }
+
+      }
+
+    }
   }
 
   "reschedule work item" should {

@@ -16,12 +16,13 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
+import play.api.Logging
 import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.LocalDateTime
@@ -32,16 +33,21 @@ import scala.concurrent.{ExecutionContext, Future}
 class GetMessagesController @Inject()(
                                        authAction: AuthAction,
                                        movementService: MovementService,
+                                       workItemService: WorkItemService,
                                        cc: ControllerComponents
-                                     )(implicit ec: ExecutionContext) extends BackendController(cc) {
+                                     )(implicit ec: ExecutionContext)
+  extends BackendController(cc)
+  with Logging {
 
   def getMessagesForMovement(lrn: String): Action[AnyContent] = {
     // todo: how we handle error here if for example MongoDb throws?
     authAction.async(parse.default) {
       implicit request: EnrolmentRequest[AnyContent] => {
+
         movementService.getMatchingERN(lrn, request.erns.toList).flatMap {
           case None => Future.successful(BadRequest(Json.toJson(ErrorResponse(LocalDateTime.now(), "Invalid LRN supplied for ERN", ""))))
-          case Some(ern) => getMessagesAsJson(lrn, ern)
+          case Some(ern) => addWorkItem(ern)
+            getMessagesAsJson(lrn, ern)
         }
       }
     }
@@ -51,6 +57,20 @@ class GetMessagesController @Inject()(
     movementService.getMovementByLRNAndERNIn(lrn, List(ern)).map {
       case Some(mv) => Ok(Json.toJson(mv.messages))
       case _ => Ok(JsArray())
+    }
+  }
+
+  private def addWorkItem(ern: String) = {
+    try {
+      workItemService.addWorkItemForErn(ern, fastMode = false).recover {
+        case ex: Throwable =>
+          logger.error(s"[GetMessagesController] - Failed to create Work Item for ERN $ern: ${ex.getMessage}")
+          //TODO compiler warning on type here
+          Future.failed(ex)
+      }
+    }
+    catch {
+      case ex: Exception => logger.error(s"[GetMessagesController] - Database error while creating Work Item for ERN $ern: ${ex.getMessage}")
     }
   }
 }

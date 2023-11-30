@@ -18,20 +18,22 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, verify, when}
+import org.mongodb.scala.MongoException
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.{BAD_REQUEST, OK}
+import play.api.http.Status.{ACCEPTED, BAD_REQUEST, OK}
 import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.AnyContent
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnsAction, FakeXmlParsers}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
 import uk.gov.hmrc.mongo.TimestampSupport
+import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
@@ -51,16 +53,18 @@ class GetMessagesControllerSpec extends PlaySpec
   private val lrn = "LRN1234"
   private val dateTimeService = mock[TimestampSupport]
   private val timeStamp = Instant.parse("2018-11-30T18:35:24.00Z")
-
+  private val workItemService = mock[WorkItemService]
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(movementService, dateTimeService)
+    reset(movementService, dateTimeService, workItemService)
 
     when(movementService.getMatchingERN(any, any))
       .thenReturn(Future.successful(Some(ern)))
 
     when(dateTimeService.timestamp()).thenReturn(timeStamp)
+
+    when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(mock[WorkItem[ExciseNumberWorkItem]]))
   }
 
   "getMessagesForMovement" should {
@@ -87,7 +91,19 @@ class GetMessagesControllerSpec extends PlaySpec
         verify(movementService).getMovementByLRNAndERNIn(eqTo(lrn), eqTo(List(ern)))
       }
 
-    "return an empty array" in {
+    "create a Work Item if there is not one for the ERN already" in {
+      val message = Message("message", "IE801", dateTimeService)
+      val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
+      when(movementService.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(Some(movement)))
+
+      await(createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest()))
+
+      verify(workItemService).addWorkItemForErn(eqTo("testErn"), eqTo(false))
+
+    }
+
+    "return an empty array when no messages" in {
       when(movementService.getMovementByLRNAndERNIn(any,any))
         .thenReturn(Future.successful(None))
 
@@ -104,12 +120,45 @@ class GetMessagesControllerSpec extends PlaySpec
 
       status(result) mustBe BAD_REQUEST
     }
+
+    "catch the error thrown if Work Item service fails and continue" in {
+      val message = Message("message", "IE801", dateTimeService)
+      val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
+      when(movementService.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(Some(movement)))
+
+      when(workItemService.addWorkItemForErn(any, any)).thenThrow(new RuntimeException("error"))
+
+      val result = createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest())
+
+      status(result) mustBe OK
+
+      verify(movementService).getMatchingERN(any,any)
+
+    }
+
+    "catch Future failure from Work Item service and log it but still process submission" in {
+      val message = Message("message", "IE801", dateTimeService)
+      val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
+      when(movementService.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(Some(movement)))
+
+      when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.failed(new MongoException("Oh no!")))
+
+      val result = createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest())
+
+      status(result) mustBe OK
+
+      verify(movementService).getMatchingERN(any, any)
+    }
+
   }
 
   private def createWithSuccessfulAuth =
     new GetMessagesController(
       FakeSuccessAuthentication,
       movementService,
+      workItemService,
       cc
     )
 

@@ -16,27 +16,33 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
+import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GetMovementResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 class GetMovementsController @Inject()(
   authAction: AuthAction,
   cc: ControllerComponents,
-  movementService: MovementService
-)(implicit ec: ExecutionContext) extends BackendController(cc)  {
+  movementService: MovementService,
+  workItemService: WorkItemService
+)(implicit ec: ExecutionContext)
+  extends BackendController(cc)
+  with Logging {
 
   def getMovements(ern: Option[String], lrn: Option[String], arc: Option[String]): Action[AnyContent] = {
     authAction.async(parse.default) {
       implicit request =>
+
+        addWorkItem(ern.getOrElse(request.erns.head))
 
         val filter = MovementFilter.and(Seq("ern" -> ern, "lrn" -> lrn, "arc" -> arc))
         movementService.getMovementByErn(request.erns.toSeq, filter)
@@ -54,6 +60,20 @@ class GetMovementsController @Inject()(
       movement.administrativeReferenceCode,
       "Accepted"
     )
+  }
+
+  private def addWorkItem(ern: String) = {
+    try {
+      workItemService.addWorkItemForErn(ern, fastMode = false).recover {
+        case ex: Throwable =>
+          logger.error(s"[GetMovementsController] - Failed to create Work Item for ERN $ern: ${ex.getMessage}")
+          //TODO compiler warning on type here
+          Future.failed(ex)
+      }
+    }
+    catch {
+      case ex: Exception => logger.error(s"[GetMovementsController] - Database error while creating Work Item for ERN $ern: ${ex.getMessage}")
+    }
   }
 
 }

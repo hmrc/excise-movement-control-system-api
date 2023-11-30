@@ -38,11 +38,20 @@ class WorkItemService @Inject()
   timestampService: TimestampSupport
 )(implicit val executionContext: ExecutionContext) {
 
-  def addWorkItemForErn(ern: String): Future[WorkItem[ExciseNumberWorkItem]] = {
+  def addWorkItemForErn(ern: String, fastMode: Boolean): Future[WorkItem[ExciseNumberWorkItem]] = {
 
     workItemRepository.getWorkItemForErn(ern).flatMap {
-      case None => createWorkItem(ern)
-      case Some(workItem) => updateWorkItemToRunOnFastIntervals(workItem)
+      // Create a new one from a submission
+      case None if fastMode => createWorkItem(ern, appConfig.fastIntervalRetryAttempts)
+
+      // New one is coming from a GetMovement or GetMessages just let it slowly go off
+      case None => createWorkItem(ern, 0)
+
+      //New submission so turn us back to fast instead of slow
+      case Some(workItem) if fastMode => updateWorkItemToRunOnFastIntervals(workItem)
+
+      // GetMessages called for an existing Work Item. Nothing to do
+      case Some(workItem) => Future.successful(workItem)
     }
 
   }
@@ -78,11 +87,11 @@ class WorkItemService @Inject()
   def pullOutstanding(failedBefore: Instant, availableBefore: Instant): Future[Option[WorkItem[ExciseNumberWorkItem]]] =
     workItemRepository.pullOutstanding(failedBefore, availableBefore)
 
-  private def createWorkItem(ern: String): Future[WorkItem[ExciseNumberWorkItem]] = {
+  private def createWorkItem(ern: String, initialRetryAttempts: Int): Future[WorkItem[ExciseNumberWorkItem]] = {
 
     val nextAvailableAt = timestampService.timestamp().plus(appConfig.workItemFastInterval.toJava)
 
-    workItemRepository.pushNew(ExciseNumberWorkItem(ern, appConfig.fastIntervalRetryAttempts), nextAvailableAt)
+    workItemRepository.pushNew(ExciseNumberWorkItem(ern, initialRetryAttempts), nextAvailableAt)
   }
 
   private def updateWorkItemToRunOnFastIntervals(workItemToUpdate: WorkItem[ExciseNumberWorkItem]): Future[WorkItem[ExciseNumberWorkItem]] = {
