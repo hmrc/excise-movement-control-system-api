@@ -23,7 +23,7 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.{ACCEPTED, BAD_REQUEST, OK}
+import play.api.http.Status.{BAD_REQUEST, OK}
 import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.AnyContent
 import play.api.test.FakeRequest
@@ -69,9 +69,9 @@ class GetMessagesControllerSpec extends PlaySpec
 
   "getMessagesForMovement" should {
     "return 200" in {
-      val message = Message("message","IE801", dateTimeService)
+      val message = Message("message", "IE801", dateTimeService)
       val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
-      when(movementService.getMovementByLRNAndERNIn(any,any))
+      when(movementService.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest())
@@ -81,15 +81,15 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "get all the new messages" in {
-      val message = Message("message","IE801", dateTimeService)
+      val message = Message("message", "IE801", dateTimeService)
       val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
-      when(movementService.getMovementByLRNAndERNIn(any,any))
+      when(movementService.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Some(movement)))
 
-        await(createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest()))
+      await(createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest()))
 
-        verify(movementService).getMovementByLRNAndERNIn(eqTo(lrn), eqTo(List(ern)))
-      }
+      verify(movementService).getMovementByLRNAndERNIn(eqTo(lrn), eqTo(List(ern)))
+    }
 
     "create a Work Item if there is not one for the ERN already" in {
       val message = Message("message", "IE801", dateTimeService)
@@ -104,7 +104,7 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "return an empty array when no messages" in {
-      when(movementService.getMovementByLRNAndERNIn(any,any))
+      when(movementService.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(None))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest())
@@ -133,7 +133,7 @@ class GetMessagesControllerSpec extends PlaySpec
 
       status(result) mustBe OK
 
-      verify(movementService).getMatchingERN(any,any)
+      verify(movementService).getMatchingERN(any, any)
 
     }
 

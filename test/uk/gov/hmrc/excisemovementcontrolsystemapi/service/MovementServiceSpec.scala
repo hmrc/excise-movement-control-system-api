@@ -26,8 +26,8 @@ import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, InternalServerError}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
@@ -36,7 +36,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.TimestampSupport
 
 import java.nio.charset.StandardCharsets
-import java.time.{Instant, LocalDateTime, ZoneOffset}
+import java.time.{Instant, LocalDateTime}
 import java.util.Base64
 import scala.concurrent.ExecutionContext
 
@@ -415,7 +415,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
 
     "do not save duplicate messages to DB" in {
-      val cachedMessage = createMessage("<foo>test</foo>",MessageTypes.IE801.value)
+      val cachedMessage = createMessage("<foo>test</foo>", MessageTypes.IE801.value)
 
       setUpForUpdateMovement(newMessage, None, Some("123"), "<foo>test</foo>", cachedMovements)
       when(mockMovementRepository.getAllBy(any))

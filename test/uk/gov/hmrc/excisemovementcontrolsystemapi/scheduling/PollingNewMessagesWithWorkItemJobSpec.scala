@@ -276,7 +276,7 @@ class PollingNewMessagesWithWorkItemJobSpec
   private def setGetNewMessagesAndAcknowledgeResponse(messageCount: Int = 0): Unit = {
     if (messageCount == 0) {
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
-        .thenReturn(Future.successful(Some(newMessageResponseEmpty, 0)))
+        .thenReturn(Future.successful(Some((newMessageResponseEmpty, 0))))
     } else {
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
         .thenReturn(Future.successful(Some((newMessageResponse, messageCount))))

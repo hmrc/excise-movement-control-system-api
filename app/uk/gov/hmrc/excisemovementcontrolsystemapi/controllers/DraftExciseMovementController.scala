@@ -79,17 +79,18 @@ class DraftExciseMovementController @Inject()(
 
   }
 
-  private def addWorkItem(ern: String) = {
+  private def addWorkItem(ern: String): Future[Boolean] = {
     try {
-      workItemService.addWorkItemForErn(ern, fastMode = true).recover {
-        case ex: Throwable =>
-          logger.error(s"[DraftExciseMovementController] - Failed to create Work Item for ERN $ern: ${ex.getMessage}")
-          //TODO compiler warning on type here
-          Future.failed(ex)
-      }
+      workItemService.addWorkItemForErn(ern, fastMode = true).flatMap { _ => Future.successful(true) }
+        .recover {
+          case ex: Throwable =>
+            logger.error(s"[DraftExciseMovementController] - Failed to create Work Item for ERN $ern: ${ex.getMessage}")
+            false
+        }
     }
     catch {
       case ex: Exception => logger.error(s"[DraftExciseMovementController] - Database error while creating Work Item for ERN $ern: ${ex.getMessage}")
+        Future.successful(false)
     }
   }
 
