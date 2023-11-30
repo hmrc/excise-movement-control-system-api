@@ -19,6 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.{reset, verify, when}
+import org.mongodb.scala.MongoException
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
@@ -144,6 +145,30 @@ class SubmitMessageControllerSpec
         status(result) mustBe NOT_FOUND
       }
     }
+
+    "catch mongo error from Work Item service and log it but still process submission" in {
+
+      when(workItemService.addWorkItemForErn(any)).thenThrow(new MongoException("Database error happened"))
+
+      val result = createWithSuccessfulAuth.submit("lrn")(request)
+
+      status(result) mustBe ACCEPTED
+
+      verify(connector).submitMessage(any)(any)
+    }
+
+    "catch Future failure from Work Item service and log it but still process submission" in {
+
+      when(workItemService.addWorkItemForErn(any)).thenReturn(Future.failed(new MongoException("Oh no!")))
+
+      val result = createWithSuccessfulAuth.submit("lrn")(request)
+
+      status(result) mustBe ACCEPTED
+
+      verify(connector).submitMessage(any)(any)
+    }
+
+
   }
 
   private def createWithSuccessfulAuth =

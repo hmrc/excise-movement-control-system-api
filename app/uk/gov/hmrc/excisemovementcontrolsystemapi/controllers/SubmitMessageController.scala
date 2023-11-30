@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
+import play.api.Logging
 import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction, ValidateErnsAction, ValidateLRNAction}
@@ -37,7 +38,9 @@ class SubmitMessageController @Inject()(
                                          workItemService: WorkItemService,
                                          emcsUtils: EmcsUtils,
                                          cc: ControllerComponents
-                                       )(implicit ec: ExecutionContext) extends BackendController(cc) {
+                                       )(implicit ec: ExecutionContext)
+  extends BackendController(cc)
+    with Logging {
 
   def submit(lrn: String): Action[NodeSeq] = {
 
@@ -48,11 +51,21 @@ class SubmitMessageController @Inject()(
       implicit request =>
         val ern = emcsUtils.getSingleErnFromMessage(request.parsedRequest.ieMessage, request.validErns)
 
-        workItemService.addWorkItemForErn(ern).flatMap { _ =>
-          movementMessageConnector.submitMessage(request).flatMap {
-            case Right(_) => Future.successful(Accepted(""))
-            case Left(error) => Future.successful(error)
+        try {
+          workItemService.addWorkItemForErn(ern).recover {
+            case ex: Throwable =>
+              logger.error(s"[SubmitMessageController] - Failed to create Work Item for ERN $ern: ${ex.getMessage}")
+            //TODO compiler warning on type here
+            Future.failed(ex)
           }
+        }
+        catch {
+          case ex: Exception => logger.error(s"[SubmitMessageController] - Database error while creating Work Item for ERN $ern: ${ex.getMessage}")
+        }
+
+        movementMessageConnector.submitMessage(request).flatMap {
+          case Right(_) => Future.successful(Accepted(""))
+          case Left(error) => Future.successful(error)
         }
 
     }

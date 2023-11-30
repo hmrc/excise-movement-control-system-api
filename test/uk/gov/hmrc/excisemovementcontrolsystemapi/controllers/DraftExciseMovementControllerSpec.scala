@@ -22,6 +22,7 @@ import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.{reset, verify, when}
 import org.mockito.captor.ArgCaptor
+import org.mongodb.scala.MongoException
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
@@ -128,16 +129,31 @@ class DraftExciseMovementControllerSpec
 
     }
 
-    "allow the error to be thrown if work item service fails" in {
+    "catch the error to be thrown if Work Item service fails and continue" in {
       when(movementMessageService.saveNewMovement(any))
         .thenReturn(Future.successful(Right(Movement("lrn", ern, None))))
 
-      when(workItemService.addWorkItemForErn(any)).thenReturn(Future.failed(new RuntimeException("error")))
+      when(workItemService.addWorkItemForErn(any)).thenThrow(new RuntimeException("error"))
 
-      intercept[RuntimeException] {
-        await(createWithSuccessfulAuth.submit(request))
-      }.getMessage mustBe "error"
+        val result = createWithSuccessfulAuth.submit(request)
 
+      status(result) mustBe ACCEPTED
+
+      verify(connector).submitMessage(any)(any)
+
+    }
+
+    "catch Future failure from Work Item service and log it but still process submission" in {
+      when(movementMessageService.saveNewMovement(any))
+        .thenReturn(Future.successful(Right(Movement("lrn", ern, None))))
+
+      when(workItemService.addWorkItemForErn(any)).thenReturn(Future.failed(new MongoException("Oh no!")))
+
+      val result = createWithSuccessfulAuth.submit(request)
+
+      status(result) mustBe ACCEPTED
+
+      verify(connector).submitMessage(any)(any)
     }
 
     "return an error when EIS error" in {
