@@ -37,7 +37,7 @@ class GetMessagesController @Inject()(
                                        cc: ControllerComponents
                                      )(implicit ec: ExecutionContext)
   extends BackendController(cc)
-  with Logging {
+    with Logging {
 
   def getMessagesForMovement(lrn: String): Action[AnyContent] = {
     // todo: how we handle error here if for example MongoDb throws?
@@ -60,17 +60,17 @@ class GetMessagesController @Inject()(
     }
   }
 
-  private def addWorkItem(ern: String) = {
+  private def addWorkItem(ern: String): Future[Boolean] = {
     try {
-      workItemService.addWorkItemForErn(ern, fastMode = false).recover {
+      workItemService.addWorkItemForErn(ern, fastMode = false).flatMap(_ => Future.successful(true)).recover {
         case ex: Throwable =>
           logger.error(s"[GetMessagesController] - Failed to create Work Item for ERN $ern: ${ex.getMessage}")
-          //TODO compiler warning on type here
-          Future.failed(ex)
+          false
       }
     }
     catch {
       case ex: Exception => logger.error(s"[GetMessagesController] - Database error while creating Work Item for ERN $ern: ${ex.getMessage}")
+        Future.successful(false)
     }
   }
 }

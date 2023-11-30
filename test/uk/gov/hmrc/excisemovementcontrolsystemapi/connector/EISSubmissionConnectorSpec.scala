@@ -45,7 +45,6 @@ import java.nio.charset.StandardCharsets
 import java.time.LocalDateTime
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
-import scala.xml.NodeSeq
 
 class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with EitherValues {
 

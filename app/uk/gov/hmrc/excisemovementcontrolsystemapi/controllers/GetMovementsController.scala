@@ -30,13 +30,13 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class GetMovementsController @Inject()(
-  authAction: AuthAction,
-  cc: ControllerComponents,
-  movementService: MovementService,
-  workItemService: WorkItemService
-)(implicit ec: ExecutionContext)
+                                        authAction: AuthAction,
+                                        cc: ControllerComponents,
+                                        movementService: MovementService,
+                                        workItemService: WorkItemService
+                                      )(implicit ec: ExecutionContext)
   extends BackendController(cc)
-  with Logging {
+    with Logging {
 
   def getMovements(ern: Option[String], lrn: Option[String], arc: Option[String]): Action[AnyContent] = {
     authAction.async(parse.default) {
@@ -48,7 +48,7 @@ class GetMovementsController @Inject()(
         movementService.getMovementByErn(request.erns.toSeq, filter)
           .map { movement: Seq[Movement] =>
             Ok(Json.toJson(movement.map(createResponseFrom)))
-        }
+          }
     }
   }
 
@@ -62,17 +62,20 @@ class GetMovementsController @Inject()(
     )
   }
 
-  private def addWorkItem(ern: String) = {
+  private def addWorkItem(ern: String): Future[Boolean] = {
     try {
-      workItemService.addWorkItemForErn(ern, fastMode = false).recover {
+      workItemService.addWorkItemForErn(ern, fastMode = false).flatMap {
+        _ => Future.successful(true)
+      }.recover {
         case ex: Throwable =>
           logger.error(s"[GetMovementsController] - Failed to create Work Item for ERN $ern: ${ex.getMessage}")
-          //TODO compiler warning on type here
-          Future.failed(ex)
+          false
       }
     }
     catch {
-      case ex: Exception => logger.error(s"[GetMovementsController] - Database error while creating Work Item for ERN $ern: ${ex.getMessage}")
+      case ex: Exception =>
+        logger.error(s"[GetMovementsController] - Database error while creating Work Item for ERN $ern: ${ex.getMessage}")
+        Future.successful(false)
     }
   }
 

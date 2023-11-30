@@ -62,17 +62,20 @@ class SubmitMessageController @Inject()(
 
   }
 
-  private def addWorkItem(ern: String) = {
+  private def addWorkItem(ern: String): Future[Boolean] = {
     try {
-      workItemService.addWorkItemForErn(ern, fastMode = true).recover {
+      workItemService.addWorkItemForErn(ern, fastMode = true).flatMap{
+        _ => Future.successful(true)
+      }.recover {
         case ex: Throwable =>
           logger.error(s"[SubmitMessageController] - Failed to create Work Item for ERN $ern: ${ex.getMessage}")
-          //TODO compiler warning on type here
-          Future.failed(ex)
+          false
       }
     }
     catch {
-      case ex: Exception => logger.error(s"[SubmitMessageController] - Database error while creating Work Item for ERN $ern: ${ex.getMessage}")
+      case ex: Exception =>
+        logger.error(s"[SubmitMessageController] - Database error while creating Work Item for ERN $ern: ${ex.getMessage}")
+        Future.successful(false)
     }
   }
 }

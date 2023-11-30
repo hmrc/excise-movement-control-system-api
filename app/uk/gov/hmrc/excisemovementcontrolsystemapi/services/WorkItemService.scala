@@ -58,7 +58,6 @@ class WorkItemService @Inject()
 
   def rescheduleWorkItem(workItem: WorkItem[ExciseNumberWorkItem]): Future[WorkItem[ExciseNumberWorkItem]] = {
 
-    val ern = workItem.item.exciseNumber
     val newFastPollRetriesLeft = Math.max(workItem.item.fastPollRetriesLeft - 1, 0)
     val updatedItem = workItem.item.copy(fastPollRetriesLeft = newFastPollRetriesLeft)
     val newAvailableAtTime = if (newFastPollRetriesLeft > 0) {

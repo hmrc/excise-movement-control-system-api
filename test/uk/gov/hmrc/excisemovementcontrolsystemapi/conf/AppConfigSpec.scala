@@ -22,7 +22,6 @@ import play.api.Configuration
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
-import java.time.{Duration => JavaDuration}
 import scala.concurrent.duration.{DAYS, Duration, MINUTES}
 
 class AppConfigSpec extends PlaySpec {
