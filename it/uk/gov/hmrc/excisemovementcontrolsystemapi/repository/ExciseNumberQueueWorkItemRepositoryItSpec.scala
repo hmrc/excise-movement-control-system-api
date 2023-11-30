@@ -153,16 +153,4 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
     repository.pushNew(ExciseNumberWorkItem(ern, 3)).futureValue
   }
 
-  private def createTestWorkItem(ern: String) = {
-    WorkItem(
-      id = new ObjectId(),
-      receivedAt = timestamp,
-      updatedAt = timestamp,
-      availableAt = timestamp.plusSeconds(3 * 60),
-      status = ToDo,
-      failureCount = 0,
-      item = ExciseNumberWorkItem(ern, 3)
-    )
-  }
-
 }
