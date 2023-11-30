@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
+import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
@@ -40,7 +41,9 @@ class DraftExciseMovementController @Inject()(
                                                movementMessageService: MovementService,
                                                workItemService: WorkItemService,
                                                cc: ControllerComponents
-                                             )(implicit ec: ExecutionContext) extends BackendController(cc) {
+                                             )(implicit ec: ExecutionContext)
+  extends BackendController(cc)
+    with Logging {
 
   def submit: Action[NodeSeq] =
     (authAction andThen xmlParser andThen validateErnsAction).async(parse.xml) {
@@ -64,14 +67,26 @@ class DraftExciseMovementController @Inject()(
       )
       case _ => throw new Exception("invalid message sent to draft excise movement controller")
     }
+    val ern = newMovement.consignorId
 
-    workItemService.addWorkItemForErn(newMovement.consignorId).flatMap { _ =>
-      movementMessageService.saveNewMovement(newMovement)
-        .flatMap {
-          case Right(msg) => Future.successful(Accepted(Json.toJson(ExciseMovementResponse("Accepted", msg.localReferenceNumber, msg.consignorId, msg.consigneeId))))
-          case Left(error) => Future.successful(error)
-        }
+    try {
+      workItemService.addWorkItemForErn(ern).recover {
+        case ex: Throwable =>
+          logger.error(s"[DraftExciseMovementController] - Failed to create Work Item for ERN $ern: ${ex.getMessage}")
+          //TODO compiler warning on type here
+          Future.failed(ex)
+      }
     }
+    catch {
+      case ex: Exception => logger.error(s"[DraftExciseMovementController] - Database error while creating Work Item for ERN $ern: ${ex.getMessage}")
+    }
+
+
+    movementMessageService.saveNewMovement(newMovement)
+      .flatMap {
+        case Right(msg) => Future.successful(Accepted(Json.toJson(ExciseMovementResponse("Accepted", msg.localReferenceNumber, msg.consignorId, msg.consigneeId))))
+        case Left(error) => Future.successful(error)
+      }
 
   }
 
