@@ -307,7 +307,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
   }
 
   private def setUpWireMockStubs(): Unit = {
-    stubMultipleShowNewMessageRequest("1")
+    stubShowNewMessageRequestForConsignorId1()
     stubShowNewMessageRequestForConsignorId3()
     stubShowNewMessageRequestForConsignorId4()
     stubMessageReceiptRequest("1")
@@ -328,7 +328,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
             Base64.getEncoder.encodeToString(newMessageWithIE801().toString().getBytes(StandardCharsets.UTF_8)),
           )).toString()
         ))
-        .willSetStateTo(s"new-message-response-for-ern-3")
+        .willSetStateTo(s"show-empty-message")
     )
 
     stubForEmptyMessageData("3")
@@ -346,43 +346,43 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
             Base64.getEncoder.encodeToString(newMessageXmlWithIE704.toString().getBytes(StandardCharsets.UTF_8)),
           )).toString()
         ))
-        .willSetStateTo(s"new-message-response-for-ern-4")
+        .willSetStateTo(s"show-empty-message")
     )
 
     stubForEmptyMessageData("4")
   }
 
-  private def stubMultipleShowNewMessageRequest(exciseNumber: String): Unit = {
+  private def stubShowNewMessageRequestForConsignorId1(): Unit = {
     wireMock.stubFor(
-      WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=$exciseNumber")
-        .inScenario("requesting-new-message")
+      WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=1")
+        .inScenario("requesting-new-message-for-ern-1")
         .whenScenarioStateIs(Scenario.STARTED)
         .willReturn(ok().withBody(Json.toJson(
           EISConsumptionResponse(
             LocalDateTime.of(2023, 1, 2, 3, 4, 5),
-            exciseNumber,
+            "1",
             //Set the new message count so it will poll again and get the item below
             Base64.getEncoder.encodeToString(newMessageWithIE801(11).toString().getBytes(StandardCharsets.UTF_8)),
           )).toString()
         ))
-        .willSetStateTo("new-message-response")
+        .willSetStateTo("show-second-response")
     )
 
     wireMock.stubFor(
-      WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=$exciseNumber")
-        .inScenario("requesting-new-message")
-        .whenScenarioStateIs("new-message-response")
-        .willSetStateTo("show-empty-message")
+      WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=1")
+        .inScenario("requesting-new-message-for-ern-1")
+        .whenScenarioStateIs("show-second-response")
         .willReturn(ok().withBody(Json.toJson(
           EISConsumptionResponse(
             LocalDateTime.of(2024, 1, 2, 3, 4, 5),
-            exciseNumber,
+            "1",
             Base64.getEncoder.encodeToString(newMessageWith818And802.toString().getBytes(StandardCharsets.UTF_8)),
           )).toString()
         ))
+        .willSetStateTo("show-empty-message")
     )
 
-    stubForEmptyMessageData(exciseNumber)
+    stubForEmptyMessageData("1")
   }
 
   private def stubForThrowingError(exciseNumber: String) = {
@@ -395,7 +395,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
   private def stubForEmptyMessageData(exciseNumber: String): Unit = {
     wireMock.stubFor(
       WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=$exciseNumber")
-        .inScenario("requesting-new-message")
+        .inScenario(s"requesting-new-message-for-ern-$exciseNumber")
         .whenScenarioStateIs("show-empty-message")
         .willReturn(ok().withBody(Json.toJson(
           EISConsumptionResponse(
