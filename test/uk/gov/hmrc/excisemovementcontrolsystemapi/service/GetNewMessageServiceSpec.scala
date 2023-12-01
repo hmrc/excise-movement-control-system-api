@@ -82,6 +82,20 @@ class GetNewMessageServiceSpec
       }
     }
 
+    "return the response and zero message count if no messages returned" in {
+      when(showNewMessageParser.countOfMessagesAvailable(any)).thenReturn(0)
+      val consumptionResponse = EISConsumptionResponse(dateTime, "123", "")
+      when(showNewMessageConnector.get(any)(any))
+        .thenReturn(Future.successful(Right(consumptionResponse)))
+      when(messageReceiptConnector.put(any)(any))
+        .thenReturn(Future.successful(Right(MessageReceiptResponse(dateTime, "123", 10))))
+
+      val result = await(sut.getNewMessagesAndAcknowledge("123"))
+
+      result mustBe Some((consumptionResponse, 0))
+
+    }
+
     "return message if message-receipt fails" in {
       when(showNewMessageParser.countOfMessagesAvailable(any)).thenReturn(7)
       when(showNewMessageConnector.get(any)(any))
@@ -109,19 +123,21 @@ class GetNewMessageServiceSpec
           verifyZeroInteractions(messageReceiptConnector)
         }
       }
+    }
 
-      "message-receipt fails and there are no message" in {
+      "return empty response and message count as 0 when message-receipt fails and there are no messages" in {
         when(showNewMessageParser.countOfMessagesAvailable(any)).thenReturn(0)
+        val eisResponse = EISConsumptionResponse(dateTime, "123", "any message")
         when(showNewMessageConnector.get(any)(any))
-          .thenReturn(Future.successful(Right(EISConsumptionResponse(dateTime, "123", "any message"))))
+          .thenReturn(Future.successful(Right(eisResponse)))
         when(messageReceiptConnector.put(any)(any))
           .thenReturn(Future.successful(Left(BadRequest("error"))))
 
         val result = await(sut.getNewMessagesAndAcknowledge("123"))
 
-        result mustBe None
+        result mustBe Some((eisResponse, 0))
       }
-    }
+
   }
 }
 

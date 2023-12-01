@@ -111,9 +111,9 @@ class PollingNewMessagesWithWorkItemJob @Inject()
         case Some((consumptionResponse, _))  =>
           saveToDB(exciseNumber, consumptionResponse).map(_ => Processed)
 
-        case None =>
-          //No messages to read
-          Future.successful(Processed)
+        case _ =>
+          logger.error(s"[PollingNewMessageWithWorkItemJob] - Could not get messages for ern: $exciseNumber. Will retry later")
+          Future.successful(PollingFailed)
       }
       .recover {
         case NonFatal(e) =>
