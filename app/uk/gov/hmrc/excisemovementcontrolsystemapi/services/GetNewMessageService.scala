@@ -52,7 +52,7 @@ class GetNewMessageServiceImpl @Inject()(
 
     if(!hasMessage) {
       logger.info(s"[GetNewMessageService] - No new messages available for Excise Registration Number: $exciseNumber")
-      Future.successful(None)
+      Future.successful(Some(newMessageResponse,0))
     } else {
       messageReceiptConnector.put(exciseNumber).map {
         _ => Some((newMessageResponse, messageCount))
