@@ -30,7 +30,6 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   def getMovementTTL: Duration = Duration(config.get[String]("mongodb.movement.TTL"))
 
   lazy val eisHost: String = servicesConfig.baseUrl("eis")
-  lazy val systemApplication: String = config.get[String]("system.application")
 
   def emcsReceiverMessageUrl: String =
     s"$eisHost/emcs/digital-submit-new-message/v1"

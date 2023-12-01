@@ -16,17 +16,18 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
-import play.api.http.{ContentTypes, HeaderNames}
-
-trait EISSubmissionHeader extends Header {
+import play.api.http.HeaderNames
 
 
-  def build(emcsCorrelationId: String, createdDateTime: String): Seq[(String, String)] = {
-    Seq(HeaderNames.ACCEPT -> ContentTypes.JSON,
-      HeaderNames.CONTENT_TYPE -> ContentTypes.JSON,
-      DateTimeName -> createdDateTime,
-      XCorrelationIdName -> emcsCorrelationId,
-      XForwardedHostName -> "",
-      SourceName -> EmcsSource)
-  }
+trait Headers {
+  def build(correlationId: String, createdDateTime: String): Seq[(String, String)]
+}
+
+object Headers {
+  val APIPSource: String = "APIP"
+  val MDTPHost: String = "MDTP"
+  val SourceName: String = "Source"
+  val XCorrelationIdName: String = "X-Correlation-Id"
+  val DateTimeName: String = "DateTime"
+  val XForwardedHostName: String = HeaderNames.X_FORWARDED_HOST
 }

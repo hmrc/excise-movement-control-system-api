@@ -30,6 +30,7 @@ import play.api.mvc.Results.InternalServerError
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageReceiptConnector
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, MessageReceiptResponse}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
@@ -64,7 +65,6 @@ class MessageReceiptConnectorSpec
     when(emcsUtil.getCurrentDateTimeString).thenReturn(dateTime.toString)
     when(emcsUtil.generateCorrelationId).thenReturn("12345")
     when(appConfig.messageReceiptUrl(any)).thenReturn("/messageReceipt")
-    when(appConfig.systemApplication).thenReturn("system.application")
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
   }
 
@@ -79,10 +79,10 @@ class MessageReceiptConnectorSpec
       await(sut.put("123"))
 
       val headers = Seq(
-        "x-forwarded-host" -> "system.application",
-        "x-correlation-id" -> "12345",
-        "source" -> "APIP",
-        "dateTime" -> dateTime.toString
+        XForwardedHostName -> MDTPHost,
+        XCorrelationIdName -> "12345",
+        SourceName -> APIPSource,
+        DateTimeName -> dateTime.toString
       )
       verify(httpClient).PUTString[Any](
         eqTo("/messageReceipt"),

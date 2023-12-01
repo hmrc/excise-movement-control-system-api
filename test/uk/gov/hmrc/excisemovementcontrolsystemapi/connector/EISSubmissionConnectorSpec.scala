@@ -37,7 +37,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest, ValidatedXmlRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISRequest, EISSubmissionResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionRequest, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
@@ -350,9 +351,9 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
   private def expectedHeader =
     Seq(HeaderNames.ACCEPT -> ContentTypes.JSON,
       HeaderNames.CONTENT_TYPE -> ContentTypes.JSON,
-      "dateTime" -> "2023-09-17T09:32:50.345",
-      "x-correlation-id" -> "1234566",
-      "x-forwarded-host" -> "",
-      "source" -> "APIP"
+      DateTimeName -> "2023-09-17T09:32:50.345",
+      XCorrelationIdName -> "1234566",
+      XForwardedHostName -> MDTPHost,
+      SourceName -> APIPSource
     )
 }

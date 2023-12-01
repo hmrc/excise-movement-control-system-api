@@ -16,18 +16,15 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
-import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
 
-trait EISConsumptionHeader extends Header {
+trait EISConsumptionHeaders extends Headers {
 
-  val appConfig: AppConfig
-
-
-  def build(emcsCorrelationId: String, createdDateTime: String): Seq[(String, String)] = {
+  def build(correlationId: String, createdDateTime: String): Seq[(String, String)] = {
     Seq(
-      XForwardedHostName -> appConfig.systemApplication,
-      XCorrelationIdName -> emcsCorrelationId,
-      SourceName -> EmcsSource,
+      XForwardedHostName -> MDTPHost,
+      XCorrelationIdName -> correlationId,
+      SourceName -> APIPSource,
       DateTimeName -> createdDateTime
     )
   }

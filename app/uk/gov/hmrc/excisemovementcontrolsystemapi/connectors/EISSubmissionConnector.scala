@@ -29,7 +29,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
-import java.nio.charset.StandardCharsets
 import java.time.LocalDateTime
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -41,7 +40,7 @@ class EISSubmissionConnector @Inject()
   emcsUtils: EmcsUtils,
   appConfig: AppConfig,
   metrics: Metrics
-)(implicit ec: ExecutionContext) extends EISSubmissionHeader with Logging {
+)(implicit ec: ExecutionContext) extends EISSubmissionHeaders with Logging {
 
   def submitMessage(request: ValidatedXmlRequest[NodeSeq])(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
 
@@ -82,7 +81,7 @@ class EISSubmissionConnector @Inject()
     <con:Control xmlns:con="http://www.govtalk.gov.uk/taxation/InternationalTrade/Common/ControlDocument">
       <con:MetaData>
         <con:MessageId>{messageIdentifier}</con:MessageId>
-        <con:Source>APIP</con:Source>
+        <con:Source>{Headers.APIPSource}</con:Source>
       </con:MetaData>
       <con:OperationRequest>
         <con:Parameters>
