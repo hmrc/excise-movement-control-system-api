@@ -89,7 +89,7 @@ class PollingNewMessagesWithWorkItemJob @Inject()
 
             case _ =>
               logger.error(s"[PollingNewMessageWithWorkItemJob] - Work item for ERN $ern has" +
-                s"failed $maximumRetries times and has been moved to the slower polling interval")
+                s" failed $maximumRetries times and has been moved to the slower polling interval")
               workItemService.rescheduleWorkItemForceSlow(wi)
 
           }
@@ -111,9 +111,9 @@ class PollingNewMessagesWithWorkItemJob @Inject()
         case Some((consumptionResponse, _))  =>
           saveToDB(exciseNumber, consumptionResponse).map(_ => Processed)
 
-        case _ =>
-          logger.error(s"[PollingNewMessageWithWorkItemJob] - Could not get messages for ern: $exciseNumber. Will retry later")
-          Future.successful(PollingFailed)
+        case None =>
+          //No messages to read
+          Future.successful(Processed)
       }
       .recover {
         case NonFatal(e) =>

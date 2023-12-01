@@ -51,13 +51,11 @@ class GetNewMessageServiceImpl @Inject()(
     val hasMessage = messageCount  > 0
 
     if(!hasMessage) {
-      logger.info(s"No new messages available for Excise Registration Number: $exciseNumber")
+      logger.info(s"[GetNewMessageService] - No new messages available for Excise Registration Number: $exciseNumber")
       Future.successful(None)
     } else {
       messageReceiptConnector.put(exciseNumber).map {
-        case Right(_) => Some((newMessageResponse, messageCount))
-        case Left(_) if hasMessage => Some((newMessageResponse, messageCount))
-        case Left(_) => None
+        _ => Some((newMessageResponse, messageCount))
       }
     }
   }

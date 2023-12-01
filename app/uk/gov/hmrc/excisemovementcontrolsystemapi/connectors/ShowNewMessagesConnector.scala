@@ -53,14 +53,14 @@ class ShowNewMessagesConnector @Inject()(
       extractIfSuccessful[EISConsumptionResponse](response) match {
         case Right(eisResponse) => Right(eisResponse)
         case Left(_) =>
-          logger.warn(EISErrorMessage(dateTime, ern, response.body, correlationId, MessageTypes.IE_NEW_MESSAGES.value))
+          logger.warn(s"[ShowNewMessageConnector] - ${EISErrorMessage(dateTime, ern, response.body, correlationId, MessageTypes.IE_NEW_MESSAGES.value)}")
           Left(InternalServerError(response.body))
       }
     }
       .andThen { case _ => timer.stop() }
       .recover {
         case ex: Throwable =>
-          logger.warn(EISErrorMessage(dateTime, ern, ex.getMessage, correlationId, MessageTypes.IE_NEW_MESSAGES.value))
+          logger.warn(s"[ShowNewMessageConnector] - ${EISErrorMessage(dateTime, ern, ex.getMessage, correlationId, MessageTypes.IE_NEW_MESSAGES.value)}")
           Left(InternalServerError(ex.getMessage))
       }
   }
