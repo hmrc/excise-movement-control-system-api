@@ -18,16 +18,9 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
 import play.api.libs.json.{Json, OFormat}
 
-case class EISRequest(
-                       emcsCorrelationId: String,
-                       createdDateTime: String,
-                       messageType: String,
-                       source: String = "APIP",
-                       user: String,
-                       message: String
-                     )
+case class EISSubmissionRequest(user: String, messageType: String, message: String)
 
-object EISRequest {
-  implicit val format: OFormat[EISRequest] = Json.format[EISRequest]
+object EISSubmissionRequest {
+  implicit val format: OFormat[EISSubmissionRequest] = Json.format[EISSubmissionRequest]
 }
 

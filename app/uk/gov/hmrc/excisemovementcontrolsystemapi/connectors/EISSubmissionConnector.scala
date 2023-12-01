@@ -52,15 +52,15 @@ class EISSubmissionConnector @Inject()
     val wrappedXml = wrapXmlInControlDocument(request.parsedRequest.ieMessage.messageIdentifier, request.body)
     val encodedMessage = emcsUtils.encode(wrappedXml.toString)
     val messageType = request.parsedRequest.ieMessage.messageType
-    val eisRequest = EISRequest(correlationId, createdDateTime, messageType, EmcsSource, "user1", encodedMessage)
 
     val ern = getSingleErnFromMessage(request.parsedRequest.ieMessage, request.validErns)
+    val eisRequest = EISSubmissionRequest(ern, messageType, encodedMessage)
 
-    httpClient.POST[EISRequest, Either[Result, EISSubmissionResponse]](
+    httpClient.POST[EISSubmissionRequest, Either[Result, EISSubmissionResponse]](
       appConfig.emcsReceiverMessageUrl,
       eisRequest,
       build(correlationId, createdDateTime)
-    )(EISRequest.format, EISHttpReader(correlationId, ern, createdDateTime), hc, ec)
+    )(EISSubmissionRequest.format, EISHttpReader(correlationId, ern, createdDateTime), hc, ec)
       .andThen { case _ => timer.stop() }
       .recover {
         case ex: Throwable =>

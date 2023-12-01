@@ -115,7 +115,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
       val controlDocAsString = controlWrappedXml.toString
       val expectedEncodedMessage = Base64.getEncoder.encodeToString(controlDocAsString.getBytes(StandardCharsets.UTF_8))
       when(emcsUtils.encode(controlDocAsString)).thenReturn(expectedEncodedMessage)
-      val expectedRequest = EISRequest(emcsCorrelationId, "2023-09-17T09:32:50.345", "IE815", "APIP", "user1", expectedEncodedMessage)
+      val expectedRequest = EISSubmissionRequest("123", "IE815", expectedEncodedMessage)
 
       submitExciseMovementWithParams(xml, ie815Message, Set("123"), Set("123"))
 
