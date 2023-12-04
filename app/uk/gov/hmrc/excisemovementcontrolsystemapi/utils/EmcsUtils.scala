@@ -50,10 +50,10 @@ class EmcsUtils {
       case _: IE810Message => validErns.head
       case _: IE813Message => validErns.head
       case x: IE815Message => x.consignorId
-      case x: IE818Message => x.consigneeId.getOrElse(throw new IllegalStateException(s"[EISSubmissionConnector] - ern not supplied for message: ${x.messageType}"))
-      case x: IE819Message => x.consigneeId.getOrElse(throw new IllegalStateException(s"[EISSubmissionConnector] - ern not supplied for message: ${x.messageType}"))
+      case x: IE818Message => x.consigneeId.getOrElse(throw new IllegalStateException("[EmcsUtils] - ern not supplied for IE818 message"))
+      case x: IE819Message => x.consigneeId.getOrElse(throw new IllegalStateException("[EmcsUtils] - ern not supplied for IE819 message"))
       case x: IE837Message => matchErn(x.consignorId, x.consigneeId, validErns, x.messageType)
-      case x: IE871Message => x.consignorId.getOrElse(throw new IllegalStateException(s"[EISSubmissionConnector] - ern not supplied for message: ${x.messageType}"))
+      case x: IE871Message => x.consignorId.getOrElse(throw new IllegalStateException("[EmcsUtils] - ern not supplied for IE871 message"))
       case _ => throw new RuntimeException(s"[EmcsUtils] - Unsupported Message Type: ${message.messageType}")
     }
   }
@@ -68,7 +68,7 @@ class EmcsUtils {
     val availableErn = erns.intersect(messageErn)
 
     if (availableErn.nonEmpty) availableErn.head
-    else throw new IllegalStateException(s"[EISSubmissionConnector] - ern not supplied for message: $messageType")
+    else throw new IllegalStateException(s"[EmcsUtils] - ern not supplied for $messageType message")
   }
 
 }

@@ -45,7 +45,7 @@ class GetMovementsControllerSpec
   private val cc = stubControllerComponents()
   private val movementService = mock[MovementService]
   private val workItemService = mock[WorkItemService]
-  private val controller = new GetMovementsController(FakeSuccessAuthentication, cc, movementService,workItemService)
+  private val controller = new GetMovementsController(FakeSuccessAuthentication, cc, movementService, workItemService)
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -54,7 +54,7 @@ class GetMovementsControllerSpec
     when(movementService.getMovementByErn(any, any))
       .thenReturn(Future.successful(Seq(Movement("lrn", ern, Some("consigneeId"), Some("arc")))))
 
-    when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(mock[WorkItem[ExciseNumberWorkItem]]))
+    when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
 
   }
 
@@ -102,18 +102,6 @@ class GetMovementsControllerSpec
       await(controller.getMovements(None, None, None)(FakeRequest("POST", "/foo")))
 
       verify(workItemService).addWorkItemForErn(eqTo("testErn"), eqTo(false))
-
-    }
-
-    "catch the error thrown if Work Item service fails and continue" in {
-
-      when(workItemService.addWorkItemForErn(any, any)).thenThrow(new RuntimeException("error"))
-
-      val result = controller.getMovements(None, None, None)(FakeRequest("POST", "/foo"))
-
-      status(result) mustBe OK
-
-      verify(movementService).getMovementByErn(any, any)
 
     }
 

@@ -69,7 +69,7 @@ class DraftExciseMovementController @Inject()(
     }
     val ern = newMovement.consignorId
 
-    addWorkItem(ern)
+    workItemService.addWorkItemForErn(ern, fastMode = true)
 
     movementMessageService.saveNewMovement(newMovement)
       .flatMap {
@@ -77,21 +77,6 @@ class DraftExciseMovementController @Inject()(
         case Left(error) => Future.successful(error)
       }
 
-  }
-
-  private def addWorkItem(ern: String): Future[Boolean] = {
-    try {
-      workItemService.addWorkItemForErn(ern, fastMode = true).flatMap { _ => Future.successful(true) }
-        .recover {
-          case ex: Throwable =>
-            logger.error(s"[DraftExciseMovementController] - Failed to create Work Item for ERN $ern: ${ex.getMessage}")
-            false
-        }
-    }
-    catch {
-      case ex: Exception => logger.error(s"[DraftExciseMovementController] - Database error while creating Work Item for ERN $ern: ${ex.getMessage}")
-        Future.successful(false)
-    }
   }
 
   //todo: this will be removed at a later time when we will do the polling

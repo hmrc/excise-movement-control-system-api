@@ -16,16 +16,16 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.service
 
-import dispatch.Future
 import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, times, verify, when}
+import org.mongodb.scala.MongoException
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ExciseNumberQueueWorkItemRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, model}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.WorkItemService
 import uk.gov.hmrc.http.HeaderCarrier
@@ -35,7 +35,7 @@ import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.Instant
 import scala.compat.java8.DurationConverters.FiniteDurationops
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{Duration, HOURS, MINUTES, SECONDS}
 
 class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfterEach {
@@ -79,30 +79,20 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         when(mockWorkItemRepo.getWorkItemForErn(any)).thenReturn(Future.successful(None))
 
-        val result = await(workItemService.addWorkItemForErn(ern,fastMode = true))
+        await(workItemService.addWorkItemForErn(ern, fastMode = true)) mustBe true
 
         withClue("should check the database for duplicates") {
           verify(mockWorkItemRepo).getWorkItemForErn(eqTo(ern))
         }
 
-        withClue("should save to db") {
+        withClue("should save to db with the correct details") {
+          // The details being that
+          // * Fast retries set to app config value
+          // * availableAt is currentTime + fastInterval
+          // * receivedAt/lastSubmitted is currentTime
+          // * status is To Do
+          // * failureCount is set to 0
           verify(mockWorkItemRepo).pushNew(eqTo(expectedExciseNumberWorkItem), eqTo(timestampPlusFastInterval), any)
-        }
-
-        withClue("should return the Work Item for this ern") {
-          result.item.exciseNumber mustBe ern
-        }
-
-        withClue("create it with fast retries set to the app config value") {
-          result.item.fastPollRetriesLeft mustBe 6
-        }
-
-        withClue("set the availableAt time to be currentTime + fast interval") {
-          result.availableAt mustBe timestampPlusFastInterval
-        }
-
-        withClue("set the receivedAt / lastSubmitted to now") {
-          result.receivedAt mustBe timestamp
         }
 
       }
@@ -136,10 +126,10 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         when(mockWorkItemRepo.saveUpdatedWorkItem(any)).thenReturn(Future.successful(true))
 
-        val result = await(workItemService.addWorkItemForErn(ern,fastMode = true))
+        await(workItemService.addWorkItemForErn(ern, fastMode = true)) mustBe true
 
         withClue("should check the database for duplicates") {
-          verify(mockWorkItemRepo, times(2)).getWorkItemForErn(eqTo(ern))
+          verify(mockWorkItemRepo).getWorkItemForErn(eqTo(ern))
         }
 
         withClue("should update the database with the right details") {
@@ -152,10 +142,6 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
           verify(mockWorkItemRepo).saveUpdatedWorkItem(eqTo(expectedWorkItemAfterUpdate))
         }
 
-        withClue("should return the work item that was saved into the db") {
-          result mustBe expectedWorkItemAfterUpdate
-        }
-
       }
 
       "update work item when entry for that ern already in the database and is next scheduled closer than fast interval" in {
@@ -163,7 +149,7 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         // Work Item already fast interval so will run soon. So we don't want to update availableAt
         val workItemAlreadyInDb = createTestWorkItem(ExciseNumberWorkItem(ern, 6), thirtySecondsLater)
-        val expectedWorkItem = workItemAlreadyInDb
+        val expectedWorkItem = workItemAlreadyInDb.copy(availableAt = thirtySecondsLater)
 
         when(mockWorkItemRepo.getWorkItemForErn(any))
           .thenReturn(
@@ -173,10 +159,10 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         when(mockWorkItemRepo.saveUpdatedWorkItem(any)).thenReturn(Future.successful(true))
 
-        val result = await(workItemService.addWorkItemForErn(ern,fastMode = true))
+        await(workItemService.addWorkItemForErn(ern, fastMode = true)) mustBe true
 
         withClue("set the availableAt time to be currentTime + fast interval") {
-          result.availableAt mustBe thirtySecondsLater
+          verify(mockWorkItemRepo).saveUpdatedWorkItem(eqTo(expectedWorkItem))
         }
 
       }
@@ -195,30 +181,20 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         when(mockWorkItemRepo.getWorkItemForErn(any)).thenReturn(Future.successful(None))
 
-        val result = await(workItemService.addWorkItemForErn(ern, fastMode = false))
+        await(workItemService.addWorkItemForErn(ern, fastMode = false)) mustBe true
 
         withClue("should check the database for duplicates") {
           verify(mockWorkItemRepo).getWorkItemForErn(eqTo(ern))
         }
 
-        withClue("should save to db") {
+        withClue("should save to db with correct details") {
+          // The details being that
+          // * Fast retries set to 0 so it falls back to the slow interval after one call
+          // * availableAt is currentTime + fastInterval
+          // * receivedAt/lastSubmitted is currentTime
+          // * status is To Do
+          // * failureCount is set to 0
           verify(mockWorkItemRepo).pushNew(eqTo(expectedExciseNumberWorkItem), eqTo(timestampPlusFastInterval), any)
-        }
-
-        withClue("should return the Work Item for this ern") {
-          result.item.exciseNumber mustBe ern
-        }
-
-        withClue("create it with fast retries set to 0 so it falls back to the slow interval after one call") {
-          result.item.fastPollRetriesLeft mustBe 0
-        }
-
-        withClue("set the availableAt time to be currentTime + fast interval") {
-          result.availableAt mustBe timestampPlusFastInterval
-        }
-
-        withClue("set the receivedAt / lastSubmitted to now") {
-          result.receivedAt mustBe timestamp
         }
 
       }
@@ -239,7 +215,7 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         when(mockWorkItemRepo.saveUpdatedWorkItem(any)).thenReturn(Future.successful(true))
 
-        val result = await(workItemService.addWorkItemForErn(ern, fastMode = false))
+        await(workItemService.addWorkItemForErn(ern, fastMode = false)) mustBe true
 
         withClue("should check the database for duplicates") {
           verify(mockWorkItemRepo).getWorkItemForErn(eqTo(ern))
@@ -249,11 +225,18 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
           verify(mockWorkItemRepo, times(0)).saveUpdatedWorkItem(any)
         }
 
-        withClue("should return the work item that is already there in the db") {
-          result mustBe workItemAlreadyInDb
-        }
-
       }
+
+    }
+
+    "silently handle and log future failure from other routines" in {
+
+      when(mockWorkItemRepo.pushNew(any, any, any))
+        .thenThrow(new RuntimeException("error"))
+
+      when(mockWorkItemRepo.getWorkItemForErn(any)).thenReturn(Future.failed(new MongoException("Oh no!")))
+
+      await(workItemService.addWorkItemForErn(ern, fastMode = true)) mustBe false
 
     }
   }
@@ -277,7 +260,7 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         .thenReturn(Future.successful(Some(expectedWorkItemAfterUpdate)))
       when(mockWorkItemRepo.saveUpdatedWorkItem(any)).thenReturn(Future.successful(true))
 
-      val result = await(workItemService.rescheduleWorkItem(workItemAlreadyInDb))
+      await(workItemService.rescheduleWorkItem(workItemAlreadyInDb)) mustBe true
 
       withClue("should update the database with the right details") {
         // The details being that
@@ -285,10 +268,6 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         // * availableAt is currentTime + fastInterval
         // * status is To Do
         verify(mockWorkItemRepo).saveUpdatedWorkItem(eqTo(expectedWorkItemAfterUpdate))
-      }
-
-      withClue("should return the work item that was saved into the db") {
-        result mustBe expectedWorkItemAfterUpdate
       }
 
     }
@@ -310,7 +289,7 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         .thenReturn(Future.successful(Some(expectedWorkItemAfterUpdate)))
       when(mockWorkItemRepo.saveUpdatedWorkItem(any)).thenReturn(Future.successful(true))
 
-      val result = await(workItemService.rescheduleWorkItem(workItemAlreadyInDb))
+      await(workItemService.rescheduleWorkItem(workItemAlreadyInDb)) mustBe true
 
       withClue("should update the database with the right details") {
         // The details being that
@@ -318,10 +297,6 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         // * availableAt is currentTime + slowInterval
         // * status is To Do
         verify(mockWorkItemRepo).saveUpdatedWorkItem(eqTo(expectedWorkItemAfterUpdate))
-      }
-
-      withClue("should return the work item that was saved into the db") {
-        result mustBe expectedWorkItemAfterUpdate
       }
 
     }
@@ -343,7 +318,7 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         .thenReturn(Future.successful(Some(expectedWorkItemAfterUpdate)))
       when(mockWorkItemRepo.saveUpdatedWorkItem(any)).thenReturn(Future.successful(true))
 
-      val result = await(workItemService.rescheduleWorkItem(workItemAlreadyInDb))
+      await(workItemService.rescheduleWorkItem(workItemAlreadyInDb)) mustBe true
 
       withClue("should update the database with the right details") {
         // The details being that
@@ -351,10 +326,6 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         // * availableAt is currentTime + slowInterval
         // * status is To Do
         verify(mockWorkItemRepo).saveUpdatedWorkItem(eqTo(expectedWorkItemAfterUpdate))
-      }
-
-      withClue("should return the work item that was saved into the db") {
-        result mustBe expectedWorkItemAfterUpdate
       }
 
     }
@@ -380,7 +351,7 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         .thenReturn(Future.successful(Some(expectedWorkItemAfterUpdate)))
       when(mockWorkItemRepo.saveUpdatedWorkItem(any)).thenReturn(Future.successful(true))
 
-      val result = await(workItemService.rescheduleWorkItemForceSlow(workItemAlreadyInDb))
+      await(workItemService.rescheduleWorkItemForceSlow(workItemAlreadyInDb)) mustBe true
 
       withClue("should update the database with the right details") {
         // The details being that
@@ -390,9 +361,6 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         verify(mockWorkItemRepo).saveUpdatedWorkItem(eqTo(expectedWorkItemAfterUpdate))
       }
 
-      withClue("should return the work item that was saved into the db") {
-        result mustBe expectedWorkItemAfterUpdate
-      }
     }
   }
 

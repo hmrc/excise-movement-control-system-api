@@ -48,6 +48,17 @@ class EmcsUtilsSpec extends PlaySpec {
         emcsUtils.getSingleErnFromMessage(ie801Message, Set("456")) mustBe "456"
       }
 
+      "IE801 throws exception if neither supplied" in {
+        val ie801Message = mock[IE801Message]
+        when(ie801Message.consigneeId).thenReturn(None)
+        when(ie801Message.consignorId).thenReturn(None)
+        when(ie801Message.messageType).thenReturn("IE801")
+
+        the[RuntimeException] thrownBy
+          emcsUtils.getSingleErnFromMessage(ie801Message, Set("123")) must
+          have message "[EmcsUtils] - ern not supplied for IE801 message"
+      }
+
       "IE810" in {
         val ie810Message = mock[IE810Message]
 
@@ -75,11 +86,29 @@ class EmcsUtilsSpec extends PlaySpec {
         emcsUtils.getSingleErnFromMessage(ie818Message, Set("123")) mustBe "123"
       }
 
+      "IE818 throws exception if no consignee supplied" in {
+        val ie818Message = mock[IE818Message]
+        when(ie818Message.consigneeId).thenReturn(None)
+
+        the[RuntimeException] thrownBy
+          emcsUtils.getSingleErnFromMessage(ie818Message, Set("123")) must
+          have message "[EmcsUtils] - ern not supplied for IE818 message"
+      }
+
       "IE819" in {
         val ie819Message = mock[IE819Message]
         when(ie819Message.consigneeId).thenReturn(Some("123"))
 
         emcsUtils.getSingleErnFromMessage(ie819Message, Set("123")) mustBe "123"
+      }
+
+      "IE819 throws exception if no consignee supplied" in {
+        val ie819Message = mock[IE819Message]
+        when(ie819Message.consigneeId).thenReturn(None)
+
+        the[RuntimeException] thrownBy
+          emcsUtils.getSingleErnFromMessage(ie819Message, Set("123")) must
+          have message "[EmcsUtils] - ern not supplied for IE819 message"
       }
 
       "IE837 with consignor" in {
@@ -96,6 +125,22 @@ class EmcsUtilsSpec extends PlaySpec {
         when(ie837Message.consigneeId).thenReturn(Some("123"))
 
         emcsUtils.getSingleErnFromMessage(ie837Message, Set("123")) mustBe "123"
+      }
+
+      "IE871" in {
+        val ie871Message = mock[IE871Message]
+        when(ie871Message.consignorId).thenReturn(Some("123"))
+
+        emcsUtils.getSingleErnFromMessage(ie871Message, Set("123")) mustBe "123"
+      }
+
+      "IE819 throws exception if no consignor supplied" in {
+        val ie871Message = mock[IE871Message]
+        when(ie871Message.consignorId).thenReturn(None)
+
+        the[RuntimeException] thrownBy
+          emcsUtils.getSingleErnFromMessage(ie871Message, Set("123")) must
+          have message "[EmcsUtils] - ern not supplied for IE871 message"
       }
 
     }

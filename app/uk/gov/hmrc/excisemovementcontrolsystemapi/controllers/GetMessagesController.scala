@@ -46,7 +46,7 @@ class GetMessagesController @Inject()(
 
         movementService.getMatchingERN(lrn, request.erns.toList).flatMap {
           case None => Future.successful(BadRequest(Json.toJson(ErrorResponse(LocalDateTime.now(), "Invalid LRN supplied for ERN", ""))))
-          case Some(ern) => addWorkItem(ern)
+          case Some(ern) => workItemService.addWorkItemForErn(ern, fastMode = false)
             getMessagesAsJson(lrn, ern)
         }
       }
@@ -60,17 +60,4 @@ class GetMessagesController @Inject()(
     }
   }
 
-  private def addWorkItem(ern: String): Future[Boolean] = {
-    try {
-      workItemService.addWorkItemForErn(ern, fastMode = false).flatMap(_ => Future.successful(true)).recover {
-        case ex: Throwable =>
-          logger.error(s"[GetMessagesController] - Failed to create Work Item for ERN $ern: ${ex.getMessage}")
-          false
-      }
-    }
-    catch {
-      case ex: Exception => logger.error(s"[GetMessagesController] - Database error while creating Work Item for ERN $ern: ${ex.getMessage}")
-        Future.successful(false)
-    }
-  }
 }
