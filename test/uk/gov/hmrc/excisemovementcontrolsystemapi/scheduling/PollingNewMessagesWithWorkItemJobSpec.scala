@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
-import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.Mockito.never
 import org.mockito.MockitoSugar.{reset, times, verify, verifyZeroInteractions, when}
@@ -31,6 +30,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionRespo
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementService, NewMessageParserService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils
 import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
@@ -305,14 +305,14 @@ class PollingNewMessagesWithWorkItemJobSpec
   private def createWorkItem(failureCount: Int = 0,
                              availableAt: Instant = Instant.now,
                              ern: String = "123"): WorkItem[ExciseNumberWorkItem] = {
-    WorkItem(
-      id = new ObjectId(),
+
+    TestUtils.createWorkItem(
+      ern = ern,
+      availableAt = Instant.now,
       receivedAt = Instant.now,
       updatedAt = Instant.now,
-      availableAt = availableAt,
-      status = ProcessingStatus.ToDo,
       failureCount = failureCount,
-      item = ExciseNumberWorkItem(ern, 3)
+      fastPollRetries = 3
     )
   }
 }

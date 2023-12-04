@@ -101,7 +101,7 @@ class SubmitMessageControllerSpec
 
       await(createWithSuccessfulAuth.submit("LRN")(request))
 
-      verify(workItemService).addWorkItemForErn("testErn",fastMode = true)
+      verify(workItemService).addWorkItemForErn("testErn", fastMode = true)
 
     }
 
