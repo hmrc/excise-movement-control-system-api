@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import play.api.Logging
 import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction, ValidateErnsAction, ValidateLRNAction}
@@ -39,8 +38,7 @@ class SubmitMessageController @Inject()(
                                          emcsUtils: EmcsUtils,
                                          cc: ControllerComponents
                                        )(implicit ec: ExecutionContext)
-  extends BackendController(cc)
-    with Logging {
+  extends BackendController(cc) {
 
   def submit(lrn: String): Action[NodeSeq] = {
 

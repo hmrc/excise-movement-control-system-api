@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import play.api.Logging
 import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
@@ -36,8 +35,7 @@ class GetMessagesController @Inject()(
                                        workItemService: WorkItemService,
                                        cc: ControllerComponents
                                      )(implicit ec: ExecutionContext)
-  extends BackendController(cc)
-    with Logging {
+  extends BackendController(cc) {
 
   def getMessagesForMovement(lrn: String): Action[AnyContent] = {
     // todo: how we handle error here if for example MongoDb throws?
