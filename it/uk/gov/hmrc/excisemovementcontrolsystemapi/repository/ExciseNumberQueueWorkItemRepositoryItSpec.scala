@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import org.bson.types.ObjectId
 import org.mockito.MockitoSugar.when
+import org.mongodb.scala.model.Filters
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, OptionValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
@@ -30,7 +31,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberW
 import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{InProgress, ToDo}
-import uk.gov.hmrc.mongo.workitem.WorkItem
+import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext
@@ -97,14 +98,13 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
 
     "update Work Item in db" in {
 
-      val dbWorkItem = insertWorkItemForErn("ern1")
+      val originalWI = insertWorkItemForErn("ern1")
 
       //Want to make sure the updatedAt is...updated. It is already set to "timestamp" so use a new one
       val newTimestamp = Instant.parse("2023-11-23T16:00:00.00Z")
       when(dateTimeService.timestamp()).thenReturn(newTimestamp)
 
-      val updatedWI = dbWorkItem.copy(
-        item = dbWorkItem.item.copy(fastPollRetriesLeft = 23),
+      val updatedWI = originalWI.copy(item = originalWI.item.copy(fastPollRetriesLeft = 23),
         availableAt = Instant.parse("2023-11-23T15:25:21.12Z"),
         receivedAt = timestamp.plusSeconds(10),
         status = InProgress,
@@ -113,7 +113,10 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
 
       repository.saveUpdatedWorkItem(updatedWI).futureValue mustBe true
 
-      val savedWorkItems = repository.getWorkItemForErn("ern1").futureValue
+      val savedWorkItems = repository.collection
+        .find(
+          Filters.in("item.exciseNumber", "ern1"),
+        ).toFuture().futureValue
 
       withClue("should update rather than insert an item - ern is unique index") {
         savedWorkItems.size mustBe 1
@@ -149,8 +152,24 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
   }
 
   private def insertWorkItemForErn(ern: String) = {
+    val workItem = createWorkItem(ern)
 
-    repository.pushNew(ExciseNumberWorkItem(ern, 3)).futureValue
+    repository.collection.insertOne(workItem).toFuture().map(_ => workItem).futureValue
+
+  }
+
+  private def createWorkItem(ern: String, fastPollRetries: Int = 0, availableAt: Instant = timestamp,
+                             receivedAt: Instant = timestamp, status: ProcessingStatus = ToDo,
+                             failureCount: Int = 0): WorkItem[ExciseNumberWorkItem] = {
+    WorkItem(
+      id = new ObjectId(),
+      receivedAt = receivedAt,
+      updatedAt = timestamp,
+      availableAt = availableAt,
+      status = status,
+      failureCount = failureCount,
+      item = ExciseNumberWorkItem(ern, fastPollRetries)
+    )
   }
 
 }

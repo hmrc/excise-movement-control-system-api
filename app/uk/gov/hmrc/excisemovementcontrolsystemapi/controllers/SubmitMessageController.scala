@@ -51,7 +51,7 @@ class SubmitMessageController @Inject()(
       implicit request =>
         val ern = emcsUtils.getSingleErnFromMessage(request.parsedRequest.ieMessage, request.validErns)
 
-        addWorkItem(ern)
+        workItemService.addWorkItemForErn(ern, fastMode = true)
 
         movementMessageConnector.submitMessage(request).flatMap {
           case Right(_) => Future.successful(Accepted(""))
@@ -62,20 +62,4 @@ class SubmitMessageController @Inject()(
 
   }
 
-  private def addWorkItem(ern: String): Future[Boolean] = {
-    try {
-      workItemService.addWorkItemForErn(ern, fastMode = true).flatMap{
-        _ => Future.successful(true)
-      }.recover {
-        case ex: Throwable =>
-          logger.error(s"[SubmitMessageController] - Failed to create Work Item for ERN $ern: ${ex.getMessage}")
-          false
-      }
-    }
-    catch {
-      case ex: Exception =>
-        logger.error(s"[SubmitMessageController] - Database error while creating Work Item for ERN $ern: ${ex.getMessage}")
-        Future.successful(false)
-    }
-  }
 }

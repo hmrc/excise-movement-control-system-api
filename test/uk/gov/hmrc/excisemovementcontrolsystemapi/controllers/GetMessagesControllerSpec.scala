@@ -64,7 +64,7 @@ class GetMessagesControllerSpec extends PlaySpec
 
     when(dateTimeService.timestamp()).thenReturn(timeStamp)
 
-    when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(mock[WorkItem[ExciseNumberWorkItem]]))
+    when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
   }
 
   "getMessagesForMovement" should {
@@ -119,22 +119,6 @@ class GetMessagesControllerSpec extends PlaySpec
       val result = createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest())
 
       status(result) mustBe BAD_REQUEST
-    }
-
-    "catch the error thrown if Work Item service fails and continue" in {
-      val message = Message("message", "IE801", dateTimeService)
-      val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
-      when(movementService.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Some(movement)))
-
-      when(workItemService.addWorkItemForErn(any, any)).thenThrow(new RuntimeException("error"))
-
-      val result = createWithSuccessfulAuth.getMessagesForMovement(lrn)(createRequest())
-
-      status(result) mustBe OK
-
-      verify(movementService).getMatchingERN(any, any)
-
     }
 
     "catch Future failure from Work Item service and log it but still process submission" in {

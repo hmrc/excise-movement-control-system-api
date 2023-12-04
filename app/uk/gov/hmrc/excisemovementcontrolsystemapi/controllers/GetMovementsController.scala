@@ -42,7 +42,7 @@ class GetMovementsController @Inject()(
     authAction.async(parse.default) {
       implicit request =>
 
-        addWorkItem(ern.getOrElse(request.erns.head))
+        workItemService.addWorkItemForErn(ern.getOrElse(request.erns.head), fastMode = false)
 
         val filter = MovementFilter.and(Seq("ern" -> ern, "lrn" -> lrn, "arc" -> arc))
         movementService.getMovementByErn(request.erns.toSeq, filter)
@@ -60,23 +60,6 @@ class GetMovementsController @Inject()(
       movement.administrativeReferenceCode,
       "Accepted"
     )
-  }
-
-  private def addWorkItem(ern: String): Future[Boolean] = {
-    try {
-      workItemService.addWorkItemForErn(ern, fastMode = false).flatMap {
-        _ => Future.successful(true)
-      }.recover {
-        case ex: Throwable =>
-          logger.error(s"[GetMovementsController] - Failed to create Work Item for ERN $ern: ${ex.getMessage}")
-          false
-      }
-    }
-    catch {
-      case ex: Exception =>
-        logger.error(s"[GetMovementsController] - Database error while creating Work Item for ERN $ern: ${ex.getMessage}")
-        Future.successful(false)
-    }
   }
 
 }

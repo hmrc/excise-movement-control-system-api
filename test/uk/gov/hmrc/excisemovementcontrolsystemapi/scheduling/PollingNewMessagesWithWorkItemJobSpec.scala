@@ -63,7 +63,7 @@ class PollingNewMessagesWithWorkItemJobSpec
   )
   private val newMessageResponseEmpty = EISConsumptionResponse(
     LocalDateTime.of(2023, 5, 6, 9, 10, 13),
-"123",
+    "123",
     emptyNewMessageDataXml.toString()
   )
 
@@ -93,7 +93,7 @@ class PollingNewMessagesWithWorkItemJobSpec
     when(newMessageParserService.extractMessages(any)).thenReturn(Seq(message))
     when(movementService.updateMovement(any, any)).thenReturn(Future.successful(true))
     when(workItemService.markAs(any, any, any)).thenReturn(Future.successful(true))
-    when(workItemService.rescheduleWorkItem(any)).thenReturn(Future.successful(createWorkItem()))
+    when(workItemService.rescheduleWorkItem(any)).thenReturn(Future.successful(true))
 
   }
 
