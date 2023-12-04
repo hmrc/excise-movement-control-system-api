@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
@@ -42,8 +41,7 @@ class DraftExciseMovementController @Inject()(
                                                workItemService: WorkItemService,
                                                cc: ControllerComponents
                                              )(implicit ec: ExecutionContext)
-  extends BackendController(cc)
-    with Logging {
+  extends BackendController(cc) {
 
   def submit: Action[NodeSeq] =
     (authAction andThen xmlParser andThen validateErnsAction).async(parse.xml) {

@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
-import org.bson.types.ObjectId
 import org.mockito.MockitoSugar.when
 import org.mongodb.scala.model.Filters
 import org.scalatest.concurrent.IntegrationPatience
@@ -105,7 +104,8 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
       val newTimestamp = Instant.parse("2023-11-23T16:00:00.00Z")
       when(dateTimeService.timestamp()).thenReturn(newTimestamp)
 
-      val updatedWI = originalWI.copy(item = originalWI.item.copy(fastPollRetriesLeft = 23),
+      val updatedWI = originalWI.copy(
+        item = originalWI.item.copy(fastPollRetriesLeft = 23),
         availableAt = Instant.parse("2023-11-23T15:25:21.12Z"),
         receivedAt = timestamp.plusSeconds(10),
         status = InProgress,

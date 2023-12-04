@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
@@ -35,8 +34,7 @@ class GetMovementsController @Inject()(
                                         movementService: MovementService,
                                         workItemService: WorkItemService
                                       )(implicit ec: ExecutionContext)
-  extends BackendController(cc)
-    with Logging {
+  extends BackendController(cc) {
 
   def getMovements(ern: Option[String], lrn: Option[String], arc: Option[String]): Action[AnyContent] = {
     authAction.async(parse.default) {
