@@ -1,0 +1,42 @@
+/*
+ * Copyright 2023 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
+
+import org.bson.types.ObjectId
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
+import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
+
+import java.time.Instant
+
+object TestUtils {
+
+  def createWorkItem(ern: String, fastPollRetries: Int = 0, availableAt: Instant,
+                     receivedAt: Instant, updatedAt: Instant, status: ProcessingStatus = ToDo,
+                     failureCount: Int = 0): WorkItem[ExciseNumberWorkItem] = {
+    WorkItem(
+      id = new ObjectId(),
+      receivedAt = receivedAt,
+      updatedAt = updatedAt,
+      availableAt = availableAt,
+      status = status,
+      failureCount = failureCount,
+      item = ExciseNumberWorkItem(ern, fastPollRetries)
+    )
+  }
+
+}

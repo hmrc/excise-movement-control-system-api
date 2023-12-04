@@ -19,7 +19,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.{Scenario, StubMapping}
-import org.bson.types.ObjectId
 import org.mockito.MockitoSugar.when
 import org.scalatest.concurrent.{Eventually, IntegrationPatience, ScalaFutures}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
@@ -36,6 +35,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionRespo
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, MovementRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils
 import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, DefaultPlayMongoRepositorySupport}
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
@@ -425,15 +425,17 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
   }
 
   private def createWorkItem(ern: String): WorkItem[ExciseNumberWorkItem] = {
-    WorkItem(
-      id = new ObjectId(),
-      receivedAt = availableBefore.minusSeconds(60),
-      updatedAt = availableBefore.minusSeconds(60),
-      availableAt = availableBefore.minusSeconds(60),
-      status = ProcessingStatus.ToDo,
-      failureCount = 0,
-      item = ExciseNumberWorkItem(ern, 3)
+
+    val sixtySecsAgo = availableBefore.minusSeconds(60)
+
+    TestUtils.createWorkItem(
+      ern = ern,
+      receivedAt = sixtySecsAgo,
+      updatedAt = sixtySecsAgo,
+      availableAt = sixtySecsAgo,
+      fastPollRetries = 3
     )
+
   }
 
   private def createMessage(xml: String, messageType: String): Message = {

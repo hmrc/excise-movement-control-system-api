@@ -28,10 +28,11 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils
 import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{InProgress, ToDo}
-import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.InProgress
+import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext
@@ -152,24 +153,15 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
   }
 
   private def insertWorkItemForErn(ern: String) = {
-    val workItem = createWorkItem(ern)
+    val workItem = TestUtils.createWorkItem(
+      ern = ern,
+      availableAt = timestamp,
+      updatedAt = timestamp,
+      receivedAt = timestamp
+    )
 
     repository.collection.insertOne(workItem).toFuture().map(_ => workItem).futureValue
 
-  }
-
-  private def createWorkItem(ern: String, fastPollRetries: Int = 0, availableAt: Instant = timestamp,
-                             receivedAt: Instant = timestamp, status: ProcessingStatus = ToDo,
-                             failureCount: Int = 0): WorkItem[ExciseNumberWorkItem] = {
-    WorkItem(
-      id = new ObjectId(),
-      receivedAt = receivedAt,
-      updatedAt = timestamp,
-      availableAt = availableAt,
-      status = status,
-      failureCount = failureCount,
-      item = ExciseNumberWorkItem(ern, fastPollRetries)
-    )
   }
 
 }

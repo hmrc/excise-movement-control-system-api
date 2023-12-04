@@ -30,10 +30,9 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnsAction, FakeXmlParsers}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
 import uk.gov.hmrc.mongo.TimestampSupport
-import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
