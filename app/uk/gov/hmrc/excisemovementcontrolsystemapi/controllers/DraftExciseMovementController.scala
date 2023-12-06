@@ -61,7 +61,7 @@ class DraftExciseMovementController @Inject()(
         x.localReferenceNumber,
         x.consignorId,
         x.consigneeId,
-        Some(generateRandomArc)
+        None
       )
       case _ => throw new Exception("invalid message sent to draft excise movement controller")
     }
@@ -77,17 +77,4 @@ class DraftExciseMovementController @Inject()(
 
   }
 
-  //todo: this will be removed at a later time when we will do the polling
-  private def generateRandomArc = {
-    val rand = new scala.util.Random
-
-    val digit = rand.nextInt(10).toString + rand.nextInt(10).toString
-    val letters = rand.alphanumeric.dropWhile(_.isDigit).take(2).toList.mkString.toUpperCase
-    val alphaNumeric = rand.alphanumeric.take(16).toList.mkString.toUpperCase()
-    val number = rand.nextInt(10)
-
-    s"$digit$letters$alphaNumeric$number"
-
-
-  }
 }

@@ -105,19 +105,6 @@ class DraftExciseMovementControllerSpec
 
     }
 
-    "generate an ARC and save to the cache" in {
-      val movement = Movement("lrn", ern, None)
-      when(movementMessageService.saveNewMovement(any))
-        .thenReturn(Future.successful(Right(movement)))
-
-      await(createWithSuccessfulAuth.submit(request))
-
-      val captor = ArgCaptor[Movement]
-      verify(movementMessageService).saveNewMovement(captor)
-
-      captor.value.administrativeReferenceCode.isDefined mustBe true
-    }
-
     "call the add work item routine to create or update the database" in {
 
       when(movementMessageService.saveNewMovement(any))
