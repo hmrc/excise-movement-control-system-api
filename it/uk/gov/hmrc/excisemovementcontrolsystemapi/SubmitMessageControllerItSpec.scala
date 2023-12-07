@@ -28,7 +28,7 @@ import play.api.http.HeaderNames
 import play.api.http.Status._
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsString, JsValue, Json}
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
@@ -204,6 +204,32 @@ class SubmitMessageControllerItSpec extends PlaySpec
       stubEISErrorResponse(BAD_REQUEST, createEISErrorResponseBodyAsJson("BAD_REQUEST").toString())
 
       postRequest(IE818).status mustBe BAD_REQUEST
+    }
+
+    "remove control document references in any paths for a BAD_REQUEST" in {
+      val eisErrorResponse = "{\"message\": \"Validation error(s) occurred\",\"errors\": [" +
+        "{\"errorCode\": 8084," +
+        "\"errorMessage\": \"The Date of Dispatch you entered is incorrect. It must be today or later. Please amend your entry and resubmit.\"," +
+        "\"location\": \"/con:Control[1]/con:OperationRequest[1]/con:Parameters[1]/con:Parameter[1]/urn:IE815[1]/urn:Body[1]/urn:SubmittedDraftOfEADESAD[1]/urn:EadEsadDraft[1]/urn:DateOfDispatch[1]\"," +
+        "\"value\": \"2023-12-05\"}]}"
+
+      val apiErrorResponse = "{\"message\": \"Validation error(s) occurred\",\"errors\": [" +
+        "{\"errorCode\": 8084," +
+        "\"errorMessage\": \"The Date of Dispatch you entered is incorrect. It must be today or later. Please amend your entry and resubmit.\"," +
+        "\"location\": \"/urn:IE815[1]/urn:Body[1]/urn:SubmittedDraftOfEADESAD[1]/urn:EadEsadDraft[1]/urn:DateOfDispatch[1]\"," +
+        "\"value\": \"2023-12-05\"}]}"
+
+      withAuthorizedTrader("GBWK002281023")
+      stubEISErrorResponse(BAD_REQUEST, eisErrorResponse)
+
+      val response = postRequest(IE818)
+      //Calling body directly is causing everything to be wrapped in extra strings which is confusing
+      //Hence getting the json as a string directly
+      cleanUpString(response.json.asInstanceOf[JsString].value) mustBe cleanUpString(apiErrorResponse)
+
+      def cleanUpString(str: String): String = {
+        str.replaceAll("[\\t\\n\\r\\s]+", "")
+      }
     }
 
     "return 500 if EIS return 500" in {

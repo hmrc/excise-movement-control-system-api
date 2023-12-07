@@ -20,6 +20,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connector.util
 import org.scalatest.EitherValues
 import org.scalatest.Inspectors.forAll
 import org.scalatestplus.play.PlaySpec
+import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, SERVICE_UNAVAILABLE}
 import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
@@ -53,12 +54,11 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
     ))
 
     forAll(Seq(
-      (400, BadRequest(exampleError)),
-      (404, NotFound(exampleError)),
-      (500, InternalServerError(exampleError)),
-      (503, ServiceUnavailable(exampleError)))) { case (statusCode, expectedResult) =>
+      (NOT_FOUND, NotFound(exampleError)),
+      (INTERNAL_SERVER_ERROR, InternalServerError(exampleError)),
+      (SERVICE_UNAVAILABLE, ServiceUnavailable(exampleError)))) { case (statusCode, expectedResult) =>
       s"return $statusCode" when {
-        "$status code has returned from HttpResponse" in {
+        s"$statusCode has returned from HttpResponse" in {
           val result = eisHttpParser.read(
             "ANY",
             "/foo",
@@ -67,6 +67,21 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
 
           result.left.value mustBe expectedResult
         }
+      }
+    }
+
+    "return BadRequest when BadRequest returned from HttpResponse" in {
+
+      val result = eisHttpParser.read(
+        "ANY",
+        "/foo",
+        HttpResponse(BAD_REQUEST, "{\"exampleError\": \"/con:Control[1]/con:Parameter[1]/urn:IE815[1]/urn:DateOfDispatch[1]\"}")
+      )
+
+      val resultObject = result.left.value
+
+      withClue("cleanup references to the control document in from EIS validation") {
+        resultObject mustBe BadRequest(Json.toJson("{\"exampleError\":\"/urn:IE815[1]/urn:DateOfDispatch[1]\"}"))
       }
     }
 

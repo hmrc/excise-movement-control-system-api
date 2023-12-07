@@ -33,15 +33,15 @@ class EISHttpReader(
                      val correlationId: String,
                      val ern: String,
                      val createdDateTime: String
-) extends HttpReads[Either[Result, EISSubmissionResponse]] with Logging {
+                   ) extends HttpReads[Either[Result, EISSubmissionResponse]] with Logging {
 
-    override def read(method: String, url: String, response: HttpResponse): Either[Result, EISSubmissionResponse] = {
-        val result = extractIfSuccessful[EISSubmissionResponse](response)
-        result match {
-          case Right(eisResponse) => Right(eisResponse)
-          case Left(httpResponse: HttpResponse) => Left(handleErrorResponse(httpResponse))
-        }
+  override def read(method: String, url: String, response: HttpResponse): Either[Result, EISSubmissionResponse] = {
+    val result = extractIfSuccessful[EISSubmissionResponse](response)
+    result match {
+      case Right(eisResponse) => Right(eisResponse)
+      case Left(httpResponse: HttpResponse) => Left(handleErrorResponse(httpResponse))
     }
+  }
 
   private def handleErrorResponse
   (
@@ -52,7 +52,8 @@ class EISHttpReader(
 
     val messageAsJson = response.json
     response.status match {
-      case BAD_REQUEST => BadRequest(messageAsJson)
+      case BAD_REQUEST =>
+        BadRequest(Json.toJson(removeControlDocumentReferences(messageAsJson.toString)))
       case NOT_FOUND => NotFound(messageAsJson)
       case SERVICE_UNAVAILABLE => ServiceUnavailable(messageAsJson)
       case _ => InternalServerError(messageAsJson)
@@ -63,11 +64,16 @@ class EISHttpReader(
     if (is2xx(response.status)) Right(jsonAs[T](response.body))
     else Left(response)
 
-  private def jsonAs[T](body: String)(implicit reads: Reads[T],  tt: TypeTag[T]): T = {
+  private def jsonAs[T](body: String)(implicit reads: Reads[T], tt: TypeTag[T]): T = {
     Try(Json.parse(body).as[T]) match {
       case Success(obj) => obj
       case Failure(exception) => throw new RuntimeException(s"Response body could not be read as type ${typeOf[T]}", exception)
     }
+  }
+
+  def removeControlDocumentReferences(errorMsg: String): String = {
+    val result = errorMsg.replaceAll("/con:[^/]*(?=/)", "")
+    result
   }
 }
 
