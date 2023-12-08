@@ -50,7 +50,7 @@ class GetMovementConnector @Inject()
     httpClient.GET[HttpResponse](
       appConfig.traderMovementUrl,
       Seq("exciseregistrationnumber" -> ern, "arc" -> arc),
-      build(correlationId, createDateTime)
+      build(correlationId, createDateTime, appConfig.traderMovementBearerToken)
     ).map { response: HttpResponse =>
 
       extractIfSuccessful[EISConsumptionResponse](response) match {

@@ -60,6 +60,8 @@ class GetMovementConnectorSpec extends PlaySpec
 
   private val timerContext = mock[Timer.Context]
 
+  private val traderMovementBearerToken = "traderMovementBearerToken"
+
   override def beforeEach(): Unit = {
     super.beforeEach()
 
@@ -68,6 +70,7 @@ class GetMovementConnectorSpec extends PlaySpec
     when(httpClient.GET[Any](any,any,any)(any,any,any))
       .thenReturn(Future.successful(HttpResponse(200, Json.toJson(response).toString())))
     when(appConfig.traderMovementUrl).thenReturn("/trader-movement-url")
+    when(appConfig.traderMovementBearerToken).thenReturn(traderMovementBearerToken)
     when(emcsUtil.generateCorrelationId).thenReturn("1234")
     when(emcsUtil.getCurrentDateTimeString).thenReturn(dateTime.toString)
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
@@ -124,7 +127,8 @@ class GetMovementConnectorSpec extends PlaySpec
       XForwardedHostName -> MDTPHost,
       XCorrelationIdName -> "1234",
       SourceName -> APIPSource,
-      DateTimeName -> dateTime.toString
+      DateTimeName -> dateTime.toString,
+      Authorization -> authorizationValue(traderMovementBearerToken)
     )
   }
 }

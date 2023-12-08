@@ -56,6 +56,8 @@ class MessageReceiptConnectorSpec
   private val dateTime = LocalDateTime.of(2023, 1,2,3,4,5)
   private val response = MessageReceiptResponse(dateTime, "123", 10)
 
+  private val messageReceiptBearerToken = "messageReceiptBearerToken"
+
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(httpClient, appConfig, metrics, timerContext)
@@ -65,6 +67,7 @@ class MessageReceiptConnectorSpec
     when(emcsUtil.getCurrentDateTimeString).thenReturn(dateTime.toString)
     when(emcsUtil.generateCorrelationId).thenReturn("12345")
     when(appConfig.messageReceiptUrl(any)).thenReturn("/messageReceipt")
+    when(appConfig.messageReceiptBearerToken).thenReturn(messageReceiptBearerToken)
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
   }
 
@@ -82,7 +85,8 @@ class MessageReceiptConnectorSpec
         XForwardedHostName -> MDTPHost,
         XCorrelationIdName -> "12345",
         SourceName -> APIPSource,
-        DateTimeName -> dateTime.toString
+        DateTimeName -> dateTime.toString,
+        Authorization -> authorizationValue(messageReceiptBearerToken)
       )
       verify(httpClient).PUTString[Any](
         eqTo("/messageReceipt"),

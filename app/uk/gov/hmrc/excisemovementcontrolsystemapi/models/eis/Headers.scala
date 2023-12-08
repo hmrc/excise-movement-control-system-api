@@ -20,7 +20,7 @@ import play.api.http.HeaderNames
 
 
 trait Headers {
-  def build(correlationId: String, createdDateTime: String): Seq[(String, String)]
+  def build(correlationId: String, createdDateTime: String, bearerToken: String): Seq[(String, String)]
 }
 
 object Headers {
@@ -30,4 +30,7 @@ object Headers {
   val XCorrelationIdName: String = "X-Correlation-Id"
   val DateTimeName: String = "DateTime"
   val XForwardedHostName: String = HeaderNames.X_FORWARDED_HOST
+  val Authorization: String = HeaderNames.AUTHORIZATION
+
+  def authorizationValue(bearerToken: String) = s"Bearer $bearerToken"
 }

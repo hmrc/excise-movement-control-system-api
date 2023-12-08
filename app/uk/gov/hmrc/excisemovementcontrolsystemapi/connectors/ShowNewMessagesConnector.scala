@@ -46,7 +46,7 @@ class ShowNewMessagesConnector @Inject()(
     httpClient.GET[HttpResponse](
       appConfig.showNewMessageUrl,
       Seq("exciseregistrationnumber" -> ern),
-      build(correlationId, dateTime)
+      build(correlationId, dateTime, appConfig.showNewMessagesBearerToken)
     ).map { response =>
 
       extractIfSuccessful[EISConsumptionResponse](response) match {

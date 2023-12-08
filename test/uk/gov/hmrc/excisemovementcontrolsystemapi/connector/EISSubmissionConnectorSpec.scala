@@ -81,6 +81,8 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
     </con:Control>
   private val timerContext = mock[Timer.Context]
   private val ie815Message = mock[IE815Message]
+  private val submissionBearerToken = "submissionBearerToken"
+
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -91,6 +93,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
     when(emcsUtils.getCurrentDateTimeString).thenReturn("2023-09-17T09:32:50.345")
     when(emcsUtils.generateCorrelationId).thenReturn(emcsCorrelationId)
     when(appConfig.emcsReceiverMessageUrl).thenReturn("/eis/path")
+    when(appConfig.submissionBearerToken).thenReturn(submissionBearerToken)
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
     when(ie815Message.messageType).thenReturn("IE815")
     when(ie815Message.consignorId).thenReturn("123")
@@ -354,6 +357,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
       DateTimeName -> "2023-09-17T09:32:50.345",
       XCorrelationIdName -> "1234566",
       XForwardedHostName -> MDTPHost,
-      SourceName -> APIPSource
+      SourceName -> APIPSource,
+      Authorization -> authorizationValue(submissionBearerToken)
     )
 }
