@@ -28,7 +28,7 @@ import play.api.http.HeaderNames
 import play.api.http.Status._
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.json.{JsString, JsValue, Json}
+import play.api.libs.json.{JsValue, Json}
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
@@ -225,11 +225,8 @@ class SubmitMessageControllerItSpec extends PlaySpec
       val response = postRequest(IE818)
       //Calling body directly is causing everything to be wrapped in extra strings which is confusing
       //Hence getting the json as a string directly
-      cleanUpString(response.json.asInstanceOf[JsString].value) mustBe cleanUpString(apiErrorResponse)
+      cleanUpString(response.json.as[String]) mustBe cleanUpString(apiErrorResponse)
 
-      def cleanUpString(str: String): String = {
-        str.replaceAll("[\\t\\n\\r\\s]+", "")
-      }
     }
 
     "return 500 if EIS return 500" in {
@@ -377,5 +374,9 @@ class SubmitMessageControllerItSpec extends PlaySpec
             .withHeader("Content-Type", "application/json")
         )
     )
+  }
+
+  private def cleanUpString(str: String): String = {
+    str.replaceAll("[\\t\\n\\r\\s]+", "")
   }
 }
