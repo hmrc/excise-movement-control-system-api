@@ -36,7 +36,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{AuthTestSupport, Move
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.mongo.TimestampSupport
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
@@ -56,7 +56,7 @@ class GetMovementsControllerItSpec extends PlaySpec
   private val consignorId = "GBWK002281023"
   private val lrn = "token"
   private val url = s"http://localhost:$port/movements"
-  private lazy val dateTimeService: DateTimeService = mock[DateTimeService]
+  private lazy val dateTimeService: TimestampSupport = mock[TimestampSupport]
   private val timestamp = Instant.parse("2018-11-30T18:35:24.00Z")
 
   private val movement1 = Movement(lrn, consignorId, Some("consigneeId"), Some("arc1"), timestamp)
@@ -72,7 +72,7 @@ class GetMovementsControllerItSpec extends PlaySpec
       .overrides(
         bind[AuthConnector].to(authConnector),
         bind[MovementRepository].to(movementRepository),
-        bind[DateTimeService].to(dateTimeService)
+        bind[TimestampSupport].to(dateTimeService)
       )
       .build()
   }

@@ -14,24 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.models
+package uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures
 
+import org.scalatestplus.mockito.MockitoSugar.mock
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, MovementRepository}
 
-import java.nio.charset.StandardCharsets
-import java.time.LocalDateTime
-import java.util.{Base64, UUID}
+trait RepositoryTestStub {
+  protected lazy val movementRepository: MovementRepository = mock[MovementRepository]
+  protected lazy val workItemRepository: ExciseNumberQueueWorkItemRepository = mock[ExciseNumberQueueWorkItemRepository]
 
-class EmcsUtils {
-
-  def getCurrentDateTime: LocalDateTime = LocalDateTime.now()
-  def getCurrentDateTimeString: String = getCurrentDateTime.toString
-  def generateCorrelationId: String = UUID.randomUUID().toString
-
-  def encode(str: String): String = {
-    Base64.getEncoder.encodeToString(str.getBytes(StandardCharsets.UTF_8))
-  }
-
-  def decode(str: String): String = {
-    Base64.getDecoder.decode(str).map(_.toChar).mkString
-  }
 }

@@ -14,12 +14,27 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures
+package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
-import org.scalatestplus.mockito.MockitoSugar.mock
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{ExecutionContext, Future}
 
-trait RepositoryTestStub {
-  protected lazy val movementRepository = mock[MovementRepository]
+trait ScheduledJob {
+  def name: String
 
+  def execute(implicit ec: ExecutionContext): Future[Result]
+
+  def isRunning: Future[Boolean]
+
+  case class Result(message: String)
+
+  val enabled: Boolean
+
+  def configKey: String = name
+
+  def initialDelay: FiniteDuration
+
+  def intervalBetweenJobRunning: FiniteDuration
+
+  override def toString() = s"$name after $initialDelay every $intervalBetweenJobRunning"
 }

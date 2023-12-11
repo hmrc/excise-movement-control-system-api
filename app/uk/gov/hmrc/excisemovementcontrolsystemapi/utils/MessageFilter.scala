@@ -18,16 +18,16 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
 
 import generated.NewMessagesDataResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
+import uk.gov.hmrc.mongo.TimestampSupport
 
 import javax.inject.Inject
 
 class MessageFilter @Inject()
 (
-  dateTimeService: DateTimeService,
+  dateTimeService: TimestampSupport,
   emcsUtils: EmcsUtils,
   factory: IEMessageFactory
 ) {
@@ -38,7 +38,7 @@ class MessageFilter @Inject()
       .filter(_.lrnEquals(lrnToFilterBy))
       .map { m =>
         val encodedMessage = emcsUtils.encode(m.toXml.toString())
-        Message(encodedMessage, m.messageType, dateTimeService.now)
+        Message(encodedMessage, m.messageType, dateTimeService)
       }
   }
 

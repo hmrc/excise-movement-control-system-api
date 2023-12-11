@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, ok, post, urlEqualTo}
+import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.when
 import org.scalatest.BeforeAndAfterAll
@@ -37,9 +38,11 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, MovementRepository}
+import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
-import java.time.LocalDateTime
+import java.time.{Instant, LocalDateTime}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
@@ -76,6 +79,16 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
+  private val workItem: WorkItem[ExciseNumberWorkItem] = WorkItem(
+    id = new ObjectId(),
+    receivedAt = Instant.now,
+    updatedAt = Instant.now,
+    availableAt = Instant.now,
+    status = ProcessingStatus.ToDo,
+    failureCount = 0,
+    item = ExciseNumberWorkItem("ern", 3)
+  )
+
   override lazy val app: Application = {
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
@@ -83,7 +96,8 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       .configure(configureServer)
       .overrides(
         bind[AuthConnector].to(authConnector),
-        bind[MovementRepository].to(movementRepository)
+        bind[MovementRepository].to(movementRepository),
+        bind[ExciseNumberQueueWorkItemRepository].to(workItemRepository)
       )
       .build()
   }
@@ -106,6 +120,9 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       when(movementRepository.saveMovement(any))
         .thenReturn(Future.successful(true))
 
+      when(workItemRepository.pushNew(any, any, any)).thenReturn(Future.successful(workItem))
+      when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
+
       when(movementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq.empty))
 
@@ -117,6 +134,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         val responseBody = Json.parse(result.body).as[ExciseMovementResponse]
         responseBody mustBe ExciseMovementResponse("Accepted", "LRNQA20230909022221", consignorId, Some("GBWKQOZ8OVLYR"))
       }
+
     }
 
     "return not found if EIS returns not found" in {

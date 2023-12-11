@@ -22,27 +22,31 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GetMovementResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class GetMovementsController @Inject()(
-  authAction: AuthAction,
-  cc: ControllerComponents,
-  movementService: MovementService
-)(implicit ec: ExecutionContext) extends BackendController(cc)  {
+                                        authAction: AuthAction,
+                                        cc: ControllerComponents,
+                                        movementService: MovementService,
+                                        workItemService: WorkItemService
+                                      )(implicit ec: ExecutionContext)
+  extends BackendController(cc) {
 
   def getMovements(ern: Option[String], lrn: Option[String], arc: Option[String]): Action[AnyContent] = {
     authAction.async(parse.default) {
       implicit request =>
 
+        workItemService.addWorkItemForErn(ern.getOrElse(request.erns.head), fastMode = false)
+
         val filter = MovementFilter.and(Seq("ern" -> ern, "lrn" -> lrn, "arc" -> arc))
         movementService.getMovementByErn(request.erns.toSeq, filter)
           .map { movement: Seq[Movement] =>
             Ok(Json.toJson(movement.map(createResponseFrom)))
-        }
+          }
     }
   }
 

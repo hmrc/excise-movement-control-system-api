@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, verify, when}
+import org.mongodb.scala.MongoException
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
@@ -28,7 +29,7 @@ import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, MovementTestUtils}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -41,14 +42,17 @@ class GetMovementsControllerSpec
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val cc = stubControllerComponents()
   private val movementService = mock[MovementService]
-  private val controller = new GetMovementsController(FakeSuccessAuthentication, cc, movementService)
+  private val workItemService = mock[WorkItemService]
+  private val controller = new GetMovementsController(FakeSuccessAuthentication, cc, movementService, workItemService)
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(movementService)
+    reset(movementService, workItemService)
 
     when(movementService.getMovementByErn(any, any))
       .thenReturn(Future.successful(Seq(Movement("lrn", ern, Some("consigneeId"), Some("arc")))))
+
+    when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
 
   }
 
@@ -89,6 +93,25 @@ class GetMovementsControllerSpec
       )
       verify(movementService).getMovementByErn(any, eqTo(filter))
 
+    }
+
+    "create a Work Item if there is not one for the ERN already" in {
+
+      await(controller.getMovements(None, None, None)(FakeRequest("POST", "/foo")))
+
+      verify(workItemService).addWorkItemForErn(eqTo("testErn"), eqTo(false))
+
+    }
+
+    "catch Future failure from Work Item service and log it but still process submission" in {
+
+      when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.failed(new MongoException("Oh no!")))
+
+      val result = controller.getMovements(None, None, None)(FakeRequest("POST", "/foo"))
+
+      status(result) mustBe OK
+
+      verify(movementService).getMovementByErn(any, any)
     }
   }
 }

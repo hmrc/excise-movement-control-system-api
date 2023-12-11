@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, ok, post, urlEqualTo}
+import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.{reset, when}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
@@ -36,10 +37,11 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, MovementRepository}
+import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
-import java.time.LocalDateTime
+import java.time.{Instant, LocalDateTime}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
@@ -62,6 +64,16 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
+  private val workItem: WorkItem[ExciseNumberWorkItem] = WorkItem(
+    id = new ObjectId(),
+    receivedAt = Instant.now,
+    updatedAt = Instant.now,
+    availableAt = Instant.now,
+    status = ProcessingStatus.ToDo,
+    failureCount = 0,
+    item = ExciseNumberWorkItem("ern", 3)
+  )
+
   override lazy val app: Application = {
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
@@ -69,7 +81,8 @@ class SubmitMessageControllerItSpec extends PlaySpec
       .configure(configureServer)
       .overrides(
         bind[AuthConnector].to(authConnector),
-        bind[MovementRepository].to(movementRepository)
+        bind[MovementRepository].to(movementRepository),
+        bind[ExciseNumberQueueWorkItemRepository].to(workItemRepository)
       )
       .build()
   }
@@ -85,6 +98,10 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
     when(movementRepository.getMovementByLRNAndERNIn(any, any))
       .thenReturn(Future.successful(Seq(Movement("LRNQA20230909022221", "", Some("23GB00000000000378553")))))
+
+    when(workItemRepository.pushNew(any, any, any)).thenReturn(Future.successful(workItem))
+    when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
+
   }
 
   override def afterAll(): Unit = {
