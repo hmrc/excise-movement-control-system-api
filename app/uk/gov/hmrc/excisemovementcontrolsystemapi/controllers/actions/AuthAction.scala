@@ -91,18 +91,30 @@ class AuthActionImpl @Inject()
     Left(ErrorResponse(status, msg))
   }
 
-  private def checkErns[A](enrolments: Enrolments, internalId: String)
-                          (implicit request: Request[A]): Either[ErrorResponse, EnrolmentRequest[A]] = {
+  private def checkErns[A](
+    enrolments: Enrolments,
+    internalId: String
+  )(implicit request: Request[A]): Either[ErrorResponse, EnrolmentRequest[A]] = {
 
-    val erns: Set[EnrolmentIdentifier] = enrolments.enrolments.flatMap(e => e.getIdentifier(EnrolmentKey.ERN))
+    val erns = getAllErnsForEmcsEnrolment(enrolments)
 
     if (erns.isEmpty) {
       logger.error(s"Could not find ${EnrolmentKey.ERN}")
       Left(ErrorResponse(FORBIDDEN, s"Could not find ${EnrolmentKey.ERN}"))
     }
     else {
-      Right(EnrolmentRequest(request, erns.map(_.value), internalId))
+      Right(EnrolmentRequest(request, erns, internalId))
     }
+  }
+
+  private def getAllErnsForEmcsEnrolment[A](enrolments: Enrolments): Set[String] = {
+    enrolments
+      .getEnrolment(EnrolmentKey.EMCS_ENROLMENT)
+      .fold[Seq[EnrolmentIdentifier]](Seq.empty)(e =>
+        e.identifiers.filter(i => i.key.equalsIgnoreCase(EnrolmentKey.ERN))
+      )
+      .map(_.value)
+      .toSet
   }
 }
 

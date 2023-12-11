@@ -146,7 +146,7 @@ class GetMessagesControllerItSpec extends PlaySpec
     }
 
     "return forbidden (403) when there are no authorized ERN" in {
-      withUnAuthorizedERN()
+      withAnEmptyERN()
 
       getRequest.status mustBe FORBIDDEN
     }
