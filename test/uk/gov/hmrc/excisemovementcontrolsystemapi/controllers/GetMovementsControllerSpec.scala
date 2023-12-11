@@ -58,14 +58,14 @@ class GetMovementsControllerSpec
 
   "getMovements" should {
     "return 200 when successful" in {
-      val result = controller.getMovements(None, None, None)(FakeRequest("POST", "/foo"))
+      val result = controller.getMovements(None, None, None, None)(FakeRequest("POST", "/foo"))
 
       status(result) mustBe OK
       contentAsJson(result) mustBe Json.toJson(Seq(createMovementResponse(ern, "lrn", "arc", Some("consigneeId"))))
     }
 
     "get all movement for an ERN" in {
-      await(controller.getMovements(None, None, None)(FakeRequest("GET", "/foo")))
+      await(controller.getMovements(None, None, None, None)(FakeRequest("GET", "/foo")))
 
       verify(movementService).getMovementByErn(eqTo(Seq(ern)), any)
     }
@@ -76,7 +76,7 @@ class GetMovementsControllerSpec
       when(movementService.getMovementByErn(any, any))
         .thenReturn(Future.successful(Seq(movement1, movement2)))
 
-      val result = controller.getMovements(None, None, None)(FakeRequest("POST", "/foo"))
+      val result = controller.getMovements(None, None, None, None)(FakeRequest("POST", "/foo"))
 
       status(result) mustBe OK
       contentAsJson(result) mustBe Json.toJson(Seq(
@@ -86,7 +86,7 @@ class GetMovementsControllerSpec
     }
 
     "use a filter" in {
-      await(controller.getMovements(Some(ern), Some("lrn"), Some("arc"))(FakeRequest("POST", "/foo")))
+      await(controller.getMovements(Some(ern), Some("lrn"), Some("arc"), None)(FakeRequest("POST", "/foo")))
 
       val filter = MovementFilter.and(Seq(
         "ern" -> Some(ern), "lrn" -> Some("lrn"), "arc" -> Some("arc"))

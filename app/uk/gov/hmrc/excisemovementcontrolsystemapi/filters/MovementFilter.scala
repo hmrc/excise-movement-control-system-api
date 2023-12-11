@@ -18,6 +18,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.filters
 
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
+import java.time.Instant
+
 sealed trait Filter {
   def filter(movements: Seq[Movement]): Seq[Movement]
 }
@@ -43,6 +45,13 @@ case class FilterArc(arc: Option[String] = None) extends Filter {
     arc.fold[Seq[Movement]](movements)(a =>
       movements.filter(o => o.administrativeReferenceCode.contains(a))
     )
+  }
+}
+
+case class FilterUpdatedSince(updatedSince: Option[String] = None) extends Filter {
+  def filter(movements: Seq[Movement]): Seq[Movement] = {
+    updatedSince.fold[Seq[Movement]](movements)(a =>
+    movements.filter(o => o.lastUpdated.isAfter(Instant.parse(a))))
   }
 }
 
@@ -75,6 +84,7 @@ object MovementFilter {
             case "ern" => FilterErn(o._2)
             case "lrn" => FilterLrn(o._2)
             case "arc" => FilterArc(o._2)
+            case "lastUpdated" => FilterUpdatedSince(o._2)
             case _ => new FilterNothing
           }
         )

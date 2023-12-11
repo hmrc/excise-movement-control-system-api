@@ -19,13 +19,15 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.filters
 import org.scalatestplus.play.PlaySpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
+import java.time.Instant
+
 class MovementFilterSpec extends PlaySpec {
 
-  private val m1 = Movement("lrn3", "test1", Some("consigneeId"), Some("arc1"))
-  private val m2 = Movement("2", "test2", Some("consigneeId2"), Some("arc2"))
-  private val m3 = Movement("5", "test2", Some("consigneeId2"), Some("arc3"))
-  private val m4 = Movement("2", "test4", Some("consigneeId2"), Some("arc4"))
-  private val m5 = Movement("lrn345", "test2abc", Some("consigneeId2"), Some("arc3fgn"))
+  private val m1 = Movement("lrn3", "test1", Some("consigneeId"), Some("arc1"), Instant.now.plusSeconds(1000))
+  private val m2 = Movement("2", "test2", Some("consigneeId2"), Some("arc2"), Instant.now)
+  private val m3 = Movement("5", "test2", Some("consigneeId2"), Some("arc3"), Instant.now)
+  private val m4 = Movement("2", "test4", Some("consigneeId2"), Some("arc4"), Instant.now)
+  private val m5 = Movement("lrn345", "test2abc", Some("consigneeId2"), Some("arc3fgn"), Instant.now)
 
   private val movements = Seq(m1, m2, m3, m4, m5)
 
@@ -45,6 +47,12 @@ class MovementFilterSpec extends PlaySpec {
 
     "filter by ARC" in {
       val filter = MovementFilter.and(Seq("arc" -> Some("arc1")))
+
+      filter.filterMovement(movements) mustBe Seq(m1)
+    }
+
+    "filter by lastUpdated" in {
+      val filter = MovementFilter.and(Seq("lastUpdated" -> Some(Instant.now.toString())))
 
       filter.filterMovement(movements) mustBe Seq(m1)
     }

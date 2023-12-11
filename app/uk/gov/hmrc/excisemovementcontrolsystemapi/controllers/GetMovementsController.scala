@@ -36,7 +36,7 @@ class GetMovementsController @Inject()(
                                       )(implicit ec: ExecutionContext)
   extends BackendController(cc) {
 
-  def getMovements(ern: Option[String], lrn: Option[String], arc: Option[String]): Action[AnyContent] = {
+  def getMovements(ern: Option[String], lrn: Option[String], arc: Option[String], updatedSince: Option[String]): Action[AnyContent] = {
     authAction.async(parse.default) {
       implicit request =>
 
