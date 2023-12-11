@@ -37,6 +37,8 @@ case class IE704Message
 
   override def messageType: String = MessageTypes.IE704.value
 
+  override def messageIdentifier: String = obj.Header.MessageIdentifier
+
   override def toXml: NodeSeq =
     scalaxb.toXML[IE704Type](obj, namespace, key, generated.defaultScope)
 

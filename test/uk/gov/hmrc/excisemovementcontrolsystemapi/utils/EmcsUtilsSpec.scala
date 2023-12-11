@@ -153,6 +153,8 @@ class EmcsUtilsSpec extends PlaySpec {
 
         override def messageType: String = "any-type"
 
+        override def messageIdentifier: String = "messageId"
+
         override def toXml: NodeSeq = NodeSeq.Empty
 
         override def lrnEquals(lrn: String): Boolean = false

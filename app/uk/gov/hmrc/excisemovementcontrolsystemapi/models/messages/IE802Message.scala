@@ -40,6 +40,8 @@ case class IE802Message
 
   override def messageType: String = MessageTypes.IE802.value
 
+  override def messageIdentifier: String = obj.Header.MessageIdentifier
+
   override def lrnEquals(lrn: String): Boolean = false
 }
 
