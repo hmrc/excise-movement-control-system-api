@@ -31,7 +31,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, M
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
 
-import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
+import java.time.{LocalDateTime, ZoneOffset}
 import scala.concurrent.{ExecutionContext, Future}
 
 class GetMovementsControllerSpec
@@ -87,11 +88,11 @@ class GetMovementsControllerSpec
     }
 
     "use a filter" in {
-      val timeFilter = LocalDateTime.now().toString
-      await(controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timeFilter))(FakeRequest("POST", "/foo")))
+      val timestampNow = LocalDateTime.now().toInstant(ZoneOffset.UTC).truncatedTo(ChronoUnit.SECONDS).toString
+      await(controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow))(FakeRequest("POST", "/foo")))
 
       val filter = MovementFilter.and(Seq(
-        "ern" -> Some(ern), "lrn" -> Some("lrn"), "arc" -> Some("arc"), "lastUpdated" -> Some(timeFilter))
+        "ern" -> Some(ern), "lrn" -> Some("lrn"), "arc" -> Some("arc"), "lastUpdated" -> Some(timestampNow))
       )
       verify(movementService).getMovementByErn(any, eqTo(filter))
 

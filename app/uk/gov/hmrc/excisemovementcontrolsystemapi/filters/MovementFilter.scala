@@ -48,10 +48,10 @@ case class FilterArc(arc: Option[String] = None) extends Filter {
   }
 }
 
-case class FilterUpdatedSince(updatedSince: Option[String] = None) extends Filter {
+case class FilterUpdatedSince(updatedSince: Option[Instant] = None) extends Filter {
   def filter(movements: Seq[Movement]): Seq[Movement] = {
     updatedSince.fold[Seq[Movement]](movements)(a =>
-    movements.filter(o => o.lastUpdated.isAfter(Instant.parse(a))))
+    movements.filter(o => o.lastUpdated.isAfter(a)))
   }
 }
 
@@ -84,7 +84,7 @@ object MovementFilter {
             case "ern" => FilterErn(o._2)
             case "lrn" => FilterLrn(o._2)
             case "arc" => FilterArc(o._2)
-            case "lastUpdated" => FilterUpdatedSince(o._2)
+            case "lastUpdated" => FilterUpdatedSince(o._2.map(Instant.parse(_)))
             case _ => new FilterNothing
           }
         )
