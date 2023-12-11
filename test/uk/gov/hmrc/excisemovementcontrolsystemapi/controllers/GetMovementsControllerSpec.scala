@@ -31,6 +31,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, M
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
 
+import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
 
 class GetMovementsControllerSpec
@@ -86,10 +87,11 @@ class GetMovementsControllerSpec
     }
 
     "use a filter" in {
-      await(controller.getMovements(Some(ern), Some("lrn"), Some("arc"), None)(FakeRequest("POST", "/foo")))
+      val timeFilter = LocalDateTime.now().toString
+      await(controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timeFilter))(FakeRequest("POST", "/foo")))
 
       val filter = MovementFilter.and(Seq(
-        "ern" -> Some(ern), "lrn" -> Some("lrn"), "arc" -> Some("arc"))
+        "ern" -> Some(ern), "lrn" -> Some("lrn"), "arc" -> Some("arc"), "lastUpdated" -> Some(timeFilter))
       )
       verify(movementService).getMovementByErn(any, eqTo(filter))
 
@@ -97,7 +99,7 @@ class GetMovementsControllerSpec
 
     "create a Work Item if there is not one for the ERN already" in {
 
-      await(controller.getMovements(None, None, None)(FakeRequest("POST", "/foo")))
+      await(controller.getMovements(None, None, None, None)(FakeRequest("POST", "/foo")))
 
       verify(workItemService).addWorkItemForErn(eqTo("testErn"), eqTo(false))
 
@@ -107,7 +109,7 @@ class GetMovementsControllerSpec
 
       when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.failed(new MongoException("Oh no!")))
 
-      val result = controller.getMovements(None, None, None)(FakeRequest("POST", "/foo"))
+      val result = controller.getMovements(None, None, None, None)(FakeRequest("POST", "/foo"))
 
       status(result) mustBe OK
 
