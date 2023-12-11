@@ -30,11 +30,16 @@ trait ResponseHandler extends Logging {
     if (is2xx(response.status)) Right(jsonAs[T](response.body))
     else Left(response)
 
-  def jsonAs[T](body: String)(implicit reads: Reads[T],  tt: TypeTag[T]): T = {
+  def jsonAs[T](body: String)(implicit reads: Reads[T], tt: TypeTag[T]): T = {
     Try(Json.parse(body).as[T]) match {
       case Success(obj) => obj
       case Failure(exception) => throw new RuntimeException(s"Response body could not be read as type ${typeOf[T]}", exception)
     }
+  }
+
+  def removeControlDocumentReferences(errorMsg: String): String = {
+    val result = errorMsg.replaceAll("/con:[^/]*(?=/)", "")
+    result
   }
 }
 

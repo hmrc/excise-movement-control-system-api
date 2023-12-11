@@ -58,6 +58,22 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   private val consignorId = "GBWK002281023"
   private val consigneeId = "GBWKQOZ8OVLYR"
 
+  private val eisErrorResponse = "{" +
+    "\"message\": \"Validation error(s) occurred\"," +
+    "\"errors\": [" +
+    "{\"errorCode\": 8084," +
+    "\"errorMessage\": \"The Date of Dispatch you entered is incorrect. It must be today or later. Please amend your entry and resubmit.\"," +
+    "\"location\": \"/con:Control[1]/con:OperationRequest[1]/con:Parameters[1]/con:Parameter[1]/urn:IE815[1]/urn:Body[1]/urn:SubmittedDraftOfEADESAD[1]/urn:EadEsadDraft[1]/urn:DateOfDispatch[1]\"," +
+    "\"value\": \"2023-12-05\"}" +
+    "]" +
+    "}"
+
+  private val apiErrorResponse = "{\"message\": \"Validation error(s) occurred\",\"errors\": [" +
+    "{\"errorCode\": 8084," +
+    "\"errorMessage\": \"The Date of Dispatch you entered is incorrect. It must be today or later. Please amend your entry and resubmit.\"," +
+    "\"location\": \"/urn:IE815[1]/urn:Body[1]/urn:SubmittedDraftOfEADESAD[1]/urn:EadEsadDraft[1]/urn:DateOfDispatch[1]\"," +
+    "\"value\": \"2023-12-05\"}]}"
+
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
   override lazy val app: Application = {
@@ -122,6 +138,18 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       stubEISErrorResponse(BAD_REQUEST, createEISErrorResponseBodyAsJson("BAD_REQUEST").toString())
 
       postRequest(IE815).status mustBe BAD_REQUEST
+    }
+
+    "remove control document references in any paths for a BAD_REQUEST" in {
+
+      withAuthorizedTrader(consignorId)
+      stubEISErrorResponse(BAD_REQUEST, eisErrorResponse)
+
+      val response = postRequest(IE815)
+      //Calling body directly is causing everything to be wrapped in extra strings which is confusing
+      //Hence getting the json as a string directly
+      cleanUpString(response.json.as[String]) mustBe cleanUpString(apiErrorResponse)
+
     }
 
     "return 500 if EIS returns 500" in {
@@ -231,5 +259,9 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
             .withHeader("Content-Type", "application/json")
         )
     )
+  }
+
+  private def cleanUpString(str: String): String = {
+    str.replaceAll("[\\t\\n\\r\\s]+", "")
   }
 }
