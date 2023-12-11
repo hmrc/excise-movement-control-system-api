@@ -31,6 +31,7 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.GetMovementConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
@@ -59,6 +60,8 @@ class GetMovementConnectorSpec extends PlaySpec
 
   private val timerContext = mock[Timer.Context]
 
+  private val traderMovementBearerToken = "traderMovementBearerToken"
+
   override def beforeEach(): Unit = {
     super.beforeEach()
 
@@ -67,7 +70,7 @@ class GetMovementConnectorSpec extends PlaySpec
     when(httpClient.GET[Any](any,any,any)(any,any,any))
       .thenReturn(Future.successful(HttpResponse(200, Json.toJson(response).toString())))
     when(appConfig.traderMovementUrl).thenReturn("/trader-movement-url")
-    when(appConfig.systemApplication).thenReturn("uk.gov.hmrc.cdio.cbit.emcs.core.api")
+    when(appConfig.traderMovementBearerToken).thenReturn(traderMovementBearerToken)
     when(emcsUtil.generateCorrelationId).thenReturn("1234")
     when(emcsUtil.getCurrentDateTimeString).thenReturn(dateTime.toString)
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
@@ -121,10 +124,11 @@ class GetMovementConnectorSpec extends PlaySpec
 
   private def expectedHeader: Seq[(String, String)] = {
     Seq(
-      "x-forwarded-host" -> "uk.gov.hmrc.cdio.cbit.emcs.core.api",
-      "x-correlation-id" -> "1234",
-      "source" -> "APIP",
-      "dateTime" -> dateTime.toString
+      XForwardedHostName -> MDTPHost,
+      XCorrelationIdName -> "1234",
+      SourceName -> APIPSource,
+      DateTimeName -> dateTime.toString,
+      Authorization -> authorizationValue(traderMovementBearerToken)
     )
   }
 }

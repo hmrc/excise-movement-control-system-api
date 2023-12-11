@@ -31,6 +31,7 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.ShowNewMessagesConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
@@ -60,6 +61,8 @@ class ShowNewMessagesConnectorSpec
   )
   private val timerContext = mock[Timer.Context]
 
+  private val showNewMessagesBearerToken = "showNewMessagesBearerToken"
+
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(httpClient, appConfig, metrics, timerContext)
@@ -69,7 +72,7 @@ class ShowNewMessagesConnectorSpec
     when(eisUtil.generateCorrelationId).thenReturn("1234")
     when(eisUtil.getCurrentDateTimeString).thenReturn(dateTime.toString)
     when(appConfig.showNewMessageUrl).thenReturn("/showNewMessage")
-    when(appConfig.systemApplication).thenReturn("system.application")
+    when(appConfig.showNewMessagesBearerToken).thenReturn(showNewMessagesBearerToken)
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
   }
 
@@ -121,10 +124,11 @@ class ShowNewMessagesConnectorSpec
 
   private def expectedHeader: Seq[(String, String)] = {
     Seq(
-      "x-forwarded-host" -> "system.application",
-      "x-correlation-id" -> "1234",
-      "source" -> "APIP",
-      "dateTime" -> dateTime.toString
+      XForwardedHostName -> MDTPHost,
+      XCorrelationIdName -> "1234",
+      SourceName -> APIPSource,
+      DateTimeName -> dateTime.toString,
+      Authorization -> authorizationValue(showNewMessagesBearerToken)
     )
   }
 }

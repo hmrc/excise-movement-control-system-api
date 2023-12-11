@@ -17,16 +17,17 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
 import play.api.http.{ContentTypes, HeaderNames}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
 
-trait EISSubmissionHeader extends Header {
+trait EISSubmissionHeaders extends Headers {
 
-
-  def build(emcsCorrelationId: String, createdDateTime: String): Seq[(String, String)] = {
+  override def build(correlationId: String, createdDateTime: String, bearerToken: String): Seq[(String, String)] = {
     Seq(HeaderNames.ACCEPT -> ContentTypes.JSON,
       HeaderNames.CONTENT_TYPE -> ContentTypes.JSON,
       DateTimeName -> createdDateTime,
-      XCorrelationIdName -> emcsCorrelationId,
-      XForwardedHostName -> "",
-      SourceName -> EmcsSource)
+      XCorrelationIdName -> correlationId,
+      XForwardedHostName -> MDTPHost,
+      SourceName -> APIPSource,
+      Authorization -> authorizationValue(bearerToken))
   }
 }

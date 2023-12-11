@@ -16,18 +16,18 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
-import play.api.libs.json.{Json, OFormat}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
 
-case class EISRequest(
-                       emcsCorrelationId: String,
-                       createdDateTime: String,
-                       messageType: String,
-                       source: String = "APIP",
-                       user: String,
-                       message: String
-                     )
+trait EISConsumptionHeaders extends Headers {
 
-object EISRequest {
-  implicit val format: OFormat[EISRequest] = Json.format[EISRequest]
+  override def build(correlationId: String, createdDateTime: String, bearerToken: String): Seq[(String, String)] = {
+    Seq(
+      XForwardedHostName -> MDTPHost,
+      XCorrelationIdName -> correlationId,
+      SourceName -> APIPSource,
+      DateTimeName -> createdDateTime,
+      Authorization -> authorizationValue(bearerToken)
+    )
+  }
+
 }
-

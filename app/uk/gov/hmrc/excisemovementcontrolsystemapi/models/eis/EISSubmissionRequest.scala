@@ -16,20 +16,11 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
-import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
+import play.api.libs.json.{Json, OFormat}
 
-trait EISConsumptionHeader extends Header {
+case class EISSubmissionRequest(user: String, messageType: String, message: String)
 
-  val appConfig: AppConfig
-
-
-  def build(emcsCorrelationId: String, createdDateTime: String): Seq[(String, String)] = {
-    Seq(
-      XForwardedHostName -> appConfig.systemApplication,
-      XCorrelationIdName -> emcsCorrelationId,
-      SourceName -> EmcsSource,
-      DateTimeName -> createdDateTime
-    )
-  }
-
+object EISSubmissionRequest {
+  implicit val format: OFormat[EISSubmissionRequest] = Json.format[EISSubmissionRequest]
 }
+

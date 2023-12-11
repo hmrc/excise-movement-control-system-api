@@ -22,7 +22,7 @@ import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISConsumptionHeader, EISConsumptionResponse, EISErrorMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISConsumptionHeaders, EISConsumptionResponse, EISErrorMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EmcsUtils, MessageTypes}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -32,10 +32,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class ShowNewMessagesConnector @Inject()(
                                           httpClient: HttpClient,
-                                          override val appConfig: AppConfig,
+                                          appConfig: AppConfig,
                                           emcsUtils: EmcsUtils,
                                           metrics: Metrics
-                                        )(implicit ec: ExecutionContext) extends EISConsumptionHeader with ResponseHandler with Logging {
+                                        )(implicit ec: ExecutionContext) extends EISConsumptionHeaders with ResponseHandler with Logging {
 
   def get(ern: String)(implicit hc: HeaderCarrier): Future[Either[Result, EISConsumptionResponse]] = {
 
@@ -46,7 +46,7 @@ class ShowNewMessagesConnector @Inject()(
     httpClient.GET[HttpResponse](
       appConfig.showNewMessageUrl,
       Seq("exciseregistrationnumber" -> ern),
-      build(correlationId, dateTime)
+      build(correlationId, dateTime, appConfig.showNewMessagesBearerToken)
     ).map { response =>
 
       extractIfSuccessful[EISConsumptionResponse](response) match {

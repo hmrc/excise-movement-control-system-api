@@ -16,12 +16,21 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
-trait Header {
+import play.api.http.HeaderNames
 
-  val EmcsSource: String = "APIP"
-  val SourceName: String = "source"
-  val XCorrelationIdName = "x-correlation-id"
-  val DateTimeName = "dateTime"
-  val XForwardedHostName = "x-forwarded-host"
 
+trait Headers {
+  def build(correlationId: String, createdDateTime: String, bearerToken: String): Seq[(String, String)]
+}
+
+object Headers {
+  val APIPSource: String = "APIP"
+  val MDTPHost: String = "MDTP"
+  val SourceName: String = "Source"
+  val XCorrelationIdName: String = "X-Correlation-Id"
+  val DateTimeName: String = "DateTime"
+  val XForwardedHostName: String = HeaderNames.X_FORWARDED_HOST
+  val Authorization: String = HeaderNames.AUTHORIZATION
+
+  def authorizationValue(bearerToken: String) = s"Bearer $bearerToken"
 }
