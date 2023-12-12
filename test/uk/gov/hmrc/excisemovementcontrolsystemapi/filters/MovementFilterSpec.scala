@@ -23,11 +23,13 @@ import java.time.Instant
 
 class MovementFilterSpec extends PlaySpec {
 
-  private val m1 = Movement("lrn3", "test1", Some("consigneeId"), Some("arc1"), Instant.now.plusSeconds(1000))
-  private val m2 = Movement("2", "test2", Some("consigneeId2"), Some("arc2"), Instant.now)
-  private val m3 = Movement("5", "test2", Some("consigneeId2"), Some("arc3"), Instant.now)
-  private val m4 = Movement("2", "test4", Some("consigneeId2"), Some("arc4"), Instant.now)
-  private val m5 = Movement("lrn345", "test2abc", Some("consigneeId2"), Some("arc3fgn"), Instant.now)
+  val now = Instant.now()
+
+  private val m1 = Movement("lrn3", "test1", Some("consigneeId"), Some("arc1"), now.plusSeconds(500))
+  private val m2 = Movement("2", "test2", Some("consigneeId2"), Some("arc2"), now.plusSeconds(1000))
+  private val m3 = Movement("5", "test2", Some("consigneeId2"), Some("arc3"), now.minusSeconds(1000))
+  private val m4 = Movement("2", "test4", Some("consigneeId2"), Some("arc4"), now.minusSeconds(1000))
+  private val m5 = Movement("lrn345", "test2abc", Some("consigneeId2"), Some("arc3fgn"), now.minusSeconds(1000))
 
   private val movements = Seq(m1, m2, m3, m4, m5)
 
@@ -52,16 +54,23 @@ class MovementFilterSpec extends PlaySpec {
     }
 
     "filter by lastUpdated" in {
-      val filter = MovementFilter.and(Seq("lastUpdated" -> Some(Instant.now.toString())))
+      val filter = MovementFilter.and(Seq("lastUpdated" -> Some(now.plusSeconds(700).toString())))
 
-      filter.filterMovement(movements) mustBe Seq(m1)
+      filter.filterMovement(movements) mustBe Seq(m2)
     }
 
-    "filter by ERN, LRN and ARC" in {
+    "filter by lastUpdated and include movements with a lastUpdated time that equals the filter time" in {
+      val filter = MovementFilter.and(Seq("lastUpdated" -> Some(now.plusSeconds(500).toString())))
+
+      filter.filterMovement(movements) mustBe Seq(m1, m2)
+    }
+
+    "filter by ERN, LRN, ARC and lastUpdated" in {
       val filter = MovementFilter.and(Seq(
         "lrn" -> Some("2"),
         "ern" -> Some("test2"),
-        "arc" -> Some("arc2")
+        "arc" -> Some("arc2"),
+        "lastUpdated" -> Some(now.toString())
       ))
 
       filter.filterMovement(movements) mustBe Seq(m2)
@@ -107,7 +116,7 @@ class MovementFilterSpec extends PlaySpec {
     }
 
     "there is no filter" in {
-      val filter = MovementFilter.and(Seq("ern" -> None, "lrn" -> None, "arc" -> None))
+      val filter = MovementFilter.and(Seq("ern" -> None, "lrn" -> None, "arc" -> None, "lastUpdated" -> None))
 
       filter.filterMovement(movements) mustBe movements
     }
