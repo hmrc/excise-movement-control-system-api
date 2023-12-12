@@ -91,16 +91,9 @@ class MovementService @Inject()(
                         filter: MovementFilter = MovementFilter.empty
                       ): Future[Seq[Movement]] = {
 
-    val thing = movementRepository.getMovementByERN(ern).map {
+    movementRepository.getMovementByERN(ern).map {
       movements => filter.filterMovement(movements)
     }
-
-    thing.map( t =>
-      println("&*&*&*&*&* " + t.length)
-
-    )
-
-    thing
   }
 
   def updateMovement(message: IEMessage, consignorId: String): Future[Boolean] = {
