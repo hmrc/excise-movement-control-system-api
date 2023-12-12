@@ -51,7 +51,7 @@ case class FilterArc(arc: Option[String] = None) extends Filter {
 case class FilterUpdatedSince(updatedSince: Option[Instant] = None) extends Filter {
   def filter(movements: Seq[Movement]): Seq[Movement] = {
     updatedSince.fold[Seq[Movement]](movements)(a =>
-    movements.filter(o => o.lastUpdated.isAfter(a)))
+    movements.filter(o => o.lastUpdated.isAfter(a) || o.lastUpdated.equals(a)))
   }
 }
 
