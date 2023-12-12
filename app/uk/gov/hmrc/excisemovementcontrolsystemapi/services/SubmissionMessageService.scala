@@ -30,7 +30,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class SubmissionMessageServiceImpl @Inject()(
   connector: EISSubmissionConnector,
   nrsService: NrsService,
-)(implicit ec: ExecutionContext) extends SubmissionMessageService {
+) (implicit val ec: ExecutionContext) extends SubmissionMessageService {
 
   def submit(
     request: ValidatedXmlRequest[_]

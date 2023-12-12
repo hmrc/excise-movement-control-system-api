@@ -25,8 +25,9 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository.mongoIndexes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
-import uk.gov.hmrc.mongo.{MongoComponent, TimestampSupport}
 
 import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Singleton}
@@ -38,7 +39,7 @@ class MovementRepository @Inject()
 (
   mongo: MongoComponent,
   appConfig: AppConfig,
-  timeService: TimestampSupport
+  timeService: DateTimeService
 )(implicit ec: ExecutionContext) extends
   PlayMongoRepository[Movement](
     collectionName = "movements",

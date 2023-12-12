@@ -44,8 +44,13 @@ class GetMessagesControllerSpec extends PlaySpec
   private val movementService = mock[MovementService]
   private val cc = stubControllerComponents()
   private val lrn = "LRN1234"
-  private val dateTimeService = mock[DateTimeService]
+<<<<<<< HEAD
+  private val dateTimeService = mock[TimestampSupport]
   private val timeStamp = LocalDateTime.of(2020, 1, 1, 1, 1, 1, 1)
+=======
+  private val dateTimeService = mock[DateTimeService]
+  private val timeStamp = LocalDateTime.of(2020,1,1,1,1,1,1)
+>>>>>>> 4df5d71 (fixed rebase error)
   private val workItemService = mock[WorkItemService]
   private val emcsUtils = mock[EmcsUtils]
 

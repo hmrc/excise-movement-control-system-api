@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 
-
+import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.{reset, verify, when}
 import org.mongodb.scala.MongoException
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
@@ -32,7 +32,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, F
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService, SubmissionMessageService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, SubmissionMessageService, WorkItemService}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
@@ -56,7 +56,7 @@ class DraftExciseMovementControllerSpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(connector, movementMessageService, workItemService, submissionMessageService)
+    reset(submissionMessageService, movementMessageService, workItemService, submissionMessageService)
 
     when(submissionMessageService.submit(any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
@@ -106,7 +106,7 @@ class DraftExciseMovementControllerSpec
 
       status(result) mustBe ACCEPTED
 
-      verify(connector).submitMessage(any)(any)
+      verify(submissionMessageService).submit(any)(any)
     }
 
     "return an error when EIS error" in {

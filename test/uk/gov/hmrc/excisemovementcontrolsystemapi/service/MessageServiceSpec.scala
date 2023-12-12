@@ -124,8 +124,6 @@ class MessageServiceSpec extends PlaySpec with EitherValues with TestXml {
 
     "throw an error if unsupported message" in {
         override def administrativeReferenceCode: Seq[Option[String]] = Seq(None)
-
-        override def messageIdentifier: String = "fake-id"
       the[RuntimeException] thrownBy
         await(messageService.getErns(UnsupportedTestMessage)) must
         have message "[MessageService] - Unsupported Message Type: any-type"

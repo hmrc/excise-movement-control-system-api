@@ -23,11 +23,10 @@ import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals
 import uk.gov.hmrc.auth.core.retrieve._
 import uk.gov.hmrc.auth.core.{AffinityGroup, AuthConnector, ConfidenceLevel, CredentialRole}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{IdentityData, NonRepudiationSubmissionAccepted, NrsMetadata, NrsPayload}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService.nonRepudiationIdentityRetrievals
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, ErnsMapper, NrsEventIdMapper}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, ErnsMapper, NrsEventIdMapper}
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier, InternalServerException}
 
 import javax.inject.{Inject, Singleton}
@@ -58,7 +57,7 @@ class NrsService @Inject()
     (for {
       identityData <- retrieveIdentityData()
       userAuthToken = retrieveUserAuthToken(headerCarrier)
-      metaData = NrsMetadata.create(payload, emcsUtils,notableEventId, identityData,dateTimeService.nowUtc.toString,
+      metaData = NrsMetadata.create(payload, emcsUtils,notableEventId, identityData, dateTimeService.nowUtc.toString,
         userAuthToken, userHeaderData, exciseNumber)
       encodedPayload = emcsUtils.encode(payload)
       nrsPayload = NrsPayload(encodedPayload, metaData)

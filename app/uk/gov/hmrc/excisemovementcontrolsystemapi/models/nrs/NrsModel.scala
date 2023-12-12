@@ -17,8 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs
 
 import play.api.libs.json._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
-
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 
 final case class NrsSubmissionId(nrsSubmissionId: String)
 

@@ -43,15 +43,16 @@ class EISSubmissionConnector @Inject()
   ernsMapper: ErnsMapper
 )(implicit ec: ExecutionContext) extends EISSubmissionHeaders with Logging {
 
-  def submitMessage(request: ValidatedXmlRequest[NodeSeq])(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
+  def submitMessage(request: ValidatedXmlRequest[_])(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
 
     val timer = metrics.defaultRegistry.timer("emcs.submission.connector.timer").time()
 
     //todo: add retry
     val correlationId = emcsUtils.generateCorrelationId
     val createdDateTime = emcsUtils.getCurrentDateTimeString
-    val wrappedXml = wrapXmlInControlDocument(request.parsedRequest.ieMessage.messageIdentifier, request.body)
-val messageType = request.message.messageType    val encodedMessage = emcsUtils.encode(wrappedXml.toString)
+    val wrappedXml = wrapXmlInControlDocument(request.message.messageIdentifier, request.body.toString)
+    val messageType = request.message.messageType
+    val encodedMessage = emcsUtils.encode(wrappedXml.toString)
 
     val ern = ernsMapper.getSingleErnFromMessage(request.message, request.validErns)
     val eisRequest = EISSubmissionRequest(ern, messageType, encodedMessage)
@@ -77,16 +78,20 @@ val messageType = request.message.messageType    val encodedMessage = emcsUtils.
       }
   }
 
-  private def wrapXmlInControlDocument(messageIdentifier: String, innerXml: NodeSeq): NodeSeq = {
+  private def wrapXmlInControlDocument(messageIdentifier: String, innerXml: String): NodeSeq = {
     <con:Control xmlns:con="http://www.govtalk.gov.uk/taxation/InternationalTrade/Common/ControlDocument">
       <con:MetaData>
-        <con:MessageId>{messageIdentifier}</con:MessageId>
-        <con:Source>{Headers.APIPSource}</con:Source>
+        <con:MessageId>
+          {messageIdentifier}
+        </con:MessageId>
+        <con:Source>
+          {Headers.APIPSource}
+        </con:Source>
       </con:MetaData>
       <con:OperationRequest>
         <con:Parameters>
           <con:Parameter Name="message">
-            {scala.xml.PCData(innerXml.toString)}
+            {scala.xml.PCData(innerXml)}
           </con:Parameter>
         </con:Parameters>
         <con:ReturnData>
@@ -94,4 +99,5 @@ val messageType = request.message.messageType    val encodedMessage = emcsUtils.
         </con:ReturnData>
       </con:OperationRequest>
     </con:Control>
+  }
 }

@@ -23,9 +23,8 @@ import play.api.libs.concurrent.Futures
 import play.api.libs.json.JsObject
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.XApiKeyHeaderKey
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NonRepudiationSubmissionAccepted, NrsPayload}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.Retrying
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{EmcsUtils, Retrying}
 import uk.gov.hmrc.http.HttpReads.is2xx
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 

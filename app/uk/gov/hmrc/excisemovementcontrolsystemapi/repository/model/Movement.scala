@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model
 
 import play.api.libs.json.{Format, Json, OFormat}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 import java.time.Instant
@@ -46,7 +47,7 @@ object Message {
   def apply(
              encodedMessage: String,
              messageType: String,
-             createdOn: Instant): Message = {
+             dateTimeService: DateTimeService): Message = {
 
     Message(encodedMessage.hashCode(), encodedMessage, messageType, createdOn)
   }

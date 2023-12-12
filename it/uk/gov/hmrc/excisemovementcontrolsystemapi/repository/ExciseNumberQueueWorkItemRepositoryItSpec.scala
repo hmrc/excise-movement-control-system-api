@@ -27,8 +27,7 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils
-import uk.gov.hmrc.mongo.TimestampSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, TestUtils}
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.InProgress
 import uk.gov.hmrc.mongo.workitem.WorkItem
@@ -47,7 +46,7 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val appConfig = app.injector.instanceOf[AppConfig]
-  private val dateTimeService = mock[TimestampSupport]
+  private val dateTimeService = mock[DateTimeService]
   private val timestamp = Instant.parse("2018-11-30T18:35:24.00Z")
 
   protected override val repository = new ExciseNumberQueueWorkItemRepository(

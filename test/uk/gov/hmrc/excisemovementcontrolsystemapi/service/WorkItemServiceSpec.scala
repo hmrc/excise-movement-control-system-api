@@ -28,8 +28,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ExciseNumberQueueWorkItemRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.WorkItemService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{Failed, InProgress, ToDo}
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
@@ -44,7 +44,7 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
 
   private val mockWorkItemRepo = mock[ExciseNumberQueueWorkItemRepository]
-  private val timestampSupport = mock[TimestampSupport]
+  private val timestampSupport = mock[DateTimeService]
   private val appConfig = mock[AppConfig]
   private val timestamp = Instant.parse("2023-11-30T18:35:24.00Z")
   private val timestampPlusFastInterval = timestamp.plusSeconds(3 * 60)

@@ -16,20 +16,10 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+trait StringSupport {
 
-import scala.xml.NodeSeq
+  def clean(str: String): String = {
+    str.replaceAll("[\\t\\n\\r\\s]+", "")
+  }
 
-object UnsupportedTestMessage extends IEMessage {
-  override def consigneeId: Option[String] = None
-
-  override def administrativeReferenceCode: Option[String] = None
-
-  override def messageType: String = "any-type"
-
-  override def toXml: NodeSeq = NodeSeq.Empty
-
-  override def lrnEquals(lrn: String): Boolean = false
-
-  override def messageIdentifier: String = "message-id"
 }

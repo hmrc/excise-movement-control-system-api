@@ -26,8 +26,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
-import uk.gov.hmrc.mongo.TimestampSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -36,7 +35,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class MovementService @Inject()(
                                  movementRepository: MovementRepository,
                                  emcsUtils: EmcsUtils,
-                                 timestampSupport: TimestampSupport
+                                 timestampSupport: DateTimeService
                                )(implicit ec: ExecutionContext) extends Logging {
   def saveNewMovement(movement: Movement): Future[Either[Result, Movement]] = {
 

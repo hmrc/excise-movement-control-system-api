@@ -56,8 +56,6 @@ trait Retrying extends Logging {
           case f @ Failure(ex) =>
              logger.error(s"[Retrying] - EMCS_API_RETRY error when retrying: url $url with message ${ex.getMessage}", ex)
             retryIfPossible(f)
-            //todo: is this unreachable code?
-          case Failure(e) => Future.failed(e)
         }
       }
     }

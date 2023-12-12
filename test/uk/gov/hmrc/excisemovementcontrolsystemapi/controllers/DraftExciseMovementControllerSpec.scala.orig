@@ -19,10 +19,9 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 <<<<<<< HEAD
 
-import org.mockito.ArgumentMatchersSugar.any
 =======
-import akka.actor.ActorSystem
->>>>>>> d948446 (added NRS connector)
+import org.mockito.ArgumentMatchersSugar.any
+>>>>>>> 4df5d71 (fixed rebase error)
 import org.mockito.MockitoSugar.{reset, verify, when}
 import org.mongodb.scala.MongoException
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
@@ -37,7 +36,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, F
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService, SubmissionMessageService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, SubmissionMessageService, WorkItemService}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
@@ -52,12 +51,7 @@ class DraftExciseMovementControllerSpec
     with EitherValues {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-<<<<<<< HEAD
-  private val connector = mock[EISSubmissionConnector]
-=======
-  implicit val sys: ActorSystem = ActorSystem("DraftExciseMovementControllerSpec")
   private val submissionMessageService = mock[SubmissionMessageService]
->>>>>>> d948446 (added NRS connector)
   private val movementMessageService = mock[MovementService]
   private val cc = stubControllerComponents()
   private val request = createRequest(IE815)
@@ -66,7 +60,7 @@ class DraftExciseMovementControllerSpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(connector, movementMessageService, workItemService, submissionMessageService)
+    reset(submissionMessageService, movementMessageService, workItemService, submissionMessageService)
 
     when(submissionMessageService.submit(any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
@@ -116,7 +110,7 @@ class DraftExciseMovementControllerSpec
 
       status(result) mustBe ACCEPTED
 
-      verify(connector).submitMessage(any)(any)
+      verify(submissionMessageService).submit(any)(any)
     }
 
     "return an error when EIS error" in {
@@ -166,12 +160,7 @@ class DraftExciseMovementControllerSpec
     new DraftExciseMovementController(
       FakeFailingAuthentication,
       FakeSuccessXMLParser,
-<<<<<<< HEAD
       FakeSuccessfulValidateErnInMessageAction(mockIeMessage),
-      connector,
-=======
-      FakeSuccessfulValidateErnsAction(mockIeMessage),
->>>>>>> d948446 (added NRS connector)
       movementMessageService,
       workItemService,
       submissionMessageService,
@@ -182,12 +171,7 @@ class DraftExciseMovementControllerSpec
     new DraftExciseMovementController(
       FakeSuccessAuthentication,
       FakeFailureXMLParser,
-<<<<<<< HEAD
       FakeSuccessfulValidateErnInMessageAction(mockIeMessage),
-      connector,
-=======
-      FakeSuccessfulValidateErnsAction(mockIeMessage),
->>>>>>> d948446 (added NRS connector)
       movementMessageService,
       workItemService,
       submissionMessageService,
@@ -198,12 +182,7 @@ class DraftExciseMovementControllerSpec
     new DraftExciseMovementController(
       FakeSuccessAuthentication,
       FakeSuccessXMLParser,
-<<<<<<< HEAD
       FakeSuccessfulValidateErnInMessageAction(mockIeMessage),
-      connector,
-=======
-      FakeSuccessfulValidateErnsAction(mockIeMessage),
->>>>>>> d948446 (added NRS connector)
       movementMessageService,
       workItemService,
       submissionMessageService,
@@ -214,12 +193,7 @@ class DraftExciseMovementControllerSpec
     new DraftExciseMovementController(
       FakeSuccessAuthentication,
       FakeSuccessXMLParser,
-<<<<<<< HEAD
       FakeFailureValidateErnInMessageAction,
-      connector,
-=======
-      FakeFailureValidateErnsAction,
->>>>>>> d948446 (added NRS connector)
       movementMessageService,
       workItemService,
       submissionMessageService,

@@ -23,7 +23,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService, NrsService, SubmissionMessageService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, SubmissionMessageService, WorkItemService}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -56,6 +56,8 @@ class DraftExciseMovementController @Inject()(
   private def handleSuccess(implicit request: ValidatedXmlRequest[NodeSeq]): Future[Result] = {
 
     val newMovement: Movement = createMovementFomMessage(request.message)
+    workItemService.addWorkItemForErn(newMovement.consignorId, fastMode = true)
+
     movementMessageService.saveNewMovement(newMovement).map {
       case Right(m) => Accepted(Json.toJson(ExciseMovementResponse("Accepted", m.localReferenceNumber, m.consignorId, m.consigneeId)))
       case Left(error) => error
@@ -73,11 +75,6 @@ class DraftExciseMovementController @Inject()(
       case _ =>
         throw new Exception(s"[DraftExciseMovementController] - invalid message sent to draft excise movement controller, message type: ${message.messageType}")
     }
-    val ern = newMovement.consignorId
-
-    workItemService.addWorkItemForErn(ern, fastMode = true)
-
-
   }
 
 }

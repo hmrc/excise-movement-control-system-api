@@ -22,7 +22,7 @@ import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ExciseNumberQueueWorkItemRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
-import uk.gov.hmrc.mongo.TimestampSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
@@ -36,7 +36,7 @@ class WorkItemService @Inject()
 (
   workItemRepository: ExciseNumberQueueWorkItemRepository,
   appConfig: AppConfig,
-  timestampService: TimestampSupport
+  timestampService: DateTimeService
 )(implicit val executionContext: ExecutionContext) extends Logging {
 
   def addWorkItemForErn(ern: String, fastMode: Boolean): Future[Boolean] = {

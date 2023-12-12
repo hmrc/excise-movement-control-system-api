@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction, ValidateErnInMessageAction, ValidateLRNAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{SubmissionMessageService, WorkItemService}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.ErnsMapper
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -34,7 +34,7 @@ class SubmitMessageController @Inject()(
                                          validateLRNAction: ValidateLRNAction,
                                          submissionMessageService: SubmissionMessageService,
                                          workItemService: WorkItemService,
-                                         emcsUtils: EmcsUtils,
+                                         ernsMapper: ErnsMapper,
                                          cc: ControllerComponents
                                        )(implicit ec: ExecutionContext)
   extends BackendController(cc) {
@@ -46,11 +46,11 @@ class SubmitMessageController @Inject()(
       andThen validateErnInMessageAction
       andThen validateLRNAction(lrn)).async(parse.xml) {
       implicit request =>
-        val ern = emcsUtils.getSingleErnFromMessage(request.parsedRequest.ieMessage, request.validErns)
+        val ern = ernsMapper.getSingleErnFromMessage(request.message, request.validErns)
 
         workItemService.addWorkItemForErn(ern, fastMode = true)
 
-	submissionMessageService.submit(request).flatMap {
+        submissionMessageService.submit(request).flatMap {
           case Right(_) => Future.successful(Accepted(""))
           case Left(error) => Future.successful(error)
         }

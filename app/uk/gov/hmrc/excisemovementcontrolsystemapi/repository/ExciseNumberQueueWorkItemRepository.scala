@@ -21,9 +21,10 @@ import org.mongodb.scala.model.Updates.{combine, set}
 import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.Codecs
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem, WorkItemFields, WorkItemRepository}
-import uk.gov.hmrc.mongo.{MongoComponent, TimestampSupport}
 
 import java.time.{Duration, Instant}
 import java.util.concurrent.TimeUnit
@@ -35,7 +36,7 @@ class ExciseNumberQueueWorkItemRepository @Inject()
 (
   appConfig: AppConfig,
   mongoComponent: MongoComponent,
-  timeService: TimestampSupport
+  timeService: DateTimeService
 )(implicit ec: ExecutionContext) extends WorkItemRepository[ExciseNumberWorkItem](
   collectionName = "excise-number-work-item",
   mongoComponent = mongoComponent,

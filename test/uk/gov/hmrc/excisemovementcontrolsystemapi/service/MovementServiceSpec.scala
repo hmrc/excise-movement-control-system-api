@@ -31,9 +31,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.TimestampSupport
 
 import java.nio.charset.StandardCharsets
 import java.time.{Instant, LocalDateTime}
@@ -49,7 +48,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
   private val emcsUtils = mock[EmcsUtils]
   private val testDateTime: LocalDateTime = LocalDateTime.of(2023, 11, 15, 17, 2, 34)
   when(emcsUtils.getCurrentDateTime).thenReturn(testDateTime)
-  private val dateTimeService = mock[TimestampSupport]
+  private val dateTimeService = mock[DateTimeService]
   when(dateTimeService.timestamp()).thenReturn(Instant.parse("2023-11-15T17:02:34.00Z"))
 
   private val movementService = new MovementService(mockMovementRepository, emcsUtils, dateTimeService)

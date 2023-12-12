@@ -31,7 +31,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, F
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{SubmissionMessageService, WorkItemService}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{EmcsUtils, ErnsMapper}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
@@ -51,7 +51,7 @@ class SubmitMessageControllerSpec
   private val ieMessage = mock[IEMessage]
   private val submissionMessageService = mock[SubmissionMessageService]
   private val workItemService = mock[WorkItemService]
-  private val emcsUtils = mock[EmcsUtils]
+  private val ernsMapper = mock[ErnsMapper]
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -59,11 +59,8 @@ class SubmitMessageControllerSpec
 
     when(submissionMessageService.submit(any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
-
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
-
-    when(emcsUtils.getSingleErnFromMessage(any, any)).thenReturn("testErn")
-
+    when(ernsMapper.getSingleErnFromMessage(any, any)).thenReturn("testErn")
   }
 
   "submit" should {
@@ -137,7 +134,7 @@ class SubmitMessageControllerSpec
 
       status(result) mustBe ACCEPTED
 
-      verify(connector).submitMessage(any)(any)
+      verify(submissionMessageService).submit(any)(any)
     }
 
   }
@@ -150,7 +147,7 @@ class SubmitMessageControllerSpec
       FakeSuccessfulValidateLRNAction,
       submissionMessageService,
       workItemService,
-      emcsUtils,
+      ernsMapper,
       cc
     )
 
@@ -168,7 +165,7 @@ class SubmitMessageControllerSpec
       FakeFailureValidateLRNAction,
       submissionMessageService,
       workItemService,
-      emcsUtils,
+      ernsMapper,
       cc
     )
 
@@ -180,7 +177,7 @@ class SubmitMessageControllerSpec
       FakeFailureValidateLRNAction,
       submissionMessageService,
       workItemService,
-      emcsUtils,
+      ernsMapper,
       cc
     )
 
@@ -192,7 +189,7 @@ class SubmitMessageControllerSpec
       FakeFailureValidateLRNAction,
       submissionMessageService,
       workItemService,
-      emcsUtils,
+      ernsMapper,
       cc
     )
 
@@ -204,7 +201,7 @@ class SubmitMessageControllerSpec
       FakeFailureValidateLRNAction,
       submissionMessageService,
       workItemService,
-      emcsUtils,
+      ernsMapper,
       cc
     )
 

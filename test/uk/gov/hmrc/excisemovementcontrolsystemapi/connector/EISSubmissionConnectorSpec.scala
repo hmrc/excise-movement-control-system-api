@@ -35,20 +35,23 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.StringSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest, ValidatedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionRequest, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.ErnsMapper
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{EmcsUtils, ErnsMapper}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
-import java.nio.charset.StandardCharsets
 import java.time.LocalDateTime
-import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
+import scala.xml.{Elem, NodeSeq}
 
-class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with EitherValues {
+class EISSubmissionConnectorSpec
+  extends PlaySpec
+    with StringSupport
+    with BeforeAndAfterEach
+    with EitherValues {
 
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
   protected implicit val ec: ExecutionContext = ExecutionContext.global
@@ -62,7 +65,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
   private val connector = new EISSubmissionConnector(mockHttpClient, emcsUtils, appConfig, metrics, new ErnsMapper)
   private val emcsCorrelationId = "1234566"
   private val xml = <IE815></IE815>
-  private val controlWrappedXml =
+  private val controlWrappedXml: Elem =
     <con:Control xmlns:con="http://www.govtalk.gov.uk/taxation/InternationalTrade/Common/ControlDocument">
       <con:MetaData>
         <con:MessageId>DummyIdentifier</con:MessageId>
@@ -86,7 +89,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(mockHttpClient, appConfig, metrics, timerContext)
+    reset(mockHttpClient, appConfig, metrics, timerContext, emcsUtils)
 
     when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "Success", emcsCorrelationId))))
@@ -97,7 +100,9 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
     when(ie815Message.messageType).thenReturn("IE815")
     when(ie815Message.consignorId).thenReturn("123")
-    when(emcsUtils.getSingleErnFromMessage(any, any)).thenReturn("123")
+    //todo: dalate
+    //when(emcsUtils.getSingleErnFromMessage(any, any)).thenReturn("123")
+    when(emcsUtils.encode(any)).thenReturn("encode-message")
     when(ie815Message.messageIdentifier).thenReturn("DummyIdentifier")
 
   }
@@ -116,10 +121,7 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
     }
 
     "send a request with the right parameters" in {
-      val controlDocAsString = controlWrappedXml.toString
-      val expectedEncodedMessage = Base64.getEncoder.encodeToString(controlDocAsString.getBytes(StandardCharsets.UTF_8))
-      when(emcsUtils.encode(controlDocAsString)).thenReturn(expectedEncodedMessage)
-      val expectedRequest = EISSubmissionRequest("123", "IE815", expectedEncodedMessage)
+      val expectedRequest = EISSubmissionRequest("123", "IE815", "encode-message")
 
       submitExciseMovementWithParams(xml, ie815Message, Set("123"), Set("123"))
 
@@ -128,6 +130,15 @@ class EISSubmissionConnectorSpec extends PlaySpec with BeforeAndAfterEach with E
         eqTo(expectedRequest),
         eqTo(expectedHeader)
       )(any, any, any, any)
+    }
+
+    "wrap the xml in the control document" in {
+      submitExciseMovementWithParams(xml, ie815Message, Set("123"), Set("123"))
+
+      val captor = ArgCaptor[String]
+      verify(emcsUtils).encode(captor.capture)
+
+      clean(captor.value) mustBe clean(controlWrappedXml.toString)
     }
 
     "use the right request parameters in http client" in {

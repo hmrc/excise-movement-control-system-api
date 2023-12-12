@@ -35,8 +35,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionRespo
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, MovementRepository}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils
-import uk.gov.hmrc.mongo.TimestampSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, TestUtils}
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, DefaultPlayMongoRepositorySupport}
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
@@ -63,7 +62,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
   private val showNewMessageUrl = "/apip-emcs/messages/v1/show-new-messages"
   private val messageReceiptUrl = "/apip-emcs/messages/v1/message-receipt?exciseregistrationnumber="
 
-  private lazy val timeService = mock[TimestampSupport]
+  private lazy val timeService = mock[DateTimeService]
   // The DB truncates it to milliseconds so to make exact comparisons in the asserts we need to ditch the nanos
   private val availableBefore = Instant.now.truncatedTo(ChronoUnit.MILLIS)
   when(timeService.timestamp()).thenReturn(availableBefore)
@@ -97,7 +96,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       .configure(configureServer ++ Map("mongodb.uri" -> mongoUri))
       .loadConfig(env => Configuration.load(env, Map("config.resource" -> "application.test.conf")))
       .overrides(
-        bind[TimestampSupport].to(timeService)
+        bind[DateTimeService].to(timeService)
       )
 
   }

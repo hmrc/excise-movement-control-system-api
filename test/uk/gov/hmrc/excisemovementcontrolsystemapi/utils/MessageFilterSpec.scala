@@ -21,10 +21,9 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.NewMessagesXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
-import uk.gov.hmrc.mongo.TimestampSupport
 
 import java.nio.charset.StandardCharsets
 import java.time.{Instant, LocalDateTime}
@@ -32,7 +31,7 @@ import java.util.Base64
 
 class MessageFilterSpec extends PlaySpec with NewMessagesXml {
 
-  private val dateTimeService = mock[TimestampSupport]
+  private val dateTimeService = mock[DateTimeService]
   private val emcsUtils = new EmcsUtils
   private val messageFactory = new IEMessageFactory
 
