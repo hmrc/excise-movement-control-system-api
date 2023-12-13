@@ -35,7 +35,7 @@ import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{AuthTestSupport, StringSupport}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, SubmitMessageTestSupport, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
@@ -55,6 +55,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
   with WireMockServerSpec
   with RepositoryTestStub
   with SubmitMessageTestSupport
+  with StringSupport
   with BeforeAndAfterAll
   with BeforeAndAfterEach {
 
@@ -211,7 +212,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
       val response = postRequest(IE818)
 
-      cleanUpString(response.body) mustBe cleanUpString(rimValidationErrorResponse(messageWithoutControlDoc))
+      clean(response.body) mustBe clean(rimValidationErrorResponse(messageWithoutControlDoc))
 
     }
 
@@ -361,7 +362,4 @@ class SubmitMessageControllerItSpec extends PlaySpec
     )
   }
 
-  private def cleanUpString(str: String): String = {
-    str.replaceAll("[\\t\\n\\r\\s]+", "")
-  }
 }

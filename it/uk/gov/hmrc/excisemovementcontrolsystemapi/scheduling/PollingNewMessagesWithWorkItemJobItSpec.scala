@@ -30,6 +30,7 @@ import play.api.libs.json.Json
 import play.api.{Application, Configuration}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{NewMessagesXml, SchedulingTestData}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.StringSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.WireMockServerSpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptResponse, MessageTypes}
@@ -53,6 +54,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
   with NewMessagesXml
   with MockitoSugar
   with ScalaFutures
+  with StringSupport
   with Eventually
   with IntegrationPatience
   with BeforeAndAfterEach
@@ -302,7 +304,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
   private def decodeAndCleanUpMessage(messages: Seq[Message]): Seq[String] = {
     messages
       .map(o => Base64.getDecoder.decode(o.encodedMessage).map(_.toChar).mkString)
-      .map(cleanUpString)
+      .map(clean)
   }
 
   private def setUpWireMockStubs(): Unit = {
@@ -417,10 +419,6 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
           )).toString()
         ))
     )
-  }
-
-  private def cleanUpString(str: String): String = {
-    str.replaceAll("[\\t\\n\\r\\s]+", "")
   }
 
   private def createWorkItem(ern: String): WorkItem[ExciseNumberWorkItem] = {

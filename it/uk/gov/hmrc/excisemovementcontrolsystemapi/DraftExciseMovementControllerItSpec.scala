@@ -35,7 +35,7 @@ import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{AuthTestSupport, StringSupport}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, SubmitMessageTestSupport, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
@@ -56,6 +56,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   with WireMockServerSpec
   with SubmitMessageTestSupport
   with RepositoryTestStub
+  with StringSupport
   with Eventually
   with IntegrationPatience
   with BeforeAndAfterAll
@@ -171,7 +172,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       stubEISErrorResponse(BAD_REQUEST, rimValidationErrorResponse(messageWithControlDoc))
 
       val response = postRequest(IE815)
-      cleanUpString(response.body) mustBe cleanUpString(rimValidationErrorResponse(messageWithoutControlDoc))
+      clean(response.body) mustBe clean(rimValidationErrorResponse(messageWithoutControlDoc))
     }
 
     "return 500 if EIS returns 500" in {
@@ -315,9 +316,5 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
             .withStatus(INTERNAL_SERVER_ERROR)
         )
     )
-  }
-
-  private def cleanUpString(str: String): String = {
-    str.replaceAll("[\\t\\n\\r\\s]+", "")
   }
 }
