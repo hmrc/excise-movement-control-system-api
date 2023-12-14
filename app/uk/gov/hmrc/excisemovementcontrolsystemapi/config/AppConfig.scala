@@ -28,7 +28,6 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   val appName: String = config.get[String]("appName")
 
   lazy val eisHost: String = servicesConfig.baseUrl("eis")
-  lazy val systemApplication: String = config.get[String]("system.application")
 
   lazy val interval: FiniteDuration = config.getOptional[String]("scheduler.pollingNewMessageJob.interval")
     .map(Duration.create(_).asInstanceOf[FiniteDuration])
