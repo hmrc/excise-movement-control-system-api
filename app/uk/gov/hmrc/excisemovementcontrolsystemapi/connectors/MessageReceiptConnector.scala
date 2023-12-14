@@ -48,7 +48,7 @@ class MessageReceiptConnector @Inject()
     httpClient.PUTString[HttpResponse](
       appConfig.messageReceiptUrl(ern),
       "",
-      build(correlationId, dateTime, appConfig.messageReceiptBearerToken)
+      build(correlationId, dateTime, appConfig.messagesBearerToken)
     ).map {
       response =>
         extractIfSuccessful[MessageReceiptResponse](response) match {
