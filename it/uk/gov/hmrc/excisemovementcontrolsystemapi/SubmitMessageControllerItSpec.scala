@@ -35,7 +35,7 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, SubmitMessageTestSupport, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, MovementRepository}
@@ -52,6 +52,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
   with TestXml
   with WireMockServerSpec
   with RepositoryTestStub
+  with SubmitMessageTestSupport
   with BeforeAndAfterAll
   with BeforeAndAfterEach {
 
@@ -224,25 +225,12 @@ class SubmitMessageControllerItSpec extends PlaySpec
     }
 
     "remove control document references in any paths for a BAD_REQUEST" in {
-      val eisErrorResponse = "{\"message\": \"Validation error(s) occurred\",\"errors\": [" +
-        "{\"errorCode\": 8084," +
-        "\"errorMessage\": \"The Date of Dispatch you entered is incorrect. It must be today or later. Please amend your entry and resubmit.\"," +
-        "\"location\": \"/con:Control[1]/con:OperationRequest[1]/con:Parameters[1]/con:Parameter[1]/urn:IE815[1]/urn:Body[1]/urn:SubmittedDraftOfEADESAD[1]/urn:EadEsadDraft[1]/urn:DateOfDispatch[1]\"," +
-        "\"value\": \"2023-12-05\"}]}"
-
-      val apiErrorResponse = "{\"message\": \"Validation error(s) occurred\",\"errors\": [" +
-        "{\"errorCode\": 8084," +
-        "\"errorMessage\": \"The Date of Dispatch you entered is incorrect. It must be today or later. Please amend your entry and resubmit.\"," +
-        "\"location\": \"/urn:IE815[1]/urn:Body[1]/urn:SubmittedDraftOfEADESAD[1]/urn:EadEsadDraft[1]/urn:DateOfDispatch[1]\"," +
-        "\"value\": \"2023-12-05\"}]}"
-
       withAuthorizedTrader("GBWK002281023")
-      stubEISErrorResponse(BAD_REQUEST, eisErrorResponse)
+      stubEISErrorResponse(BAD_REQUEST, rimValidationErrorResponse(messageWithControlDoc))
 
       val response = postRequest(IE818)
-      //Calling body directly is causing everything to be wrapped in extra strings which is confusing
-      //Hence getting the json as a string directly
-      cleanUpString(response.json.as[String]) mustBe cleanUpString(apiErrorResponse)
+
+      cleanUpString(response.body) mustBe cleanUpString(rimValidationErrorResponse(messageWithoutControlDoc))
 
     }
 

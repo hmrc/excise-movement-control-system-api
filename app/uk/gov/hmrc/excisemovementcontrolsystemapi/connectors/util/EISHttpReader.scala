@@ -22,8 +22,10 @@ import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, EISSubmissionResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, EISSubmissionResponse, RimValidationErrorResponse}
 import uk.gov.hmrc.http.{HttpReads, HttpResponse}
+
+import scala.util.{Success, Try}
 
 class EISHttpReader(
                      val correlationId: String,
@@ -49,15 +51,23 @@ class EISHttpReader(
     logger.warn(EISErrorMessage(createdDateTime, ern, response.body, correlationId, MessageTypes.IE815.value))
 
     val messageAsJson = response.json
+
     response.status match {
-      case BAD_REQUEST =>
-        BadRequest(Json.toJson(removeControlDocumentReferences(messageAsJson.toString)))
+      case BAD_REQUEST => extractValidJson(response)
       case NOT_FOUND => NotFound(messageAsJson)
       case SERVICE_UNAVAILABLE => ServiceUnavailable(messageAsJson)
       case _ => InternalServerError(messageAsJson)
     }
   }
 
+  private def extractValidJson(response: HttpResponse): Result = {
+    Try(jsonAs[RimValidationErrorResponse](response.body)) match {
+      case Success(value) =>
+        val errors = value.validatorResults.map(o => o.copy(errorLocation = removeControlDocumentReferences(o.errorLocation)))
+        BadRequest(Json.toJson(value.copy(validatorResults = errors)))
+      case _ => BadRequest(response.json)
+    }
+  }
 }
 
 object EISHttpReader {
