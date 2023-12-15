@@ -118,7 +118,7 @@ class MovementService @Inject()(
     (movementWithArc, movementWithLrn) match {
       case (Some(mArc), _) => saveDistinctMessage(mArc, message, messageArc)
       case (None, Some(mLrn)) => saveDistinctMessage(mLrn, message, messageArc)
-      case _ => throw new RuntimeException(s"[MovementService] - Cannot retrieve a movement. Local reference number or administration reference code are not present for ERN: $ern")
+      case _ => throw new RuntimeException(s"[MovementService] - Cannot retrieve a movement. Local reference number or administration reference code are not present for ERN: $ern, message: ${message.messageType}")
     }
   }
 
