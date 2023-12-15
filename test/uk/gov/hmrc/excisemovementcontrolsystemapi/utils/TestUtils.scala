@@ -17,6 +17,8 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
 
 import org.bson.types.ObjectId
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
@@ -39,4 +41,40 @@ object TestUtils {
     )
   }
 
+  def getPreValidateTraderSuccessResponse: PreValidateTraderResponse = PreValidateTraderResponse(
+    ExciseTraderValidationResponse("2021-12-17T09:31:12Z",
+      Array(ExciseTraderResponse("GBWK002281023", "UK Record", validTrader = true, "1",
+        ValidateProductAuthorisationResponse(true)
+      ))))
+
+  def getPreValidateTraderErrorResponse: PreValidateTraderErrorResponse = PreValidateTraderErrorResponse(
+    validationTimeStamp = "2021-12-17T09:31:12Z",
+    exciseTraderResponse = Array(ExciseTraderErrorResponse(
+      validTrader = false,
+      exciseRegistrationNumber = "GBWK000000000",
+      traderType = None,
+      entityGroup = "UK Record",
+      errorCode = Some("6"),
+      errorText = Some("Not Found"),
+      validateProductAuthorisationResponse = Some(ValidateProductAuthorisationErrorResponse(
+        valid = false,
+        productError = Some(Seq(ProductError(
+          errorCode = "1",
+          errorText = "Unrecognised EPC",
+          exciseProductCode = "S200"
+        )))
+      )
+      ))
+    )
+  )
+
+  def getPreValidateTraderRequest: PreValidateTraderRequest = PreValidateTraderRequest(
+    ExciseTraderValidationRequest(
+      ExciseTraderRequest(
+        "GBWK002281023",
+        "UK Record",
+        Seq(ValidateProductAuthorisationRequest(ExciseProductCode("W200")))
+      )
+    )
+  )
 }

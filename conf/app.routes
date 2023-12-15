@@ -4,3 +4,4 @@ POST       /movements                  uk.gov.hmrc.excisemovementcontrolsystemap
 GET        /movements                  uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.GetMovementsController.getMovements(ern: Option[String], lrn: Option[String], arc: Option[String])
 GET        /movements/:lrn/messages    uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.GetMessagesController.getMessagesForMovement(lrn: String)
 POST       /movements/:lrn/messages    uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubmitMessageController.submit(lrn: String)
+POST       /traders/pre-validate       uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.PreValidateTraderController.submit
