@@ -54,7 +54,7 @@ trait Retrying extends Logging {
           case Success(response) if Status.isSuccessful(response.status) => Future.successful(response)
           case s: Success[HttpResponse] => retryIfPossible(s)
           case f @ Failure(ex) =>
-             logger.error(s"[Retrying] - EMCS_API_RETRY error when retrying: url $url with message ${ex.getMessage}", ex)
+             logger.warn(s"[Retrying] - EMCS_API_RETRY error when retrying: url $url with message ${ex.getMessage}", ex)
             retryIfPossible(f)
         }
       }

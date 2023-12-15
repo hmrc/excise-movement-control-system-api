@@ -43,12 +43,11 @@ class EISSubmissionConnector @Inject()
   ernsMapper: ErnsMapper
 )(implicit ec: ExecutionContext) extends EISSubmissionHeaders with Logging {
 
-  def submitMessage(request: ValidatedXmlRequest[_])(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
+  def submitMessage(request: ValidatedXmlRequest[_], correlationId: String)(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
 
     val timer = metrics.defaultRegistry.timer("emcs.submission.connector.timer").time()
 
     //todo: add retry
-    val correlationId = emcsUtils.generateCorrelationId
     val createdDateTime = emcsUtils.getCurrentDateTimeString
     val wrappedXml = wrapXmlInControlDocument(request.message.messageIdentifier, request.body.toString)
     val messageType = request.message.messageType

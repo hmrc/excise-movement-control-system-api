@@ -24,7 +24,7 @@ import play.api.libs.json.JsObject
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.XApiKeyHeaderKey
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NonRepudiationSubmissionAccepted, NrsPayload}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{EmcsUtils, Retrying}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.Retrying
 import uk.gov.hmrc.http.HttpReads.is2xx
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
@@ -36,15 +36,13 @@ class NrsConnector @Inject()
 (
     httpClient: HttpClient,
     appConfig: AppConfig,
-    emcsUtils: EmcsUtils,
     metrics: Metrics
 )(implicit val ec: ExecutionContext, val futures: Futures) extends Retrying with Logging
 {
 
-  def sendToNrs(payload: NrsPayload)(implicit hc: HeaderCarrier): Future[Either[Int, NonRepudiationSubmissionAccepted]] = {
+  def sendToNrs(payload: NrsPayload,  correlationId: String)(implicit hc: HeaderCarrier): Future[Either[Int, NonRepudiationSubmissionAccepted]] = {
 
     val timer = metrics.defaultRegistry.timer("emcs.nrs.submission.timer").time()
-    val correlationId = emcsUtils.generateCorrelationId
     val jsonObject = payload.toJsObject
 
     retry(appConfig.nrsRetries, canRetry, appConfig.getNrsSubmissionUrl) { retryAttempt: Int =>
@@ -58,7 +56,7 @@ class NrsConnector @Inject()
           Right(submissionId)
         case _ =>
           //todo: Add explicit audit error
-          logger.error(s"[NrsConnector] - Error when submitting to Non repudiation system (NRS) with status: ${response.status}, correlationId: $correlationId")
+          logger.warn(s"[NrsConnector] - Error when submitting to Non repudiation system (NRS) with status: ${response.status}, correlationId: $correlationId")
           Left(response.status)
       }
     }

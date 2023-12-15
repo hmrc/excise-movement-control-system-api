@@ -25,7 +25,7 @@ class ErnsMapper {
 
    We are trying to get the ERN to use in the logs here, so want the one that is both in the auth and the message
  */
-  def getSingleErnFromMessage(message: IEMessage, validErns: Set[String]) = {
+  def getSingleErnFromMessage(message: IEMessage, validErns: Set[String]): String = {
     message match {
       case x: IE801Message => matchErn(x.consignorId, x.consigneeId, validErns, x.messageType)
       //For 810 & 813 we have no ERN in message so just use auth

@@ -37,7 +37,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
 import java.time.ZonedDateTime
-import java.util.UUID
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -56,7 +55,7 @@ class NrsConnectorSpec
   private val appConfig = mock[AppConfig]
   private val emcsUtils = mock[EmcsUtils]
   private val metrics = mock[Metrics](RETURNS_DEEP_STUBS)
-  private val connector = new NrsConnector(httpClient, appConfig, emcsUtils, metrics)
+  private val connector = new NrsConnector(httpClient, appConfig, metrics)
   private val timerContext = mock[Timer.Context]
   private val timeStamp = ZonedDateTime.now()
 
@@ -92,13 +91,11 @@ class NrsConnectorSpec
     ))
     when(futures.delay(any)).thenReturn(Future.successful(Done))
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
-    when(emcsUtils.generateCorrelationId).thenReturn(
-      UUID.fromString("00000000-0000-0001-0000-000000000001").toString)
   }
 
   "submit" should {
     "return success" in {
-      val result = connector.sendToNrs(nrsPayLoad).futureValue
+      val result = connector.sendToNrs(nrsPayLoad, "correlationId").futureValue
 
       result mustBe Right(NonRepudiationSubmissionAccepted("testNesSubmissionId"))
     }
@@ -108,7 +105,7 @@ class NrsConnectorSpec
       when(httpClient.POST[Any,Any](any,any,any)(any,any,any,any))
         .thenReturn(Future.successful(HttpResponse(400, JsObject.empty.toString())))
 
-      val result = connector.sendToNrs(nrsPayLoad).futureValue
+      val result = connector.sendToNrs(nrsPayLoad, "correlationId").futureValue
 
       result.left.value mustBe 400
     }
@@ -118,7 +115,7 @@ class NrsConnectorSpec
         when(httpClient.POST[Any, Any](any, any, any)(any, any, any, any))
           .thenReturn(Future.successful(HttpResponse(BAD_REQUEST, JsObject.empty.toString())))
 
-        val result = connector.sendToNrs(nrsPayLoad).futureValue
+        val result = connector.sendToNrs(nrsPayLoad, "correlationId").futureValue
 
         result.left.value mustBe BAD_REQUEST
         verifyHttpPostCAll(3)
@@ -129,7 +126,7 @@ class NrsConnectorSpec
           .thenReturn(Future.failed(new RuntimeException("error")))
 
         intercept[RuntimeException] {
-          connector.sendToNrs(nrsPayLoad).futureValue
+          connector.sendToNrs(nrsPayLoad, "correlationId").futureValue
           verifyHttpPostCAll(3)
         }
 
@@ -144,14 +141,14 @@ class NrsConnectorSpec
           Future.successful(successFulNrsResponse)
         )
 
-      val result = connector.sendToNrs(nrsPayLoad).futureValue
+      val result = connector.sendToNrs(nrsPayLoad, "correlationId").futureValue
 
       result mustBe Right(NonRepudiationSubmissionAccepted("testNesSubmissionId"))
       verifyHttpPostCAll(2)
     }
 
     "start and stop a timer" in {
-      connector.sendToNrs(NrsPayload("encodepayload", nrsMetadata)).futureValue
+      connector.sendToNrs(NrsPayload("encodepayload", nrsMetadata), "correlationId").futureValue
 
       verify(metrics.defaultRegistry).timer(eqTo("emcs.nrs.submission.timer"))
       verify(metrics.defaultRegistry.timer(eqTo("emcs.nrs.submission.timer"))).time()

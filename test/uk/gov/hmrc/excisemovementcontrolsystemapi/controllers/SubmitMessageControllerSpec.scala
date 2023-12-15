@@ -31,7 +31,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, F
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{SubmissionMessageService, WorkItemService}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{EmcsUtils, ErnsMapper}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.ErnsMapper
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem

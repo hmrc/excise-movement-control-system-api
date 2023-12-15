@@ -28,7 +28,7 @@ import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest, ValidatedXmlRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NonRepudiationSubmissionAccepted, NrsMetadata, NrsPayload}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService.NonRepudiationIdentityRetrievals
@@ -40,13 +40,6 @@ import java.time.ZonedDateTime
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
-
-/*
-todo: Add more tests for:
-1. retrieval identitydata fails
-2. retirval userAuthentication fail.
-3. submitToNrs fails
- */
 class NrsServiceSpec
   extends PlaySpec
     with ScalaFutures
@@ -79,7 +72,7 @@ class NrsServiceSpec
     when(dateTimeService.nowUtc).thenReturn(timeStamp)
     when(authConnector.authorise[NonRepudiationIdentityRetrievals](any, any)(any, any)) thenReturn
       Future.successful(testAuthRetrievals)
-    when(nrsConnector.sendToNrs(any)(any)).
+    when(nrsConnector.sendToNrs(any, any)(any)).
       thenReturn(Future.successful(Right(NonRepudiationSubmissionAccepted("submissionId"))))
     when(message.consignorId).thenReturn("ern")
   }
@@ -95,12 +88,12 @@ class NrsServiceSpec
       val encodePayload = Base64.getEncoder.encodeToString("<IE815>test</IE815>".getBytes(StandardCharsets.UTF_8))
       val nrsPayload = NrsPayload(encodePayload, createExpectedMetadata)
 
-      verify(nrsConnector).sendToNrs(eqTo(nrsPayload))(eqTo(hc))
+      verify(nrsConnector).sendToNrs(eqTo(nrsPayload), eqTo("correlationId"))(eqTo(hc))
     }
 
     "return an error" when {
       "NRS submit request fails" in {
-        when(nrsConnector.sendToNrs(any)(any)).
+        when(nrsConnector.sendToNrs(any, any)(any)).
           thenReturn(Future.successful(Left(INTERNAL_SERVER_ERROR)))
 
         submitNrs(hc).left.value mustBe INTERNAL_SERVER_ERROR
@@ -137,14 +130,12 @@ class NrsServiceSpec
 
   private def submitNrs(hc: HeaderCarrier): Either[Int, NonRepudiationSubmissionAccepted] = {
 
-
-
     val request =  createRequest(message)
 
-    service.submitNrs(request)(hc).futureValue
+    service.submitNrs(request,"correlationId")(hc).futureValue
   }
 
-  private def createRequest(message: IE815Message): ValidatedXmlRequest[_] = {
+  private def createRequest(message: IEMessage): ValidatedXmlRequest[_] = {
     val fakeRequest = FakeRequest()
       .withBody("<IE815>test</IE815>")
       .withHeaders(

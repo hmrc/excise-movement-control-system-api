@@ -94,14 +94,11 @@ class EISSubmissionConnectorSpec
     when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "Success", emcsCorrelationId))))
     when(emcsUtils.getCurrentDateTimeString).thenReturn("2023-09-17T09:32:50.345")
-    when(emcsUtils.generateCorrelationId).thenReturn(emcsCorrelationId)
     when(appConfig.emcsReceiverMessageUrl).thenReturn("/eis/path")
     when(appConfig.submissionBearerToken).thenReturn(submissionBearerToken)
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
     when(ie815Message.messageType).thenReturn("IE815")
     when(ie815Message.consignorId).thenReturn("123")
-    //todo: dalate
-    //when(emcsUtils.getSingleErnFromMessage(any, any)).thenReturn("123")
     when(emcsUtils.encode(any)).thenReturn("encode-message")
     when(ie815Message.messageIdentifier).thenReturn("DummyIdentifier")
 
@@ -227,20 +224,21 @@ class EISSubmissionConnectorSpec
                                               enrolledErns: Set[String],
                                               validatedErns: Set[String]
                                             ): Future[Either[Result, EISSubmissionResponse]] = {
-    connector.submitMessage(ValidatedXmlRequest(ParsedXmlRequest(
+    val request = ValidatedXmlRequest(ParsedXmlRequest(
       EnrolmentRequest(FakeRequest().withBody(xml), enrolledErns, "124"),
       message,
       enrolledErns,
       "124"
-    ), validatedErns
-    ))
+    ), validatedErns)
+
+    connector.submitMessage(request, emcsCorrelationId)
   }
 
   private def expectedHeader =
     Seq(HeaderNames.ACCEPT -> ContentTypes.JSON,
       HeaderNames.CONTENT_TYPE -> ContentTypes.JSON,
       DateTimeName -> "2023-09-17T09:32:50.345",
-      XCorrelationIdName -> "1234566",
+      XCorrelationIdName -> emcsCorrelationId,
       XForwardedHostName -> MDTPHost,
       SourceName -> APIPSource,
       Authorization -> authorizationValue(submissionBearerToken)

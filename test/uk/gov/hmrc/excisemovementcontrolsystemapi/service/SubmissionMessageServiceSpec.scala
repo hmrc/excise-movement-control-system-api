@@ -32,6 +32,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionRespon
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{NrsService, SubmissionMessageServiceImpl}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -47,7 +48,8 @@ class SubmissionMessageServiceSpec
 
   private val connector = mock[EISSubmissionConnector]
   private val nrsService = mock[NrsService]
-  private val sut = new SubmissionMessageServiceImpl(connector, nrsService)
+  private val emcsUtil = mock[EmcsUtils]
+  private val sut = new SubmissionMessageServiceImpl(connector, nrsService, emcsUtil)
 
   private val message = mock[IE815Message]
   val notableEventId = "notableEventId"
@@ -66,24 +68,25 @@ class SubmissionMessageServiceSpec
     reset(connector, nrsService)
 
     when(message.consignorId).thenReturn("1234")
+    when(emcsUtil.generateCorrelationId).thenReturn("correlationId")
   }
   "submit" should {
     "submit a message" in {
 
-      when(connector.submitMessage(any)(any))
+      when(connector.submitMessage(any, any)(any))
         .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "IE815", "correlationId"))))
 
-      when(nrsService.submitNrs(any)(any))
+      when(nrsService.submitNrs(any, any)(any))
         .thenReturn(Future.successful(Right(NonRepudiationSubmissionAccepted("submissionId"))))
 
       sut.submit(request).futureValue
 
-      verify(connector).submitMessage(eqTo(request))(any)
+      verify(connector).submitMessage(eqTo(request), eqTo("correlationId"))(any)
 
     }
 
     "return EISSubmissionResponse" in {
-      when(connector.submitMessage(any)(any))
+      when(connector.submitMessage(any, any)(any))
         .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "IE815", "correlationId"))))
 
       val result = sut.submit(request).futureValue
@@ -92,7 +95,7 @@ class SubmissionMessageServiceSpec
     }
 
     "return an error" in {
-      when(connector.submitMessage(any)(any))
+      when(connector.submitMessage(any, any)(any))
         .thenReturn(Future.successful(Left(InternalServerError("error"))))
 
       val result = sut.submit(request).futureValue
@@ -105,20 +108,20 @@ class SubmissionMessageServiceSpec
     }
 
     "send to NRS when submission is successful" in {
-      when(connector.submitMessage(any)(any))
+      when(connector.submitMessage(any, any)(any))
         .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "IE815", "correlationId"))))
 
       sut.submit(request)
 
-      verify(nrsService).submitNrs(eqTo(request))(any)
+      verify(nrsService).submitNrs(eqTo(request), eqTo("correlationId"))(any)
     }
 
     "return response if NRS fails" in {
 
-      when(connector.submitMessage(any)(any))
+      when(connector.submitMessage(any, any)(any))
         .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "IE815", "correlationId"))))
 
-      when(nrsService.submitNrs(any)(any))
+      when(nrsService.submitNrs(any, any)(any))
         .thenReturn(Future.successful(Left(INTERNAL_SERVER_ERROR)))
 
       val result = sut.submit(request).futureValue

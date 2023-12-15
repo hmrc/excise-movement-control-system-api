@@ -46,6 +46,7 @@ class NrsService @Inject()
 
   def submitNrs(
     request: ValidatedXmlRequest[_],
+    correlationId: String
   )(implicit headerCarrier: HeaderCarrier): Future[Either[Int, NonRepudiationSubmissionAccepted]] = {
 
     val payload = request.body.toString
@@ -61,12 +62,12 @@ class NrsService @Inject()
         userAuthToken, userHeaderData, exciseNumber)
       encodedPayload = emcsUtils.encode(payload)
       nrsPayload = NrsPayload(encodedPayload, metaData)
-      retrievedNrsResponse <- nrsConnector.sendToNrs(nrsPayload)
+      retrievedNrsResponse <- nrsConnector.sendToNrs(nrsPayload, correlationId)
     } yield retrievedNrsResponse)
       .recover {
         case NonFatal(e) =>
           //Todo: Catching the error and not throwing here for the moment. But do we want to throw here?
-          logger.error(s"[NrsService] - Error when submitting to Non repudiation system (NRS) with message: ${e.getMessage}", e)
+          logger.warn(s"[NrsService] - Error when submitting to Non repudiation system (NRS) with message: ${e.getMessage}", e)
           Left(INTERNAL_SERVER_ERROR)
       }
 

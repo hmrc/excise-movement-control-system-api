@@ -21,6 +21,7 @@ import play.api.mvc.Result
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.Inject
@@ -30,15 +31,18 @@ import scala.concurrent.{ExecutionContext, Future}
 class SubmissionMessageServiceImpl @Inject()(
   connector: EISSubmissionConnector,
   nrsService: NrsService,
+  emcsUtils: EmcsUtils,
 ) (implicit val ec: ExecutionContext) extends SubmissionMessageService {
 
   def submit(
     request: ValidatedXmlRequest[_]
   )(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
 
-    connector.submitMessage(request).map {
+    val correlationId = emcsUtils.generateCorrelationId
+
+    connector.submitMessage(request, correlationId).map {
       case Right(response) =>
-        nrsService.submitNrs(request)
+        nrsService.submitNrs(request, correlationId)
         Right(response)
       case error => error
     }
