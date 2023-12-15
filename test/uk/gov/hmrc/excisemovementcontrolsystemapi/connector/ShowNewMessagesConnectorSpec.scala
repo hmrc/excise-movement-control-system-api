@@ -61,7 +61,7 @@ class ShowNewMessagesConnectorSpec
   )
   private val timerContext = mock[Timer.Context]
 
-  private val showNewMessagesBearerToken = "showNewMessagesBearerToken"
+  private val messagesBearerToken = "messagesBearerToken"
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -72,7 +72,7 @@ class ShowNewMessagesConnectorSpec
     when(eisUtil.generateCorrelationId).thenReturn("1234")
     when(eisUtil.getCurrentDateTimeString).thenReturn(dateTime.toString)
     when(appConfig.showNewMessageUrl).thenReturn("/showNewMessage")
-    when(appConfig.showNewMessagesBearerToken).thenReturn(showNewMessagesBearerToken)
+    when(appConfig.messagesBearerToken).thenReturn(messagesBearerToken)
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
   }
 
@@ -128,7 +128,7 @@ class ShowNewMessagesConnectorSpec
       XCorrelationIdName -> "1234",
       SourceName -> APIPSource,
       DateTimeName -> dateTime.toString,
-      Authorization -> authorizationValue(showNewMessagesBearerToken)
+      Authorization -> authorizationValue(messagesBearerToken)
     )
   }
 }

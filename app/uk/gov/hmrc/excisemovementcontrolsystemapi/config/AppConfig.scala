@@ -28,7 +28,6 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   val appName: String = config.get[String]("appName")
 
   lazy val eisHost: String = servicesConfig.baseUrl("eis")
-  lazy val systemApplication: String = config.get[String]("system.application")
 
   lazy val interval: FiniteDuration = config.getOptional[String]("scheduler.pollingNewMessageJob.interval")
     .map(Duration.create(_).asInstanceOf[FiniteDuration])
@@ -74,12 +73,11 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   def emcsReceiverMessageUrl: String = s"$eisHost/emcs/digital-submit-new-message/v1"
   def submissionBearerToken: String = servicesConfig.getConfString("eis.submission-bearer-token", "dummySubmissionBearerToken")
   def showNewMessageUrl: String = s"$eisHost/apip-emcs/messages/v1/show-new-messages"
-  def showNewMessagesBearerToken: String = servicesConfig.getConfString("eis.show-new-messages-bearer-token", "dummyShowNewMessagesBearerToken")
   def messageReceiptUrl(ern: String): String =
     s"$eisHost/apip-emcs/messages/v1/message-receipt?exciseregistrationnumber=$ern"
-  def messageReceiptBearerToken: String = servicesConfig.getConfString("eis.messages-receipt-bearer-token", "dummyMessagesReceiptBearerToken")
+  def messagesBearerToken: String = servicesConfig.getConfString("eis.messages-bearer-token", "dummyMessagesBearerToken")
 
   def traderMovementUrl: String = s"$eisHost/emcs/movements/v1/trader-movements"
-  def traderMovementBearerToken: String = servicesConfig.getConfString("eis.trader-movement-bearer-token", "dummyMovementBearerToken")
+  def movementBearerToken: String = servicesConfig.getConfString("eis.movement-bearer-token", "dummyMovementBearerToken")
 
 }
