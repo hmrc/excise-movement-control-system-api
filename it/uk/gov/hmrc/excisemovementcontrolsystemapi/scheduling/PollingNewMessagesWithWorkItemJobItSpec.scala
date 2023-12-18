@@ -442,7 +442,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
     Message(
       Base64.getEncoder.encodeToString(xml.getBytes(StandardCharsets.UTF_8)),
       messageType,
-      timeService
+      timeService.timestamp()
     )
   }
 }

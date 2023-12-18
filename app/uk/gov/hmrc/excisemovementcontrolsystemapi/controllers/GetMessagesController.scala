@@ -21,10 +21,11 @@ import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import java.time.LocalDateTime
+import java.time.{Instant, LocalDateTime}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -37,7 +38,7 @@ class GetMessagesController @Inject()(
                                      )(implicit ec: ExecutionContext)
   extends BackendController(cc) {
 
-  def getMessagesForMovement(lrn: String): Action[AnyContent] = {
+  def getMessagesForMovement(lrn: String, lastUpdated: Option[String]): Action[AnyContent] = {
     // todo: how we handle error here if for example MongoDb throws?
     authAction.async(parse.default) {
       implicit request: EnrolmentRequest[AnyContent] => {
@@ -45,17 +46,27 @@ class GetMessagesController @Inject()(
         movementService.getMatchingERN(lrn, request.erns.toList).flatMap {
           case None => Future.successful(BadRequest(Json.toJson(ErrorResponse(LocalDateTime.now(), "Invalid LRN supplied for ERN", ""))))
           case Some(ern) => workItemService.addWorkItemForErn(ern, fastMode = false)
-            getMessagesAsJson(lrn, ern)
+            getMessagesAsJson(lrn, ern, lastUpdated)
         }
       }
     }
   }
 
-  private def getMessagesAsJson(lrn: String, ern: String): Future[Result] = {
-    movementService.getMovementByLRNAndERNIn(lrn, List(ern)).map {
-      case Some(mv) => Ok(Json.toJson(mv.messages))
+  private def getMessagesAsJson(lrn: String, ern: String, lastUpdated: Option[String]): Future[Result] = {
+    movementService.getMovementByLRNAndERNIn(lrn, List(ern))
+      .map(mv => {
+        mv.map(m => filterMessagesByTime(m.messages, lastUpdated))
+      })
+      .map {
+      case Some(mv) => Ok(Json.toJson(mv))
       case _ => Ok(JsArray())
     }
+  }
+
+  private def filterMessagesByTime(messages: Seq[Message], updatedSince: Option[String]): Seq[Message] = {
+      updatedSince.fold[Seq[Message]](messages)(a =>
+        messages.filter(o => o.createdOn.isAfter(Instant.parse(a)) || o.createdOn.equals(Instant.parse(a)))
+      )
   }
 
 }

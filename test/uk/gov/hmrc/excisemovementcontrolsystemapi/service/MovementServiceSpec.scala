@@ -140,8 +140,8 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
   "getMovementByLRNAndERNIn with valid LRN and ERN combination" should {
     "return  a movement" in {
-      val message1 = Message("123456", "IE801", dateTimeService)
-      val message2 = Message("ABCDE", "IE815", dateTimeService)
+      val message1 = Message("123456", "IE801", dateTimeService.timestamp())
+      val message2 = Message("ABCDE", "IE815", dateTimeService.timestamp())
       val movement = Movement(lrn, consignorId, Some(consigneeId), None, Instant.now(), Seq(message1, message2))
       when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(movement)))
@@ -327,8 +327,8 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
   "updateMovement" should {
 
-    val cachedMessage1 = Message("<IE801>test</IE801>", MessageTypes.IE801.value, dateTimeService)
-    val cachedMessage2 = Message("<IE802>test</IE802>", MessageTypes.IE802.value, dateTimeService)
+    val cachedMessage1 = Message("<IE801>test</IE801>", MessageTypes.IE801.value, dateTimeService.timestamp())
+    val cachedMessage2 = Message("<IE802>test</IE802>", MessageTypes.IE802.value, dateTimeService.timestamp())
 
     //For these tests use a real EmcsUtils as we don't need the dateTime stubbed
     val movementServiceForUpdateTests = new MovementService(mockMovementRepository, new EmcsUtils, dateTimeService)
@@ -338,7 +338,8 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       Movement("345", consignorId, None, Some("89"), now, Seq.empty),
       Movement("345", "12", None, Some("890"), now, Seq.empty)
     )
-    val expectedMessage = createMessage("<IE818>test</IE818>", MessageTypes.IE818.value)
+    val encodeMessage = Base64.getEncoder.encodeToString("<IE818>test</IE818>".getBytes(StandardCharsets.UTF_8))
+    val expectedMessage = Message(encodeMessage, MessageTypes.IE818.value, dateTimeService.timestamp())
 
     "save movement" when {
       "message contains Administration Reference Code (ARC)" in {
@@ -379,7 +380,9 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         eqTo(Movement("123", consignorId, None, Some("456"), now, Seq(expectedMessage))))
     }
 
+
     "throw an error" when {
+
       "message has both ARC and LRN missing" in {
         setUpForUpdateMovement(newMessage, None, None, "<foo>test</foo>", cachedMovements)
 
@@ -454,6 +457,6 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
   private def createMessage(xml: String, messageType: String) = {
     val encodeMessage = Base64.getEncoder.encodeToString(xml.getBytes(StandardCharsets.UTF_8))
-    Message(encodeMessage, messageType, dateTimeService)
+    Message(encodeMessage, messageType, dateTimeService.timestamp())
   }
 }

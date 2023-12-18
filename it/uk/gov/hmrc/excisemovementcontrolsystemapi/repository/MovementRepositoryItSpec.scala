@@ -98,7 +98,7 @@ class MovementRepositoryItSpec extends PlaySpec
       insertMovement(Movement("1", "345", Some("789"), None, timestamp))
       insertMovement(Movement("2", "897", Some("456"), None))
 
-      val message = Message("any, message", MessageTypes.IE801.value, dateTimeService)
+      val message = Message("any, message", MessageTypes.IE801.value, dateTimeService.timestamp())
       val result = repository.updateMovement(Movement("2", "897", Some("321"), Some("arc"), Instant.now, Seq(message))).futureValue
 
       val records = findAll().futureValue
@@ -114,7 +114,7 @@ class MovementRepositoryItSpec extends PlaySpec
       insertMovement(Movement("1", "345", Some("789"), None, timestamp))
       insertMovement(Movement("2", "897", Some("456"), None))
 
-      val message = Message("any, message", MessageTypes.IE801.value, dateTimeService)
+      val message = Message("any, message", MessageTypes.IE801.value, dateTimeService.timestamp())
       val result = repository.updateMovement(Movement("2", "78", Some("456"), Some("arc"), Instant.now, Seq(message))).futureValue
 
       val records = findAll().futureValue
@@ -131,7 +131,7 @@ class MovementRepositoryItSpec extends PlaySpec
       insertMovement(Movement("1", "345", Some("789"), None, instant))
       insertMovement(Movement("2", "897", Some("456"), None, instant))
 
-      val message = Message("any, message", MessageTypes.IE801.value, dateTimeService)
+      val message = Message("any, message", MessageTypes.IE801.value, dateTimeService.timestamp())
       val result = repository.updateMovement(Movement("4", "897", Some("321"), Some("arc"), Instant.now, Seq(message))).futureValue
 
       val records = findAll().futureValue
