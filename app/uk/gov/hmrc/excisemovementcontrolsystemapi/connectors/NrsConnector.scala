@@ -45,8 +45,8 @@ class NrsConnector @Inject()
     val timer = metrics.defaultRegistry.timer("emcs.nrs.submission.timer").time()
     val jsonObject = payload.toJsObject
 
-    retry(appConfig.nrsRetries, canRetry, appConfig.getNrsSubmissionUrl) { retryAttempt: Int =>
-      send(retryAttempt, jsonObject, correlationId)
+    retry(appConfig.nrsRetries, canRetry, appConfig.getNrsSubmissionUrl) {
+      send(jsonObject, correlationId)
     }
       .map { response: HttpResponse =>
       response.status match {
@@ -56,7 +56,7 @@ class NrsConnector @Inject()
           Right(submissionId)
         case _ =>
           //todo: Add explicit audit error
-          logger.warn(s"[NrsConnector] - Error when submitting to Non repudiation system (NRS) with status: ${response.status}, correlationId: $correlationId")
+          logger.warn(s"[NrsConnector - Mauro] - Error when submitting to Non repudiation system (NRS) with status: ${response.status}, correlationId: $correlationId")
           Left(response.status)
       }
     }
@@ -64,13 +64,12 @@ class NrsConnector @Inject()
   }
 
   def send(
-    retriedAttempts: Int,
     jsonObject: JsObject,
     correlationId: String
   )(implicit hc: HeaderCarrier): Future[HttpResponse] = {
 
     val nrsSubmissionUrl = appConfig.getNrsSubmissionUrl
-    logger.info(s"[NrsConnector] - RETRY - Attempt $retriedAttempts NRS submission: sending POST request to $nrsSubmissionUrl. CorrelationId: $correlationId")
+    logger.info(s"[NrsConnector] - NRS submission: sending POST request to $nrsSubmissionUrl. CorrelationId: $correlationId")
 
     httpClient.POST[JsObject, HttpResponse](
       nrsSubmissionUrl,

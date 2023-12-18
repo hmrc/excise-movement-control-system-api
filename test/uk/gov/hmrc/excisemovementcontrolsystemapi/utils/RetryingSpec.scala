@@ -65,13 +65,11 @@ class RetryingSpec extends PlaySpec with ScalaFutures with BeforeAndAfterEach{
   "retry" should {
     "process a block and return 200 with no retry" in {
 
-      def block(numOfAttempt: Int): Int => Future[HttpResponse] = {
-        numOfAttempt =>
-          numOfRetried = numOfAttempt
+      def block: Future[HttpResponse] = {
           Future.successful(HttpResponse(200, "Success"))
       }
 
-      val result = retrying.retry(delays, retryCondition, "/url")(block(0)).futureValue
+      val result = retrying.retry(delays, retryCondition, "/url")(block).futureValue
 
       result.status mustBe OK
       numOfRetried mustBe 0
@@ -79,26 +77,23 @@ class RetryingSpec extends PlaySpec with ScalaFutures with BeforeAndAfterEach{
 
     "retry 3 times" when {
       "always return a non 2xx status code" in {
-        def block(numOfAttempt: Int): Int => Future[HttpResponse] = { _ =>
-          numOfRetried += 1
+        def block: Future[HttpResponse] = {
           Future.successful(HttpResponse(BAD_REQUEST, "failure"))
         }
 
-        val result = await(retrying.retry(delays, retryCondition, "/url")(block(0)))
+        val result = await(retrying.retry(delays, retryCondition, "/url")(block))
 
         result.status mustBe BAD_REQUEST
-        numOfRetried mustBe 3
       }
 
       "an exception occur continuously" in {
-        def block(numOfAttempt: Int): Int => Future[HttpResponse] = {
-          _ =>
+        def block: Future[HttpResponse] = {
             numOfRetried += 1
             Future.failed(new RuntimeException("error"))
         }
 
         the [RuntimeException] thrownBy {
-          await(retrying.retry(delays, retryCondition, "/url")(block(0)))
+          await(retrying.retry(delays, retryCondition, "/url")(block))
         } must have message "error"
 
         numOfRetried mustBe 3
@@ -107,32 +102,15 @@ class RetryingSpec extends PlaySpec with ScalaFutures with BeforeAndAfterEach{
 
     "stop retrying" when {
       "successful after an exception" in {
-        def block(numOfAttempt: Int): Int => Future[HttpResponse] = {
-          numOfAttempt =>
-            numOfRetried += 1
-            numOfAttempt match {
-              case 0 => Future.successful(HttpResponse(BAD_REQUEST, "failure"))
-              case 1 => Future.successful(HttpResponse(OK, "Success"))
+        def block: Future[HttpResponse] = {
+          numOfRetried += 1
+          numOfRetried match {
+              case 1 => Future.successful(HttpResponse(BAD_REQUEST, "failure"))
+              case 2 => Future.successful(HttpResponse(OK, "Success"))
           }
         }
 
-        val result = await(retrying.retry(delays, retryCondition, "/url")(block(0)))
-
-        result.status mustBe OK
-        numOfRetried mustBe 2
-      }
-
-      "return a 2xx after a error" in {
-        def block(numOfAttempt: Int): Int => Future[HttpResponse] = {
-          numOfAttempt =>
-            numOfRetried += 1
-            numOfAttempt match {
-              case 0 => Future.successful(HttpResponse(BAD_REQUEST, "failure"))
-              case 1 => Future.successful(HttpResponse(OK, "Success"))
-          }
-        }
-
-        val result = await(retrying.retry(delays, retryCondition, "url")(block(0)))
+        val result = await(retrying.retry(delays, retryCondition, "/url")(block))
 
         result.status mustBe OK
         numOfRetried mustBe 2
