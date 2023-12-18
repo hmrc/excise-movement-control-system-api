@@ -56,7 +56,7 @@ class NrsConnector @Inject()
           Right(submissionId)
         case _ =>
           //todo: Add explicit audit error
-          logger.warn(s"[NrsConnector - Mauro] - Error when submitting to Non repudiation system (NRS) with status: ${response.status}, correlationId: $correlationId")
+          logger.warn(s"[NrsConnector] - Error when submitting to Non repudiation system (NRS) with status: ${response.status}, correlationId: $correlationId")
           Left(response.status)
       }
     }
