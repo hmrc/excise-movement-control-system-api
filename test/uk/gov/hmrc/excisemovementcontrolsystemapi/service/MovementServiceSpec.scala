@@ -444,7 +444,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         intercept[RuntimeException] {
           await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
-        }.getMessage mustBe "[MovementService] - Cannot retrieve a movement. Local reference number or administration reference code are not present for ERN: ABC"
+      }.getMessage mustBe "[MovementService] - Cannot retrieve a movement. Local reference number or administration reference code are not present for ERN: ABC, message IE818"
       }
 
       "movement is not present" in {
