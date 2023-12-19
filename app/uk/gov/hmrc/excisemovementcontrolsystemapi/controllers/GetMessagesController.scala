@@ -38,7 +38,7 @@ class GetMessagesController @Inject()(
                                      )(implicit ec: ExecutionContext)
   extends BackendController(cc) {
 
-  def getMessagesForMovement(lrn: String, lastUpdated: Option[String]): Action[AnyContent] = {
+  def getMessagesForMovement(lrn: String, updatedSince: Option[String]): Action[AnyContent] = {
     // todo: how we handle error here if for example MongoDb throws?
     authAction.async(parse.default) {
       implicit request: EnrolmentRequest[AnyContent] => {
@@ -46,17 +46,17 @@ class GetMessagesController @Inject()(
         movementService.getMatchingERN(lrn, request.erns.toList).flatMap {
           case None => Future.successful(BadRequest(Json.toJson(ErrorResponse(LocalDateTime.now(), "Invalid LRN supplied for ERN", ""))))
           case Some(ern) => workItemService.addWorkItemForErn(ern, fastMode = false)
-            getMessagesAsJson(lrn, ern, lastUpdated)
+            getMessagesAsJson(lrn, ern, updatedSince)
         }
       }
     }
   }
 
-  private def getMessagesAsJson(lrn: String, ern: String, lastUpdated: Option[String]): Future[Result] = {
-    val lastUpdatedTime = lastUpdated.map(Instant.parse(_))
+  private def getMessagesAsJson(lrn: String, ern: String, updatedSince: Option[String]): Future[Result] = {
+    val updatedSinceTime = updatedSince.map(Instant.parse(_))
     movementService.getMovementByLRNAndERNIn(lrn, List(ern))
       .map(mv => {
-        mv.map(m => filterMessagesByTime(m.messages, lastUpdatedTime))
+        mv.map(m => filterMessagesByTime(m.messages, updatedSinceTime))
       })
       .map {
       case Some(mv) => Ok(Json.toJson(mv))
@@ -65,7 +65,7 @@ class GetMessagesController @Inject()(
   }
 
   private def filterMessagesByTime(messages: Seq[Message], updatedSince: Option[Instant]): Seq[Message] = {
-      updatedSince.fold[Seq[Message]](messages)(a =>
+    updatedSince.fold[Seq[Message]](messages)(a =>
         messages.filter(o => o.createdOn.isAfter(a) || o.createdOn.equals(a))
       )
   }

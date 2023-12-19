@@ -54,24 +54,24 @@ class MovementFilterSpec extends PlaySpec {
       filter.filterMovement(movements) mustBe Seq(m1)
     }
 
-    "filter by lastUpdated" in {
-      val filter = MovementFilter.and(Seq("lastUpdated" -> Some(now.plusSeconds(700).toString())))
+    "filter by updatedSince" in {
+      val filter = MovementFilter.and(Seq("updatedSince" -> Some(now.plusSeconds(700).toString())))
 
       filter.filterMovement(movements) mustBe Seq(m2)
     }
 
-    "filter by lastUpdated and include movements with a lastUpdated time that equals the filter time" in {
-      val filter = MovementFilter.and(Seq("lastUpdated" -> Some(now.plusSeconds(500).toString())))
+    "filter by updatedSince and include movements with a updatedSince time that equals the filter time" in {
+      val filter = MovementFilter.and(Seq("updatedSince" -> Some(now.plusSeconds(500).toString())))
 
       filter.filterMovement(movements) mustBe Seq(m1, m2)
     }
 
-    "filter by ERN, LRN, ARC and lastUpdated" in {
+    "filter by ERN, LRN, ARC and updatedSince" in {
       val filter = MovementFilter.and(Seq(
         "lrn" -> Some("2"),
         "ern" -> Some("test2"),
         "arc" -> Some("arc2"),
-        "lastUpdated" -> Some(now.toString())
+        "updatedSince" -> Some(now.toString())
       ))
 
       filter.filterMovement(movements) mustBe Seq(m2)
@@ -117,7 +117,7 @@ class MovementFilterSpec extends PlaySpec {
     }
 
     "there is no filter" in {
-      val filter = MovementFilter.and(Seq("ern" -> None, "lrn" -> None, "arc" -> None, "lastUpdated" -> None))
+      val filter = MovementFilter.and(Seq("ern" -> None, "lrn" -> None, "arc" -> None, "updatedSince" -> None))
 
       filter.filterMovement(movements) mustBe movements
     }
@@ -129,14 +129,14 @@ class MovementFilterSpec extends PlaySpec {
     }
 
     "succeed when a valid date format is provided" in {
-      val filter = MovementFilter.and(Seq("lastUpdated" -> Some("2020-11-15T17:02:34.00Z")))
+      val filter = MovementFilter.and(Seq("updatedSince" -> Some("2020-11-15T17:02:34.00Z")))
 
       filter.filterMovement(movements) mustBe Seq(m1, m2, m3, m4, m5)
     }
 
     "fail when an invalid date format is provided" in {
       intercept[DateTimeParseException] {
-        val filter = MovementFilter.and(Seq("lastUpdated" -> Some("invalidDate")))
+        val filter = MovementFilter.and(Seq("updatedSince" -> Some("invalidDate")))
         filter.filterMovement(movements)
       }.getMessage mustBe "Text 'invalidDate' could not be parsed at index 0"
     }

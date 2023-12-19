@@ -36,13 +36,13 @@ class GetMovementsController @Inject()(
                                       )(implicit ec: ExecutionContext)
   extends BackendController(cc) {
 
-  def getMovements(ern: Option[String], lrn: Option[String], arc: Option[String], lastUpdated: Option[String]): Action[AnyContent] = {
+  def getMovements(ern: Option[String], lrn: Option[String], arc: Option[String], updatedSince: Option[String]): Action[AnyContent] = {
     authAction.async(parse.default) {
       implicit request =>
 
         workItemService.addWorkItemForErn(ern.getOrElse(request.erns.head), fastMode = false)
 
-        val filter = MovementFilter.and(Seq("ern" -> ern, "lrn" -> lrn, "arc" -> arc, "lastUpdated" -> lastUpdated))
+        val filter = MovementFilter.and(Seq("ern" -> ern, "lrn" -> lrn, "arc" -> arc, "updatedSince" -> updatedSince))
         movementService.getMovementByErn(request.erns.toSeq, filter)
           .map { movement: Seq[Movement] =>
             Ok(Json.toJson(movement.map(createResponseFrom)))

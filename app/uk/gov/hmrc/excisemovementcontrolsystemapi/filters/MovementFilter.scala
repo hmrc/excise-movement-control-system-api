@@ -84,7 +84,7 @@ object MovementFilter {
             case "ern" => FilterErn(o._2)
             case "lrn" => FilterLrn(o._2)
             case "arc" => FilterArc(o._2)
-            case "lastUpdated" => FilterUpdatedSince(o._2.map(Instant.parse(_)))
+            case "updatedSince" => FilterUpdatedSince(o._2.map(Instant.parse(_)))
             case _ => new FilterNothing
           }
         )

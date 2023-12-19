@@ -142,14 +142,14 @@ class GetMovementsControllerItSpec extends PlaySpec
       )
     }
 
-    "get filtered movement by lastUpdated" in {
+    "get filtered movement by updatedSince" in {
       val timeFilter = LocalDateTime.now().minusDays(1).toInstant(ZoneOffset.UTC)
 
       withAuthorizedTrader(consignorId)
       when(movementRepository.getMovementByERN(Seq(consignorId)))
         .thenReturn(Future.successful(Seq(movement1, movement2, movement3)))
 
-      val urlToGoIn = s"$url?lastUpdated=$timeFilter"
+      val urlToGoIn = s"$url?updatedSince=$timeFilter"
 
       val result = getRequest(urlToGoIn)
 

@@ -92,7 +92,7 @@ class GetMovementsControllerSpec
       await(controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow))(FakeRequest("POST", "/foo")))
 
       val filter = MovementFilter.and(Seq(
-        "ern" -> Some(ern), "lrn" -> Some("lrn"), "arc" -> Some("arc"), "lastUpdated" -> Some(timestampNow))
+        "ern" -> Some(ern), "lrn" -> Some("lrn"), "arc" -> Some("arc"), "updatedSince" -> Some(timestampNow))
       )
       verify(movementService).getMovementByErn(any, eqTo(filter))
 
