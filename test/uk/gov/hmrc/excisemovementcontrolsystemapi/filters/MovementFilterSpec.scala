@@ -20,6 +20,7 @@ import org.scalatestplus.play.PlaySpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
 import java.time.Instant
+import java.time.format.DateTimeParseException
 
 class MovementFilterSpec extends PlaySpec {
 
@@ -126,5 +127,19 @@ class MovementFilterSpec extends PlaySpec {
 
       filter.filterMovement(movements) mustBe movements
     }
+
+    "succeed when a valid date format is provided" in {
+      val filter = MovementFilter.and(Seq("lastUpdated" -> Some("2020-11-15T17:02:34.00Z")))
+
+      filter.filterMovement(movements) mustBe Seq(m1, m2, m3, m4, m5)
+    }
+
+    "fail when an invalid date format is provided" in {
+      intercept[DateTimeParseException] {
+        val filter = MovementFilter.and(Seq("lastUpdated" -> Some("invalidDate")))
+        filter.filterMovement(movements)
+      }.getMessage mustBe "Text 'invalidDate' could not be parsed at index 0"
+    }
+
   }
 }

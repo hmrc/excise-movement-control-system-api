@@ -42,7 +42,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Mov
 import uk.gov.hmrc.mongo.TimestampSupport
 
 import java.nio.charset.StandardCharsets
-import java.time.temporal.ChronoUnit
 import java.time.{Instant, LocalDateTime}
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
@@ -63,7 +62,7 @@ class GetMessagesControllerItSpec extends PlaySpec
   private val lrn = "token"
   private val url = s"http://localhost:$port/movements/$lrn/messages"
   private lazy val dateTimeService: TimestampSupport = mock[TimestampSupport]
-  private val timestamp = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+  private val timestamp = Instant.now()
   private val responseFromEis = EISConsumptionResponse(
     LocalDateTime.of(2023, 1, 2, 3, 4, 5),
     consignorId,

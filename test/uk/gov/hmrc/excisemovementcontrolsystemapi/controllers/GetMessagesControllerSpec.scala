@@ -35,7 +35,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, Wor
 import uk.gov.hmrc.mongo.TimestampSupport
 
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 import scala.concurrent.{ExecutionContext, Future}
 
 class GetMessagesControllerSpec extends PlaySpec
@@ -96,7 +95,8 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "get all the new messages when there is a time query parameter provided" in {
-      val timeNow = dateTimeService.timestamp().truncatedTo(ChronoUnit.SECONDS).toString
+      val timeNow = dateTimeService.timestamp()
+        .toString
       val timeInFuture = Instant.now.plusSeconds(1000)
       val timeInPast = Instant.now.minusSeconds(1000)
       val message = Message("message", "IE801", timeInFuture)
@@ -112,7 +112,7 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "get all the new messages including messages with a createdOn time of NOW when there is a time query parameter provided" in {
-      val timeNow = dateTimeService.timestamp()//.truncatedTo(ChronoUnit.SECONDS)
+      val timeNow = dateTimeService.timestamp()
 
       //TODO: do we need to do this truncated stuff everywhere? Or even at all. Just make sure that the format we have
       // specified is adhered to
