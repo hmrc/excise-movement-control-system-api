@@ -22,8 +22,8 @@ import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import scalaxb.DataRecord
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.Ie801XmlMessage.IE801
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 
 class IEMessageFactorySpec
@@ -64,14 +64,19 @@ class IEMessageFactorySpec
       sut.createIEMessage(message).isInstanceOf[IE704Message] mustBe true
     }
 
+    "return an instance of IE801Message" in {
+      when(message.key).thenReturn(Some("IE801"))
+      sut.createIEMessage(message).isInstanceOf[IE801Message] mustBe true
+    }
+
     "return an instance of IE802Message" in {
       when(message.key).thenReturn(Some("IE802"))
       sut.createIEMessage(message).isInstanceOf[IE802Message] mustBe true
     }
 
-    "return an instance of IE801Message" in {
-      when(message.key).thenReturn(Some("IE801"))
-      sut.createIEMessage(message).isInstanceOf[IE801Message] mustBe true
+    "return an instance of IE807Message" in {
+      when(message.key).thenReturn(Some("IE807"))
+      sut.createIEMessage(message).isInstanceOf[IE807Message] mustBe true
     }
 
     "return an instance of IE810Message" in {
@@ -124,6 +129,17 @@ class IEMessageFactorySpec
       result.administrativeReferenceCode mustBe Some("tokentokentokentokent")
       result.localReferenceNumber mustBe Some("token")
     }
+
+    "return an instance of IE807Message" in {
+      val result = sut.createFromXml("IE807", IE807).asInstanceOf[IE807Message]
+      result.isInstanceOf[IE807Message] mustBe true
+      result.consigneeId mustBe None
+      result.administrativeReferenceCode mustBe Some("23XI00000000000000331")
+      result.messageIdentifier mustBe "GB0023121"
+      result.messageType mustBe MessageTypes.IE807.value
+      result.lrnEquals("anyLrn") mustBe false
+    }
+
 
     "return an instance of IE810Message" in {
 

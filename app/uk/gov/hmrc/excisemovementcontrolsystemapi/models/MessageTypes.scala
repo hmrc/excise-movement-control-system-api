@@ -32,12 +32,13 @@ todo: we do need to account for all message here.
 object MessageTypes extends StringEnum[MessageEnum] with StringPlayJsonValueEnum[MessageEnum] {
   val values: immutable.IndexedSeq[MessageEnum] = findValues
 
-  case object IE815 extends MessageEnum("IE815")
   case object IE704 extends MessageEnum("IE704")
   case object IE801 extends MessageEnum("IE801")
   case object IE802 extends MessageEnum("IE802")
+  case object IE807 extends MessageEnum("IE807")
   case object IE810 extends MessageEnum("IE810")
   case object IE813 extends MessageEnum("IE813")
+  case object IE815 extends MessageEnum("IE815")
   case object IE818 extends MessageEnum("IE818")
   case object IE819 extends MessageEnum("IE819")
   case object IE837 extends MessageEnum("IE837")

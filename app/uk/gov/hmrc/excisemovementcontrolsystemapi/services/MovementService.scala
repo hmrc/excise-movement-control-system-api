@@ -96,18 +96,18 @@ class MovementService @Inject()(
     }
   }
 
-  def updateMovement(message: IEMessage, consignorId: String): Future[Boolean] = {
+  def updateMovement(message: IEMessage, ern: String): Future[Boolean] = {
 
-    movementRepository.getAllBy(consignorId).flatMap(cachedMovement => {
+    movementRepository.getAllBy(ern).flatMap(cachedMovement => {
 
       val arc = message.administrativeReferenceCode
-      val movementWithArc = cachedMovement.filter(o => o.administrativeReferenceCode.equals(arc)).headOption
-      val movementWithLrn = cachedMovement.filter(m => message.lrnEquals(m.localReferenceNumber)).headOption
+      val movementWithArc = cachedMovement.find(o => o.administrativeReferenceCode.equals(arc))
+      val movementWithLrn = cachedMovement.find(m => message.lrnEquals(m.localReferenceNumber))
 
       (movementWithArc, movementWithLrn) match {
         case (Some(mArc), _) => saveDistinctMessage(mArc, message)
         case (None, Some(mLrn)) => saveDistinctMessage(mLrn, message)
-        case _ => throw new RuntimeException(s"[MovementService] - Cannot retrieve a movement. Local reference number or administration reference code are not present for ERN: $consignorId")
+        case _ => throw new RuntimeException(s"[MovementService] - Cannot retrieve a movement. Local reference number or administration reference code are not present for ERN: $ern")
       }
     })
   }

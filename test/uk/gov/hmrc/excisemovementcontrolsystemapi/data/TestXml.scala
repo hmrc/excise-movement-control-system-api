@@ -20,6 +20,279 @@ import scala.xml.Elem
 
 trait TestXml {
 
+  lazy val IE801: Elem =
+    <urn:IE801
+    xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.01"
+    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01">
+      <urn:Header>
+        <urn1:MessageSender>token</urn1:MessageSender>
+        <urn1:MessageRecipient>token</urn1:MessageRecipient>
+        <urn1:DateOfPreparation>2008-09-29</urn1:DateOfPreparation>
+        <urn1:TimeOfPreparation>00:18:33</urn1:TimeOfPreparation>
+        <urn1:MessageIdentifier>token</urn1:MessageIdentifier>
+        <!--Optional:-->
+        <urn1:CorrelationIdentifier>token</urn1:CorrelationIdentifier>
+      </urn:Header>
+      <urn:Body>
+        <urn:EADESADContainer>
+          <!--Optional:-->
+          <urn:ConsigneeTrader language="to">
+            <!--Optional:-->
+            <urn:Traderid>token</urn:Traderid>
+            <urn:TraderName>token</urn:TraderName>
+            <urn:StreetName>token</urn:StreetName>
+            <!--Optional:-->
+            <urn:StreetNumber>token</urn:StreetNumber>
+            <urn:Postcode>token</urn:Postcode>
+            <urn:City>token</urn:City>
+            <!--Optional:-->
+            <urn:EoriNumber>token</urn:EoriNumber>
+          </urn:ConsigneeTrader>
+          <urn:ExciseMovement>
+            <urn:AdministrativeReferenceCode>tokentokentokentokent</urn:AdministrativeReferenceCode>
+            <urn:DateAndTimeOfValidationOfEadEsad>2006-08-19T18:27:14+01:00</urn:DateAndTimeOfValidationOfEadEsad>
+          </urn:ExciseMovement>
+          <urn:ConsignorTrader language="to">
+            <urn:TraderExciseNumber>tokentokentok</urn:TraderExciseNumber>
+            <urn:TraderName>token</urn:TraderName>
+            <urn:StreetName>token</urn:StreetName>
+            <!--Optional:-->
+            <urn:StreetNumber>token</urn:StreetNumber>
+            <urn:Postcode>token</urn:Postcode>
+            <urn:City>token</urn:City>
+          </urn:ConsignorTrader>
+          <!--Optional:-->
+          <urn:PlaceOfDispatchTrader language="to">
+            <!--Optional:-->
+            <urn:ReferenceOfTaxWarehouse>tokentokentok</urn:ReferenceOfTaxWarehouse>
+            <!--Optional:-->
+            <urn:TraderName>token</urn:TraderName>
+            <!--Optional:-->
+            <urn:StreetName>token</urn:StreetName>
+            <!--Optional:-->
+            <urn:StreetNumber>token</urn:StreetNumber>
+            <!--Optional:-->
+            <urn:Postcode>token</urn:Postcode>
+            <!--Optional:-->
+            <urn:City>token</urn:City>
+          </urn:PlaceOfDispatchTrader>
+          <!--Optional:-->
+          <urn:DispatchImportOffice>
+            <urn:ReferenceNumber>tokentok</urn:ReferenceNumber>
+          </urn:DispatchImportOffice>
+          <!--Optional:-->
+          <urn:ComplementConsigneeTrader>
+            <urn:MemberStateCode>to</urn:MemberStateCode>
+            <!--Optional:-->
+            <urn:SerialNumberOfCertificateOfExemption>token</urn:SerialNumberOfCertificateOfExemption>
+          </urn:ComplementConsigneeTrader>
+          <!--Optional:-->
+          <urn:DeliveryPlaceTrader language="to">
+            <!--Optional:-->
+            <urn:Traderid>token</urn:Traderid>
+            <!--Optional:-->
+            <urn:TraderName>token</urn:TraderName>
+            <!--Optional:-->
+            <urn:StreetName>token</urn:StreetName>
+            <!--Optional:-->
+            <urn:StreetNumber>token</urn:StreetNumber>
+            <!--Optional:-->
+            <urn:Postcode>token</urn:Postcode>
+            <!--Optional:-->
+            <urn:City>token</urn:City>
+          </urn:DeliveryPlaceTrader>
+          <!--Optional:-->
+          <urn:DeliveryPlaceCustomsOffice>
+            <urn:ReferenceNumber>tokentok</urn:ReferenceNumber>
+          </urn:DeliveryPlaceCustomsOffice>
+          <urn:CompetentAuthorityDispatchOffice>
+            <urn:ReferenceNumber>tokentok</urn:ReferenceNumber>
+          </urn:CompetentAuthorityDispatchOffice>
+          <!--Optional:-->
+          <urn:TransportArrangerTrader language="to">
+            <!--Optional:-->
+            <urn:VatNumber>token</urn:VatNumber>
+            <urn:TraderName>token</urn:TraderName>
+            <urn:StreetName>token</urn:StreetName>
+            <!--Optional:-->
+            <urn:StreetNumber>token</urn:StreetNumber>
+            <urn:Postcode>token</urn:Postcode>
+            <urn:City>token</urn:City>
+          </urn:TransportArrangerTrader>
+          <!--Optional:-->
+          <urn:FirstTransporterTrader language="to">
+            <!--Optional:-->
+            <urn:VatNumber>token</urn:VatNumber>
+            <urn:TraderName>token</urn:TraderName>
+            <urn:StreetName>token</urn:StreetName>
+            <!--Optional:-->
+            <urn:StreetNumber>token</urn:StreetNumber>
+            <urn:Postcode>token</urn:Postcode>
+            <urn:City>token</urn:City>
+          </urn:FirstTransporterTrader>
+          <!--0 to 9 repetitions:-->
+          <urn:DocumentCertificate>
+            <!--Optional:-->
+            <urn:DocumentType>toke</urn:DocumentType>
+            <!--Optional:-->
+            <urn:DocumentReference>token</urn:DocumentReference>
+            <!--Optional:-->
+            <urn:DocumentDescription language="to">token</urn:DocumentDescription>
+            <!--Optional:-->
+            <urn:ReferenceOfDocument language="to">token</urn:ReferenceOfDocument>
+          </urn:DocumentCertificate>
+          <urn:EadEsad>
+            <urn:LocalReferenceNumber>token</urn:LocalReferenceNumber>
+            <urn:InvoiceNumber>token</urn:InvoiceNumber>
+            <!--Optional:-->
+            <urn:InvoiceDate>2009-05-16</urn:InvoiceDate>
+            <urn:OriginTypeCode>2</urn:OriginTypeCode>
+            <urn:DateOfDispatch>2002-11-05+00:00</urn:DateOfDispatch>
+            <!--Optional:-->
+            <urn:TimeOfDispatch>16:46:32+01:00</urn:TimeOfDispatch>
+            <!--Optional:-->
+            <urn:UpstreamArc>tokentokentokentokent</urn:UpstreamArc>
+            <!--0 to 9 repetitions:-->
+            <urn:ImportSad>
+              <urn:ImportSadNumber>token</urn:ImportSadNumber>
+            </urn:ImportSad>
+          </urn:EadEsad>
+          <urn:HeaderEadEsad>
+            <urn:SequenceNumber>to</urn:SequenceNumber>
+            <urn:DateAndTimeOfUpdateValidation>2016-02-20T14:56:29+00:00</urn:DateAndTimeOfUpdateValidation>
+            <urn:DestinationTypeCode>7</urn:DestinationTypeCode>
+            <urn:JourneyTime>tok</urn:JourneyTime>
+            <urn:TransportArrangement>1</urn:TransportArrangement>
+          </urn:HeaderEadEsad>
+          <urn:TransportMode>
+            <urn:TransportModeCode>to</urn:TransportModeCode>
+            <!--Optional:-->
+            <urn:ComplementaryInformation language="to">token</urn:ComplementaryInformation>
+          </urn:TransportMode>
+          <urn:MovementGuarantee>
+            <urn:GuarantorTypeCode>234</urn:GuarantorTypeCode>
+            <!--0 to 2 repetitions:-->
+            <urn:GuarantorTrader language="to">
+              <!--Optional:-->
+              <urn:TraderExciseNumber>tokentokentok</urn:TraderExciseNumber>
+              <!--Optional:-->
+              <urn:TraderName>token</urn:TraderName>
+              <!--Optional:-->
+              <urn:StreetName>token</urn:StreetName>
+              <!--Optional:-->
+              <urn:StreetNumber>token</urn:StreetNumber>
+              <!--Optional:-->
+              <urn:City>token</urn:City>
+              <!--Optional:-->
+              <urn:Postcode>token</urn:Postcode>
+              <!--Optional:-->
+              <urn:VatNumber>token</urn:VatNumber>
+            </urn:GuarantorTrader>
+          </urn:MovementGuarantee>
+          <!--1 or more repetitions:-->
+          <urn:BodyEadEsad>
+            <urn:BodyRecordUniqueReference>tok</urn:BodyRecordUniqueReference>
+            <urn:ExciseProductCode>toke</urn:ExciseProductCode>
+            <urn:CnCode>tokentok</urn:CnCode>
+            <urn:Quantity>1000.00000000000</urn:Quantity>
+            <urn:GrossMass>1000.000000000000</urn:GrossMass>
+            <urn:NetMass>1000.000000000000</urn:NetMass>
+            <!--Optional:-->
+            <urn:AlcoholicStrengthByVolumeInPercentage>1000.00</urn:AlcoholicStrengthByVolumeInPercentage>
+            <!--Optional:-->
+            <urn:DegreePlato>1000.00</urn:DegreePlato>
+            <!--Optional:-->
+            <urn:FiscalMark language="to">token</urn:FiscalMark>
+            <!--Optional:-->
+            <urn:FiscalMarkUsedFlag>0</urn:FiscalMarkUsedFlag>
+            <!--Optional:-->
+            <urn:DesignationOfOrigin language="to">token</urn:DesignationOfOrigin>
+            <!--Optional:-->
+            <urn:SizeOfProducer>token</urn:SizeOfProducer>
+            <!--Optional:-->
+            <urn:Density>1000.00</urn:Density>
+            <!--Optional:-->
+            <urn:CommercialDescription language="to">token</urn:CommercialDescription>
+            <!--Optional:-->
+            <urn:BrandNameOfProducts language="to">token</urn:BrandNameOfProducts>
+            <!--Optional:-->
+            <urn:MaturationPeriodOrAgeOfProducts>token</urn:MaturationPeriodOrAgeOfProducts>
+            <!--1 to 99 repetitions:-->
+            <urn:Package>
+              <urn:KindOfPackages>to</urn:KindOfPackages>
+              <!--Optional:-->
+              <urn:NumberOfPackages>token</urn:NumberOfPackages>
+              <!--Optional:-->
+              <urn:ShippingMarks>token</urn:ShippingMarks>
+              <!--Optional:-->
+              <urn:CommercialSealIdentification>token</urn:CommercialSealIdentification>
+              <!--Optional:-->
+              <urn:SealInformation language="to">token</urn:SealInformation>
+            </urn:Package>
+            <!--Optional:-->
+            <urn:WineProduct>
+              <urn:WineProductCategory>4</urn:WineProductCategory>
+              <!--Optional:-->
+              <urn:WineGrowingZoneCode>to</urn:WineGrowingZoneCode>
+              <!--Optional:-->
+              <urn:ThirdCountryOfOrigin>to</urn:ThirdCountryOfOrigin>
+              <!--Optional:-->
+              <urn:OtherInformation language="to">token</urn:OtherInformation>
+              <!--0 to 99 repetitions:-->
+              <urn:WineOperation>
+                <urn:WineOperationCode>to</urn:WineOperationCode>
+              </urn:WineOperation>
+            </urn:WineProduct>
+          </urn:BodyEadEsad>
+          <!--1 to 99 repetitions:-->
+          <urn:TransportDetails>
+            <urn:TransportUnitCode>to</urn:TransportUnitCode>
+            <!--Optional:-->
+            <urn:IdentityOfTransportUnits>token</urn:IdentityOfTransportUnits>
+            <!--Optional:-->
+            <urn:CommercialSealIdentification>token</urn:CommercialSealIdentification>
+            <!--Optional:-->
+            <urn:ComplementaryInformation language="to">token</urn:ComplementaryInformation>
+            <!--Optional:-->
+            <urn:SealInformation language="to">token</urn:SealInformation>
+          </urn:TransportDetails>
+        </urn:EADESADContainer>
+      </urn:Body>
+    </urn:IE801>
+
+  lazy val IE807: Elem = <urn4:IE807 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
+                                     xmlns:urn4="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE807:V3.01">
+    <urn4:Header>
+      <urn:MessageSender>NDEA.GB</urn:MessageSender>
+      <urn:MessageRecipient>NDEA.XI</urn:MessageRecipient>
+      <urn:DateOfPreparation>2023-06-27</urn:DateOfPreparation>
+      <urn:TimeOfPreparation>00:18:33</urn:TimeOfPreparation>
+      <urn:MessageIdentifier>GB0023121</urn:MessageIdentifier>
+      <urn:CorrelationIdentifier>6de24ff423abcb344bbcbcbcbc3423</urn:CorrelationIdentifier>
+    </urn4:Header>
+    <urn4:Body>
+      <urn4:InterruptionOfMovement>
+        <urn4:Attributes>
+          <urn4:AdministrativeReferenceCode>23XI00000000000000331</urn4:AdministrativeReferenceCode>
+          <urn4:ComplementaryInformation language="to">Customs aren't happy :(</urn4:ComplementaryInformation>
+          <urn4:DateAndTimeOfIssuance>2023-06-27T00:18:13</urn4:DateAndTimeOfIssuance>
+          <urn4:ReasonForInterruptionCode>1</urn4:ReasonForInterruptionCode>
+          <urn4:ReferenceNumberOfExciseOffice>AB737333</urn4:ReferenceNumberOfExciseOffice>
+          <urn4:ExciseOfficerIdentification>GB3939939393</urn4:ExciseOfficerIdentification>
+        </urn4:Attributes>
+        <urn4:ReferenceControlReport>
+          <urn4:ControlReportReference>GBAA2C3F4244ADB9</urn4:ControlReportReference>
+        </urn4:ReferenceControlReport>
+        <urn4:ReferenceControlReport>
+          <urn4:ControlReportReference>GBAA2C3F4244ADB8</urn4:ControlReportReference>
+        </urn4:ReferenceControlReport>
+        <urn4:ReferenceEventReport>
+          <urn4:EventReportNumber>GBAA2C3F4244ADB3</urn4:EventReportNumber>
+        </urn4:ReferenceEventReport>
+      </urn4:InterruptionOfMovement>
+    </urn4:Body>
+  </urn4:IE807>
+
   lazy val IE810: Elem = <urn:IE810 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE810:V3.01"
                                     xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
                                     xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
@@ -39,15 +312,14 @@ trait TestXml {
           <urn:DateAndTimeOfValidationOfCancellation>2023-06-13T10:17:05</urn:DateAndTimeOfValidationOfCancellation>
         </urn:Attributes>
         <urn:ExciseMovementEad>
-        <urn:AdministrativeReferenceCode>23GB00000000000377161</urn:AdministrativeReferenceCode>
-      </urn:ExciseMovementEad>
+          <urn:AdministrativeReferenceCode>23GB00000000000377161</urn:AdministrativeReferenceCode>
+        </urn:ExciseMovementEad>
         <urn:Cancellation>
-        <urn:CancellationReasonCode>3</urn:CancellationReasonCode>
-      </urn:Cancellation>
+          <urn:CancellationReasonCode>3</urn:CancellationReasonCode>
+        </urn:Cancellation>
       </urn:CancellationOfEAD>
     </urn:Body>
   </urn:IE810>
-
 
   lazy val IE813: Elem = <urn:IE813 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE813:V3.01"
                                     xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
@@ -116,10 +388,10 @@ trait TestXml {
   lazy val IE815WithNoCosignor: Elem = IE815Template("")
 
   private def IE815Template(consignor: String): Elem = <urn:IE815 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.01"
-                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
-                                    xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
-                                    xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
-                                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                                                                  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
+                                                                  xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
+                                                                  xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
+                                                                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <urn:Header>
       <urn1:MessageSender>NDEA.GB</urn1:MessageSender>
       <urn1:MessageRecipient>NDEA.GB</urn1:MessageRecipient>

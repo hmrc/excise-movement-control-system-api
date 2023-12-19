@@ -55,6 +55,7 @@ class GetNewMessageServiceImpl @Inject()(
       Future.successful(Some((newMessageResponse,0)))
     } else {
       messageReceiptConnector.put(exciseNumber).map {
+        logger.debug(s"[GetNewMessageService] - $messageCount messages available for Excise Registration Number: $exciseNumber")
         _ => Some((newMessageResponse, messageCount))
       }
     }

@@ -22,7 +22,7 @@ import org.scalatest.EitherValues
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{Ie801XmlMessage, TestXml}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
@@ -42,7 +42,7 @@ class MessageServiceSpec extends PlaySpec with EitherValues with TestXml {
 
     "return the consignee and consignor from the message for an IE801" in {
 
-      val ie801Message = IE801Message.createFromXml(Ie801XmlMessage.IE801)
+      val ie801Message = IE801Message.createFromXml(IE801)
 
       await(messageService.getErns(ie801Message)) mustBe Set("tokentokentok", "token")
 
