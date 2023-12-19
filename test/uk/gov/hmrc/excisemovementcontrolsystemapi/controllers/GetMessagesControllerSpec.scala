@@ -35,6 +35,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, Wor
 import uk.gov.hmrc.mongo.TimestampSupport
 
 import java.time.Instant
+import java.time.format.DateTimeParseException
 import scala.concurrent.{ExecutionContext, Future}
 
 class GetMessagesControllerSpec extends PlaySpec
@@ -130,6 +131,33 @@ class GetMessagesControllerSpec extends PlaySpec
 
       status(result) mustBe OK
       contentAsJson(result) mustBe Json.toJson(Seq(message, message3))
+    }
+
+    "succeed when a valid date format is provided" in {
+      val timeInFuture = Instant.now.plusSeconds(1000)
+      val message = Message("message", "IE801", timeInFuture)
+      val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
+      when(movementService.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(Some(movement)))
+
+      val result = createWithSuccessfulAuth.getMessagesForMovement(lrn, Some("2020-11-15T17:02:34.00Z"))(createRequest())
+
+      status(result) mustBe OK
+      contentAsJson(result) mustBe Json.toJson(Seq(message))
+    }
+
+    "fail when an invalid date format is provided" in {
+      intercept[DateTimeParseException] {
+        val timeInFuture = Instant.now.plusSeconds(1000)
+        val message = Message("message", "IE801", timeInFuture)
+        val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
+
+        when(movementService.getMovementByLRNAndERNIn(any, any))
+          .thenReturn(Future.successful(Some(movement)))
+
+        await(createWithSuccessfulAuth.getMessagesForMovement(lrn, Some("invalidDate"))(createRequest()))
+
+      }.getMessage mustBe "Text 'invalidDate' could not be parsed at index 0"
     }
 
     "create a Work Item if there is not one for the ERN already" in {

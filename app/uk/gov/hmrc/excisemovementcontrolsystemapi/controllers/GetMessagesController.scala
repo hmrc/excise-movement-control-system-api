@@ -53,9 +53,10 @@ class GetMessagesController @Inject()(
   }
 
   private def getMessagesAsJson(lrn: String, ern: String, lastUpdated: Option[String]): Future[Result] = {
+    val lastUpdatedTime = lastUpdated.map(Instant.parse(_))
     movementService.getMovementByLRNAndERNIn(lrn, List(ern))
       .map(mv => {
-        mv.map(m => filterMessagesByTime(m.messages, lastUpdated))
+        mv.map(m => filterMessagesByTime(m.messages, lastUpdatedTime))
       })
       .map {
       case Some(mv) => Ok(Json.toJson(mv))
@@ -63,9 +64,9 @@ class GetMessagesController @Inject()(
     }
   }
 
-  private def filterMessagesByTime(messages: Seq[Message], updatedSince: Option[String]): Seq[Message] = {
+  private def filterMessagesByTime(messages: Seq[Message], updatedSince: Option[Instant]): Seq[Message] = {
       updatedSince.fold[Seq[Message]](messages)(a =>
-        messages.filter(o => o.createdOn.isAfter(Instant.parse(a)) || o.createdOn.equals(Instant.parse(a)))
+        messages.filter(o => o.createdOn.isAfter(a) || o.createdOn.equals(a))
       )
   }
 
