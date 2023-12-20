@@ -36,7 +36,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PreValidateTraderCo
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTraderHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{PreValidateTraderErrorResponse, PreValidateTraderResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderErrorResponse, getPreValidateTraderRequest, getPreValidateTraderSuccessResponse}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
@@ -187,7 +187,7 @@ class PreValidateTraderConnectorSpec extends PlaySpec with BeforeAndAfterEach wi
     preValidateTraderHttpReader
   }
 
-  private def submitPreValidateTrader(): Future[Either[Result, Either[PreValidateTraderErrorResponse, PreValidateTraderResponse]]] = {
+  private def submitPreValidateTrader(): Future[Either[Result, PreValidateTraderResponse]] = {
     connector.submitMessage(validRequest, "ern123")
   }
 

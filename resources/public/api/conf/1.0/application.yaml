@@ -392,7 +392,7 @@ paths:
             application/vnd.hmrc.1.0+json:
               schema:
                 oneOf:
-                  - $ref: '#/components/schemas/ExciseTraderValidationSuccessResponse'
+                  - $ref: '#/components/schemas/ExciseTraderValidationSuccessfulResponse'
                   - $ref: '#/components/schemas/ExciseTraderValidationErrorResponse'
               examples:
                 Success:
@@ -725,17 +725,26 @@ components:
       properties:
         product:
           $ref: '#/components/schemas/ProductRequest'
-    ExciseTraderValidationSuccessResponse:
+    ExciseTraderValidationSuccessfulResponse:
       type: object
       required:
-        - validationTimestamp
         - exciseTraderValidationResponse
       properties:
-        validationTimestamp:
-          $ref: '#/components/schemas/ValidationTimestamp'
         exciseTraderValidationResponse:
           $ref: '#/components/schemas/ExciseTraderValidationResponse'
     ExciseTraderValidationResponse:
+      type: object
+      required:
+        - validationTimestamp
+        - exciseTraderResponse
+      properties:
+        validationTimestamp:
+          $ref: '#/components/schemas/ValidationTimestamp'
+        exciseTraderResponse:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExciseTraderResponse'
+    ExciseTraderResponse:
       type: object
       required:
         - exciseRegistrationNumber
@@ -773,7 +782,9 @@ components:
         validationTimestamp:
           $ref: '#/components/schemas/ValidationTimestamp'
         exciseTraderValidationResponse:
-          $ref: '#/components/schemas/ExciseTraderErrorResponse'
+          type: array
+          items:
+            $ref: '#/components/schemas/ExciseTraderErrorResponse'
     ExciseTraderErrorResponse:
       type: object
       required:
@@ -805,7 +816,9 @@ components:
         valid:
           type: boolean
         productError:
-          $ref: '#/components/schemas/ProductError'
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductError'
     ProductError:
       type: object
       required:

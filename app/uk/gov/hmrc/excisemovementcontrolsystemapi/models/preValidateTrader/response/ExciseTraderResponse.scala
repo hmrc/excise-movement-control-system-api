@@ -22,8 +22,10 @@ case class ExciseTraderResponse(
                                  exciseRegistrationNumber: String,
                                  entityGroup: String,
                                  validTrader: Boolean,
-                                 traderType: String,
-                                 validateProductAuthorisationResponse: ValidateProductAuthorisationResponse
+                                 errorCode: Option[String] = None,
+                                 errorText: Option[String] = None,
+                                 traderType: Option[String] = None,
+                                 validateProductAuthorisationResponse: Option[ValidateProductAuthorisationResponse] = None
                                )
 
 object ExciseTraderResponse {

@@ -21,7 +21,7 @@ import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, SERVICE_UNAVAILABLE}
 import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISErrorMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{PreValidateTraderErrorResponse, PreValidateTraderResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderResponse
 import uk.gov.hmrc.http.HttpReads.is2xx
 import uk.gov.hmrc.http.{HttpReads, HttpResponse}
 
@@ -29,11 +29,11 @@ class PreValidateTraderHttpReader(
                                    val correlationId: String,
                                    val ern: String,
                                    val createdDateTime: String
-                                 ) extends HttpReads[Either[Result, Either[PreValidateTraderErrorResponse, PreValidateTraderResponse]]]
+                                 ) extends HttpReads[Either[Result, PreValidateTraderResponse]]
   with Logging
   with ResponseHandler {
 
-  override def read(method: String, url: String, response: HttpResponse): Either[Result, Either[PreValidateTraderErrorResponse, PreValidateTraderResponse]] = {
+  override def read(method: String, url: String, response: HttpResponse): Either[Result, PreValidateTraderResponse] = {
 
     val result = extractIfSuccessful(response)
     result match {
@@ -42,9 +42,13 @@ class PreValidateTraderHttpReader(
     }
   }
 
-  def extractIfSuccessful(response: HttpResponse): Either[HttpResponse, Either[PreValidateTraderErrorResponse, PreValidateTraderResponse]] =
-    if (is2xx(response.status)) Right(ExtractPreValidateTraderResponse.extractResponse(response))
+  def extractIfSuccessful(response: HttpResponse): Either[HttpResponse, PreValidateTraderResponse] =
+    if (is2xx(response.status)) Right(extractResponse(response))
     else Left(response)
+
+  private def extractResponse(httpResponse: HttpResponse): PreValidateTraderResponse = {
+    jsonAs[PreValidateTraderResponse](httpResponse.body)
+  }
 
 
   private def handleErrorResponse

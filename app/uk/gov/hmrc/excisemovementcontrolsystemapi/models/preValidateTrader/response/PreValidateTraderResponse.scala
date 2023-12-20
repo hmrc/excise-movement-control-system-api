@@ -19,7 +19,11 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.resp
 import play.api.libs.json.{Format, Json}
 
 case class PreValidateTraderResponse(
-                                      exciseTraderValidationResponse: ExciseTraderValidationResponse,
+                                      //Success
+                                      exciseTraderValidationResponse: Option[ExciseTraderValidationResponse] = None,
+                                      //And error cases
+                                      validationTimeStamp: Option[String] = None,
+                                      exciseTraderResponse: Option[Array[ExciseTraderResponse]] = None
                                     )
 
 object PreValidateTraderResponse {

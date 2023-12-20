@@ -17,20 +17,17 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connector.util
 
 
-import org.scalatest.EitherValues
 import org.scalatest.Inspectors.forAll
+import org.scalatest.{EitherValues, OptionValues}
 import org.scalatestplus.play.PlaySpec
 import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, SERVICE_UNAVAILABLE}
 import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTraderHttpReader
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderErrorResponse, getPreValidateTraderSuccessResponse}
 import uk.gov.hmrc.http.HttpResponse
 
-import scala.reflect.runtime.universe.typeOf
-
-class PreValidateTraderHttpReaderSpec extends PlaySpec with EitherValues {
+class PreValidateTraderHttpReaderSpec extends PlaySpec with EitherValues with OptionValues {
 
   private val validResponse = getPreValidateTraderSuccessResponse
   private val businessError = getPreValidateTraderErrorResponse
@@ -45,11 +42,9 @@ class PreValidateTraderHttpReaderSpec extends PlaySpec with EitherValues {
         HttpResponse(200, Json.toJson(validResponse).toString())
       )
 
-      result.map {
-        case Right(result) =>
-          result.exciseTraderValidationResponse.validationTimeStamp mustBe validResponse.exciseTraderValidationResponse.validationTimeStamp
-          result.exciseTraderValidationResponse.exciseTraderResponse(0) mustBe validResponse.exciseTraderValidationResponse.exciseTraderResponse(0)
-      }
+      val responseObject = result.toOption.value.exciseTraderValidationResponse.value
+      responseObject.validationTimeStamp mustBe validResponse.exciseTraderValidationResponse.value.validationTimeStamp
+      responseObject.exciseTraderResponse(0) mustBe validResponse.exciseTraderValidationResponse.value.exciseTraderResponse(0)
 
     }
 
@@ -61,11 +56,10 @@ class PreValidateTraderHttpReaderSpec extends PlaySpec with EitherValues {
         HttpResponse(200, Json.toJson(businessError).toString())
       )
 
-      result.map {
-        case Left(result) =>
-          result.validationTimeStamp mustBe businessError.validationTimeStamp
-          result.exciseTraderResponse(0) mustBe businessError.exciseTraderResponse(0)
-      }
+      val responseObject = result.toOption.value
+
+      responseObject.validationTimeStamp mustBe businessError.validationTimeStamp
+      responseObject.exciseTraderResponse.value(0) mustBe businessError.exciseTraderResponse.value(0)
     }
 
     forAll(Seq(
@@ -86,16 +80,5 @@ class PreValidateTraderHttpReaderSpec extends PlaySpec with EitherValues {
       }
     }
 
-    "throw if cannot parse json" in {
-      val ex = intercept[RuntimeException] {
-        preValidateTraderHttpReader.read(
-          "ANY",
-          "/foo",
-          HttpResponse(200, """{"test":"test"}""")
-        )
-      }
-
-      ex.getMessage mustBe s"Response body could not be read as type ${typeOf[PreValidateTraderErrorResponse]}"
-    }
   }
 }

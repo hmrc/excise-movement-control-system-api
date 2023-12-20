@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, ok, post, urlEqualTo}
-import org.scalatest.BeforeAndAfterAll
+import org.scalatest.{BeforeAndAfterAll, OptionValues}
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -40,7 +40,8 @@ class PreValidateTraderControllerItSpec extends PlaySpec
   with GuiceOneServerPerSuite
   with AuthTestSupport
   with WireMockServerSpec
-  with BeforeAndAfterAll {
+  with BeforeAndAfterAll
+  with OptionValues {
 
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
   private val url = s"http://localhost:$port/traders/pre-validate"
@@ -83,9 +84,9 @@ class PreValidateTraderControllerItSpec extends PlaySpec
 
       withClue("return the json response") {
         val responseBody = Json.parse(result.body).as[PreValidateTraderResponse].exciseTraderValidationResponse
-        responseBody.validationTimeStamp mustBe expectedResult.validationTimeStamp
+        responseBody.value.validationTimeStamp mustBe expectedResult.value.validationTimeStamp
 
-        responseBody.exciseTraderResponse(0) mustBe expectedResult.exciseTraderResponse(0)
+        responseBody.value.exciseTraderResponse(0) mustBe expectedResult.value.exciseTraderResponse(0)
       }
 
     }
@@ -134,7 +135,7 @@ class PreValidateTraderControllerItSpec extends PlaySpec
       postRequest(Json.toJson(""), contentType = """application/xml""").status mustBe UNSUPPORTED_MEDIA_TYPE
     }
 
-    "return bad request (400) when body is not xml" in {
+    "return bad request (400) when body is not json" in {
       withAuthorizedTrader(authErn)
 
       val result = await(wsClient.url(url)

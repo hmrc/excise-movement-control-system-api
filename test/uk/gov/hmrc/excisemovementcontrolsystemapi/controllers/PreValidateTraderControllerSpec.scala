@@ -50,7 +50,7 @@ class PreValidateTraderControllerSpec
     reset(connector)
 
     when(connector.submitMessage(any, any)(any)).
-      thenReturn(Future.successful(Right(Right(getPreValidateTraderSuccessResponse))))
+      thenReturn(Future.successful(Right(getPreValidateTraderSuccessResponse)))
   }
 
   "submit" should {
@@ -64,7 +64,7 @@ class PreValidateTraderControllerSpec
 
     "return 200 when business error" in {
       when(connector.submitMessage(any, any)(any)).
-        thenReturn(Future.successful(Right(Left(getPreValidateTraderErrorResponse))))
+        thenReturn(Future.successful(Right(getPreValidateTraderErrorResponse)))
 
       val result = createWithSuccessfulAuth.submit(request)
 
@@ -91,7 +91,7 @@ class PreValidateTraderControllerSpec
 
     "a validation parser error" when {
       "xml cannot be parsed" in {
-        val result = createWithFailingXmlParserAction.submit(request)
+        val result = createWithFailingJsonParserAction.submit(request)
 
         status(result) mustBe BAD_REQUEST
       }
@@ -115,7 +115,7 @@ class PreValidateTraderControllerSpec
       cc
     )
 
-  private def createWithFailingXmlParserAction =
+  private def createWithFailingJsonParserAction =
     new PreValidateTraderController(
       FakeSuccessAuthentication,
       FakeFailureJsonParser,

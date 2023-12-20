@@ -41,31 +41,38 @@ object TestUtils {
     )
   }
 
-  def getPreValidateTraderSuccessResponse: PreValidateTraderResponse = PreValidateTraderResponse(
-    ExciseTraderValidationResponse("2021-12-17T09:31:12Z",
-      Array(ExciseTraderResponse("GBWK002281023", "UK Record", validTrader = true, "1",
-        ValidateProductAuthorisationResponse(true)
-      ))))
+  def getPreValidateTraderSuccessResponse: PreValidateTraderResponse = PreValidateTraderResponse(Some(
+    ExciseTraderValidationResponse(
+      validationTimeStamp = "2021-12-17T09:31:12Z",
+      exciseTraderResponse = Array(ExciseTraderResponse(
+        exciseRegistrationNumber = "GBWK002281023",
+        entityGroup = "UK Record",
+        validTrader = true,
+        traderType = Some("1"),
+        validateProductAuthorisationResponse = Some(ValidateProductAuthorisationResponse(valid = true))
+      ))
+    )
+  )
+  )
 
-  def getPreValidateTraderErrorResponse: PreValidateTraderErrorResponse = PreValidateTraderErrorResponse(
-    validationTimeStamp = "2021-12-17T09:31:12Z",
-    exciseTraderResponse = Array(ExciseTraderErrorResponse(
+  def getPreValidateTraderErrorResponse: PreValidateTraderResponse = PreValidateTraderResponse(
+    validationTimeStamp = Some("2021-12-17T09:31:12Z"),
+    exciseTraderResponse = Some(Array(ExciseTraderResponse(
       validTrader = false,
       exciseRegistrationNumber = "GBWK000000000",
       traderType = None,
       entityGroup = "UK Record",
       errorCode = Some("6"),
       errorText = Some("Not Found"),
-      validateProductAuthorisationResponse = Some(ValidateProductAuthorisationErrorResponse(
+      validateProductAuthorisationResponse = Some(ValidateProductAuthorisationResponse(
         valid = false,
         productError = Some(Seq(ProductError(
           errorCode = "1",
           errorText = "Unrecognised EPC",
           exciseProductCode = "S200"
         )))
-      )
       ))
-    )
+    )))
   )
 
   def getPreValidateTraderRequest: PreValidateTraderRequest = PreValidateTraderRequest(

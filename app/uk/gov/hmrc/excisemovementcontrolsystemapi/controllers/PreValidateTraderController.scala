@@ -40,10 +40,7 @@ class PreValidateTraderController @Inject()(
     (authAction andThen parseJsonAction).async(parse.json) {
       implicit request: ParsedPreValidateTraderRequest[JsValue] =>
         connector.submitMessage(request.json, "request.request.erns.head").flatMap {
-          case Right(response) => response match {
-            case Left(errorResponse) => Future.successful(Ok(Json.toJson(errorResponse)))
-            case Right(successResponse) => Future.successful(Ok(Json.toJson(successResponse)))
-          }
+          case Right(response) => Future.successful(Ok(Json.toJson(response)))
           case Left(error) => Future.successful(error)
         }
     }

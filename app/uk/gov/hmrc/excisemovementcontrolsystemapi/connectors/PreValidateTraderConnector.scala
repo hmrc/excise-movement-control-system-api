@@ -25,7 +25,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTraderHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.PreValidateTraderRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{PreValidateTraderErrorResponse, PreValidateTraderResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
@@ -42,14 +42,14 @@ class PreValidateTraderConnector @Inject()
 )(implicit ec: ExecutionContext) extends EISSubmissionHeaders with Logging {
 
   def submitMessage(request: PreValidateTraderRequest, ern: String)(implicit hc: HeaderCarrier):
-  Future[Either[Result, Either[PreValidateTraderErrorResponse, PreValidateTraderResponse]]] = {
+  Future[Either[Result, PreValidateTraderResponse]] = {
 
     val timer = metrics.defaultRegistry.timer("emcs.prevalidatetrader.connector.timer").time()
 
     val correlationId = emcsUtils.generateCorrelationId
     val createdDateTime = emcsUtils.getCurrentDateTimeString
 
-    httpClient.POST[PreValidateTraderRequest, Either[Result, Either[PreValidateTraderErrorResponse, PreValidateTraderResponse]]](
+    httpClient.POST[PreValidateTraderRequest, Either[Result, PreValidateTraderResponse]](
       appConfig.preValidateTraderUrl,
       request,
       build(correlationId, createdDateTime, appConfig.preValidateTraderBearerToken)
