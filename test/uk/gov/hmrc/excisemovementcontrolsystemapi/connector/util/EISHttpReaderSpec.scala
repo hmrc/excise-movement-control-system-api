@@ -17,7 +17,6 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connector.util
 
 
-import akka.http.scaladsl.model.DateTime
 import org.scalatest.EitherValues
 import org.scalatest.Inspectors.forAll
 import org.scalatestplus.play.PlaySpec
@@ -29,15 +28,15 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, 
 import uk.gov.hmrc.http.HttpResponse
 
 import java.time.LocalDateTime
-import java.util.UUID
 import scala.reflect.runtime.universe.typeOf
 
 class EISHttpReaderSpec extends PlaySpec with EitherValues {
 
   private val eisHttpParser = EISHttpReader("123", "GB123", "date time")
+  private val localDateTime = LocalDateTime.of(2023, 9, 19, 15, 57, 23)
   private val exampleError = Json.toJson(
     EISErrorResponse(
-      LocalDateTime.of(2023, 9, 19, 15, 57, 23),
+      localDateTime,
       "Error",
       "Error details",
       "123"
@@ -125,7 +124,7 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
       errorType = errorCode,
       errorReason = "The Date of Dispatch you entered is incorrect",
       errorLocation = location,
-      originalAttributeValue = DateTime.now.toString()
+      originalAttributeValue = localDateTime.toString()
     )
   }
 }

@@ -25,7 +25,7 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, model}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ExciseNumberQueueWorkItemRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.WorkItemService
 import uk.gov.hmrc.http.HeaderCarrier
@@ -35,8 +35,8 @@ import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.Instant
 import scala.compat.java8.DurationConverters.FiniteDurationops
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{Duration, HOURS, MINUTES, SECONDS}
+import scala.concurrent.{ExecutionContext, Future}
 
 class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfterEach {
 
