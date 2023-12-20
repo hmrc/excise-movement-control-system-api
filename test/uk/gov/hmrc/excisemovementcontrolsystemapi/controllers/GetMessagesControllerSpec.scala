@@ -30,11 +30,13 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnsAction, FakeXmlParsers}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.mongo.TimestampSupport
 
-import java.time.Instant
+import java.time.{Instant, LocalDate, LocalDateTime, LocalTime}
 import java.time.format.DateTimeParseException
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -52,8 +54,9 @@ class GetMessagesControllerSpec extends PlaySpec
   private val cc = stubControllerComponents()
   private val lrn = "LRN1234"
   private val dateTimeService = mock[TimestampSupport]
-  private val timeStamp = Instant.parse("2018-11-30T18:35:24.00Z")
+  private val timeStamp = LocalDateTime.of(2020,1,1,1,1,1,1)
   private val workItemService = mock[WorkItemService]
+  private val emcsUtils = mock[EmcsUtils]
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -63,6 +66,8 @@ class GetMessagesControllerSpec extends PlaySpec
       .thenReturn(Future.successful(Some(ern)))
 
     when(dateTimeService.timestamp()).thenReturn(Instant.now())
+
+    when(emcsUtils.getCurrentDateTime).thenReturn(timeStamp)
 
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
   }
@@ -114,9 +119,6 @@ class GetMessagesControllerSpec extends PlaySpec
 
     "get all the new messages including messages with a createdOn time of NOW when there is a time query parameter provided" in {
       val timeNow = dateTimeService.timestamp()
-
-      //TODO: do we need to do this truncated stuff everywhere? Or even at all. Just make sure that the format we have
-      // specified is adhered to
       val timeNowString = timeNow.toString
       val timeInFuture = Instant.now.plusSeconds(1000)
       val timeInPast = Instant.now.minusSeconds(1000)
@@ -147,17 +149,19 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "fail when an invalid date format is provided" in {
-      intercept[DateTimeParseException] {
-        val timeInFuture = Instant.now.plusSeconds(1000)
-        val message = Message("message", "IE801", timeInFuture)
-        val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
+      val timeInFuture = Instant.now.plusSeconds(1000)
+      val message = Message("message", "IE801", timeInFuture)
+      val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
+      when(movementService.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(Some(movement)))
 
-        when(movementService.getMovementByLRNAndERNIn(any, any))
-          .thenReturn(Future.successful(Some(movement)))
+      val result = createWithSuccessfulAuth.getMessagesForMovement(lrn, Some("invalid date"))(createRequest())
 
-        await(createWithSuccessfulAuth.getMessagesForMovement(lrn, Some("invalidDate"))(createRequest()))
+      status(result) mustBe BAD_REQUEST
 
-      }.getMessage mustBe "Text 'invalidDate' could not be parsed at index 0"
+      contentAsJson(result) mustBe Json.toJson(
+        ErrorResponse(timeStamp, "Invalid date format provided in the updatedSince query parameter", "")
+      )
     }
 
     "create a Work Item if there is not one for the ERN already" in {
@@ -212,7 +216,8 @@ class GetMessagesControllerSpec extends PlaySpec
       FakeSuccessAuthentication,
       movementService,
       workItemService,
-      cc
+      cc,
+      emcsUtils
     )
 
   private def createRequest(): FakeRequest[AnyContent] = {

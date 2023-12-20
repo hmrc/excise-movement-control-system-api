@@ -23,18 +23,21 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.{Instant, LocalDateTime}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 
 @Singleton
 class GetMessagesController @Inject()(
                                        authAction: AuthAction,
                                        movementService: MovementService,
                                        workItemService: WorkItemService,
-                                       cc: ControllerComponents
+                                       cc: ControllerComponents,
+                                       implicit val emcsUtils: EmcsUtils
                                      )(implicit ec: ExecutionContext)
   extends BackendController(cc) {
 
@@ -44,7 +47,7 @@ class GetMessagesController @Inject()(
       implicit request: EnrolmentRequest[AnyContent] => {
 
         movementService.getMatchingERN(lrn, request.erns.toList).flatMap {
-          case None => Future.successful(BadRequest(Json.toJson(ErrorResponse(LocalDateTime.now(), "Invalid LRN supplied for ERN", ""))))
+          case None => Future.successful(BadRequest(Json.toJson(ErrorResponse(emcsUtils.getCurrentDateTime, "Invalid LRN supplied for ERN", ""))))
           case Some(ern) => workItemService.addWorkItemForErn(ern, fastMode = false)
             getMessagesAsJson(lrn, ern, updatedSince)
         }
@@ -53,15 +56,20 @@ class GetMessagesController @Inject()(
   }
 
   private def getMessagesAsJson(lrn: String, ern: String, updatedSince: Option[String]): Future[Result] = {
-    val updatedSinceTime = updatedSince.map(Instant.parse(_))
-    movementService.getMovementByLRNAndERNIn(lrn, List(ern))
-      .map(mv => {
-        mv.map(m => filterMessagesByTime(m.messages, updatedSinceTime))
-      })
-      .map {
-      case Some(mv) => Ok(Json.toJson(mv))
-      case _ => Ok(JsArray())
-    }
+
+
+    Try(updatedSince.map(Instant.parse(_))).map { updatedSinceTime =>
+      movementService.getMovementByLRNAndERNIn(lrn, List(ern))
+        .map(mv => {
+          mv.map(m => filterMessagesByTime(m.messages, updatedSinceTime))
+        })
+        .map {
+          case Some(mv) => Ok(Json.toJson(mv))
+          case _ => Ok(JsArray())
+        }
+
+    }.getOrElse(
+      Future.successful(BadRequest(Json.toJson(ErrorResponse(emcsUtils.getCurrentDateTime, "Invalid date format provided in the updatedSince query parameter", "")))))
   }
 
   private def filterMessagesByTime(messages: Seq[Message], updatedSince: Option[Instant]): Seq[Message] = {
