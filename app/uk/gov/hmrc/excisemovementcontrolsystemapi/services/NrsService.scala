@@ -66,7 +66,6 @@ class NrsService @Inject()
     } yield retrievedNrsResponse)
       .recover {
         case NonFatal(e) =>
-          //Todo: Catching the error and not throwing here for the moment. But do we want to throw here?
           logger.warn(s"[NrsService] - Error when submitting to Non repudiation system (NRS) with message: ${e.getMessage}", e)
           Left(INTERNAL_SERVER_ERROR)
       }
