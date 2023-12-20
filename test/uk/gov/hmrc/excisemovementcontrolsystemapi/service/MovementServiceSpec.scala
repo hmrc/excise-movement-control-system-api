@@ -338,15 +338,13 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       Movement("345", consignorId, None, Some("89"), now, Seq.empty),
       Movement("345", "12", None, Some("890"), now, Seq.empty)
     )
+    val expectedMessage = createMessage("<IE818>test</IE818>", MessageTypes.IE818.value)
 
     "save movement" when {
       "message contains Administration Reference Code (ARC)" in {
         setUpForUpdateMovement(newMessage, Some("456"), None, "<IE818>test</IE818>", cachedMovements)
 
         await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
-
-        val encodeMessage = Base64.getEncoder.encodeToString("<IE818>test</IE818>".getBytes(StandardCharsets.UTF_8))
-        val expectedMessage = Message(encodeMessage, MessageTypes.IE818.value, dateTimeService)
 
         verify(mockMovementRepository).updateMovement(
           eqTo(Movement("123", consignorId, None, Some("456"), now, Seq(expectedMessage))))
@@ -357,9 +355,6 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
 
-        val encodeMessage = Base64.getEncoder.encodeToString("<IE818>test</IE818>".getBytes(StandardCharsets.UTF_8))
-        val expectedMessage = Message(encodeMessage, MessageTypes.IE818.value, dateTimeService)
-
         verify(mockMovementRepository).updateMovement(
           eqTo(Movement("123", consignorId, None, Some("456"), now, Seq(expectedMessage))))
       }
@@ -369,50 +364,38 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
 
-        val encodeMessage = Base64.getEncoder.encodeToString("<IE818>test</IE818>".getBytes(StandardCharsets.UTF_8))
-        val expectedMessage = Message(encodeMessage, MessageTypes.IE818.value, dateTimeService)
-
         verify(mockMovementRepository).updateMovement(
           eqTo(Movement("345", consignorId, None, Some("89"), now, Seq(expectedMessage))))
       }
+    }
 
-      "test message" in {
-        setUpForUpdateMovement(newMessage, Some("456"), None, "<IE818>test</IE818>", cachedMovements)
+    "not overwrite ARC that are not empty" in {
+      setUpForUpdateMovement(newMessage, None, Some("123"), "<IE818>test</IE818>", cachedMovements)
 
-        when(newMessage.toXml).thenReturn(scala.xml.XML.loadString("<IE818>test</IE818>"))
-        when(newMessage.messageType).thenReturn(MessageTypes.IE818.value)
-        val movement = Seq(
-          Movement("123", consignorId, None, Some("456"), now, Seq(cachedMessage1, cachedMessage2)),
-        )
-        when(mockMovementRepository.getAllBy(any))
-          .thenReturn(Future.successful(movement))
-        await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
+      when(newMessage.administrativeReferenceCode).thenReturn(Some("arc"))
+      await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
 
-        val encodeMessage = Base64.getEncoder.encodeToString("<IE818>test</IE818>".getBytes(StandardCharsets.UTF_8))
-        val expectedMessage = Message(encodeMessage, MessageTypes.IE818.value, dateTimeService)
+      verify(mockMovementRepository).updateMovement(
+        eqTo(Movement("123", consignorId, None, Some("456"), now, Seq(expectedMessage))))
+    }
 
-        verify(mockMovementRepository).updateMovement(
-          eqTo(Movement("123", consignorId, None, Some("456"), now, Seq(cachedMessage1, cachedMessage2, expectedMessage))))
+    "throw an error" when {
+      "message has both ARC and LRN missing" in {
+        setUpForUpdateMovement(newMessage, None, None, "<foo>test</foo>", cachedMovements)
 
+        intercept[RuntimeException] {
+          await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
+        }.getMessage mustBe "[MovementService] - Cannot retrieve a movement. Local reference number or administration reference code are not present for ERN: ABC"
+      }
+
+      "movement is not present" in {
+        when(mockMovementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
+
+        intercept[RuntimeException] {
+          await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
+        }
       }
     }
-
-    "throw an error is message has both ARC and LRN missing" in {
-      setUpForUpdateMovement(newMessage, None, None, "<foo>test</foo>", cachedMovements)
-
-      intercept[RuntimeException] {
-        await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
-      }.getMessage mustBe "[MovementService] - Cannot retrieve a movement. Local reference number or administration reference code are not present for ERN: ABC"
-    }
-
-    "return false if cannot retrieve message1" in {
-      when(mockMovementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
-
-      intercept[RuntimeException] {
-        await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
-      }
-    }
-
 
     "do not save duplicate messages to DB" in {
       val cachedMessage = createMessage("<foo>test</foo>", MessageTypes.IE801.value)

@@ -42,9 +42,7 @@ class MovementService @Inject()(
 
     getMovementByLRNAndERNIn(movement.localReferenceNumber, List(movement.consignorId)).
       flatMap {
-        case Some(movementFromDb: Movement) if movementFromDb.administrativeReferenceCode.isDefined || movementFromDb.consigneeId != movement.consigneeId =>
-          //If we already have an arc this movement is already in process. Don't rewrite it
-          // If we don't have an arc but the consignee is different, don't rewrite it
+        case Some(movementFromDb: Movement) if isLrnAlreadyUsed(movement, movementFromDb) =>
           Future.successful(Left(BadRequest(Json.toJson(
             ErrorResponse(
               emcsUtils.getCurrentDateTime,
@@ -52,10 +50,7 @@ class MovementService @Inject()(
               s"The local reference number ${movement.localReferenceNumber} has already been used for another movement"
             )
           ))))
-        case Some(movementFromDb: Movement) =>
-          //Already in db with the same details (same consignor, consignee, lrn)
-          //So just return what we have
-          Future(Right(movementFromDb))
+        case Some(movementFromDb: Movement) => Future(Right(movementFromDb))
         case _ =>
           movementRepository.saveMovement(movement)
             .map(_ => Right(movement))
@@ -127,7 +122,7 @@ class MovementService @Inject()(
     val newArc = newMessage.administrativeReferenceCode.orElse(movement.administrativeReferenceCode)
 
     val newMovement = movement.copy(
-      administrativeReferenceCode = newArc,
+      administrativeReferenceCode = movement.administrativeReferenceCode.fold(newArc)(Some(_)),
       messages = allMessages
     )
 
@@ -140,5 +135,9 @@ class MovementService @Inject()(
   private def matchingERN(movement: Movement, erns: List[String]): Option[String] = {
     if (erns.contains(movement.consignorId)) Some(movement.consignorId)
     else movement.consigneeId
+  }
+
+  private def isLrnAlreadyUsed(movement: Movement, movementFromDb: Movement) = {
+    movementFromDb.administrativeReferenceCode.isDefined || movementFromDb.consigneeId != movement.consigneeId
   }
 }
