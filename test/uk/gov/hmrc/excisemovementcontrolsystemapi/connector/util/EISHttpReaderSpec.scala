@@ -24,7 +24,7 @@ import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, SERV
 import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse, RimValidationErrorResponse, ValidatorResults}
 import uk.gov.hmrc.http.HttpResponse
 
 import java.time.LocalDateTime
@@ -33,6 +33,15 @@ import scala.reflect.runtime.universe.typeOf
 class EISHttpReaderSpec extends PlaySpec with EitherValues {
 
   private val eisHttpParser = EISHttpReader("123", "GB123", "date time")
+  private val localDateTime = LocalDateTime.of(2023, 9, 19, 15, 57, 23)
+  private val exampleError = Json.toJson(
+    EISErrorResponse(
+      localDateTime,
+      "Error",
+      "Error details",
+      "123"
+  ))
+
   "read" should {
     "return EISResponse" in {
       val eisResponse = EISSubmissionResponse("ok", "Success", "123")
@@ -46,14 +55,8 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
       result mustBe Right(eisResponse)
     }
 
-    val exampleError = Json.toJson(EISErrorResponse(
-      LocalDateTime.of(2023, 9, 19, 15, 57, 23),
-      "Error",
-      "Error details",
-      "123"
-    ))
-
     forAll(Seq(
+      (BAD_REQUEST, BadRequest(exampleError)),
       (NOT_FOUND, NotFound(exampleError)),
       (INTERNAL_SERVER_ERROR, InternalServerError(exampleError)),
       (SERVICE_UNAVAILABLE, ServiceUnavailable(exampleError)))) { case (statusCode, expectedResult) =>
@@ -70,31 +73,58 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
       }
     }
 
-    "return BadRequest when BadRequest returned from HttpResponse" in {
+    "cleanup references to the control document in from EIS validation" in {
 
       val result = eisHttpParser.read(
         "ANY",
         "/foo",
-        HttpResponse(BAD_REQUEST, "{\"exampleError\": \"/con:Control[1]/con:Parameter[1]/urn:IE815[1]/urn:DateOfDispatch[1]\"}")
+        HttpResponse(BAD_REQUEST, Json.toJson(createRimValidationResponse).toString())
       )
 
-      val resultObject = result.left.value
-
-      withClue("cleanup references to the control document in from EIS validation") {
-        resultObject mustBe BadRequest(Json.toJson("{\"exampleError\":\"/urn:IE815[1]/urn:DateOfDispatch[1]\"}"))
-      }
+      result.left.value mustBe BadRequest(Json.toJson(expectedRimValidationResponse))
     }
 
     "throw if cannot parse json" in {
-      val ex = intercept[RuntimeException] {
+
+      the[RuntimeException] thrownBy {
         eisHttpParser.read(
           "ANY",
           "/foo",
           HttpResponse(200, """{"test":"test"}""")
         )
-      }
-
-      ex.getMessage mustBe s"Response body could not be read as type ${typeOf[EISSubmissionResponse]}"
+      } must have message s"Response body could not be read as type ${typeOf[EISSubmissionResponse]}"
     }
+  }
+
+  private def createRimValidationResponse = {
+    RimValidationErrorResponse(
+      emcsCorrelationId = "correlationId",
+      message = Seq("Validation error(s) occurred"),
+      validatorResults = Seq(
+        createRimError(8080L, "/con:Control[1]/con:Parameter[1]/urn:IE815[1]/urn:DateOfDispatch[1]"),
+        createRimError(8090L, "/con:Control[1]/con:Parameter[1]/urn:IE818[1]/urn:DateOfDispatch[1]")
+      )
+    )
+  }
+
+  private def expectedRimValidationResponse = {
+    RimValidationErrorResponse(
+      emcsCorrelationId = "correlationId",
+      message = Seq("Validation error(s) occurred"),
+      validatorResults = Seq(
+        createRimError(8080L, "/urn:IE815[1]/urn:DateOfDispatch[1]"),
+        createRimError(8090L, "/urn:IE818[1]/urn:DateOfDispatch[1]"),
+      )
+    )
+  }
+
+  private def createRimError(errorCode: BigInt, location: String) = {
+    ValidatorResults(
+      errorCategory = "business",
+      errorType = errorCode,
+      errorReason = "The Date of Dispatch you entered is incorrect",
+      errorLocation = location,
+      originalAttributeValue = localDateTime.toString()
+    )
   }
 }

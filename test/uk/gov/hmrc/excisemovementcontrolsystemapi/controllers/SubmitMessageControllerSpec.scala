@@ -59,17 +59,6 @@ class SubmitMessageControllerSpec
   private val workItemService = mock[WorkItemService]
   private val emcsUtils = mock[EmcsUtils]
 
-  private val workItem =
-    WorkItem(
-      id = new ObjectId(),
-      receivedAt = Instant.now,
-      updatedAt = Instant.now,
-      availableAt = Instant.now,
-      status = ToDo,
-      failureCount = 0,
-      item = ExciseNumberWorkItem(ern, 3)
-    )
-
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(connector, workItemService)
