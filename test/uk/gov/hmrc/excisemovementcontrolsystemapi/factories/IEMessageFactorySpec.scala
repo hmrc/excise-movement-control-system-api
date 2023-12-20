@@ -48,14 +48,14 @@ class IEMessageFactorySpec
         when(message.key).thenReturn(Some("Anything"))
         intercept[RuntimeException] {
           sut.createIEMessage(message)
-        }.getMessage mustBe s"Could not create Message object. Unsupported message: Anything"
+        }.getMessage mustBe s"[IEMessageFactory] - Could not create Message object. Unsupported message: Anything"
       }
 
       "messageType is empty" in {
         when(message.key).thenReturn(None)
         intercept[RuntimeException] {
           sut.createIEMessage(message)
-        }.getMessage mustBe "Could not create Message object. Message type is empty"
+        }.getMessage mustBe "[IEMessageFactory] - Could not create Message object. Message type is empty"
       }
     }
 
@@ -104,6 +104,11 @@ class IEMessageFactorySpec
       sut.createIEMessage(message).isInstanceOf[IE837Message] mustBe true
     }
 
+    "return an instance of IE840Message" in {
+      when(message.key).thenReturn(Some("IE840"))
+      sut.createIEMessage(message).isInstanceOf[IE840Message] mustBe true
+    }
+
     "return an instance of IE871Message" in {
       when(message.key).thenReturn(Some("IE871"))
       sut.createIEMessage(message).isInstanceOf[IE871Message] mustBe true
@@ -111,13 +116,13 @@ class IEMessageFactorySpec
 
   }
 
-  "createfromType" should {
+  "createFromType" should {
     "return throw an error" when {
       "cannot handle message type" in {
 
         the[Exception] thrownBy {
           sut.createFromXml("Anything", IE801)
-        } must have message s"Could not create Message object. Unsupported message: Anything"
+        } must have message s"[IEMessageFactory] - Could not create Message object. Unsupported message: Anything"
       }
     }
 
@@ -139,7 +144,6 @@ class IEMessageFactorySpec
       result.messageType mustBe MessageTypes.IE807.value
       result.lrnEquals("anyLrn") mustBe false
     }
-
 
     "return an instance of IE810Message" in {
 
@@ -198,6 +202,16 @@ class IEMessageFactorySpec
       result.consignorId mustBe None
       result.consigneeId mustBe Some("GBWK240176600")
       result.administrativeReferenceCode mustBe Some("16GB00000000000192223")
+    }
+
+    "return an instance of IE840Message" in {
+      val result = sut.createFromXml("IE840", IE840).asInstanceOf[IE840Message]
+      result.isInstanceOf[IE840Message] mustBe true
+      result.consigneeId mustBe None
+      result.administrativeReferenceCode mustBe Some("23XI00000000000000333")
+      result.messageIdentifier mustBe "XI0003265"
+      result.messageType mustBe MessageTypes.IE840.value
+      result.lrnEquals("anyLrn") mustBe false
     }
 
     "return an instance of IE871Message" in {
