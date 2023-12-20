@@ -80,4 +80,7 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   def traderMovementUrl: String = s"$eisHost/emcs/movements/v1/trader-movements"
   def movementBearerToken: String = servicesConfig.getConfString("eis.movement-bearer-token", "dummyMovementBearerToken")
 
+  def preValidateTraderUrl: String = s"$eisHost/emcs/pre-validate-trader/v1"
+  def preValidateTraderBearerToken: String = servicesConfig.getConfString("eis.pre-validate-trader-bearer-token", "dummyPreValidateTraderBearerToken")
+
 }
