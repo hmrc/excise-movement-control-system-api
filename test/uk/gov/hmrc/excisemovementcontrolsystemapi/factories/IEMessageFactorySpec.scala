@@ -74,6 +74,11 @@ class IEMessageFactorySpec
       sut.createIEMessage(message).isInstanceOf[IE802Message] mustBe true
     }
 
+    "return an instance of IE803Message" in {
+      when(message.key).thenReturn(Some("IE803"))
+      sut.createIEMessage(message).isInstanceOf[IE803Message] mustBe true
+    }
+
     "return an instance of IE807Message" in {
       when(message.key).thenReturn(Some("IE807"))
       sut.createIEMessage(message).isInstanceOf[IE807Message] mustBe true
@@ -133,6 +138,16 @@ class IEMessageFactorySpec
       result.consigneeId mustBe Some("token")
       result.administrativeReferenceCode mustBe Some("tokentokentokentokent")
       result.localReferenceNumber mustBe Some("token")
+    }
+
+    "return an instance of IE803Message" in {
+      val result = sut.createFromXml("IE803", IE803).asInstanceOf[IE803Message]
+      result.isInstanceOf[IE803Message] mustBe true
+      result.consigneeId mustBe None
+      result.administrativeReferenceCode mustBe Some("23XI00000000000056333")
+      result.messageIdentifier mustBe "GB002312688"
+      result.messageType mustBe MessageTypes.IE803.value
+      result.lrnEquals("anyLrn") mustBe false
     }
 
     "return an instance of IE807Message" in {

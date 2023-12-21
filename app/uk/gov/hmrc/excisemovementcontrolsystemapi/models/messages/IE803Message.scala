@@ -16,15 +16,15 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
-import generated.{IE807Type, MessagesOption}
+import generated.{IE803Type, MessagesOption}
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 
 import scala.xml.NodeSeq
 
-case class IE807Message
+case class IE803Message
 (
-  private val obj: IE807Type,
+  private val obj: IE803Type,
   private val key: Option[String],
   private val namespace: Option[String]
 ) extends IEMessage {
@@ -32,26 +32,26 @@ case class IE807Message
   def consigneeId: Option[String] = None
 
   override def administrativeReferenceCode: Option[String] =
-    Some(obj.Body.InterruptionOfMovement.AttributesValue.AdministrativeReferenceCode)
+    Some(obj.Body.NotificationOfDivertedEADESAD.ExciseNotification.AdministrativeReferenceCode)
 
   override def toXml: NodeSeq = {
-    scalaxb.toXML[IE807Type](obj, namespace, key, generated.defaultScope)
+    scalaxb.toXML[IE803Type](obj, namespace, key, generated.defaultScope)
   }
 
-  override def messageType: String = MessageTypes.IE807.value
+  override def messageType: String = MessageTypes.IE803.value
 
   override def messageIdentifier: String = obj.Header.MessageIdentifier
 
   override def lrnEquals(lrn: String): Boolean = false
 }
 
-object IE807Message {
-  def apply(message: DataRecord[MessagesOption]): IE807Message = {
-    IE807Message(message.as[IE807Type], message.key, message.namespace)
+object IE803Message {
+  def apply(message: DataRecord[MessagesOption]): IE803Message = {
+    IE803Message(message.as[IE803Type], message.key, message.namespace)
   }
 
-  def createFromXml(xml: NodeSeq): IE807Message = {
-    val ie807: IE807Type = scalaxb.fromXML[IE807Type](xml)
-    IE807Message(ie807, Some(ie807.productPrefix), None)
+  def createFromXml(xml: NodeSeq): IE803Message = {
+    val ie803: IE803Type = scalaxb.fromXML[IE803Type](xml)
+    IE803Message(ie803, Some(ie803.productPrefix), None)
   }
 }
