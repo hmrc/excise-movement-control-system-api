@@ -31,8 +31,8 @@ case class IE840Message
 
   override def consigneeId: Option[String] = None
 
-  override def administrativeReferenceCode: Option[String] =
-    obj.Body.EventReportEnvelope.ExciseMovement.map(_.AdministrativeReferenceCode)
+  override def administrativeReferenceCode: Seq[Option[String]] =
+    Seq(obj.Body.EventReportEnvelope.ExciseMovement.map(_.AdministrativeReferenceCode))
 
   override def messageType: String = MessageTypes.IE840.value
 

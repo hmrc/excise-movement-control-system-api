@@ -126,7 +126,7 @@ class MessageServiceSpec extends PlaySpec with EitherValues with TestXml {
       class NonSupportedMessage extends IEMessage {
         override def consigneeId: Option[String] = None
 
-        override def administrativeReferenceCode: Option[String] = None
+        override def administrativeReferenceCode: Seq[Option[String]] = Seq(None)
 
         override def messageType: String = "any-type"
 

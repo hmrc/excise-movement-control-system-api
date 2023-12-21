@@ -20,6 +20,67 @@ import scala.xml.Elem
 
 trait TestXml {
 
+  lazy val IE704: Elem = <ns1:IE704 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
+                                    xmlns:ns1="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3">
+    <ns1:Header>
+      <urn:MessageSender>NDEA.XI</urn:MessageSender>
+      <urn:MessageRecipient>NDEA.XI</urn:MessageRecipient>
+      <urn:DateOfPreparation>2008-09-29</urn:DateOfPreparation>
+      <urn:TimeOfPreparation>00:18:33</urn:TimeOfPreparation>
+      <urn:MessageIdentifier>XI000001</urn:MessageIdentifier>
+      <!--Optional:-->
+      <urn:CorrelationIdentifier>9b8effe4-adca-4431-bfc2-d65bb5f1e15d</urn:CorrelationIdentifier>
+    </ns1:Header>
+    <ns1:Body>
+      <ns1:GenericRefusalMessage>
+        <!--Optional:-->
+        <ns1:Attributes>
+          <!--Optional:-->
+          <ns1:AdministrativeReferenceCode>23XI00000000000000012</ns1:AdministrativeReferenceCode>
+          <!--Optional:-->
+          <ns1:SequenceNumber>1</ns1:SequenceNumber>
+          <!--Optional:-->
+          <ns1:LocalReferenceNumber>lrnie8158976912</ns1:LocalReferenceNumber>
+        </ns1:Attributes>
+        <!--1 or more repetitions:-->
+        <ns1:FunctionalError>
+          <ns1:ErrorType>4401</ns1:ErrorType>
+          <ns1:ErrorReason>token</ns1:ErrorReason>
+          <!--Optional:-->
+          <ns1:ErrorLocation>token</ns1:ErrorLocation>
+          <!--Optional:-->
+          <ns1:OriginalAttributeValue>token</ns1:OriginalAttributeValue>
+        </ns1:FunctionalError>
+      </ns1:GenericRefusalMessage>
+    </ns1:Body>
+  </ns1:IE704>
+
+  lazy val IE704NoArc: Elem = <ns1:IE704 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
+                                    xmlns:ns1="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3">
+    <ns1:Header>
+      <urn:MessageSender>NDEA.XI</urn:MessageSender>
+      <urn:MessageRecipient>NDEA.XI</urn:MessageRecipient>
+      <urn:DateOfPreparation>2008-09-29</urn:DateOfPreparation>
+      <urn:TimeOfPreparation>00:18:33</urn:TimeOfPreparation>
+      <urn:MessageIdentifier>XI000001</urn:MessageIdentifier>
+      <urn:CorrelationIdentifier>9b8effe4-adca-4431-bfc2-d65bb5f1e15d</urn:CorrelationIdentifier>
+    </ns1:Header>
+    <ns1:Body>
+      <ns1:GenericRefusalMessage>
+        <ns1:Attributes>
+          <ns1:SequenceNumber>1</ns1:SequenceNumber>
+          <ns1:LocalReferenceNumber>lrnie8158976912</ns1:LocalReferenceNumber>
+        </ns1:Attributes>
+        <ns1:FunctionalError>
+          <ns1:ErrorType>4401</ns1:ErrorType>
+          <ns1:ErrorReason>token</ns1:ErrorReason>
+          <ns1:ErrorLocation>token</ns1:ErrorLocation>
+          <ns1:OriginalAttributeValue>token</ns1:OriginalAttributeValue>
+        </ns1:FunctionalError>
+      </ns1:GenericRefusalMessage>
+    </ns1:Body>
+  </ns1:IE704>
+
   lazy val IE801: Elem =
     <urn:IE801
     xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.01"
@@ -259,6 +320,35 @@ trait TestXml {
         </urn:EADESADContainer>
       </urn:Body>
     </urn:IE801>
+
+  lazy val IE802: Elem = <urn7:IE802 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
+                                     xmlns:urn7="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE802:V3.01">
+    <urn7:Header>
+      <urn:MessageSender>CSMISE.EC</urn:MessageSender>
+      <urn:MessageRecipient>CSMISE.EC</urn:MessageRecipient>
+      <urn:DateOfPreparation>2008-09-29</urn:DateOfPreparation>
+      <urn:TimeOfPreparation>00:18:33</urn:TimeOfPreparation>
+      <urn:MessageIdentifier>X00004</urn:MessageIdentifier>
+      <!--Optional:-->
+      <urn:CorrelationIdentifier>X00004</urn:CorrelationIdentifier>
+    </urn7:Header>
+    <urn7:Body>
+      <urn7:ReminderMessageForExciseMovement>
+        <urn7:Attributes>
+          <urn7:DateAndTimeOfIssuanceOfReminder>2006-08-19T18:27:14</urn7:DateAndTimeOfIssuanceOfReminder>
+          <!--Optional:-->
+          <urn7:ReminderInformation language="to">token</urn7:ReminderInformation>
+          <urn7:LimitDateAndTime>2009-05-16T13:42:28</urn7:LimitDateAndTime>
+          <urn7:ReminderMessageType>2</urn7:ReminderMessageType>
+        </urn7:Attributes>
+        <urn7:ExciseMovement>
+          <urn7:AdministrativeReferenceCode>23XI00000000000000090</urn7:AdministrativeReferenceCode>
+          <urn7:SequenceNumber>10</urn7:SequenceNumber>
+        </urn7:ExciseMovement>
+      </urn7:ReminderMessageForExciseMovement>
+    </urn7:Body>
+  </urn7:IE802>
+
 
   lazy val IE803: Elem = <urn6:IE803 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
                                      xmlns:urn6="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE803:V3.01">
@@ -617,6 +707,51 @@ trait TestXml {
         </urn:AlertOrRejectionOfEADESAD>
       </urn:Body>
     </urn:IE819>
+
+  lazy val IE829: Elem = <urn2:IE829 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
+                                     xmlns:urn2="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE829:V3.01">
+    <urn2:Header>
+      <urn:MessageSender>NDEA.XI</urn:MessageSender>
+      <urn:MessageRecipient>NDEA.AT</urn:MessageRecipient>
+      <urn:DateOfPreparation>2023-06-26</urn:DateOfPreparation>
+      <urn:TimeOfPreparation>09:15:33</urn:TimeOfPreparation>
+      <urn:MessageIdentifier>XI004321B</urn:MessageIdentifier>
+      <urn:CorrelationIdentifier>6dddas342231ff3a67888bbcedec3435</urn:CorrelationIdentifier>
+    </urn2:Header>
+    <urn2:Body>
+      <urn2:NotificationOfAcceptedExport>
+        <urn2:Attributes>
+          <urn2:DateAndTimeOfIssuance>2024-06-26T09:14:54</urn2:DateAndTimeOfIssuance>
+        </urn2:Attributes>
+        <urn2:ConsigneeTrader language="en">
+          <urn2:Traderid>AT00000612157</urn2:Traderid>
+          <urn2:TraderName>Whale Oil Lamps Co.</urn2:TraderName>
+          <urn2:StreetName>The Street</urn2:StreetName>
+          <urn2:Postcode>MC232</urn2:Postcode>
+          <urn2:City>Happy Town</urn2:City>
+          <urn2:EoriNumber>7</urn2:EoriNumber>
+        </urn2:ConsigneeTrader>
+        <urn2:ExciseMovementEad>
+          <urn2:AdministrativeReferenceCode>23XI00000000000056339</urn2:AdministrativeReferenceCode>
+          <urn2:SequenceNumber>1</urn2:SequenceNumber>
+        </urn2:ExciseMovementEad>
+        <urn2:ExciseMovementEad>
+          <urn2:AdministrativeReferenceCode>23XI00000000000056340</urn2:AdministrativeReferenceCode>
+          <urn2:SequenceNumber>1</urn2:SequenceNumber>
+        </urn2:ExciseMovementEad>
+        <urn2:ExportPlaceCustomsOffice>
+          <urn2:ReferenceNumber>AT633734</urn2:ReferenceNumber>
+        </urn2:ExportPlaceCustomsOffice>
+        <urn2:ExportAcceptance>
+          <urn2:ReferenceNumberOfSenderCustomsOffice>AT324234</urn2:ReferenceNumberOfSenderCustomsOffice>
+          <urn2:IdentificationOfSenderCustomsOfficer>84884</urn2:IdentificationOfSenderCustomsOfficer>
+          <urn2:DateOfAcceptance>2023-06-26</urn2:DateOfAcceptance>
+          <urn2:DocumentReferenceNumber>123123vmnfhsdf3AT</urn2:DocumentReferenceNumber>
+        </urn2:ExportAcceptance>
+      </urn2:NotificationOfAcceptedExport>
+    </urn2:Body>
+  </urn2:IE829>
+
 
   lazy val IE837WithConsignor: Elem =
     <urn:IE837 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE837:V3.01"

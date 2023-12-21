@@ -31,8 +31,8 @@ case class IE807Message
 
   def consigneeId: Option[String] = None
 
-  override def administrativeReferenceCode: Option[String] =
-    Some(obj.Body.InterruptionOfMovement.AttributesValue.AdministrativeReferenceCode)
+  override def administrativeReferenceCode: Seq[Option[String]] =
+    Seq(Some(obj.Body.InterruptionOfMovement.AttributesValue.AdministrativeReferenceCode))
 
   override def toXml: NodeSeq = {
     scalaxb.toXML[IE807Type](obj, namespace, key, generated.defaultScope)

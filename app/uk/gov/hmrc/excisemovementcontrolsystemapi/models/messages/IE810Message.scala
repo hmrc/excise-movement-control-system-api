@@ -33,8 +33,8 @@ case class IE810Message(
 
   override def consigneeId: Option[String] = None
 
-  override def administrativeReferenceCode: Option[String] =
-    Some(obj.Body.CancellationOfEAD.ExciseMovementEad.AdministrativeReferenceCode)
+  override def administrativeReferenceCode: Seq[Option[String]] =
+    Seq(Some(obj.Body.CancellationOfEAD.ExciseMovementEad.AdministrativeReferenceCode))
 
   override def messageType: String = MessageTypes.IE810.value
 

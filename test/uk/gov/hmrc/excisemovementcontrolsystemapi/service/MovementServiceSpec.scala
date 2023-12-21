@@ -343,7 +343,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
     "save movement" when {
       "message contains Administration Reference Code (ARC)" in {
-        setUpForUpdateMovement(newMessage, Some("456"), None, "<IE818>test</IE818>", cachedMovements)
+        setUpForUpdateMovement(newMessage, Seq(Some("456")), None, "<IE818>test</IE818>", cachedMovements)
 
         await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
 
@@ -352,7 +352,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       }
 
       "message contains Both Administration Reference Code (ARC) and Local Ref Number (LRN)" in {
-        setUpForUpdateMovement(newMessage, Some("456"), Some("123"), "<IE818>test</IE818>", cachedMovements)
+        setUpForUpdateMovement(newMessage, Seq(Some("456")), Some("123"), "<IE818>test</IE818>", cachedMovements)
 
         await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
 
@@ -361,7 +361,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       }
 
       "message contains Local Ref Number (LRN)" in {
-        setUpForUpdateMovement(newMessage, None, Some("345"), "<IE818>test</IE818>", cachedMovements)
+        setUpForUpdateMovement(newMessage, Seq(None), Some("345"), "<IE818>test</IE818>", cachedMovements)
 
         await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
 
@@ -370,8 +370,25 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       }
     }
 
+      "retain old messages when adding a new one to a movement" in {
+        setUpForUpdateMovement(newMessage, Seq(Some("456")), None, "<IE818>test</IE818>", cachedMovements)
+
+        when(newMessage.toXml).thenReturn(scala.xml.XML.loadString("<IE818>test</IE818>"))
+        when(newMessage.messageType).thenReturn(MessageTypes.IE818.value)
+        val movement = Seq(
+          Movement("123", consignorId, None, Some("456"), now, Seq(cachedMessage1, cachedMessage2)),
+        )
+        when(mockMovementRepository.getAllBy(any))
+          .thenReturn(Future.successful(movement))
+        await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
+
+        verify(mockMovementRepository).updateMovement(
+          eqTo(Movement("123", consignorId, None, Some("456"), now, Seq(cachedMessage1, cachedMessage2, expectedMessage))))
+
+      }
+
     "not overwrite ARC that are not empty" in {
-      setUpForUpdateMovement(newMessage, None, Some("123"), "<IE818>test</IE818>", cachedMovements)
+      setUpForUpdateMovement(newMessage, Seq(None), Some("123"), "<IE818>test</IE818>", cachedMovements)
 
       when(newMessage.administrativeReferenceCode).thenReturn(Some("arc"))
       await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
@@ -380,11 +397,24 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         eqTo(Movement("123", consignorId, None, Some("456"), now, Seq(expectedMessage))))
     }
 
+      "message contains multiple Administration Reference Codes (ARCs)" in {
+        setUpForUpdateMovement(newMessage, Seq(Some("456"),Some("890")), None, "<IE818>test</IE818>", cachedMovements)
+
+        await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
+
+        verify(mockMovementRepository).updateMovement(
+          eqTo(Movement("123", consignorId, None, Some("456"), now, Seq(expectedMessage)))
+        )
+
+        verify(mockMovementRepository).updateMovement(
+          eqTo(Movement("345", "12", None, Some("890"), now, Seq(expectedMessage)))
+        )
+      }
 
     "throw an error" when {
 
       "message has both ARC and LRN missing" in {
-        setUpForUpdateMovement(newMessage, None, None, "<foo>test</foo>", cachedMovements)
+        setUpForUpdateMovement(newMessage, Seq(None), None, "<foo>test</foo>", cachedMovements)
 
         intercept[RuntimeException] {
           await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
@@ -403,7 +433,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
     "do not save duplicate messages to DB" in {
       val cachedMessage = createMessage("<foo>test</foo>", MessageTypes.IE801.value)
 
-      setUpForUpdateMovement(newMessage, None, Some("123"), "<foo>test</foo>", cachedMovements)
+      setUpForUpdateMovement(newMessage, Seq(None), Some("123"), "<foo>test</foo>", cachedMovements)
       when(mockMovementRepository.getAllBy(any))
         .thenReturn(Future.successful(Seq(Movement(lrn, consignorId, None, None, now, Seq(cachedMessage, cachedMessage1, cachedMessage2)))))
 
@@ -415,7 +445,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
     "save to DB when message has different content but the same message type" in {
       val cachedMessage: Message = createMessage("<foo>different content</foo>", MessageTypes.IE801.value)
-      setUpForUpdateMovement(newMessage, None, Some("123"), "<foo>test</foo>", cachedMovements)
+      setUpForUpdateMovement(newMessage, Seq(None), Some("123"), "<foo>test</foo>", cachedMovements)
       when(mockMovementRepository.updateMovement(any)).thenReturn(Future.successful(true))
       when(mockMovementRepository.getAllBy(any))
         .thenReturn(Future.successful(Seq(Movement(lrn, consignorId, None, None, now, Seq(cachedMessage, cachedMessage1)))))
@@ -429,7 +459,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
     }
 
     "return false if did not save the message" in {
-      setUpForUpdateMovement(newMessage, None, Some("123"), "<foo>test</foo>", cachedMovements)
+      setUpForUpdateMovement(newMessage, Seq(None), Some("123"), "<foo>test</foo>", cachedMovements)
       when(mockMovementRepository.updateMovement(any)).thenReturn(Future.successful(false))
 
       val result = await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
@@ -441,7 +471,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
   private def setUpForUpdateMovement
   (
     message: IEMessage,
-    arc: Option[String],
+    arc: Seq[Option[String]],
     lrn: Option[String],
     messageXml: String,
     cachedMovements: Seq[Movement]

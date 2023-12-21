@@ -40,8 +40,8 @@ case class IE837Message
       Some(obj.Body.ExplanationOnDelayForDelivery.AttributesValue.SubmitterIdentification)
     } else None
 
-  override def administrativeReferenceCode: Option[String] =
-    Some(obj.Body.ExplanationOnDelayForDelivery.ExciseMovement.AdministrativeReferenceCode)
+  override def administrativeReferenceCode: Seq[Option[String]] =
+    Seq(Some(obj.Body.ExplanationOnDelayForDelivery.ExciseMovement.AdministrativeReferenceCode))
 
   override def messageType: String = MessageTypes.IE837.value
 

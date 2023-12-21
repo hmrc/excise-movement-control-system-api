@@ -22,8 +22,8 @@ import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
@@ -98,28 +98,39 @@ class MovementService @Inject()(
 
   def updateMovement(message: IEMessage, ern: String): Future[Boolean] = {
 
-    movementRepository.getAllBy(ern).flatMap(cachedMovement => {
+    movementRepository.getAllBy(ern).map(cachedMovements => {
 
-      val arc = message.administrativeReferenceCode
-      val movementWithArc = cachedMovement.find(o => o.administrativeReferenceCode.equals(arc))
-      val movementWithLrn = cachedMovement.find(m => message.lrnEquals(m.localReferenceNumber))
+      //Some messages (e.g. IE829) have multiple arcs in so we want to update them all
+      // If no arc it will be Seq(None)
+      val messageArcs = message.administrativeReferenceCode
 
-      (movementWithArc, movementWithLrn) match {
-        case (Some(mArc), _) => saveDistinctMessage(mArc, message)
-        case (None, Some(mLrn)) => saveDistinctMessage(mLrn, message)
-        case _ => throw new RuntimeException(s"[MovementService] - Cannot retrieve a movement. Local reference number or administration reference code are not present for ERN: $ern")
+      val results: Seq[Future[Boolean]] = messageArcs.map { messageArc =>
+        updateMovementForIndividualArc(message, ern, cachedMovements, messageArc)
       }
-    })
+
+      Future.sequence(results).map{ boolSeq => boolSeq.forall(identity)}
+    }).flatten
   }
 
-  private def saveDistinctMessage(movement: Movement, newMessage: IEMessage): Future[Boolean] = {
+  private def updateMovementForIndividualArc(message: IEMessage, ern: String, cachedMovements: Seq[Movement], messageArc: Option[String]) = {
+    val movementWithArc = cachedMovements.find(o => o.administrativeReferenceCode.equals(messageArc))
+    val movementWithLrn = cachedMovements.find(m => message.lrnEquals(m.localReferenceNumber))
+
+    (movementWithArc, movementWithLrn) match {
+      case (Some(mArc), _) => saveDistinctMessage(mArc, message, messageArc)
+      case (None, Some(mLrn)) => saveDistinctMessage(mLrn, message, messageArc)
+      case _ => throw new RuntimeException(s"[MovementService] - Cannot retrieve a movement. Local reference number or administration reference code are not present for ERN: $ern")
+    }
+  }
+
+  private def saveDistinctMessage(movement: Movement, newMessage: IEMessage, messageArc: Option[String]): Future[Boolean] = {
 
     val encodedMessage = emcsUtils.encode(newMessage.toXml.toString)
     val messages = Seq(Message(encodedMessage, newMessage.messageType, timestampSupport.timestamp()))
 
     //todo: remove hash from message class. Hash can calculate on the go in here
     val allMessages = (movement.messages ++ messages).distinctBy(_.hash)
-    val newArc = newMessage.administrativeReferenceCode.orElse(movement.administrativeReferenceCode)
+    val newArc = messageArc.orElse(movement.administrativeReferenceCode)
 
     val newMovement = movement.copy(
       administrativeReferenceCode = movement.administrativeReferenceCode.fold(newArc)(Some(_)),

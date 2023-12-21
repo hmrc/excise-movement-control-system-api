@@ -29,11 +29,11 @@ case class IE704Message
 ) extends IEMessage {
   override def consigneeId: Option[String] = None
 
-  override def administrativeReferenceCode: Option[String] =
-    for {
+  override def administrativeReferenceCode: Seq[Option[String]] =
+    Seq(for {
       attribute <- obj.Body.GenericRefusalMessage.AttributesValue
       arc <- attribute.AdministrativeReferenceCode
-    } yield arc
+    } yield arc)
 
   override def messageType: String = MessageTypes.IE704.value
 

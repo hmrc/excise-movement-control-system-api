@@ -38,7 +38,8 @@ case class IE801Message
   override def consigneeId: Option[String] =
     obj.Body.EADESADContainer.ConsigneeTrader.flatMap(_.Traderid)
 
-  override def administrativeReferenceCode: Option[String] = Some(obj.Body.EADESADContainer.ExciseMovement.AdministrativeReferenceCode)
+  override def administrativeReferenceCode: Seq[Option[String]] =
+    Seq(Some(obj.Body.EADESADContainer.ExciseMovement.AdministrativeReferenceCode))
 
   override def messageType: String = MessageTypes.IE801.value
 

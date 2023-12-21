@@ -31,8 +31,8 @@ case class IE802Message
 
   def consigneeId: Option[String] = None
 
-  override def administrativeReferenceCode: Option[String] =
-    Some(obj.Body.ReminderMessageForExciseMovement.ExciseMovement.AdministrativeReferenceCode)
+  override def administrativeReferenceCode: Seq[Option[String]] =
+    Seq(Some(obj.Body.ReminderMessageForExciseMovement.ExciseMovement.AdministrativeReferenceCode))
 
   override def toXml: NodeSeq = {
     scalaxb.toXML[IE802Type](obj, namespace, key, generated.defaultScope)
