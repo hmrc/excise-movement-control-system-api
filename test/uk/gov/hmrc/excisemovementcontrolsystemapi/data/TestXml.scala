@@ -1135,5 +1135,26 @@ trait TestXml {
         </urn5:Body>
       </urn5:IE881>
 
+    lazy val IE905: Elem = <urn6:IE905 xmlns:urn6="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE905:V3.01"
+                                       xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01">
+      <urn6:Header>
+        <urn:MessageSender>NDEA.GB</urn:MessageSender>
+        <urn:MessageRecipient>NDEA.XI</urn:MessageRecipient>
+        <urn:DateOfPreparation>2023-07-02</urn:DateOfPreparation>
+        <urn:TimeOfPreparation>21:23:41</urn:TimeOfPreparation>
+        <urn:MessageIdentifier>XI00432RR</urn:MessageIdentifier>
+        <urn:CorrelationIdentifier>6774741231ff3111f3233</urn:CorrelationIdentifier>
+      </urn6:Header>
+      <urn6:Body>
+        <urn6:StatusResponse>
+          <urn6:Attributes>
+            <urn6:AdministrativeReferenceCode>23XI00000000000056349</urn6:AdministrativeReferenceCode>
+            <urn6:SequenceNumber>1</urn6:SequenceNumber>
+            <urn6:Status>X07</urn6:Status>
+            <urn6:LastReceivedMessageType>IE881</urn6:LastReceivedMessageType>
+          </urn6:Attributes>
+        </urn6:StatusResponse>
+      </urn6:Body>
+    </urn6:IE905>
 
 }
