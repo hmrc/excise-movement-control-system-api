@@ -26,7 +26,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, Wor
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import java.time.{Instant, LocalDateTime}
+import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
