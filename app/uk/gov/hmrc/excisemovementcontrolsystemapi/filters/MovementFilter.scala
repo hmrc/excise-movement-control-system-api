@@ -70,26 +70,7 @@ case class MovementFilter (private val filter: Seq[Filter]) {
 }
 
 object MovementFilter {
-
   def empty = MovementFilter(Seq.empty)
-
-  def and(filter: Seq[(String, Option[String])]): MovementFilter = {
-
-    MovementFilter(
-      filter match {
-        case Nil => Seq(FilterNothing)
-        case m@ Seq(_,_*) => m.map (o =>
-          o._1 match {
-            case "ern" => FilterErn(o._2)
-            case "lrn" => FilterLrn(o._2)
-            case "arc" => FilterArc(o._2)
-            case "updatedSince" => FilterUpdatedSince(o._2.map(Instant.parse(_)))
-            case _ => FilterNothing
-          }
-        )
-        case _ => Seq(FilterNothing)
-    })
-  }
 }
 
 case class MovementFilterBuilder(private val filters: Seq[Filter]) {

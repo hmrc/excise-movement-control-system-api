@@ -25,7 +25,7 @@ import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, InternalServerError}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
+import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilterBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
@@ -245,7 +245,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       when(mockMovementRepository.getMovementByERN(Seq(consignorId)))
         .thenReturn(Future.successful(Seq(expectedMovement1, expectedMovement2)))
 
-      val filter = MovementFilter.and(Seq("ern" -> Some(consignorId)))
+      val filter = MovementFilterBuilder().withErn(Some(consignorId)).withLrn(None).withArc(None).withUpdatedSince(None).build()
       val result = await(movementService.getMovementByErn(Seq(consignorId), filter))
 
       result mustBe Seq(expectedMovement1)
@@ -259,7 +259,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       when(mockMovementRepository.getMovementByERN(Seq(consignorId)))
         .thenReturn(Future.successful(Seq(expectedMovement1, expectedMovement2)))
 
-      val filter = MovementFilter.and(Seq("lrn" -> Some(lrnToFilterBy)))
+      val filter = MovementFilterBuilder().withErn(None).withLrn(Some(lrnToFilterBy)).withArc(None).withUpdatedSince(None).build()
       val result = await(movementService.getMovementByErn(Seq(consignorId), filter))
 
       result mustBe Seq(expectedMovement2)
@@ -273,7 +273,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       when(mockMovementRepository.getMovementByERN(Seq(consignorId)))
         .thenReturn(Future.successful(Seq(expectedMovement1, expectedMovement2)))
 
-      val filter = MovementFilter.and(Seq("arc" -> Some(arcToFilterBy)))
+      val filter = MovementFilterBuilder().withErn(None).withLrn(None).withArc(Some(arcToFilterBy)).withUpdatedSince(None).build()
       val result = await(movementService.getMovementByErn(Seq(consignorId), filter))
 
       result mustBe Seq(expectedMovement2)
@@ -288,7 +288,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       when(mockMovementRepository.getMovementByERN(Seq(consignorId)))
         .thenReturn(Future.successful(Seq(expectedMovement1, expectedMovement2, expectedMovement3, expectedMovement4)))
 
-      val filter = MovementFilter.and(Seq("ern" -> Some(ernToFilterBy), "lrn" -> Some(lrnToFilterBy)))
+      val filter = MovementFilterBuilder().withErn(Some(ernToFilterBy)).withLrn(Some(lrnToFilterBy)).withArc(None).withUpdatedSince(None).build()
       val result = await(movementService.getMovementByErn(Seq(consignorId), filter))
 
       result mustBe Seq(expectedMovement4)
@@ -305,11 +305,11 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       when(mockMovementRepository.getMovementByERN(Seq(consignorId)))
         .thenReturn(Future.successful(Seq(expectedMovement1, expectedMovement2, expectedMovement3, expectedMovement4, expectedMovement5)))
 
-      val filter = MovementFilter.and(Seq(
-        "ern" -> Some(ernToFilterBy),
-        "lrn" -> Some(lrnToFilterBy),
-        "arc" -> Some(arcToFilterBy)
-      ))
+      val filter = MovementFilterBuilder()
+        .withErn(Some(ernToFilterBy))
+        .withLrn(Some(lrnToFilterBy))
+        .withArc(Some(arcToFilterBy))
+        .withUpdatedSince(None).build()
       val result = await(movementService.getMovementByErn(Seq(consignorId), filter))
 
       result mustBe Seq(expectedMovement4)

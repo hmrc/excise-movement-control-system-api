@@ -26,7 +26,7 @@ import play.api.http.Status.{BAD_REQUEST, OK}
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
+import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, MovementFilterBuilder}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, MovementTestUtils}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
@@ -95,12 +95,13 @@ class GetMovementsControllerSpec
 
     "use a filter" in {
       val timestampNow = LocalDateTime.now().toInstant(ZoneOffset.UTC)
-        .toString
-      await(controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow))(FakeRequest("POST", "/foo")))
+      await(controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString))(FakeRequest("POST", "/foo")))
 
-      val filter = MovementFilter.and(Seq(
-        "ern" -> Some(ern), "lrn" -> Some("lrn"), "arc" -> Some("arc"), "updatedSince" -> Some(timestampNow))
-      )
+      val filter = MovementFilterBuilder()
+        .withErn(Some(ern))
+        .withLrn(Some("lrn"))
+        .withArc(Some("arc"))
+        .withUpdatedSince(Some(timestampNow)).build()
       verify(movementService).getMovementByErn(any, eqTo(filter))
 
     }
