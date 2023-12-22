@@ -18,10 +18,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 
 import akka.actor.ActorSystem
-import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.{reset, verify, when}
-import org.mockito.captor.ArgCaptor
 import org.mongodb.scala.MongoException
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
@@ -35,12 +33,9 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnsAction, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
-import uk.gov.hmrc.mongo.workitem.WorkItem
 
-import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
 
@@ -61,17 +56,6 @@ class DraftExciseMovementControllerSpec
   private val request = createRequest(IE815)
   private val mockIeMessage = mock[IE815Message]
   private val workItemService = mock[WorkItemService]
-
-  private val workItem =
-    WorkItem(
-      id = new ObjectId(),
-      receivedAt = Instant.now,
-      updatedAt = Instant.now,
-      availableAt = Instant.now,
-      status = ToDo,
-      failureCount = 0,
-      item = ExciseNumberWorkItem(ern, 3)
-    )
 
   override def beforeEach(): Unit = {
     super.beforeEach()

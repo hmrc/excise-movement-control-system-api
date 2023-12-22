@@ -390,7 +390,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
     "not overwrite ARC that are not empty" in {
       setUpForUpdateMovement(newMessage, Seq(None), Some("123"), "<IE818>test</IE818>", cachedMovements)
 
-      when(newMessage.administrativeReferenceCode).thenReturn(Some("arc"))
+      when(newMessage.administrativeReferenceCode).thenReturn(Seq(Some("arc")))
       await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
 
       verify(mockMovementRepository).updateMovement(
