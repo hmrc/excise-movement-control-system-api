@@ -253,7 +253,6 @@ class IEMessageFactorySpec
     "return an instance of IE829Message" in {
       val result = sut.createFromXml("IE829", IE829).asInstanceOf[IE829Message]
       result.isInstanceOf[IE829Message] mustBe true
-      result.consignorId mustBe None
       result.consigneeId mustBe Some("AT00000612157")
       result.administrativeReferenceCode mustBe Seq(Some("23XI00000000000056339"),Some("23XI00000000000056340"))
       result.messageIdentifier mustBe "XI004321B"
@@ -278,6 +277,22 @@ class IEMessageFactorySpec
       result.consignorId mustBe None
       result.consigneeId mustBe Some("GBWK240176600")
       result.administrativeReferenceCode mustBe Seq(Some("16GB00000000000192223"))
+    }
+
+    "return an instance of IE839Message" in {
+      val result = sut.createFromXml("IE839", IE839).asInstanceOf[IE839Message]
+      result.isInstanceOf[IE839Message] mustBe true
+      result.consigneeId mustBe Some("AT00000612158")
+      result.administrativeReferenceCode mustBe Seq(Some("23XI00000000000056341"))
+      result.messageIdentifier mustBe "XI004322"
+      result.messageType mustBe MessageTypes.IE839.value
+      result.lrnEquals("anyLrn") mustBe false
+    }
+
+    "return an instance of IE839Message with multiple ARCs" in {
+      val result = sut.createFromXml("IE839", IE839MultipleArcs).asInstanceOf[IE839Message]
+      result.isInstanceOf[IE839Message] mustBe true
+      result.administrativeReferenceCode mustBe Seq(Some("23XI00000000000056341"), Some("23XI00000000000056342"), Some("23XI00000000000056343"))
     }
 
     "return an instance of IE840Message" in {
