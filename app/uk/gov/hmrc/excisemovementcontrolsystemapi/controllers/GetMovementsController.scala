@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
-import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
+import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilterBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, GetMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
@@ -47,7 +47,7 @@ class GetMovementsController @Inject()(
         workItemService.addWorkItemForErn(ern.getOrElse(request.erns.head), fastMode = false)
 
         Try(updatedSince.map(Instant.parse(_))).map { updatedSinceTime =>
-          val filter = MovementFilter.and(Seq("ern" -> ern, "lrn" -> lrn, "arc" -> arc, "updatedSince" -> updatedSinceTime.map(_.toString())))
+          val filter = MovementFilterBuilder().withErn(ern).withLrn(lrn).withArc(arc).withUpdatedSince(updatedSinceTime).build()
           movementService.getMovementByErn(request.erns.toSeq, filter)
             .map { movement: Seq[Movement] =>
               Ok(Json.toJson(movement.map(createResponseFrom)))

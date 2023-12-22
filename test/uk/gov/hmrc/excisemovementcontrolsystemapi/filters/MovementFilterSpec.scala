@@ -117,7 +117,7 @@ class MovementFilterSpec extends PlaySpec {
     }
 
     "there is no filter" in {
-      val filter = MovementFilter.and(Seq("ern" -> None, "lrn" -> None, "arc" -> None, "updatedSince" -> None))
+      val filter = MovementFilterBuilder().withErn(None).withLrn(None).withArc(None).withUpdatedSince(None).build()
 
       filter.filterMovement(movements) mustBe movements
     }
