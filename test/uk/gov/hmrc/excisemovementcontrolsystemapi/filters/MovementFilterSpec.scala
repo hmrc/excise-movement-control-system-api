@@ -36,31 +36,31 @@ class MovementFilterSpec extends PlaySpec {
 
   "filterMovement" should {
     "filter by LRN" in {
-      val filter = MovementFilterBuilder().withErn(None).withLrn(Some("lrn3")).withArc(None).withUpdatedSince(None).build()
+      val filter = MovementFilterBuilder().withLrn(Some("lrn3")).build()
 
       filter.filterMovement(movements) mustBe Seq(m1)
     }
 
     "filter by ERN" in {
-      val filter = MovementFilterBuilder().withErn(Some("test1")).withLrn(None).withArc(None).withUpdatedSince(None).build()
+      val filter = MovementFilterBuilder().withErn(Some("test1")).build()
 
       filter.filterMovement(movements) mustBe Seq(m1)
     }
 
     "filter by ARC" in {
-      val filter = MovementFilterBuilder().withErn(None).withLrn(None).withArc(Some("arc1")).withUpdatedSince(None).build()
+      val filter = MovementFilterBuilder().withArc(Some("arc1")).build()
 
       filter.filterMovement(movements) mustBe Seq(m1)
     }
 
     "filter by updatedSince" in {
-      val filter = MovementFilterBuilder().withErn(None).withLrn(None).withArc(None).withUpdatedSince(Some(now.plusSeconds(700))).build()
+      val filter = MovementFilterBuilder().withUpdatedSince(Some(now.plusSeconds(700))).build()
 
       filter.filterMovement(movements) mustBe Seq(m2)
     }
 
     "filter by updatedSince and include movements with a updatedSince time that equals the filter time" in {
-      val filter = MovementFilterBuilder().withErn(None).withLrn(None).withArc(None).withUpdatedSince(Some(now.plusSeconds(500))).build()
+      val filter = MovementFilterBuilder().withUpdatedSince(Some(now.plusSeconds(500))).build()
 
       filter.filterMovement(movements) mustBe Seq(m1, m2)
     }
@@ -76,19 +76,19 @@ class MovementFilterSpec extends PlaySpec {
     }
 
     "filter by ERN and LRN" in {
-      val filter = MovementFilterBuilder().withErn(Some("test2")).withLrn(Some("2")).withArc(None).withUpdatedSince(None).build()
+      val filter = MovementFilterBuilder().withErn(Some("test2")).withLrn(Some("2")).build()
 
       filter.filterMovement(movements) mustBe Seq(m2)
     }
 
     "not return any match for an LRN" in {
-      val filter = MovementFilterBuilder().withErn(None).withLrn(Some("3")).withArc(Some("arc3")).withUpdatedSince(None).build()
+      val filter = MovementFilterBuilder().withLrn(Some("3")).withArc(Some("arc3")).build()
 
       filter.filterMovement(movements) mustBe Seq.empty
     }
 
     "not return any match for an ARC" in {
-      val filter = MovementFilterBuilder().withErn(None).withLrn(None).withArc(Some("3")).withUpdatedSince(None).build()
+      val filter = MovementFilterBuilder().withArc(Some("3")).build()
 
       filter.filterMovement(movements) mustBe Seq.empty
     }
@@ -112,23 +112,5 @@ class MovementFilterSpec extends PlaySpec {
 
       filter.filterMovement(movements) mustBe movements
     }
-
-//    "succeed when a valid date format is provided" in {
-//      val filter = MovementFilterBuilder().withErn(None).withLrn(None).withArc(None).withUpdatedSince(None).build()
-//
-//      val filter = MovementFilter.and(Seq("updatedSince" -> Some("2020-11-15T17:02:34.00Z")))
-//
-//      filter.filterMovement(movements) mustBe Seq(m1, m2, m3, m4, m5)
-//    }
-//
-//    "fail when an invalid date format is provided" in {
-//      val filter = MovementFilterBuilder().withErn(None).withLrn(None).withArc(None).withUpdatedSince(None).build()
-//
-//      intercept[DateTimeParseException] {
-//        val filter = MovementFilter.and(Seq("updatedSince" -> Some("invalidDate")))
-//        filter.filterMovement(movements)
-//      }.getMessage mustBe "Text 'invalidDate' could not be parsed at index 0"
-//    }
-
   }
 }

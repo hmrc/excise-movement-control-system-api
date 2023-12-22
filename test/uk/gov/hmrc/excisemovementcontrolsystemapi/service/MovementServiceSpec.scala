@@ -245,7 +245,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       when(mockMovementRepository.getMovementByERN(Seq(consignorId)))
         .thenReturn(Future.successful(Seq(expectedMovement1, expectedMovement2)))
 
-      val filter = MovementFilterBuilder().withErn(Some(consignorId)).withLrn(None).withArc(None).withUpdatedSince(None).build()
+      val filter = MovementFilterBuilder().withErn(Some(consignorId)).build()
       val result = await(movementService.getMovementByErn(Seq(consignorId), filter))
 
       result mustBe Seq(expectedMovement1)
@@ -259,7 +259,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       when(mockMovementRepository.getMovementByERN(Seq(consignorId)))
         .thenReturn(Future.successful(Seq(expectedMovement1, expectedMovement2)))
 
-      val filter = MovementFilterBuilder().withErn(None).withLrn(Some(lrnToFilterBy)).withArc(None).withUpdatedSince(None).build()
+      val filter = MovementFilterBuilder().withLrn(Some(lrnToFilterBy)).build()
       val result = await(movementService.getMovementByErn(Seq(consignorId), filter))
 
       result mustBe Seq(expectedMovement2)
@@ -273,7 +273,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       when(mockMovementRepository.getMovementByERN(Seq(consignorId)))
         .thenReturn(Future.successful(Seq(expectedMovement1, expectedMovement2)))
 
-      val filter = MovementFilterBuilder().withErn(None).withLrn(None).withArc(Some(arcToFilterBy)).withUpdatedSince(None).build()
+      val filter = MovementFilterBuilder().withArc(Some(arcToFilterBy)).build()
       val result = await(movementService.getMovementByErn(Seq(consignorId), filter))
 
       result mustBe Seq(expectedMovement2)
@@ -288,7 +288,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       when(mockMovementRepository.getMovementByERN(Seq(consignorId)))
         .thenReturn(Future.successful(Seq(expectedMovement1, expectedMovement2, expectedMovement3, expectedMovement4)))
 
-      val filter = MovementFilterBuilder().withErn(Some(ernToFilterBy)).withLrn(Some(lrnToFilterBy)).withArc(None).withUpdatedSince(None).build()
+      val filter = MovementFilterBuilder().withErn(Some(ernToFilterBy)).withLrn(Some(lrnToFilterBy)).build()
       val result = await(movementService.getMovementByErn(Seq(consignorId), filter))
 
       result mustBe Seq(expectedMovement4)
@@ -309,7 +309,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         .withErn(Some(ernToFilterBy))
         .withLrn(Some(lrnToFilterBy))
         .withArc(Some(arcToFilterBy))
-        .withUpdatedSince(None).build()
+        .build()
       val result = await(movementService.getMovementByErn(Seq(consignorId), filter))
 
       result mustBe Seq(expectedMovement4)
