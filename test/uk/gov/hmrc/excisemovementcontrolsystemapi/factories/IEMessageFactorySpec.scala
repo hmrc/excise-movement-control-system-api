@@ -314,7 +314,15 @@ class IEMessageFactorySpec
       result.messageIdentifier mustBe "GB100000000302708"
       result.messageType mustBe MessageTypes.IE871.value
       result.lrnEquals("anyLrn") mustBe false
+    }
 
+    "return an instance of IE881Message" in {
+      val result = sut.createFromXml("IE881", IE881).asInstanceOf[IE881Message]
+      result.consigneeId mustBe None
+      result.administrativeReferenceCode mustBe Seq(Some("23XI00000000000056349"))
+      result.messageIdentifier mustBe "XI00432M"
+      result.messageType mustBe MessageTypes.IE881.value
+      result.lrnEquals("anyLrn") mustBe false
     }
   }
 }
