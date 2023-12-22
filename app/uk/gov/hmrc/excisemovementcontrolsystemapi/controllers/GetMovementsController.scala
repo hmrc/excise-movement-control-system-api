@@ -47,7 +47,6 @@ class GetMovementsController @Inject()(
         workItemService.addWorkItemForErn(ern.getOrElse(request.erns.head), fastMode = false)
 
         Try(updatedSince.map(Instant.parse(_))).map { updatedSinceTime =>
-          println("***** " + updatedSinceTime)
           val filter = MovementFilter.and(Seq("ern" -> ern, "lrn" -> lrn, "arc" -> arc, "updatedSince" -> updatedSinceTime.map(_.toString())))
           movementService.getMovementByErn(request.erns.toSeq, filter)
             .map { movement: Seq[Movement] =>
