@@ -22,15 +22,18 @@ import org.mongodb.scala.MongoException
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.OK
+import play.api.http.Status.{BAD_REQUEST, OK}
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
+import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, MovementFilterBuilder}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, MovementTestUtils}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 
+import java.time.{LocalDateTime, ZoneOffset}
 import scala.concurrent.{ExecutionContext, Future}
 
 class GetMovementsControllerSpec
@@ -43,7 +46,9 @@ class GetMovementsControllerSpec
   private val cc = stubControllerComponents()
   private val movementService = mock[MovementService]
   private val workItemService = mock[WorkItemService]
-  private val controller = new GetMovementsController(FakeSuccessAuthentication, cc, movementService, workItemService)
+  private val emcsUtils = mock[EmcsUtils]
+  private val controller = new GetMovementsController(FakeSuccessAuthentication, cc, movementService, workItemService, emcsUtils)
+  private val timeStamp = LocalDateTime.of(2020,1,1,1,1,1,1)
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -54,18 +59,21 @@ class GetMovementsControllerSpec
 
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
 
+
+    when(emcsUtils.getCurrentDateTime).thenReturn(timeStamp)
+
   }
 
   "getMovements" should {
     "return 200 when successful" in {
-      val result = controller.getMovements(None, None, None)(FakeRequest("POST", "/foo"))
+      val result = controller.getMovements(None, None, None, None)(FakeRequest("POST", "/foo"))
 
       status(result) mustBe OK
       contentAsJson(result) mustBe Json.toJson(Seq(createMovementResponse(ern, "lrn", "arc", Some("consigneeId"))))
     }
 
     "get all movement for an ERN" in {
-      await(controller.getMovements(None, None, None)(FakeRequest("GET", "/foo")))
+      await(controller.getMovements(None, None, None, None)(FakeRequest("GET", "/foo")))
 
       verify(movementService).getMovementByErn(eqTo(Seq(ern)), any)
     }
@@ -76,7 +84,7 @@ class GetMovementsControllerSpec
       when(movementService.getMovementByErn(any, any))
         .thenReturn(Future.successful(Seq(movement1, movement2)))
 
-      val result = controller.getMovements(None, None, None)(FakeRequest("POST", "/foo"))
+      val result = controller.getMovements(None, None, None, None)(FakeRequest("POST", "/foo"))
 
       status(result) mustBe OK
       contentAsJson(result) mustBe Json.toJson(Seq(
@@ -86,18 +94,32 @@ class GetMovementsControllerSpec
     }
 
     "use a filter" in {
-      await(controller.getMovements(Some(ern), Some("lrn"), Some("arc"))(FakeRequest("POST", "/foo")))
+      val timestampNow = LocalDateTime.now().toInstant(ZoneOffset.UTC)
+      await(controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString))(FakeRequest("POST", "/foo")))
 
-      val filter = MovementFilter.and(Seq(
-        "ern" -> Some(ern), "lrn" -> Some("lrn"), "arc" -> Some("arc"))
-      )
+      val filter = MovementFilterBuilder()
+        .withErn(Some(ern))
+        .withLrn(Some("lrn"))
+        .withArc(Some("arc"))
+        .withUpdatedSince(Some(timestampNow)).build()
       verify(movementService).getMovementByErn(any, eqTo(filter))
+
+    }
+
+    "respond with BAD REQUEST if the updatedSince time is provided in an invalid format" in {
+
+      val result = controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some("invalid date"))(FakeRequest("POST", "/foo"))
+
+      status(result) mustBe BAD_REQUEST
+      contentAsJson(result) mustBe Json.toJson(
+        ErrorResponse(timeStamp, "Invalid date format provided in the updatedSince query parameter", "")
+      )
 
     }
 
     "create a Work Item if there is not one for the ERN already" in {
 
-      await(controller.getMovements(None, None, None)(FakeRequest("POST", "/foo")))
+      await(controller.getMovements(None, None, None, None)(FakeRequest("POST", "/foo")))
 
       verify(workItemService).addWorkItemForErn(eqTo("testErn"), eqTo(false))
 
@@ -107,7 +129,7 @@ class GetMovementsControllerSpec
 
       when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.failed(new MongoException("Oh no!")))
 
-      val result = controller.getMovements(None, None, None)(FakeRequest("POST", "/foo"))
+      val result = controller.getMovements(None, None, None, None)(FakeRequest("POST", "/foo"))
 
       status(result) mustBe OK
 

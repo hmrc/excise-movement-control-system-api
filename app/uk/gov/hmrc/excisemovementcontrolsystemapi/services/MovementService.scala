@@ -115,7 +115,7 @@ class MovementService @Inject()(
   private def saveDistinctMessage(movement: Movement, newMessage: IEMessage): Future[Boolean] = {
 
     val encodedMessage = emcsUtils.encode(newMessage.toXml.toString)
-    val messages = Seq(Message(encodedMessage, newMessage.messageType, timestampSupport))
+    val messages = Seq(Message(encodedMessage, newMessage.messageType, timestampSupport.timestamp()))
 
     //todo: remove hash from message class. Hash can calculate on the go in here
     val allMessages = (movement.messages ++ messages).distinctBy(_.hash)

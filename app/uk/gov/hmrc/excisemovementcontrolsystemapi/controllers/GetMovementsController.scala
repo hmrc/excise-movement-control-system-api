@@ -19,34 +19,42 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
-import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GetMovementResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilterBuilder
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, GetMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
+import java.time.Instant
 import javax.inject.Inject
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 
 class GetMovementsController @Inject()(
                                         authAction: AuthAction,
                                         cc: ControllerComponents,
                                         movementService: MovementService,
-                                        workItemService: WorkItemService
+                                        workItemService: WorkItemService,
+                                        emcsUtils: EmcsUtils
                                       )(implicit ec: ExecutionContext)
   extends BackendController(cc) {
 
-  def getMovements(ern: Option[String], lrn: Option[String], arc: Option[String]): Action[AnyContent] = {
+  def getMovements(ern: Option[String], lrn: Option[String], arc: Option[String], updatedSince: Option[String]): Action[AnyContent] = {
     authAction.async(parse.default) {
       implicit request =>
 
         workItemService.addWorkItemForErn(ern.getOrElse(request.erns.head), fastMode = false)
 
-        val filter = MovementFilter.and(Seq("ern" -> ern, "lrn" -> lrn, "arc" -> arc))
-        movementService.getMovementByErn(request.erns.toSeq, filter)
-          .map { movement: Seq[Movement] =>
-            Ok(Json.toJson(movement.map(createResponseFrom)))
-          }
+        Try(updatedSince.map(Instant.parse(_))).map { updatedSinceTime =>
+          val filter = MovementFilterBuilder().withErn(ern).withLrn(lrn).withArc(arc).withUpdatedSince(updatedSinceTime).build()
+          movementService.getMovementByErn(request.erns.toSeq, filter)
+            .map { movement: Seq[Movement] =>
+              Ok(Json.toJson(movement.map(createResponseFrom)))
+            }
+        }.getOrElse(
+          Future.successful(BadRequest(Json.toJson(ErrorResponse(emcsUtils.getCurrentDateTime, "Invalid date format provided in the updatedSince query parameter", ""))))
+        )
     }
   }
 

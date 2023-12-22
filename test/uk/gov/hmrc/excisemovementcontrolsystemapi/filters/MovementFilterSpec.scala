@@ -19,87 +19,90 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.filters
 import org.scalatestplus.play.PlaySpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
+import java.time.Instant
+
 class MovementFilterSpec extends PlaySpec {
 
-  private val m1 = Movement("lrn3", "test1", Some("consigneeId"), Some("arc1"))
-  private val m2 = Movement("2", "test2", Some("consigneeId2"), Some("arc2"))
-  private val m3 = Movement("5", "test2", Some("consigneeId2"), Some("arc3"))
-  private val m4 = Movement("2", "test4", Some("consigneeId2"), Some("arc4"))
-  private val m5 = Movement("lrn345", "test2abc", Some("consigneeId2"), Some("arc3fgn"))
+  val now = Instant.now()
+
+  private val m1 = Movement("lrn3", "test1", Some("consigneeId"), Some("arc1"), now.plusSeconds(500))
+  private val m2 = Movement("2", "test2", Some("consigneeId2"), Some("arc2"), now.plusSeconds(1000))
+  private val m3 = Movement("5", "test2", Some("consigneeId2"), Some("arc3"), now.minusSeconds(1000))
+  private val m4 = Movement("2", "test4", Some("consigneeId2"), Some("arc4"), now.minusSeconds(1000))
+  private val m5 = Movement("lrn345", "test2abc", Some("consigneeId2"), Some("arc3fgn"), now.minusSeconds(1000))
 
   private val movements = Seq(m1, m2, m3, m4, m5)
 
 
   "filterMovement" should {
     "filter by LRN" in {
-      val filter = MovementFilter.and(Seq("lrn" -> Some("lrn3")))
+      val filter = MovementFilterBuilder().withLrn(Some("lrn3")).build()
 
       filter.filterMovement(movements) mustBe Seq(m1)
     }
 
     "filter by ERN" in {
-      val filter = MovementFilter.and(Seq("ern" -> Some("test1")))
+      val filter = MovementFilterBuilder().withErn(Some("test1")).build()
 
       filter.filterMovement(movements) mustBe Seq(m1)
     }
 
     "filter by ARC" in {
-      val filter = MovementFilter.and(Seq("arc" -> Some("arc1")))
+      val filter = MovementFilterBuilder().withArc(Some("arc1")).build()
 
       filter.filterMovement(movements) mustBe Seq(m1)
     }
 
-    "filter by ERN, LRN and ARC" in {
-      val filter = MovementFilter.and(Seq(
-        "lrn" -> Some("2"),
-        "ern" -> Some("test2"),
-        "arc" -> Some("arc2")
-      ))
+    "filter by updatedSince" in {
+      val filter = MovementFilterBuilder().withUpdatedSince(Some(now.plusSeconds(700))).build()
+
+      filter.filterMovement(movements) mustBe Seq(m2)
+    }
+
+    "filter by updatedSince and include movements with a updatedSince time that equals the filter time" in {
+      val filter = MovementFilterBuilder().withUpdatedSince(Some(now.plusSeconds(500))).build()
+
+      filter.filterMovement(movements) mustBe Seq(m1, m2)
+    }
+
+    "filter by ERN, LRN, ARC and updatedSince" in {
+      val filter = MovementFilterBuilder()
+        .withErn(Some("test2"))
+        .withLrn(Some("2"))
+        .withArc(Some("arc2"))
+        .withUpdatedSince(Some(now)).build()
 
       filter.filterMovement(movements) mustBe Seq(m2)
     }
 
     "filter by ERN and LRN" in {
-      val filter = MovementFilter.and(Seq(
-        "lrn" -> Some("2"),
-        "ern" -> Some("test2")
-      ))
+      val filter = MovementFilterBuilder().withErn(Some("test2")).withLrn(Some("2")).build()
 
       filter.filterMovement(movements) mustBe Seq(m2)
     }
 
     "not return any match for an LRN" in {
-
-      val filter = MovementFilter.and(Seq(
-        "ern" -> None,
-        "lrn" -> Some("3"),
-        "arc" -> Some("arc3")
-      ))
+      val filter = MovementFilterBuilder().withLrn(Some("3")).withArc(Some("arc3")).build()
 
       filter.filterMovement(movements) mustBe Seq.empty
     }
 
     "not return any match for an ARC" in {
-
-      val filter = MovementFilter.and(Seq(
-        "ern" -> None,
-        "lrn" -> None,
-        "arc" -> Some("3")
-      ))
+      val filter = MovementFilterBuilder().withArc(Some("3")).build()
 
       filter.filterMovement(movements) mustBe Seq.empty
     }
 
     "not filter" when {
-      "empty sequence" in {
-        val filter = MovementFilter.and(Seq.empty)
+      "empty builder" in {
+        val filter = MovementFilterBuilder().build()
 
         filter.filterMovement(movements) mustBe movements
       }
     }
 
     "there is no filter" in {
-      val filter = MovementFilter.and(Seq("ern" -> None, "lrn" -> None, "arc" -> None))
+      val filter = MovementFilterBuilder().withErn(None).withLrn(None).withArc(None).withUpdatedSince(None).build()
 
       filter.filterMovement(movements) mustBe movements
     }

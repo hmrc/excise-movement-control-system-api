@@ -17,7 +17,6 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model
 
 import play.api.libs.json.{Format, Json, OFormat}
-import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 import java.time.Instant
@@ -47,9 +46,9 @@ object Message {
   def apply(
              encodedMessage: String,
              messageType: String,
-             dateTimeService: TimestampSupport): Message = {
+             createdOn: Instant): Message = {
 
-    Message(encodedMessage.hashCode(), encodedMessage, messageType, dateTimeService.timestamp())
+    Message(encodedMessage.hashCode(), encodedMessage, messageType, createdOn)
   }
 
   implicit val format: OFormat[Message] = Json.format[Message]

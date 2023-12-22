@@ -38,7 +38,7 @@ class MessageFilter @Inject()
       .filter(_.lrnEquals(lrnToFilterBy))
       .map { m =>
         val encodedMessage = emcsUtils.encode(m.toXml.toString())
-        Message(encodedMessage, m.messageType, dateTimeService)
+        Message(encodedMessage, m.messageType, dateTimeService.timestamp())
       }
   }
 
