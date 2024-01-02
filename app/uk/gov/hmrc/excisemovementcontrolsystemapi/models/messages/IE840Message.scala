@@ -16,31 +16,28 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
-import generated.{IE819Type, MessagesOption}
+import generated.{IE840Type, MessagesOption}
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 
 import scala.xml.NodeSeq
 
-
-case class IE819Message
+case class IE840Message
 (
-  private val obj: IE819Type,
+  private val obj: IE840Type,
   private val key: Option[String],
   private val namespace: Option[String]
 ) extends IEMessage {
-  def consignorId: Option[String] = None
 
-  override def consigneeId: Option[String] =
-    obj.Body.AlertOrRejectionOfEADESAD.ConsigneeTrader.flatMap(_.Traderid)
+  override def consigneeId: Option[String] = None
 
   override def administrativeReferenceCode: Seq[Option[String]] =
-    Seq(Some(obj.Body.AlertOrRejectionOfEADESAD.ExciseMovement.AdministrativeReferenceCode))
+    Seq(obj.Body.EventReportEnvelope.ExciseMovement.map(_.AdministrativeReferenceCode))
 
-  override def messageType: String = MessageTypes.IE819.value
+  override def messageType: String = MessageTypes.IE840.value
 
   override def toXml: NodeSeq = {
-    scalaxb.toXML[IE819Type](obj, namespace, key, generated.defaultScope)
+    scalaxb.toXML[IE840Type](obj, namespace, key, generated.defaultScope)
   }
 
   override def lrnEquals(lrn: String): Boolean = false
@@ -48,13 +45,13 @@ case class IE819Message
   override def messageIdentifier: String = obj.Header.MessageIdentifier
 }
 
-object IE819Message {
-  def apply(message: DataRecord[MessagesOption]): IE819Message = {
-    IE819Message(message.as[IE819Type], message.key, message.namespace)
+object IE840Message {
+  def apply(message: DataRecord[MessagesOption]): IE840Message = {
+    IE840Message(message.as[IE840Type], message.key, message.namespace)
   }
 
-  def createFromXml(xml: NodeSeq): IE819Message = {
-    val ie819: IE819Type = scalaxb.fromXML[IE819Type](xml)
-    IE819Message(ie819, Some(ie819.productPrefix), None)
+  def createFromXml(xml: NodeSeq): IE840Message = {
+    val ie840: IE840Type = scalaxb.fromXML[IE840Type](xml)
+    IE840Message(ie840, Some(ie840.productPrefix), None)
   }
 }

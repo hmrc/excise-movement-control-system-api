@@ -54,11 +54,13 @@ class MessageService @Inject()(movementRepository: MovementRepository, implicit 
         Future.successful(Set(ie801Message.consigneeId, ie801Message.consignorId).flatten)
 
       case _: IE810Message =>
-        val arc = ieMessage.administrativeReferenceCode.getOrElse(throw new RuntimeException("IE810 message must have an administrative reference code"))
+        // Only expect one ARC for this message type
+        val arc = ieMessage.administrativeReferenceCode.head.getOrElse(throw new RuntimeException("IE810 message must have an administrative reference code"))
         getConsignorAndConsigneeFromArc(arc)
 
       case _: IE813Message =>
-        val arc = ieMessage.administrativeReferenceCode.getOrElse(throw new RuntimeException("IE813 message must have an administrative reference code"))
+        // Only expect one ARC for this message type
+      val arc = ieMessage.administrativeReferenceCode.head.getOrElse(throw new RuntimeException("IE813 message must have an administrative reference code"))
         getConsignorFromArc(arc)
 
       case ie815Message: IE815Message =>

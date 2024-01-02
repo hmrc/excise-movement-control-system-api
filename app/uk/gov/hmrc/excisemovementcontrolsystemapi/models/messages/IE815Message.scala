@@ -31,7 +31,7 @@ case class IE815Message(private val obj: IE815Type) extends IEMessage {
   override def consigneeId: Option[String] =
     obj.Body.SubmittedDraftOfEADESAD.ConsigneeTrader.flatMap(_.Traderid)
 
-  override def administrativeReferenceCode: Option[String] = None
+  override def administrativeReferenceCode: Seq[Option[String]] = Seq(None)
 
   override def messageType: String = MessageTypes.IE815.value
 

@@ -23,7 +23,7 @@ trait IEMessage {
 
   def consigneeId: Option[String]
 
-  def administrativeReferenceCode: Option[String]
+  def administrativeReferenceCode: Seq[Option[String]]
 
   def messageType: String
 

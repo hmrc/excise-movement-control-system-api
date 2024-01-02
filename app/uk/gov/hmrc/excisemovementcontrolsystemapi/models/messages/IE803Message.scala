@@ -16,45 +16,42 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
-import generated.{IE819Type, MessagesOption}
+import generated.{IE803Type, MessagesOption}
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 
 import scala.xml.NodeSeq
 
-
-case class IE819Message
+case class IE803Message
 (
-  private val obj: IE819Type,
+  private val obj: IE803Type,
   private val key: Option[String],
   private val namespace: Option[String]
 ) extends IEMessage {
-  def consignorId: Option[String] = None
 
-  override def consigneeId: Option[String] =
-    obj.Body.AlertOrRejectionOfEADESAD.ConsigneeTrader.flatMap(_.Traderid)
+  def consigneeId: Option[String] = None
 
   override def administrativeReferenceCode: Seq[Option[String]] =
-    Seq(Some(obj.Body.AlertOrRejectionOfEADESAD.ExciseMovement.AdministrativeReferenceCode))
-
-  override def messageType: String = MessageTypes.IE819.value
+    Seq(Some(obj.Body.NotificationOfDivertedEADESAD.ExciseNotification.AdministrativeReferenceCode))
 
   override def toXml: NodeSeq = {
-    scalaxb.toXML[IE819Type](obj, namespace, key, generated.defaultScope)
+    scalaxb.toXML[IE803Type](obj, namespace, key, generated.defaultScope)
   }
 
-  override def lrnEquals(lrn: String): Boolean = false
+  override def messageType: String = MessageTypes.IE803.value
 
   override def messageIdentifier: String = obj.Header.MessageIdentifier
+
+  override def lrnEquals(lrn: String): Boolean = false
 }
 
-object IE819Message {
-  def apply(message: DataRecord[MessagesOption]): IE819Message = {
-    IE819Message(message.as[IE819Type], message.key, message.namespace)
+object IE803Message {
+  def apply(message: DataRecord[MessagesOption]): IE803Message = {
+    IE803Message(message.as[IE803Type], message.key, message.namespace)
   }
 
-  def createFromXml(xml: NodeSeq): IE819Message = {
-    val ie819: IE819Type = scalaxb.fromXML[IE819Type](xml)
-    IE819Message(ie819, Some(ie819.productPrefix), None)
+  def createFromXml(xml: NodeSeq): IE803Message = {
+    val ie803: IE803Type = scalaxb.fromXML[IE803Type](xml)
+    IE803Message(ie803, Some(ie803.productPrefix), None)
   }
 }
