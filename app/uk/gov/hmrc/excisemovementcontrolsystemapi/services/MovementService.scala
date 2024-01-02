@@ -99,8 +99,10 @@ class MovementService @Inject()(
 
     movementRepository.getAllBy(ern).map(cachedMovements => {
 
-      //Some messages (e.g. IE829) have multiple arcs in so we want to update them all
-      // If no arc it will be Seq(None)
+      //todo:
+      // Some messages (e.g. IE829) have multiple arcs in so we want to update them all
+      // If no arc it will be Seq(None). This may need to be revisited as we may need to
+      // use the SequenceNumber in this case.
       val messageArcs = message.administrativeReferenceCode
 
       val results: Seq[Future[Boolean]] = messageArcs.map { messageArc =>
