@@ -31,7 +31,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeAuthentication
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 
 import java.time.{Instant, LocalDateTime}
 import scala.concurrent.{ExecutionContext, Future}
@@ -48,6 +48,7 @@ class GetMessagesControllerSpec extends PlaySpec
   private val timeStamp = LocalDateTime.of(2020, 1, 1, 1, 1, 1, 1)
   private val workItemService = mock[WorkItemService]
   private val emcsUtils = mock[EmcsUtils]
+  private val messageCreateOn = Instant.now()
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -56,7 +57,7 @@ class GetMessagesControllerSpec extends PlaySpec
     when(movementService.getMatchingERN(any, any))
       .thenReturn(Future.successful(Some(ern)))
 
-    when(dateTimeService.timestamp()).thenReturn(Instant.now())
+    when(dateTimeService.timestamp()).thenReturn(messageCreateOn)
 
     when(emcsUtils.getCurrentDateTime).thenReturn(timeStamp)
 
@@ -65,7 +66,7 @@ class GetMessagesControllerSpec extends PlaySpec
 
   "getMessagesForMovement" should {
     "return 200" in {
-      val message = Message("message", "IE801", dateTimeService.timestamp())
+      val message = Message("message", "IE801", messageCreateOn)
       val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
       when(movementService.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Some(movement)))
@@ -77,8 +78,8 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "get all the new messages" in {
-      val message = Message("message", "IE801", dateTimeService.timestamp())
-      val message2 = Message("message2", "IE801", dateTimeService.timestamp())
+      val message = Message("message", "IE801", messageCreateOn)
+      val message2 = Message("message2", "IE801", messageCreateOn)
       val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message, message2))
       when(movementService.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Some(movement)))
@@ -92,8 +93,6 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "get all the new messages when there is a time query parameter provided" in {
-      val timeNow = dateTimeService.timestamp()
-        .toString
       val timeInFuture = Instant.now.plusSeconds(1000)
       val timeInPast = Instant.now.minusSeconds(1000)
       val message = Message("message", "IE801", timeInFuture)
@@ -102,20 +101,19 @@ class GetMessagesControllerSpec extends PlaySpec
       when(movementService.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Some(movement)))
 
-      val result = createWithSuccessfulAuth.getMessagesForMovement(lrn, Some(timeNow))(createRequest())
+      val result = createWithSuccessfulAuth.getMessagesForMovement(lrn, Some(messageCreateOn.toString))(createRequest())
 
       status(result) mustBe OK
       contentAsJson(result) mustBe Json.toJson(Seq(message))
     }
 
     "get all the new messages including messages with a createdOn time of NOW when there is a time query parameter provided" in {
-      val timeNow = dateTimeService.timestamp()
-      val timeNowString = timeNow.toString
+      val timeNowString = messageCreateOn.toString
       val timeInFuture = Instant.now.plusSeconds(1000)
       val timeInPast = Instant.now.minusSeconds(1000)
       val message = Message("message", "IE801", timeInFuture)
       val message2 = Message("message2", "IE801", timeInPast)
-      val message3 = Message("message3", "IE801", timeNow)
+      val message3 = Message("message3", "IE801", messageCreateOn)
       val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message, message2, message3))
       when(movementService.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Some(movement)))
@@ -156,7 +154,7 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "create a Work Item if there is not one for the ERN already" in {
-      val message = Message("message", "IE801", dateTimeService.timestamp())
+      val message = Message("message", "IE801", messageCreateOn)
       val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
       when(movementService.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Some(movement)))
@@ -186,7 +184,7 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "catch Future failure from Work Item service and log it but still process submission" in {
-      val message = Message("message", "IE801", dateTimeService.timestamp())
+      val message = Message("message", "IE801", messageCreateOn)
       val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
       when(movementService.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Some(movement)))
