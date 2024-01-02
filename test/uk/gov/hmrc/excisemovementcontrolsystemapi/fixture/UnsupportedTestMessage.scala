@@ -23,7 +23,7 @@ import scala.xml.NodeSeq
 object UnsupportedTestMessage extends IEMessage {
   override def consigneeId: Option[String] = None
 
-  override def administrativeReferenceCode: Option[String] = None
+  override def administrativeReferenceCode: Seq[Option[String]] = Seq.empty
 
   override def messageType: String = "any-type"
 

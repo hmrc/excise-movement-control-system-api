@@ -27,17 +27,17 @@ class MessageService @Inject()(
   movementRepository: MovementRepository
 )(implicit val executionContext: ExecutionContext) {
 
-  private def getConsignorAndConsigneeFromArc(message: IEMessage): Future[Set[String]] = {
-    message.administrativeReferenceCode match {
+  private def getConsignorAndConsigneeFromArc(arc: Option[String], messageType: String): Future[Set[String]] = {
+   arc match {
       case Some(a) =>  getMovementUsingArc(a).map(m => Set(Some(m.consignorId), m.consigneeId).flatten)
-      case _ => throw new RuntimeException(s"[MessageService] - ${message.messageType} message must have an administrative reference code")
+      case _ => throw new RuntimeException(s"[MessageService] - $messageType message must have an administrative reference code")
     }
   }
 
-  private def getConsignorFromArc(message: IEMessage): Future[Set[String]] = {
-    message.administrativeReferenceCode match {
+  private def getConsignorFromArc(arc: Option[String], messageType: String): Future[Set[String]] = {
+    arc match {
       case Some(a) =>  getMovementUsingArc(a).map(m => Set(m.consignorId))
-      case _ => throw new RuntimeException(s"[MessageService] - ${message.messageType} message must have an administrative reference code")
+      case _ => throw new RuntimeException(s"[MessageService] - $messageType message must have an administrative reference code")
     }
   }
 
@@ -53,8 +53,8 @@ class MessageService @Inject()(
 
     ieMessage match {
       case ie801: IE801Message => Future.successful(Set(ie801.consigneeId, ie801.consignorId).flatten)
-      case ie810: IE810Message => getConsignorAndConsigneeFromArc(ie810)
-      case ie813: IE813Message => getConsignorFromArc(ie813)
+      case ie810: IE810Message => getConsignorAndConsigneeFromArc(ie810.administrativeReferenceCode.head, ie810.messageType)
+      case ie813: IE813Message => getConsignorFromArc(ie813.administrativeReferenceCode.head, ie813.messageType)
       case ie815: IE815Message => Future.successful(Set(ie815.consignorId))
       case ie818: IE818Message => Future.successful(Set(ie818.consigneeId).flatten)
       case ie819: IE819Message => Future.successful(Set(ie819.consigneeId).flatten)
