@@ -184,10 +184,18 @@ class GetMovementsControllerItSpec extends PlaySpec
       ))
     }
 
-    "return a Unauthorized (401) when no authorized trader" in {
+    "return an Unauthorized (401) when no authorized trader" in {
       withUnauthorizedTrader(InternalError("A general auth failure"))
 
       getRequest(url).status mustBe UNAUTHORIZED
+    }
+
+    "return a Bad Request (400) when not logged in as the filtering trader" in {
+
+      withAuthorizedTrader(consignorId)
+
+      getRequest(s"$url?ern=GBWK002281024").status mustBe BAD_REQUEST
+
     }
   }
 

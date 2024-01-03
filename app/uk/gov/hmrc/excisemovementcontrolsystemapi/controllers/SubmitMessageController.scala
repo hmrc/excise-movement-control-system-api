@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction, ValidateErnsAction, ValidateLRNAction}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction, ValidateErnInMessageAction, ValidateLRNAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.WorkItemService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -31,7 +31,7 @@ import scala.xml.NodeSeq
 class SubmitMessageController @Inject()(
                                          authAction: AuthAction,
                                          xmlParser: ParseXmlAction,
-                                         validateErnsAction: ValidateErnsAction,
+                                         validateErnInMessageAction: ValidateErnInMessageAction,
                                          validateLRNAction: ValidateLRNAction,
                                          movementMessageConnector: EISSubmissionConnector,
                                          workItemService: WorkItemService,
@@ -44,7 +44,7 @@ class SubmitMessageController @Inject()(
 
     (authAction
       andThen xmlParser
-      andThen validateErnsAction
+      andThen validateErnInMessageAction
       andThen validateLRNAction(lrn)).async(parse.xml) {
       implicit request =>
         val ern = emcsUtils.getSingleErnFromMessage(request.parsedRequest.ieMessage, request.validErns)

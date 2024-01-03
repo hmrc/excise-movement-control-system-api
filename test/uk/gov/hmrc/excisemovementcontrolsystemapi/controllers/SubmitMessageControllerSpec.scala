@@ -28,7 +28,7 @@ import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnsAction, FakeValidateLRNAction, FakeXmlParsers}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnInMessageAction, FakeValidateLRNAction, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.WorkItemService
@@ -41,7 +41,7 @@ class SubmitMessageControllerSpec
   extends PlaySpec
     with FakeAuthentication
     with FakeXmlParsers
-    with FakeValidateErnsAction
+    with FakeValidateErnInMessageAction
     with FakeValidateLRNAction
     with BeforeAndAfterEach
     with TestXml {
@@ -147,7 +147,7 @@ class SubmitMessageControllerSpec
     new SubmitMessageController(
       FakeSuccessAuthentication,
       FakeSuccessXMLParser,
-      FakeSuccessfulValidateErnsAction(ieMessage),
+      FakeSuccessfulValidateErnInMessageAction(ieMessage),
       FakeSuccessfulValidateLRNAction,
       connector,
       workItemService,
@@ -165,7 +165,7 @@ class SubmitMessageControllerSpec
     new SubmitMessageController(
       FakeFailingAuthentication,
       FakeSuccessXMLParser,
-      FakeSuccessfulValidateErnsAction(ieMessage),
+      FakeSuccessfulValidateErnInMessageAction(ieMessage),
       FakeFailureValidateLRNAction,
       connector,
       workItemService,
@@ -177,7 +177,7 @@ class SubmitMessageControllerSpec
     new SubmitMessageController(
       FakeSuccessAuthentication,
       FakeFailureXMLParser,
-      FakeSuccessfulValidateErnsAction(ieMessage),
+      FakeSuccessfulValidateErnInMessageAction(ieMessage),
       FakeFailureValidateLRNAction,
       connector,
       workItemService,
@@ -189,7 +189,7 @@ class SubmitMessageControllerSpec
     new SubmitMessageController(
       FakeSuccessAuthentication,
       FakeSuccessXMLParser,
-      FakeFailureValidateErnsAction,
+      FakeFailureValidateErnInMessageAction,
       FakeFailureValidateLRNAction,
       connector,
       workItemService,
@@ -201,7 +201,7 @@ class SubmitMessageControllerSpec
     new SubmitMessageController(
       FakeSuccessAuthentication,
       FakeSuccessXMLParser,
-      FakeSuccessfulValidateErnsAction(ieMessage),
+      FakeSuccessfulValidateErnInMessageAction(ieMessage),
       FakeFailureValidateLRNAction,
       connector,
       workItemService,

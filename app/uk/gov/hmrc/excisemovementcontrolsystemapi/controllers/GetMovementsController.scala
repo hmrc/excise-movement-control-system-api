@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ValidateErnParameterAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilterBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, GetMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
@@ -33,6 +33,7 @@ import scala.util.Try
 
 class GetMovementsController @Inject()(
                                         authAction: AuthAction,
+                                        validateErnParameterAction: ValidateErnParameterAction,
                                         cc: ControllerComponents,
                                         movementService: MovementService,
                                         workItemService: WorkItemService,
@@ -41,7 +42,7 @@ class GetMovementsController @Inject()(
   extends BackendController(cc) {
 
   def getMovements(ern: Option[String], lrn: Option[String], arc: Option[String], updatedSince: Option[String]): Action[AnyContent] = {
-    authAction.async(parse.default) {
+    (authAction andThen validateErnParameterAction(ern)).async(parse.default) {
       implicit request =>
 
         workItemService.addWorkItemForErn(ern.getOrElse(request.erns.head), fastMode = false)

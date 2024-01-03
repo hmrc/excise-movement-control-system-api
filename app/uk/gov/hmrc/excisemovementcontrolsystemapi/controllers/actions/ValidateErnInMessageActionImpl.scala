@@ -29,19 +29,19 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-class ValidateErnsActionImpl @Inject()(messageService: MessageService)(
+class ValidateErnInMessageActionImpl @Inject()(messageService: MessageService)(
   implicit val executionContext: ExecutionContext,
   implicit val emcsUtils: EmcsUtils
-) extends ValidateErnsAction
+) extends ValidateErnInMessageAction
   with Logging {
   override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ValidatedXmlRequest[A]]] = {
 
     val matchedErns: Future[Set[String]] =
       messageService.getErns(request.ieMessage).map(ernsFromMessage => request.erns.intersect(ernsFromMessage))
 
-    matchedErns.map(erns => {
-      if (erns.nonEmpty) {
-        Right(ValidatedXmlRequest(request, erns))
+    matchedErns.map(ern => {
+      if (ern.nonEmpty) {
+        Right(ValidatedXmlRequest(request, ern))
       }
       else {
         logger.error("[ValidateErnAction] - Invalid Excise Number")
@@ -62,7 +62,7 @@ class ValidateErnsActionImpl @Inject()(messageService: MessageService)(
   }
 }
 
-@ImplementedBy(classOf[ValidateErnsActionImpl])
-trait ValidateErnsAction extends ActionRefiner[ParsedXmlRequest, ValidatedXmlRequest] {
+@ImplementedBy(classOf[ValidateErnInMessageActionImpl])
+trait ValidateErnInMessageAction extends ActionRefiner[ParsedXmlRequest, ValidatedXmlRequest] {
   def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ValidatedXmlRequest[A]]]
 }

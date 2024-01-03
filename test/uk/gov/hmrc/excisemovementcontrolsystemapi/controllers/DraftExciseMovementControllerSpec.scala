@@ -30,7 +30,7 @@ import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnsAction, FakeXmlParsers}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnInMessageAction, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
@@ -43,7 +43,7 @@ class DraftExciseMovementControllerSpec
   extends PlaySpec
     with FakeAuthentication
     with FakeXmlParsers
-    with FakeValidateErnsAction
+    with FakeValidateErnInMessageAction
     with TestXml
     with BeforeAndAfterEach
     with EitherValues {
@@ -159,7 +159,7 @@ class DraftExciseMovementControllerSpec
     new DraftExciseMovementController(
       FakeFailingAuthentication,
       FakeSuccessXMLParser,
-      FakeSuccessfulValidateErnsAction(mockIeMessage),
+      FakeSuccessfulValidateErnInMessageAction(mockIeMessage),
       connector,
       movementMessageService,
       workItemService,
@@ -170,7 +170,7 @@ class DraftExciseMovementControllerSpec
     new DraftExciseMovementController(
       FakeSuccessAuthentication,
       FakeFailureXMLParser,
-      FakeSuccessfulValidateErnsAction(mockIeMessage),
+      FakeSuccessfulValidateErnInMessageAction(mockIeMessage),
       connector,
       movementMessageService,
       workItemService,
@@ -181,7 +181,7 @@ class DraftExciseMovementControllerSpec
     new DraftExciseMovementController(
       FakeSuccessAuthentication,
       FakeSuccessXMLParser,
-      FakeSuccessfulValidateErnsAction(mockIeMessage),
+      FakeSuccessfulValidateErnInMessageAction(mockIeMessage),
       connector,
       movementMessageService,
       workItemService,
@@ -192,7 +192,7 @@ class DraftExciseMovementControllerSpec
     new DraftExciseMovementController(
       FakeSuccessAuthentication,
       FakeSuccessXMLParser,
-      FakeFailureValidateErnsAction,
+      FakeFailureValidateErnInMessageAction,
       connector,
       movementMessageService,
       workItemService,
