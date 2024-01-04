@@ -32,7 +32,7 @@ import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NonRepudiationSubmissionAccepted, NrsMetadata, NrsPayload}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NonRepudiationSubmissionAccepted, NonRepudiationSubmissionFailed, NrsMetadata, NrsPayload}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
@@ -83,8 +83,8 @@ class NrsConnectorSpec
     when(httpClient.POST[Any,Any](any,any,any)(any,any,any,any))
       .thenReturn(Future.successful(successFulNrsResponse))
     when(appConfig.getNrsSubmissionUrl).thenReturn("/nrs-url")
-    when(appConfig.nrsAuthorisationToken).thenReturn("authToken")
-    when(appConfig.nrsRetries).thenReturn(Seq(
+    when(appConfig.nrsApiKey).thenReturn("authToken")
+    when(appConfig.nrsRetryDelays).thenReturn(Seq(
       Duration.create(1L, "seconds"),
       Duration.create(1L, "seconds"),
       Duration.create(1L, "seconds")
@@ -97,27 +97,27 @@ class NrsConnectorSpec
     "return success" in {
       val result = connector.sendToNrs(nrsPayLoad, "correlationId").futureValue
 
-      result mustBe Right(NonRepudiationSubmissionAccepted("testNesSubmissionId"))
+      result mustBe NonRepudiationSubmissionAccepted("testNesSubmissionId")
     }
 
 
     "return an error" in {
       when(httpClient.POST[Any,Any](any,any,any)(any,any,any,any))
-        .thenReturn(Future.successful(HttpResponse(400, JsObject.empty.toString())))
+        .thenReturn(Future.successful(HttpResponse(400, "bad request")))
 
       val result = connector.sendToNrs(nrsPayLoad, "correlationId").futureValue
 
-      result.left.value mustBe 400
+      result mustBe NonRepudiationSubmissionFailed(400, "bad request")
     }
 
     "retry 3 time" when {
       "nrs return a non 2xx status" in {
         when(httpClient.POST[Any, Any](any, any, any)(any, any, any, any))
-          .thenReturn(Future.successful(HttpResponse(BAD_REQUEST, JsObject.empty.toString())))
+          .thenReturn(Future.successful(HttpResponse(BAD_REQUEST, "bad request")))
 
         val result = connector.sendToNrs(nrsPayLoad, "correlationId").futureValue
 
-        result.left.value mustBe BAD_REQUEST
+        result mustBe NonRepudiationSubmissionFailed(BAD_REQUEST, "bad request")
         verifyHttpPostCAll(3)
       }
 
@@ -129,8 +129,6 @@ class NrsConnectorSpec
           connector.sendToNrs(nrsPayLoad, "correlationId").futureValue
           verifyHttpPostCAll(3)
         }
-
-
       }
     }
 
@@ -143,7 +141,7 @@ class NrsConnectorSpec
 
       val result = connector.sendToNrs(nrsPayLoad, "correlationId").futureValue
 
-      result mustBe Right(NonRepudiationSubmissionAccepted("testNesSubmissionId"))
+      result mustBe NonRepudiationSubmissionAccepted("testNesSubmissionId")
       verifyHttpPostCAll(2)
     }
 

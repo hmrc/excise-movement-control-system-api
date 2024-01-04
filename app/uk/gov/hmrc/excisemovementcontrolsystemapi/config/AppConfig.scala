@@ -29,8 +29,8 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   lazy val eisHost: String = servicesConfig.baseUrl("eis")
   lazy val nrsHost:  String = servicesConfig.baseUrl("nrs")
 
-  lazy val nrsAuthorisationToken: String = servicesConfig.getString("microservice.services.nrs.api-key")
-  lazy val nrsRetries: Seq[FiniteDuration] = config.get[Seq[FiniteDuration]]("microservice.services.nrs.retries")
+  lazy val nrsApiKey: String = servicesConfig.getConfString("nrs.api-key", "dummyNrsApiKey")
+  lazy val nrsRetryDelays: Seq[FiniteDuration] = config.get[Seq[FiniteDuration]]("microservice.services.nrs.retryDelays")
 
   lazy val interval: FiniteDuration = config.getOptional[String]("scheduler.pollingNewMessageJob.interval")
     .map(Duration.create(_).asInstanceOf[FiniteDuration])

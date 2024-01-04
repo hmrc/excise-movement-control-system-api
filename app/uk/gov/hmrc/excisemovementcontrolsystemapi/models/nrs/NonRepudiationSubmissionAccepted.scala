@@ -18,8 +18,16 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs
 
 import play.api.libs.json.{Json, OFormat}
 
-case class NonRepudiationSubmissionAccepted(nrSubmissionId: String)
+sealed trait NonRepudiationSubmission
+
+case class NonRepudiationSubmissionAccepted(nrSubmissionId: String) extends NonRepudiationSubmission
 
 object NonRepudiationSubmissionAccepted {
   implicit val format: OFormat[NonRepudiationSubmissionAccepted] = Json.format[NonRepudiationSubmissionAccepted]
+}
+
+case class NonRepudiationSubmissionFailed(status: Int, reason: String) extends NonRepudiationSubmission
+
+object NonRepudiationSubmissionFailed {
+  implicit val format: OFormat[NonRepudiationSubmissionFailed] = Json.format[NonRepudiationSubmissionFailed]
 }

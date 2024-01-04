@@ -23,7 +23,7 @@ import play.api.libs.concurrent.Futures
 import play.api.libs.json.JsObject
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.XApiKeyHeaderKey
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NonRepudiationSubmissionAccepted, NrsPayload}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NonRepudiationSubmission, NonRepudiationSubmissionAccepted, NonRepudiationSubmissionFailed, NrsPayload}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.Retrying
 import uk.gov.hmrc.http.HttpReads.is2xx
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
@@ -40,26 +40,26 @@ class NrsConnector @Inject()
 )(implicit val ec: ExecutionContext, val futures: Futures) extends Retrying with Logging
 {
 
-  def sendToNrs(payload: NrsPayload,  correlationId: String)(implicit hc: HeaderCarrier): Future[Either[Int, NonRepudiationSubmissionAccepted]] = {
+  def sendToNrs(payload: NrsPayload,  correlationId: String)(implicit hc: HeaderCarrier): Future[NonRepudiationSubmission] = {
 
     val timer = metrics.defaultRegistry.timer("emcs.nrs.submission.timer").time()
     val jsonObject = payload.toJsObject
 
-    retry(appConfig.nrsRetries, canRetry, appConfig.getNrsSubmissionUrl) {
+    retry(appConfig.nrsRetryDelays, canRetry, appConfig.getNrsSubmissionUrl) {
       send(jsonObject, correlationId)
     }
       .map { response: HttpResponse =>
-      response.status match {
-        case ACCEPTED =>
-          val submissionId = response.json.as[NonRepudiationSubmissionAccepted]
-          logger.info(s"[NrsConnector] - Non repudiation submission accepted with nrSubmissionId: ${submissionId.nrSubmissionId}")
-          Right(submissionId)
-        case _ =>
-          //todo: Add explicit audit error
-          logger.warn(s"[NrsConnector] - Error when submitting to Non repudiation system (NRS) with status: ${response.status}, correlationId: $correlationId")
-          Left(response.status)
+        response.status match {
+          case ACCEPTED =>
+            val submissionId = response.json.as[NonRepudiationSubmissionAccepted]
+            logger.info(s"[NrsConnector] - Non repudiation submission accepted with nrSubmissionId: ${submissionId.nrSubmissionId}")
+            submissionId
+          case _ =>
+            //todo: Add explicit audit error
+            logger.warn(s"[NrsConnector] - Error when submitting to Non repudiation system (NRS) with status: ${response.status}, correlationId: $correlationId")
+            NonRepudiationSubmissionFailed(response.status, response.body)
+        }
       }
-    }
       .andThen { case _ => timer.stop() }
   }
 
@@ -88,7 +88,7 @@ class NrsConnector @Inject()
   private def createHeader: Seq[(String, String)] = {
     Seq(
       "Content-Type" -> "application/json",
-      (XApiKeyHeaderKey, appConfig.nrsAuthorisationToken)
+      (XApiKeyHeaderKey, appConfig.nrsApiKey)
     )
   }
 }

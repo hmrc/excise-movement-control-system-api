@@ -17,22 +17,26 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.ImplementedBy
+import play.api.Logging
 import play.api.mvc.Result
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmission
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 
 class SubmissionMessageServiceImpl @Inject()(
   connector: EISSubmissionConnector,
   nrsService: NrsService,
   emcsUtils: EmcsUtils,
-) (implicit val ec: ExecutionContext) extends SubmissionMessageService {
+) (implicit val ec: ExecutionContext) extends SubmissionMessageService with Logging {
+
 
   def submit(
     request: ValidatedXmlRequest[_]
@@ -40,11 +44,20 @@ class SubmissionMessageServiceImpl @Inject()(
 
     val correlationId = emcsUtils.generateCorrelationId
 
-    connector.submitMessage(request, correlationId).map {
-      case Right(response) =>
-        nrsService.submitNrs(request, correlationId)
-        Right(response)
-      case error => error
+    for {
+      submitMessageResponse <- connector.submitMessage(request, correlationId)
+      isSuccess = submitMessageResponse.isRight
+      _ = if(isSuccess) sendToNrs(request, correlationId)
+      } yield submitMessageResponse
+  }
+
+  private def sendToNrs(
+    request: ValidatedXmlRequest[_],
+    correlationId: String
+  )(implicit hc: HeaderCarrier): Future[Option[NonRepudiationSubmission]] = {
+    nrsService.submitNrs(request, correlationId).transformWith {
+      case Success(value) => Future.successful(Some(value))
+      case _ => Future.successful(None)
     }
   }
 }

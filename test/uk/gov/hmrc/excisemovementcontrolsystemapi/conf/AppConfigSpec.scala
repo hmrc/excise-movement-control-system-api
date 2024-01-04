@@ -40,6 +40,7 @@ class AppConfigSpec extends PlaySpec {
       |scheduler.workItems.fastInterval=3 minutes
       |scheduler.workItems.slowInterval=32 minutes
       |mongodb.workItem.TTL = 10 days
+      |microservice.services.nrs.api-key="test-key"
     """.stripMargin
 
   private def createAppConfig = {
@@ -89,6 +90,10 @@ class AppConfigSpec extends PlaySpec {
 
     "return config for Work Item slow interval" in {
       configService.workItemSlowInterval mustBe Duration.create(32, MINUTES)
+    }
+
+    "return config forApi Key" in {
+      configService.nrsApiKey mustBe "test-key"
     }
   }
 }

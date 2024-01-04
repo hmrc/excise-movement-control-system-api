@@ -185,13 +185,15 @@ class PollingNewMessagesWithWorkItemJobSpec
       val workItem = createWorkItem(retryAttempt)
       addOneItemToMockQueue(workItem)
 
+      when(workItemService.rescheduleWorkItemForceSlow(any)).thenReturn(Future.successful(true))
       when(appConfig.maxFailureRetryAttempts).thenReturn(retryAttempt)
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
-      await(job.executeInMutex)
+      val result = await(job.executeInMutex)
 
       verify(workItemService).rescheduleWorkItemForceSlow(eqTo(workItem))
+      result.message mustBe "polling-new-messages Job ran successfully."
     }
 
     "parse the messages" in {

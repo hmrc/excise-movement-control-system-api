@@ -18,36 +18,34 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import play.api.Logging
 import play.api.http.Status.INTERNAL_SERVER_ERROR
-import uk.gov.hmrc.auth.core.authorise.EmptyPredicate
-import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals
 import uk.gov.hmrc.auth.core.retrieve._
-import uk.gov.hmrc.auth.core.{AffinityGroup, AuthConnector, ConfidenceLevel, CredentialRole}
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals
+import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{IdentityData, NonRepudiationSubmissionAccepted, NrsMetadata, NrsPayload}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{IdentityData, NonRepudiationSubmission, NonRepudiationSubmissionFailed, NrsMetadata, NrsPayload}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService.nonRepudiationIdentityRetrievals
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, ErnsMapper, NrsEventIdMapper}
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier, InternalServerException}
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.control.NonFatal
 
 @Singleton
 class NrsService @Inject()
 (
-  authConnector: AuthConnector,
+  override val authConnector: AuthConnector,
   nrsConnector: NrsConnector,
   dateTimeService: DateTimeService,
   emcsUtils: EmcsUtils,
   ernsMapper: ErnsMapper,
   nrsEventIdMapper: NrsEventIdMapper
-)(implicit ec: ExecutionContext) extends Logging {
+)(implicit ec: ExecutionContext) extends AuthorisedFunctions with Logging {
 
   def submitNrs(
     request: ValidatedXmlRequest[_],
     correlationId: String
-  )(implicit headerCarrier: HeaderCarrier): Future[Either[Int, NonRepudiationSubmissionAccepted]] = {
+  )(implicit headerCarrier: HeaderCarrier): Future[NonRepudiationSubmission] = {
 
     val payload = request.body.toString
     val userHeaderData = request.headersAsMap
@@ -65,15 +63,14 @@ class NrsService @Inject()
       retrievedNrsResponse <- nrsConnector.sendToNrs(nrsPayload, correlationId)
     } yield retrievedNrsResponse)
       .recover {
-        case NonFatal(e) =>
+        case e: Exception =>
           logger.warn(s"[NrsService] - Error when submitting to Non repudiation system (NRS) with message: ${e.getMessage}", e)
-          Left(INTERNAL_SERVER_ERROR)
+          NonRepudiationSubmissionFailed(INTERNAL_SERVER_ERROR, e.getMessage)
       }
-
   }
 
   private def retrieveIdentityData()(implicit headerCarrier: HeaderCarrier): Future[IdentityData] =
-    authConnector.authorise(EmptyPredicate, nonRepudiationIdentityRetrievals).map {
+    authorised().retrieve(nonRepudiationIdentityRetrievals) {
       case affinityGroup ~ internalId ~
         externalId ~ agentCode ~
         credentials ~ confidenceLevel ~
@@ -84,7 +81,7 @@ class NrsService @Inject()
         mdtpInfo ~ itmpName ~
         itmpAddress ~
         credentialStrength =>
-        IdentityData(internalId = internalId,
+        Future.successful(IdentityData(internalId = internalId,
           externalId = externalId,
           agentCode = agentCode,
           optionalCredentials = credentials,
@@ -101,7 +98,7 @@ class NrsService @Inject()
           optionalItmpAddress = itmpAddress,
           affinityGroup = affinityGroup,
           credentialStrength = credentialStrength
-        )
+        ))
     }
 
   def retrieveUserAuthToken(hc: HeaderCarrier): String =

@@ -23,13 +23,14 @@ import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.Status.INTERNAL_SERVER_ERROR
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest, ValidatedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NonRepudiationSubmissionAccepted, NrsMetadata, NrsPayload}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService.NonRepudiationIdentityRetrievals
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, ErnsMapper, NrsEventIdMapper}
@@ -73,13 +74,13 @@ class NrsServiceSpec
     when(authConnector.authorise[NonRepudiationIdentityRetrievals](any, any)(any, any)) thenReturn
       Future.successful(testAuthRetrievals)
     when(nrsConnector.sendToNrs(any, any)(any)).
-      thenReturn(Future.successful(Right(NonRepudiationSubmissionAccepted("submissionId"))))
+      thenReturn(Future.successful(NonRepudiationSubmissionAccepted("submissionId")))
     when(message.consignorId).thenReturn("ern")
   }
 
   "submitNrs" should {
     "return NonRepudiationSubmissionAccepted" in {
-      submitNrs(hc) mustBe Right(NonRepudiationSubmissionAccepted("submissionId"))
+      submitNrs(hc) mustBe NonRepudiationSubmissionAccepted("submissionId")
     }
 
     "submit nrs payload" in {
@@ -94,22 +95,15 @@ class NrsServiceSpec
     "return an error" when {
       "NRS submit request fails" in {
         when(nrsConnector.sendToNrs(any, any)(any)).
-          thenReturn(Future.successful(Left(INTERNAL_SERVER_ERROR)))
+          thenReturn(Future.successful(NonRepudiationSubmissionFailed(INTERNAL_SERVER_ERROR, "any reason")))
 
-        submitNrs(hc).left.value mustBe INTERNAL_SERVER_ERROR
-      }
-
-      "cannot retrieve credential" in {
-        when(authConnector.authorise[NonRepudiationIdentityRetrievals](any, any)(any, any)) thenReturn
-          Future.failed(new RuntimeException("Cannot retrieve credential"))
-
-        submitNrs(hc).left.value mustBe INTERNAL_SERVER_ERROR
+        submitNrs(hc) mustBe NonRepudiationSubmissionFailed(INTERNAL_SERVER_ERROR, "any reason")
       }
 
       "cannot retrieve user AuthToken" in {
         val result = submitNrs(HeaderCarrier())
 
-        result.left.value mustBe INTERNAL_SERVER_ERROR
+        result mustBe NonRepudiationSubmissionFailed(INTERNAL_SERVER_ERROR, "No auth token available for NRS")
       }
     }
   }
@@ -128,11 +122,11 @@ class NrsServiceSpec
     )
   }
 
-  private def submitNrs(hc: HeaderCarrier): Either[Int, NonRepudiationSubmissionAccepted] = {
+  private def submitNrs(hc: HeaderCarrier): NonRepudiationSubmission = {
 
     val request =  createRequest(message)
 
-    service.submitNrs(request,"correlationId")(hc).futureValue
+    await(service.submitNrs(request,"correlationId")(hc))
   }
 
   private def createRequest(message: IEMessage): ValidatedXmlRequest[_] = {

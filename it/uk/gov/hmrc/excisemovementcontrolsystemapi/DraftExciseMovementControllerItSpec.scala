@@ -42,6 +42,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, 
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, MovementRepository}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.{Instant, LocalDateTime}
@@ -144,6 +145,18 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       withClue("return the json response") {
         assertValidResult(result)
       }
+    }
+
+    "return success also if NRS throws" in {
+      withAuthorizedTrader(consignorId)
+      stubEISSuccessfulRequest
+      stubNrsErrorResponse
+      setupRepositories
+
+      // no Authorization header added
+      val result = await(wsClient.url(url).post(IE815))
+
+      result.status mustBe ACCEPTED
     }
     "return not found if EIS returns not found" in {
       withAuthorizedTrader(consignorId)
