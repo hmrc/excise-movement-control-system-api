@@ -388,28 +388,27 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       }
 
     "not overwrite ARC that are not empty" in {
-      setUpForUpdateMovement(newMessage, Seq(None), Some("123"), "<IE818>test</IE818>", cachedMovements)
+      setUpForUpdateMovement(newMessage, Seq(Some("arc")), Some("123"), "<IE818>test</IE818>", cachedMovements)
 
-      when(newMessage.administrativeReferenceCode).thenReturn(Seq(Some("arc")))
       await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
 
       verify(mockMovementRepository).updateMovement(
         eqTo(Movement("123", consignorId, None, Some("456"), now, Seq(expectedMessage))))
     }
 
-      "message contains multiple Administration Reference Codes (ARCs)" in {
-        setUpForUpdateMovement(newMessage, Seq(Some("456"),Some("890")), None, "<IE818>test</IE818>", cachedMovements)
+    "message contains multiple Administration Reference Codes (ARCs)" in {
+      setUpForUpdateMovement(newMessage, Seq(Some("456"), Some("890")), None, "<IE818>test</IE818>", cachedMovements)
 
-        await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
+      await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
 
-        verify(mockMovementRepository).updateMovement(
-          eqTo(Movement("123", consignorId, None, Some("456"), now, Seq(expectedMessage)))
-        )
+      verify(mockMovementRepository).updateMovement(
+        eqTo(Movement("123", consignorId, None, Some("456"), now, Seq(expectedMessage)))
+      )
 
-        verify(mockMovementRepository).updateMovement(
-          eqTo(Movement("345", "12", None, Some("890"), now, Seq(expectedMessage)))
-        )
-      }
+      verify(mockMovementRepository).updateMovement(
+        eqTo(Movement("345", "12", None, Some("890"), now, Seq(expectedMessage)))
+      )
+    }
 
     "throw an error" when {
 
