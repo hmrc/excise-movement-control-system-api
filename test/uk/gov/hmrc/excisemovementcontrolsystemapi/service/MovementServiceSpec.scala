@@ -68,7 +68,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
   private val exampleMovement: Movement = Movement(lrn, consignorId, Some(consigneeId))
 
-  "saveMovement" should {
+  "saveNewMovement" should {
     "return a Movement" in {
       val successMovement = exampleMovement
       when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
@@ -96,7 +96,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       result.left.value mustBe InternalServerError(Json.toJson(expectedError))
     }
 
-    "throw an error when LRN is already in database with an ARC" in {
+    "throw an error when LRN is already in database for consignor with an ARC" in {
       val exampleMovementWithArc = exampleMovement.copy(administrativeReferenceCode = Some("arc"))
 
       when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
@@ -109,7 +109,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       result.left.value mustBe BadRequest(Json.toJson(expectedError))
     }
 
-    "throw an error when LRN is already in database with no ARC for different consignee" in {
+    "throw an error when LRN is already in database with no ARC for same consignor but different consignee" in {
       val exampleMovementWithDifferentConsignee = exampleMovement.copy(consigneeId = Some("1234"))
 
       when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
@@ -122,8 +122,36 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       result.left.value mustBe BadRequest(Json.toJson(expectedError))
     }
 
-    "return the database movement when LRN is already in database with no ARC for same consignee" in {
+    "return the database movement when LRN is already in database with no ARC for same consignor and same consignee" in {
       val movementInDB = exampleMovement.copy(lastUpdated = Instant.now)
+
+      when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(Seq(movementInDB)))
+
+      when(mockMovementRepository.saveMovement(any))
+        .thenReturn(Future.successful(true))
+
+      val result = await(movementService.saveNewMovement(exampleMovement))
+
+      result mustBe Right(movementInDB)
+    }
+
+    "return the database movement when LRN is already in database for different consignor but same consignee" in {
+      val movementInDB = exampleMovement.copy(lastUpdated = Instant.now, consignorId = "newConsignor")
+
+      when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.successful(Seq(movementInDB)))
+
+      when(mockMovementRepository.saveMovement(any))
+        .thenReturn(Future.successful(true))
+
+      val result = await(movementService.saveNewMovement(exampleMovement))
+
+      result mustBe Right(movementInDB)
+    }
+
+    "return the database movement when LRN is already in database as a consignee and it is submitted as a consignor" in {
+      val movementInDB = exampleMovement.copy(lastUpdated = Instant.now, consignorId = consigneeId, consigneeId = Some(consignorId))
 
       when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(movementInDB)))
@@ -370,22 +398,22 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       }
     }
 
-      "retain old messages when adding a new one to a movement" in {
-        setUpForUpdateMovement(newMessage, Seq(Some("456")), None, "<IE818>test</IE818>", cachedMovements)
+    "retain old messages when adding a new one to a movement" in {
+      setUpForUpdateMovement(newMessage, Seq(Some("456")), None, "<IE818>test</IE818>", cachedMovements)
 
-        when(newMessage.toXml).thenReturn(scala.xml.XML.loadString("<IE818>test</IE818>"))
-        when(newMessage.messageType).thenReturn(MessageTypes.IE818.value)
-        val movement = Seq(
-          Movement("123", consignorId, None, Some("456"), now, Seq(cachedMessage1, cachedMessage2)),
-        )
-        when(mockMovementRepository.getAllBy(any))
-          .thenReturn(Future.successful(movement))
-        await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
+      when(newMessage.toXml).thenReturn(scala.xml.XML.loadString("<IE818>test</IE818>"))
+      when(newMessage.messageType).thenReturn(MessageTypes.IE818.value)
+      val movement = Seq(
+        Movement("123", consignorId, None, Some("456"), now, Seq(cachedMessage1, cachedMessage2)),
+      )
+      when(mockMovementRepository.getAllBy(any))
+        .thenReturn(Future.successful(movement))
+      await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
 
-        verify(mockMovementRepository).updateMovement(
-          eqTo(Movement("123", consignorId, None, Some("456"), now, Seq(cachedMessage1, cachedMessage2, expectedMessage))))
+      verify(mockMovementRepository).updateMovement(
+        eqTo(Movement("123", consignorId, None, Some("456"), now, Seq(cachedMessage1, cachedMessage2, expectedMessage))))
 
-      }
+    }
 
     "not overwrite ARC that are not empty" in {
       setUpForUpdateMovement(newMessage, Seq(Some("arc")), Some("123"), "<IE818>test</IE818>", cachedMovements)

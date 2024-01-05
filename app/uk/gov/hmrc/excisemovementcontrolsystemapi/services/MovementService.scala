@@ -108,7 +108,7 @@ class MovementService @Inject()(
         updateMovementForIndividualArc(message, ern, cachedMovements, messageArc)
       }
 
-      Future.sequence(results).map{ boolSeq => boolSeq.forall(identity)}
+      Future.sequence(results).map { boolSeq => boolSeq.forall(identity) }
     }).flatten
   }
 
@@ -149,6 +149,8 @@ class MovementService @Inject()(
   }
 
   private def isLrnAlreadyUsed(movement: Movement, movementFromDb: Movement) = {
-    movementFromDb.administrativeReferenceCode.isDefined || movementFromDb.consigneeId != movement.consigneeId
+    movement.consignorId == movementFromDb.consignorId &&
+      (movementFromDb.administrativeReferenceCode.isDefined
+        || movementFromDb.consigneeId != movement.consigneeId)
   }
 }

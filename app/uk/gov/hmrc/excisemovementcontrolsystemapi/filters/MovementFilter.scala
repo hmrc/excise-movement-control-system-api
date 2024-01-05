@@ -27,7 +27,7 @@ sealed trait Filter {
 case class FilterErn(ern: Option[String] = None) extends Filter {
   def filter(movements: Seq[Movement]): Seq[Movement] = {
     ern.fold[Seq[Movement]](movements)(e =>
-      movements.filter(o => o.consignorId.equals(e))
+      movements.filter(o => o.consignorId.equals(e) || o.consigneeId.contains(e))
     )
   }
 }
@@ -70,7 +70,7 @@ case class MovementFilter (private val filter: Seq[Filter]) {
 }
 
 object MovementFilter {
-  def empty = MovementFilter(Seq.empty)
+  def empty: MovementFilter = MovementFilter(Seq.empty)
 }
 
 case class MovementFilterBuilder(private val filters: Seq[Filter]) {

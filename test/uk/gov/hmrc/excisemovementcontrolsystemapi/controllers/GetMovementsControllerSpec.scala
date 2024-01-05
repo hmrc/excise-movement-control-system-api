@@ -26,7 +26,7 @@ import play.api.http.Status.{BAD_REQUEST, OK}
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, MovementFilterBuilder}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilterBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, MovementTestUtils}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
@@ -48,7 +48,7 @@ class GetMovementsControllerSpec
   private val workItemService = mock[WorkItemService]
   private val emcsUtils = mock[EmcsUtils]
   private val controller = new GetMovementsController(FakeSuccessAuthentication, cc, movementService, workItemService, emcsUtils)
-  private val timeStamp = LocalDateTime.of(2020,1,1,1,1,1,1)
+  private val timeStamp = LocalDateTime.of(2020, 1, 1, 1, 1, 1, 1)
 
   override def beforeEach(): Unit = {
     super.beforeEach()

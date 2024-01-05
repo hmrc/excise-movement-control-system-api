@@ -54,15 +54,16 @@ class GetMovementsControllerItSpec extends PlaySpec
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
 
   private val consignorId = "GBWK002281023"
+  private val consigneeId = "GBWK002281027"
   private val lrn = "token"
   private val url = s"http://localhost:$port/movements"
   private lazy val dateTimeService: TimestampSupport = mock[TimestampSupport]
   private val timestampNow = LocalDateTime.now().toInstant(ZoneOffset.UTC)
   private val timestampTwoDaysAgo = LocalDateTime.now().minusDays(2).toInstant(ZoneOffset.UTC)
 
-  private val movement1 = Movement(lrn, consignorId, Some("consigneeId"), Some("arc1"), timestampNow)
-  private val movement2 = Movement("lrn1", consignorId, Some("consigneeId"), Some("arc2"), timestampTwoDaysAgo)
-  private val movement3 = Movement("lrn2", "ern2", Some("consigneeId"), Some("arc3"), timestampTwoDaysAgo)
+  private val movement1 = Movement(lrn, consignorId, Some(consigneeId), Some("arc1"), timestampNow)
+  private val movement2 = Movement("lrn1", consignorId, Some("consignee2"), Some("arc2"), timestampTwoDaysAgo)
+  private val movement3 = Movement("lrn2", "ern2", Some(consigneeId), Some("arc3"), timestampTwoDaysAgo)
 
   override lazy val app: Application = {
     wireMock.start()
@@ -89,7 +90,7 @@ class GetMovementsControllerItSpec extends PlaySpec
   }
 
   "Get Movements" should {
-    "return 200" in {
+    "return 200 and movements when logged in as consignor" in {
       withAuthorizedTrader(consignorId)
       when(movementRepository.getMovementByERN(Seq(consignorId)))
         .thenReturn(Future.successful(Seq(movement1, movement2)))
@@ -99,8 +100,8 @@ class GetMovementsControllerItSpec extends PlaySpec
       result.status mustBe OK
       withClue("return an EIS response") {
         result.json mustBe Json.toJson(Seq(
-          createMovementResponse(consignorId, lrn, "arc1", Some("consigneeId")),
-          createMovementResponse(consignorId, "lrn1", "arc2", Some("consigneeId"))
+          createMovementResponseFromMovement(movement1),
+          createMovementResponseFromMovement(movement2)
         ))
       }
     }
@@ -113,8 +114,21 @@ class GetMovementsControllerItSpec extends PlaySpec
       val result = getRequest(s"$url?ern=$consignorId")
 
       result.json mustBe Json.toJson(Seq(
-        createMovementResponse(consignorId,lrn, "arc1", Some("consigneeId")),
-        createMovementResponse(consignorId,"lrn1", "arc2", Some("consigneeId"))
+        createMovementResponseFromMovement(movement1),
+        createMovementResponseFromMovement(movement2)
+      ))
+    }
+
+    "get filtered movement by ERN when you are the consignee" in {
+      withAuthorizedTrader(consigneeId)
+      when(movementRepository.getMovementByERN(Seq(consigneeId)))
+        .thenReturn(Future.successful(Seq(movement1, movement2, movement3)))
+
+      val result = getRequest(s"$url?ern=$consigneeId")
+
+      result.json mustBe Json.toJson(Seq(
+        createMovementResponseFromMovement(movement1),
+        createMovementResponseFromMovement(movement3)
       ))
     }
 
@@ -126,8 +140,8 @@ class GetMovementsControllerItSpec extends PlaySpec
       val result = getRequest(s"$url?lrn=$lrn")
 
       result.json mustBe Json.toJson(Seq(
-          createMovementResponse(consignorId,lrn, "arc1", Some("consigneeId")))
-      )
+        createMovementResponseFromMovement(movement1)
+      ))
     }
 
     "get filtered movement by arc" in {
@@ -138,8 +152,8 @@ class GetMovementsControllerItSpec extends PlaySpec
       val result = getRequest(s"$url?arc=arc1")
 
       result.json mustBe Json.toJson(Seq(
-        createMovementResponse(consignorId,lrn, "arc1", Some("consigneeId")))
-      )
+        createMovementResponseFromMovement(movement1)
+      ))
     }
 
     "get filtered movement by updatedSince" in {
@@ -154,11 +168,11 @@ class GetMovementsControllerItSpec extends PlaySpec
       val result = getRequest(urlToGoIn)
 
       result.json mustBe Json.toJson(Seq(
-        createMovementResponse(consignorId, lrn, "arc1", Some("consigneeId")))
-      )
+        createMovementResponseFromMovement(movement1)
+      ))
     }
 
-    "get filtered movement by ern, lrn and rc" in {
+    "get filtered movement by ern, lrn and arc" in {
       withAuthorizedTrader(consignorId)
       when(movementRepository.getMovementByERN(Seq(consignorId)))
         .thenReturn(Future.successful(Seq(movement1, movement2, movement3)))
@@ -166,8 +180,8 @@ class GetMovementsControllerItSpec extends PlaySpec
       val result = getRequest(s"$url?arc=arc1&lrn=$lrn&ern=$consignorId")
 
       result.json mustBe Json.toJson(Seq(
-        createMovementResponse(consignorId,lrn, "arc1", Some("consigneeId")))
-      )
+        createMovementResponseFromMovement(movement1)
+      ))
     }
 
     "return a Unauthorized (401) when no authorized trader" in {

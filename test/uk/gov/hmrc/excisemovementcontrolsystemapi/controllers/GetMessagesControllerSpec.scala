@@ -36,8 +36,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, Wor
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.mongo.TimestampSupport
 
-import java.time.{Instant, LocalDate, LocalDateTime, LocalTime}
-import java.time.format.DateTimeParseException
+import java.time.{Instant, LocalDateTime}
 import scala.concurrent.{ExecutionContext, Future}
 
 class GetMessagesControllerSpec extends PlaySpec
@@ -54,7 +53,7 @@ class GetMessagesControllerSpec extends PlaySpec
   private val cc = stubControllerComponents()
   private val lrn = "LRN1234"
   private val dateTimeService = mock[TimestampSupport]
-  private val timeStamp = LocalDateTime.of(2020,1,1,1,1,1,1)
+  private val timeStamp = LocalDateTime.of(2020, 1, 1, 1, 1, 1, 1)
   private val workItemService = mock[WorkItemService]
   private val emcsUtils = mock[EmcsUtils]
 
@@ -125,7 +124,7 @@ class GetMessagesControllerSpec extends PlaySpec
       val message = Message("message", "IE801", timeInFuture)
       val message2 = Message("message2", "IE801", timeInPast)
       val message3 = Message("message3", "IE801", timeNow)
-      val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message,message2, message3))
+      val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message, message2, message3))
       when(movementService.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Some(movement)))
 
