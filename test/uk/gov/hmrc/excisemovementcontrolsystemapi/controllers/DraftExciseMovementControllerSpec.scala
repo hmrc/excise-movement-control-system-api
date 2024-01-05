@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 
-import akka.actor.ActorSystem
+
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.{reset, verify, when}
 import org.mongodb.scala.MongoException
@@ -49,7 +49,6 @@ class DraftExciseMovementControllerSpec
     with EitherValues {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  implicit val sys: ActorSystem = ActorSystem("DraftExciseMovementControllerSpec")
   private val connector = mock[EISSubmissionConnector]
   private val movementMessageService = mock[MovementService]
   private val cc = stubControllerComponents()
