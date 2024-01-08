@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction, ValidateErnsAction}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction, ValidateErnInMessageAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
@@ -35,7 +35,7 @@ import scala.xml.NodeSeq
 class DraftExciseMovementController @Inject()(
                                                authAction: AuthAction,
                                                xmlParser: ParseXmlAction,
-                                               validateErnsAction: ValidateErnsAction,
+                                               validateErnInMessageAction: ValidateErnInMessageAction,
                                                movementMessageConnector: EISSubmissionConnector,
                                                movementMessageService: MovementService,
                                                workItemService: WorkItemService,
@@ -44,7 +44,7 @@ class DraftExciseMovementController @Inject()(
   extends BackendController(cc) {
 
   def submit: Action[NodeSeq] =
-    (authAction andThen xmlParser andThen validateErnsAction).async(parse.xml) {
+    (authAction andThen xmlParser andThen validateErnInMessageAction).async(parse.xml) {
       implicit request: ValidatedXmlRequest[NodeSeq] =>
         movementMessageConnector.submitMessage(request).flatMap {
           case Right(_) => handleSuccess

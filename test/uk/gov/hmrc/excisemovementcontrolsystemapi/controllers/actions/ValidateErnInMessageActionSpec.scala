@@ -37,13 +37,13 @@ import java.time.LocalDateTime
 import scala.concurrent.{ExecutionContext, Future}
 
 
-class ValidateErnsActionSpec extends PlaySpec with TestXml with EitherValues with BeforeAndAfterAll {
+class ValidateErnInMessageActionSpec extends PlaySpec with TestXml with EitherValues with BeforeAndAfterAll {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val emcsUtils: EmcsUtils = mock[EmcsUtils]
   val messageService: MessageService = mock[MessageService]
 
-  val sut = new ValidateErnsActionImpl(messageService)
+  val sut = new ValidateErnInMessageActionImpl(messageService)
 
   private val message = mock[IEMessage](RETURNS_DEEP_STUBS)
   private val currentDateTime = LocalDateTime.of(2023, 10, 18, 15, 33, 33)
