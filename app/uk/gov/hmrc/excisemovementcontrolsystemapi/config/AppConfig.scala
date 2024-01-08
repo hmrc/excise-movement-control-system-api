@@ -24,10 +24,13 @@ import scala.concurrent.duration.{DAYS, Duration, FiniteDuration, HOURS, MINUTES
 
 @Singleton
 class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig) {
-
   val appName: String = config.get[String]("appName")
 
   lazy val eisHost: String = servicesConfig.baseUrl("eis")
+  lazy val nrsHost:  String = servicesConfig.baseUrl("nrs")
+
+  lazy val nrsApiKey: String = servicesConfig.getConfString("nrs.api-key", "dummyNrsApiKey")
+  lazy val nrsRetryDelays: Seq[FiniteDuration] = config.get[Seq[FiniteDuration]]("microservice.services.nrs.retryDelays")
 
   lazy val interval: FiniteDuration = config.getOptional[String]("scheduler.pollingNewMessageJob.interval")
     .map(Duration.create(_).asInstanceOf[FiniteDuration])
@@ -79,6 +82,7 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
 
   def traderMovementUrl: String = s"$eisHost/emcs/movements/v1/trader-movements"
   def movementBearerToken: String = servicesConfig.getConfString("eis.movement-bearer-token", "dummyMovementBearerToken")
+  def getNrsSubmissionUrl: String = s"$nrsHost/submission"
 
   def preValidateTraderUrl: String = s"$eisHost/emcs/pre-validate-trader/v1"
   def preValidateTraderBearerToken: String = servicesConfig.getConfString("eis.pre-validate-trader-bearer-token", "dummyPreValidateTraderBearerToken")

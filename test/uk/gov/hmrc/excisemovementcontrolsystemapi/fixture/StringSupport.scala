@@ -14,24 +14,12 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
+package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
-object EISErrorMessage {
+trait StringSupport {
 
-  def apply(
-             createDateTime: String,
-             ern: String,
-             message: String,
-             correlationId: String,
-             messageTypes: String,
-  ): String = {
-    //todo: Sore messageIdentifier from the header of the message as meesageId
-    s"""EIS error with message: $message,
-    | messageId: $correlationId,
-    | correlationId: $correlationId,
-    | messageType: $messageTypes,
-    | timestamp: $createDateTime,
-    | exciseId: $ern""".stripMargin
+  def clean(str: String): String = {
+    str.replaceAll("[\\t\\n\\r\\s]+", "")
   }
 
 }

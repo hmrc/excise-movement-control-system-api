@@ -21,18 +21,20 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.NewMessagesXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.StringSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
-import uk.gov.hmrc.mongo.TimestampSupport
 
 import java.nio.charset.StandardCharsets
 import java.time.{Instant, LocalDateTime}
 import java.util.Base64
 
-class MessageFilterSpec extends PlaySpec with NewMessagesXml {
+class MessageFilterSpec extends PlaySpec
+  with StringSupport
+  with NewMessagesXml {
 
-  private val dateTimeService = mock[TimestampSupport]
+  private val dateTimeService = mock[DateTimeService]
   private val emcsUtils = new EmcsUtils
   private val messageFactory = new IEMessageFactory
 
@@ -94,10 +96,6 @@ class MessageFilterSpec extends PlaySpec with NewMessagesXml {
     val decoder = Base64.getDecoder
     messages
       .map(o => new String(decoder.decode(o.encodedMessage), StandardCharsets.UTF_8))
-      .map(cleanUpString)
-  }
-
-  private def cleanUpString(str: String): String = {
-    str.replaceAll("[\\t\\n\\r\\s]+", "")
+      .map(clean)
   }
 }

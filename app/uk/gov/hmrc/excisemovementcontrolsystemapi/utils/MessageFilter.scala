@@ -21,13 +21,12 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
-import uk.gov.hmrc.mongo.TimestampSupport
 
 import javax.inject.Inject
 
 class MessageFilter @Inject()
 (
-  dateTimeService: TimestampSupport,
+  dateTimeService: DateTimeService,
   emcsUtils: EmcsUtils,
   factory: IEMessageFactory
 ) {
@@ -48,7 +47,6 @@ class MessageFilter @Inject()
   }
 
   private def getNewMessageDataResponse(decodedMessage: String) = {
-    val t = scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
-    t
+    scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
   }
 }

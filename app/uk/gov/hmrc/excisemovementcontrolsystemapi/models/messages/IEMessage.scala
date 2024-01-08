@@ -23,6 +23,11 @@ trait IEMessage {
 
   def consigneeId: Option[String]
 
+  //todo:
+  // here it feel wrong returning a Seq[Option[String]]
+  // for every message when only the IE829 has a list of ARC while all the other have definitely
+  // one. We may should not derived the administrativeReferenceCode from the interface and
+  // use a matching/visitor pattern to retrieve this for each single message.
   def administrativeReferenceCode: Seq[Option[String]]
 
   def messageType: String

@@ -23,7 +23,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 
 import scala.xml.NodeSeq
 
-//todo: add support for the following messages: IE803, IE807, IE829, IE839, IE840, IE881, IE905
 case class IEMessageFactory() {
   def createIEMessage(message: DataRecord[MessagesOption]): IEMessage = {
     val messageType = message.key.getOrElse(throw new RuntimeException("[IEMessageFactory] - Could not create Message object. Message type is empty"))

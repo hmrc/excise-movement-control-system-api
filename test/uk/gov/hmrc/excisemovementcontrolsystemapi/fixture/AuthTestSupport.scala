@@ -21,7 +21,7 @@ import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.when
 import org.scalatestplus.mockito.MockitoSugar.mock
 import uk.gov.hmrc.auth.core.AffinityGroup.Organisation
-import uk.gov.hmrc.auth.core.authorise.Predicate
+import uk.gov.hmrc.auth.core.authorise.{EmptyPredicate, Predicate}
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{affinityGroup, authorisedEnrolments, credentials, internalId}
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
 import uk.gov.hmrc.auth.core.syntax.retrieved.authSyntaxForRetrieved
@@ -29,7 +29,7 @@ import uk.gov.hmrc.auth.core.{AffinityGroup, AuthConnector, Enrolment, Enrolment
 
 import scala.concurrent.Future
 
-trait AuthTestSupport {
+trait AuthTestSupport extends NrsTestData {
 
   lazy val authConnector = mock[AuthConnector]
   private val authFetch = authorisedEnrolments and affinityGroup and credentials and internalId
@@ -96,6 +96,17 @@ trait AuthTestSupport {
     when(authConnector.authorise(ArgumentMatchers.argThat((p: Predicate) => true), eqTo(authFetch))(any,any))
       .thenReturn(Future.successful(retrieval))
   }
+
+  def authorizeNrsWithIdentityData = {
+    when(authConnector.authorise(
+        ArgumentMatchers.eq(EmptyPredicate),
+        ArgumentMatchers.eq(nonRepudiationIdentityRetrievals))(
+        any,
+        any
+      )
+    ).thenReturn(Future.successful(testAuthRetrievals))
+  }
+
 
   def withUnauthorizedTrader(error: Throwable): Unit =
     when(authConnector.authorise(any, any)(any, any)).thenReturn(Future.failed(error))

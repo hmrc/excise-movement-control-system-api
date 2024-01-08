@@ -23,8 +23,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionRespo
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.PollingNewMessagesWithWorkItemJob._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementService, NewMessageParserService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus
 
@@ -43,7 +43,7 @@ class PollingNewMessagesWithWorkItemJob @Inject()
   movementService: MovementService,
   messageParser: NewMessageParserService,
   appConfig: AppConfig,
-  dateTimeService: TimestampSupport
+  dateTimeService: DateTimeService
 )(implicit ec: ExecutionContext) extends ScheduledMongoJob
   with Logging {
 

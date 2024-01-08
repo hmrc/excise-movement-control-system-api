@@ -26,8 +26,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
-import uk.gov.hmrc.mongo.TimestampSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -36,7 +35,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class MovementService @Inject()(
                                  movementRepository: MovementRepository,
                                  emcsUtils: EmcsUtils,
-                                 timestampSupport: TimestampSupport
+                                 timestampSupport: DateTimeService
                                )(implicit ec: ExecutionContext) extends Logging {
   def saveNewMovement(movement: Movement): Future[Either[Result, Movement]] = {
 
@@ -100,8 +99,10 @@ class MovementService @Inject()(
 
     movementRepository.getAllBy(ern).map(cachedMovements => {
 
-      //Some messages (e.g. IE829) have multiple arcs in so we want to update them all
-      // If no arc it will be Seq(None)
+      //todo:
+      // Some messages (e.g. IE829) have multiple arcs in so we want to update them all
+      // If no arc it will be Seq(None). This may need to be revisited as we may need to
+      // use the SequenceNumber in this case.
       val messageArcs = message.administrativeReferenceCode
 
       val results: Seq[Future[Boolean]] = messageArcs.map { messageArc =>
@@ -119,7 +120,7 @@ class MovementService @Inject()(
     (movementWithArc, movementWithLrn) match {
       case (Some(mArc), _) => saveDistinctMessage(mArc, message, messageArc)
       case (None, Some(mLrn)) => saveDistinctMessage(mLrn, message, messageArc)
-      case _ => throw new RuntimeException(s"[MovementService] - Cannot retrieve a movement. Local reference number or administration reference code are not present for ERN: $ern")
+      case _ => throw new RuntimeException(s"[MovementService] - Cannot retrieve a movement. Local reference number or administration reference code are not present for ERN: $ern, message: ${message.messageType}")
     }
   }
 

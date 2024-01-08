@@ -47,7 +47,7 @@ class ValidateLRNImpl @Inject()
 
       override def refine[A](request: ValidatedXmlRequest[A]): Future[Either[Result, ValidatedXmlRequest[A]]] = {
 
-        movementService.getMovementByLRNAndERNIn(lrn, request.parsedRequest.erns.toList).map {
+        movementService.getMovementByLRNAndERNIn(lrn, request.validErns.toList).map {
           case Some(_) => Right(request)
           case _ => Left(NotFoundErrorResponse(lrn)(request))
         }
@@ -62,7 +62,7 @@ class ValidateLRNImpl @Inject()
       ErrorResponse(
         emcsUtils.getCurrentDateTime,
         "Local reference number not found",
-        s"Local reference number $lrn is not found within the data for ERNs ${request.parsedRequest.erns.mkString("/")}"
+        s"Local reference number $lrn is not found within the data for ERNs ${request.validErns.mkString("/")}"
       )
     ))
   }

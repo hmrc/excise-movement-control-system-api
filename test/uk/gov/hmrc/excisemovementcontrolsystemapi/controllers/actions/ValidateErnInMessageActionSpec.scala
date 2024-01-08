@@ -53,8 +53,8 @@ class ValidateErnInMessageActionSpec extends PlaySpec with TestXml with EitherVa
     super.beforeAll()
     when(emcsUtils.getCurrentDateTime).thenReturn(currentDateTime)
     when(emcsUtils.generateCorrelationId).thenReturn("123")
-
-    when(messageService.getErns(any)).thenReturn(Future.successful(Set("GBWK002281023", "GBWKQOZ8OVLYR")))
+    when(messageService.getErns(any))
+      .thenReturn(Future.successful(Set("GBWK002281023", "GBWKQOZ8OVLYR")))
   }
 
   "ValidateErnsAction" should {
@@ -80,7 +80,6 @@ class ValidateErnInMessageActionSpec extends PlaySpec with TestXml with EitherVa
 
         result.left.value mustBe Forbidden(Json.toJson(ErrorResponse(currentDateTime, "ERN validation error",
           "Excise number in message does not match authenticated excise number")))
-
       }
     }
   }

@@ -16,9 +16,10 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
 
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
-
+import java.lang.String.format
+import java.math.BigInteger
 import java.nio.charset.StandardCharsets
+import java.security.MessageDigest.getInstance
 import java.time.LocalDateTime
 import java.util.{Base64, UUID}
 
@@ -27,7 +28,6 @@ class EmcsUtils {
   def getCurrentDateTime: LocalDateTime = LocalDateTime.now()
   def getCurrentDateTimeString: String = getCurrentDateTime.toString
   def generateCorrelationId: String = UUID.randomUUID().toString
-  def createEncoder: Base64.Encoder = Base64.getEncoder
 
   def encode(str: String): String = {
     Base64.getEncoder.encodeToString(str.getBytes(StandardCharsets.UTF_8))
@@ -37,38 +37,7 @@ class EmcsUtils {
     Base64.getDecoder.decode(str).map(_.toChar).mkString
   }
 
-  /*
-    The illegal state exception for IE818 message should never happen here,
-    because these should have been caught previously during the validation.
-
-    We are trying to get the ERN to use in the logs here, so want the one that is both in the auth and the message
-  */
-  def getSingleErnFromMessage(message: IEMessage, validErns: Set[String]): String = {
-    message match {
-      case x: IE801Message => matchErn(x.consignorId, x.consigneeId, validErns, x.messageType)
-      //For 810 & 813 we have no ERN in message so just use auth
-      case _: IE810Message => validErns.head
-      case _: IE813Message => validErns.head
-      case x: IE815Message => x.consignorId
-      case x: IE818Message => x.consigneeId.getOrElse(throw new IllegalStateException("[EmcsUtils] - ern not supplied for IE818 message"))
-      case x: IE819Message => x.consigneeId.getOrElse(throw new IllegalStateException("[EmcsUtils] - ern not supplied for IE819 message"))
-      case x: IE837Message => matchErn(x.consignorId, x.consigneeId, validErns, x.messageType)
-      case x: IE871Message => x.consignorId.getOrElse(throw new IllegalStateException("[EmcsUtils] - ern not supplied for IE871 message"))
-      case _ => throw new RuntimeException(s"[EmcsUtils] - Unsupported Message Type: ${message.messageType}")
-    }
-  }
-
-  private def matchErn(
-                        consignorId: Option[String],
-                        consigneeId: Option[String],
-                        erns: Set[String],
-                        messageType: String
-                      ): String = {
-    val messageErn: Set[String] = Set(consignorId, consigneeId).flatten
-    val availableErn = erns.intersect(messageErn)
-
-    if (availableErn.nonEmpty) availableErn.head
-    else throw new IllegalStateException(s"[EmcsUtils] - ern not supplied for $messageType message")
-  }
-
+  def sha256Hash(text: String): String =
+    format("%064x", new BigInteger(1, getInstance("SHA-256")
+      .digest(text.getBytes("UTF-8"))))
 }

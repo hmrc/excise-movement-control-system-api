@@ -17,11 +17,12 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, ok, post, urlEqualTo}
+import com.github.tomakehurst.wiremock.client.WireMock._
 import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.when
-import org.scalatest.BeforeAndAfterAll
+import org.scalatest.concurrent.{Eventually, IntegrationPatience}
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -30,16 +31,18 @@ import play.api.http.Status._
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsValue, Json}
-import play.api.libs.ws.WSClient
+import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{AuthTestSupport, StringSupport}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, SubmitMessageTestSupport, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, MovementRepository}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.{Instant, LocalDateTime}
@@ -54,7 +57,11 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   with WireMockServerSpec
   with SubmitMessageTestSupport
   with RepositoryTestStub
-  with BeforeAndAfterAll {
+  with StringSupport
+  with Eventually
+  with IntegrationPatience
+  with BeforeAndAfterAll
+  with BeforeAndAfterEach {
 
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
   private val url = s"http://localhost:$port/movements"
@@ -78,7 +85,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
     GuiceApplicationBuilder()
-      .configure(configureServer)
+      .configure(configureWithNrsServer)
       .overrides(
         bind[AuthConnector].to(authConnector),
         bind[MovementRepository].to(movementRepository),
@@ -97,31 +104,60 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     wireMock.stop()
   }
 
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    stubNrsResponse
+    authorizeNrsWithIdentityData
+  }
+
   "Draft Excise Movement" should {
 
     "return 202" in {
       withAuthorizedTrader(consignorId)
-      stubEISSuccessfulRequest()
-      when(movementRepository.saveMovement(any))
-        .thenReturn(Future.successful(true))
-
+      stubEISSuccessfulRequest
+      setupRepositories
       when(workItemRepository.pushNew(any, any, any)).thenReturn(Future.successful(workItem))
       when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
 
-      when(movementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq.empty))
 
       val result = postRequest(IE815)
 
       result.status mustBe ACCEPTED
-
       withClue("return the json response") {
-        val responseBody = Json.parse(result.body).as[ExciseMovementResponse]
-        responseBody mustBe ExciseMovementResponse("Accepted", "LRNQA20230909022221", consignorId, Some("GBWKQOZ8OVLYR"))
+        assertValidResult(result)
+      }
+
+      withClue("submit to NRS"){
+        eventually{verify(postRequestedFor(urlEqualTo("/submission")))}
       }
 
     }
 
+    "return success also if NRS fails" in {
+      withAuthorizedTrader(consignorId)
+      stubEISSuccessfulRequest
+      stubNrsErrorResponse
+      setupRepositories
+
+      val result = postRequest(IE815)
+
+      result.status mustBe ACCEPTED
+      withClue("return the json response") {
+        assertValidResult(result)
+      }
+    }
+
+    "return success also if NRS throws" in {
+      withAuthorizedTrader(consignorId)
+      stubEISSuccessfulRequest
+      stubNrsErrorResponse
+      setupRepositories
+
+      // no Authorization header added
+      val result = await(wsClient.url(url).post(IE815))
+
+      result.status mustBe ACCEPTED
+    }
     "return not found if EIS returns not found" in {
       withAuthorizedTrader(consignorId)
       val eisErrorResponse = createEISErrorResponseBodyAsJson("NOT_FOUND")
@@ -149,7 +185,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       stubEISErrorResponse(BAD_REQUEST, rimValidationErrorResponse(messageWithControlDoc))
 
       val response = postRequest(IE815)
-      cleanUpString(response.body) mustBe cleanUpString(rimValidationErrorResponse(messageWithoutControlDoc))
+      clean(response.body) mustBe clean(rimValidationErrorResponse(messageWithoutControlDoc))
     }
 
     "return 500 if EIS returns 500" in {
@@ -221,6 +257,19 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     }
   }
 
+  private def setupRepositories = {
+    when(movementRepository.saveMovement(any))
+      .thenReturn(Future.successful(true))
+
+    when(movementRepository.getMovementByLRNAndERNIn(any, any))
+      .thenReturn(Future.successful(Seq.empty))
+  }
+
+  private def assertValidResult(result: WSResponse) = {
+    val responseBody = Json.parse(result.body).as[ExciseMovementResponse]
+    responseBody mustBe ExciseMovementResponse("Accepted", "LRNQA20230909022221", consignorId, Some("GBWKQOZ8OVLYR"))
+  }
+
   private def createEISErrorResponseBodyAsJson(message: String): JsValue = {
     Json.toJson(EISErrorResponse(
       LocalDateTime.of(2023, 12, 5, 12, 5, 6),
@@ -239,7 +288,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     )
   }
 
-  private def stubEISSuccessfulRequest() = {
+  private def stubEISSuccessfulRequest = {
 
     val response = EISSubmissionResponse("OK", "message", "123")
     wireMock.stubFor(
@@ -261,7 +310,24 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     )
   }
 
-  private def cleanUpString(str: String): String = {
-    str.replaceAll("[\\t\\n\\r\\s]+", "")
+  private def stubNrsResponse = {
+    wireMock.stubFor(
+      post(urlEqualTo("/submission"))
+        .willReturn(
+          aResponse()
+            .withStatus(ACCEPTED)
+            .withBody(Json.toJson(NonRepudiationSubmissionAccepted("submissionId")).toString())
+        )
+    )
+  }
+
+  private def stubNrsErrorResponse = {
+    wireMock.stubFor(
+      post(urlEqualTo("/submission"))
+        .willReturn(
+          aResponse()
+            .withStatus(INTERNAL_SERVER_ERROR)
+        )
+    )
   }
 }

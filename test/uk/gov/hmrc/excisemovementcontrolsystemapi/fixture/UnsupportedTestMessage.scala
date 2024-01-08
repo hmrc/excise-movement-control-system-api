@@ -14,24 +14,22 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
+package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
-object EISErrorMessage {
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 
-  def apply(
-             createDateTime: String,
-             ern: String,
-             message: String,
-             correlationId: String,
-             messageTypes: String,
-  ): String = {
-    //todo: Sore messageIdentifier from the header of the message as meesageId
-    s"""EIS error with message: $message,
-    | messageId: $correlationId,
-    | correlationId: $correlationId,
-    | messageType: $messageTypes,
-    | timestamp: $createDateTime,
-    | exciseId: $ern""".stripMargin
-  }
+import scala.xml.NodeSeq
 
+object UnsupportedTestMessage extends IEMessage {
+  override def consigneeId: Option[String] = None
+
+  override def administrativeReferenceCode: Seq[Option[String]] = Seq.empty
+
+  override def messageType: String = "any-type"
+
+  override def toXml: NodeSeq = NodeSeq.Empty
+
+  override def lrnEquals(lrn: String): Boolean = false
+
+  override def messageIdentifier: String = "message-id"
 }
