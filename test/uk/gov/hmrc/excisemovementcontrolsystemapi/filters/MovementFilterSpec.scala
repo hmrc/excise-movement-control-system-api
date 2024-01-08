@@ -23,7 +23,7 @@ import java.time.Instant
 
 class MovementFilterSpec extends PlaySpec {
 
-  val now = Instant.now()
+  private val now = Instant.now()
 
   private val m1 = Movement("lrn3", "test1", Some("consigneeId"), Some("arc1"), now.plusSeconds(500))
   private val m2 = Movement("2", "test2", Some("consigneeId2"), Some("arc2"), now.plusSeconds(1000))
@@ -45,6 +45,12 @@ class MovementFilterSpec extends PlaySpec {
       val filter = MovementFilterBuilder().withErn(Some("test1")).build()
 
       filter.filterMovement(movements) mustBe Seq(m1)
+    }
+
+    "filter by ERN should find consignee" in {
+      val filter = MovementFilterBuilder().withErn(Some("consigneeId2")).build()
+
+      filter.filterMovement(movements) mustBe Seq(m2, m3, m4, m5)
     }
 
     "filter by ARC" in {

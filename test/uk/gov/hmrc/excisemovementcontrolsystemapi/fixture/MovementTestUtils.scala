@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GetMovementResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
 trait MovementTestUtils {
 
@@ -31,6 +32,18 @@ trait MovementTestUtils {
       lrn,
       consigneeId,
       Some(arc),
+      "Accepted"
+    )
+  }
+
+  def createMovementResponseFromMovement(
+                             movement: Movement
+                            ): GetMovementResponse = {
+    GetMovementResponse(
+      movement.consignorId,
+      movement.localReferenceNumber,
+      movement.consigneeId,
+      movement.administrativeReferenceCode,
       "Accepted"
     )
   }
