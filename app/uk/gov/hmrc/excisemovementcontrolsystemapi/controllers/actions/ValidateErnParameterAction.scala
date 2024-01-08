@@ -40,23 +40,12 @@ class ValidateErnParameterActionImpl @Inject()
 
       override val executionContext: ExecutionContext = ec
 
-      override def filter[A](request: EnrolmentRequest[A]): Future[Option[Result]] = {
+      override def filter[A](request: EnrolmentRequest[A]): Future[Option[Result]] = Future.successful {
 
-        Future {
-
-          ernParameter match {
-            //Ensure if they supplied an ERN it matches one they have logged in as
-            case Some(value) =>
-              if (request.erns.contains(value)) {
-                None
-              } else {
-                Some(badRequestResponse(value)(request))
-              }
-
-            //Nothing to validate
-            case None => None
-          }
-
+        ernParameter.flatMap { value =>
+          // Ensure if they supplied an ERN it matches one they have logged in as
+          if (request.erns.contains(value)) None
+          else Some(badRequestResponse(value)(request))
         }
 
       }
