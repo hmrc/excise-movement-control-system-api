@@ -113,8 +113,13 @@ class GetMessagesControllerSpec extends PlaySpec
       val timeInPast = Instant.now.minusSeconds(1000)
       val message = Message("message", "IE801", timeInFuture)
       val message2 = Message("message2", "IE801", timeInPast)
-      val message3 = Message("message3", "IE801", messageCreateOn)
+<<<<<<< HEAD
+      val message3 = Message("message3", "IE801", timeNow)
       val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message, message2, message3))
+=======
+      val message3 = Message("message3", "IE801", messageCreateOn)
+      val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message,message2, message3))
+>>>>>>> 506fd6c (fixed rebase error)
       when(movementService.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Some(movement)))
 

@@ -23,12 +23,6 @@ import scala.collection.immutable
 
 sealed abstract class MessageEnum(val value: String) extends StringEnumEntry
 
-/*
-todo: we do need to account for all message here.
- Just thinking for the end of october we will not deploy all
- message, so we may getnew one that are not in this enum
-*/
-
 object MessageTypes extends StringEnum[MessageEnum] with StringPlayJsonValueEnum[MessageEnum] {
   val values: immutable.IndexedSeq[MessageEnum] = findValues
 

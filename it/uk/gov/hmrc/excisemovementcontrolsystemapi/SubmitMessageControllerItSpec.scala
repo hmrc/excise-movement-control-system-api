@@ -17,13 +17,14 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, ok, post, urlEqualTo}
+import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, ok, post, postRequestedFor, urlEqualTo, verify}
 import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.{reset, when}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
+import org.scalatest.prop.TableDrivenPropertyChecks._
 import play.api.Application
 import play.api.http.HeaderNames
 import play.api.http.Status._
@@ -34,16 +35,17 @@ import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{AuthTestSupport, StringSupport}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, SubmitMessageTestSupport, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, MovementRepository}
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.{Instant, LocalDateTime}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.xml.NodeSeq
+import scala.xml.{Elem, NodeSeq}
 
 
 class SubmitMessageControllerItSpec extends PlaySpec
@@ -53,6 +55,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
   with WireMockServerSpec
   with RepositoryTestStub
   with SubmitMessageTestSupport
+  with StringSupport
   with BeforeAndAfterAll
   with BeforeAndAfterEach {
 
@@ -79,7 +82,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
     GuiceApplicationBuilder()
-      .configure(configureServer)
+      .configure(configureWithNrsServer)
       .overrides(
         bind[AuthConnector].to(authConnector),
         bind[MovementRepository].to(movementRepository),
@@ -95,13 +98,15 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(movementRepository)
+    reset(authConnector, movementRepository)
 
     when(movementRepository.getMovementByLRNAndERNIn(any, any))
       .thenReturn(Future.successful(Seq(Movement("LRNQA20230909022221", "", Some("23GB00000000000378553")))))
 
     when(workItemRepository.pushNew(any, any, any)).thenReturn(Future.successful(workItem))
     when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
+    authorizeNrsWithIdentityData
+    stubNrsResponse
 
   }
 
@@ -113,7 +118,6 @@ class SubmitMessageControllerItSpec extends PlaySpec
   "Submit IE810 Cancellation" should {
 
     "return 202 when submitted by consignor" in {
-
       when(movementRepository.getMovementByARC("23GB00000000000377161"))
         .thenReturn(Future.successful(Seq(Movement("LRNQA20230909022221", "consignor", Some("consignee"), Some("23GB00000000000377161")))))
 
@@ -124,11 +128,9 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
       result.status mustBe ACCEPTED
       result.body.isEmpty mustBe true
-
     }
 
     "return 202 when submitted by consignee" in {
-
       when(movementRepository.getMovementByARC("23GB00000000000377161"))
         .thenReturn(Future.successful(Seq(Movement("LRNQA20230909022221", "consignor", Some("consignee"), Some("23GB00000000000377161")))))
 
@@ -139,7 +141,6 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
       result.status mustBe ACCEPTED
       result.body.isEmpty mustBe true
-
     }
 
   }
@@ -147,7 +148,6 @@ class SubmitMessageControllerItSpec extends PlaySpec
   "Submit IE813 Change of Destination" should {
 
     "return 202 when submitted by consignor" in {
-
       when(movementRepository.getMovementByARC("23GB00000000000378126"))
         .thenReturn(Future.successful(Seq(Movement("LRNQA20230909022221", "consignor", Some("consignee"), Some("23GB00000000000378126")))))
 
@@ -158,11 +158,9 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
       result.status mustBe ACCEPTED
       result.body.isEmpty mustBe true
-
     }
 
     "return 403 error when submitted by consignee" in {
-
       when(movementRepository.getMovementByARC("23GB00000000000378126"))
         .thenReturn(Future.successful(Seq(Movement("LRNQA20230909022221", "consignor", Some("consignee"), Some("23GB00000000000378126")))))
 
@@ -172,26 +170,11 @@ class SubmitMessageControllerItSpec extends PlaySpec
       val result = postRequest(IE813)
 
       result.status mustBe FORBIDDEN
-
       result.body.contains("Excise number in message does not match authenticated excise number") mustBe true
     }
-
   }
 
-  "Submit IE818 Report of Receipt Movement" should {
-
-    "return 202" in {
-      withAuthorizedTrader(consigneeId)
-      stubEISSuccessfulRequest()
-
-      val result = postRequest(IE818)
-
-      result.status mustBe ACCEPTED
-      result.body.isEmpty mustBe true
-
-    }
-
-    "return not found if EIS returns not found" in {
+  "return not found if EIS returns not found" in {
       withAuthorizedTrader("GBWK002281023")
       val eisErrorResponse = createEISErrorResponseBodyAsJson("NOT_FOUND")
       stubEISErrorResponse(NOT_FOUND, eisErrorResponse.toString())
@@ -205,7 +188,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       }
     }
 
-    "return not found if database cannot find ERN/LRN combo" in {
+  "return not found if database cannot find ERN/LRN combo" in {
       withAuthorizedTrader("GBWK002281023")
 
       when(movementRepository.getMovementByLRNAndERNIn(any, any))
@@ -214,10 +197,9 @@ class SubmitMessageControllerItSpec extends PlaySpec
       val result: WSResponse = postRequest(IE818)
 
       result.status mustBe NOT_FOUND
-
     }
 
-    "return bad request if EIS return BAD_REQUEST" in {
+  "return bad request if EIS return BAD_REQUEST" in {
       withAuthorizedTrader("GBWK002281023")
       stubEISErrorResponse(BAD_REQUEST, createEISErrorResponseBodyAsJson("BAD_REQUEST").toString())
 
@@ -230,48 +212,48 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
       val response = postRequest(IE818)
 
-      cleanUpString(response.body) mustBe cleanUpString(rimValidationErrorResponse(messageWithoutControlDoc))
+      clean(response.body) mustBe clean(rimValidationErrorResponse(messageWithoutControlDoc))
 
     }
 
-    "return 500 if EIS return 500" in {
+  "return 500 if EIS return 500" in {
       withAuthorizedTrader(consigneeId)
       stubEISErrorResponse(INTERNAL_SERVER_ERROR, createEISErrorResponseBodyAsJson("INTERNAL_SERVER_ERROR").toString())
 
       postRequest(IE818).status mustBe INTERNAL_SERVER_ERROR
     }
 
-    "return 500 if EIS return bad json" in {
+  "return 500 if EIS return bad json" in {
       withAuthorizedTrader(consigneeId)
       stubEISErrorResponse(INTERNAL_SERVER_ERROR, """"{"json": "is-bad"}""")
 
       postRequest(IE818).status mustBe INTERNAL_SERVER_ERROR
     }
 
-    "return forbidden (403) when there are no authorized ERN" in {
+  "return forbidden (403) when there are no authorized ERN" in {
       withAnEmptyERN()
 
       postRequest(IE818).status mustBe FORBIDDEN
     }
 
-    "return a Unauthorized (401) when no authorized trader" in {
+  "return a Unauthorized (401) when no authorized trader" in {
       withUnauthorizedTrader(InternalError("A general auth failure"))
 
       postRequest(IE818).status mustBe UNAUTHORIZED
     }
 
-    "return bad request (400) when xml cannot be parsed" in {
+  "return bad request (400) when xml cannot be parsed" in {
       withAuthorizedTrader("GBWK002281023")
 
       postRequest(<IE818></IE818>).status mustBe BAD_REQUEST
     }
 
-    "return Unsupported Media Type (415)" in {
+  "return Unsupported Media Type (415)" in {
       withAuthorizedTrader("GBWK002281023")
       postRequest(contentType = """application/json""").status mustBe UNSUPPORTED_MEDIA_TYPE
     }
 
-    "return bad request (400) when body is not xml" in {
+  "return bad request (400) when body is not xml" in {
       withAuthorizedTrader("GBWK002281023")
 
       //Can't use postRequest routine as test requires non-xml body
@@ -285,56 +267,44 @@ class SubmitMessageControllerItSpec extends PlaySpec
       result.status mustBe BAD_REQUEST
     }
 
-    "return forbidden (403) when consignor id cannot be validate" in {
+  "return forbidden (403) when consignor id cannot be validate" in {
       withAuthorizedTrader("123")
 
       postRequest(IE818).status mustBe FORBIDDEN
     }
+
+  "submit to NRS" in {
+    withAuthorizedTrader(consigneeId)
+    stubEISSuccessfulRequest()
+
+    postRequest(IE818)
+
+    verify(postRequestedFor(urlEqualTo("/submission")))
   }
 
-  "Submit IE819 Alert or Rejection" should {
+  val table = Table(
+    ("description", "message", "consignorId"),
+    ("IE818 - Report of Receipt Movement", IE818, consigneeId),
+    ("IE819 - Alert or Rejection", IE819, "GBWK002281023"),
+    ("IE837 - Report of Receipt Movement", IE837WithConsignee, "GBWK240176600"),
+    ("IE871 Explanation On Shortage", IE871, "GBWK240176600")
+  )
 
-    "return 202" in {
-      withAuthorizedTrader("GBWK002281023")
-      stubEISSuccessfulRequest()
+  forAll(table) {
+    (
+      description: String,
+      message: Elem,
+      consignorId: String
+    ) =>
+      s"submit message $description" in {
+        withAuthorizedTrader(consignorId)
+        stubEISSuccessfulRequest()
 
-      val result = postRequest(IE819)
+        val result = postRequest(message)
 
-      result.status mustBe ACCEPTED
-      result.body.isEmpty mustBe true
-
-    }
-
-  }
-
-  "Submit IE837 Report of Receipt Movement" should {
-
-    "return 202" in {
-      withAuthorizedTrader("GBWK240176600")
-      stubEISSuccessfulRequest()
-
-      val result = postRequest(IE837WithConsignee)
-
-      result.status mustBe ACCEPTED
-      result.body.isEmpty mustBe true
-
-    }
-
-  }
-
-  "Submit IE871 Explanation On Shortage" should {
-
-    "return 202" in {
-      withAuthorizedTrader("GBWK240176600")
-      stubEISSuccessfulRequest()
-
-      val result = postRequest(IE871)
-
-      result.status mustBe ACCEPTED
-      result.body.isEmpty mustBe true
-
-    }
-
+        result.status mustBe ACCEPTED
+        result.body.isEmpty mustBe true
+      }
   }
 
   private def createEISErrorResponseBodyAsJson(message: String): JsValue = {
@@ -381,7 +351,15 @@ class SubmitMessageControllerItSpec extends PlaySpec
     )
   }
 
-  private def cleanUpString(str: String): String = {
-    str.replaceAll("[\\t\\n\\r\\s]+", "")
+  private def stubNrsResponse = {
+    wireMock.stubFor(
+      post(urlEqualTo("/submission"))
+        .willReturn(
+          aResponse()
+            .withStatus(ACCEPTED)
+            .withBody(Json.toJson(NonRepudiationSubmissionAccepted("submissionId")).toString())
+        )
+    )
   }
+
 }

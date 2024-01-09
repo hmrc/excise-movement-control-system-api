@@ -23,20 +23,22 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-class MessageService @Inject()(movementRepository: MovementRepository, implicit val executionContext: ExecutionContext) {
+class MessageService @Inject()(
+  movementRepository: MovementRepository
+)(implicit val executionContext: ExecutionContext) {
 
-  private def getConsignorAndConsigneeFromArc(arc: String): Future[Set[String]] = {
-
-    val movementFuture = getMovementUsingArc(arc)
-    movementFuture.map(movement => Set(Some(movement.consignorId), movement.consigneeId).flatten)
-
+  private def getConsignorAndConsigneeFromArc(arc: Option[String], messageType: String): Future[Set[String]] = {
+   arc match {
+      case Some(a) =>  getMovementUsingArc(a).map(m => Set(Some(m.consignorId), m.consigneeId).flatten)
+      case _ => throw new RuntimeException(s"[MessageService] - $messageType message must have an administrative reference code")
+    }
   }
 
-  private def getConsignorFromArc(arc: String): Future[Set[String]] = {
-
-    val movementFuture = getMovementUsingArc(arc)
-    movementFuture.map(movement => Set(movement.consignorId))
-
+  private def getConsignorFromArc(arc: Option[String], messageType: String): Future[Set[String]] = {
+    arc match {
+      case Some(a) =>  getMovementUsingArc(a).map(m => Set(m.consignorId))
+      case _ => throw new RuntimeException(s"[MessageService] - $messageType message must have an administrative reference code")
+    }
   }
 
   private def getMovementUsingArc(arc: String): Future[Movement] = {
@@ -50,36 +52,16 @@ class MessageService @Inject()(movementRepository: MovementRepository, implicit 
   def getErns(ieMessage: IEMessage): Future[Set[String]] = {
 
     ieMessage match {
-      case ie801Message: IE801Message =>
-        Future.successful(Set(ie801Message.consigneeId, ie801Message.consignorId).flatten)
-
-      case _: IE810Message =>
-        // Only expect one ARC for this message type
-        val arc = ieMessage.administrativeReferenceCode.head.getOrElse(throw new RuntimeException("IE810 message must have an administrative reference code"))
-        getConsignorAndConsigneeFromArc(arc)
-
-      case _: IE813Message =>
-        // Only expect one ARC for this message type
-      val arc = ieMessage.administrativeReferenceCode.head.getOrElse(throw new RuntimeException("IE813 message must have an administrative reference code"))
-        getConsignorFromArc(arc)
-
-      case ie815Message: IE815Message =>
-        Future.successful(Set(ie815Message.consignorId))
-
-      case ie818Message: IE818Message =>
-        Future.successful(Set(ie818Message.consigneeId).flatten)
-
-      case ie819Message: IE819Message =>
-        Future.successful(Set(ie819Message.consigneeId).flatten)
-
-      case ie837Message: IE837Message =>
-        Future.successful(Set(ie837Message.consignorId, ie837Message.consigneeId).flatten)
-
-      case ie871Message: IE871Message =>
-        Future.successful(Set(ie871Message.consignorId).flatten)
+      case ie801: IE801Message => Future.successful(Set(ie801.consigneeId, ie801.consignorId).flatten)
+      case ie810: IE810Message => getConsignorAndConsigneeFromArc(ie810.administrativeReferenceCode.head, ie810.messageType)
+      case ie813: IE813Message => getConsignorFromArc(ie813.administrativeReferenceCode.head, ie813.messageType)
+      case ie815: IE815Message => Future.successful(Set(ie815.consignorId))
+      case ie818: IE818Message => Future.successful(Set(ie818.consigneeId).flatten)
+      case ie819: IE819Message => Future.successful(Set(ie819.consigneeId).flatten)
+      case ie837: IE837Message => Future.successful(Set(ie837.consignorId, ie837.consigneeId).flatten)
+      case ie871: IE871Message => Future.successful(Set(ie871.consignorId).flatten)
 
       case _ => throw new RuntimeException(s"[MessageService] - Unsupported Message Type: ${ieMessage.messageType}")
     }
-
   }
 }

@@ -17,7 +17,11 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 
+<<<<<<< HEAD
+
+=======
 import org.mockito.ArgumentMatchersSugar.any
+>>>>>>> 4df5d71 (fixed rebase error)
 import org.mockito.MockitoSugar.{reset, verify, when}
 import org.mongodb.scala.MongoException
 import org.scalatest.{BeforeAndAfterEach, EitherValues}

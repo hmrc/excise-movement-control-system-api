@@ -30,8 +30,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionRespo
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementService, NewMessageParserService, WorkItemService}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils
-import uk.gov.hmrc.mongo.TimestampSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, TestUtils}
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
@@ -54,7 +53,7 @@ class PollingNewMessagesWithWorkItemJobSpec
   private val newMessageParserService = mock[NewMessageParserService]
   private val lockRepository = mock[MongoLockRepository]
   private val workItemService = mock[WorkItemService]
-  private val dateTimeService = mock[TimestampSupport]
+  private val dateTimeService = mock[DateTimeService]
   private val message = mock[IEMessage]
   private val newMessageResponse = EISConsumptionResponse(
     LocalDateTime.of(2023, 5, 6, 9, 10, 13),
@@ -186,13 +185,15 @@ class PollingNewMessagesWithWorkItemJobSpec
       val workItem = createWorkItem(retryAttempt)
       addOneItemToMockQueue(workItem)
 
+      when(workItemService.rescheduleWorkItemForceSlow(any)).thenReturn(Future.successful(true))
       when(appConfig.maxFailureRetryAttempts).thenReturn(retryAttempt)
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
-      await(job.executeInMutex)
+      val result = await(job.executeInMutex)
 
       verify(workItemService).rescheduleWorkItemForceSlow(eqTo(workItem))
+      result.message mustBe "polling-new-messages Job ran successfully."
     }
 
     "parse the messages" in {

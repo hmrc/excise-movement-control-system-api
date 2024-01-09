@@ -26,13 +26,12 @@ import play.api.http.HeaderNames
 import play.api.mvc.Results.NotFound
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnInMessageAction, FakeValidateLRNAction, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.WorkItemService
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{SubmissionMessageService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.ErnsMapper
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
@@ -50,21 +49,18 @@ class SubmitMessageControllerSpec
   private val cc = stubControllerComponents()
   private val request = createRequest(IE818)
   private val ieMessage = mock[IEMessage]
-  private val connector = mock[EISSubmissionConnector]
+  private val submissionMessageService = mock[SubmissionMessageService]
   private val workItemService = mock[WorkItemService]
-  private val emcsUtils = mock[EmcsUtils]
+  private val ernsMapper = mock[ErnsMapper]
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(connector, workItemService)
+    reset(submissionMessageService, workItemService)
 
-    when(connector.submitMessage(any)(any))
+    when(submissionMessageService.submit(any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
-
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
-
-    when(emcsUtils.getSingleErnFromMessage(any, any)).thenReturn("testErn")
-
+    when(ernsMapper.getSingleErnFromMessage(any, any)).thenReturn("testErn")
   }
 
   "submit" should {
@@ -77,7 +73,7 @@ class SubmitMessageControllerSpec
 
       await(createWithSuccessfulAuth.submit("lrn")(request))
 
-      verify(connector).submitMessage(any)(any)
+      verify(submissionMessageService).submit(any)(any)
 
     }
 
@@ -90,7 +86,7 @@ class SubmitMessageControllerSpec
     }
 
     "return an error when EIS error" in {
-      when(connector.submitMessage(any)(any))
+      when(submissionMessageService.submit(any)(any))
         .thenReturn(Future.successful(Left(NotFound("not found"))))
 
       val result = createWithSuccessfulAuth.submit("lrn")(request)
@@ -138,7 +134,7 @@ class SubmitMessageControllerSpec
 
       status(result) mustBe ACCEPTED
 
-      verify(connector).submitMessage(any)(any)
+      verify(submissionMessageService).submit(any)(any)
     }
 
   }
@@ -149,9 +145,9 @@ class SubmitMessageControllerSpec
       FakeSuccessXMLParser,
       FakeSuccessfulValidateErnInMessageAction(ieMessage),
       FakeSuccessfulValidateLRNAction,
-      connector,
+      submissionMessageService,
       workItemService,
-      emcsUtils,
+      ernsMapper,
       cc
     )
 
@@ -167,9 +163,9 @@ class SubmitMessageControllerSpec
       FakeSuccessXMLParser,
       FakeSuccessfulValidateErnInMessageAction(ieMessage),
       FakeFailureValidateLRNAction,
-      connector,
+      submissionMessageService,
       workItemService,
-      emcsUtils,
+      ernsMapper,
       cc
     )
 
@@ -179,9 +175,9 @@ class SubmitMessageControllerSpec
       FakeFailureXMLParser,
       FakeSuccessfulValidateErnInMessageAction(ieMessage),
       FakeFailureValidateLRNAction,
-      connector,
+      submissionMessageService,
       workItemService,
-      emcsUtils,
+      ernsMapper,
       cc
     )
 
@@ -191,9 +187,9 @@ class SubmitMessageControllerSpec
       FakeSuccessXMLParser,
       FakeFailureValidateErnInMessageAction,
       FakeFailureValidateLRNAction,
-      connector,
+      submissionMessageService,
       workItemService,
-      emcsUtils,
+      ernsMapper,
       cc
     )
 
@@ -203,9 +199,9 @@ class SubmitMessageControllerSpec
       FakeSuccessXMLParser,
       FakeSuccessfulValidateErnInMessageAction(ieMessage),
       FakeFailureValidateLRNAction,
-      connector,
+      submissionMessageService,
       workItemService,
-      emcsUtils,
+      ernsMapper,
       cc
     )
 

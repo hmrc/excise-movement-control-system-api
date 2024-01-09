@@ -23,20 +23,20 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.UnsupportedTestMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService
 
 import scala.concurrent.ExecutionContext
-import scala.xml.NodeSeq
 
 class MessageServiceSpec extends PlaySpec with EitherValues with TestXml {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
   private val movementRepository = mock[MovementRepository]
-  private val messageService = new MessageService(movementRepository, ec)
+  private val messageService = new MessageService(movementRepository)
 
   "getErns" should {
 
@@ -123,25 +123,10 @@ class MessageServiceSpec extends PlaySpec with EitherValues with TestXml {
     }
 
     "throw an error if unsupported message" in {
-      class NonSupportedMessage extends IEMessage {
-        override def consigneeId: Option[String] = None
-
-        override def administrativeReferenceCode: Seq[Option[String]] = Seq(None)
-
-        override def messageType: String = "any-type"
-
-        override def toXml: NodeSeq = NodeSeq.Empty
-
-        override def lrnEquals(lrn: String): Boolean = false
-
-        override def messageIdentifier: String = "fake-id"
-      }
-
       the[RuntimeException] thrownBy
-        await(messageService.getErns(new NonSupportedMessage())) must
+        await(messageService.getErns(UnsupportedTestMessage)) must
         have message "[MessageService] - Unsupported Message Type: any-type"
     }
 
   }
-
 }

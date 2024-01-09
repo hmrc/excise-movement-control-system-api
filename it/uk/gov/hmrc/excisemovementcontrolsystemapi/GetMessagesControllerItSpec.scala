@@ -39,7 +39,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, 
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.mongo.TimestampSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import java.nio.charset.StandardCharsets
 import java.time.{Instant, LocalDateTime}
@@ -61,7 +61,7 @@ class GetMessagesControllerItSpec extends PlaySpec
   private val consignorId = "GBWK002281023"
   private val lrn = "token"
   private val url = s"http://localhost:$port/movements/$lrn/messages"
-  private lazy val dateTimeService: TimestampSupport = mock[TimestampSupport]
+  private lazy val dateTimeService: DateTimeService = mock[DateTimeService]
   private val timestamp = Instant.now()
   private val responseFromEis = EISConsumptionResponse(
     LocalDateTime.of(2023, 1, 2, 3, 4, 5),
@@ -78,7 +78,7 @@ class GetMessagesControllerItSpec extends PlaySpec
       .overrides(
         bind[AuthConnector].to(authConnector),
         bind[MovementRepository].to(movementRepository),
-        bind[TimestampSupport].to(dateTimeService)
+        bind[DateTimeService].to(dateTimeService)
       )
       .build()
   }
