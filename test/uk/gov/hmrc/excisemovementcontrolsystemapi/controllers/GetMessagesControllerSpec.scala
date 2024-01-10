@@ -149,7 +149,7 @@ class GetMessagesControllerSpec extends PlaySpec
       status(result) mustBe BAD_REQUEST
 
       contentAsJson(result) mustBe Json.toJson(
-        ErrorResponse(timeStamp, "Invalid date format provided in the updatedSince query parameter", "")
+        ErrorResponse(timeStamp, "Invalid date format provided in the updatedSince query parameter. Format should be like '2020-11-15T17:02:34.00Z'", "")
       )
     }
 

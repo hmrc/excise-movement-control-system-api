@@ -54,7 +54,7 @@ class GetMovementsController @Inject()(
               Ok(Json.toJson(movement.map(createResponseFrom)))
             }
         }.getOrElse(
-          Future.successful(BadRequest(Json.toJson(ErrorResponse(emcsUtils.getCurrentDateTime, "Invalid date format provided in the updatedSince query parameter", ""))))
+          Future.successful(BadRequest(Json.toJson(ErrorResponse(emcsUtils.getCurrentDateTime, "Invalid date format provided in the updatedSince query parameter. Format should be like '2020-11-15T17:02:34.00Z'", ""))))
         )
     }
   }
