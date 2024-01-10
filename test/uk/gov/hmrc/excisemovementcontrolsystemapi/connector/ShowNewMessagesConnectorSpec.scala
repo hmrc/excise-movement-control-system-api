@@ -67,11 +67,11 @@ class ShowNewMessagesConnectorSpec
     super.beforeEach()
     reset(httpClient, appConfig, metrics, timerContext)
 
-    when(httpClient.GET[Any](any,any,any)(any,any,any))
+    when(httpClient.PUTString[Any](any,any,any)(any,any,any))
       .thenReturn(Future.successful(HttpResponse(200, Json.toJson(response).toString())))
     when(eisUtil.generateCorrelationId).thenReturn("1234")
     when(eisUtil.getCurrentDateTimeString).thenReturn(dateTime.toString)
-    when(appConfig.showNewMessageUrl).thenReturn("/showNewMessage")
+    when(appConfig.showNewMessageUrl(any)).thenReturn("/showNewMessage")
     when(appConfig.messagesBearerToken).thenReturn(messagesBearerToken)
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
   }
@@ -80,9 +80,9 @@ class ShowNewMessagesConnectorSpec
     "get the show new message" in {
       await(sut.get("123"))
 
-      verify(httpClient).GET(
+      verify(httpClient).PUTString[Any](
         eqTo("/showNewMessage"),
-        eqTo(Seq("exciseregistrationnumber" -> "123")),
+        eqTo(""),
         eqTo(expectedHeader)
       )(any,any,any)
     }
@@ -103,7 +103,7 @@ class ShowNewMessagesConnectorSpec
 
     "should return an error" when {
       "eis return an error" in {
-        when(httpClient.GET[Any](any,any,any)(any,any,any))
+        when(httpClient.PUTString[Any](any,any,any)(any,any,any))
           .thenReturn(Future.successful(HttpResponse(422, "error message")))
 
         val result = await(sut.get("123"))
@@ -112,7 +112,7 @@ class ShowNewMessagesConnectorSpec
       }
 
       "cannot parse json" in {
-        when(httpClient.GET[Any](any,any,any)(any,any,any))
+        when(httpClient.PUTString[Any](any,any,any)(any,any,any))
           .thenReturn(Future.successful(HttpResponse(200, "error message")))
 
         val result = await(sut.get("123"))
