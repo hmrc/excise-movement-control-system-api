@@ -17,10 +17,10 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util
 
 import play.api.Logging
-import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, SERVICE_UNAVAILABLE}
+import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, SERVICE_UNAVAILABLE, UNPROCESSABLE_ENTITY}
 import play.api.libs.json.Json
 import play.api.mvc.Result
-import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
+import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable, UnprocessableEntity}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, EISSubmissionResponse, RimValidationErrorResponse}
 import uk.gov.hmrc.http.{HttpReads, HttpResponse}
@@ -56,6 +56,7 @@ class EISHttpReader(
       case BAD_REQUEST => extractValidJson(response)
       case NOT_FOUND => NotFound(messageAsJson)
       case SERVICE_UNAVAILABLE => ServiceUnavailable(messageAsJson)
+      case UNPROCESSABLE_ENTITY => UnprocessableEntity(messageAsJson)
       case _ => InternalServerError(messageAsJson)
     }
   }
