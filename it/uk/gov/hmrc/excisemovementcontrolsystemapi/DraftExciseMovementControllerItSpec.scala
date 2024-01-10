@@ -158,6 +158,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
       result.status mustBe ACCEPTED
     }
+
     "return not found if EIS returns not found" in {
       withAuthorizedTrader(consignorId)
       val eisErrorResponse = createEISErrorResponseBodyAsJson("NOT_FOUND")
@@ -172,7 +173,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       }
     }
 
-    "return bad request if EIS returns BAD_REQUEST" in {
+    "return bad request (400) if EIS returns BAD_REQUEST" in {
       withAuthorizedTrader(consignorId)
       stubEISErrorResponse(BAD_REQUEST, createEISErrorResponseBodyAsJson("BAD_REQUEST").toString())
 
@@ -188,14 +189,21 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       clean(response.body) mustBe clean(rimValidationErrorResponse(messageWithoutControlDoc))
     }
 
-    "return 500 if EIS returns 500" in {
+    "return unprocessable entity (422) if EIS returns UNPROCESSABLE_ENTRY" in {
+      withAuthorizedTrader(consignorId)
+      stubEISErrorResponse(UNPROCESSABLE_ENTITY, createEISErrorResponseBodyAsJson("Unprocessable_Entity").toString())
+
+      postRequest(IE815).status mustBe UNPROCESSABLE_ENTITY
+    }
+
+    "return internal server error (500) if EIS returns 500" in {
       withAuthorizedTrader(consignorId)
       stubEISErrorResponse(INTERNAL_SERVER_ERROR, createEISErrorResponseBodyAsJson("INTERNAL_SERVER_ERROR").toString())
 
       postRequest(IE815).status mustBe INTERNAL_SERVER_ERROR
     }
 
-    "return 500 if EIS returns bad json" in {
+    "return internal server error (500) if EIS returns bad json" in {
       withAuthorizedTrader(consignorId)
       stubEISErrorResponse(INTERNAL_SERVER_ERROR, """"{"json": "is-bad"}""")
 
@@ -251,7 +259,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     }
 
     "return forbidden (403) when consignor id cannot be validate" in {
-      withAuthorizedTrader("123")
+      withAuthorizedTrader()
 
       postRequest(IE815).status mustBe FORBIDDEN
     }

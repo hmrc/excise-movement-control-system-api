@@ -20,9 +20,9 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connector.util
 import org.scalatest.EitherValues
 import org.scalatest.Inspectors.forAll
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, SERVICE_UNAVAILABLE}
+import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, SERVICE_UNAVAILABLE, UNPROCESSABLE_ENTITY}
 import play.api.libs.json.Json
-import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
+import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable, UnprocessableEntity}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse, RimValidationErrorResponse, ValidatorResults}
 import uk.gov.hmrc.http.HttpResponse
@@ -59,7 +59,8 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
       (BAD_REQUEST, BadRequest(exampleError)),
       (NOT_FOUND, NotFound(exampleError)),
       (INTERNAL_SERVER_ERROR, InternalServerError(exampleError)),
-      (SERVICE_UNAVAILABLE, ServiceUnavailable(exampleError)))) { case (statusCode, expectedResult) =>
+      (SERVICE_UNAVAILABLE, ServiceUnavailable(exampleError)),
+      (UNPROCESSABLE_ENTITY, UnprocessableEntity(exampleError)))) { case (statusCode, expectedResult) =>
       s"return $statusCode" when {
         s"$statusCode has returned from HttpResponse" in {
           val result = eisHttpParser.read(
@@ -124,7 +125,7 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
       errorType = errorCode,
       errorReason = "The Date of Dispatch you entered is incorrect",
       errorLocation = location,
-      originalAttributeValue = localDateTime.toString()
+      originalAttributeValue = localDateTime.toString
     )
   }
 }

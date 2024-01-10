@@ -29,7 +29,7 @@ import org.scalatestplus.play.PlaySpec
 import play.api.http.{ContentTypes, HeaderNames}
 import play.api.libs.json.Json
 import play.api.mvc.Result
-import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
+import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable, UnprocessableEntity}
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
@@ -191,6 +191,15 @@ class EISSubmissionConnectorSpec
       val result = await(submitExciseMovementForIE815)
 
       result.left.value mustBe InternalServerError("any error")
+    }
+
+    "return unprocessable entity error" in {
+      when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
+        .thenReturn(Future.successful(Left(UnprocessableEntity("any error"))))
+
+      val result = await(submitExciseMovementForIE815)
+
+      result.left.value mustBe UnprocessableEntity("any error")
     }
 
     "start and stop metrics" in {
