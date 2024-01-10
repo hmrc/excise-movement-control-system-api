@@ -69,7 +69,7 @@ class GetMessagesController @Inject()(
         }
 
     }.getOrElse(
-      Future.successful(BadRequest(Json.toJson(ErrorResponse(emcsUtils.getCurrentDateTime, "Invalid date format provided in the updatedSince query parameter. Format should be like '2020-11-15T17:02:34.00Z'", "")))))
+      Future.successful(BadRequest(Json.toJson(ErrorResponse(emcsUtils.getCurrentDateTime, "Invalid date format provided in the updatedSince query parameter", "Date format should be like '2020-11-15T17:02:34.00Z'")))))
   }
 
   private def filterMessagesByTime(messages: Seq[Message], updatedSince: Option[Instant]): Seq[Message] = {
