@@ -169,7 +169,7 @@ class GetMessagesControllerItSpec extends PlaySpec
 
   private def stubShowNewMessageRequest(exciseNumber: String) = {
     wireMock.stubFor(
-      WireMock.get(s"/apip-emcs/messages/v1/show-new-messages?exciseregistrationnumber=$exciseNumber")
+      WireMock.put(s"/emcs/messages/v1/show-new-messages?exciseregistrationnumber=$exciseNumber")
         .willReturn(
           ok().withBody(Json.toJson(responseFromEis).toString()
           ))

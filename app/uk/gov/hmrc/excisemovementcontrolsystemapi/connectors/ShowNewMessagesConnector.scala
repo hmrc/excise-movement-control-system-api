@@ -44,9 +44,9 @@ class ShowNewMessagesConnector @Inject()(
     val correlationId = emcsUtils.generateCorrelationId
     val dateTime = emcsUtils.getCurrentDateTimeString
 
-    httpClient.GET[HttpResponse](
-      appConfig.showNewMessageUrl,
-      Seq("exciseregistrationnumber" -> ern),
+    httpClient.PUTString[HttpResponse](
+      appConfig.showNewMessageUrl(ern),
+      "",
       build(correlationId, dateTime, appConfig.messagesBearerToken)
     ).map { response =>
 

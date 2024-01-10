@@ -61,8 +61,8 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
   with BeforeAndAfterAll {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  private val showNewMessageUrl = "/apip-emcs/messages/v1/show-new-messages"
-  private val messageReceiptUrl = "/apip-emcs/messages/v1/message-receipt?exciseregistrationnumber="
+  private val showNewMessageUrl = "/emcs/messages/v1/show-new-messages?exciseregistrationnumber="
+  private val messageReceiptUrl = "/emcs/messages/v1/message-receipt?exciseregistrationnumber="
 
   private lazy val timeService = mock[DateTimeService]
   // The DB truncates it to milliseconds so to make exact comparisons in the asserts we need to ditch the nanos
@@ -153,13 +153,13 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       Thread.sleep(6000)
 
       eventually {
-        wireMock.verify(getRequestedFor(urlEqualTo(s"$showNewMessageUrl?exciseregistrationnumber=1")))
+        wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}1")))
       }
       eventually {
-        wireMock.verify(getRequestedFor(urlEqualTo(s"$showNewMessageUrl?exciseregistrationnumber=3")))
+        wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}3")))
       }
       eventually {
-        wireMock.verify(getRequestedFor(urlEqualTo(s"$showNewMessageUrl?exciseregistrationnumber=4")))
+        wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}4")))
       }
       eventually {
         wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}1")))
@@ -198,13 +198,13 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       app
 
       eventually {
-        wireMock.verify(0, getRequestedFor(urlEqualTo(s"$showNewMessageUrl?exciseregistrationnumber=1")))
+        wireMock.verify(0, putRequestedFor(urlEqualTo(s"${showNewMessageUrl}1")))
       }
       eventually {
-        wireMock.verify(0, getRequestedFor(urlEqualTo(s"$showNewMessageUrl?exciseregistrationnumber=3")))
+        wireMock.verify(0, putRequestedFor(urlEqualTo(s"${showNewMessageUrl}3")))
       }
       eventually {
-        wireMock.verify(0, getRequestedFor(urlEqualTo(s"$showNewMessageUrl?exciseregistrationnumber=4")))
+        wireMock.verify(0, putRequestedFor(urlEqualTo(s"${showNewMessageUrl}4")))
       }
       eventually {
         wireMock.verify(0, putRequestedFor(urlEqualTo(s"${messageReceiptUrl}1")))
@@ -233,7 +233,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
         timeService
       )
 
-      stubForThrowingError("1")
+      stubForThrowingError()
 
       val createdWorkItem = createWorkItem("1")
       insert(createdWorkItem).futureValue
@@ -268,7 +268,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
         timeService
       )
 
-      stubForThrowingError("1")
+      stubForThrowingError()
 
       insert(createWorkItem("1")).futureValue
 
@@ -319,7 +319,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
 
   private def stubShowNewMessageRequestForConsignorId3(): Unit = {
     wireMock.stubFor(
-      WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=3")
+      put(s"${showNewMessageUrl}3")
         .inScenario(s"requesting-new-message-for-ern-3")
         .whenScenarioStateIs(Scenario.STARTED)
         .willReturn(ok().withBody(Json.toJson(
@@ -337,7 +337,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
 
   private def stubShowNewMessageRequestForConsignorId4(): Unit = {
     wireMock.stubFor(
-      WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=4")
+      put(s"${showNewMessageUrl}4")
         .inScenario(s"requesting-new-message-for-ern-4")
         .whenScenarioStateIs(Scenario.STARTED)
         .willReturn(ok().withBody(Json.toJson(
@@ -355,7 +355,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
 
   private def stubShowNewMessageRequestForConsignorId1(): Unit = {
     wireMock.stubFor(
-      WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=1")
+      put(s"${showNewMessageUrl}1")
         .inScenario("requesting-new-message-for-ern-1")
         .whenScenarioStateIs(Scenario.STARTED)
         .willReturn(ok().withBody(Json.toJson(
@@ -370,7 +370,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
     )
 
     wireMock.stubFor(
-      WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=1")
+      put(s"${showNewMessageUrl}1")
         .inScenario("requesting-new-message-for-ern-1")
         .whenScenarioStateIs("show-second-response")
         .willReturn(ok().withBody(Json.toJson(
@@ -386,16 +386,16 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
     stubForEmptyMessageData("1")
   }
 
-  private def stubForThrowingError(exciseNumber: String) = {
+  private def stubForThrowingError(): StubMapping = {
     wireMock.stubFor(
-      WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=$exciseNumber")
+      put(s"${showNewMessageUrl}1")
         .willReturn(serverError().withBody("Internal server error"))
     )
   }
 
   private def stubForEmptyMessageData(exciseNumber: String): Unit = {
     wireMock.stubFor(
-      WireMock.get(s"$showNewMessageUrl?exciseregistrationnumber=$exciseNumber")
+      put(s"$showNewMessageUrl$exciseNumber")
         .inScenario(s"requesting-new-message-for-ern-$exciseNumber")
         .whenScenarioStateIs("show-empty-message")
         .willReturn(ok().withBody(Json.toJson(

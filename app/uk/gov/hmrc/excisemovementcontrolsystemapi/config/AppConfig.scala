@@ -75,12 +75,12 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
 
   def emcsReceiverMessageUrl: String = s"$eisHost/emcs/digital-submit-new-message/v1"
   def submissionBearerToken: String = servicesConfig.getConfString("eis.submission-bearer-token", "dummySubmissionBearerToken")
-  def showNewMessageUrl: String = s"$eisHost/apip-emcs/messages/v1/show-new-messages"
+  def showNewMessageUrl(ern: String): String = s"$eisHost/emcs/messages/v1/show-new-messages?exciseregistrationnumber=$ern"
   def messageReceiptUrl(ern: String): String =
-    s"$eisHost/apip-emcs/messages/v1/message-receipt?exciseregistrationnumber=$ern"
+    s"$eisHost/emcs/messages/v1/message-receipt?exciseregistrationnumber=$ern"
   def messagesBearerToken: String = servicesConfig.getConfString("eis.messages-bearer-token", "dummyMessagesBearerToken")
 
-  def traderMovementUrl: String = s"$eisHost/emcs/movements/v1/trader-movements"
+  def traderMovementUrl: String = s"$eisHost/emcs/movements/v1/trader-movement"
   def movementBearerToken: String = servicesConfig.getConfString("eis.movement-bearer-token", "dummyMovementBearerToken")
   def getNrsSubmissionUrl: String = s"$nrsHost/submission"
 
