@@ -22,12 +22,13 @@ import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 import java.time.Instant
 
 case class Movement(
+                     _id: MovementId,
                      localReferenceNumber: String,
                      consignorId: String,
                      consigneeId: Option[String],
-                     administrativeReferenceCode: Option[String] = None,
-                     lastUpdated: Instant = Instant.now,
-                     messages: Seq[Message] = Seq.empty
+                     administrativeReferenceCode: Option[String],
+                     lastUpdated: Instant,
+                     messages: Seq[Message]
                    )
 
 case class Message(
@@ -40,6 +41,15 @@ case class Message(
 object Movement {
   implicit val instantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
   implicit val format: OFormat[Movement] = Json.format[Movement]
+
+  def apply(localReferenceNumber: String,
+            consignorId: String,
+            consigneeId: Option[String],
+            administrativeReferenceCode: Option[String] = None,
+            lastUpdated: Instant = Instant.now,
+            messages: Seq[Message] = Seq.empty): Movement =
+    Movement(MovementId.generate, localReferenceNumber, consignorId, consigneeId,
+      administrativeReferenceCode, lastUpdated, messages)
 }
 
 object Message {

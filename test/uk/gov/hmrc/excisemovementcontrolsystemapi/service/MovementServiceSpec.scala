@@ -360,11 +360,11 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
     //For these tests use a real EmcsUtils as we don't need the dateTime stubbed
     val movementServiceForUpdateTests = new MovementService(mockMovementRepository, new EmcsUtils, dateTimeService)
 
-    val cachedMovements = Seq(
-      Movement("123", consignorId, None, Some("456"), now, Seq.empty),
-      Movement("345", consignorId, None, Some("89"), now, Seq.empty),
-      Movement("345", "12", None, Some("890"), now, Seq.empty)
-    )
+    val movementARC456 = Movement("123", consignorId, None, Some("456"), now, Seq.empty)
+    val movementARC89 = Movement("345", consignorId, None, Some("89"), now, Seq.empty)
+    val movementARC890 = Movement("345", "12", None, Some("890"), now, Seq.empty)
+
+    val cachedMovements = Seq(movementARC456, movementARC89, movementARC890)
     val encodeMessage = Base64.getEncoder.encodeToString("<IE818>test</IE818>".getBytes(StandardCharsets.UTF_8))
     val expectedMessage = Message(encodeMessage, MessageTypes.IE818.value, dateTimeService.timestamp())
 
@@ -374,8 +374,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
 
-        verify(mockMovementRepository).updateMovement(
-          eqTo(Movement("123", consignorId, None, Some("456"), now, Seq(expectedMessage))))
+        verify(mockMovementRepository).updateMovement(eqTo(movementARC456.copy(messages = Seq(expectedMessage))))
       }
 
       "message contains Both Administration Reference Code (ARC) and Local Ref Number (LRN)" in {
@@ -383,8 +382,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
 
-        verify(mockMovementRepository).updateMovement(
-          eqTo(Movement("123", consignorId, None, Some("456"), now, Seq(expectedMessage))))
+        verify(mockMovementRepository).updateMovement(eqTo(movementARC456.copy(messages = Seq(expectedMessage))))
       }
 
       "message contains Local Ref Number (LRN)" in {
@@ -392,8 +390,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
 
-        verify(mockMovementRepository).updateMovement(
-          eqTo(Movement("345", consignorId, None, Some("89"), now, Seq(expectedMessage))))
+        verify(mockMovementRepository).updateMovement(eqTo(movementARC89.copy(messages = Seq(expectedMessage))))
       }
     }
 
@@ -402,15 +399,13 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
       when(newMessage.toXml).thenReturn(scala.xml.XML.loadString("<IE818>test</IE818>"))
       when(newMessage.messageType).thenReturn(MessageTypes.IE818.value)
-      val movement = Seq(
-        Movement("123", consignorId, None, Some("456"), now, Seq(cachedMessage1, cachedMessage2)),
-      )
-      when(mockMovementRepository.getAllBy(any))
-        .thenReturn(Future.successful(movement))
+      val initialMovement = movementARC456.copy(messages= Seq(cachedMessage1, cachedMessage2))
+
+      when(mockMovementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(initialMovement)))
       await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
 
-      verify(mockMovementRepository).updateMovement(
-        eqTo(Movement("123", consignorId, None, Some("456"), now, Seq(cachedMessage1, cachedMessage2, expectedMessage))))
+      verify(mockMovementRepository).updateMovement(eqTo(initialMovement.copy(messages =
+        Seq(cachedMessage1, cachedMessage2, expectedMessage))))
 
     }
 
@@ -419,8 +414,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
       await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
 
-      verify(mockMovementRepository).updateMovement(
-        eqTo(Movement("123", consignorId, None, Some("456"), now, Seq(expectedMessage))))
+      verify(mockMovementRepository).updateMovement(eqTo(movementARC456.copy(messages =Seq(expectedMessage))))
     }
 
     "message contains multiple Administration Reference Codes (ARCs)" in {
@@ -428,13 +422,9 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
       await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
 
-      verify(mockMovementRepository).updateMovement(
-        eqTo(Movement("123", consignorId, None, Some("456"), now, Seq(expectedMessage)))
-      )
+      verify(mockMovementRepository).updateMovement(eqTo(movementARC456.copy(messages = Seq(expectedMessage))))
 
-      verify(mockMovementRepository).updateMovement(
-        eqTo(Movement("345", "12", None, Some("890"), now, Seq(expectedMessage)))
-      )
+      verify(mockMovementRepository).updateMovement(eqTo(movementARC890.copy(messages = Seq(expectedMessage))))
     }
 
     "throw an error" when {
@@ -459,29 +449,29 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
     "do not save duplicate messages to DB" in {
       val cachedMessage = createMessage("<foo>test</foo>", MessageTypes.IE801.value)
 
+      val movementWithMessagesAlready = Movement(lrn, consignorId, None, None, now, Seq(cachedMessage, cachedMessage1, cachedMessage2))
+
       setUpForUpdateMovement(newMessage, Seq(None), Some("123"), "<foo>test</foo>", cachedMovements)
-      when(mockMovementRepository.getAllBy(any))
-        .thenReturn(Future.successful(Seq(Movement(lrn, consignorId, None, None, now, Seq(cachedMessage, cachedMessage1, cachedMessage2)))))
+      when(mockMovementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movementWithMessagesAlready)))
 
       await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
 
-      val expectedMovement = Movement(lrn, consignorId, None, None, now, Seq(cachedMessage, cachedMessage1, cachedMessage2))
-      verify(mockMovementRepository).updateMovement(eqTo(expectedMovement))
+      verify(mockMovementRepository).updateMovement(eqTo(movementWithMessagesAlready))
     }
 
     "save to DB when message has different content but the same message type" in {
       val cachedMessage: Message = createMessage("<foo>different content</foo>", MessageTypes.IE801.value)
+      val movementWithMessagesAlready = Movement(lrn, consignorId, None, None, now, Seq(cachedMessage, cachedMessage1))
+
       setUpForUpdateMovement(newMessage, Seq(None), Some("123"), "<foo>test</foo>", cachedMovements)
       when(mockMovementRepository.updateMovement(any)).thenReturn(Future.successful(true))
-      when(mockMovementRepository.getAllBy(any))
-        .thenReturn(Future.successful(Seq(Movement(lrn, consignorId, None, None, now, Seq(cachedMessage, cachedMessage1)))))
+      when(mockMovementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movementWithMessagesAlready)))
 
       await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
 
       val expectedNewMessage = createMessage("<foo>test</foo>", MessageTypes.IE818.value)
-      verify(mockMovementRepository).updateMovement(
-        eqTo(Movement(lrn, consignorId, None, None, now, Seq(cachedMessage, cachedMessage1, expectedNewMessage)))
-      )
+      val expectedMovement = movementWithMessagesAlready.copy(messages = Seq(cachedMessage, cachedMessage1, expectedNewMessage))
+      verify(mockMovementRepository).updateMovement(eqTo(expectedMovement))
     }
 
     "return false if did not save the message" in {
