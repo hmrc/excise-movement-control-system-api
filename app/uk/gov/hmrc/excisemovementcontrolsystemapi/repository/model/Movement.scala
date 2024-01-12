@@ -20,9 +20,10 @@ import play.api.libs.json.{Format, Json, OFormat}
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 import java.time.Instant
+import java.util.UUID
 
 case class Movement(
-                     _id: MovementId,
+                     _id: String,
                      localReferenceNumber: String,
                      consignorId: String,
                      consigneeId: Option[String],
@@ -48,7 +49,7 @@ object Movement {
             administrativeReferenceCode: Option[String] = None,
             lastUpdated: Instant = Instant.now,
             messages: Seq[Message] = Seq.empty): Movement =
-    Movement(MovementId.generate, localReferenceNumber, consignorId, consigneeId,
+    Movement(UUID.randomUUID().toString, localReferenceNumber, consignorId, consigneeId,
       administrativeReferenceCode, lastUpdated, messages)
 }
 

@@ -39,12 +39,12 @@ class SubmitMessageController @Inject()(
                                        )(implicit ec: ExecutionContext)
   extends BackendController(cc) {
 
-  def submit(lrn: String): Action[NodeSeq] = {
+  def submit(movementId: String): Action[NodeSeq] = {
 
     (authAction
       andThen xmlParser
       andThen validateErnInMessageAction
-      andThen validateLRNAction(lrn)).async(parse.xml) {
+      andThen validateLRNAction(movementId)).async(parse.xml) {
       implicit request =>
         val ern = ernsMapper.getSingleErnFromMessage(request.message, request.validErns)
 

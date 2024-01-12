@@ -154,6 +154,30 @@ class MovementRepositoryItSpec extends PlaySpec
     actual.sortBy(_.localReferenceNumber) mustBe expected
   }
 
+  "getMovementById" should {
+    "return the matching movement when it is there" in {
+      val movementId1 = "49491927-aaa1-4835-b405-dd6e7fa3aaf0"
+      val movementId2 = "8b43eb3b-3856-4f0c-b1ab-80355f70f6aa"
+        val movement1 = Movement(movementId1, "lrn", "ern1", None, Some("arc1"), Instant.now, Seq.empty)
+        val movement2 = Movement(movementId2, "lrn", "ern2", None, Some("arc2"), Instant.now, Seq.empty)
+        insertMovement(movement1)
+        insertMovement(movement2)
+
+        val result = repository.getMovementById(movementId1).futureValue
+        result mustBe Some(movement1)
+      }
+
+    "return None when no movement for given id" in {
+      val movementId1 = "49491927-aaa1-4835-b405-dd6e7fa3aaf0"
+      val movement1 = Movement(movementId1, "lrn", "ern1", None, Some("arc1"), Instant.now, Seq.empty)
+      insertMovement(movement1)
+
+      val result = repository.getMovementById("23432343-2342342").futureValue
+
+      result mustBe None
+    }
+  }
+
   "getMovementByLRNAndERNIn" should {
     val lrn = "123"
     val consignorId = "Abc"
