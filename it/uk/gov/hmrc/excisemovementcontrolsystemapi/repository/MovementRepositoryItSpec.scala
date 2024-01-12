@@ -27,11 +27,12 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement, MovementId}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 
 import java.time.Instant
+import java.util.UUID
 import scala.concurrent.ExecutionContext
 
 class MovementRepositoryItSpec extends PlaySpec
@@ -74,7 +75,8 @@ class MovementRepositoryItSpec extends PlaySpec
 
   "saveMovement" should {
     "return insert a movement" in {
-      val result = repository.saveMovement(Movement("123", "345", Some("789"), None)).futureValue
+      val uuid = UUID.randomUUID()
+      val result = repository.saveMovement(Movement(MovementId(uuid),"123", "345", Some("789"), None, Instant.now(), Seq.empty)).futureValue
 
       val insertedRecord = find(
         Filters.and(
@@ -86,6 +88,7 @@ class MovementRepositoryItSpec extends PlaySpec
         .value
 
       result mustBe true
+      insertedRecord._id mustBe MovementId(uuid)
       insertedRecord.localReferenceNumber mustBe "123"
       insertedRecord.consignorId mustBe "345"
       insertedRecord.consigneeId mustBe Some("789")
