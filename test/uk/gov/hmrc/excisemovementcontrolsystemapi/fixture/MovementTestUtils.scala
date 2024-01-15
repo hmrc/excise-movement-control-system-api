@@ -17,7 +17,9 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GetMovementResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Movement, MovementId}
+
+import java.util.UUID
 
 trait MovementTestUtils {
 
@@ -28,6 +30,7 @@ trait MovementTestUtils {
                               consigneeId: Some[String]
                             ): GetMovementResponse = {
     GetMovementResponse(
+      MovementId(UUID.fromString("cfdb20c7-d0b0-4b8b-a071-737d68dede5e")),
       ern,
       lrn,
       consigneeId,
@@ -40,6 +43,7 @@ trait MovementTestUtils {
                              movement: Movement
                             ): GetMovementResponse = {
     GetMovementResponse(
+      movement._id,
       movement.consignorId,
       movement.localReferenceNumber,
       movement.consigneeId,
