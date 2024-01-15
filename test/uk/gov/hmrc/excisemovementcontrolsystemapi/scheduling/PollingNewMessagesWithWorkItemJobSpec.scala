@@ -35,7 +35,7 @@ import uk.gov.hmrc.mongo.lock.MongoLockRepository
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
-import java.time.{Instant, LocalDateTime}
+import java.time.Instant
 import scala.concurrent.Future.successful
 import scala.concurrent.duration.{Duration, HOURS, MINUTES, SECONDS}
 import scala.concurrent.{ExecutionContext, Future}
@@ -56,12 +56,12 @@ class PollingNewMessagesWithWorkItemJobSpec
   private val dateTimeService = mock[DateTimeService]
   private val message = mock[IEMessage]
   private val newMessageResponse = EISConsumptionResponse(
-    LocalDateTime.of(2023, 5, 6, 9, 10, 13),
+    Instant.parse("2023-05-06T09:10:13Z"),
     "123",
     "any message"
   )
   private val newMessageResponseEmpty = EISConsumptionResponse(
-    LocalDateTime.of(2023, 5, 6, 9, 10, 13),
+    Instant.parse("2023-05-06T09:10:13Z"),
     "123",
     emptyNewMessageDataXml.toString()
   )
@@ -208,7 +208,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
     "send getNewMessage request for each pending ern if there are multiple" in {
 
-      addTwoItemsToMockQueue(createWorkItem(ern = "123"), createWorkItem(ern = "124"))
+      addTwoItemsToMockQueue(createWorkItem(), createWorkItem(ern = "124"))
 
       setGetNewMessagesAndAcknowledgeResponse(5)
 

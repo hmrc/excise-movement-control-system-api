@@ -23,8 +23,8 @@ import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISConsumptionHeaders, EISConsumptionResponse, EISErrorMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
@@ -35,28 +35,29 @@ class ShowNewMessagesConnector @Inject()(
                                           httpClient: HttpClient,
                                           appConfig: AppConfig,
                                           emcsUtils: EmcsUtils,
-                                          metrics: Metrics
+                                          metrics: Metrics,
+                                          dateTimeService: DateTimeService
                                         )(implicit ec: ExecutionContext) extends EISConsumptionHeaders with ResponseHandler with Logging {
 
   def get(ern: String)(implicit hc: HeaderCarrier): Future[Either[Result, EISConsumptionResponse]] = {
 
     val timer = metrics.defaultRegistry.timer("emcs.shownewmessage.timer").time()
     val correlationId = emcsUtils.generateCorrelationId
-    val dateTime = emcsUtils.getCurrentDateTimeString
+    val dateTime = dateTimeService.timestamp().toString
 
     httpClient.PUTString[HttpResponse](
-      appConfig.showNewMessageUrl(ern),
-      "",
-      build(correlationId, dateTime, appConfig.messagesBearerToken)
-    ).map { response =>
+        appConfig.showNewMessageUrl(ern),
+        "",
+        build(correlationId, dateTime, appConfig.messagesBearerToken)
+      ).map { response =>
 
-      extractIfSuccessful[EISConsumptionResponse](response) match {
-        case Right(eisResponse) => Right(eisResponse)
-        case Left(_) =>
-          logger.warn(s"[ShowNewMessageConnector] - ${EISErrorMessage(dateTime, ern, response.body, correlationId, MessageTypes.IE_NEW_MESSAGES.value)}")
-          Left(InternalServerError(response.body))
+        extractIfSuccessful[EISConsumptionResponse](response) match {
+          case Right(eisResponse) => Right(eisResponse)
+          case Left(_) =>
+            logger.warn(s"[ShowNewMessageConnector] - ${EISErrorMessage(dateTime, ern, response.body, correlationId, MessageTypes.IE_NEW_MESSAGES.value)}")
+            Left(InternalServerError(response.body))
+        }
       }
-    }
       .andThen { case _ => timer.stop() }
       .recover {
         case ex: Throwable =>

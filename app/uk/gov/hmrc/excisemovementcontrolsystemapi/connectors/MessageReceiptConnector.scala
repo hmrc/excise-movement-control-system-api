@@ -22,11 +22,11 @@ import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptResponse, MessageTypes}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISConsumptionHeaders, EISErrorMessage}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptResponse, MessageTypes}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -36,28 +36,29 @@ class MessageReceiptConnector @Inject()
   httpClient: HttpClient,
   appConfig: AppConfig,
   eisUtils: EmcsUtils,
-  metrics: Metrics
+  metrics: Metrics,
+  dateTimeService: DateTimeService
 )(implicit val ec: ExecutionContext) extends EISConsumptionHeaders with ResponseHandler with Logging {
 
   def put(ern: String)(implicit hc: HeaderCarrier): Future[Either[Result, MessageReceiptResponse]] = {
 
     val timer = metrics.defaultRegistry.timer("emcs.messagereceipt.timer").time()
-    val dateTime = eisUtils.getCurrentDateTimeString
+    val dateTime = dateTimeService.timestamp().toString
     val correlationId = eisUtils.generateCorrelationId
 
     httpClient.PUTString[HttpResponse](
-      appConfig.messageReceiptUrl(ern),
-      "",
-      build(correlationId, dateTime, appConfig.messagesBearerToken)
-    ).map {
-      response =>
-        extractIfSuccessful[MessageReceiptResponse](response) match {
-          case Right(eisResponse) => Right(eisResponse)
-          case Left(error) =>
-            logger.error(EISErrorMessage(dateTime, ern, response.body, correlationId, MessageTypes.IE_MESSAGE_RECEIPT.value))
-            Left(InternalServerError(error.body))
-        }
-    }
+        appConfig.messageReceiptUrl(ern),
+        "",
+        build(correlationId, dateTime, appConfig.messagesBearerToken)
+      ).map {
+        response =>
+          extractIfSuccessful[MessageReceiptResponse](response) match {
+            case Right(eisResponse) => Right(eisResponse)
+            case Left(error) =>
+              logger.error(EISErrorMessage(dateTime, ern, response.body, correlationId, MessageTypes.IE_MESSAGE_RECEIPT.value))
+              Left(InternalServerError(error.body))
+          }
+      }
       .andThen(_ => timer.stop())
       .recover {
         case ex: Throwable =>

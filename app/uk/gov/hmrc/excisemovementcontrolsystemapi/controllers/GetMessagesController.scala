@@ -23,7 +23,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
@@ -37,7 +37,7 @@ class GetMessagesController @Inject()(
                                        movementService: MovementService,
                                        workItemService: WorkItemService,
                                        cc: ControllerComponents,
-                                       implicit val emcsUtils: EmcsUtils
+                                       dateTimeService: DateTimeService
                                      )(implicit ec: ExecutionContext)
   extends BackendController(cc) {
 
@@ -47,7 +47,7 @@ class GetMessagesController @Inject()(
       implicit request: EnrolmentRequest[AnyContent] => {
 
         movementService.getMatchingERN(lrn, request.erns.toList).flatMap {
-          case None => Future.successful(BadRequest(Json.toJson(ErrorResponse(emcsUtils.getCurrentDateTime, "Invalid LRN supplied for ERN", ""))))
+          case None => Future.successful(BadRequest(Json.toJson(ErrorResponse(dateTimeService.timestamp(), "Invalid LRN supplied for ERN", ""))))
           case Some(ern) => workItemService.addWorkItemForErn(ern, fastMode = false)
             getMessagesAsJson(lrn, ern, updatedSince)
         }
@@ -69,13 +69,13 @@ class GetMessagesController @Inject()(
         }
 
     }.getOrElse(
-      Future.successful(BadRequest(Json.toJson(ErrorResponse(emcsUtils.getCurrentDateTime, "Invalid date format provided in the updatedSince query parameter", "Date format should be like '2020-11-15T17:02:34.00Z'")))))
+      Future.successful(BadRequest(Json.toJson(ErrorResponse(dateTimeService.timestamp(), "Invalid date format provided in the updatedSince query parameter", "Date format should be like '2020-11-15T17:02:34.00Z'")))))
   }
 
   private def filterMessagesByTime(messages: Seq[Message], updatedSince: Option[Instant]): Seq[Message] = {
     updatedSince.fold[Seq[Message]](messages)(a =>
-        messages.filter(o => o.createdOn.isAfter(a) || o.createdOn.equals(a))
-      )
+      messages.filter(o => o.createdOn.isAfter(a) || o.createdOn.equals(a))
+    )
   }
 
 }

@@ -23,10 +23,10 @@ import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISConsumptionHeaders, EISConsumptionResponse, EISErrorMessage}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -36,7 +36,8 @@ class GetMovementConnector @Inject()
   httpClient: HttpClient,
   appConfig: AppConfig,
   emcsUtils: EmcsUtils,
-  metrics: Metrics
+  metrics: Metrics,
+  dateTimeService: DateTimeService
 )(implicit val ec: ExecutionContext) extends EISConsumptionHeaders with ResponseHandler with Logging {
 
   def get(
@@ -46,21 +47,21 @@ class GetMovementConnector @Inject()
 
     val timer = metrics.defaultRegistry.timer("emcs.getmovements.timer").time()
     val correlationId = emcsUtils.generateCorrelationId
-    val createDateTime = emcsUtils.getCurrentDateTimeString
+    val createDateTime = dateTimeService.timestamp().toString
 
     httpClient.GET[HttpResponse](
-      appConfig.traderMovementUrl,
-      Seq("exciseregistrationnumber" -> ern, "arc" -> arc),
-      build(correlationId, createDateTime, appConfig.movementBearerToken)
-    ).map { response: HttpResponse =>
+        appConfig.traderMovementUrl,
+        Seq("exciseregistrationnumber" -> ern, "arc" -> arc),
+        build(correlationId, createDateTime, appConfig.movementBearerToken)
+      ).map { response: HttpResponse =>
 
-      extractIfSuccessful[EISConsumptionResponse](response) match {
-        case Right(eisResponse) => Right(eisResponse)
-        case Left(_) =>
-          logger.warn(EISErrorMessage(createDateTime, ern, response.body, correlationId, MessageTypes.IE_MOVEMENT_FOR_TRADER.value))
-          Left(InternalServerError(response.body))
+        extractIfSuccessful[EISConsumptionResponse](response) match {
+          case Right(eisResponse) => Right(eisResponse)
+          case Left(_) =>
+            logger.warn(EISErrorMessage(createDateTime, ern, response.body, correlationId, MessageTypes.IE_MOVEMENT_FOR_TRADER.value))
+            Left(InternalServerError(response.body))
+        }
       }
-    }
       .andThen { case _ => timer.stop() }
       .recover {
         case ex: Throwable =>

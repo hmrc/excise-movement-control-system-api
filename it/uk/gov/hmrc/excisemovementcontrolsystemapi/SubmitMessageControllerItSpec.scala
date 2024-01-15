@@ -21,6 +21,7 @@ import com.github.tomakehurst.wiremock.client.WireMock._
 import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, when}
+import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
@@ -42,7 +43,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumber
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, MovementRepository}
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
-import java.time.{Instant, LocalDateTime}
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
@@ -380,7 +381,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
   private def createEISErrorResponseBodyAsJson(message: String): JsValue = {
     Json.toJson(EISErrorResponse(
-      LocalDateTime.of(2023, 12, 5, 12, 5, 6),
+      Instant.parse("2023-12-05T12:05:06Z"),
       message,
       s"debug $message",
       "123"

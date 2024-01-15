@@ -64,7 +64,7 @@ class NrsServiceSpec
     new NrsEventIdMapper
   )
 
-  val message = mock[IE815Message]
+  private val message = mock[IE815Message]
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -124,9 +124,9 @@ class NrsServiceSpec
 
   private def submitNrs(hc: HeaderCarrier): NonRepudiationSubmission = {
 
-    val request =  createRequest(message)
+    val request = createRequest(message)
 
-    await(service.submitNrs(request,"correlationId")(hc))
+    await(service.submitNrs(request, "correlationId")(hc))
   }
 
   private def createRequest(message: IEMessage): ValidatedXmlRequest[_] = {

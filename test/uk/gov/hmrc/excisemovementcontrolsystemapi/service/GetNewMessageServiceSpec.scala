@@ -29,7 +29,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionRespo
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageServiceImpl, NewMessageParserService}
 import uk.gov.hmrc.http.HeaderCarrier
 
-import java.time.LocalDateTime
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
 class GetNewMessageServiceSpec
@@ -39,7 +39,7 @@ class GetNewMessageServiceSpec
   protected implicit val ec: ExecutionContext = ExecutionContext.global
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  private val dateTime = LocalDateTime.of(2023, 3, 4, 5, 6, 7)
+  private val dateTime = Instant.parse("2023-03-04T05:06:07Z")
   private val showNewMessageConnector = mock[ShowNewMessagesConnector]
   private val messageReceiptConnector = mock[MessageReceiptConnector]
   private val showNewMessageParser = mock[NewMessageParserService]
@@ -125,18 +125,18 @@ class GetNewMessageServiceSpec
       }
     }
 
-      "return empty response and message count as 0 when message-receipt fails and there are no messages" in {
-        when(showNewMessageParser.countOfMessagesAvailable(any)).thenReturn(0)
-        val eisResponse = EISConsumptionResponse(dateTime, "123", "any message")
-        when(showNewMessageConnector.get(any)(any))
-          .thenReturn(Future.successful(Right(eisResponse)))
-        when(messageReceiptConnector.put(any)(any))
-          .thenReturn(Future.successful(Left(BadRequest("error"))))
+    "return empty response and message count as 0 when message-receipt fails and there are no messages" in {
+      when(showNewMessageParser.countOfMessagesAvailable(any)).thenReturn(0)
+      val eisResponse = EISConsumptionResponse(dateTime, "123", "any message")
+      when(showNewMessageConnector.get(any)(any))
+        .thenReturn(Future.successful(Right(eisResponse)))
+      when(messageReceiptConnector.put(any)(any))
+        .thenReturn(Future.successful(Left(BadRequest("error"))))
 
-        val result = await(sut.getNewMessagesAndAcknowledge("123"))
+      val result = await(sut.getNewMessagesAndAcknowledge("123"))
 
-        result mustBe Some((eisResponse, 0))
-      }
+      result mustBe Some((eisResponse, 0))
+    }
 
   }
 }

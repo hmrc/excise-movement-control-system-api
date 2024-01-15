@@ -40,10 +40,10 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionRequest, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{EmcsUtils, ErnsMapper}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, ErnsMapper}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
-import java.time.LocalDateTime
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.{Elem, NodeSeq}
 
@@ -59,10 +59,11 @@ class EISSubmissionConnectorSpec
   private val mockHttpClient = mock[HttpClient]
   private val emcsUtils = mock[EmcsUtils]
   private val appConfig = mock[AppConfig]
+  private val dateTimeService = mock[DateTimeService]
 
   private val metrics = mock[Metrics](RETURNS_DEEP_STUBS)
 
-  private val connector = new EISSubmissionConnector(mockHttpClient, emcsUtils, appConfig, metrics, new ErnsMapper)
+  private val connector = new EISSubmissionConnector(mockHttpClient, emcsUtils, appConfig, metrics, new ErnsMapper, dateTimeService)
   private val emcsCorrelationId = "1234566"
   private val xml = <IE815></IE815>
   private val controlWrappedXml: Elem =
@@ -87,13 +88,15 @@ class EISSubmissionConnectorSpec
   private val submissionBearerToken = "submissionBearerToken"
 
 
+  private val timestamp = Instant.parse("2023-09-17T09:32:50.345Z")
+
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(mockHttpClient, appConfig, metrics, timerContext, emcsUtils)
 
     when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "Success", emcsCorrelationId))))
-    when(emcsUtils.getCurrentDateTimeString).thenReturn("2023-09-17T09:32:50.345")
+    when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(appConfig.emcsReceiverMessageUrl).thenReturn("/eis/path")
     when(appConfig.submissionBearerToken).thenReturn(submissionBearerToken)
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
@@ -162,7 +165,7 @@ class EISSubmissionConnectorSpec
       val result = await(submitExciseMovementForIE815)
 
       result.left.value mustBe InternalServerError(
-        Json.toJson(EISErrorResponse(LocalDateTime.parse("2023-09-17T09:32:50.345"),
+        Json.toJson(EISErrorResponse(timestamp,
           "Exception", "error", emcsCorrelationId)))
     }
 
@@ -246,7 +249,7 @@ class EISSubmissionConnectorSpec
   private def expectedHeader =
     Seq(HeaderNames.ACCEPT -> ContentTypes.JSON,
       HeaderNames.CONTENT_TYPE -> ContentTypes.JSON,
-      DateTimeName -> "2023-09-17T09:32:50.345",
+      DateTimeName -> timestamp.toString,
       XCorrelationIdName -> emcsCorrelationId,
       XForwardedHostName -> MDTPHost,
       SourceName -> APIPSource,

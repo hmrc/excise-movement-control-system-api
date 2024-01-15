@@ -20,27 +20,27 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connector.util
 import org.scalatest.EitherValues
 import org.scalatest.Inspectors.forAll
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, SERVICE_UNAVAILABLE, UNPROCESSABLE_ENTITY}
+import play.api.http.Status._
 import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable, UnprocessableEntity}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse, RimValidationErrorResponse, ValidatorResults}
 import uk.gov.hmrc.http.HttpResponse
 
-import java.time.LocalDateTime
+import java.time.Instant
 import scala.reflect.runtime.universe.typeOf
 
 class EISHttpReaderSpec extends PlaySpec with EitherValues {
 
   private val eisHttpParser = EISHttpReader("123", "GB123", "date time")
-  private val localDateTime = LocalDateTime.of(2023, 9, 19, 15, 57, 23)
+  private val localDateTime = Instant.parse("2023-09-19T15:57:23Z")
   private val exampleError = Json.toJson(
     EISErrorResponse(
       localDateTime,
       "Error",
       "Error details",
       "123"
-  ))
+    ))
 
   "read" should {
     "return EISResponse" in {

@@ -31,9 +31,9 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, F
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
-import java.time.{Instant, LocalDateTime, ZoneOffset}
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
 class GetMovementsControllerSpec
@@ -47,16 +47,16 @@ class GetMovementsControllerSpec
   private val cc = stubControllerComponents()
   private val movementService = mock[MovementService]
   private val workItemService = mock[WorkItemService]
-  private val emcsUtils = mock[EmcsUtils]
+  private val dateTimeService = mock[DateTimeService]
   private val controller = new GetMovementsController(
     FakeSuccessAuthentication,
     FakeValidateErnParameterSuccessAction,
     cc,
     movementService,
     workItemService,
-    emcsUtils
+    dateTimeService
   )
-  private val timeStamp = LocalDateTime.of(2020, 1, 1, 1, 1, 1, 1)
+  private val timeStamp = Instant.parse("2020-01-01T01:01:01.1Z")
   private val fakeRequest = FakeRequest("POST", "/foo")
 
   override def beforeEach(): Unit = {
@@ -69,7 +69,7 @@ class GetMovementsControllerSpec
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
 
 
-    when(emcsUtils.getCurrentDateTime).thenReturn(timeStamp)
+    when(dateTimeService.timestamp()).thenReturn(timeStamp)
 
   }
 
@@ -119,7 +119,7 @@ class GetMovementsControllerSpec
     }
 
     "use a filter" in {
-      val timestampNow = LocalDateTime.now().toInstant(ZoneOffset.UTC)
+      val timestampNow = Instant.now()
       await(controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString))(fakeRequest))
 
       val filter = MovementFilterBuilder()
@@ -179,6 +179,6 @@ class GetMovementsControllerSpec
       cc,
       movementService,
       workItemService,
-      emcsUtils
+      dateTimeService
     )
 }

@@ -35,7 +35,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUt
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.nio.charset.StandardCharsets
-import java.time.{Instant, LocalDateTime}
+import java.time.Instant
 import java.util.Base64
 import scala.concurrent.ExecutionContext
 
@@ -45,11 +45,10 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
 
   private val mockMovementRepository = mock[MovementRepository]
-  private val emcsUtils = mock[EmcsUtils]
-  private val testDateTime: LocalDateTime = LocalDateTime.of(2023, 11, 15, 17, 2, 34)
-  when(emcsUtils.getCurrentDateTime).thenReturn(testDateTime)
+  private val emcsUtils = new EmcsUtils
+  private val testDateTime: Instant = Instant.parse("2023-11-15T17:02:34Z")
   private val dateTimeService = mock[DateTimeService]
-  when(dateTimeService.timestamp()).thenReturn(Instant.parse("2023-11-15T17:02:34.00Z"))
+  when(dateTimeService.timestamp()).thenReturn(testDateTime)
 
   private val movementService = new MovementService(mockMovementRepository, emcsUtils, dateTimeService)
 
@@ -382,8 +381,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
     val cachedMessage1 = Message("<IE801>test</IE801>", MessageTypes.IE801.value, dateTimeService.timestamp())
     val cachedMessage2 = Message("<IE802>test</IE802>", MessageTypes.IE802.value, dateTimeService.timestamp())
 
-    //For these tests use a real EmcsUtils as we don't need the dateTime stubbed
-    val movementServiceForUpdateTests = new MovementService(mockMovementRepository, new EmcsUtils, dateTimeService)
+    val movementServiceForUpdateTests = new MovementService(mockMovementRepository, emcsUtils, dateTimeService)
 
     val movementARC456 = Movement("123", consignorId, None, Some("456"), now, Seq.empty)
     val movementARC89 = Movement("345", consignorId, None, Some("89"), now, Seq.empty)
@@ -424,7 +422,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
       when(newMessage.toXml).thenReturn(scala.xml.XML.loadString("<IE818>test</IE818>"))
       when(newMessage.messageType).thenReturn(MessageTypes.IE818.value)
-      val initialMovement = movementARC456.copy(messages= Seq(cachedMessage1, cachedMessage2))
+      val initialMovement = movementARC456.copy(messages = Seq(cachedMessage1, cachedMessage2))
 
       when(mockMovementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(initialMovement)))
       await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
@@ -439,7 +437,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
       await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
 
-      verify(mockMovementRepository).updateMovement(eqTo(movementARC456.copy(messages =Seq(expectedMessage))))
+      verify(mockMovementRepository).updateMovement(eqTo(movementARC456.copy(messages = Seq(expectedMessage))))
     }
 
     "message contains multiple Administration Reference Codes (ARCs)" in {
@@ -459,7 +457,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         intercept[RuntimeException] {
           await(movementServiceForUpdateTests.updateMovement(newMessage, consignorId))
-      }.getMessage mustBe "[MovementService] - Cannot retrieve a movement. Local reference number or administration reference code are not present for ERN: ABC, message: IE818"
+        }.getMessage mustBe "[MovementService] - Cannot retrieve a movement. Local reference number or administration reference code are not present for ERN: ABC, message: IE818"
       }
 
       "movement is not present" in {
