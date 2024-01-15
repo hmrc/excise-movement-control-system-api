@@ -59,7 +59,7 @@ class DraftExciseMovementController @Inject()(
     workItemService.addWorkItemForErn(newMovement.consignorId, fastMode = true)
 
     movementMessageService.saveNewMovement(newMovement).map {
-      case Right(m) => Accepted(Json.toJson(ExciseMovementResponse("Accepted", m.localReferenceNumber, m.consignorId, m.consigneeId)))
+      case Right(m) => Accepted(Json.toJson(ExciseMovementResponse("Accepted", m._id, m.localReferenceNumber, m.consignorId, m.consigneeId)))
       case Left(error) => error
     }
   }

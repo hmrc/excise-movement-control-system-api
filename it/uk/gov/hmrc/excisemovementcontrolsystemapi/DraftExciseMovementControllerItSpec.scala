@@ -42,7 +42,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, 
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, MovementRepository}
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.{Instant, LocalDateTime}
@@ -275,7 +274,11 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
   private def assertValidResult(result: WSResponse) = {
     val responseBody = Json.parse(result.body).as[ExciseMovementResponse]
-    responseBody mustBe ExciseMovementResponse("Accepted", "LRNQA20230909022221", consignorId, Some("GBWKQOZ8OVLYR"))
+    responseBody.status mustBe "Accepted"
+    responseBody.movementId.value.toString must fullyMatch.regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+    responseBody.consignorId mustBe consignorId
+    responseBody.localReferenceNumber mustBe "LRNQA20230909022221"
+    responseBody.consigneeId mustBe Some("GBWKQOZ8OVLYR")
   }
 
   private def createEISErrorResponseBodyAsJson(message: String): JsValue = {

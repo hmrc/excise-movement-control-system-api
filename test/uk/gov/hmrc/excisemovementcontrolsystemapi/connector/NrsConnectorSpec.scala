@@ -28,7 +28,7 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.Status.BAD_REQUEST
 import play.api.libs.concurrent.Futures
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.Json
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
