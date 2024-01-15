@@ -17,14 +17,13 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
 import com.google.inject.ImplementedBy
-import play.api.Logging
 import play.api.libs.json.Json
-import play.api.mvc.{ActionFilter, ActionRefiner, ControllerComponents, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
+import play.api.mvc.Results.NotFound
+import play.api.mvc.{ActionFilter, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{EmcsUtils, ErnsMapper}
-import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -33,13 +32,9 @@ import scala.concurrent.{ExecutionContext, Future}
 class ValidateMovementIdActionImpl @Inject()
 (
   val movementService: MovementService,
-  val emcsUtils: EmcsUtils,
-  val ernMappers: ErnsMapper,
-  cc: ControllerComponents
+  val emcsUtils: EmcsUtils
 )(implicit val ec: ExecutionContext)
-  extends BackendController(cc)
-    with ValidateLRNAction
-    with Logging {
+  extends ValidateMovementIdAction {
 
   override def apply(id: String): ActionFilter[ValidatedXmlRequest] =
     new ActionFilter[ValidatedXmlRequest] {
@@ -48,44 +43,39 @@ class ValidateMovementIdActionImpl @Inject()
 
       override def filter[A](request: ValidatedXmlRequest[A]): Future[Option[Result]] = {
 
-      //  Future.successful(None)
+        val authorisedErns = request.validErns
 
         movementService.getMovementById(id).map {
-          case Some(_) =>
-            //TODO can we get away with this?
-          val ernForMessage = ernMappers.getSingleErnFromMessage(request.message, request.validErns)
+          case Some(movement) =>
 
-            if (request.validErns.contains(ernForMessage)) {
-              None
+            val ernsForMovement = movementService.getErnsForMovement(movement)
+
+            if (authorisedErns.intersect(ernsForMovement).isEmpty) {
+              Some(NotFoundErrorResponse(id, authorisedErns))
             } else {
-              Some(NotFoundErrorResponse(id))
+              None
             }
 
-          case None => Some(NotFoundErrorResponse(id))
+          case None => Some(NotFoundErrorResponse(id, authorisedErns))
         }
 
-       // movementService.getMovementByLRNAndERNIn(lrn, request.validErns.toList).map {
-       //   case Some(_) => Right(request)
-     //     case _ => Left(NotFoundErrorResponse(lrn)(request))
-     //   }
       }
 
     }
 
 
-  private def NotFoundErrorResponse[A](id: String): Result = {
+  private def NotFoundErrorResponse[A](id: String, authorisedErns: Set[String]): Result = {
     NotFound(Json.toJson(
       ErrorResponse(
         emcsUtils.getCurrentDateTime,
         "Movement not found",
-        s"Movement $id is not found within the data"
+        s"Movement $id is not found within the data for ERNs ${authorisedErns.mkString("/")}"
       )
-      //TODO put erns back in here
     ))
   }
 }
 
 @ImplementedBy(classOf[ValidateMovementIdActionImpl])
-trait ValidateMovementIdAction  {
-  def apply(id: String):ActionRefiner[ValidatedXmlRequest, ValidatedXmlRequest]
+trait ValidateMovementIdAction {
+  def apply(id: String): ActionFilter[ValidatedXmlRequest]
 }

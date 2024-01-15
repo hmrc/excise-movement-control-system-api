@@ -16,39 +16,38 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
-import play.api.mvc.Results.BadRequest
+import play.api.mvc.Results.NotFound
 import play.api.mvc.{ActionFilter, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateErnParameterAction
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateMovementIdAction
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait FakeValidateErnParameterAction {
+trait FakeValidateMovementIdAction {
 
-  object FakeValidateErnParameterSuccessAction extends ValidateErnParameterAction {
+  object FakeSuccessValidateMovementIdAction extends ValidateMovementIdAction {
 
-    override def apply(ern: Option[String]): ActionFilter[EnrolmentRequest] = {
-      new ActionFilter[EnrolmentRequest] {
+    override def apply(id: String): ActionFilter[ValidatedXmlRequest] = {
+      new ActionFilter[ValidatedXmlRequest] {
 
         override val executionContext: ExecutionContext = ExecutionContext.Implicits.global
 
-        override def filter[A](request: EnrolmentRequest[A]): Future[Option[Result]] = {
+        override def filter[A](request: ValidatedXmlRequest[A]): Future[Option[Result]] = {
           Future.successful(None)
         }
       }
     }
   }
 
-  object FakeValidateErnParameterFailureAction extends ValidateErnParameterAction {
+  object FakeFailureValidateMovementIdAction extends ValidateMovementIdAction {
 
-    override def apply(ern: Option[String]): ActionFilter[EnrolmentRequest] = {
-      new ActionFilter[EnrolmentRequest] {
+    override def apply(id: String): ActionFilter[ValidatedXmlRequest] = {
+      new ActionFilter[ValidatedXmlRequest] {
 
         override val executionContext: ExecutionContext = ExecutionContext.Implicits.global
 
-        override def filter[A](request: EnrolmentRequest[A]): Future[Option[Result]] = {
-          Future.successful(Some(BadRequest("Error")))
+        override def filter[A](request: ValidatedXmlRequest[A]): Future[Option[Result]] = {
+          Future.successful(Some(NotFound("Error")))
         }
       }
     }

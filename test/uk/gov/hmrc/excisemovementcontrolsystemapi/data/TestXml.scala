@@ -349,7 +349,6 @@ trait TestXml {
     </urn7:Body>
   </urn7:IE802>
 
-
   lazy val IE803: Elem = <urn6:IE803 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
                                      xmlns:urn6="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE803:V3.01">
     <urn6:Header>
@@ -752,7 +751,6 @@ trait TestXml {
     </urn2:Body>
   </urn2:IE829>
 
-
   lazy val IE837WithConsignor: Elem =
     <urn:IE837 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE837:V3.01"
                xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
@@ -802,7 +800,7 @@ trait TestXml {
       <urn:Body>
         <urn:ExplanationOnDelayForDelivery>
           <urn:Attributes>
-            <urn:SubmitterIdentification>GBWK240176600</urn:SubmitterIdentification>
+            <urn:SubmitterIdentification>GBWK002281023</urn:SubmitterIdentification>
             <urn:SubmitterType>2</urn:SubmitterType>
             <urn:ExplanationCode>6</urn:ExplanationCode>
             <urn:ComplementaryInformation language="en">Accident on M5</urn:ComplementaryInformation>
@@ -1088,7 +1086,7 @@ trait TestXml {
     </urn:Body>
     </urn:IE871>
 
-   lazy val IE881: Elem =
+  lazy val IE881: Elem =
      <urn5:IE881 xmlns:urn5="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE881:V3.01"
                  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01">
         <urn5:Header>
@@ -1135,7 +1133,7 @@ trait TestXml {
         </urn5:Body>
       </urn5:IE881>
 
-    lazy val IE905: Elem = <urn6:IE905 xmlns:urn6="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE905:V3.01"
+  lazy val IE905: Elem = <urn6:IE905 xmlns:urn6="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE905:V3.01"
                                        xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01">
       <urn6:Header>
         <urn:MessageSender>NDEA.GB</urn:MessageSender>

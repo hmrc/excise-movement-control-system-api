@@ -27,7 +27,7 @@ import play.api.mvc.Results.NotFound
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnInMessageAction, FakeValidateLRNAction, FakeXmlParsers}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnInMessageAction, FakeValidateMovementIdAction, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{SubmissionMessageService, WorkItemService}
@@ -41,7 +41,7 @@ class SubmitMessageControllerSpec
     with FakeAuthentication
     with FakeXmlParsers
     with FakeValidateErnInMessageAction
-    with FakeValidateLRNAction
+    with FakeValidateMovementIdAction
     with BeforeAndAfterEach
     with TestXml {
 
@@ -118,9 +118,9 @@ class SubmitMessageControllerSpec
       }
     }
 
-    "return a ern / lrn mismatch error" when {
-      "lrn and ern are not in the database" in {
-        val result = createWithLRNValidationError.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request)
+    "return a not found error" when {
+      "movement id validation fails" in {
+        val result = createWithMovementIdFailure.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request)
 
         status(result) mustBe NOT_FOUND
       }
@@ -144,7 +144,7 @@ class SubmitMessageControllerSpec
       FakeSuccessAuthentication,
       FakeSuccessXMLParser,
       FakeSuccessfulValidateErnInMessageAction(ieMessage),
-      FakeSuccessfulValidateLRNAction,
+      FakeSuccessValidateMovementIdAction,
       submissionMessageService,
       workItemService,
       ernsMapper,
@@ -162,7 +162,7 @@ class SubmitMessageControllerSpec
       FakeFailingAuthentication,
       FakeSuccessXMLParser,
       FakeSuccessfulValidateErnInMessageAction(ieMessage),
-      FakeFailureValidateLRNAction,
+      FakeSuccessValidateMovementIdAction,
       submissionMessageService,
       workItemService,
       ernsMapper,
@@ -174,7 +174,7 @@ class SubmitMessageControllerSpec
       FakeSuccessAuthentication,
       FakeFailureXMLParser,
       FakeSuccessfulValidateErnInMessageAction(ieMessage),
-      FakeFailureValidateLRNAction,
+      FakeSuccessValidateMovementIdAction,
       submissionMessageService,
       workItemService,
       ernsMapper,
@@ -186,19 +186,19 @@ class SubmitMessageControllerSpec
       FakeSuccessAuthentication,
       FakeSuccessXMLParser,
       FakeFailureValidateErnInMessageAction,
-      FakeFailureValidateLRNAction,
+      FakeSuccessValidateMovementIdAction,
       submissionMessageService,
       workItemService,
       ernsMapper,
       cc
     )
 
-  private def createWithLRNValidationError =
+  private def createWithMovementIdFailure =
     new SubmitMessageController(
       FakeSuccessAuthentication,
       FakeSuccessXMLParser,
       FakeSuccessfulValidateErnInMessageAction(ieMessage),
-      FakeFailureValidateLRNAction,
+      FakeFailureValidateMovementIdAction,
       submissionMessageService,
       workItemService,
       ernsMapper,

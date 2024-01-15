@@ -17,14 +17,13 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, ok, post, postRequestedFor, urlEqualTo, verify}
+import com.github.tomakehurst.wiremock.client.WireMock._
 import org.bson.types.ObjectId
-import org.mockito.ArgumentMatchersSugar.any
+import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, when}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
-import org.scalatest.prop.TableDrivenPropertyChecks._
 import play.api.Application
 import play.api.http.HeaderNames
 import play.api.http.Status._
@@ -45,7 +44,7 @@ import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.{Instant, LocalDateTime}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.xml.{Elem, NodeSeq}
+import scala.xml.NodeSeq
 
 
 class SubmitMessageControllerItSpec extends PlaySpec
@@ -61,10 +60,12 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
 
-  private def url(lrn: String) = s"http://localhost:$port/movements/$lrn/messages"
+  private def url(movementId: String) = s"http://localhost:$port/movements/$movementId/messages"
 
   private val eisUrl = "/emcs/digital-submit-new-message/v1"
+  private val consignorId = "GBWK240176600"
   private val consigneeId = "GBWK002281023"
+  private val movement = Movement("LRNQA20230909022221", consignorId, Some(consigneeId), Some("23GB00000000000377161"))
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
@@ -100,8 +101,8 @@ class SubmitMessageControllerItSpec extends PlaySpec
     super.beforeEach()
     reset(authConnector, movementRepository)
 
-    when(movementRepository.getMovementByLRNAndERNIn(any, any))
-      .thenReturn(Future.successful(Seq(Movement("LRNQA20230909022221", "", Some("23GB00000000000378553")))))
+    when(movementRepository.getMovementById(eqTo(movement._id)))
+      .thenReturn(Future.successful(Some(movement)))
 
     when(workItemRepository.pushNew(any, any, any)).thenReturn(Future.successful(workItem))
     when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
@@ -118,10 +119,9 @@ class SubmitMessageControllerItSpec extends PlaySpec
   "Submit IE810 Cancellation" should {
 
     "return 202 when submitted by consignor" in {
-      when(movementRepository.getMovementByARC("23GB00000000000377161"))
-        .thenReturn(Future.successful(Seq(Movement("LRNQA20230909022221", "consignor", Some("consignee"), Some("23GB00000000000377161")))))
+      when(movementRepository.getMovementByARC("23GB00000000000377161")).thenReturn(Future.successful(Seq(movement)))
 
-      withAuthorizedTrader("consignor")
+      withAuthorizedTrader(consignorId)
       stubEISSuccessfulRequest()
 
       val result = postRequest(IE810)
@@ -132,9 +132,9 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
     "return 202 when submitted by consignee" in {
       when(movementRepository.getMovementByARC("23GB00000000000377161"))
-        .thenReturn(Future.successful(Seq(Movement("LRNQA20230909022221", "consignor", Some("consignee"), Some("23GB00000000000377161")))))
+        .thenReturn(Future.successful(Seq(movement)))
 
-      withAuthorizedTrader("consignee")
+      withAuthorizedTrader(consigneeId)
       stubEISSuccessfulRequest()
 
       val result = postRequest(IE810)
@@ -149,9 +149,9 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
     "return 202 when submitted by consignor" in {
       when(movementRepository.getMovementByARC("23GB00000000000378126"))
-        .thenReturn(Future.successful(Seq(Movement("LRNQA20230909022221", "consignor", Some("consignee"), Some("23GB00000000000378126")))))
+        .thenReturn(Future.successful(Seq(movement)))
 
-      withAuthorizedTrader("consignor")
+      withAuthorizedTrader(consignorId)
       stubEISSuccessfulRequest()
 
       val result = postRequest(IE813)
@@ -162,7 +162,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
     "return 403 error when submitted by consignee" in {
       when(movementRepository.getMovementByARC("23GB00000000000378126"))
-        .thenReturn(Future.successful(Seq(Movement("LRNQA20230909022221", "consignor", Some("consignee"), Some("23GB00000000000378126")))))
+        .thenReturn(Future.successful(Seq(movement)))
 
       withAuthorizedTrader("consignee")
       stubEISSuccessfulRequest()
@@ -174,104 +174,200 @@ class SubmitMessageControllerItSpec extends PlaySpec
     }
   }
 
-  "return not found if EIS returns not found" in {
-      withAuthorizedTrader("GBWK002281023")
-      val eisErrorResponse = createEISErrorResponseBodyAsJson("NOT_FOUND")
-      stubEISErrorResponse(NOT_FOUND, eisErrorResponse.toString())
+  "Submit IE818 Report of Receipt Movement" should {
+
+    "return 403 when sent in by the consignor" in {
+      withAuthorizedTrader(consignorId)
+      stubEISSuccessfulRequest()
 
       val result = postRequest(IE818)
 
-      result.status mustBe NOT_FOUND
-
-      withClue("return the EIS error response") {
-        result.json mustBe Json.toJson(eisErrorResponse)
-      }
+      result.status mustBe FORBIDDEN
+      result.body.isEmpty mustBe false
     }
 
-  "return not found if database cannot find ERN/LRN combo" in {
-      withAuthorizedTrader("GBWK002281023")
+    "return 202 when sent in by the consignee" in {
+      withAuthorizedTrader(consigneeId)
+      stubEISSuccessfulRequest()
 
-      when(movementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq.empty))
+      val result = postRequest(IE818)
 
-      val result: WSResponse = postRequest(IE818)
-
-      result.status mustBe NOT_FOUND
+      result.status mustBe ACCEPTED
+      result.body.isEmpty mustBe true
     }
 
-  "return bad request if EIS return BAD_REQUEST" in {
-      withAuthorizedTrader("GBWK002281023")
-      stubEISErrorResponse(BAD_REQUEST, createEISErrorResponseBodyAsJson("BAD_REQUEST").toString())
+  }
 
-      postRequest(IE818).status mustBe BAD_REQUEST
+  "Submit IE819 Alert or Rejection" should {
+
+    "return 403 when sent in by the consignor" in {
+      withAuthorizedTrader(consignorId)
+      stubEISSuccessfulRequest()
+
+      val result = postRequest(IE819)
+
+      result.status mustBe FORBIDDEN
+      result.body.isEmpty mustBe false
     }
 
-    "remove control document references in any paths for a BAD_REQUEST" in {
-      withAuthorizedTrader("GBWK002281023")
-      stubEISErrorResponse(BAD_REQUEST, rimValidationErrorResponse(messageWithControlDoc))
+    "return 202 when sent in by the consignee" in {
+      withAuthorizedTrader(consigneeId)
+      stubEISSuccessfulRequest()
 
-      val response = postRequest(IE818)
+      val result = postRequest(IE819)
 
-      clean(response.body) mustBe clean(rimValidationErrorResponse(messageWithoutControlDoc))
-
+      result.status mustBe ACCEPTED
+      result.body.isEmpty mustBe true
     }
+
+  }
+
+  "Submit IE837 Report of Receipt Movement" should {
+
+    "return 202 when sent in by the consignor" in {
+      withAuthorizedTrader(consignorId)
+      stubEISSuccessfulRequest()
+
+      val result = postRequest(IE837WithConsignor)
+
+      result.status mustBe ACCEPTED
+      result.body.isEmpty mustBe true
+    }
+
+    "return 202 when sent in by the consignee" in {
+      withAuthorizedTrader(consigneeId)
+      stubEISSuccessfulRequest()
+
+      val result = postRequest(IE837WithConsignee)
+
+      result.status mustBe ACCEPTED
+      result.body.isEmpty mustBe true
+    }
+
+  }
+
+  "Submit IE871 Explanation On Shortage" should {
+
+    "return 202 when sent in by the consignor" in {
+      withAuthorizedTrader(consignorId)
+      stubEISSuccessfulRequest()
+
+      val result = postRequest(IE871)
+
+      result.status mustBe ACCEPTED
+      result.body.isEmpty mustBe true
+    }
+
+    "return 403 when sent in by the consignee" in {
+      withAuthorizedTrader(consigneeId)
+      stubEISSuccessfulRequest()
+
+      val result = postRequest(IE871)
+
+      result.status mustBe FORBIDDEN
+      result.body.isEmpty mustBe false
+    }
+
+  }
+
+  "return not found if EIS returns not found" in {
+    withAuthorizedTrader("GBWK002281023")
+    val eisErrorResponse = createEISErrorResponseBodyAsJson("NOT_FOUND")
+    stubEISErrorResponse(NOT_FOUND, eisErrorResponse.toString())
+
+    val result = postRequest(IE818)
+
+    result.status mustBe NOT_FOUND
+
+    withClue("return the EIS error response") {
+      result.json mustBe Json.toJson(eisErrorResponse)
+    }
+  }
+
+  "return not found if database cannot find movement ID for ERN" in {
+    withAuthorizedTrader(consigneeId)
+
+    when(movementRepository.getMovementById(eqTo(movement._id)))
+      .thenReturn(Future.successful(None))
+
+    val result: WSResponse = postRequest(IE818)
+
+    result.status mustBe NOT_FOUND
+  }
+
+  "return bad request if EIS returns BAD_REQUEST" in {
+    withAuthorizedTrader(consigneeId)
+    stubEISErrorResponse(BAD_REQUEST, createEISErrorResponseBodyAsJson("BAD_REQUEST").toString())
+
+    postRequest(IE818).status mustBe BAD_REQUEST
+  }
+
+  "remove control document references in any paths for a BAD_REQUEST" in {
+    withAuthorizedTrader(consigneeId)
+    stubEISErrorResponse(BAD_REQUEST, rimValidationErrorResponse(messageWithControlDoc))
+
+    val response = postRequest(IE818)
+
+    clean(response.body) mustBe clean(rimValidationErrorResponse(messageWithoutControlDoc))
+
+  }
 
   "return 500 if EIS return 500" in {
-      withAuthorizedTrader(consigneeId)
-      stubEISErrorResponse(INTERNAL_SERVER_ERROR, createEISErrorResponseBodyAsJson("INTERNAL_SERVER_ERROR").toString())
+    withAuthorizedTrader(consigneeId)
+    stubEISErrorResponse(INTERNAL_SERVER_ERROR, createEISErrorResponseBodyAsJson("INTERNAL_SERVER_ERROR").toString())
 
-      postRequest(IE818).status mustBe INTERNAL_SERVER_ERROR
-    }
+    postRequest(IE818).status mustBe INTERNAL_SERVER_ERROR
+  }
 
   "return 500 if EIS return bad json" in {
-      withAuthorizedTrader(consigneeId)
-      stubEISErrorResponse(INTERNAL_SERVER_ERROR, """"{"json": "is-bad"}""")
+    withAuthorizedTrader(consigneeId)
+    stubEISErrorResponse(INTERNAL_SERVER_ERROR, """"{"json": "is-bad"}""")
 
-      postRequest(IE818).status mustBe INTERNAL_SERVER_ERROR
-    }
+    postRequest(IE818).status mustBe INTERNAL_SERVER_ERROR
+  }
 
   "return forbidden (403) when there are no authorized ERN" in {
-      withAnEmptyERN()
+    withAnEmptyERN()
 
-      postRequest(IE818).status mustBe FORBIDDEN
-    }
+    postRequest(IE818).status mustBe FORBIDDEN
+  }
 
   "return a Unauthorized (401) when no authorized trader" in {
-      withUnauthorizedTrader(InternalError("A general auth failure"))
+    withUnauthorizedTrader(InternalError("A general auth failure"))
 
-      postRequest(IE818).status mustBe UNAUTHORIZED
-    }
+    postRequest(IE818).status mustBe UNAUTHORIZED
+  }
 
   "return bad request (400) when xml cannot be parsed" in {
-      withAuthorizedTrader("GBWK002281023")
+    withAuthorizedTrader("GBWK002281023")
 
-      postRequest(<IE818></IE818>).status mustBe BAD_REQUEST
-    }
+    postRequest(<IE818></IE818>).status mustBe BAD_REQUEST
+  }
 
   "return Unsupported Media Type (415)" in {
-      withAuthorizedTrader("GBWK002281023")
-      postRequest(contentType = """application/json""").status mustBe UNSUPPORTED_MEDIA_TYPE
-    }
+    withAuthorizedTrader("GBWK002281023")
+    postRequest(contentType = """application/json""").status mustBe UNSUPPORTED_MEDIA_TYPE
+  }
 
   "return bad request (400) when body is not xml" in {
-      withAuthorizedTrader("GBWK002281023")
+    withAuthorizedTrader("GBWK002281023")
 
-      //Can't use postRequest routine as test requires non-xml body
-      val result = await(wsClient.url(url("lrn"))
-        .addHttpHeaders(
-          HeaderNames.AUTHORIZATION -> "TOKEN",
-          HeaderNames.CONTENT_TYPE -> """application/vnd.hmrc.1.0+xml"""
-        ).post("test")
-      )
+    //Can't use postRequest routine as test requires non-xml body
+    val result = await(wsClient.url(url("lrn"))
+      .addHttpHeaders(
+        HeaderNames.AUTHORIZATION -> "TOKEN",
+        HeaderNames.CONTENT_TYPE -> """application/vnd.hmrc.1.0+xml"""
+      ).post("test")
+    )
 
-      result.status mustBe BAD_REQUEST
-    }
+    result.status mustBe BAD_REQUEST
+  }
 
   "return forbidden (403) when consignor id cannot be validate" in {
-      withAuthorizedTrader("123")
+    withAuthorizedTrader()
 
-      postRequest(IE818).status mustBe FORBIDDEN
-    }
+    postRequest(IE818).status mustBe FORBIDDEN
+  }
 
   "submit to NRS" in {
     withAuthorizedTrader(consigneeId)
@@ -280,31 +376,6 @@ class SubmitMessageControllerItSpec extends PlaySpec
     postRequest(IE818)
 
     verify(postRequestedFor(urlEqualTo("/submission")))
-  }
-
-  val table = Table(
-    ("description", "message", "consignorId"),
-    ("IE818 - Report of Receipt Movement", IE818, consigneeId),
-    ("IE819 - Alert or Rejection", IE819, "GBWK002281023"),
-    ("IE837 - Report of Receipt Movement", IE837WithConsignee, "GBWK240176600"),
-    ("IE871 Explanation On Shortage", IE871, "GBWK240176600")
-  )
-
-  forAll(table) {
-    (
-      description: String,
-      message: Elem,
-      consignorId: String
-    ) =>
-      s"submit message $description" in {
-        withAuthorizedTrader(consignorId)
-        stubEISSuccessfulRequest()
-
-        val result = postRequest(message)
-
-        result.status mustBe ACCEPTED
-        result.body.isEmpty mustBe true
-      }
   }
 
   private def createEISErrorResponseBodyAsJson(message: String): JsValue = {
@@ -318,10 +389,9 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
   private def postRequest(
                            xml: NodeSeq = IE818,
-                           contentType: String = """application/vnd.hmrc.1.0+xml""",
-                           lrn: String = "LRNQA20230909022221"
+                           contentType: String = """application/vnd.hmrc.1.0+xml"""
                          ) = {
-    await(wsClient.url(url(lrn))
+    await(wsClient.url(url(movement._id))
       .addHttpHeaders(
         HeaderNames.AUTHORIZATION -> "TOKEN",
         HeaderNames.CONTENT_TYPE -> contentType
