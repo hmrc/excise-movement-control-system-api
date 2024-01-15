@@ -81,10 +81,7 @@ class MovementRepository @Inject()
   }
 
   def getMovementById(id: String): Future[Option[Movement]] = {
-    collection.find(equal("_id", id)).toFuture().map {
-      case x if x.isEmpty => None
-      case x => x.headOption
-    }
+    collection.find(equal("_id", id)).headOption()
   }
 
   def getMovementByLRNAndERNIn(lrn: String, erns: List[String]): Future[Seq[Movement]] = {

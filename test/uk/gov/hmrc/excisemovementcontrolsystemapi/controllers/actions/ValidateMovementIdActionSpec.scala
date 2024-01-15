@@ -71,9 +71,7 @@ class ValidateMovementIdActionSpec
     "return a request when id is in database and matches the ern" in {
 
       when(movementService.getMovementById(any))
-        .thenReturn(Future.successful(Some(Movement("lrn", "consignorId", None))))
-
-      when(movementService.getErnsForMovement(any)).thenReturn(Set("GBWK002181023", "GBWK002281022"))
+        .thenReturn(Future.successful(Some(Movement("lrn", "GBWK002181023", Some("GBWK002281022")))))
 
       val checkResponseMatchesRequestBlock = (actual: ValidatedXmlRequest[_]) => {
         actual mustBe request
@@ -103,8 +101,6 @@ class ValidateMovementIdActionSpec
 
       when(movementService.getMovementById(any))
         .thenReturn(Future.successful(Some(Movement("lrn", "GBWK002281029", Some("GBWK002281039")))))
-
-      when(movementService.getErnsForMovement(any)).thenReturn(Set("GBWK00858555"))
 
       val result = await(sut.apply("uuid1").invokeBlock(request, defaultBlock))
 

@@ -22,6 +22,7 @@ import play.api.mvc.Results.NotFound
 import play.api.mvc.{ActionFilter, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 
@@ -48,7 +49,7 @@ class ValidateMovementIdActionImpl @Inject()
         movementService.getMovementById(id).map {
           case Some(movement) =>
 
-            val ernsForMovement = movementService.getErnsForMovement(movement)
+            val ernsForMovement = getErnsForMovement(movement)
 
             if (authorisedErns.intersect(ernsForMovement).isEmpty) {
               Some(NotFoundErrorResponse(id, authorisedErns))
@@ -72,6 +73,10 @@ class ValidateMovementIdActionImpl @Inject()
         s"Movement $id is not found within the data for ERNs ${authorisedErns.mkString("/")}"
       )
     ))
+  }
+
+  private def getErnsForMovement(movement: Movement): Set[String] = {
+    Set(Some(movement.consignorId), movement.consigneeId).flatten
   }
 }
 

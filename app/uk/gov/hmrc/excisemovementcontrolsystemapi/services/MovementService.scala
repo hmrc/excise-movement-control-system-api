@@ -117,10 +117,6 @@ class MovementService @Inject()(
     }).flatten
   }
 
-  def getErnsForMovement(movement: Movement): Set[String] = {
-    Set(Some(movement.consignorId), movement.consigneeId).flatten
-  }
-
   private def updateMovementForIndividualArc(message: IEMessage, ern: String, cachedMovements: Seq[Movement], messageArc: Option[String]) = {
     val movementWithArc = cachedMovements.find(o => o.administrativeReferenceCode.equals(messageArc))
     val movementWithLrn = cachedMovements.find(m => message.lrnEquals(m.localReferenceNumber))

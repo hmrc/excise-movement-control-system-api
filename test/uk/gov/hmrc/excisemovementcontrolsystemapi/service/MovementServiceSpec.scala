@@ -509,23 +509,6 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
     }
   }
 
-  "getErnsForMovement" should {
-
-    "return the consignor if only that is set" in {
-      val movement = Movement("lrn", "consignor", None)
-
-      movementService.getErnsForMovement(movement) mustBe Set("consignor")
-    }
-
-    "return the consignor and consignee if both are set" in {
-      val movement = Movement("lrn", "consignor", Some("consignee"))
-
-      movementService.getErnsForMovement(movement) mustBe Set("consignor", "consignee")
-    }
-
-
-  }
-
   private def setUpForUpdateMovement
   (
     message: IEMessage,
