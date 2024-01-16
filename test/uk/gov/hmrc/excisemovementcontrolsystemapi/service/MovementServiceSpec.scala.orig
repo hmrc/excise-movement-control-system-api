@@ -89,7 +89,12 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
       val result = await(movementService.saveNewMovement(exampleMovement))
 
+<<<<<<< HEAD
+      val expectedError = ErrorResponse(testDateTime, "Database error", "Error occurred while saving movement")
+
+=======
       val expectedError = ErrorResponse(testDateTime, "Database error", "error")
+>>>>>>> b7b76ab (getting the box id for  push notification)
       result.left.value mustBe InternalServerError(Json.toJson(expectedError))
     }
 

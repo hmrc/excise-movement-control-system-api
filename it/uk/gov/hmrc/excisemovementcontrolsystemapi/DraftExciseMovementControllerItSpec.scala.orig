@@ -40,7 +40,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{AuthTestSupport, Stri
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, SubmitMessageTestSupport, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Constants
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.FailedBoxIdNotificationResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
@@ -50,6 +49,10 @@ import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+<<<<<<< HEAD
+import java.time.{Instant, LocalDateTime, ZoneOffset, ZonedDateTime}
+=======
+>>>>>>> 1b59bf1 (refactor and some clean up)
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
@@ -121,6 +124,10 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     authorizeNrsWithIdentityData
     stubGetBoxIdSuccessRequest
     when(dateTimeService.timestamp()).thenReturn(timeStamp)
+<<<<<<< HEAD
+    when(dateTimeService.nowUtc).thenReturn(ZonedDateTime.now(ZoneOffset.UTC))
+=======
+>>>>>>> 1b59bf1 (refactor and some clean up)
   }
 
   "Draft Excise Movement" should {
@@ -157,11 +164,9 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
         result.status mustBe BAD_REQUEST
         withClue("return the json response") {
-          val expectedJson =
-            s"""{"dateTime":"$timeStamp",
-               |"message":"Box Id error",
-               |"debugMessage":"Missing or incorrect query parameter"}""".stripMargin
-          Json.parse(result.body) mustBe Json.parse(expectedJson)
+          val expectedJson = ErrorResponse(timeStamp, "Push Notification Error", "Missing or incorrect query parameter")
+          val responseBody = Json.parse(result.body).as[ErrorResponse]
+          responseBody mustBe expectedJson
         }
 
         withClue("should not submit to NRS") {
@@ -339,8 +344,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   private def createEISErrorResponseBodyAsJson(message: String): JsValue = {
     Json.toJson(EISErrorResponse(
       Instant.parse("2023-12-05T12:05:06Z"),
-      message.toUpperCase,
-      message.toLowerCase,
+      message,
       s"debug $message",
       "123"
     ))

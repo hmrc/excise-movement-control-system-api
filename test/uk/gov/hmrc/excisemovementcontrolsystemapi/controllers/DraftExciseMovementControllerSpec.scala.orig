@@ -34,7 +34,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, F
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.SuccessBoxNotificationResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.BoxNotificationResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, SubmissionMessageService, WorkItemService}
 
@@ -69,7 +69,7 @@ class DraftExciseMovementControllerSpec
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
     when(notificationConnector.getBoxId(any)(any))
-      .thenReturn(Future.successful(Right(SuccessBoxNotificationResponse(boxId))))
+      .thenReturn(Future.successful(Right(BoxNotificationResponse(boxId))))
 
     when(mockIeMessage.consigneeId).thenReturn(Some("789"))
     when(mockIeMessage.consignorId).thenReturn("456")
@@ -78,14 +78,23 @@ class DraftExciseMovementControllerSpec
 
   "submit" should {
     "return 200" in {
+<<<<<<< HEAD
       when(movementService.saveNewMovement(any))
         .thenReturn(Future.successful(Right(Movement("123", boxId, "456", Some("789"), None, Instant.now))))
+=======
+      when(movementMessageService.saveNewMovement(any))
+        .thenReturn(Future.successful(Right(Movement("123", "456", Some("789"), None, Instant.now))))
+>>>>>>> aef7443 (getting the box id for  push notification)
 
       val result = createWithSuccessfulAuth.submit(request)
 
       status(result) mustBe ACCEPTED
 
+<<<<<<< HEAD
       withClue("submit the message") {
+=======
+      withClue("submit hte message") {
+>>>>>>> aef7443 (getting the box id for  push notification)
         val captor = ArgCaptor[ValidatedXmlRequest[_]]
         verify(submissionMessageService).submit(captor.capture)(any)
         captor.value.message mustBe mockIeMessage
@@ -97,6 +106,7 @@ class DraftExciseMovementControllerSpec
 
       withClue("should save the new movement") {
         val captor = ArgCaptor[Movement]
+<<<<<<< HEAD
         verify(movementService).saveNewMovement(captor.capture)
         val newMovement = captor.value
         newMovement.localReferenceNumber mustBe "123"
@@ -105,12 +115,25 @@ class DraftExciseMovementControllerSpec
         newMovement.administrativeReferenceCode mustBe None
         newMovement.messages mustBe Seq.empty
         newMovement.boxId mustBe boxId
+=======
+        verify(movementMessageService).saveNewMovement(captor.capture)
+        captor.value.localReferenceNumber mustBe "123"
+        captor.value.consignorId mustBe "456"
+        captor.value.consigneeId mustBe Some("789")
+        captor.value.administrativeReferenceCode mustBe None
+        captor.value.messages mustBe Seq.empty
+>>>>>>> aef7443 (getting the box id for  push notification)
       }
     }
 
     "call the add work item routine to create or update the database" in {
+<<<<<<< HEAD
       when(movementService.saveNewMovement(any))
         .thenReturn(Future.successful(Right(Movement(boxId, "lrn", ern, None))))
+=======
+      when(movementMessageService.saveNewMovement(any))
+        .thenReturn(Future.successful(Right(Movement("lrn", ern, None))))
+>>>>>>> aef7443 (getting the box id for  push notification)
 
       await(createWithSuccessfulAuth.submit(request))
 
@@ -118,8 +141,13 @@ class DraftExciseMovementControllerSpec
     }
 
     "return ACCEPTED if failing to add workItem " in {
+<<<<<<< HEAD
       when(movementService.saveNewMovement(any))
         .thenReturn(Future.successful(Right(Movement(boxId, "lrn", ern, None))))
+=======
+      when(movementMessageService.saveNewMovement(any))
+        .thenReturn(Future.successful(Right(Movement("lrn", ern, None))))
+>>>>>>> aef7443 (getting the box id for  push notification)
       when(workItemService.addWorkItemForErn(any, any))
         .thenReturn(Future.failed(new MongoException("Oh no!")))
 
@@ -130,6 +158,11 @@ class DraftExciseMovementControllerSpec
 
     "return an error" when {
       "get box id return an error" in {
+<<<<<<< HEAD
+=======
+        when(movementMessageService.saveNewMovement(any))
+          .thenReturn(Future.successful(Right(Movement("123", "456", Some("789"), None, Instant.now))))
+>>>>>>> aef7443 (getting the box id for  push notification)
         when(notificationConnector.getBoxId(any)(any))
           .thenReturn(Future.successful(Left(BadRequest("error"))))
 
@@ -143,8 +176,13 @@ class DraftExciseMovementControllerSpec
       }
 
       "clientId is not available" in {
+<<<<<<< HEAD
         when(movementService.saveNewMovement(any))
           .thenReturn(Future.successful(Right(Movement(boxId, "123", "456", Some("789"), None, Instant.now))))
+=======
+        when(movementMessageService.saveNewMovement(any))
+          .thenReturn(Future.successful(Right(Movement("123", "456", Some("789"), None, Instant.now))))
+>>>>>>> aef7443 (getting the box id for  push notification)
 
         val result = createWithSuccessfulAuth.submit(createRequestWithoutClientId)
 
@@ -179,7 +217,11 @@ class DraftExciseMovementControllerSpec
       }
 
       "cannot save the movement" in {
+<<<<<<< HEAD
         when(movementService.saveNewMovement(any))
+=======
+        when(movementMessageService.saveNewMovement(any))
+>>>>>>> aef7443 (getting the box id for  push notification)
           .thenReturn(Future.successful(Left(InternalServerError("error"))))
 
         val result = createWithSuccessfulAuth.submit(request)
