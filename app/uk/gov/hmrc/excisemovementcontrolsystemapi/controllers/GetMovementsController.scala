@@ -44,9 +44,6 @@ class GetMovementsController @Inject()(
   def getMovements(ern: Option[String], lrn: Option[String], arc: Option[String], updatedSince: Option[String]): Action[AnyContent] = {
     (authAction andThen validateErnParameterAction(ern)).async(parse.default) {
       implicit request =>
-        //IF movement Id query, look at request ERNS, and do like the action thingy thing from the last one...
-        // still need to allow for applying the other filters, since they're there. If no movementID query, then nothing changes
-
         workItemService.addWorkItemForErn(ern.getOrElse(request.erns.head), fastMode = false)
 
         Try(updatedSince.map(Instant.parse(_))).map { updatedSinceTime =>
