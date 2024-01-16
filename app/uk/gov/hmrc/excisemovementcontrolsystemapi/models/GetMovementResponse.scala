@@ -17,10 +17,9 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
 import play.api.libs.json.{Json, OFormat}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.MovementId
 
 case class GetMovementResponse(
-  movementId: MovementId,
+  movementId: String,
   consignorId: String,
   localReferenceNumber: String,
   consigneeId: Option[String],

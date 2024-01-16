@@ -29,12 +29,11 @@ import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilterBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnParameterAction, MovementTestUtils}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Movement, MovementId}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 
 import java.time.{Instant, LocalDateTime, ZoneOffset}
-import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
 class GetMovementsControllerSpec
@@ -65,7 +64,7 @@ class GetMovementsControllerSpec
     reset(movementService, workItemService)
 
     when(movementService.getMovementByErn(any, any))
-      .thenReturn(Future.successful(Seq(Movement(MovementId(UUID.fromString("cfdb20c7-d0b0-4b8b-a071-737d68dede5e")), "lrn", ern, Some("consigneeId"), Some("arc"), Instant.now(), Seq.empty))))
+      .thenReturn(Future.successful(Seq(Movement("cfdb20c7-d0b0-4b8b-a071-737d68dede5e", "lrn", ern, Some("consigneeId"), Some("arc"), Instant.now(), Seq.empty))))
 
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
 
@@ -90,7 +89,7 @@ class GetMovementsControllerSpec
 
     "return multiple movement" in {
       val movement1 = Movement(
-        MovementId(UUID.fromString("cfdb20c7-d0b0-4b8b-a071-737d68dede5a")),
+        "cfdb20c7-d0b0-4b8b-a071-737d68dede5a",
         "lrn",
         ern,
         Some("consigneeId"),
@@ -99,7 +98,7 @@ class GetMovementsControllerSpec
         Seq.empty
       )
       val movement2 = Movement(
-        MovementId(UUID.fromString("cfdb20c7-d0b0-4b8b-a071-737d68dede5b")),
+        "cfdb20c7-d0b0-4b8b-a071-737d68dede5b",
         "lrn2",
         ern,
         Some("consigneeId2"),
