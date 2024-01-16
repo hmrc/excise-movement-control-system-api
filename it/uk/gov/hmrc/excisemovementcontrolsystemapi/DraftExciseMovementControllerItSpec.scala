@@ -50,6 +50,7 @@ import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.time.{Instant, LocalDateTime, ZoneOffset, ZonedDateTime}
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
