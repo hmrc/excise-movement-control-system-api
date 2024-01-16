@@ -28,6 +28,7 @@ trait MovementTestUtils {
                               consigneeId: Some[String]
                             ): GetMovementResponse = {
     GetMovementResponse(
+      "cfdb20c7-d0b0-4b8b-a071-737d68dede5e",
       ern,
       lrn,
       consigneeId,
@@ -40,6 +41,7 @@ trait MovementTestUtils {
                              movement: Movement
                             ): GetMovementResponse = {
     GetMovementResponse(
+      movement._id,
       movement.consignorId,
       movement.localReferenceNumber,
       movement.consigneeId,

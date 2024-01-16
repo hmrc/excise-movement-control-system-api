@@ -44,11 +44,11 @@ class GetMovementsController @Inject()(
   def getMovements(ern: Option[String], lrn: Option[String], arc: Option[String], updatedSince: Option[String]): Action[AnyContent] = {
     (authAction andThen validateErnParameterAction(ern)).async(parse.default) {
       implicit request =>
-
         workItemService.addWorkItemForErn(ern.getOrElse(request.erns.head), fastMode = false)
 
         Try(updatedSince.map(Instant.parse(_))).map { updatedSinceTime =>
           val filter = MovementFilterBuilder().withErn(ern).withLrn(lrn).withArc(arc).withUpdatedSince(updatedSinceTime).build()
+
           movementService.getMovementByErn(request.erns.toSeq, filter)
             .map { movement: Seq[Movement] =>
               Ok(Json.toJson(movement.map(createResponseFrom)))
@@ -61,6 +61,7 @@ class GetMovementsController @Inject()(
 
   private def createResponseFrom(movement: Movement) = {
     GetMovementResponse(
+      movement._id,
       movement.consignorId,
       movement.localReferenceNumber,
       movement.consigneeId,

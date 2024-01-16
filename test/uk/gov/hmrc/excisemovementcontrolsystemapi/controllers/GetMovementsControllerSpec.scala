@@ -33,7 +33,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 
-import java.time.{LocalDateTime, ZoneOffset}
+import java.time.{Instant, LocalDateTime, ZoneOffset}
 import scala.concurrent.{ExecutionContext, Future}
 
 class GetMovementsControllerSpec
@@ -64,7 +64,7 @@ class GetMovementsControllerSpec
     reset(movementService, workItemService)
 
     when(movementService.getMovementByErn(any, any))
-      .thenReturn(Future.successful(Seq(Movement("lrn", ern, Some("consigneeId"), Some("arc")))))
+      .thenReturn(Future.successful(Seq(Movement("cfdb20c7-d0b0-4b8b-a071-737d68dede5e", "lrn", ern, Some("consigneeId"), Some("arc"), Instant.now(), Seq.empty))))
 
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
 
@@ -88,8 +88,24 @@ class GetMovementsControllerSpec
     }
 
     "return multiple movement" in {
-      val movement1 = Movement("lrn", ern, Some("consigneeId"), Some("arc"))
-      val movement2 = Movement("lrn2", ern, Some("consigneeId2"), Some("arc2"))
+      val movement1 = Movement(
+        "cfdb20c7-d0b0-4b8b-a071-737d68dede5a",
+        "lrn",
+        ern,
+        Some("consigneeId"),
+        Some("arc"),
+        Instant.now(),
+        Seq.empty
+      )
+      val movement2 = Movement(
+        "cfdb20c7-d0b0-4b8b-a071-737d68dede5b",
+        "lrn2",
+        ern,
+        Some("consigneeId2"),
+        Some("arc2"),
+        Instant.now(),
+        Seq.empty
+      )
       when(movementService.getMovementByErn(any, any))
         .thenReturn(Future.successful(Seq(movement1, movement2)))
 
@@ -97,8 +113,8 @@ class GetMovementsControllerSpec
 
       status(result) mustBe OK
       contentAsJson(result) mustBe Json.toJson(Seq(
-        createMovementResponse(ern, "lrn", "arc", Some("consigneeId")),
-        createMovementResponse(ern, "lrn2", "arc2", Some("consigneeId2"))
+        createMovementResponseFromMovement(movement1),
+        createMovementResponseFromMovement(movement2)
       ))
     }
 
