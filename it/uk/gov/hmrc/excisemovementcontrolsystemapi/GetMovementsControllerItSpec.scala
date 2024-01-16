@@ -63,6 +63,7 @@ class GetMovementsControllerItSpec extends PlaySpec
   override lazy val app: Application = {
 
     GuiceApplicationBuilder()
+      .configure(configureEisService)
       .overrides(
         bind[AuthConnector].to(authConnector),
         bind[MovementRepository].to(movementRepository),

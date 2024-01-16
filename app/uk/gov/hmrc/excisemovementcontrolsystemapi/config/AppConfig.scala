@@ -28,6 +28,7 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
 
   lazy val eisHost: String = servicesConfig.baseUrl("eis")
   lazy val nrsHost:  String = servicesConfig.baseUrl("nrs")
+  lazy val pushPullNotificationHost: String = servicesConfig.baseUrl("notification")
 
   lazy val nrsApiKey: String = servicesConfig.getConfString("nrs.api-key", "dummyNrsApiKey")
   lazy val nrsRetryDelays: Seq[FiniteDuration] = config.get[Seq[FiniteDuration]]("microservice.services.nrs.retryDelays")

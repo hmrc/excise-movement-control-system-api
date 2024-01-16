@@ -54,7 +54,7 @@ class PreValidateTraderControllerItSpec extends PlaySpec
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
     GuiceApplicationBuilder()
-      .configure(configureServer)
+      .configure(configureEisService)
       .overrides(
         bind[AuthConnector].to(authConnector),
       )

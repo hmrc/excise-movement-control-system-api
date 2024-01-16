@@ -83,10 +83,9 @@ class GetMessagesControllerSpec extends PlaySpec
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(lrn, None)(createRequest())
 
-      verify(movementService).getMovementByLRNAndERNIn(eqTo(lrn), eqTo(List(ern)))
-
       status(result) mustBe OK
       contentAsJson(result) mustBe Json.toJson(Seq(message, message2))
+      verify(movementService).getMovementByLRNAndERNIn(eqTo(lrn), eqTo(List(ern)))
     }
 
     "get all the new messages when there is a time query parameter provided" in {

@@ -74,7 +74,7 @@ class GetMessagesControllerItSpec extends PlaySpec
     WireMock.configureFor(wireHost, wireMock.port())
 
     GuiceApplicationBuilder()
-      .configure(configureServer)
+      .configure(configureEisService)
       .overrides(
         bind[AuthConnector].to(authConnector),
         bind[MovementRepository].to(movementRepository),
