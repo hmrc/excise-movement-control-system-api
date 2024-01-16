@@ -49,6 +49,7 @@ import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.Instant
 import java.time.{Instant, LocalDateTime, ZoneOffset, ZonedDateTime}
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
@@ -327,7 +328,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     val responseBody = Json.parse(result.body).as[ExciseMovementResponse]
     responseBody.status mustBe "Accepted"
     responseBody.boxId mustBe boxId
-    UUID.fromString(responseBody.movementId) //mustNot Throw An Exception
+    UUID.fromString(responseBody.movementId).toString must not be empty //mustNot Throw An Exception
     responseBody.consignorId mustBe consignorId
     responseBody.localReferenceNumber mustBe "LRNQA20230909022221"
     responseBody.consigneeId mustBe Some("GBWKQOZ8OVLYR")
