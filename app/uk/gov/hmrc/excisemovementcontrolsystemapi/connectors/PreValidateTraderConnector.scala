@@ -26,10 +26,9 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTra
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.PreValidateTraderRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
-import java.time.LocalDateTime
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -38,7 +37,8 @@ class PreValidateTraderConnector @Inject()
   httpClient: HttpClient,
   emcsUtils: EmcsUtils,
   appConfig: AppConfig,
-  metrics: Metrics
+  metrics: Metrics,
+  dateTimeService: DateTimeService
 )(implicit ec: ExecutionContext) extends EISSubmissionHeaders with Logging {
 
   def submitMessage(request: PreValidateTraderRequest, ern: String)(implicit hc: HeaderCarrier):
@@ -47,13 +47,14 @@ class PreValidateTraderConnector @Inject()
     val timer = metrics.defaultRegistry.timer("emcs.prevalidatetrader.connector.timer").time()
 
     val correlationId = emcsUtils.generateCorrelationId
-    val createdDateTime = emcsUtils.getCurrentDateTimeString
+    val timestamp = dateTimeService.timestamp()
+    val createdDateTime = timestamp.toString
 
     httpClient.POST[PreValidateTraderRequest, Either[Result, PreValidateTraderResponse]](
-      appConfig.preValidateTraderUrl,
-      request,
-      build(correlationId, createdDateTime, appConfig.preValidateTraderBearerToken)
-    )(PreValidateTraderRequest.format, PreValidateTraderHttpReader(correlationId, ern, createdDateTime), hc, ec)
+        appConfig.preValidateTraderUrl,
+        request,
+        build(correlationId, createdDateTime, appConfig.preValidateTraderBearerToken)
+      )(PreValidateTraderRequest.format, PreValidateTraderHttpReader(correlationId, ern, createdDateTime), hc, ec)
       .andThen { case _ => timer.stop() }
       .recover {
         case ex: Throwable =>
@@ -61,7 +62,7 @@ class PreValidateTraderConnector @Inject()
           logger.warn(EISErrorMessage(createdDateTime, ern, ex.getMessage, correlationId, "PreValidateTrader"), ex)
 
           val error = EISErrorResponse(
-            LocalDateTime.parse(createdDateTime),
+            timestamp,
             "Exception",
             ex.getMessage,
             correlationId

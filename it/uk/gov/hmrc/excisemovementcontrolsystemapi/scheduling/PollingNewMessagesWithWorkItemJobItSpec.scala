@@ -41,8 +41,8 @@ import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, DefaultPlayMongoRepo
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.nio.charset.StandardCharsets
+import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.time.{Instant, LocalDateTime}
 import java.util.Base64
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{DAYS, Duration, MINUTES}
@@ -324,7 +324,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
         .whenScenarioStateIs(Scenario.STARTED)
         .willReturn(ok().withBody(Json.toJson(
           EISConsumptionResponse(
-            LocalDateTime.of(2023, 1, 2, 3, 4, 5),
+            Instant.parse("2023-01-02T03:04:05Z"),
             "3",
             Base64.getEncoder.encodeToString(newMessageWithIE801().toString().getBytes(StandardCharsets.UTF_8)),
           )).toString()
@@ -342,7 +342,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
         .whenScenarioStateIs(Scenario.STARTED)
         .willReturn(ok().withBody(Json.toJson(
           EISConsumptionResponse(
-            LocalDateTime.of(2023, 1, 2, 3, 4, 5),
+            Instant.parse("2023-01-02T03:04:05Z"),
             "4",
             Base64.getEncoder.encodeToString(newMessageXmlWithIE704.toString().getBytes(StandardCharsets.UTF_8)),
           )).toString()
@@ -360,7 +360,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
         .whenScenarioStateIs(Scenario.STARTED)
         .willReturn(ok().withBody(Json.toJson(
           EISConsumptionResponse(
-            LocalDateTime.of(2023, 1, 2, 3, 4, 5),
+            Instant.parse("2023-01-02T03:04:05Z"),
             "1",
             //Set the new message count so it will poll again and get the item below
             Base64.getEncoder.encodeToString(newMessageWithIE801(11).toString().getBytes(StandardCharsets.UTF_8)),
@@ -375,7 +375,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
         .whenScenarioStateIs("show-second-response")
         .willReturn(ok().withBody(Json.toJson(
           EISConsumptionResponse(
-            LocalDateTime.of(2024, 1, 2, 3, 4, 5),
+            Instant.parse("2024-01-02T03:04:05Z"),
             "1",
             Base64.getEncoder.encodeToString(newMessageWith818And802.toString().getBytes(StandardCharsets.UTF_8)),
           )).toString()
@@ -400,7 +400,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
         .whenScenarioStateIs("show-empty-message")
         .willReturn(ok().withBody(Json.toJson(
           EISConsumptionResponse(
-            LocalDateTime.of(2024, 1, 2, 3, 4, 5),
+            Instant.parse("2024-01-02T03:04:05Z"),
             exciseNumber,
             Base64.getEncoder.encodeToString(emptyNewMessageDataXml.toString().getBytes(StandardCharsets.UTF_8)),
           )).toString()
@@ -413,7 +413,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       put(s"$messageReceiptUrl$exciseNumber")
         .willReturn(ok().withBody(Json.toJson(
           MessageReceiptResponse(
-            LocalDateTime.of(2023, 1, 2, 3, 4, 5),
+            Instant.parse("2023-01-02T03:04:05Z"),
             exciseNumber,
             3
           )).toString()

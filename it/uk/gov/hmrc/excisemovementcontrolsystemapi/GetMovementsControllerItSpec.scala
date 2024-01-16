@@ -38,7 +38,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.mongo.TimestampSupport
 
-import java.time.{LocalDateTime, ZoneOffset}
+import java.time.temporal.ChronoUnit
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
 class GetMovementsControllerItSpec extends PlaySpec
@@ -58,8 +59,8 @@ class GetMovementsControllerItSpec extends PlaySpec
   private val lrn = "token"
   private val url = s"http://localhost:$port/movements"
   private lazy val dateTimeService: TimestampSupport = mock[TimestampSupport]
-  private val timestampNow = LocalDateTime.now().toInstant(ZoneOffset.UTC)
-  private val timestampTwoDaysAgo = LocalDateTime.now().minusDays(2).toInstant(ZoneOffset.UTC)
+  private val timestampNow = Instant.now()
+  private val timestampTwoDaysAgo = Instant.now().minus(2, ChronoUnit.DAYS)
 
   private val movement1 = Movement(lrn, consignorId, Some(consigneeId), Some("arc1"), timestampNow)
   private val movement2 = Movement("lrn1", consignorId, Some("consignee2"), Some("arc2"), timestampTwoDaysAgo)
@@ -157,7 +158,7 @@ class GetMovementsControllerItSpec extends PlaySpec
     }
 
     "get filtered movement by updatedSince" in {
-      val timeFilter = LocalDateTime.now().minusDays(1).toInstant(ZoneOffset.UTC)
+      val timeFilter = Instant.now().minus(1, ChronoUnit.DAYS)
 
       withAuthorizedTrader(consignorId)
       when(movementRepository.getMovementByERN(Seq(consignorId)))

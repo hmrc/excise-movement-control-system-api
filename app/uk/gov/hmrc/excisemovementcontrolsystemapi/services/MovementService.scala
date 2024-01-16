@@ -35,7 +35,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class MovementService @Inject()(
                                  movementRepository: MovementRepository,
                                  emcsUtils: EmcsUtils,
-                                 timestampSupport: DateTimeService
+                                 dateTimeService: DateTimeService
                                )(implicit ec: ExecutionContext) extends Logging {
   def saveNewMovement(movement: Movement): Future[Either[Result, Movement]] = {
 
@@ -44,7 +44,7 @@ class MovementService @Inject()(
         case Some(movementFromDb: Movement) if isLrnAlreadyUsed(movement, movementFromDb) =>
           Future.successful(Left(BadRequest(Json.toJson(
             ErrorResponse(
-              emcsUtils.getCurrentDateTime,
+              dateTimeService.timestamp(),
               "Duplicate LRN error",
               s"The local reference number ${movement.localReferenceNumber} has already been used for another movement"
             )
@@ -58,7 +58,7 @@ class MovementService @Inject()(
                 logger.error(s"[MovementService] - Error occurred while saving movement message: ${ex.getMessage}")
                 Left(InternalServerError(Json.toJson(
                   ErrorResponse(
-                    emcsUtils.getCurrentDateTime,
+                    dateTimeService.timestamp(),
                     "Database error",
                     "Error occurred while saving movement message"
                   )
@@ -131,7 +131,7 @@ class MovementService @Inject()(
   private def saveDistinctMessage(movement: Movement, newMessage: IEMessage, messageArc: Option[String]): Future[Boolean] = {
 
     val encodedMessage = emcsUtils.encode(newMessage.toXml.toString)
-    val messages = Seq(Message(encodedMessage, newMessage.messageType, timestampSupport.timestamp()))
+    val messages = Seq(Message(encodedMessage, newMessage.messageType, dateTimeService.timestamp()))
 
     //todo: remove hash from message class. Hash can calculate on the go in here
     val allMessages = (movement.messages ++ messages).distinctBy(_.hash)

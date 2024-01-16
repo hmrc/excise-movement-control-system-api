@@ -18,9 +18,9 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
 import play.api.libs.json.{Json, OFormat}
 
-import java.time.LocalDateTime
+import java.time.Instant
 
-case class EISErrorResponse(dateTime: LocalDateTime,
+case class EISErrorResponse(dateTime: Instant,
                             message: String,
                             debugMessage: String,
                             emcsCorrelationId: String

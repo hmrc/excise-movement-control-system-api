@@ -25,11 +25,9 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.ErnsMapper
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, ErnsMapper}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
-import java.time.LocalDateTime
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
@@ -40,15 +38,17 @@ class EISSubmissionConnector @Inject()
   emcsUtils: EmcsUtils,
   appConfig: AppConfig,
   metrics: Metrics,
-  ernsMapper: ErnsMapper
+  ernsMapper: ErnsMapper,
+  dateTimeService: DateTimeService
 )(implicit ec: ExecutionContext) extends EISSubmissionHeaders with Logging {
 
   def submitMessage(request: ValidatedXmlRequest[_], correlationId: String)(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
 
     val timer = metrics.defaultRegistry.timer("emcs.submission.connector.timer").time()
 
+    val timestamp = dateTimeService.timestamp()
     //todo: add retry
-    val createdDateTime = emcsUtils.getCurrentDateTimeString
+    val createdDateTime = timestamp.toString
     val wrappedXml = wrapXmlInControlDocument(request.message.messageIdentifier, request.body.toString)
     val messageType = request.message.messageType
     val encodedMessage = emcsUtils.encode(wrappedXml.toString)
@@ -57,10 +57,10 @@ class EISSubmissionConnector @Inject()
     val eisRequest = EISSubmissionRequest(ern, messageType, encodedMessage)
 
     httpClient.POST[EISSubmissionRequest, Either[Result, EISSubmissionResponse]](
-      appConfig.emcsReceiverMessageUrl,
-      eisRequest,
-      build(correlationId, createdDateTime, appConfig.submissionBearerToken)
-    )(EISSubmissionRequest.format, EISHttpReader(correlationId, ern, createdDateTime), hc, ec)
+        appConfig.emcsReceiverMessageUrl,
+        eisRequest,
+        build(correlationId, createdDateTime, appConfig.submissionBearerToken)
+      )(EISSubmissionRequest.format, EISHttpReader(correlationId, ern, createdDateTime), hc, ec)
       .andThen { case _ => timer.stop() }
       .recover {
         case ex: Throwable =>
@@ -68,7 +68,7 @@ class EISSubmissionConnector @Inject()
           logger.warn(EISErrorMessage(createdDateTime, ern, ex.getMessage, correlationId, messageType), ex)
 
           val error = EISErrorResponse(
-            LocalDateTime.parse(createdDateTime),
+            timestamp,
             "Exception",
             ex.getMessage,
             correlationId

@@ -26,6 +26,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.XApiKe
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NonRepudiationSubmission, NonRepudiationSubmissionAccepted, NonRepudiationSubmissionFailed, NrsPayload}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.Retrying
 import uk.gov.hmrc.http.HttpReads.is2xx
+import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
 import javax.inject.Inject
@@ -34,18 +35,17 @@ import scala.util.{Success, Try}
 
 class NrsConnector @Inject()
 (
-    httpClient: HttpClient,
-    appConfig: AppConfig,
-    metrics: Metrics
-)(implicit val ec: ExecutionContext, val futures: Futures) extends Retrying with Logging
-{
+  httpClient: HttpClient,
+  appConfig: AppConfig,
+  metrics: Metrics
+)(implicit val ec: ExecutionContext, val futures: Futures) extends Retrying with Logging {
 
-  def sendToNrs(payload: NrsPayload,  correlationId: String)(implicit hc: HeaderCarrier): Future[NonRepudiationSubmission] = {
+  def sendToNrs(payload: NrsPayload, correlationId: String)(implicit hc: HeaderCarrier): Future[NonRepudiationSubmission] = {
 
     val timer = metrics.defaultRegistry.timer("emcs.nrs.submission.timer").time()
     val jsonObject = payload.toJsObject
 
-    retry(appConfig.nrsRetryDelays, canRetry, appConfig.getNrsSubmissionUrl) {
+    retry(appConfig.nrsRetryDelays.toList, canRetry, appConfig.getNrsSubmissionUrl) {
       send(jsonObject, correlationId)
     }
       .map { response: HttpResponse =>
@@ -64,9 +64,9 @@ class NrsConnector @Inject()
   }
 
   def send(
-    jsonObject: JsObject,
-    correlationId: String
-  )(implicit hc: HeaderCarrier): Future[HttpResponse] = {
+            jsonObject: JsObject,
+            correlationId: String
+          )(implicit hc: HeaderCarrier): Future[HttpResponse] = {
 
     val nrsSubmissionUrl = appConfig.getNrsSubmissionUrl
     logger.info(s"[NrsConnector] - NRS submission: sending POST request to $nrsSubmissionUrl. CorrelationId: $correlationId")
@@ -77,12 +77,12 @@ class NrsConnector @Inject()
       createHeader)
   }
 
-  private def canRetry(response: Try[HttpResponse]) : Boolean = {
+  private def canRetry(response: Try[HttpResponse]): Boolean = {
     response match {
       case Success(r) => !is2xx(r.status)
       case _ => true
     }
-}
+  }
 
 
   private def createHeader: Seq[(String, String)] = {

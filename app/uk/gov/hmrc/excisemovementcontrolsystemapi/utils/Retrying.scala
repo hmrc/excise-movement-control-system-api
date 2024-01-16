@@ -31,12 +31,12 @@ trait Retrying extends Logging {
   implicit val futures: Futures
 
   def retry(
-    delays: Seq[FiniteDuration],
+    delays: List[FiniteDuration],
     retryCondition: Try[HttpResponse] => Boolean,
     url: String
   )(block: => Future[HttpResponse]): Future[HttpResponse] = {
 
-    def loop(delays: Seq[FiniteDuration]): Future[HttpResponse] = {
+    def loop(delays: List[FiniteDuration]): Future[HttpResponse] = {
       def retryIfPossible(result: Try[HttpResponse]): Future[HttpResponse] =
         delays match {
           case Nil => Future.fromTry(result)

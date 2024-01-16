@@ -18,11 +18,11 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
 import play.api.libs.json.{Json, OFormat}
 
-import java.time.LocalDateTime
+import java.time.Instant
 
 case class EISConsumptionResponse
 (
-  dateTime: LocalDateTime,
+  dateTime: Instant,
   exciseRegistrationNumber: String,
   message: String
 )

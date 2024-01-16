@@ -42,7 +42,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Mov
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import java.nio.charset.StandardCharsets
-import java.time.{Instant, LocalDateTime}
+import java.time.Instant
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -64,7 +64,7 @@ class GetMessagesControllerItSpec extends PlaySpec
   private lazy val dateTimeService: DateTimeService = mock[DateTimeService]
   private val timestamp = Instant.now()
   private val responseFromEis = EISConsumptionResponse(
-    LocalDateTime.of(2023, 1, 2, 3, 4, 5),
+    Instant.parse("2023-01-02T03:04:05Z"),
     consignorId,
     Base64.getEncoder.encodeToString(newMessageWithIE801().toString().getBytes(StandardCharsets.UTF_8)),
   )

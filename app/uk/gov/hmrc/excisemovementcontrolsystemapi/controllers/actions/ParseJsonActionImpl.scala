@@ -23,7 +23,7 @@ import play.api.mvc.{ActionRefiner, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ParsedPreValidateTraderRequest, PreValidateTraderRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, preValidateTrader}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
@@ -32,7 +32,7 @@ import scala.util.{Failure, Success, Try}
 
 class ParseJsonActionImpl @Inject()
 (
-  emcsUtils: EmcsUtils,
+  dateTimeService: DateTimeService,
   cc: ControllerComponents
 )(implicit val executionContext: ExecutionContext) extends BackendController(cc)
   with ParseJsonAction
@@ -67,7 +67,7 @@ class ParseJsonActionImpl @Inject()
     message: String,
     debugMessage: String
   ): ErrorResponse = {
-    ErrorResponse(emcsUtils.getCurrentDateTime, message, debugMessage)
+    ErrorResponse(dateTimeService.timestamp(), message, debugMessage)
   }
 }
 

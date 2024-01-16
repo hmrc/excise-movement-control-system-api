@@ -21,9 +21,9 @@ import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{ActionRefiner, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
@@ -34,7 +34,7 @@ import scala.xml.NodeSeq
 class ParseXmlActionImpl @Inject()
 (
   ieMessageFactory: IEMessageFactory,
-  emcsUtils: EmcsUtils,
+  dateTimeService: DateTimeService,
   cc: ControllerComponents
 )(implicit val executionContext: ExecutionContext) extends BackendController(cc)
   with ParseXmlAction
@@ -47,14 +47,14 @@ class ParseXmlActionImpl @Inject()
       case body: NodeSeq if body.nonEmpty => parseXml(body, request)
       case _ =>
         logger.error("Not valid XML or XML is empty")
-        Future.successful(Left(BadRequest(Json.toJson(handleError("XML error","Not valid XML or XML is empty")))))
+        Future.successful(Left(BadRequest(Json.toJson(handleError("XML error", "Not valid XML or XML is empty")))))
     }
   }
 
   def parseXml[A](
-    xmlBody: NodeSeq,
-    request: EnrolmentRequest[A]
-  ) : Future[Either[Result, ParsedXmlRequest[A]]] = {
+                   xmlBody: NodeSeq,
+                   request: EnrolmentRequest[A]
+                 ): Future[Either[Result, ParsedXmlRequest[A]]] = {
 
     val messageType = xmlBody.head.label
     Try(ieMessageFactory.createFromXml(messageType, xmlBody)) match {
@@ -70,7 +70,7 @@ class ParseXmlActionImpl @Inject()
     message: String,
     debugMessage: String
   ): ErrorResponse = {
-    ErrorResponse(emcsUtils.getCurrentDateTime, message, debugMessage)
+    ErrorResponse(dateTimeService.timestamp(), message, debugMessage)
   }
 }
 

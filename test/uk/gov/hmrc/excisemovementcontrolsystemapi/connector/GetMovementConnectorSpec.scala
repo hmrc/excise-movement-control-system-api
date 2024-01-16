@@ -30,12 +30,12 @@ import play.api.mvc.Results.InternalServerError
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.GetMovementConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
-import java.time.LocalDateTime
+import java.time.Instant
 import scala.concurrent.ExecutionContext
 import scala.reflect.runtime.universe.typeOf
 
@@ -50,10 +50,11 @@ class GetMovementConnectorSpec extends PlaySpec
   private val appConfig = mock[AppConfig]
   private val metrics = mock[Metrics](RETURNS_DEEP_STUBS)
   private val emcsUtil = mock[EmcsUtils]
-  private val sut = new GetMovementConnector(httpClient, appConfig, emcsUtil, metrics)
-  private val dateTime = LocalDateTime.of(2023, 2, 3, 5, 6, 7)
-  private val response  = EISConsumptionResponse(
-    dateTime,
+  private val dateTimeService = mock[DateTimeService]
+  private val sut = new GetMovementConnector(httpClient, appConfig, emcsUtil, metrics, dateTimeService)
+  private val timestamp = Instant.parse("2023-02-03T05:06:07Z")
+  private val response = EISConsumptionResponse(
+    timestamp,
     "ern",
     "message"
   )
@@ -67,12 +68,12 @@ class GetMovementConnectorSpec extends PlaySpec
 
     reset(httpClient, appConfig, emcsUtil, metrics, timerContext)
 
-    when(httpClient.GET[Any](any,any,any)(any,any,any))
+    when(httpClient.GET[Any](any, any, any)(any, any, any))
       .thenReturn(Future.successful(HttpResponse(200, Json.toJson(response).toString())))
     when(appConfig.traderMovementUrl).thenReturn("/trader-movement-url")
     when(appConfig.movementBearerToken).thenReturn(movementBearerToken)
     when(emcsUtil.generateCorrelationId).thenReturn("1234")
-    when(emcsUtil.getCurrentDateTimeString).thenReturn(dateTime.toString)
+    when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
   }
 
@@ -90,10 +91,10 @@ class GetMovementConnectorSpec extends PlaySpec
         eqTo("/trader-movement-url"),
         eqTo(Seq("exciseregistrationnumber" -> "ern", "arc" -> "arc")),
         eqTo(expectedHeader)
-      )(any,any,any)
+      )(any, any, any)
     }
 
-    "return an error "when {
+    "return an error " when {
       "cannot parse Json" in {
         when(httpClient.GET[Any](any, any, any)(any, any, any))
           .thenReturn(Future.successful(HttpResponse(200, "error message")))
@@ -127,7 +128,7 @@ class GetMovementConnectorSpec extends PlaySpec
       XForwardedHostName -> MDTPHost,
       XCorrelationIdName -> "1234",
       SourceName -> APIPSource,
-      DateTimeName -> dateTime.toString,
+      DateTimeName -> timestamp.toString,
       Authorization -> authorizationValue(movementBearerToken)
     )
   }

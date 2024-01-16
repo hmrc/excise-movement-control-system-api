@@ -25,20 +25,20 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.play.bootstrap.tools.Stubs.stubMessagesControllerComponents
 
-import java.time.LocalDateTime
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
 class ValidateErnParameterActionSpec extends PlaySpec {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  private val emcsUtils: EmcsUtils = mock[EmcsUtils]
-  private val currentDateTime = LocalDateTime.of(2023, 10, 18, 15, 33, 33)
-  private val sut = new ValidateErnParameterActionImpl(emcsUtils, stubMessagesControllerComponents())
+  private val dateTimeService = mock[DateTimeService]
+  private val currentDateTime = Instant.parse("2023-10-18T15:33:33Z")
+  private val sut = new ValidateErnParameterActionImpl(dateTimeService, stubMessagesControllerComponents())
 
-  when(emcsUtils.getCurrentDateTime).thenReturn(currentDateTime)
+  when(dateTimeService.timestamp()).thenReturn(currentDateTime)
 
   private def defaultBlock(enrolmentRequest: EnrolmentRequest[_]) =
     Future.successful(Ok)

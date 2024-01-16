@@ -37,11 +37,11 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTra
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderErrorResponse, getPreValidateTraderRequest, getPreValidateTraderSuccessResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
-import java.time.LocalDateTime
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
 class PreValidateTraderConnectorSpec extends PlaySpec with BeforeAndAfterEach with EitherValues {
@@ -51,11 +51,12 @@ class PreValidateTraderConnectorSpec extends PlaySpec with BeforeAndAfterEach wi
 
   private val mockHttpClient = mock[HttpClient]
   private val emcsUtils = mock[EmcsUtils]
+  private val dateTimeService = mock[DateTimeService]
   private val appConfig = mock[AppConfig]
 
   private val metrics = mock[Metrics](RETURNS_DEEP_STUBS)
 
-  private val connector = new PreValidateTraderConnector(mockHttpClient, emcsUtils, appConfig, metrics)
+  private val connector = new PreValidateTraderConnector(mockHttpClient, emcsUtils, appConfig, metrics, dateTimeService)
   private val emcsCorrelationId = "1234566"
   private val timerContext = mock[Timer.Context]
   private val preValidateTraderBearerToken = "preValidateTraderBearerToken"
@@ -65,6 +66,8 @@ class PreValidateTraderConnectorSpec extends PlaySpec with BeforeAndAfterEach wi
   private val businessError = getPreValidateTraderErrorResponse
 
 
+  private val timestamp = Instant.parse("2023-09-17T09:32:50.345Z")
+
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(mockHttpClient, appConfig, metrics, timerContext)
@@ -72,7 +75,7 @@ class PreValidateTraderConnectorSpec extends PlaySpec with BeforeAndAfterEach wi
     when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
       .thenReturn(Future.successful(Right(Right(validResponse))))
 
-    when(emcsUtils.getCurrentDateTimeString).thenReturn("2023-09-17T09:32:50.345")
+    when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(emcsUtils.generateCorrelationId).thenReturn(emcsCorrelationId)
     when(appConfig.preValidateTraderUrl).thenReturn("/eis/path")
     when(appConfig.preValidateTraderBearerToken).thenReturn(preValidateTraderBearerToken)
@@ -135,7 +138,7 @@ class PreValidateTraderConnectorSpec extends PlaySpec with BeforeAndAfterEach wi
       val result = await(submitPreValidateTrader())
 
       result.left.value mustBe InternalServerError(
-        Json.toJson(EISErrorResponse(LocalDateTime.parse("2023-09-17T09:32:50.345"),
+        Json.toJson(EISErrorResponse(timestamp,
           "Exception", "error", emcsCorrelationId)))
     }
 
@@ -194,7 +197,7 @@ class PreValidateTraderConnectorSpec extends PlaySpec with BeforeAndAfterEach wi
   private def expectedHeader =
     Seq(HeaderNames.ACCEPT -> ContentTypes.JSON,
       HeaderNames.CONTENT_TYPE -> ContentTypes.JSON,
-      DateTimeName -> "2023-09-17T09:32:50.345",
+      DateTimeName -> timestamp.toString,
       XCorrelationIdName -> "1234566",
       XForwardedHostName -> MDTPHost,
       SourceName -> APIPSource,

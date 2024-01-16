@@ -31,9 +31,9 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeAuthentication
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
-import java.time.{Instant, LocalDateTime}
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
 class GetMessagesControllerSpec extends PlaySpec
@@ -45,9 +45,8 @@ class GetMessagesControllerSpec extends PlaySpec
   private val cc = stubControllerComponents()
   private val lrn = "LRN1234"
   private val dateTimeService = mock[DateTimeService]
-  private val timeStamp = LocalDateTime.of(2020, 1, 1, 1, 1, 1, 1)
+  private val timeStamp = Instant.parse("2020-01-01T01:01:01.1Z")
   private val workItemService = mock[WorkItemService]
-  private val emcsUtils = mock[EmcsUtils]
   private val messageCreateOn = Instant.now()
 
   override def beforeEach(): Unit = {
@@ -57,9 +56,7 @@ class GetMessagesControllerSpec extends PlaySpec
     when(movementService.getMatchingERN(any, any))
       .thenReturn(Future.successful(Some(ern)))
 
-    when(dateTimeService.timestamp()).thenReturn(messageCreateOn)
-
-    when(emcsUtils.getCurrentDateTime).thenReturn(timeStamp)
+    when(dateTimeService.timestamp()).thenReturn(timeStamp)
 
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
   }
@@ -206,7 +203,7 @@ class GetMessagesControllerSpec extends PlaySpec
       movementService,
       workItemService,
       cc,
-      emcsUtils
+      dateTimeService
     )
 
   private def createRequest(): FakeRequest[AnyContent] = {

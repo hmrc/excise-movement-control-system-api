@@ -19,8 +19,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.{reset, when}
-import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
@@ -31,9 +31,9 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
-import java.time.LocalDateTime
+import java.time.Instant
 import scala.concurrent.ExecutionContext
 
 class ParseXmlActionSpec
@@ -45,16 +45,16 @@ class ParseXmlActionSpec
   implicit val ec: ExecutionContext = ExecutionContext.global
 
   private val messageFactory = mock[IEMessageFactory]
-  private val emcsUtils = mock[EmcsUtils]
+  private val dateTimeService = mock[DateTimeService]
   private val message = mock[IEMessage]
   private val parserXmlAction = new ParseXmlActionImpl(
     messageFactory,
-    emcsUtils,
+    dateTimeService,
     stubControllerComponents()
   )
-  private val dateTime = LocalDateTime.of(2023, 5, 11, 1, 1, 1)
+  private val timestamp = Instant.parse("2023-05-11T01:01:01Z")
 
-  val xmlStr =
+  private val xmlStr =
     """<IE815>
       | <body></body>
       |</IE815>""".stripMargin
@@ -62,9 +62,9 @@ class ParseXmlActionSpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(messageFactory, emcsUtils, message)
+    reset(messageFactory, dateTimeService, message)
 
-    when(emcsUtils.getCurrentDateTime).thenReturn(dateTime)
+    when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(messageFactory.createFromXml(any, any)).thenReturn(message)
   }
 
@@ -83,7 +83,7 @@ class ParseXmlActionSpec
 
         val result = parserXmlAction.refine(enrolmentRequest).futureValue
 
-        val expectedError = ErrorResponse(dateTime, "XML error", "Not valid XML or XML is empty")
+        val expectedError = ErrorResponse(timestamp, "XML error", "Not valid XML or XML is empty")
         result.left.value mustBe BadRequest(Json.toJson(expectedError))
       }
 
@@ -93,7 +93,7 @@ class ParseXmlActionSpec
 
         val result = parserXmlAction.refine(enrolmentRequest).futureValue
 
-        val expectedError = ErrorResponse(dateTime, "Not valid IE815 message", "Error message")
+        val expectedError = ErrorResponse(timestamp, "Not valid IE815 message", "Error message")
         result.left.value mustBe BadRequest(Json.toJson(expectedError))
       }
     }

@@ -21,7 +21,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{ActionFilter, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
@@ -29,7 +29,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class ValidateErnParameterActionImpl @Inject()
 (
-  val emcsUtils: EmcsUtils,
+  dateTimeService: DateTimeService,
   cc: ControllerComponents
 )(implicit val ec: ExecutionContext)
   extends BackendController(cc)
@@ -55,7 +55,7 @@ class ValidateErnParameterActionImpl @Inject()
   private def badRequestResponse[A](ern: String)(implicit request: EnrolmentRequest[A]): Result = {
     BadRequest(Json.toJson(
       ErrorResponse(
-        emcsUtils.getCurrentDateTime,
+        dateTimeService.timestamp(),
         "ERN parameter value error",
         s"The ERN $ern supplied in the parameter is not among the authorised ERNs ${request.erns.mkString("/")}"
       )

@@ -27,32 +27,31 @@ import play.api.mvc.Results.Forbidden
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
-import java.time.LocalDateTime
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
 
 class ValidateErnInMessageActionSpec extends PlaySpec with TestXml with EitherValues with BeforeAndAfterAll {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  implicit val emcsUtils: EmcsUtils = mock[EmcsUtils]
+  private val dateTimeService = mock[DateTimeService]
   val messageService: MessageService = mock[MessageService]
 
-  val sut = new ValidateErnInMessageActionImpl(messageService)
+  val sut = new ValidateErnInMessageActionImpl(messageService, dateTimeService)
 
   private val message = mock[IEMessage](RETURNS_DEEP_STUBS)
-  private val currentDateTime = LocalDateTime.of(2023, 10, 18, 15, 33, 33)
+  private val currentDateTime = Instant.parse("2023-10-18T15:33:33Z")
 
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    when(emcsUtils.getCurrentDateTime).thenReturn(currentDateTime)
-    when(emcsUtils.generateCorrelationId).thenReturn("123")
+    when(dateTimeService.timestamp()).thenReturn(currentDateTime)
     when(messageService.getErns(any))
       .thenReturn(Future.successful(Set("GBWK002281023", "GBWKQOZ8OVLYR")))
   }

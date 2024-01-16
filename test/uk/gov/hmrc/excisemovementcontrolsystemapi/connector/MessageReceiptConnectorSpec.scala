@@ -31,11 +31,11 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageReceiptConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
-import java.time.LocalDateTime
+import java.time.Instant
 import scala.concurrent.ExecutionContext
 import scala.reflect.runtime.universe.typeOf
 
@@ -52,10 +52,11 @@ class MessageReceiptConnectorSpec
   private val appConfig = mock[AppConfig]
   private val metrics = mock[Metrics](RETURNS_DEEP_STUBS)
   private val emcsUtil = mock[EmcsUtils]
-  private val sut = new MessageReceiptConnector(httpClient, appConfig, emcsUtil, metrics)
+  private val dateTimeService = mock[DateTimeService]
+  private val sut = new MessageReceiptConnector(httpClient, appConfig, emcsUtil, metrics, dateTimeService)
 
-  private val dateTime = LocalDateTime.of(2023, 1,2,3,4,5)
-  private val response = MessageReceiptResponse(dateTime, "123", 10)
+  private val timestamp = Instant.parse("2023-01-02T03:04:05Z")
+  private val response = MessageReceiptResponse(timestamp, "123", 10)
 
   private val messagesBearerToken = "messagesBearerToken"
 
@@ -63,9 +64,9 @@ class MessageReceiptConnectorSpec
     super.beforeEach()
     reset(httpClient, appConfig, metrics, timerContext)
 
-    when(httpClient.PUTString[Any](any, any, any)(any,any,any))
+    when(httpClient.PUTString[Any](any, any, any)(any, any, any))
       .thenReturn(Future.successful(HttpResponse(200, Json.toJson(response).toString())))
-    when(emcsUtil.getCurrentDateTimeString).thenReturn(dateTime.toString)
+    when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(emcsUtil.generateCorrelationId).thenReturn("12345")
     when(appConfig.messageReceiptUrl(any)).thenReturn("/messageReceipt")
     when(appConfig.messagesBearerToken).thenReturn(messagesBearerToken)
@@ -86,14 +87,14 @@ class MessageReceiptConnectorSpec
         XForwardedHostName -> MDTPHost,
         XCorrelationIdName -> "12345",
         SourceName -> APIPSource,
-        DateTimeName -> dateTime.toString,
+        DateTimeName -> timestamp.toString,
         Authorization -> authorizationValue(messagesBearerToken)
       )
       verify(httpClient).PUTString[Any](
         eqTo("/messageReceipt"),
         eqTo(""),
         eqTo(headers)
-      )(any,any,any)
+      )(any, any, any)
     }
 
     "should start a timer" in {
@@ -106,7 +107,7 @@ class MessageReceiptConnectorSpec
 
     "return an error" when {
       "eis api return an error" in {
-        when(httpClient.PUTString[Any](any, any, any)(any,any,any))
+        when(httpClient.PUTString[Any](any, any, any)(any, any, any))
           .thenReturn(Future.successful(HttpResponse(404, "error")))
 
         val result = await(sut.put("123"))
@@ -115,7 +116,7 @@ class MessageReceiptConnectorSpec
       }
 
       "can parse Json" in {
-        when(httpClient.PUTString[Any](any, any, any)(any,any,any))
+        when(httpClient.PUTString[Any](any, any, any)(any, any, any))
           .thenReturn(Future.successful(HttpResponse(200, "error")))
 
         val result = await(sut.put("123"))

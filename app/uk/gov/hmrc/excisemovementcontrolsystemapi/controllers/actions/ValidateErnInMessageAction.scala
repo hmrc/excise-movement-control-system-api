@@ -21,18 +21,18 @@ import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.Results.Forbidden
 import play.api.mvc.{ActionRefiner, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{ParsedXmlRequest, ValidatedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{ParsedXmlRequest, ValidatedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-class ValidateErnInMessageActionImpl @Inject()(messageService: MessageService)(
-  implicit val executionContext: ExecutionContext,
-  implicit val emcsUtils: EmcsUtils
-) extends ValidateErnInMessageAction
+class ValidateErnInMessageActionImpl @Inject()(messageService: MessageService,
+                                               dateTimeService: DateTimeService)(
+                                                implicit val executionContext: ExecutionContext
+                                              ) extends ValidateErnInMessageAction
   with Logging {
   override def refine[A](request: ParsedXmlRequest[A]): Future[Either[Result, ValidatedXmlRequest[A]]] = {
 
@@ -49,7 +49,7 @@ class ValidateErnInMessageActionImpl @Inject()(messageService: MessageService)(
           Forbidden(
             Json.toJson(
               ErrorResponse(
-                emcsUtils.getCurrentDateTime,
+                dateTimeService.timestamp(),
                 "ERN validation error",
                 "Excise number in message does not match authenticated excise number"
               )

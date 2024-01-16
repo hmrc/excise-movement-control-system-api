@@ -23,7 +23,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilterBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, GetMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
@@ -37,7 +37,7 @@ class GetMovementsController @Inject()(
                                         cc: ControllerComponents,
                                         movementService: MovementService,
                                         workItemService: WorkItemService,
-                                        emcsUtils: EmcsUtils
+                                        dateTimeService: DateTimeService
                                       )(implicit ec: ExecutionContext)
   extends BackendController(cc) {
 
@@ -54,7 +54,7 @@ class GetMovementsController @Inject()(
               Ok(Json.toJson(movement.map(createResponseFrom)))
             }
         }.getOrElse(
-          Future.successful(BadRequest(Json.toJson(ErrorResponse(emcsUtils.getCurrentDateTime, "Invalid date format provided in the updatedSince query parameter", "Date format should be like '2020-11-15T17:02:34.00Z'"))))
+          Future.successful(BadRequest(Json.toJson(ErrorResponse(dateTimeService.timestamp(), "Invalid date format provided in the updatedSince query parameter", "Date format should be like '2020-11-15T17:02:34.00Z'"))))
         )
     }
   }

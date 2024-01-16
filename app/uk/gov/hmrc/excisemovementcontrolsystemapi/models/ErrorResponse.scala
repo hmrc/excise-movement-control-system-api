@@ -18,10 +18,10 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
 import play.api.libs.json.{Json, OFormat}
 
-import java.time.LocalDateTime
+import java.time.Instant
 
 case class ErrorResponse(
-                          dateTime: LocalDateTime,
+                          dateTime: Instant,
                           message: String,
                           debugMessage: String,
                         )

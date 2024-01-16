@@ -30,12 +30,12 @@ import play.api.mvc.Results.InternalServerError
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.ShowNewMessagesConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
-import java.time.LocalDateTime
+import java.time.Instant
 import scala.concurrent.ExecutionContext
 import scala.reflect.runtime.universe.typeOf
 
@@ -51,11 +51,12 @@ class ShowNewMessagesConnectorSpec
   private val appConfig = mock[AppConfig]
   private val metrics = mock[Metrics](RETURNS_DEEP_STUBS)
   private val eisUtil = mock[EmcsUtils]
-  private val sut = new ShowNewMessagesConnector(httpClient, appConfig, eisUtil, metrics)
+  private val dateTimeService = mock[DateTimeService]
+  private val sut = new ShowNewMessagesConnector(httpClient, appConfig, eisUtil, metrics, dateTimeService)
 
-  private val dateTime = LocalDateTime.of(2023, 2, 3, 5, 6, 7)
-  private val response  = EISConsumptionResponse(
-    dateTime,
+  private val timestamp = Instant.parse("2023-02-03T05:06:07Z")
+  private val response = EISConsumptionResponse(
+    timestamp,
     "123",
     "message"
   )
@@ -67,10 +68,10 @@ class ShowNewMessagesConnectorSpec
     super.beforeEach()
     reset(httpClient, appConfig, metrics, timerContext)
 
-    when(httpClient.PUTString[Any](any,any,any)(any,any,any))
+    when(httpClient.PUTString[Any](any, any, any)(any, any, any))
       .thenReturn(Future.successful(HttpResponse(200, Json.toJson(response).toString())))
     when(eisUtil.generateCorrelationId).thenReturn("1234")
-    when(eisUtil.getCurrentDateTimeString).thenReturn(dateTime.toString)
+    when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(appConfig.showNewMessageUrl(any)).thenReturn("/showNewMessage")
     when(appConfig.messagesBearerToken).thenReturn(messagesBearerToken)
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
@@ -84,7 +85,7 @@ class ShowNewMessagesConnectorSpec
         eqTo("/showNewMessage"),
         eqTo(""),
         eqTo(expectedHeader)
-      )(any,any,any)
+      )(any, any, any)
     }
 
     "return a successful response" in {
@@ -103,7 +104,7 @@ class ShowNewMessagesConnectorSpec
 
     "should return an error" when {
       "eis return an error" in {
-        when(httpClient.PUTString[Any](any,any,any)(any,any,any))
+        when(httpClient.PUTString[Any](any, any, any)(any, any, any))
           .thenReturn(Future.successful(HttpResponse(422, "error message")))
 
         val result = await(sut.get("123"))
@@ -112,7 +113,7 @@ class ShowNewMessagesConnectorSpec
       }
 
       "cannot parse json" in {
-        when(httpClient.PUTString[Any](any,any,any)(any,any,any))
+        when(httpClient.PUTString[Any](any, any, any)(any, any, any))
           .thenReturn(Future.successful(HttpResponse(200, "error message")))
 
         val result = await(sut.get("123"))
@@ -127,7 +128,7 @@ class ShowNewMessagesConnectorSpec
       XForwardedHostName -> MDTPHost,
       XCorrelationIdName -> "1234",
       SourceName -> APIPSource,
-      DateTimeName -> dateTime.toString,
+      DateTimeName -> timestamp.toString,
       Authorization -> authorizationValue(messagesBearerToken)
     )
   }

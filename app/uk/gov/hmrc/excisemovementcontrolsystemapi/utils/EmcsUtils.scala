@@ -20,13 +20,10 @@ import java.lang.String.format
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest.getInstance
-import java.time.LocalDateTime
 import java.util.{Base64, UUID}
 
 class EmcsUtils {
 
-  def getCurrentDateTime: LocalDateTime = LocalDateTime.now()
-  def getCurrentDateTimeString: String = getCurrentDateTime.toString
   def generateCorrelationId: String = UUID.randomUUID().toString
 
   def encode(str: String): String = {

@@ -44,7 +44,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberW
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, MovementRepository}
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
-import java.time.{Instant, LocalDateTime}
+import java.time.Instant
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
@@ -127,8 +127,10 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         assertValidResult(result)
       }
 
-      withClue("submit to NRS"){
-        eventually{verify(postRequestedFor(urlEqualTo("/submission")))}
+      withClue("submit to NRS") {
+        eventually {
+          verify(postRequestedFor(urlEqualTo("/submission")))
+        }
       }
 
     }
@@ -284,7 +286,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
   private def createEISErrorResponseBodyAsJson(message: String): JsValue = {
     Json.toJson(EISErrorResponse(
-      LocalDateTime.of(2023, 12, 5, 12, 5, 6),
+      Instant.parse("2023-12-05T12:05:06Z"),
       message,
       s"debug $message",
       "123"

@@ -18,11 +18,11 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
 import play.api.libs.json.{Json, OFormat}
 
-import java.time.LocalDateTime
+import java.time.Instant
 
 case class MessageReceiptResponse
 (
-  dateTime: LocalDateTime,
+  dateTime: Instant,
   exciseRegistrationNumber: String,
   recordsAffected: Int
 )
