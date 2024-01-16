@@ -17,37 +17,37 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
 import play.api.mvc.Results.NotFound
-import play.api.mvc.{ActionRefiner, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateLRNAction
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
+import play.api.mvc.{ActionFilter, Result}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateMovementIdAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait FakeValidateLRNAction {
+trait FakeValidateMovementIdAction {
 
-  object FakeSuccessfulValidateLRNAction extends ValidateLRNAction with TestXml {
+  object FakeSuccessValidateMovementIdAction extends ValidateMovementIdAction {
 
-    override def apply(lrn: String): ActionRefiner[ValidatedXmlRequest, ValidatedXmlRequest] = {
-      new ActionRefiner[ValidatedXmlRequest, ValidatedXmlRequest] {
+    override def apply(id: String): ActionFilter[ValidatedXmlRequest] = {
+      new ActionFilter[ValidatedXmlRequest] {
 
         override val executionContext: ExecutionContext = ExecutionContext.Implicits.global
 
-        override def refine[A](request: ValidatedXmlRequest[A]): Future[Either[Result, ValidatedXmlRequest[A]]] = {
-          Future.successful(Right(request))
+        override def filter[A](request: ValidatedXmlRequest[A]): Future[Option[Result]] = {
+          Future.successful(None)
         }
       }
     }
   }
 
-  object FakeFailureValidateLRNAction extends ValidateLRNAction {
-    override def apply(lrn: String): ActionRefiner[ValidatedXmlRequest, ValidatedXmlRequest] = {
-      new ActionRefiner[ValidatedXmlRequest, ValidatedXmlRequest] {
+  object FakeFailureValidateMovementIdAction extends ValidateMovementIdAction {
+
+    override def apply(id: String): ActionFilter[ValidatedXmlRequest] = {
+      new ActionFilter[ValidatedXmlRequest] {
 
         override val executionContext: ExecutionContext = ExecutionContext.Implicits.global
 
-        override def refine[A](request: ValidatedXmlRequest[A]): Future[Either[Result, ValidatedXmlRequest[A]]] = {
-          Future.successful(Left(NotFound("Error")))
+        override def filter[A](request: ValidatedXmlRequest[A]): Future[Option[Result]] = {
+          Future.successful(Some(NotFound("Error")))
         }
       }
     }

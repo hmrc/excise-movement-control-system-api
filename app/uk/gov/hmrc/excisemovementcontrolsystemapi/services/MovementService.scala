@@ -69,6 +69,10 @@ class MovementService @Inject()(
 
   }
 
+  def getMovementById(id: String): Future[Option[Movement]] = {
+    movementRepository.getMovementById(id)
+  }
+
   def getMovementByLRNAndERNIn(lrn: String, erns: List[String]): Future[Option[Movement]] = {
     movementRepository.getMovementByLRNAndERNIn(lrn, erns).map {
       case Seq() => None

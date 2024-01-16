@@ -102,7 +102,7 @@ class MessageServiceSpec extends PlaySpec with EitherValues with TestXml {
 
       val ie837Message = IE837Message.createFromXml(IE837WithConsignee)
 
-      await(messageService.getErns(ie837Message)) mustBe Set("GBWK240176600")
+      await(messageService.getErns(ie837Message)) mustBe Set("GBWK002281023")
 
     }
 

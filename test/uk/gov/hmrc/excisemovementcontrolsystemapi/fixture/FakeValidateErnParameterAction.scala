@@ -26,7 +26,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait FakeValidateErnParameterAction {
 
-  object FakeValidateErnParameterSuccessAction extends ValidateErnParameterAction with TestXml {
+  object FakeValidateErnParameterSuccessAction extends ValidateErnParameterAction {
 
     override def apply(ern: Option[String]): ActionFilter[EnrolmentRequest] = {
       new ActionFilter[EnrolmentRequest] {
@@ -40,7 +40,7 @@ trait FakeValidateErnParameterAction {
     }
   }
 
-  object FakeValidateErnParameterFailureAction extends ValidateErnParameterAction with TestXml {
+  object FakeValidateErnParameterFailureAction extends ValidateErnParameterAction {
 
     override def apply(ern: Option[String]): ActionFilter[EnrolmentRequest] = {
       new ActionFilter[EnrolmentRequest] {

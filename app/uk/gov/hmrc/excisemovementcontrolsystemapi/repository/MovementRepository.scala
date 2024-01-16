@@ -80,6 +80,10 @@ class MovementRepository @Inject()
       .map(_ => true)
   }
 
+  def getMovementById(id: String): Future[Option[Movement]] = {
+    collection.find(equal("_id", id)).headOption()
+  }
+
   def getMovementByLRNAndERNIn(lrn: String, erns: List[String]): Future[Seq[Movement]] = {
     //TODO case where returns more than one (e.g. consignee has the same LRN for two different consignors)
     // IN this case would this be the same movement? So we are ok to get the head?

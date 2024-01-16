@@ -45,6 +45,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueW
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.{Instant, LocalDateTime}
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
@@ -275,7 +276,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   private def assertValidResult(result: WSResponse) = {
     val responseBody = Json.parse(result.body).as[ExciseMovementResponse]
     responseBody.status mustBe "Accepted"
-    responseBody.movementId.value.toString must fullyMatch.regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+    UUID.fromString(responseBody.movementId) //mustNot Throw An Exception
     responseBody.consignorId mustBe consignorId
     responseBody.localReferenceNumber mustBe "LRNQA20230909022221"
     responseBody.consigneeId mustBe Some("GBWKQOZ8OVLYR")

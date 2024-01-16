@@ -352,6 +352,31 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
     }
   }
 
+  "getMovementById" should {
+
+    "return the movement for the id if it is found" in {
+      val expectedMovement1 = Movement("uuid1", "lrn1", consignorId, None, Some("arc1"), Instant.now, Seq.empty)
+
+      when(mockMovementRepository.getMovementById("uuid1"))
+        .thenReturn(Future.successful(Some(expectedMovement1)))
+
+      val result = await(movementService.getMovementById("uuid1"))
+
+      result mustBe Some(expectedMovement1)
+    }
+
+    "return None if no match" in {
+
+      when(mockMovementRepository.getMovementById("uuid2"))
+        .thenReturn(Future.successful(None))
+
+      val result = await(movementService.getMovementById("uuid2"))
+
+      result mustBe None
+    }
+
+  }
+
   "updateMovement" should {
 
     val cachedMessage1 = Message("<IE801>test</IE801>", MessageTypes.IE801.value, dateTimeService.timestamp())
