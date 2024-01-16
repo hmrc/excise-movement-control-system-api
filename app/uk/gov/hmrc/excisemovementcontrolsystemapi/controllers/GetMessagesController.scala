@@ -48,7 +48,7 @@ class GetMessagesController @Inject()(
 
         movementService.getMatchingERN(lrn, request.erns.toList).flatMap {
           case None => Future.successful(BadRequest(Json.toJson(ErrorResponse(dateTimeService.timestamp(), "Invalid LRN supplied for ERN", ""))))
-            Future.successful(BadRequest(Json.toJson(ErrorResponse(emcsUtils.getCurrentDateTime, "Invalid LRN supplied for ERN", ""))))
+            Future.successful(BadRequest(Json.toJson(ErrorResponse(dateTimeService.timestamp(), "Invalid LRN supplied for ERN", ""))))
           case Some(ern) =>
             workItemService.addWorkItemForErn(ern, fastMode = false)
             getMessagesAsJson(lrn, ern, updatedSince)

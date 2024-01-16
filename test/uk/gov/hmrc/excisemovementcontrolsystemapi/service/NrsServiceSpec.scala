@@ -37,7 +37,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUt
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier}
 
 import java.nio.charset.StandardCharsets
-import java.time.ZonedDateTime
+import java.time.Instant
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -53,7 +53,7 @@ class NrsServiceSpec
   private val nrsConnector = mock[NrsConnector]
   private val dateTimeService = mock[DateTimeService]
   private val authConnector: AuthConnector = mock[AuthConnector]
-  private val timeStamp = ZonedDateTime.now()
+  private val timeStamp = Instant.now()
   private val userHeaderData = Seq("header" -> "test")
   private val service = new NrsService(
     authConnector,
@@ -70,7 +70,7 @@ class NrsServiceSpec
     super.beforeEach()
     reset(authConnector, nrsConnector, dateTimeService)
 
-    when(dateTimeService.nowUtc).thenReturn(timeStamp)
+    when(dateTimeService.timestamp()).thenReturn(timeStamp)
     when(authConnector.authorise[NonRepudiationIdentityRetrievals](any, any)(any, any)) thenReturn
       Future.successful(testAuthRetrievals)
     when(nrsConnector.sendToNrs(any, any)(any)).

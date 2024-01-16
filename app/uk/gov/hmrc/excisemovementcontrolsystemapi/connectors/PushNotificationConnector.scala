@@ -24,7 +24,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.{BoxNotificationResponse, Constants}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
@@ -78,7 +78,7 @@ class PushNotificationConnector @Inject()(
   }
 
   private def createJsonErrorResponse(message: String): JsValue = {
-    Json.toJson(ErrorResponse(dateTimeService.currentLocalDateTime, "Push Notification Error", message))
+    Json.toJson(ErrorResponse(dateTimeService.timestamp(), "Push Notification Error", message))
   }
 }
 

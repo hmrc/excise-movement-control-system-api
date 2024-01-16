@@ -31,7 +31,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.BoxNotific
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
-import java.time.LocalDateTime
+import java.time.{Instant, LocalDateTime}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.runtime.universe.typeOf
 
@@ -46,7 +46,7 @@ class PushNotificationConnectorSpec
   private val httpClient = mock[HttpClient]
   private val appConfig = mock[AppConfig]
   private val dateTimeService = mock[DateTimeService]
-  private val timestamp = LocalDateTime.now
+  private val timestamp = Instant.now
 
   private val sut = new PushNotificationConnector(httpClient, appConfig, dateTimeService)
 
@@ -57,7 +57,7 @@ class PushNotificationConnectorSpec
     when(httpClient.GET[Any](any, any, any)(any,any,any))
       .thenReturn(Future.successful(HttpResponse(200, Json.toJson(BoxNotificationResponse("123")).toString())))
     when(appConfig.pushPullNotificationHost).thenReturn("/notificationUrl")
-    when(dateTimeService.currentLocalDateTime).thenReturn(timestamp)
+    when(dateTimeService.timestamp()).thenReturn(timestamp)
   }
 
   "getBoxId" should {

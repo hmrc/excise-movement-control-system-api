@@ -56,7 +56,7 @@ class NrsService @Inject()
     (for {
       identityData <- retrieveIdentityData()
       userAuthToken = retrieveUserAuthToken(headerCarrier)
-      metaData = NrsMetadata.create(payload, emcsUtils,notableEventId, identityData, dateTimeService.nowUtc.toString,
+      metaData = NrsMetadata.create(payload, emcsUtils,notableEventId, identityData, dateTimeService.timestamp().toString,
         userAuthToken, userHeaderData, exciseNumber)
       encodedPayload = emcsUtils.encode(payload)
       nrsPayload = NrsPayload(encodedPayload, metaData)

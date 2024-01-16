@@ -48,7 +48,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.Instant
-import java.time.{Instant, LocalDateTime, ZoneOffset, ZonedDateTime}
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
@@ -74,7 +74,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   private val consigneeId = "GBWKQOZ8OVLYR"
   private val boxId = "testBoxId"
   private lazy val dateTimeService = mock[DateTimeService]
-  private val timeStamp = LocalDateTime.now
+  private val timeStamp = Instant.now
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
@@ -119,8 +119,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     stubNrsResponse
     authorizeNrsWithIdentityData
     stubGetBoxIdSuccessRequest
-    when(dateTimeService.currentLocalDateTime).thenReturn(timeStamp)
-    when(dateTimeService.nowUtc).thenReturn(ZonedDateTime.now(ZoneOffset.UTC))
+    when(dateTimeService.timestamp()).thenReturn(timeStamp)
   }
 
   "Draft Excise Movement" should {
@@ -178,7 +177,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       result.status mustBe BAD_REQUEST
       withClue("return the json response") {
         val responseBody = result.json.as[ErrorResponse]
-        responseBody.dateTime.truncatedTo(ChronoUnit.MINUTES) mustBe LocalDateTime.now.truncatedTo(ChronoUnit.MINUTES)
+        responseBody.dateTime.truncatedTo(ChronoUnit.MINUTES) mustBe Instant.now.truncatedTo(ChronoUnit.MINUTES)
         responseBody.message mustBe "ClientId error"
         responseBody.debugMessage mustBe "Request header is missing clientId"
       }

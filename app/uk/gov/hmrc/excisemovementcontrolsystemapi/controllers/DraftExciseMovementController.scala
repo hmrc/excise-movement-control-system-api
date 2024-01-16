@@ -28,7 +28,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, SubmissionMessageService, WorkItemService}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import java.time.LocalDateTime
+import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
@@ -55,7 +55,7 @@ class DraftExciseMovementController @Inject()(
               case Right(box) => submitMessage(box.boxId)
               case Left(error) => Future.successful(error)
             }
-          case _ => Future.successful(BadRequest(Json.toJson(ErrorResponse(LocalDateTime.now, "ClientId error", "Request header is missing clientId"))))
+          case _ => Future.successful(BadRequest(Json.toJson(ErrorResponse(Instant.now, "ClientId error", "Request header is missing clientId"))))
         }
     }
 
