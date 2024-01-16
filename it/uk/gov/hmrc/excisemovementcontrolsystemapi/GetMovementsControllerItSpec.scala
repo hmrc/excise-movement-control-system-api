@@ -16,10 +16,8 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi
 
-import com.github.tomakehurst.wiremock.client.WireMock
 import org.mockito.MockitoSugar.when
 import org.scalatest.BeforeAndAfterAll
-import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -31,22 +29,18 @@ import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{AuthTestSupport, MovementTestUtils}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.RepositoryTestStub
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.mongo.TimestampSupport
 
-import java.time.temporal.ChronoUnit
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import scala.concurrent.{ExecutionContext, Future}
 
 class GetMovementsControllerItSpec extends PlaySpec
   with GuiceOneServerPerSuite
   with AuthTestSupport
-  with TestXml
-  with WireMockServerSpec
   with RepositoryTestStub
   with MovementTestUtils
   with BeforeAndAfterAll {
@@ -58,7 +52,6 @@ class GetMovementsControllerItSpec extends PlaySpec
   private val consigneeId = "GBWK002281027"
   private val lrn = "token"
   private val url = s"http://localhost:$port/movements"
-  private lazy val dateTimeService: TimestampSupport = mock[TimestampSupport]
   private val timestampNow = Instant.now()
   private val timestampTwoDaysAgo = Instant.now().minus(2, ChronoUnit.DAYS)
 
@@ -67,27 +60,13 @@ class GetMovementsControllerItSpec extends PlaySpec
   private val movement3 = Movement("lrn2", "ern2", Some(consigneeId), Some("arc3"), timestampTwoDaysAgo)
 
   override lazy val app: Application = {
-    wireMock.start()
-    WireMock.configureFor(wireHost, wireMock.port())
 
     GuiceApplicationBuilder()
-      .configure(configureServer)
       .overrides(
         bind[AuthConnector].to(authConnector),
         bind[MovementRepository].to(movementRepository),
-        bind[TimestampSupport].to(dateTimeService)
       )
       .build()
-  }
-
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-    wireMock.resetAll()
-  }
-
-  override def afterAll(): Unit = {
-    super.afterAll()
-    wireMock.stop()
   }
 
   "Get Movements" should {

@@ -27,7 +27,6 @@ import scala.concurrent.{ExecutionContext, Future}
 trait FakeAuthentication {
 
   val ern = "testErn"
-  val ern2 = "testErn2"
 
   object FakeSuccessAuthentication extends AuthAction {
 
