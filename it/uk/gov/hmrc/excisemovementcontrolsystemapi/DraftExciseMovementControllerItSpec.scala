@@ -18,10 +18,9 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock._
-import org.mockito.MockitoSugar.{reset => MockitSugerReset}
 import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchersSugar.any
-import org.mockito.MockitoSugar.when
+import org.mockito.MockitoSugar.{when, reset => MockitSugerReset}
 import org.scalatest.concurrent.{Eventually, IntegrationPatience}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatestplus.mockito.MockitoSugar.mock
@@ -49,9 +48,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.Instant
-import java.util.UUID
 import java.time.{Instant, LocalDateTime, ZoneOffset, ZonedDateTime}
-import scala.concurrent.duration.MINUTES
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 

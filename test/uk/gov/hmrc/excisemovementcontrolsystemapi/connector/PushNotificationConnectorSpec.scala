@@ -112,7 +112,13 @@ class PushNotificationConnectorSpec
 
         val result = await(sut.getBoxId("clientId"))
 
-        result.left.value mustBe InternalServerError(s"Response body could not be read as type ${typeOf[BoxNotificationResponse]}")
+        val expectedError = Json.toJson(
+          ErrorResponse(
+            timestamp,
+            "Push Notification Error",
+            s"Response body could not be read as type ${typeOf[BoxNotificationResponse]}")
+        )
+        result.left.value mustBe InternalServerError(expectedError)
       }
     }
   }
