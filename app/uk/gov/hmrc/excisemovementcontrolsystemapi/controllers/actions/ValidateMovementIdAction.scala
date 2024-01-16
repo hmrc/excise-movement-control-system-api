@@ -24,7 +24,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -33,7 +33,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class ValidateMovementIdActionImpl @Inject()
 (
   val movementService: MovementService,
-  val emcsUtils: EmcsUtils
+  val dateTimeService: DateTimeService
 )(implicit val ec: ExecutionContext)
   extends ValidateMovementIdAction {
 
@@ -68,7 +68,7 @@ class ValidateMovementIdActionImpl @Inject()
   private def NotFoundErrorResponse[A](id: String, authorisedErns: Set[String]): Result = {
     NotFound(Json.toJson(
       ErrorResponse(
-        emcsUtils.getCurrentDateTime,
+        dateTimeService.timestamp(),
         "Movement not found",
         s"Movement $id is not found within the data for ERNs ${authorisedErns.mkString("/")}"
       )

@@ -31,9 +31,9 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
-import java.time.LocalDateTime
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
 class ValidateMovementIdActionSpec
@@ -41,11 +41,11 @@ class ValidateMovementIdActionSpec
     with BeforeAndAfterEach {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  private val emcsUtils: EmcsUtils = mock[EmcsUtils]
-  private val currentDateTime = LocalDateTime.of(2023, 10, 18, 15, 33, 33)
+  private val dateTimeService = mock[DateTimeService]
+  private val timestamp = Instant.parse("2023-10-18T15:33:33Z")
   private val ieMessage = mock[IEMessage]
   private val movementService = mock[MovementService]
-  private val sut = new ValidateMovementIdActionImpl(movementService, emcsUtils)
+  private val sut = new ValidateMovementIdActionImpl(movementService, dateTimeService)
 
   private val erns = Set("GBWK002281023", "GBWK002181023", "GBWK002281022")
   private val request = ValidatedXmlRequest(
@@ -64,7 +64,7 @@ class ValidateMovementIdActionSpec
 
     reset(movementService)
 
-    when(emcsUtils.getCurrentDateTime).thenReturn(currentDateTime)
+    when(dateTimeService.timestamp()).thenReturn(timestamp)
   }
 
   "ValidateMovementIdAction" should {
@@ -91,7 +91,7 @@ class ValidateMovementIdActionSpec
       val result = await(sut.apply("uuid1").invokeBlock(request, defaultBlock))
 
       result mustBe NotFound(Json.toJson(ErrorResponse(
-        currentDateTime,
+        timestamp,
         "Movement not found",
         "Movement uuid1 is not found within the data for ERNs GBWK002281023/GBWK002181023/GBWK002281022"))
       )
@@ -105,7 +105,7 @@ class ValidateMovementIdActionSpec
       val result = await(sut.apply("uuid1").invokeBlock(request, defaultBlock))
 
       result mustBe NotFound(Json.toJson(ErrorResponse(
-        currentDateTime,
+        timestamp,
         "Movement not found",
         "Movement uuid1 is not found within the data for ERNs GBWK002281023/GBWK002181023/GBWK002281022"))
       )
