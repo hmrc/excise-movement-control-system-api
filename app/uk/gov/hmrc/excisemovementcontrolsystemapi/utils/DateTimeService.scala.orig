@@ -19,13 +19,27 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
 import com.google.inject.{ImplementedBy, Singleton}
 
 import java.time.Instant
+<<<<<<< HEAD
+import javax.inject.Inject
+=======
+>>>>>>> 1b59bf1 (refactor and some clean up)
 
 @ImplementedBy(classOf[DateTimeServiceImpl])
 trait DateTimeService {
   def timestamp(): Instant
+<<<<<<< HEAD
+  def currentLocalDateTime: LocalDateTime
+=======
+>>>>>>> 1b59bf1 (refactor and some clean up)
 }
 
 @Singleton
 class DateTimeServiceImpl extends DateTimeService {
   override def timestamp(): Instant = Instant.now()
+<<<<<<< HEAD
+
+  //todo: replace occurrences of this with the nowUtc
+  override def currentLocalDateTime: LocalDateTime = LocalDateTime.now()
+=======
+>>>>>>> 1b59bf1 (refactor and some clean up)
 }
