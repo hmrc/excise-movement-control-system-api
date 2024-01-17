@@ -44,20 +44,20 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
 
   private val mockWorkItemRepo = mock[ExciseNumberQueueWorkItemRepository]
-  private val timestampSupport = mock[DateTimeService]
+  private val dateTimeService = mock[DateTimeService]
   private val appConfig = mock[AppConfig]
   private val timestamp = Instant.parse("2023-11-30T18:35:24.00Z")
   private val timestampPlusFastInterval = timestamp.plusSeconds(3 * 60)
   private val timestampPlusSlowInterval = timestamp.plusSeconds(2 * 60 * 60)
 
-  private val workItemService = new WorkItemService(mockWorkItemRepo, appConfig, timestampSupport)
+  private val workItemService = new WorkItemService(mockWorkItemRepo, appConfig, dateTimeService)
 
   private val ern = "ern123"
 
   override def beforeEach(): Unit = {
     super.beforeEach()
 
-    when(timestampSupport.timestamp()).thenReturn(Instant.from(timestamp))
+    when(dateTimeService.timestamp()).thenReturn(Instant.from(timestamp))
     when(appConfig.workItemFastInterval).thenReturn(Duration.create(3, MINUTES))
     when(appConfig.fastIntervalRetryAttempts).thenReturn(6)
     when(appConfig.workItemSlowInterval).thenReturn(Duration.create(2, HOURS))

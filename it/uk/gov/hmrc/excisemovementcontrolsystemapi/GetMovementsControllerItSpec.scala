@@ -16,10 +16,9 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi
 
-import com.github.tomakehurst.wiremock.client.WireMock
+import org.mockito.ArgumentMatchersSugar.eqTo
 import org.mockito.MockitoSugar.when
 import org.scalatest.BeforeAndAfterAll
-import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -31,22 +30,18 @@ import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{AuthTestSupport, MovementTestUtils}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.RepositoryTestStub
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.mongo.TimestampSupport
 
-import java.time.temporal.ChronoUnit
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import scala.concurrent.{ExecutionContext, Future}
 
 class GetMovementsControllerItSpec extends PlaySpec
   with GuiceOneServerPerSuite
   with AuthTestSupport
-  with TestXml
-  with WireMockServerSpec
   with RepositoryTestStub
   with MovementTestUtils
   with BeforeAndAfterAll {
@@ -57,8 +52,7 @@ class GetMovementsControllerItSpec extends PlaySpec
   private val consignorId = "GBWK002281023"
   private val consigneeId = "GBWK002281027"
   private val lrn = "token"
-  private val url = s"http://localhost:$port/movements"
-  private lazy val dateTimeService: TimestampSupport = mock[TimestampSupport]
+  private val baseUrl = s"http://localhost:$port/movements"
   private val timestampNow = Instant.now()
   private val timestampTwoDaysAgo = Instant.now().minus(2, ChronoUnit.DAYS)
 
@@ -67,27 +61,13 @@ class GetMovementsControllerItSpec extends PlaySpec
   private val movement3 = Movement("lrn2", "ern2", Some(consigneeId), Some("arc3"), timestampTwoDaysAgo)
 
   override lazy val app: Application = {
-    wireMock.start()
-    WireMock.configureFor(wireHost, wireMock.port())
 
     GuiceApplicationBuilder()
-      .configure(configureServer)
       .overrides(
         bind[AuthConnector].to(authConnector),
         bind[MovementRepository].to(movementRepository),
-        bind[TimestampSupport].to(dateTimeService)
       )
       .build()
-  }
-
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-    wireMock.resetAll()
-  }
-
-  override def afterAll(): Unit = {
-    super.afterAll()
-    wireMock.stop()
   }
 
   "Get Movements" should {
@@ -96,7 +76,7 @@ class GetMovementsControllerItSpec extends PlaySpec
       when(movementRepository.getMovementByERN(Seq(consignorId)))
         .thenReturn(Future.successful(Seq(movement1, movement2)))
 
-      val result = getRequest(url)
+      val result = getRequest(baseUrl)
 
       result.status mustBe OK
       withClue("return an EIS response") {
@@ -112,7 +92,7 @@ class GetMovementsControllerItSpec extends PlaySpec
       when(movementRepository.getMovementByERN(Seq(consignorId)))
         .thenReturn(Future.successful(Seq(movement1, movement2, movement3)))
 
-      val result = getRequest(s"$url?ern=$consignorId")
+      val result = getRequest(s"$baseUrl?ern=$consignorId")
 
       result.json mustBe Json.toJson(Seq(
         createMovementResponseFromMovement(movement1),
@@ -125,7 +105,7 @@ class GetMovementsControllerItSpec extends PlaySpec
       when(movementRepository.getMovementByERN(Seq(consigneeId)))
         .thenReturn(Future.successful(Seq(movement1, movement2, movement3)))
 
-      val result = getRequest(s"$url?ern=$consigneeId")
+      val result = getRequest(s"$baseUrl?ern=$consigneeId")
 
       result.json mustBe Json.toJson(Seq(
         createMovementResponseFromMovement(movement1),
@@ -138,7 +118,7 @@ class GetMovementsControllerItSpec extends PlaySpec
       when(movementRepository.getMovementByERN(Seq(consignorId)))
         .thenReturn(Future.successful(Seq(movement1, movement2, movement3)))
 
-      val result = getRequest(s"$url?lrn=$lrn")
+      val result = getRequest(s"$baseUrl?lrn=$lrn")
 
       result.json mustBe Json.toJson(Seq(
         createMovementResponseFromMovement(movement1)
@@ -150,7 +130,7 @@ class GetMovementsControllerItSpec extends PlaySpec
       when(movementRepository.getMovementByERN(Seq(consignorId)))
         .thenReturn(Future.successful(Seq(movement1, movement2, movement3)))
 
-      val result = getRequest(s"$url?arc=arc1")
+      val result = getRequest(s"$baseUrl?arc=arc1")
 
       result.json mustBe Json.toJson(Seq(
         createMovementResponseFromMovement(movement1)
@@ -164,7 +144,7 @@ class GetMovementsControllerItSpec extends PlaySpec
       when(movementRepository.getMovementByERN(Seq(consignorId)))
         .thenReturn(Future.successful(Seq(movement1, movement2, movement3)))
 
-      val urlToGoIn = s"$url?updatedSince=$timeFilter"
+      val urlToGoIn = s"$baseUrl?updatedSince=$timeFilter"
 
       val result = getRequest(urlToGoIn)
 
@@ -178,7 +158,7 @@ class GetMovementsControllerItSpec extends PlaySpec
       when(movementRepository.getMovementByERN(Seq(consignorId)))
         .thenReturn(Future.successful(Seq(movement1, movement2, movement3)))
 
-      val result = getRequest(s"$url?arc=arc1&lrn=$lrn&ern=$consignorId")
+      val result = getRequest(s"$baseUrl?arc=arc1&lrn=$lrn&ern=$consignorId")
 
       result.json mustBe Json.toJson(Seq(
         createMovementResponseFromMovement(movement1)
@@ -188,16 +168,103 @@ class GetMovementsControllerItSpec extends PlaySpec
     "return an Unauthorized (401) when no authorized trader" in {
       withUnauthorizedTrader(InternalError("A general auth failure"))
 
-      getRequest(url).status mustBe UNAUTHORIZED
+      getRequest(baseUrl).status mustBe UNAUTHORIZED
     }
 
     "return a Bad Request (400) when not logged in as the filtering trader" in {
 
       withAuthorizedTrader(consignorId)
 
-      getRequest(s"$url?ern=GBWK002281024").status mustBe BAD_REQUEST
+      getRequest(s"$baseUrl?ern=GBWK002281024").status mustBe BAD_REQUEST
 
     }
+  }
+
+  "Get Movement" should {
+
+    val movementId = "cfdb20c7-d0b0-4b8b-a071-737d68dede5b"
+    val movement = Movement(
+      movementId,
+      "LRNQA20230909022221",
+      consignorId,
+      Some(consigneeId),
+      Some("23GB00000000000377161"),
+      timestampNow,
+      Seq.empty
+    )
+
+    "return 200 Success and movement details when consignor" in {
+
+      when(movementRepository.getMovementById(eqTo(movementId)))
+        .thenReturn(Future.successful(Some(movement)))
+
+      withAuthorizedTrader(consignorId)
+
+      val result = getRequest(getUrl(movementId))
+
+      result.status mustBe OK
+
+      result.json mustBe Json.toJson(createMovementResponseFromMovement(movement))
+    }
+
+    "return 200 Success and movement details when consignee" in {
+
+      when(movementRepository.getMovementById(eqTo(movementId)))
+        .thenReturn(Future.successful(Some(movement)))
+
+      withAuthorizedTrader(consigneeId)
+
+      val result = getRequest(getUrl(movementId))
+
+      result.status mustBe OK
+      result.json mustBe Json.toJson(createMovementResponseFromMovement(movement))
+
+    }
+
+    "return 401 Unauthorised when not authorised trader" in {
+
+      withUnauthorizedTrader(InternalError("A general auth failure"))
+
+      val result = getRequest(getUrl(movementId))
+
+      result.status mustBe UNAUTHORIZED
+    }
+
+    "return 404 Not Found when movement is not in database" in {
+      when(movementRepository.getMovementById(eqTo(movementId)))
+        .thenReturn(Future.successful(None))
+
+      withAuthorizedTrader(consigneeId)
+
+      val result = getRequest(getUrl(movementId))
+
+      result.status mustBe NOT_FOUND
+
+    }
+
+    "return 404 Not Found when movement is not valid for your login" in {
+      when(movementRepository.getMovementById(eqTo(movementId)))
+        .thenReturn(Future.successful(Some(movement)))
+
+      withAuthorizedTrader("differentPerson")
+
+      val result = getRequest(getUrl(movementId))
+
+      result.status mustBe NOT_FOUND
+
+    }
+
+    "return 400 Bad Request when UUID is wrong format" in {
+      withAuthorizedTrader(consignorId)
+
+      val result = getRequest(getUrl("nfbfs78-432nfsd-4123"))
+
+      result.status mustBe BAD_REQUEST
+
+    }
+
+    def getUrl(movementId: String) = s"$baseUrl/$movementId"
+
   }
 
   private def getRequest(url: String) = {

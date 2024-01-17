@@ -30,7 +30,7 @@ trait FakeJsonParsers {
   object FakeSuccessJsonParser extends ParseJsonAction {
     override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedPreValidateTraderRequest[A]]] = {
       Future.successful(Right(preValidateTrader.request.ParsedPreValidateTraderRequest(
-        EnrolmentRequest(request, Set.empty, "123"),
+        EnrolmentRequest(request, Set("ern123"), "123"),
         getPreValidateTraderRequest)))
     }
 
