@@ -68,7 +68,7 @@ class DraftExciseMovementController @Inject()(
 
   private def handleSuccess(boxId: String)(implicit request: ValidatedXmlRequest[NodeSeq]): Future[Result] = {
 
-    val newMovement: Movement = createMovementFomMessage(request.message)
+    val newMovement: Movement = createMovementFomMessage(request.message, boxId)
     workItemService.addWorkItemForErn(newMovement.consignorId, fastMode = true)
 
     movementMessageService.saveNewMovement(newMovement).map {
@@ -77,9 +77,10 @@ class DraftExciseMovementController @Inject()(
     }
   }
 
-  private def createMovementFomMessage(message: IEMessage): Movement = {
+  private def createMovementFomMessage(message: IEMessage, boxId: String): Movement = {
     message match {
       case x: IE815Message => Movement(
+        boxId,
         x.localReferenceNumber,
         x.consignorId,
         x.consigneeId,

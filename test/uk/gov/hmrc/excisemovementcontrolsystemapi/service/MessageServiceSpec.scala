@@ -53,7 +53,7 @@ class MessageServiceSpec extends PlaySpec with EitherValues with TestXml {
       val testArc = "23GB00000000000377161"
 
       when(movementRepository.getMovementByARC(testArc)).thenReturn(Future.successful(
-        Seq(Movement("lrn", "consignor", Some("consignee"), Some(testArc)))))
+        Seq(createMovement(testArc))))
 
       val ie810Message = IE810Message.createFromXml(IE810)
 
@@ -66,7 +66,7 @@ class MessageServiceSpec extends PlaySpec with EitherValues with TestXml {
       val testArc = "23GB00000000000378126"
 
       when(movementRepository.getMovementByARC(testArc)).thenReturn(Future.successful(
-        Seq(Movement("lrn", "consignor", Some("consignee"), Some(testArc)))))
+        Seq(createMovement(testArc))))
 
       val ie813Message = IE813Message.createFromXml(IE813)
 
@@ -128,5 +128,9 @@ class MessageServiceSpec extends PlaySpec with EitherValues with TestXml {
         have message "[MessageService] - Unsupported Message Type: any-type"
     }
 
+  }
+
+  private def createMovement(arc: String): Movement = {
+    Movement("boxId", "lrn", "consignor", Some("consignee"), Some(arc))
   }
 }

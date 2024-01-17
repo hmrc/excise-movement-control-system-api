@@ -65,7 +65,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
   private val eisUrl = "/emcs/digital-submit-new-message/v1"
   private val consignorId = "GBWK240176600"
   private val consigneeId = "GBWK002281023"
-  private val movement = Movement("LRNQA20230909022221", consignorId, Some(consigneeId), Some("23GB00000000000377161"))
+  private val movement = Movement("boxId", "LRNQA20230909022221", consignorId, Some(consigneeId), Some("23GB00000000000377161"))
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 

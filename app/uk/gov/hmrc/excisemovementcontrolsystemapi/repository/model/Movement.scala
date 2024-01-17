@@ -24,6 +24,7 @@ import java.util.UUID
 
 case class Movement(
                      _id: String,
+                     boxId: String,
                      localReferenceNumber: String,
                      consignorId: String,
                      consigneeId: Option[String],
@@ -43,13 +44,14 @@ object Movement {
   implicit val instantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
   implicit val format: OFormat[Movement] = Json.format[Movement]
 
-  def apply(localReferenceNumber: String,
+  def apply(boxId: String,
+            localReferenceNumber: String,
             consignorId: String,
             consigneeId: Option[String],
             administrativeReferenceCode: Option[String] = None,
             lastUpdated: Instant = Instant.now,
             messages: Seq[Message] = Seq.empty): Movement =
-    Movement(UUID.randomUUID().toString, localReferenceNumber, consignorId, consigneeId,
+    Movement(UUID.randomUUID().toString, boxId, localReferenceNumber, consignorId, consigneeId,
       administrativeReferenceCode, lastUpdated, messages)
 }
 

@@ -56,9 +56,9 @@ class GetMovementsControllerItSpec extends PlaySpec
   private val timestampNow = Instant.now()
   private val timestampTwoDaysAgo = Instant.now().minus(2, ChronoUnit.DAYS)
 
-  private val movement1 = Movement(lrn, consignorId, Some(consigneeId), Some("arc1"), timestampNow)
-  private val movement2 = Movement("lrn1", consignorId, Some("consignee2"), Some("arc2"), timestampTwoDaysAgo)
-  private val movement3 = Movement("lrn2", "ern2", Some(consigneeId), Some("arc3"), timestampTwoDaysAgo)
+  private val movement1 = Movement("boxId", lrn, consignorId, Some(consigneeId), Some("arc1"), timestampNow)
+  private val movement2 = Movement("boxId", "lrn1", consignorId, Some("consignee2"), Some("arc2"), timestampTwoDaysAgo)
+  private val movement3 = Movement("boxId", "lrn2", "ern2", Some(consigneeId), Some("arc3"), timestampTwoDaysAgo)
 
   override lazy val app: Application = {
 

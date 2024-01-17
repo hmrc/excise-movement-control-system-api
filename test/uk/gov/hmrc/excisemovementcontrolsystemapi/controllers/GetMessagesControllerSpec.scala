@@ -64,7 +64,7 @@ class GetMessagesControllerSpec extends PlaySpec
   "getMessagesForMovement" should {
     "return 200" in {
       val message = Message("message", "IE801", messageCreateOn)
-      val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
+      val movement = createMovementWithMessages(Seq(message))
       when(movementService.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Some(movement)))
 
@@ -77,7 +77,7 @@ class GetMessagesControllerSpec extends PlaySpec
     "get all the new messages" in {
       val message = Message("message", "IE801", messageCreateOn)
       val message2 = Message("message2", "IE801", messageCreateOn)
-      val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message, message2))
+      val movement = createMovementWithMessages(Seq(message, message2))
       when(movementService.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Some(movement)))
 
@@ -93,7 +93,7 @@ class GetMessagesControllerSpec extends PlaySpec
       val timeInPast = Instant.now.minusSeconds(1000)
       val message = Message("message", "IE801", timeInFuture)
       val message2 = Message("message2", "IE801", timeInPast)
-      val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message, message2))
+      val movement = createMovementWithMessages(Seq(message, message2))
       when(movementService.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Some(movement)))
 
@@ -110,7 +110,7 @@ class GetMessagesControllerSpec extends PlaySpec
       val message = Message("message", "IE801", timeInFuture)
       val message2 = Message("message2", "IE801", timeInPast)
       val message3 = Message("message3", "IE801", messageCreateOn)
-      val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message, message2, message3))
+      val movement = createMovementWithMessages(Seq(message, message2, message3))
       when(movementService.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Some(movement)))
 
@@ -123,7 +123,7 @@ class GetMessagesControllerSpec extends PlaySpec
     "succeed when a valid date format is provided" in {
       val timeInFuture = Instant.now.plusSeconds(1000)
       val message = Message("message", "IE801", timeInFuture)
-      val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
+      val movement = createMovementWithMessages(Seq(message))
       when(movementService.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Some(movement)))
 
@@ -136,7 +136,7 @@ class GetMessagesControllerSpec extends PlaySpec
     "fail when an invalid date format is provided" in {
       val timeInFuture = Instant.now.plusSeconds(1000)
       val message = Message("message", "IE801", timeInFuture)
-      val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
+      val movement = createMovementWithMessages(Seq(message))
       when(movementService.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Some(movement)))
 
@@ -151,7 +151,7 @@ class GetMessagesControllerSpec extends PlaySpec
 
     "create a Work Item if there is not one for the ERN already" in {
       val message = Message("message", "IE801", messageCreateOn)
-      val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
+      val movement = createMovementWithMessages(Seq(message))
       when(movementService.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Some(movement)))
 
@@ -181,7 +181,7 @@ class GetMessagesControllerSpec extends PlaySpec
 
     "catch Future failure from Work Item service and log it but still process submission" in {
       val message = Message("message", "IE801", messageCreateOn)
-      val movement = Movement("lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
+      val movement = createMovementWithMessages(Seq(message))
       when(movementService.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Some(movement)))
 
@@ -194,6 +194,10 @@ class GetMessagesControllerSpec extends PlaySpec
       verify(movementService).getMatchingERN(any, any)
     }
 
+  }
+
+  private def createMovementWithMessages(messages: Seq[Message]):Movement = {
+    Movement("boxId", "lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, messages)
   }
 
   private def createWithSuccessfulAuth =
