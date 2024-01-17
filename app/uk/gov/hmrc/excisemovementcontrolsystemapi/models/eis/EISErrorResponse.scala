@@ -21,6 +21,7 @@ import play.api.libs.json.{Json, OFormat}
 import java.time.Instant
 
 case class EISErrorResponse(dateTime: Instant,
+                            status: String,
                             message: String,
                             debugMessage: String,
                             emcsCorrelationId: String

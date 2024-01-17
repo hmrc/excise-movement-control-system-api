@@ -287,7 +287,8 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   private def createEISErrorResponseBodyAsJson(message: String): JsValue = {
     Json.toJson(EISErrorResponse(
       Instant.parse("2023-12-05T12:05:06Z"),
-      message,
+      message.toUpperCase,
+      message.toLowerCase,
       s"debug $message",
       "123"
     ))

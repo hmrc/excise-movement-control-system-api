@@ -63,6 +63,7 @@ class PreValidateTraderConnector @Inject()
 
           val error = EISErrorResponse(
             timestamp,
+            "INTERNAL_SERVER_ERROR",
             "Exception",
             ex.getMessage,
             correlationId

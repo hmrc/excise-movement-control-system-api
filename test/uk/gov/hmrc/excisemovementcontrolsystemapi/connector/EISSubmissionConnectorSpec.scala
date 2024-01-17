@@ -165,7 +165,7 @@ class EISSubmissionConnectorSpec
       val result = await(submitExciseMovementForIE815)
 
       result.left.value mustBe InternalServerError(
-        Json.toJson(EISErrorResponse(timestamp,
+        Json.toJson(EISErrorResponse(timestamp, "INTERNAL_SERVER_ERROR",
           "Exception", "error", emcsCorrelationId)))
     }
 

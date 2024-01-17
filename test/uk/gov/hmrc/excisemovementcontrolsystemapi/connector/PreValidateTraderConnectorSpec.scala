@@ -138,7 +138,7 @@ class PreValidateTraderConnectorSpec extends PlaySpec with BeforeAndAfterEach wi
       val result = await(submitPreValidateTrader())
 
       result.left.value mustBe InternalServerError(
-        Json.toJson(EISErrorResponse(timestamp,
+        Json.toJson(EISErrorResponse(timestamp, "INTERNAL_SERVER_ERROR",
           "Exception", "error", emcsCorrelationId)))
     }
 

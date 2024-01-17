@@ -53,6 +53,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ExciseMovement'
               example:
+                status: "Accepted"
+                movementId: b6ba6a73-d723-4c9f-b9b7-99e533fb614f
                 consignorId: "GBWK002281023"
                 consigneeId: "GBWKQOZ8OVLYR"
                 localReferenceNumber: "LRNQA20230909022221"
@@ -62,62 +64,118 @@ paths:
           content:
             application/vnd.hmrc.1.0+json:
               schema:
-                $ref: '#/components/schemas/ExciseMovementError'
+                oneOf:
+                  - $ref: '#/components/schemas/ExciseMovementError'
+                  - $ref: '#/components/schemas/DownstreamError'
               examples:
+                duplicateLrn:
+                  summary: "Duplicate LRN"
+                  value:
+                    dateTime: "2024-01-17T15:21:17.170162Z"
+                    message: "Duplicate LRN error"
+                    debugMessage: "The local reference number lrnie8156540856 has already been used for another movement"
                 jsonValidation:
                   summary: "Json validation error downstream"
                   value:
                     dateTime: "2021-12-17T09:30:47Z"
+                    status: "BAD_REQUEST"
                     message: "Json validation failed"
                     debugMessage: "user is missing but it is required"
                     emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
-                xmlValidation:
-                  summary: "Xml validation failure"
+                invalidIE815:
+                  summary: "Invalid IE815 message"
                   value:
-                    message: "Validation error(s) occurred"
-                    errors:
-                      - errorCode: 8084
-                        errorMessage: "The Date of Dispatch you entered is incorrect. It must be today or later. Please amend your entry and resubmit."
-                        location: "/urn:IE815[1]/urn:Body[1]/urn:SubmittedDraftOfEADESAD[1]/urn:EadEsadDraft[1]/urn:DateOfDispatch[1]"
-                        value: "2023-09-09"
+                    dateTime: "2014-01-17T15:24:29.598475Z"
+                    message: "Not valid IE815 message"
+                    debugMessage: "Error while parsing: DateOfDispatch field expected"
+
         '401':
-          description: Consignor not authorized. Invalid enrolment parameter.
+          description: Consignor not authorised. Invalid enrolment parameter.
+          content:
+            text/plain:
+              example:
+                "Invalid affinity group Individual"
         '403':
           description: Consignor ID is not in authorisation bearer token
-        '404':
-          description: Connection Refused
           content:
             application/vnd.hmrc.1.0+json:
               schema:
                 $ref: '#/components/schemas/ExciseMovementError'
               example:
-                dateTime: "2021-12-17T09:30:47Z"
-                message: "Received error response from server"
-                debugMessage: "Connection refused; nested exception is java.net.ConnectException: Connection refused"
-                emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+                dateTime: '2024-01-17T15:27:29.540089Z'
+                message: ERN validation error
+                debugMessage: Excise number in message does not match authenticated excise number
+            text/plain:
+              example:
+                "Could not find ExciseNumber"
+        '404':
+          description: Downstream connection refused
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/DownstreamError'
+              example:
+                dateTime: '2021-12-17T09:31:12Z'
+                status: NOT_FOUND
+                message: Received error response from server
+                debugMessage: 'Connection refused; nested exception is java.net.ConnectException: Connection refused'
+                emcsCorrelationId: b47a371c-01e6-4dc0-97c1-dd524f7035d0
+        '422':
+          description: The draft movement message has failed validation
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/DownstreamValidationError'
+              example:
+                message: ["Validation error(s) occurred"]
+                errors:
+                  - errorCategory: "business"
+                    errorType: 8084
+                    errorReason: "The Date of Dispatch you entered is incorrect. It must be today or later. Please amend your entry and resubmit."
+                    errorLocation: "/urn:IE815[1]/urn:Body[1]/urn:SubmittedDraftOfEADESAD[1]/urn:EadEsadDraft[1]/urn:DateOfDispatch[1]"
+                    originalAttributeValue: "2023-09-09"
+
         '500':
           description: Internal server error
           content:
             application/vnd.hmrc.1.0+json:
               schema:
-                $ref: '#/components/schemas/ExciseMovementError'
-              example:
-                dateTime: "2021-12-17T09:30:47Z"
-                message: "Invalid JSON structure"
-                debugMessage: "JSON parse error: Unexpected character"
-                emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+                oneOf:
+                  - $ref: '#/components/schemas/DownstreamError'
+                  - $ref: '#/components/schemas/ExciseMovementError'
+              examples:
+                downstreamError:
+                  summary: Downstream internal server error
+                  value:
+                    dateTime: "2021-12-17T09:30:47Z"
+                    status: "INTERNAL_SERVER_ERROR"
+                    message: "Invalid JSON structure"
+                    debugMessage: "JSON parse error: Unexpected character"
+                    emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+                databaseError:
+                  summary: Database error
+                  value:
+                    dateTime: '2024-01-17T15:27:29.540089Z'
+                    message: Database error
+                    debugMessage: Error occurred while saving movement
+
         '503':
           description: Downstream service is Unavailable
           content:
             application/vnd.hmrc.1.0+json:
               schema:
-                $ref: '#/components/schemas/ExciseMovementError'
+                $ref: '#/components/schemas/DownstreamError'
               example:
-                code: "SERVER_ERROR"
-                message: "Service unavailable"
+                dateTime: '2021-12-17T09:31:12Z'
+                status: SERVICE_UNAVAILABLE
+                message: CIRCUIT_BREAKER - 815_CB is OPEN
+                debugMessage: CircuitBreaker '815_CB' is OPEN and does not permit further calls
+                emcsCorrelationId: 4afb4a1e-33ca-42a5-8117-315db02b7f3c
+
       security:
         - userRestricted:
             - excise-movement-control-system
+
     get:
       tags:
         - Movements
@@ -499,11 +557,15 @@ components:
     DateTime:
       type: string
       format: date-time
-      example: '2021-12-17T09:30:47Z'
+      example: '2021-12-17T09:30:470162Z'
     CorrelationId:
       type: string
       format: uuid
       example: 3e8dae97-b586-4cef-8511-68ac12da9028
+    MovementId:
+      type: string
+      format: uuid
+      example: b6ba6a73-d723-4c9f-b9b7-99e533fb614f
     IE810:
       type: object
       description: Submit cancellation
@@ -570,10 +632,13 @@ components:
     ExciseMovement:
       type: object
       required:
+        - movementId
         - consignorId
         - localReferenceNumber
         - status
       properties:
+        movementId:
+          $ref: '#/components/schemas/MovementId'
         consignorId:
           $ref: '#/components/schemas/ExciseReferenceNumber'
         localReferenceNumber:
@@ -592,37 +657,69 @@ components:
         - dateTime
         - message
         - debugMessage
-        - emcsCorrelationId
       properties:
         dateTime:
           $ref: '#/components/schemas/DateTime'
-        emcsCorrelationId:
-          $ref: '#/components/schemas/CorrelationId'
         message:
           type: string
         debugMessage:
           type: string
+
+    DownstreamError:
+      type: object
+      required:
+        - dateTime
+        - status
+        - message
+        - debugMessage
+        - emcsCorrelationId
+      properties:
+        dateTime:
+          $ref: '#/components/schemas/DateTime'
+        status:
+          type: string
+        message:
+          type: string
+        debugMessage:
+          type: string
+        emcsCorrelationId:
+          $ref: '#/components/schemas/CorrelationId'
+
+    DownstreamValidationError:
+      type: object
+      required:
+        - message
+        - emcsCorrelationId
+      properties:
+        emcsCorrelationId:
+          $ref: '#/components/schemas/CorrelationId'
+        message:
+          type: array
+          items:
+            type: string
         errors:
           type: array
           items:
             $ref: '#/components/schemas/ValidationError'
-      xml:
-        name: exciseMovementType
+
     ValidationError:
       type: object
       required:
-        - errorCode
-        - errorMessage
-        - location
-        - value
+        - errorCategory
+        - errorType
+        - errorReason
+        - errorLocation
+        - originalAttributeValue
       properties:
-        errorCode:
+        errorCategory:
+          type: string
+        errorType:
           type: integer
-        errorMessage:
+        errorReason:
           type: string
-        location:
+        errorLocation:
           type: string
-        value:
+        originalAttributeValue:
           type: string
     SubmitDraftMessageType:
       type: string
