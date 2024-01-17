@@ -58,7 +58,6 @@ paths:
                 consignorId: "GBWK002281023"
                 consigneeId: "GBWKQOZ8OVLYR"
                 localReferenceNumber: "LRNQA20230909022221"
-                status: "Accepted"
         '400':
           description: The submission of draft movement message has failed validation
           content:
@@ -214,12 +213,14 @@ paths:
           content:
             application/vnd.hmrc.1.0+json:
               example:
-                - consignorId: "GBWK002281023"
+                - movementId: "b6ba6a73-d723-4c9f-b9b7-99e533fb614f"
+                  consignorId: "GBWK002281023"
                   consigneeId: "GBWKQOZ8OVLYR"
                   localReferenceNumber: "LRNQA20230909022221"
                   administrativeReferenceCode: "35WE3B5EDSYSZ86STVKH8"
                   status: "Accepted"
-                - consignorId: "GBWK002281023"
+                - movementId: "612d2527-c207-4ffb-9250-f4ece59a29c5"
+                  consignorId: "GBWK002281023"
                   consigneeId: "GBWKQOZ8OVLYQ"
                   localReferenceNumber: "LRNQA20230909022224"
                   status: "None"
@@ -227,8 +228,38 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ExciseMovement'
+        '400':
+          description: Bad request - either filter ERN is invalid or date filter format is invalid
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: "#/components/schemas/ExciseMovementError"
+              examples:
+                ernParameter:
+                  summary: filter ERN is not valid
+                  value:
+                    dateTime: '2024-01-17T16:26:18.062304Z'
+                    message: ERN parameter value error
+                    debugMessage: The ERN GBWKQOZ8OVLDD supplied in the parameter is not among the authorised ERNs GBWKQOZ8OVLYR
+                dateFormat:
+                  summary: date filter format is not valid
+                  value:
+                    dateTime: '2024-01-17T16:27:41.095827Z'
+                    message: Invalid date format provided in the updatedSince query parameter
+                    debugMessage: Date format should be like '2020-11-15T17:02:34.00Z'
+
         '401':
-          description: Consignor or Consignee not authorized. Invalid enrolment parameter.
+          description: Consignor or Consignee not authorised. Invalid enrolment parameter.
+          content:
+            text/plain:
+              example:
+                "Invalid affinity group Individual"
+        '403':
+          description: Consignor ID is not in authorisation bearer token
+          content:
+            text/plain:
+              example:
+                "Could not find ExciseNumber"
       security:
         - userRestricted:
             - excise-movement-control-system
