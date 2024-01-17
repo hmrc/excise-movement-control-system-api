@@ -21,7 +21,7 @@ import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -46,21 +46,33 @@ class GetMessagesController @Inject()(
     // todo: how we handle error here if for example MongoDb throws?
     authAction.async(parse.default) {
       implicit request: EnrolmentRequest[AnyContent] => {
-
-        //is UUID valid
-        //look up movement
-        // is ERN able to use that movement
-        //return messages as Json.
         Try(UUID.fromString(movementId)) match {
           case Success(_) =>
-            movementService.getMatchingERN(movementId, request.erns.toList).flatMap {
-              case None => Future.successful(BadRequest(Json.toJson(ErrorResponse(dateTimeService.timestamp(), "Invalid LRN supplied for ERN", ""))))
-              case Some(ern) => workItemService.addWorkItemForErn(ern, fastMode = false)
-                getMessagesAsJson(movementId, ern, updatedSince)
+
+            Try(updatedSince.map(Instant.parse(_))).map { updatedSinceTime => {
+
+              val movement = movementService.getMovementById(movementId)
+
+              movement.map {
+                case Some(mvt) =>
+                  if (getErnsForMovement(mvt).intersect(request.erns).isEmpty)
+                    BadRequest(Json.toJson(ErrorResponse(
+                      dateTimeService.timestamp(),
+                      "Invalid MovementID supplied for ERN",
+                      ""
+                    ))) else {
+                    workItemService.addWorkItemForErn(mvt.consignorId, fastMode = false)
+
+                    Ok(Json.toJson(filterMessagesByTime(mvt.messages, updatedSinceTime)))
+                  }
+                case _ => NotFound("blah")
+              }
             }
+            }.getOrElse(
+              Future.successful(BadRequest(Json.toJson(ErrorResponse(dateTimeService.timestamp(), "Invalid date format provided in the updatedSince query parameter", "Date format should be like '2020-11-15T17:02:34.00Z'")))))
 
 
-          case _ =>
+              case _ =>
             Future.successful(BadRequest(Json.toJson(ErrorResponse(
               dateTimeService.timestamp(),
               "Movement Id format error",
@@ -92,6 +104,10 @@ class GetMessagesController @Inject()(
     updatedSince.fold[Seq[Message]](messages)(a =>
       messages.filter(o => o.createdOn.isAfter(a) || o.createdOn.equals(a))
     )
+  }
+
+  private def getErnsForMovement(movement: Movement): Set[String] = {
+    Set(Some(movement.consignorId), movement.consigneeId).flatten
   }
 
 }

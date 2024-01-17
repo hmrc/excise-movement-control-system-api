@@ -99,8 +99,8 @@ class GetMessagesControllerItSpec extends PlaySpec
       stubShowNewMessageRequest(consignorId)
       when(dateTimeService.timestamp()).thenReturn(timestamp)
       val message = Message("encodedMessage", "IE801", dateTimeService.timestamp())
-      when(movementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq(Movement("boxId", validUUID, consignorId, None, None, Instant.now, Seq(message)))))
+      when(movementRepository.getMovementById(any))
+        .thenReturn(Future.successful(Some(Movement("boxId", validUUID, consignorId, None, None, Instant.now, Seq(message)))))
 
       val result = getRequest
 
@@ -112,19 +112,19 @@ class GetMessagesControllerItSpec extends PlaySpec
 
     }
 
-    "return 400 when no movement message is found" in {
+    "return 400 when no movement is found" in {
       withAuthorizedTrader(consignorId)
-      when(movementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq.empty))
+      when(movementRepository.getMovementById(any))
+        .thenReturn(Future.successful(None))
 
       val result = getRequest
 
-      result.status mustBe BAD_REQUEST
+      result.status mustBe NOT_FOUND
     }
 
     "return 500 when mongo db fails to fetch details" in {
       withAuthorizedTrader(consignorId)
-      when(movementRepository.getMovementByLRNAndERNIn(any, any))
+      when(movementRepository.getMovementById(any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
       val result = getRequest

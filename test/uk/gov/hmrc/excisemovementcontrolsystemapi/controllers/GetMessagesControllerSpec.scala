@@ -22,7 +22,7 @@ import org.mongodb.scala.MongoException
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.{BAD_REQUEST, OK}
+import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, OK}
 import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.AnyContent
 import play.api.test.FakeRequest
@@ -78,7 +78,7 @@ class GetMessagesControllerSpec extends PlaySpec
     "return 200" in {
       val message = Message("message", "IE801", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message))
-      when(movementService.getMovementByLRNAndERNIn(any, any))
+      when(movementService.getMovementById(any))
         .thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
@@ -91,12 +91,12 @@ class GetMessagesControllerSpec extends PlaySpec
       val message = Message("message", "IE801", messageCreateOn)
       val message2 = Message("message2", "IE801", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message, message2))
-      when(movementService.getMovementByLRNAndERNIn(any, any))
+      when(movementService.getMovementById(any))
         .thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
 
-      verify(movementService).getMovementByLRNAndERNIn(eqTo(validUUID), eqTo(List(ern)))
+      verify(movementService).getMovementById(eqTo(validUUID))
 
       status(result) mustBe OK
       contentAsJson(result) mustBe Json.toJson(Seq(message, message2))
@@ -108,7 +108,7 @@ class GetMessagesControllerSpec extends PlaySpec
       val message = Message("message", "IE801", timeInFuture)
       val message2 = Message("message2", "IE801", timeInPast)
       val movement = createMovementWithMessages(Seq(message, message2))
-      when(movementService.getMovementByLRNAndERNIn(any, any))
+      when(movementService.getMovementById(any))
         .thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, Some(messageCreateOn.toString))(createRequest())
@@ -125,7 +125,7 @@ class GetMessagesControllerSpec extends PlaySpec
       val message2 = Message("message2", "IE801", timeInPast)
       val message3 = Message("message3", "IE801", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message, message2, message3))
-      when(movementService.getMovementByLRNAndERNIn(any, any))
+      when(movementService.getMovementById(any))
         .thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, Some(timeNowString))(createRequest())
@@ -138,7 +138,7 @@ class GetMessagesControllerSpec extends PlaySpec
       val timeInFuture = Instant.now.plusSeconds(1000)
       val message = Message("message", "IE801", timeInFuture)
       val movement = createMovementWithMessages(Seq(message))
-      when(movementService.getMovementByLRNAndERNIn(any, any))
+      when(movementService.getMovementById(any))
         .thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, Some("2020-11-15T17:02:34.00Z"))(createRequest())
@@ -151,7 +151,7 @@ class GetMessagesControllerSpec extends PlaySpec
       val timeInFuture = Instant.now.plusSeconds(1000)
       val message = Message("message", "IE801", timeInFuture)
       val movement = createMovementWithMessages(Seq(message))
-      when(movementService.getMovementByLRNAndERNIn(any, any))
+      when(movementService.getMovementById(any))
         .thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, Some("invalid date"))(createRequest())
@@ -166,7 +166,7 @@ class GetMessagesControllerSpec extends PlaySpec
     "create a Work Item if there is not one for the ERN already" in {
       val message = Message("message", "IE801", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message))
-      when(movementService.getMovementByLRNAndERNIn(any, any))
+      when(movementService.getMovementById(any))
         .thenReturn(Future.successful(Some(movement)))
 
       await(createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest()))
@@ -176,8 +176,9 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "return an empty array when no messages" in {
-      when(movementService.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(None))
+      val movement = createMovementWithMessages(Seq.empty)
+      when(movementService.getMovementById(any))
+        .thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
 
@@ -185,18 +186,19 @@ class GetMessagesControllerSpec extends PlaySpec
       contentAsJson(result) mustBe JsArray()
     }
 
-    "return a bad request when no movement exists for LRN/ERNs combination" in {
-      when(movementService.getMatchingERN(any, any)).thenReturn(Future.successful(None))
+    "return NOT_FOUND when no movement exists for given movementID" in {
+      when(movementService.getMovementById(any))
+        .thenReturn(Future.successful(None))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
 
-      status(result) mustBe BAD_REQUEST
+      status(result) mustBe NOT_FOUND
     }
 
     "catch Future failure from Work Item service and log it but still process submission" in {
       val message = Message("message", "IE801", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message))
-      when(movementService.getMovementByLRNAndERNIn(any, any))
+      when(movementService.getMovementById(any))
         .thenReturn(Future.successful(Some(movement)))
 
       when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.failed(new MongoException("Oh no!")))
@@ -204,8 +206,6 @@ class GetMessagesControllerSpec extends PlaySpec
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
 
       status(result) mustBe OK
-
-      verify(movementService).getMatchingERN(any, any)
     }
 
   }
