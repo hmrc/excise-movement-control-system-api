@@ -22,7 +22,7 @@ import org.mongodb.scala.MongoException
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.{BAD_REQUEST, OK}
+import play.api.http.Status.{BAD_REQUEST, FORBIDDEN, NOT_FOUND, OK}
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
@@ -56,7 +56,7 @@ class GetMovementsControllerSpec
     workItemService,
     dateTimeService
   )
-  private val timeStamp = Instant.parse("2020-01-01T01:01:01.1Z")
+  private val timestamp = Instant.parse("2020-01-01T01:01:01.1Z")
   private val fakeRequest = FakeRequest("POST", "/foo")
 
   override def beforeEach(): Unit = {
@@ -69,7 +69,7 @@ class GetMovementsControllerSpec
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
 
 
-    when(dateTimeService.timestamp()).thenReturn(timeStamp)
+    when(dateTimeService.timestamp()).thenReturn(timestamp)
 
   }
 
@@ -138,7 +138,7 @@ class GetMovementsControllerSpec
 
         status(result) mustBe BAD_REQUEST
         contentAsJson(result) mustBe Json.toJson(
-          ErrorResponse(timeStamp, "Invalid date format provided in the updatedSince query parameter", "Date format should be like '2020-11-15T17:02:34.00Z'")
+          ErrorResponse(timestamp, "Invalid date format provided in the updatedSince query parameter", "Date format should be like '2020-11-15T17:02:34.00Z'")
         )
 
       }
@@ -147,6 +147,14 @@ class GetMovementsControllerSpec
         val result = createControllerWithErnParameterError.getMovements(Some("ERNValue"), None, None, None)(fakeRequest)
 
         status(result) mustBe BAD_REQUEST
+      }
+    }
+
+    "return authentication error" when {
+      "authentication fails" in {
+        val result = createWithAuthActionFailure.getMovements(None, None, None, None)(fakeRequest)
+
+        status(result) mustBe FORBIDDEN
       }
     }
 
@@ -172,10 +180,118 @@ class GetMovementsControllerSpec
 
   }
 
+  "Get movement controller" should {
+
+    val uuid = "cfdb20c7-d0b0-4b8b-a071-737d68dede5b"
+    val movement = Movement("id123", "lrn1", "testErn", Some("consignee"), Some("arc"), Instant.now(), Seq.empty)
+
+    "return the movement when successful" in {
+
+      when(movementService.getMovementById(eqTo(uuid))).thenReturn(Future.successful(Some(movement)))
+
+      val result = controller.getMovement(uuid)(fakeRequest)
+
+      status(result) mustBe OK
+
+      contentAsJson(result) mustBe Json.toJson(createMovementResponseFromMovement(movement))
+
+    }
+
+    "return Not Found error" when {
+      "movement not found in database" in {
+
+        when(movementService.getMovementById(any)).thenReturn(Future.successful(None))
+        val result = controller.getMovement(uuid)(fakeRequest)
+
+        status(result) mustBe NOT_FOUND
+
+        contentAsJson(result) mustBe Json.toJson(
+          ErrorResponse(timestamp, "Movement not found", s"Movement $uuid is not found")
+        )
+
+      }
+
+      "movement in database is for different ERNs" in {
+
+        when(movementService.getMovementById(uuid)).thenReturn(Future.successful(Some(
+          movement.copy(consignorId = "ern8921")
+        )))
+
+        val result = controller.getMovement(uuid)(fakeRequest)
+
+        status(result) mustBe NOT_FOUND
+
+        contentAsJson(result) mustBe Json.toJson(
+          ErrorResponse(timestamp, "Movement not found", s"Movement $uuid is not found within the data for ERNs testErn")
+        )
+      }
+    }
+
+    "return Bad Request error" when {
+      "supplied movement Id is not in correct format" in {
+
+        val result = controller.getMovement("abcd43-r")(fakeRequest)
+
+        status(result) mustBe BAD_REQUEST
+
+        contentAsJson(result) mustBe Json.toJson(
+          ErrorResponse(
+            dateTimeService.timestamp(),
+            "Movement Id format error",
+            "Movement Id should be a valid UUID"
+          )
+        )
+
+      }
+    }
+
+    "return authentication error" when {
+      "authentication fails" in {
+        val result = createWithAuthActionFailure.getMovement(uuid)(fakeRequest)
+
+        status(result) mustBe FORBIDDEN
+      }
+    }
+
+    "create a Work Item if there is not one for the ERN already" in {
+
+      when(movementService.getMovementById(eqTo(uuid))).thenReturn(Future.successful(Some(movement)))
+
+      await(controller.getMovement(uuid)(fakeRequest))
+
+      verify(workItemService).addWorkItemForErn(eqTo("testErn"), eqTo(false))
+
+    }
+
+    "catch Future failure from Work Item service and log it but still process submission" in {
+
+      when(movementService.getMovementById(eqTo(uuid))).thenReturn(Future.successful(Some(movement)))
+
+      when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.failed(new MongoException("Oh no!")))
+
+      val result = controller.getMovement(uuid)(fakeRequest)
+
+      status(result) mustBe OK
+
+    }
+
+  }
+
+
   private def createControllerWithErnParameterError =
     new GetMovementsController(
       FakeSuccessAuthentication,
       FakeValidateErnParameterFailureAction,
+      cc,
+      movementService,
+      workItemService,
+      dateTimeService
+    )
+
+  private def createWithAuthActionFailure =
+    new GetMovementsController(
+      FakeFailingAuthentication,
+      FakeValidateErnParameterSuccessAction,
       cc,
       movementService,
       workItemService,
