@@ -27,9 +27,10 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
+import java.util.UUID
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
+import scala.util.{Success, Try}
 
 @Singleton
 class GetMessagesController @Inject()(
@@ -41,17 +42,30 @@ class GetMessagesController @Inject()(
                                      )(implicit ec: ExecutionContext)
   extends BackendController(cc) {
 
-  def getMessagesForMovement(lrn: String, updatedSince: Option[String]): Action[AnyContent] = {
+  def getMessagesForMovement(movementId: String, updatedSince: Option[String]): Action[AnyContent] = {
     // todo: how we handle error here if for example MongoDb throws?
     authAction.async(parse.default) {
       implicit request: EnrolmentRequest[AnyContent] => {
 
-        movementService.getMatchingERN(lrn, request.erns.toList).flatMap {
-          case None => 
-            Future.successful(BadRequest(Json.toJson(ErrorResponse(dateTimeService.timestamp(), "Invalid LRN supplied for ERN", ""))))
-          case Some(ern) =>
-            workItemService.addWorkItemForErn(ern, fastMode = false)
-            getMessagesAsJson(lrn, ern, updatedSince)
+        //is UUID valid
+        //look up movement
+        // is ERN able to use that movement
+        //return messages as Json.
+        Try(UUID.fromString(movementId)) match {
+          case Success(_) =>
+            movementService.getMatchingERN(movementId, request.erns.toList).flatMap {
+              case None => Future.successful(BadRequest(Json.toJson(ErrorResponse(dateTimeService.timestamp(), "Invalid LRN supplied for ERN", ""))))
+              case Some(ern) => workItemService.addWorkItemForErn(ern, fastMode = false)
+                getMessagesAsJson(movementId, ern, updatedSince)
+            }
+
+
+          case _ =>
+            Future.successful(BadRequest(Json.toJson(ErrorResponse(
+              dateTimeService.timestamp(),
+              "Movement Id format error",
+              "Movement Id should be a valid UUID"
+            ))))
         }
       }
     }
