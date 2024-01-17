@@ -60,14 +60,13 @@ class PushNotificationConnector @Inject()(
     }.recover {
       case ex: Throwable =>
         //todo: Is this an error?
-        logger.error(s"[PushPullNotificationConnector] - Error Error retrieving BoxId, message: ${ex.getMessage}", ex)
+        logger.error(s"[PushNotificationConnector] - Error retrieving BoxId, message: ${ex.getMessage}", ex)
         Left(InternalServerError(createJsonErrorResponse(ex.getMessage)))
     }
   }
 
   private def handleNotificationError(response: HttpResponse): Result = {
-    logger.error(s"[PushPullNotificationConnector] - push-pull-notification-api return an error, status: ${response.status}, message: ${response.body}")
-    //todo: change to Instant type time
+    logger.error(s"[PushNotificationConnector] - push-pull-notification-api returned an error, status: ${response.status}, message: ${response.body}")
     val errorResponse = createJsonErrorResponse(response.body)
 
     response.status match {

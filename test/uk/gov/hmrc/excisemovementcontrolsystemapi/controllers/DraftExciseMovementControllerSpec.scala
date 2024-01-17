@@ -85,7 +85,7 @@ class DraftExciseMovementControllerSpec
 
       status(result) mustBe ACCEPTED
 
-      withClue("submit hte message") {
+      withClue("submit the message") {
         val captor = ArgCaptor[ValidatedXmlRequest[_]]
         verify(submissionMessageService).submit(captor.capture)(any)
         captor.value.message mustBe mockIeMessage
@@ -128,8 +128,6 @@ class DraftExciseMovementControllerSpec
 
     "return an error" when {
       "get box id return an error" in {
-        when(movementMessageService.saveNewMovement(any))
-          .thenReturn(Future.successful(Right(Movement("123", "456", Some("789"), None, Instant.now))))
         when(notificationConnector.getBoxId(any)(any))
           .thenReturn(Future.successful(Left(BadRequest("error"))))
 

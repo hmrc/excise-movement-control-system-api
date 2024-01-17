@@ -20,7 +20,7 @@ import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchersSugar.any
-import org.mockito.MockitoSugar.{when, reset => MockitSugerReset}
+import org.mockito.MockitoSugar.{when, reset => mockitoSugerReset}
 import org.scalatest.concurrent.{Eventually, IntegrationPatience}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatestplus.mockito.MockitoSugar.mock
@@ -113,7 +113,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    MockitSugerReset(dateTimeService)
+    mockitoSugerReset(dateTimeService)
 
     wireMock.resetAll()
     stubNrsResponse

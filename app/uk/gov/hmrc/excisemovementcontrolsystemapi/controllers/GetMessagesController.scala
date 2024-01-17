@@ -47,7 +47,7 @@ class GetMessagesController @Inject()(
       implicit request: EnrolmentRequest[AnyContent] => {
 
         movementService.getMatchingERN(lrn, request.erns.toList).flatMap {
-          case None => Future.successful(BadRequest(Json.toJson(ErrorResponse(dateTimeService.timestamp(), "Invalid LRN supplied for ERN", ""))))
+          case None => 
             Future.successful(BadRequest(Json.toJson(ErrorResponse(dateTimeService.timestamp(), "Invalid LRN supplied for ERN", ""))))
           case Some(ern) =>
             workItemService.addWorkItemForErn(ern, fastMode = false)
