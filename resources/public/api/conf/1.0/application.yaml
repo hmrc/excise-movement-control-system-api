@@ -263,7 +263,74 @@ paths:
       security:
         - userRestricted:
             - excise-movement-control-system
-  /customs/excise/movements/{localReferenceNumber}/messages:
+
+  /customs/excise/movements/{movementId}:
+    get:
+      tags:
+        - Movements
+      summary: Get excise movement
+      description: Get excise movement for the supplied movement ID. </br></br>**Note:** You will only be able to retrieve movements where the consignor ID or consignee ID of the movement matches any of your excise reference numbers (ERNs) in the bearer token that you use for API authentication.
+      operationId: getMovement
+      parameters:
+        - $ref: "#/components/parameters/AcceptHeader"
+        - name: movementId
+          in: path
+          description: Movement Id of the movement to be returned
+          required: true
+          schema:
+            $ref: '#/components/schemas/MovementId'
+      responses:
+        '200':
+          description: Successful operation. This will contain the details of the requested movement.
+          content:
+            application/vnd.hmrc.1.0+json:
+              example:
+                movementId: "b6ba6a73-d723-4c9f-b9b7-99e533fb614f"
+                consignorId: "GBWK002281023"
+                consigneeId: "GBWKQOZ8OVLYR"
+                localReferenceNumber: "LRNQA20230909022221"
+                administrativeReferenceCode: "35WE3B5EDSYSZ86STVKH8"
+                status: "Accepted"
+              schema:
+                $ref: '#/components/schemas/ExciseMovement'
+
+        '401':
+          description: Consignor or Consignee not authorised. Invalid enrolment parameter.
+          content:
+            text/plain:
+              example:
+                "Invalid affinity group Individual"
+        '403':
+          description: Consignor ID is not in authorisation bearer token
+          content:
+            text/plain:
+              example:
+                "Could not find ExciseNumber"
+
+        '404':
+          description: Movement with supplied id not found for this ERN
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: "#/components/schemas/ExciseMovementError"
+              examples:
+                movementNotFound:
+                  summary: Movement not in database
+                  value:
+                    dateTime: '2024-01-17T16:26:18.062304Z'
+                    message: Movement not found
+                    debugMessage: Movement b6ba6a73-d723-4c9f-b9b7-99e533fb614f is not found
+                movementNotForErn:
+                  summary: Movement not valid for ERN
+                  value:
+                    dateTime: '2024-01-17T16:27:41.095827Z'
+                    message: Movement not found
+                    debugMessage: Movement b6ba6a73-d723-4c9f-b9b7-99e533fb614f is not found within the data for ERNs GBWK002281022
+      security:
+        - userRestricted:
+            - excise-movement-control-system
+
+  /customs/excise/movements/{movementId}/messages:
     post:
       tags:
         - Movements
