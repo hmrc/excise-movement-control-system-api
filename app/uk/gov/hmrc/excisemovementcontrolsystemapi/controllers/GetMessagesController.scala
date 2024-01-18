@@ -25,6 +25,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Mov
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import cats.implicits._
+import cats.data.{EitherT, OptionT}
 
 import java.time.Instant
 import java.util.UUID
@@ -46,46 +48,57 @@ class GetMessagesController @Inject()(
     // todo: how we handle error here if for example MongoDb throws?
     authAction.async(parse.default) {
       implicit request: EnrolmentRequest[AnyContent] => {
-        Try(UUID.fromString(movementId)) match {
-          case Success(_) =>
 
-            Try(updatedSince.map(Instant.parse(_))).map { updatedSinceTime => {
-
-              val movement = movementService.getMovementById(movementId)
-
-              movement.map {
-                case Some(mvt) =>
-                  if (getErnsForMovement(mvt).intersect(request.erns).isEmpty)
-                    BadRequest(Json.toJson(ErrorResponse(
-                      dateTimeService.timestamp(),
-                      "Invalid MovementID supplied for ERN",
-                      s"Movement ${mvt._id} is not found within the data for ERNs ${request.erns.mkString("/")}"
-                    ))) else {
-                    workItemService.addWorkItemForErn(mvt.consignorId, fastMode = false)
-
-                    Ok(Json.toJson(filterMessagesByTime(mvt.messages, updatedSinceTime)))
-                  }
-                case _ => NotFound(
-                  Json.toJson(ErrorResponse(
-                    dateTimeService.timestamp(),
-                    "No movement found for the MovementID provided",
-                    s"MovementID $movementId was not found in the database"
-                  )))
-              }
-            }
-            }.getOrElse(
-              Future.successful(BadRequest(Json.toJson(ErrorResponse(dateTimeService.timestamp(), "Invalid date format provided in the updatedSince query parameter", "Date format should be like '2020-11-15T17:02:34.00Z'")))))
+        val result = for {
+          mvtId <- validateMovementID(movementId)
+          updatedSince <- validateUpdatedSince(updatedSince)
+          movement <- getMovement(mvtId.toString)
+        } yield {
 
 
-              case _ =>
-            Future.successful(BadRequest(Json.toJson(ErrorResponse(
+          if (getErnsForMovement(movement).intersect(request.erns).isEmpty) {
+            BadRequest(Json.toJson(ErrorResponse(
               dateTimeService.timestamp(),
-              "Movement Id format error",
-              "Movement Id should be a valid UUID"
-            ))))
+              "Invalid MovementID supplied for ERN",
+              s"Movement $mvtId is not found within the data for ERNs ${request.erns.mkString("/")}"
+            )))
+          } else {
+            workItemService.addWorkItemForErn(movement.consignorId, fastMode = false)
+            Ok(Json.toJson(filterMessagesByTime(movement.messages, updatedSince)))
+          }
         }
+
+        result.merge
+
       }
     }
+  }
+
+  private def validateMovementID(movementId: String): EitherT[Future, Result, UUID] = EitherT.fromEither(Try(UUID.fromString(movementId)).toEither.left.map(_ =>
+    BadRequest(Json.toJson(ErrorResponse(
+      dateTimeService.timestamp(),
+      "Movement Id format error",
+      "Movement Id should be a valid UUID"
+    )))
+  ))
+
+  private def validateUpdatedSince(updatedSince: Option[String]): EitherT[Future, Result, Option[Instant]] = EitherT.fromEither(Try(updatedSince.map(Instant.parse(_))).toEither.left.map(_ =>
+    BadRequest(Json.toJson(ErrorResponse(
+      dateTimeService.timestamp(),
+      "Invalid date format provided in the updatedSince query parameter",
+      "Date format should be like '2020-11-15T17:02:34.00Z'")
+    ))
+  ))
+
+  private def getMovement(id: String): EitherT[Future, Result, Movement] = {
+    OptionT(movementService.getMovementById(id)).toRightF(
+      Future.successful(NotFound(
+        Json.toJson(ErrorResponse(
+          dateTimeService.timestamp(),
+          "No movement found for the MovementID provided",
+          s"MovementID $id was not found in the database"
+        )))
+      ))
   }
 
   private def filterMessagesByTime(messages: Seq[Message], updatedSince: Option[Instant]): Seq[Message] = {

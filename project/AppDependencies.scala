@@ -16,6 +16,7 @@ object AppDependencies {
     "javax.xml.bind"          % "jaxb-api"                    % "2.3.1",
     "org.dispatchhttp"        %% "dispatch-core"              % dispatchVersion,
     "com.beachape"            %% "enumeratum-play-json"       % "1.6.0",
+    "org.typelevel"           %% "cats-core"                  % "2.10.0",
   )
 
   val test = Seq(
