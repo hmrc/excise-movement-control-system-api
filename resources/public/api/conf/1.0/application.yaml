@@ -346,7 +346,7 @@ paths:
         - $ref: '#/components/parameters/ContentTypeHeader'
         - name: movementId
           in: path
-          description: Movement Id to submit message for
+          description: The movement to submit messages for
           required: true
           schema:
             $ref: '#/components/schemas/MovementId'
@@ -540,9 +540,9 @@ paths:
       operationId: getAllMessages
       parameters:
         - $ref: "#/components/parameters/AcceptHeader"
-        - name: localReferenceNumber
+        - name: movementId
           in: path
-          description: The local reference number of the movement
+          description: The movement to get messages for
           required: true
           schema:
             type: string
@@ -558,22 +558,72 @@ paths:
           content:
             application/vnd.hmrc.1.0+json:
               example:
-                - encodedMessage: PElFODE1PjwhLS0gRXhhbXBsZSBJRTgxNSBtZXNzYWdlIC0tPjwvSUU4MTU+
+                - hash: 510168662
+                  encodedMessage: PElFODE1PjwhLS0gRXhhbXBsZSBJRTgxNSBtZXNzYWdlIC0tPjwvSUU4MTU+
+                  messageType: IE815
                   createdOn: 2023-10-30T15:36:08.985Z
-                  type: IE815
-                - encodedMessage: PElFODAxPjwhLS0gRXhhbXBsZSBJRTgwMSBtZXNzYWdlIC0tPjwvSUU4MDE+
+                - hash: 510168662
+                  encodedMessage: PElFODAxPjwhLS0gRXhhbXBsZSBJRTgwMSBtZXNzYWdlIC0tPjwvSUU4MDE+
+                  messageType: IE801
                   createdOn: 2023-10-28T15:36:08.985Z
-                  type: IE801
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/MessageWithType'
+
+        '400':
+          description: Invalid movement Id, invalid updated since format or not allowed to access this movement
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: "#/components/schemas/ExciseMovementError"
+              examples:
+                movementIdFormat:
+                  summary: Movement Id not valid
+                  value:
+                    dateTime: '2024-01-17T16:27:41.095827Z'
+                    message: Movement Id format error
+                    debugMessage: Movement Id should be a valid UUID
+                dateFormat:
+                  summary: Invalid updated since format
+                  value:
+                    dateTime: '2024-01-17T16:27:41.095827Z'
+                    message: Invalid date format provided in the updatedSince query parameter
+                    debugMessage: Date format should be like '2020-11-15T17:02:34.00Z'
+
         '401':
-          description: Consignor or Consignee not authorized. Invalid enrolment parameter.
+          description: Consignor or Consignee not authorised. Invalid enrolment parameter.
+          content:
+            text/plain:
+              example:
+                "Invalid affinity group Individual"
         '403':
-          description: The requested movement's consignor ID or consignee ID is not in authorisation bearer token
+          description: Consignor ID or Consignee ID is not in authorisation bearer token
+          content:
+            text/plain:
+              example:
+                "Could not find ExciseNumber"
+
         '404':
-          description: Unknown movement, based on the provided local reference number
+          description: Movement with supplied id not found for this ERN
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: "#/components/schemas/ExciseMovementError"
+              examples:
+                movementNotFound:
+                  summary: Movement not in database
+                  value:
+                    dateTime: '2024-01-17T16:26:18.062304Z'
+                    message: Movement not found
+                    debugMessage: Movement b6ba6a73-d723-4c9f-b9b7-99e533fb614f is not found
+                movementNotForErn:
+                  summary: Movement not valid for ERN
+                  value:
+                    dateTime: '2024-01-17T16:27:41.095827Z'
+                    message: Movement not found
+                    debugMessage: Movement b6ba6a73-d723-4c9f-b9b7-99e533fb614f is not found within the data for ERNs GBWK002281022
+
       security:
         - userRestricted:
             - excise-movement-control-system
@@ -657,13 +707,53 @@ paths:
                             - exciseProductCode: S200
                               errorCode: '1'
                               errorText: Unrecognised EPC
+
         '400':
           description: Invalid JSON or mandatory fields missing.
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ExciseMovementError'
+              example:
+                dateTime: '2024-01-17T15:27:29.540089Z'
+                message: Not valid Pre Validate Trader message
+                debugMessage: "Missing field: entityGroup"
+
+            text/plain:
+              example: "" #downstream 400s are empty
+
+        '401':
+          description: Logged in user not authorised. Invalid enrolment parameter.
+          content:
+            text/plain:
+              example:
+                "Invalid affinity group Individual"
+        '403':
+          description: ERN is not in authorisation bearer token
+          content:
+            text/plain:
+              example:
+                "Could not find ExciseNumber"
+
         '500':
           description: Internal server error
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/DownstreamError'
+              example:
+                dateTime: "2021-12-17T09:30:47Z"
+                status: "INTERNAL_SERVER_ERROR"
+                message: "Invalid JSON structure"
+                debugMessage: "JSON parse error: Unexpected character"
+                emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+            text/plain:
+              example: "" #downstream 400s are empty
+
       security:
         - userRestricted:
             - excise-movement-control-system
+
 components:
   parameters:
     AcceptHeader:
@@ -944,10 +1034,12 @@ components:
         - $ref: '#/components/schemas/Message'
         - type: object
           required:
-            - type
+            - messageType
           properties:
-            type:
+            messageType:
               $ref: '#/components/schemas/MessageType'
+            hash:
+              type: string
     PreValidateTraderRequest:
       required:
         - exciseTraderValidationRequest
