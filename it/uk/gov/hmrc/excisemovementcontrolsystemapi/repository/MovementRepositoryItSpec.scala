@@ -24,6 +24,7 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
+import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
@@ -46,8 +47,8 @@ class MovementRepositoryItSpec extends PlaySpec
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val appConfig = app.injector.instanceOf[AppConfig]
-  private val dateTimeService = mock[DateTimeService]
-  private val timestamp = Instant.parse("2018-11-30T18:35:24.00Z")
+  private lazy val dateTimeService = mock[DateTimeService]
+  private lazy val timestamp = Instant.now
 
   protected override val repository = new MovementRepository(
     mongoComponent,
@@ -57,9 +58,9 @@ class MovementRepositoryItSpec extends PlaySpec
 
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
-      .configure(
-        "mongodb.uri" -> mongoUri
-      )
+      .configure("mongodb.uri" -> mongoUri)
+      .overrides(bind[DateTimeService].to(dateTimeService)
+    )
 
   override implicit lazy val app: Application = appBuilder.build()
 
@@ -76,7 +77,8 @@ class MovementRepositoryItSpec extends PlaySpec
   "saveMovement" should {
     "return insert a movement" in {
       val uuid = UUID.randomUUID()
-      val result = repository.saveMovement(Movement(uuid.toString,"123", "345", Some("789"), None, Instant.now(), Seq.empty)).futureValue
+      val movement = Movement(uuid.toString,"boxId", "123", "345", Some("789"), None, timestamp, Seq.empty)
+      val result = repository.saveMovement(movement).futureValue
 
       val insertedRecord = find(
         Filters.and(
@@ -88,22 +90,18 @@ class MovementRepositoryItSpec extends PlaySpec
         .value
 
       result mustBe true
-      insertedRecord._id mustBe uuid.toString
-      insertedRecord.localReferenceNumber mustBe "123"
-      insertedRecord.consignorId mustBe "345"
-      insertedRecord.consigneeId mustBe Some("789")
-      insertedRecord.administrativeReferenceCode mustBe None
+      insertedRecord mustBe movement
     }
   }
 
   "updateMovement" should {
     "update a movement by lrn and consignorId" in {
-      val movementLRN1 = Movement("1", "345", Some("789"), None, timestamp)
-      val movementLRN2 = Movement("2", "897", Some("456"), None)
+      val movementLRN1 = Movement("boxId1", "1", "345", Some("789"), None, timestamp)
+      val movementLRN2 = Movement("boxId2", "2", "897", Some("456"), None)
       insertMovement(movementLRN1)
       insertMovement(movementLRN2)
 
-      val message = Message("any, message", MessageTypes.IE801.value, dateTimeService.timestamp())
+      val message = Message("any, message", MessageTypes.IE801.value, timestamp)
       val updatedMovement = movementLRN2.copy(administrativeReferenceCode = Some("arc"), messages = Seq(message))
       val result = repository.updateMovement(updatedMovement).futureValue
 
@@ -114,12 +112,12 @@ class MovementRepositoryItSpec extends PlaySpec
     }
 
     "update a movement by lrn and consigneeId" in {
-      val movementLRN1 = Movement("1", "345", Some("789"), None, timestamp)
-      val movementLRN2 = Movement("2", "897", Some("456"), None)
+      val movementLRN1 = Movement("boxId1", "1", "345", Some("789"), None, timestamp)
+      val movementLRN2 = Movement("boxId2", "2", "897", Some("456"), None)
       insertMovement(movementLRN1)
       insertMovement(movementLRN2)
 
-      val message = Message("any, message", MessageTypes.IE801.value, dateTimeService.timestamp())
+      val message = Message("any, message", MessageTypes.IE801.value, timestamp)
       val result = repository.updateMovement(movementLRN2.copy(administrativeReferenceCode = Some("arc"), messages = Seq(message))).futureValue
 
       val records = findAll().futureValue
@@ -133,13 +131,13 @@ class MovementRepositoryItSpec extends PlaySpec
 
     "not update the movement if record not found" in {
       val instant = Instant.now
-      val movementLRN1 = Movement("1", "345", Some("789"), None, instant)
-      val movementLRN2 = Movement("2", "897", Some("456"), None, instant)
+      val movementLRN1 = Movement("boxId1", "1", "345", Some("789"), None, instant)
+      val movementLRN2 = Movement("boxId2", "2", "897", Some("456"), None, instant)
       insertMovement(movementLRN1)
       insertMovement(movementLRN2)
 
-      val message = Message("any, message", MessageTypes.IE801.value, dateTimeService.timestamp())
-      val result = repository.updateMovement(Movement("4", "897", Some("321"), Some("arc"), Instant.now, Seq(message))).futureValue
+      val message = Message("any, message", MessageTypes.IE801.value, timestamp)
+      val result = repository.updateMovement(Movement("boxId", "4", "897", Some("321"), Some("arc"), Instant.now, Seq(message))).futureValue
 
       val records = findAll().futureValue
 
@@ -158,8 +156,8 @@ class MovementRepositoryItSpec extends PlaySpec
     "return the matching movement when it is there" in {
       val movementId1 = "49491927-aaa1-4835-b405-dd6e7fa3aaf0"
       val movementId2 = "8b43eb3b-3856-4f0c-b1ab-80355f70f6aa"
-        val movement1 = Movement(movementId1, "lrn", "ern1", None, Some("arc1"), Instant.now, Seq.empty)
-        val movement2 = Movement(movementId2, "lrn", "ern2", None, Some("arc2"), Instant.now, Seq.empty)
+        val movement1 = Movement(movementId1, "boxId", "lrn", "ern1", None, Some("arc1"), Instant.now, Seq.empty)
+        val movement2 = Movement(movementId2, "boxId", "lrn", "ern2", None, Some("arc2"), Instant.now, Seq.empty)
         insertMovement(movement1)
         insertMovement(movement2)
 
@@ -169,7 +167,7 @@ class MovementRepositoryItSpec extends PlaySpec
 
     "return None when no movement for given id" in {
       val movementId1 = "49491927-aaa1-4835-b405-dd6e7fa3aaf0"
-      val movement1 = Movement(movementId1, "lrn", "ern1", None, Some("arc1"), Instant.now, Seq.empty)
+      val movement1 = Movement(movementId1, "boxId", "lrn", "ern1", None, Some("arc1"), Instant.now, Seq.empty)
       insertMovement(movement1)
 
       val result = repository.getMovementById("23432343-2342342").futureValue
@@ -182,7 +180,7 @@ class MovementRepositoryItSpec extends PlaySpec
     val lrn = "123"
     val consignorId = "Abc"
     val consigneeId = "def"
-    val movement = Movement(lrn, consignorId, Some(consigneeId), None)
+    val movement = Movement("boxId", lrn, consignorId, Some(consigneeId), None)
 
 
     "return movement with valid lrn and consignorId combination" in {
@@ -215,7 +213,7 @@ class MovementRepositoryItSpec extends PlaySpec
 
     "return one movement with valid lrn and ern combination when multiple movements are available" in {
       insertMovement(movement)
-      insertMovement(Movement("Test3333", consignorId, Some(consigneeId), None))
+      insertMovement(Movement("boxId", "Test3333", consignorId, Some(consigneeId), None))
       val result = repository.getMovementByLRNAndERNIn(lrn, List(consignorId)).futureValue
 
       result mustBe Seq(movement)
@@ -232,10 +230,10 @@ class MovementRepositoryItSpec extends PlaySpec
   "getMovementByErn" should {
     "return a list of movement" when {
       "ern match the consignorId " in {
-        val expectedMovement1 = Movement("1", "ern1", None, Some("arc1"))
-        val expectedMovement2 = Movement("1", "ern2", None, Some("arc2"))
-        val expectedMovement3 = Movement("2", "ern1", None, Some("arc3"))
-        val expectedMovement4 = Movement("3", "ern4", None, Some("arc4"))
+        val expectedMovement1 = Movement("boxId", "1", "ern1", None, Some("arc1"))
+        val expectedMovement2 = Movement("boxId", "1", "ern2", None, Some("arc2"))
+        val expectedMovement3 = Movement("boxId", "2", "ern1", None, Some("arc3"))
+        val expectedMovement4 = Movement("boxId", "3", "ern4", None, Some("arc4"))
         insertMovement(expectedMovement1)
         insertMovement(expectedMovement2)
         insertMovement(expectedMovement3)
@@ -247,10 +245,10 @@ class MovementRepositoryItSpec extends PlaySpec
       }
 
       "ern match consignorId and consigneeId" in {
-        val expectedMovement1 = Movement("1", "consignorId1", Some("ern1"), Some("arc1"))
-        val expectedMovement2 = Movement("2", "ern1", Some("ern2"), Some("arc2"))
-        val expectedMovement3 = Movement("3", "consignorId1", Some("ern1"), Some("arc3"))
-        val expectedMovement4 = Movement("4", "ern4", None, Some("arc4"))
+        val expectedMovement1 = Movement("boxId", "1", "consignorId1", Some("ern1"), Some("arc1"))
+        val expectedMovement2 = Movement("boxId", "2", "ern1", Some("ern2"), Some("arc2"))
+        val expectedMovement3 = Movement("boxId", "3", "consignorId1", Some("ern1"), Some("arc3"))
+        val expectedMovement4 = Movement("boxId", "4", "ern4", None, Some("arc4"))
         insertMovement(expectedMovement1)
         insertMovement(expectedMovement2)
         insertMovement(expectedMovement3)
@@ -265,9 +263,9 @@ class MovementRepositoryItSpec extends PlaySpec
     }
 
     "return an empty list" in {
-      val expectedMovement1 = Movement("lrn", "consignorId1", Some("ern1"), Some("arc1"))
-      val expectedMovement2 = Movement("lrn", "consignorId2", Some("ern2"), Some("arc2"))
-      val expectedMovement3 = Movement("lrn1", "consignorId1", Some("ern1"), Some("arc3"))
+      val expectedMovement1 = Movement("boxId", "lrn", "consignorId1", Some("ern1"), Some("arc1"))
+      val expectedMovement2 = Movement("boxId", "lrn", "consignorId2", Some("ern2"), Some("arc2"))
+      val expectedMovement3 = Movement("boxId", "lrn1", "consignorId1", Some("ern1"), Some("arc3"))
       insertMovement(expectedMovement1)
       insertMovement(expectedMovement2)
       insertMovement(expectedMovement3)
@@ -283,10 +281,10 @@ class MovementRepositoryItSpec extends PlaySpec
   "getMovementByArc" should {
     "return a list of movement" when {
       "arc matches the supplied arc " in {
-        val expectedMovement1 = Movement("lrn", "ern1", None, Some("arc1"))
-        val expectedMovement2 = Movement("lrn", "ern2", None, Some("arc2"))
-        val expectedMovement3 = Movement("lrn1", "ern1", None, Some("arc3"))
-        val expectedMovement4 = Movement("lrn4", "ern4", None, Some("arc4"))
+        val expectedMovement1 = Movement("boxId", "lrn", "ern1", None, Some("arc1"))
+        val expectedMovement2 = Movement("boxId", "lrn", "ern2", None, Some("arc2"))
+        val expectedMovement3 = Movement("boxId", "lrn1", "ern1", None, Some("arc3"))
+        val expectedMovement4 = Movement("boxId", "lrn4", "ern4", None, Some("arc4"))
         insertMovement(expectedMovement1)
         insertMovement(expectedMovement2)
         insertMovement(expectedMovement3)
@@ -302,9 +300,9 @@ class MovementRepositoryItSpec extends PlaySpec
   "getAll" should {
     "get all record for a consignorId" in {
       val instant = Instant.now
-      val movementLrn1 = Movement("1", "345", Some("789"), None, instant)
-      val movementLrn2 = Movement("2", "897", Some("456"), None, instant)
-      val movementLrn6 = Movement("6", "345", Some("523"), None, instant)
+      val movementLrn1 = Movement("boxId", "1", "345", Some("789"), None, instant)
+      val movementLrn2 = Movement("boxId", "2", "897", Some("456"), None, instant)
+      val movementLrn6 = Movement("boxId", "6", "345", Some("523"), None, instant)
 
       insertMovement(movementLrn1)
       insertMovement(movementLrn2)
@@ -317,10 +315,10 @@ class MovementRepositoryItSpec extends PlaySpec
 
     "get all record for a consignee" in {
       val instant = Instant.now
-      val movementLrn1 = Movement("1", "345", Some("789"), None, instant)
-      val movementLrn2 = Movement("2", "897", Some("456"), None, instant)
-      val movementLrn6 = Movement("6", "345", Some("523"), None, instant)
-      val movementLrn1Consignor564 = Movement("1", "564", Some("456"), None, instant)
+      val movementLrn1 = Movement("boxId", "1", "345", Some("789"), None, instant)
+      val movementLrn2 = Movement("boxId", "2", "897", Some("456"), None, instant)
+      val movementLrn6 = Movement("boxId", "6", "345", Some("523"), None, instant)
+      val movementLrn1Consignor564 = Movement("boxId", "1", "564", Some("456"), None, instant)
       insertMovement(movementLrn1)
       insertMovement(movementLrn2)
       insertMovement(movementLrn6)
@@ -332,9 +330,9 @@ class MovementRepositoryItSpec extends PlaySpec
     }
 
     "return an empty list if there are no matching records" in {
-      insertMovement(Movement("1", "345", Some("789"), None))
-      insertMovement(Movement("2", "897", Some("456"), None))
-      insertMovement(Movement("6", "345", Some("523"), None))
+      insertMovement(Movement("boxId", "1", "345", Some("789"), None))
+      insertMovement(Movement("boxId", "2", "897", Some("456"), None))
+      insertMovement(Movement("boxId", "6", "345", Some("523"), None))
 
       val result = repository.getAllBy("896").futureValue
 

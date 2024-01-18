@@ -53,7 +53,7 @@ class DraftExciseMovementControllerSpec
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val submissionMessageService = mock[SubmissionMessageService]
-  private val movementMessageService = mock[MovementService]
+  private val movementService = mock[MovementService]
   private val cc = stubControllerComponents()
   private val request = createRequest
   private val mockIeMessage = mock[IE815Message]
@@ -63,7 +63,7 @@ class DraftExciseMovementControllerSpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(submissionMessageService, movementMessageService, workItemService, submissionMessageService)
+    reset(submissionMessageService, movementService, workItemService, submissionMessageService)
 
     when(submissionMessageService.submit(any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
@@ -78,8 +78,8 @@ class DraftExciseMovementControllerSpec
 
   "submit" should {
     "return 200" in {
-      when(movementMessageService.saveNewMovement(any))
-        .thenReturn(Future.successful(Right(Movement("123", "456", Some("789"), None, Instant.now))))
+      when(movementService.saveNewMovement(any))
+        .thenReturn(Future.successful(Right(Movement("123", boxId, "456", Some("789"), None, Instant.now))))
 
       val result = createWithSuccessfulAuth.submit(request)
 
@@ -97,18 +97,20 @@ class DraftExciseMovementControllerSpec
 
       withClue("should save the new movement") {
         val captor = ArgCaptor[Movement]
-        verify(movementMessageService).saveNewMovement(captor.capture)
-        captor.value.localReferenceNumber mustBe "123"
-        captor.value.consignorId mustBe "456"
-        captor.value.consigneeId mustBe Some("789")
-        captor.value.administrativeReferenceCode mustBe None
-        captor.value.messages mustBe Seq.empty
+        verify(movementService).saveNewMovement(captor.capture)
+        val newMovement = captor.value
+        newMovement.localReferenceNumber mustBe "123"
+        newMovement.consignorId mustBe "456"
+        newMovement.consigneeId mustBe Some("789")
+        newMovement.administrativeReferenceCode mustBe None
+        newMovement.messages mustBe Seq.empty
+        newMovement.boxId mustBe boxId
       }
     }
 
     "call the add work item routine to create or update the database" in {
-      when(movementMessageService.saveNewMovement(any))
-        .thenReturn(Future.successful(Right(Movement("lrn", ern, None))))
+      when(movementService.saveNewMovement(any))
+        .thenReturn(Future.successful(Right(Movement(boxId, "lrn", ern, None))))
 
       await(createWithSuccessfulAuth.submit(request))
 
@@ -116,8 +118,8 @@ class DraftExciseMovementControllerSpec
     }
 
     "return ACCEPTED if failing to add workItem " in {
-      when(movementMessageService.saveNewMovement(any))
-        .thenReturn(Future.successful(Right(Movement("lrn", ern, None))))
+      when(movementService.saveNewMovement(any))
+        .thenReturn(Future.successful(Right(Movement(boxId, "lrn", ern, None))))
       when(workItemService.addWorkItemForErn(any, any))
         .thenReturn(Future.failed(new MongoException("Oh no!")))
 
@@ -141,8 +143,8 @@ class DraftExciseMovementControllerSpec
       }
 
       "clientId is not available" in {
-        when(movementMessageService.saveNewMovement(any))
-          .thenReturn(Future.successful(Right(Movement("123", "456", Some("789"), None, Instant.now))))
+        when(movementService.saveNewMovement(any))
+          .thenReturn(Future.successful(Right(Movement(boxId, "123", "456", Some("789"), None, Instant.now))))
 
         val result = createWithSuccessfulAuth.submit(createRequestWithoutClientId)
 
@@ -177,7 +179,7 @@ class DraftExciseMovementControllerSpec
       }
 
       "cannot save the movement" in {
-        when(movementMessageService.saveNewMovement(any))
+        when(movementService.saveNewMovement(any))
           .thenReturn(Future.successful(Left(InternalServerError("error"))))
 
         val result = createWithSuccessfulAuth.submit(request)
@@ -192,7 +194,7 @@ class DraftExciseMovementControllerSpec
       FakeFailingAuthentication,
       FakeSuccessXMLParser,
       FakeSuccessfulValidateErnInMessageAction(mockIeMessage),
-      movementMessageService,
+      movementService,
       workItemService,
       submissionMessageService,
       notificationConnector,
@@ -204,7 +206,7 @@ class DraftExciseMovementControllerSpec
       FakeSuccessAuthentication,
       FakeFailureXMLParser,
       FakeSuccessfulValidateErnInMessageAction(mockIeMessage),
-      movementMessageService,
+      movementService,
       workItemService,
       submissionMessageService,
       notificationConnector,
@@ -216,7 +218,7 @@ class DraftExciseMovementControllerSpec
       FakeSuccessAuthentication,
       FakeSuccessXMLParser,
       FakeSuccessfulValidateErnInMessageAction(mockIeMessage),
-      movementMessageService,
+      movementService,
       workItemService,
       submissionMessageService,
       notificationConnector,
@@ -228,7 +230,7 @@ class DraftExciseMovementControllerSpec
       FakeSuccessAuthentication,
       FakeSuccessXMLParser,
       FakeFailureValidateErnInMessageAction,
-      movementMessageService,
+      movementService,
       workItemService,
       submissionMessageService,
       notificationConnector,

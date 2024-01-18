@@ -64,7 +64,7 @@ class GetMovementsControllerSpec
     reset(movementService, workItemService)
 
     when(movementService.getMovementByErn(any, any))
-      .thenReturn(Future.successful(Seq(Movement("cfdb20c7-d0b0-4b8b-a071-737d68dede5e", "lrn", ern, Some("consigneeId"), Some("arc"), Instant.now(), Seq.empty))))
+      .thenReturn(Future.successful(Seq(Movement("cfdb20c7-d0b0-4b8b-a071-737d68dede5e", "boxId", "lrn", ern, Some("consigneeId"), Some("arc"), Instant.now(), Seq.empty))))
 
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
 
