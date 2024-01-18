@@ -31,7 +31,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.BoxNotific
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
-import java.time.{Instant, LocalDateTime}
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.runtime.universe.typeOf
 
