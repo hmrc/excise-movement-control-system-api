@@ -193,6 +193,10 @@ class GetMessagesControllerSpec extends PlaySpec
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
 
       status(result) mustBe NOT_FOUND
+      contentAsJson(result) mustBe Json.toJson(
+        ErrorResponse(timeStamp, "No movement found for the MovementID provided",
+          s"MovementID $validUUID was not found in the database")
+      )
     }
 
     "catch Future failure from Work Item service and log it but still process submission" in {

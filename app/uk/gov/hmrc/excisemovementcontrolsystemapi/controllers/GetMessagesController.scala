@@ -59,13 +59,18 @@ class GetMessagesController @Inject()(
                     BadRequest(Json.toJson(ErrorResponse(
                       dateTimeService.timestamp(),
                       "Invalid MovementID supplied for ERN",
-                      ""
+                      s"Movement ${mvt._id} is not found within the data for ERNs ${request.erns.mkString("/")}"
                     ))) else {
                     workItemService.addWorkItemForErn(mvt.consignorId, fastMode = false)
 
                     Ok(Json.toJson(filterMessagesByTime(mvt.messages, updatedSinceTime)))
                   }
-                case _ => NotFound("blah")
+                case _ => NotFound(
+                  Json.toJson(ErrorResponse(
+                    dateTimeService.timestamp(),
+                    "No movement found for the MovementID provided",
+                    s"MovementID $movementId was not found in the database"
+                  )))
               }
             }
             }.getOrElse(
@@ -81,23 +86,6 @@ class GetMessagesController @Inject()(
         }
       }
     }
-  }
-
-  private def getMessagesAsJson(lrn: String, ern: String, updatedSince: Option[String]): Future[Result] = {
-
-
-    Try(updatedSince.map(Instant.parse(_))).map { updatedSinceTime =>
-      movementService.getMovementByLRNAndERNIn(lrn, List(ern))
-        .map(mv => {
-          mv.map(m => filterMessagesByTime(m.messages, updatedSinceTime))
-        })
-        .map {
-          case Some(mv) => Ok(Json.toJson(mv))
-          case _ => Ok(JsArray())
-        }
-
-    }.getOrElse(
-      Future.successful(BadRequest(Json.toJson(ErrorResponse(dateTimeService.timestamp(), "Invalid date format provided in the updatedSince query parameter", "Date format should be like '2020-11-15T17:02:34.00Z'")))))
   }
 
   private def filterMessagesByTime(messages: Seq[Message], updatedSince: Option[Instant]): Seq[Message] = {
