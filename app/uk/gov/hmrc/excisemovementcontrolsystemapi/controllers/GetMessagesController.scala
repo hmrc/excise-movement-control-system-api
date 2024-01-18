@@ -55,9 +55,8 @@ class GetMessagesController @Inject()(
           movement <- getMovement(mvtId.toString)
         } yield {
 
-
           if (getErnsForMovement(movement).intersect(request.erns).isEmpty) {
-            BadRequest(Json.toJson(ErrorResponse(
+            NotFound(Json.toJson(ErrorResponse(
               dateTimeService.timestamp(),
               "Invalid MovementID supplied for ERN",
               s"Movement $mvtId is not found within the data for ERNs ${request.erns.mkString("/")}"

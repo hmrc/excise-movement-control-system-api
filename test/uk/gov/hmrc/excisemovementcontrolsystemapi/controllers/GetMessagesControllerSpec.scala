@@ -199,6 +199,21 @@ class GetMessagesControllerSpec extends PlaySpec
       )
     }
 
+    "return NOT_FOUND when movement is for a different ern " in {
+      val message = Message("message", "IE801", Instant.now)
+      val movement = Movement(validUUID, "consignor", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
+      when(movementService.getMovementById(any))
+        .thenReturn(Future.successful(Some(movement)))
+
+      val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
+
+      status(result) mustBe NOT_FOUND
+      contentAsJson(result) mustBe Json.toJson(
+        ErrorResponse(timeStamp, "Invalid MovementID supplied for ERN",
+          s"Movement $validUUID is not found within the data for ERNs testErn")
+      )
+    }
+
     "catch Future failure from Work Item service and log it but still process submission" in {
       val message = Message("message", "IE801", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message))

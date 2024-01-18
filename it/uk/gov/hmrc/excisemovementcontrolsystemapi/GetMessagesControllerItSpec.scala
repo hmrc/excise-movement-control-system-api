@@ -112,10 +112,21 @@ class GetMessagesControllerItSpec extends PlaySpec
 
     }
 
-    "return 400 when no movement is found" in {
+    "return 404 when no movement is found" in {
       withAuthorizedTrader(consignorId)
       when(movementRepository.getMovementById(any))
         .thenReturn(Future.successful(None))
+
+      val result = getRequest
+
+      result.status mustBe NOT_FOUND
+    }
+
+    "return 404 when movement is not valid for ERN" in {
+      withAuthorizedTrader(consignorId)
+      val message = Message("encodedMessage", "IE801", dateTimeService.timestamp())
+      when(movementRepository.getMovementById(any))
+        .thenReturn(Future.successful(Some(Movement(validUUID, "consignor", None, None, Instant.now, Seq(message)))))
 
       val result = getRequest
 
