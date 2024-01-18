@@ -19,7 +19,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 import play.api.mvc.Results.BadRequest
 import play.api.mvc.{ActionFilter, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateErnParameterAction
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 
 import scala.concurrent.{ExecutionContext, Future}

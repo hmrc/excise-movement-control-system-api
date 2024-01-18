@@ -20,9 +20,10 @@ import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchersSugar.any
-import org.mockito.MockitoSugar.when
+import org.mockito.MockitoSugar.{when, reset => mockitoSugerReset}
 import org.scalatest.concurrent.{Eventually, IntegrationPatience}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
+import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -37,14 +38,17 @@ import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{AuthTestSupport, StringSupport}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, SubmitMessageTestSupport, WireMockServerSpec}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Constants
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, MovementRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
@@ -68,6 +72,9 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   private val eisUrl = "/emcs/digital-submit-new-message/v1"
   private val consignorId = "GBWK002281023"
   private val consigneeId = "GBWKQOZ8OVLYR"
+  private val boxId = "testBoxId"
+  private lazy val dateTimeService = mock[DateTimeService]
+  private val timeStamp = Instant.now
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
@@ -85,11 +92,11 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
     GuiceApplicationBuilder()
-      .configure(configureWithNrsServer)
+      .configure(configureServices)
       .overrides(
         bind[AuthConnector].to(authConnector),
         bind[MovementRepository].to(movementRepository),
-        bind[ExciseNumberQueueWorkItemRepository].to(workItemRepository)
+        bind[DateTimeService].to(dateTimeService)
       )
       .build()
   }
@@ -106,8 +113,13 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
+    mockitoSugerReset(dateTimeService)
+
+    wireMock.resetAll()
     stubNrsResponse
     authorizeNrsWithIdentityData
+    stubGetBoxIdSuccessRequest
+    when(dateTimeService.timestamp()).thenReturn(timeStamp)
   }
 
   "Draft Excise Movement" should {
@@ -119,7 +131,6 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       when(workItemRepository.pushNew(any, any, any)).thenReturn(Future.successful(workItem))
       when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
 
-
       val result = postRequest(IE815)
 
       result.status mustBe ACCEPTED
@@ -128,11 +139,48 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       }
 
       withClue("submit to NRS") {
-        eventually {
-          verify(postRequestedFor(urlEqualTo("/submission")))
+        verify(postRequestedFor(urlEqualTo("/submission")))
+      }
+    }
+
+    "return an error" when {
+      "notification service return a 400" in {
+        withAuthorizedTrader(consignorId)
+        stubEISSuccessfulRequest
+        setupRepositories
+        stubGetBoxIdFailureRequest(BAD_REQUEST, "Missing or incorrect query parameter")
+        when(workItemRepository.pushNew(any, any, any)).thenReturn(Future.successful(workItem))
+        when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
+
+        val result = postRequest(IE815)
+
+        result.status mustBe BAD_REQUEST
+        withClue("return the json response") {
+          val expectedJson = ErrorResponse(timeStamp, "Push Notification Error", "Missing or incorrect query parameter")
+          val responseBody = Json.parse(result.body).as[ErrorResponse]
+          responseBody mustBe expectedJson
+        }
+
+        withClue("should not submit to NRS") {
+          verify(0, postRequestedFor(urlEqualTo("/submission")))
+        }
+
+        withClue("should not submit message") {
+          verify(0, postRequestedFor(urlEqualTo(eisUrl)))
         }
       }
+    }
 
+    "clientId is missing in the header" in {
+      val result = postRequestWithoutClientId
+
+      result.status mustBe BAD_REQUEST
+      withClue("return the json response") {
+        val responseBody = result.json.as[ErrorResponse]
+        responseBody.dateTime.truncatedTo(ChronoUnit.MINUTES) mustBe Instant.now.truncatedTo(ChronoUnit.MINUTES)
+        responseBody.message mustBe "ClientId error"
+        responseBody.debugMessage mustBe "Request header is missing clientId"
+      }
     }
 
     "return success also if NRS fails" in {
@@ -156,7 +204,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       setupRepositories
 
       // no Authorization header added
-      val result = await(wsClient.url(url).post(IE815))
+      val result = await(wsClient.url(url).addHttpHeaders("X-Client-Id" -> "clientId").post(IE815))
 
       result.status mustBe ACCEPTED
     }
@@ -278,7 +326,8 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   private def assertValidResult(result: WSResponse) = {
     val responseBody = Json.parse(result.body).as[ExciseMovementResponse]
     responseBody.status mustBe "Accepted"
-    UUID.fromString(responseBody.movementId) //mustNot Throw An Exception
+    responseBody.boxId mustBe boxId
+    UUID.fromString(responseBody.movementId).toString must not be empty //mustNot Throw An Exception
     responseBody.consignorId mustBe consignorId
     responseBody.localReferenceNumber mustBe "LRNQA20230909022221"
     responseBody.consigneeId mustBe Some("GBWKQOZ8OVLYR")
@@ -297,8 +346,18 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     await(wsClient.url(url)
       .addHttpHeaders(
         HeaderNames.AUTHORIZATION -> "TOKEN",
-        HeaderNames.CONTENT_TYPE -> contentType
+        HeaderNames.CONTENT_TYPE -> contentType,
+        "X-Client-Id" -> "clientId"
       ).post(xml)
+    )
+  }
+
+  private def postRequestWithoutClientId = {
+    await(wsClient.url(url)
+      .addHttpHeaders(
+        HeaderNames.AUTHORIZATION -> "TOKEN",
+        HeaderNames.CONTENT_TYPE ->  "application/vnd.hmrc.1.0+xml",
+      ).post(IE815)
     )
   }
 
@@ -343,5 +402,45 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
             .withStatus(INTERNAL_SERVER_ERROR)
         )
     )
+  }
+
+  private def stubGetBoxIdSuccessRequest = {
+    wireMock.stubFor {
+      get(urlPathEqualTo(s"""/box"""))
+        .withQueryParam("boxName",equalTo(Constants.BoxName))
+        .withQueryParam("clientId", equalTo("clientId"))
+        .willReturn(
+          aResponse()
+            .withStatus(OK)
+            .withBody(
+              s"""
+                {
+                  "boxId": "${boxId}",
+                  "boxName":"customs/excise##1.0##notificationUrl",
+                  "boxCreator":{
+                      "clientId": "testClientId"
+                  },
+                  "subscriber": {
+                      "subscribedDateTime": "2020-06-01T10:27:33.613+0000",
+                      "callBackUrl": "https://www.example.com/callback",
+                      "subscriptionType": "API_PUSH_SUBSCRIBER"
+                  }
+                }
+              """)
+        )
+    }
+  }
+
+  private def stubGetBoxIdFailureRequest(status: Int, body: String) = {
+    wireMock.stubFor {
+      get(urlPathEqualTo(s"""/box"""))
+        .withQueryParam("boxName",equalTo(Constants.BoxName))
+        .withQueryParam("clientId", equalTo("clientId"))
+        .willReturn(
+          aResponse()
+            .withStatus(status)
+            .withBody(body)
+        )
+    }
   }
 }

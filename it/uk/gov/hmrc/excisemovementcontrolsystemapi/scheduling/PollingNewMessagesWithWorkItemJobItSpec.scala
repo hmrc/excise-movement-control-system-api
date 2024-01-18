@@ -95,7 +95,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
     WireMock.configureFor(wireHost, wireMock.port())
 
     GuiceApplicationBuilder()
-      .configure(configureServer ++ Map("mongodb.uri" -> mongoUri))
+      .configure(configureEisService ++ Map("mongodb.uri" -> mongoUri))
       .loadConfig(env => Configuration.load(env, Map("config.resource" -> "application.test.conf")))
       .overrides(
         bind[DateTimeService].to(timeService)
