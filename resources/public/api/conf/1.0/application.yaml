@@ -63,9 +63,7 @@ paths:
           content:
             application/vnd.hmrc.1.0+json:
               schema:
-                oneOf:
-                  - $ref: '#/components/schemas/ExciseMovementError'
-                  - $ref: '#/components/schemas/DownstreamError'
+                $ref: '#/components/schemas/ExciseMovementError'
               examples:
                 duplicateLrn:
                   summary: "Duplicate LRN"
@@ -112,7 +110,7 @@ paths:
           content:
             application/vnd.hmrc.1.0+json:
               schema:
-                $ref: '#/components/schemas/DownstreamError'
+                $ref: '#/components/schemas/ExciseMovementError'
               example:
                 dateTime: '2021-12-17T09:31:12Z'
                 status: NOT_FOUND
@@ -139,9 +137,7 @@ paths:
           content:
             application/vnd.hmrc.1.0+json:
               schema:
-                oneOf:
-                  - $ref: '#/components/schemas/DownstreamError'
-                  - $ref: '#/components/schemas/ExciseMovementError'
+                $ref: '#/components/schemas/ExciseMovementError'
               examples:
                 downstreamError:
                   summary: Downstream internal server error
@@ -163,7 +159,7 @@ paths:
           content:
             application/vnd.hmrc.1.0+json:
               schema:
-                $ref: '#/components/schemas/DownstreamError'
+                $ref: '#/components/schemas/ExciseMovementError'
               example:
                 dateTime: '2021-12-17T09:31:12Z'
                 status: SERVICE_UNAVAILABLE
@@ -423,9 +419,7 @@ paths:
           content:
             application/vnd.hmrc.1.0+json:
               schema:
-                oneOf:
-                  - $ref: '#/components/schemas/ExciseMovementError'
-                  - $ref: '#/components/schemas/DownstreamError'
+                $ref: '#/components/schemas/ExciseMovementError'
               examples:
                 invalidIE815:
                   summary: "Invalid IE815 message"
@@ -468,9 +462,7 @@ paths:
           content:
             application/vnd.hmrc.1.0+json:
               schema:
-                oneOf:
-                  - $ref: '#/components/schemas/ExciseMovementError'
-                  - $ref: '#/components/schemas/DownstreamError'
+                $ref: '#/components/schemas/ExciseMovementError'
               examples:
                 movementNotFound:
                   summary: Movement doesn't exist or cannot be accessed
@@ -507,7 +499,7 @@ paths:
           content:
             application/vnd.hmrc.1.0+json:
               schema:
-                $ref: '#/components/schemas/DownstreamError'
+                $ref: '#/components/schemas/ExciseMovementError'
               example:
                 dateTime: "2021-12-17T09:30:47Z"
                 status: "INTERNAL_SERVER_ERROR"
@@ -520,7 +512,7 @@ paths:
           content:
             application/vnd.hmrc.1.0+json:
               schema:
-                $ref: '#/components/schemas/DownstreamError'
+                $ref: '#/components/schemas/ExciseMovementError'
               example:
                 dateTime: '2021-12-17T09:31:12Z'
                 status: SERVICE_UNAVAILABLE
@@ -740,7 +732,7 @@ paths:
           content:
             application/vnd.hmrc.1.0+json:
               schema:
-                $ref: '#/components/schemas/DownstreamError'
+                $ref: '#/components/schemas/ExciseMovementError'
               example:
                 dateTime: "2021-12-17T09:30:47Z"
                 status: "INTERNAL_SERVER_ERROR"
@@ -904,28 +896,13 @@ components:
           $ref: '#/components/schemas/MovementStatus'
       xml:
         name: exciseMovement
+
     ExciseMovementError:
       type: object
       required:
         - dateTime
         - message
         - debugMessage
-      properties:
-        dateTime:
-          $ref: '#/components/schemas/DateTime'
-        message:
-          type: string
-        debugMessage:
-          type: string
-
-    DownstreamError:
-      type: object
-      required:
-        - dateTime
-        - status
-        - message
-        - debugMessage
-        - emcsCorrelationId
       properties:
         dateTime:
           $ref: '#/components/schemas/DateTime'
