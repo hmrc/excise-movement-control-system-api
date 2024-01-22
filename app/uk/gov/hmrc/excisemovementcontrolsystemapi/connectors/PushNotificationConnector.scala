@@ -87,7 +87,6 @@ class PushNotificationConnector @Inject()(
     logger.error(s"[PushNotificationConnector] - Error retrieving BoxId, url: $url, status: ${response.status}, message: ${response.body}")
     val errorResponse = FailedBoxIdNotificationResponse(dateTimeService.timestamp(), response.body)
 
-    println(s"actual => ${Json.toJson(errorResponse)}")
     response.status match {
       case 400 => BadRequest(Json.toJson(errorResponse))
       case 404 => NotFound(Json.toJson(errorResponse))
