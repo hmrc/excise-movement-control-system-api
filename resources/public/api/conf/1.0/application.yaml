@@ -333,7 +333,6 @@ paths:
       summary: Submit a message for an excise movement.
       description: |
         Submit a message for a specific excise movement. </br></br>
-        The **X-Message-Type** header **must** be the same as the message body e.g. for an **IE818 (Record of receipt) message** the **X-Message-Type** header also needs to be **IE818**
         
         **Note:** The consignor ID or consignee ID in the message must match an excise reference number (ERN) in the bearer token that you use for API authentication. If it does not, a 403 Forbidden error will be thrown.
       operationId: postMessage
@@ -346,12 +345,6 @@ paths:
           required: true
           schema:
             $ref: '#/components/schemas/MovementId'
-        - name: X-Message-Type
-          in: header
-          description: The message type
-          required: true
-          schema:
-            $ref: '#/components/schemas/IncomingMessageType'
       requestBody:
         required: true
         content:
