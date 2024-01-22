@@ -55,7 +55,7 @@ class DraftExciseMovementController @Inject()(
               case Right(box) => submitMessage(box.boxId)
               case Left(error) => Future.successful(error)
             }
-          case _ => Future.successful(BadRequest(Json.toJson(ErrorResponse(Instant.now, "ClientId error", "Request header is missing clientId"))))
+          case _ => Future.successful(BadRequest(Json.toJson(ErrorResponse(Instant.now, s"ClientId error", s"Request header is missing ${Constants.XClientIdHeader}"))))
         }
     }
 

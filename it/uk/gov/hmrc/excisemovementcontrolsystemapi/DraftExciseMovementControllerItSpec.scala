@@ -40,7 +40,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{AuthTestSupport, Stri
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, SubmitMessageTestSupport, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Constants
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.FailedBoxIdNotificationResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
@@ -182,7 +181,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         val responseBody = result.json.as[ErrorResponse]
         responseBody.dateTime.truncatedTo(ChronoUnit.MINUTES) mustBe Instant.now.truncatedTo(ChronoUnit.MINUTES)
         responseBody.message mustBe "ClientId error"
-        responseBody.debugMessage mustBe "Request header is missing clientId"
+        responseBody.debugMessage mustBe "Request header is missing X-Client-Id"
       }
     }
 

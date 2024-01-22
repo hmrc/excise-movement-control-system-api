@@ -76,7 +76,7 @@ You can use mocklab.io. See [Testing Push Pull Notifications on External Test - 
 * In the terminal type the following command and press enter
 
     ```
-    response=$(curl --location -g --request POST 'http://localhost:9607/application' \
+    curl --location -g --request POST 'http://localhost:9607/application' \
     --header 'Authorization: Bearer <paste the generated access token here>' \
     --header 'Content-Type: application/json' \
     --data-raw '{
@@ -94,7 +94,7 @@ You can use mocklab.io. See [Testing Push Pull Notifications on External Test - 
                 "userId": "61e93581-5028-4475-912b-e8df6f406e2f"
             }
         ]
-    }')
+    }'
     ```
 * copy the client Id
 
@@ -116,29 +116,29 @@ You can use mocklab.io. See [Testing Push Pull Notifications on External Test - 
 
 * in the terminal type the following command and press enter
 
-```
-curl --location --request PUT 'http://localhost:9650/definition/context/customs%2Fexcise/version/1.0' \
---header 'Content-Type: application/json' \
---data-raw '{
-    "fieldDefinitions": [
-        {
-            "name": "notificationUrl",
-            "shortDescription": "Notification URL",
-            "description": "What is your notification web address for us to send push notifications to?",
-            "type": "PPNSField",
-            "hint": "You must only give us a web address that you own. Your application will use this address to listen to notifications from HMRC.",
-            "validation": {
-                "errorMessage": "notificationUrl must be a valid https URL",
-                "rules": [
-                    {
-                        "UrlValidationRule": {}
-                    }
-                ]
-            }
-        }
-    ]
-}'
-```
+  ```
+  curl --location --request PUT 'http://localhost:9650/definition/context/customs%2Fexcise/version/1.0' \
+  --header 'Content-Type: application/json' \
+  --data-raw '{
+      "fieldDefinitions": [
+          {
+              "name": "notificationUrl",
+              "shortDescription": "Notification URL",
+              "description": "What is your notification web address for us to send push notifications to?",
+              "type": "PPNSField",
+              "hint": "You must only give us a web address that you own. Your application will use this address to listen to notifications from HMRC.",
+              "validation": {
+                  "errorMessage": "notificationUrl must be a valid https URL",
+                  "rules": [
+                      {
+                          "UrlValidationRule": {}
+                      }
+                  ]
+              }
+          }
+      ]
+  }'
+  ```
 
 #### Set the callback URL
 

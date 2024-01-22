@@ -111,9 +111,6 @@ class PushNotificationConnectorSpec
       }
 
       "cannot parse json" in {
-
-        val t = Json.toJson(FailedPushNotification(500, "test"))
-        val from = t.as[FailedPushNotification]
         val errorJson = Json.obj( "code" -> "UNKNOWN_ERROR", "message" -> "Box does not exist")
         when(httpClient.GET[Any](any, any, any)(any,any,any))
           .thenReturn(Future.successful(HttpResponse(200, errorJson.toString())))
