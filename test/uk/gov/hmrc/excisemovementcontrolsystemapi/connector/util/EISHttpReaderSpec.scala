@@ -37,6 +37,7 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
   private val exampleError = Json.toJson(
     EISErrorResponse(
       localDateTime,
+      "BAD_REQUEST",
       "Error",
       "Error details",
       "123"

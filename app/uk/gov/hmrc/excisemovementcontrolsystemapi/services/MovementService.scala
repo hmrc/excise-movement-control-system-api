@@ -55,12 +55,12 @@ class MovementService @Inject()(
             .map(_ => Right(movement))
             .recover {
               case ex: Throwable =>
-                logger.error(s"[MovementService] - Error occurred while saving movement message: ${ex.getMessage}")
+                logger.error(s"[MovementService] - Error occurred while saving movement: ${ex.getMessage}")
                 Left(InternalServerError(Json.toJson(
                   ErrorResponse(
                     dateTimeService.timestamp(),
                     "Database error",
-                    "Error occurred while saving movement message"
+                    "Error occurred while saving movement"
                   )
                 )))
             }

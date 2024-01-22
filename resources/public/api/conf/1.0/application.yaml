@@ -53,10 +53,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/ExciseMovement'
               example:
+                status: "Accepted"
+                movementId: b6ba6a73-d723-4c9f-b9b7-99e533fb614f
                 consignorId: "GBWK002281023"
                 consigneeId: "GBWKQOZ8OVLYR"
                 localReferenceNumber: "LRNQA20230909022221"
-                status: "Accepted"
         '400':
           description: The submission of draft movement message has failed validation
           content:
@@ -64,48 +65,95 @@ paths:
               schema:
                 $ref: '#/components/schemas/ExciseMovementError'
               examples:
+                duplicateLrn:
+                  summary: "Duplicate LRN"
+                  value:
+                    dateTime: "2024-01-17T15:21:17.170162Z"
+                    message: "Duplicate LRN error"
+                    debugMessage: "The local reference number lrnie8156540856 has already been used for another movement"
                 jsonValidation:
                   summary: "Json validation error downstream"
                   value:
                     dateTime: "2021-12-17T09:30:47Z"
+                    status: "BAD_REQUEST"
                     message: "Json validation failed"
                     debugMessage: "user is missing but it is required"
                     emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
-                xmlValidation:
-                  summary: "Xml validation failure"
+                invalidIE815:
+                  summary: "Invalid IE815 message"
                   value:
-                    message: "Validation error(s) occurred"
-                    errors:
-                      - errorCode: 8084
-                        errorMessage: "The Date of Dispatch you entered is incorrect. It must be today or later. Please amend your entry and resubmit."
-                        location: "/urn:IE815[1]/urn:Body[1]/urn:SubmittedDraftOfEADESAD[1]/urn:EadEsadDraft[1]/urn:DateOfDispatch[1]"
-                        value: "2023-09-09"
+                    dateTime: "2014-01-17T15:24:29.598475Z"
+                    message: "Not valid IE815 message"
+                    debugMessage: "Error while parsing: DateOfDispatch field expected"
+
         '401':
-          description: Consignor not authorized. Invalid enrolment parameter.
+          description: Consignor not authorised. Invalid enrolment parameter.
+          content:
+            text/plain:
+              example:
+                "Invalid affinity group Individual"
         '403':
           description: Consignor ID is not in authorisation bearer token
-        '404':
-          description: Connection Refused
           content:
             application/vnd.hmrc.1.0+json:
               schema:
                 $ref: '#/components/schemas/ExciseMovementError'
               example:
-                dateTime: "2021-12-17T09:30:47Z"
-                message: "Received error response from server"
-                debugMessage: "Connection refused; nested exception is java.net.ConnectException: Connection refused"
-                emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+                dateTime: '2024-01-17T15:27:29.540089Z'
+                message: ERN validation error
+                debugMessage: Excise number in message does not match authenticated excise number
+            text/plain:
+              example:
+                "Could not find ExciseNumber"
+        '404':
+          description: Downstream connection refused
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ExciseMovementError'
+              example:
+                dateTime: '2021-12-17T09:31:12Z'
+                status: NOT_FOUND
+                message: Received error response from server
+                debugMessage: 'Connection refused; nested exception is java.net.ConnectException: Connection refused'
+                emcsCorrelationId: b47a371c-01e6-4dc0-97c1-dd524f7035d0
+        '422':
+          description: The draft movement message has failed validation
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/DownstreamValidationError'
+              example:
+                message: ["Validation error(s) occurred"]
+                errors:
+                  - errorCategory: "business"
+                    errorType: 8084
+                    errorReason: "The Date of Dispatch you entered is incorrect. It must be today or later. Please amend your entry and resubmit."
+                    errorLocation: "/urn:IE815[1]/urn:Body[1]/urn:SubmittedDraftOfEADESAD[1]/urn:EadEsadDraft[1]/urn:DateOfDispatch[1]"
+                    originalAttributeValue: "2023-09-09"
+
         '500':
           description: Internal server error
           content:
             application/vnd.hmrc.1.0+json:
               schema:
                 $ref: '#/components/schemas/ExciseMovementError'
-              example:
-                dateTime: "2021-12-17T09:30:47Z"
-                message: "Invalid JSON structure"
-                debugMessage: "JSON parse error: Unexpected character"
-                emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+              examples:
+                downstreamError:
+                  summary: Downstream internal server error
+                  value:
+                    dateTime: "2021-12-17T09:30:47Z"
+                    status: "INTERNAL_SERVER_ERROR"
+                    message: "Invalid JSON structure"
+                    debugMessage: "JSON parse error: Unexpected character"
+                    emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+                databaseError:
+                  summary: Database error
+                  value:
+                    dateTime: '2024-01-17T15:27:29.540089Z'
+                    message: Database error
+                    debugMessage: Error occurred while saving movement
+
         '503':
           description: Downstream service is Unavailable
           content:
@@ -113,11 +161,16 @@ paths:
               schema:
                 $ref: '#/components/schemas/ExciseMovementError'
               example:
-                code: "SERVER_ERROR"
-                message: "Service unavailable"
+                dateTime: '2021-12-17T09:31:12Z'
+                status: SERVICE_UNAVAILABLE
+                message: CIRCUIT_BREAKER - 815_CB is OPEN
+                debugMessage: CircuitBreaker '815_CB' is OPEN and does not permit further calls
+                emcsCorrelationId: 4afb4a1e-33ca-42a5-8117-315db02b7f3c
+
       security:
         - userRestricted:
             - excise-movement-control-system
+
     get:
       tags:
         - Movements
@@ -156,12 +209,14 @@ paths:
           content:
             application/vnd.hmrc.1.0+json:
               example:
-                - consignorId: "GBWK002281023"
+                - movementId: "b6ba6a73-d723-4c9f-b9b7-99e533fb614f"
+                  consignorId: "GBWK002281023"
                   consigneeId: "GBWKQOZ8OVLYR"
                   localReferenceNumber: "LRNQA20230909022221"
                   administrativeReferenceCode: "35WE3B5EDSYSZ86STVKH8"
                   status: "Accepted"
-                - consignorId: "GBWK002281023"
+                - movementId: "612d2527-c207-4ffb-9250-f4ece59a29c5"
+                  consignorId: "GBWK002281023"
                   consigneeId: "GBWKQOZ8OVLYQ"
                   localReferenceNumber: "LRNQA20230909022224"
                   status: "None"
@@ -169,12 +224,109 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ExciseMovement'
+        '400':
+          description: Bad request - either filter ERN is invalid or date filter format is invalid
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: "#/components/schemas/ExciseMovementError"
+              examples:
+                ernParameter:
+                  summary: filter ERN is not valid
+                  value:
+                    dateTime: '2024-01-17T16:26:18.062304Z'
+                    message: ERN parameter value error
+                    debugMessage: The ERN GBWKQOZ8OVLDD supplied in the parameter is not among the authorised ERNs GBWKQOZ8OVLYR
+                dateFormat:
+                  summary: date filter format is not valid
+                  value:
+                    dateTime: '2024-01-17T16:27:41.095827Z'
+                    message: Invalid date format provided in the updatedSince query parameter
+                    debugMessage: Date format should be like '2020-11-15T17:02:34.00Z'
+
         '401':
-          description: Consignor or Consignee not authorized. Invalid enrolment parameter.
+          description: Consignor or Consignee not authorised. Invalid enrolment parameter.
+          content:
+            text/plain:
+              example:
+                "Invalid affinity group Individual"
+        '403':
+          description: Consignor ID is not in authorisation bearer token
+          content:
+            text/plain:
+              example:
+                "Could not find ExciseNumber"
       security:
         - userRestricted:
             - excise-movement-control-system
-  /customs/excise/movements/{localReferenceNumber}/messages:
+
+  /customs/excise/movements/{movementId}:
+    get:
+      tags:
+        - Movements
+      summary: Get excise movement
+      description: Get excise movement for the supplied movement ID. </br></br>**Note:** You will only be able to retrieve movements where the consignor ID or consignee ID of the movement matches any of your excise reference numbers (ERNs) in the bearer token that you use for API authentication.
+      operationId: getMovement
+      parameters:
+        - $ref: "#/components/parameters/AcceptHeader"
+        - name: movementId
+          in: path
+          description: Movement Id of the movement to be returned
+          required: true
+          schema:
+            $ref: '#/components/schemas/MovementId'
+      responses:
+        '200':
+          description: Successful operation. This will contain the details of the requested movement.
+          content:
+            application/vnd.hmrc.1.0+json:
+              example:
+                movementId: "b6ba6a73-d723-4c9f-b9b7-99e533fb614f"
+                consignorId: "GBWK002281023"
+                consigneeId: "GBWKQOZ8OVLYR"
+                localReferenceNumber: "LRNQA20230909022221"
+                administrativeReferenceCode: "35WE3B5EDSYSZ86STVKH8"
+                status: "Accepted"
+              schema:
+                $ref: '#/components/schemas/ExciseMovement'
+
+        '401':
+          description: Consignor or Consignee not authorised. Invalid enrolment parameter.
+          content:
+            text/plain:
+              example:
+                "Invalid affinity group Individual"
+        '403':
+          description: Consignor ID is not in authorisation bearer token
+          content:
+            text/plain:
+              example:
+                "Could not find ExciseNumber"
+
+        '404':
+          description: Movement with supplied id not found for this ERN
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: "#/components/schemas/ExciseMovementError"
+              examples:
+                movementNotFound:
+                  summary: Movement not in database
+                  value:
+                    dateTime: '2024-01-17T16:26:18.062304Z'
+                    message: Movement not found
+                    debugMessage: Movement b6ba6a73-d723-4c9f-b9b7-99e533fb614f is not found
+                movementNotForErn:
+                  summary: Movement not valid for ERN
+                  value:
+                    dateTime: '2024-01-17T16:27:41.095827Z'
+                    message: Movement not found
+                    debugMessage: Movement b6ba6a73-d723-4c9f-b9b7-99e533fb614f is not found within the data for ERNs GBWK002281022
+      security:
+        - userRestricted:
+            - excise-movement-control-system
+
+  /customs/excise/movements/{movementId}/messages:
     post:
       tags:
         - Movements
@@ -188,12 +340,12 @@ paths:
       parameters:
         - $ref: '#/components/parameters/AcceptHeader'
         - $ref: '#/components/parameters/ContentTypeHeader'
-        - name: localReferenceNumber
+        - name: movementId
           in: path
-          description: The excise movement identifier
+          description: The movement to submit messages for
           required: true
           schema:
-            type: string
+            $ref: '#/components/schemas/MovementId'
         - name: X-Message-Type
           in: header
           description: The message type
@@ -268,26 +420,80 @@ paths:
             application/vnd.hmrc.1.0+json:
               schema:
                 $ref: '#/components/schemas/ExciseMovementError'
-              example:
-                dateTime: "2021-12-17T09:30:47Z"
-                message: "Json validation failed"
-                debugMessage: "user is missing but it is required"
-                emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+              examples:
+                invalidIE815:
+                  summary: "Invalid IE815 message"
+                  value:
+                    dateTime: "2014-01-17T15:24:29.598475Z"
+                    message: "Not valid IE815 message"
+                    debugMessage: "Error while parsing: DateOfDispatch field expected"
+                jsonValidation:
+                  summary: "Json validation error downstream"
+                  value:
+                    dateTime: "2021-12-17T09:30:47Z"
+                    status: "BAD_REQUEST"
+                    message: "Json validation failed"
+                    debugMessage: "user is missing but it is required"
+                    emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+
         '401':
-          description: Consignor or Consignee not authorized. Invalid enrolment parameter.
+          description: Consignor or Consignee not authorised. Invalid enrolment parameter.
+          content:
+            text/plain:
+              example:
+                "Invalid affinity group Individual"
+
         '403':
-          description: Consignor ID or consignee ID in submitted message is not in authorisation bearer token
-        '404':
-          description: Unknown excise movement identifier
+          description: Consignor ID or consignee ID is not in authorisation bearer token
           content:
             application/vnd.hmrc.1.0+json:
               schema:
                 $ref: '#/components/schemas/ExciseMovementError'
               example:
-                dateTime: "2021-12-17T09:30:47Z"
-                message: "Received error response from server"
-                debugMessage: "Connection refused; nested exception is java.net.ConnectException: Connection refused"
-                emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+                dateTime: '2024-01-17T15:27:29.540089Z'
+                message: ERN validation error
+                debugMessage: Excise number in message does not match authenticated excise number
+            text/plain:
+              example:
+                "Could not find ExciseNumber"
+
+        '404':
+          description: Movement doesn't exist or movement cannot be accessed by enrolled user or downstream connection issues
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ExciseMovementError'
+              examples:
+                movementNotFound:
+                  summary: Movement doesn't exist or cannot be accessed
+                  value:
+                    dateTime: "2021-12-17T09:30:47Z"
+                    message: "Movement not found"
+                    debugMessage: "Movement b6ba6a73-d723-4c9f-b9b7-99e533fb614f is not found within the data for ERNs GBWK002281023\\GBWK002281024"
+                downstreamConnection:
+                  summary: Downstream connection refused
+                  value:
+                    dateTime: '2021-12-17T09:31:12Z'
+                    status: NOT_FOUND
+                    message: Received error response from server
+                    debugMessage: 'Connection refused; nested exception is java.net.ConnectException: Connection refused'
+                    emcsCorrelationId: b47a371c-01e6-4dc0-97c1-dd524f7035d0
+
+        '422':
+          description: The draft movement message has failed validation
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/DownstreamValidationError'
+              example:
+                message: ["Validation error(s) occurred"]
+                errors:
+                  - errorCategory: "business"
+                    errorType: 8007
+                    errorReason: "The destination office must be valid and start with 'GB' or 'XI' followed by six numbers. Please amend your entry and resubmit."
+                    errorLocation: "/urn:IE818[1]/urn:Body[1]/urn:AcceptedOrRejectedReportOfReceiptExport[1]/urn:DestinationOffice[1]"
+                    originalAttributeValue: "83844"
+
         '500':
           description: Internal server error
           content:
@@ -296,9 +502,11 @@ paths:
                 $ref: '#/components/schemas/ExciseMovementError'
               example:
                 dateTime: "2021-12-17T09:30:47Z"
+                status: "INTERNAL_SERVER_ERROR"
                 message: "Invalid JSON structure"
                 debugMessage: "JSON parse error: Unexpected character"
                 emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+
         '503':
           description: Downstream service is Unavailable
           content:
@@ -306,11 +514,16 @@ paths:
               schema:
                 $ref: '#/components/schemas/ExciseMovementError'
               example:
-                code: "SERVER_ERROR"
-                message: "Service unavailable"
+                dateTime: '2021-12-17T09:31:12Z'
+                status: SERVICE_UNAVAILABLE
+                message: CIRCUIT_BREAKER - 815_CB is OPEN
+                debugMessage: CircuitBreaker '815_CB' is OPEN and does not permit further calls
+                emcsCorrelationId: 4afb4a1e-33ca-42a5-8117-315db02b7f3c
+
       security:
         - userRestricted:
             - excise-movement-control-system
+
     get:
       tags:
         - Movements
@@ -319,9 +532,9 @@ paths:
       operationId: getAllMessages
       parameters:
         - $ref: "#/components/parameters/AcceptHeader"
-        - name: localReferenceNumber
+        - name: movementId
           in: path
-          description: The local reference number of the movement
+          description: The movement to get messages for
           required: true
           schema:
             type: string
@@ -337,26 +550,76 @@ paths:
           content:
             application/vnd.hmrc.1.0+json:
               example:
-                - encodedMessage: PElFODE1PjwhLS0gRXhhbXBsZSBJRTgxNSBtZXNzYWdlIC0tPjwvSUU4MTU+
+                - hash: 510168662
+                  encodedMessage: PElFODE1PjwhLS0gRXhhbXBsZSBJRTgxNSBtZXNzYWdlIC0tPjwvSUU4MTU+
+                  messageType: IE815
                   createdOn: 2023-10-30T15:36:08.985Z
-                  type: IE815
-                - encodedMessage: PElFODAxPjwhLS0gRXhhbXBsZSBJRTgwMSBtZXNzYWdlIC0tPjwvSUU4MDE+
+                - hash: 510168662
+                  encodedMessage: PElFODAxPjwhLS0gRXhhbXBsZSBJRTgwMSBtZXNzYWdlIC0tPjwvSUU4MDE+
+                  messageType: IE801
                   createdOn: 2023-10-28T15:36:08.985Z
-                  type: IE801
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/MessageWithType'
+
+        '400':
+          description: Invalid movement Id, invalid updated since format or not allowed to access this movement
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: "#/components/schemas/ExciseMovementError"
+              examples:
+                movementIdFormat:
+                  summary: Movement Id not valid
+                  value:
+                    dateTime: '2024-01-17T16:27:41.095827Z'
+                    message: Movement Id format error
+                    debugMessage: Movement Id should be a valid UUID
+                dateFormat:
+                  summary: Invalid updated since format
+                  value:
+                    dateTime: '2024-01-17T16:27:41.095827Z'
+                    message: Invalid date format provided in the updatedSince query parameter
+                    debugMessage: Date format should be like '2020-11-15T17:02:34.00Z'
+
         '401':
-          description: Consignor or Consignee not authorized. Invalid enrolment parameter.
+          description: Consignor or Consignee not authorised. Invalid enrolment parameter.
+          content:
+            text/plain:
+              example:
+                "Invalid affinity group Individual"
         '403':
-          description: The requested movement's consignor ID or consignee ID is not in authorisation bearer token
+          description: Consignor ID or Consignee ID is not in authorisation bearer token
+          content:
+            text/plain:
+              example:
+                "Could not find ExciseNumber"
+
         '404':
-          description: Unknown movement, based on the provided local reference number
+          description: Movement with supplied id not found for this ERN
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: "#/components/schemas/ExciseMovementError"
+              examples:
+                movementNotFound:
+                  summary: Movement not in database
+                  value:
+                    dateTime: '2024-01-17T16:26:18.062304Z'
+                    message: Movement not found
+                    debugMessage: Movement b6ba6a73-d723-4c9f-b9b7-99e533fb614f is not found
+                movementNotForErn:
+                  summary: Movement not valid for ERN
+                  value:
+                    dateTime: '2024-01-17T16:27:41.095827Z'
+                    message: Movement not found
+                    debugMessage: Movement b6ba6a73-d723-4c9f-b9b7-99e533fb614f is not found within the data for ERNs GBWK002281022
+
       security:
         - userRestricted:
             - excise-movement-control-system
-  
+
   /customs/excise/traders/pre-validate:
     post:
       tags:
@@ -436,13 +699,53 @@ paths:
                             - exciseProductCode: S200
                               errorCode: '1'
                               errorText: Unrecognised EPC
+
         '400':
           description: Invalid JSON or mandatory fields missing.
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ExciseMovementError'
+              example:
+                dateTime: '2024-01-17T15:27:29.540089Z'
+                message: Not valid Pre Validate Trader message
+                debugMessage: "Missing field: entityGroup"
+
+            text/plain:
+              example: "" #downstream 400s are empty
+
+        '401':
+          description: Logged in user not authorised. Invalid enrolment parameter.
+          content:
+            text/plain:
+              example:
+                "Invalid affinity group Individual"
+        '403':
+          description: ERN is not in authorisation bearer token
+          content:
+            text/plain:
+              example:
+                "Could not find ExciseNumber"
+
         '500':
           description: Internal server error
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ExciseMovementError'
+              example:
+                dateTime: "2021-12-17T09:30:47Z"
+                status: "INTERNAL_SERVER_ERROR"
+                message: "Invalid JSON structure"
+                debugMessage: "JSON parse error: Unexpected character"
+                emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+            text/plain:
+              example: "" #downstream 400s are empty
+
       security:
         - userRestricted:
             - excise-movement-control-system
+
 components:
   parameters:
     AcceptHeader:
@@ -499,11 +802,15 @@ components:
     DateTime:
       type: string
       format: date-time
-      example: '2021-12-17T09:30:47Z'
+      example: '2021-12-17T09:30:470162Z'
     CorrelationId:
       type: string
       format: uuid
       example: 3e8dae97-b586-4cef-8511-68ac12da9028
+    MovementId:
+      type: string
+      format: uuid
+      example: b6ba6a73-d723-4c9f-b9b7-99e533fb614f
     IE810:
       type: object
       description: Submit cancellation
@@ -570,10 +877,13 @@ components:
     ExciseMovement:
       type: object
       required:
+        - movementId
         - consignorId
         - localReferenceNumber
         - status
       properties:
+        movementId:
+          $ref: '#/components/schemas/MovementId'
         consignorId:
           $ref: '#/components/schemas/ExciseReferenceNumber'
         localReferenceNumber:
@@ -586,43 +896,60 @@ components:
           $ref: '#/components/schemas/MovementStatus'
       xml:
         name: exciseMovement
+
     ExciseMovementError:
       type: object
       required:
         - dateTime
         - message
         - debugMessage
-        - emcsCorrelationId
       properties:
         dateTime:
           $ref: '#/components/schemas/DateTime'
-        emcsCorrelationId:
-          $ref: '#/components/schemas/CorrelationId'
+        status:
+          type: string
         message:
           type: string
         debugMessage:
           type: string
+        emcsCorrelationId:
+          $ref: '#/components/schemas/CorrelationId'
+
+    DownstreamValidationError:
+      type: object
+      required:
+        - message
+        - emcsCorrelationId
+      properties:
+        emcsCorrelationId:
+          $ref: '#/components/schemas/CorrelationId'
+        message:
+          type: array
+          items:
+            type: string
         errors:
           type: array
           items:
             $ref: '#/components/schemas/ValidationError'
-      xml:
-        name: exciseMovementType
+
     ValidationError:
       type: object
       required:
-        - errorCode
-        - errorMessage
-        - location
-        - value
+        - errorCategory
+        - errorType
+        - errorReason
+        - errorLocation
+        - originalAttributeValue
       properties:
-        errorCode:
+        errorCategory:
+          type: string
+        errorType:
           type: integer
-        errorMessage:
+        errorReason:
           type: string
-        location:
+        errorLocation:
           type: string
-        value:
+        originalAttributeValue:
           type: string
     SubmitDraftMessageType:
       type: string
@@ -684,10 +1011,12 @@ components:
         - $ref: '#/components/schemas/Message'
         - type: object
           required:
-            - type
+            - messageType
           properties:
-            type:
+            messageType:
               $ref: '#/components/schemas/MessageType'
+            hash:
+              type: string
     PreValidateTraderRequest:
       required:
         - exciseTraderValidationRequest
