@@ -1,8 +1,8 @@
 # microservice specific routes
 
-POST       /movements                  uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.DraftExciseMovementController.submit
-GET        /movements                  uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.GetMovementsController.getMovements(ern: Option[String], lrn: Option[String], arc: Option[String], updatedSince: Option[String])
-GET        /movements/:movementId      uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.GetMovementsController.getMovement(movementId: String)
-GET        /movements/:lrn/messages    uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.GetMessagesController.getMessagesForMovement(lrn: String, updatedSince: Option[String])
-POST       /movements/:movementId/messages    uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubmitMessageController.submit(movementId: String)
-POST       /traders/pre-validate       uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.PreValidateTraderController.submit
+POST       /movements                           uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.DraftExciseMovementController.submit
+GET        /movements                           uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.GetMovementsController.getMovements(ern: Option[String], lrn: Option[String], arc: Option[String], updatedSince: Option[String])
+GET        /movements/:movementId               uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.GetMovementsController.getMovement(movementId: String)
+GET        /movements/:movementId/messages      uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.GetMessagesController.getMessagesForMovement(movementId: String, updatedSince: Option[String])
+POST       /movements/:movementId/messages      uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubmitMessageController.submit(movementId: String)
+POST       /traders/pre-validate                uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.PreValidateTraderController.submit

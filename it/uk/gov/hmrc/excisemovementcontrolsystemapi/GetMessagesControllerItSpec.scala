@@ -59,8 +59,8 @@ class GetMessagesControllerItSpec extends PlaySpec
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
 
   private val consignorId = "GBWK002281023"
-  private val lrn = "token"
-  private val url = s"http://localhost:$port/movements/$lrn/messages"
+  private val validUUID = "cfdb20c7-d0b0-4b8b-a071-737d68dede5e"
+  private val url = s"http://localhost:$port/movements/$validUUID/messages"
   private lazy val dateTimeService: DateTimeService = mock[DateTimeService]
   private val timestamp = Instant.now()
   private val responseFromEis = EISConsumptionResponse(
@@ -99,8 +99,8 @@ class GetMessagesControllerItSpec extends PlaySpec
       stubShowNewMessageRequest(consignorId)
       when(dateTimeService.timestamp()).thenReturn(timestamp)
       val message = Message("encodedMessage", "IE801", dateTimeService.timestamp())
-      when(movementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq(Movement("boxId", lrn, consignorId, None, None, Instant.now, Seq(message)))))
+      when(movementRepository.getMovementById(any))
+        .thenReturn(Future.successful(Some(Movement(validUUID, "boxId", "lrn", consignorId, None, None, Instant.now, Seq(message)))))
 
       val result = getRequest
 
@@ -112,19 +112,30 @@ class GetMessagesControllerItSpec extends PlaySpec
 
     }
 
-    "return 400 when no movement message is found" in {
+    "return 404 when no movement is found" in {
       withAuthorizedTrader(consignorId)
-      when(movementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq.empty))
+      when(movementRepository.getMovementById(any))
+        .thenReturn(Future.successful(None))
 
       val result = getRequest
 
-      result.status mustBe BAD_REQUEST
+      result.status mustBe NOT_FOUND
+    }
+
+    "return 404 when movement is not valid for ERN" in {
+      withAuthorizedTrader(consignorId)
+      val message = Message("encodedMessage", "IE801", dateTimeService.timestamp())
+      when(movementRepository.getMovementById(any))
+        .thenReturn(Future.successful(Some(Movement(validUUID, "boxId", "lrn", "consignor", None, None, Instant.now, Seq(message)))))
+
+      val result = getRequest
+
+      result.status mustBe NOT_FOUND
     }
 
     "return 500 when mongo db fails to fetch details" in {
       withAuthorizedTrader(consignorId)
-      when(movementRepository.getMovementByLRNAndERNIn(any, any))
+      when(movementRepository.getMovementById(any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
       val result = getRequest

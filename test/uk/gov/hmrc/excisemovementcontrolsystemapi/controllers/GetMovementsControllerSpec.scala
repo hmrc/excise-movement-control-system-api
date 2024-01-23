@@ -183,7 +183,7 @@ class GetMovementsControllerSpec
   "Get movement controller" should {
 
     val uuid = "cfdb20c7-d0b0-4b8b-a071-737d68dede5b"
-    val movement = Movement("id123", "lrn1", "testErn", Some("consignee"), Some("arc"), Instant.now(), Seq.empty)
+    val movement = Movement(uuid, "id123", "lrn1", "testErn", Some("consignee"), Some("arc"), Instant.now(), Seq.empty)
 
     "return the movement when successful" in {
 
