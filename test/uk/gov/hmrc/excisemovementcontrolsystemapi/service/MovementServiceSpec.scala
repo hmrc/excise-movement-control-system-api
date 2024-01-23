@@ -354,7 +354,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
   "getMovementById" should {
 
     "return the movement for the id if it is found" in {
-      val expectedMovement1 = Movement("uuid1", "lrn1", consignorId, None, Some("arc1"), Instant.now, Seq.empty)
+      val expectedMovement1 = Movement("uuid1", "boxId", "lrn1", consignorId, None, Some("arc1"), Instant.now, Seq.empty)
 
       when(mockMovementRepository.getMovementById("uuid1"))
         .thenReturn(Future.successful(Some(expectedMovement1)))

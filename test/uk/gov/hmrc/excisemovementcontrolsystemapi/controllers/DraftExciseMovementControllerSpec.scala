@@ -79,7 +79,7 @@ class DraftExciseMovementControllerSpec
   "submit" should {
     "return 200" in {
       when(movementService.saveNewMovement(any))
-        .thenReturn(Future.successful(Right(Movement("123", boxId, "456", Some("789"), None, Instant.now))))
+        .thenReturn(Future.successful(Right(Movement(boxId, "123", "456", Some("789"), None, Instant.now))))
 
       val result = createWithSuccessfulAuth.submit(request)
 

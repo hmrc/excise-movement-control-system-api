@@ -100,7 +100,7 @@ class GetMessagesControllerItSpec extends PlaySpec
       when(dateTimeService.timestamp()).thenReturn(timestamp)
       val message = Message("encodedMessage", "IE801", dateTimeService.timestamp())
       when(movementRepository.getMovementById(any))
-        .thenReturn(Future.successful(Some(Movement("boxId", validUUID, consignorId, None, None, Instant.now, Seq(message)))))
+        .thenReturn(Future.successful(Some(Movement(validUUID, "boxId", "lrn", consignorId, None, None, Instant.now, Seq(message)))))
 
       val result = getRequest
 
@@ -126,7 +126,7 @@ class GetMessagesControllerItSpec extends PlaySpec
       withAuthorizedTrader(consignorId)
       val message = Message("encodedMessage", "IE801", dateTimeService.timestamp())
       when(movementRepository.getMovementById(any))
-        .thenReturn(Future.successful(Some(Movement(validUUID, "consignor", None, None, Instant.now, Seq(message)))))
+        .thenReturn(Future.successful(Some(Movement(validUUID, "boxId", "lrn", "consignor", None, None, Instant.now, Seq(message)))))
 
       val result = getRequest
 

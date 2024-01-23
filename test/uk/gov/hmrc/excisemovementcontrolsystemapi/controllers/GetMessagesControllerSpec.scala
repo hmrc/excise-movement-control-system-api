@@ -96,10 +96,10 @@ class GetMessagesControllerSpec extends PlaySpec
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
 
-      verify(movementService).getMovementById(eqTo(validUUID))
-
       status(result) mustBe OK
       contentAsJson(result) mustBe Json.toJson(Seq(message, message2))
+
+      verify(movementService).getMovementById(eqTo(validUUID))
     }
 
     "get all the new messages when there is a time query parameter provided" in {
@@ -201,7 +201,7 @@ class GetMessagesControllerSpec extends PlaySpec
 
     "return NOT_FOUND when movement is for a different ern " in {
       val message = Message("message", "IE801", Instant.now)
-      val movement = Movement(validUUID, "consignor", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
+      val movement = Movement(validUUID, "boxId", "consignor", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
       when(movementService.getMovementById(any))
         .thenReturn(Future.successful(Some(movement)))
 
@@ -230,7 +230,7 @@ class GetMessagesControllerSpec extends PlaySpec
   }
 
   private def createMovementWithMessages(messages: Seq[Message]):Movement = {
-    Movement("boxId", validUUID, "consignorId", Some("consigneeId"), Some("arc"), Instant.now, messages)
+    Movement(validUUID, "boxId", "lrn", "testErn", Some("consigneeId"), Some("arc"), Instant.now, messages)
   }
 
   private def createWithSuccessfulAuth =
