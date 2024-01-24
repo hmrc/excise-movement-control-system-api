@@ -20,10 +20,10 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PushNotificationConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction, ValidateErnInMessageAction}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Constants
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, SubmissionMessageService, WorkItemService}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -55,7 +55,7 @@ class DraftExciseMovementController @Inject()(
               case Right(box) => submitMessage(box.boxId)
               case Left(error) => Future.successful(error)
             }
-          case _ => Future.successful(BadRequest(Json.toJson(ErrorResponse(Instant.now, "ClientId error", "Request header is missing clientId"))))
+          case _ => Future.successful(BadRequest(Json.toJson(ErrorResponse(Instant.now, s"ClientId error", s"Request header is missing ${Constants.XClientIdHeader}"))))
         }
     }
 
@@ -72,8 +72,10 @@ class DraftExciseMovementController @Inject()(
     workItemService.addWorkItemForErn(newMovement.consignorId, fastMode = true)
 
     movementMessageService.saveNewMovement(newMovement).map {
-      case Right(m) => Accepted(Json.toJson(ExciseMovementResponse("Accepted", boxId, m._id, m.localReferenceNumber, m.consignorId, m.consigneeId)))
-      case Left(error) => error
+      case Right(m) =>
+        Accepted(Json.toJson(ExciseMovementResponse("Accepted", boxId, m._id, m.localReferenceNumber, m.consignorId, m.consigneeId)))
+      case Left(error) =>
+        error
     }
   }
 

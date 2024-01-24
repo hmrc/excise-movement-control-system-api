@@ -24,6 +24,7 @@ import scala.concurrent.duration.{DAYS, Duration, FiniteDuration, HOURS, MINUTES
 
 @Singleton
 class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig) {
+
   val appName: String = config.get[String]("appName")
 
   lazy val eisHost: String = servicesConfig.baseUrl("eis")
@@ -87,5 +88,8 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
 
   def preValidateTraderUrl: String = s"$eisHost/emcs/pre-validate-trader/v1"
   def preValidateTraderBearerToken: String = servicesConfig.getConfString("eis.pre-validate-trader-bearer-token", "dummyPreValidateTraderBearerToken")
+
+  def pushNotificationUri(boxId: String) =
+    s"$pushPullNotificationHost/box/$boxId/notifications"
 
 }

@@ -156,9 +156,11 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
         result.status mustBe BAD_REQUEST
         withClue("return the json response") {
-          val expectedJson = ErrorResponse(timeStamp, "Push Notification Error", "Missing or incorrect query parameter")
-          val responseBody = Json.parse(result.body).as[ErrorResponse]
-          responseBody mustBe expectedJson
+          val expectedJson =
+            s"""{"dateTime":"$timeStamp",
+               |"message":"Box Id error",
+               |"debugMessage":"Missing or incorrect query parameter"}""".stripMargin
+          Json.parse(result.body) mustBe Json.parse(expectedJson)
         }
 
         withClue("should not submit to NRS") {
@@ -179,7 +181,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         val responseBody = result.json.as[ErrorResponse]
         responseBody.dateTime.truncatedTo(ChronoUnit.MINUTES) mustBe Instant.now.truncatedTo(ChronoUnit.MINUTES)
         responseBody.message mustBe "ClientId error"
-        responseBody.debugMessage mustBe "Request header is missing clientId"
+        responseBody.debugMessage mustBe "Request header is missing X-Client-Id"
       }
     }
 

@@ -41,32 +41,20 @@ class MovementService @Inject()(
 
     getMovementByLRNAndERNIn(movement.localReferenceNumber, List(movement.consignorId)).
       flatMap {
-        case Some(movementFromDb: Movement) if isLrnAlreadyUsed(movement, movementFromDb) =>
-          Future.successful(Left(BadRequest(Json.toJson(
-            ErrorResponse(
-              dateTimeService.timestamp(),
-              "Duplicate LRN error",
-              s"The local reference number ${movement.localReferenceNumber} has already been used for another movement"
-            )
-          ))))
-        case Some(movementFromDb: Movement) => Future(Right(movementFromDb))
-        case _ =>
-          movementRepository.saveMovement(movement)
-            .map(_ => Right(movement))
-            .recover {
-              case ex: Throwable =>
-                logger.error(s"[MovementService] - Error occurred while saving movement: ${ex.getMessage}")
-                Left(InternalServerError(Json.toJson(
-                  ErrorResponse(
-                    dateTimeService.timestamp(),
-                    "Database error",
-                    "Error occurred while saving movement"
-                  )
-                )))
-            }
+        case Some(m) if isLrnAlreadyUsed(movement, m) => createDuplicateErrorResponse(movement)
+        case Some(m) => Future(Right(m))
+        case _ => movementRepository.saveMovement(movement).map(_ => Right(movement))
       }
-
-
+  }.recover {
+    case ex: Throwable =>
+      logger.error(s"[MovementService] - Error occurred while saving movement, ${ex.getMessage}")
+      Left(InternalServerError(Json.toJson(
+        ErrorResponse(
+          dateTimeService.timestamp(),
+          "Database error",
+          ex.getMessage
+        )
+      )))
   }
 
   def getMovementById(id: String): Future[Option[Movement]] = {
@@ -115,6 +103,16 @@ class MovementService @Inject()(
 
       Future.sequence(results).map { boolSeq => boolSeq.forall(identity) }
     }).flatten
+  }
+
+  private def createDuplicateErrorResponse(movement: Movement) = {
+    Future.successful(Left(BadRequest(Json.toJson(
+      ErrorResponse(
+        dateTimeService.timestamp(),
+        "Duplicate LRN error",
+        s"The local reference number ${movement.localReferenceNumber} has already been used for another movement"
+      )
+    ))))
   }
 
   private def updateMovementForIndividualArc(message: IEMessage, ern: String, cachedMovements: Seq[Movement], messageArc: Option[String]) = {

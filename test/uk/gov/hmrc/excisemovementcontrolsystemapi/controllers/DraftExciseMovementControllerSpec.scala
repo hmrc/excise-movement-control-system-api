@@ -34,7 +34,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, F
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.BoxNotificationResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.SuccessBoxNotificationResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, SubmissionMessageService, WorkItemService}
 
@@ -69,7 +69,7 @@ class DraftExciseMovementControllerSpec
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
     when(notificationConnector.getBoxId(any)(any))
-      .thenReturn(Future.successful(Right(BoxNotificationResponse(boxId))))
+      .thenReturn(Future.successful(Right(SuccessBoxNotificationResponse(boxId))))
 
     when(mockIeMessage.consigneeId).thenReturn(Some("789"))
     when(mockIeMessage.consignorId).thenReturn("456")

@@ -22,10 +22,18 @@ import java.time.Instant
 
 //todo: this could be refactor to create specific error response
 // for each endpoint, (submission, notification, clientid error, etc
-case class ErrorResponse(
-                          dateTime: Instant,
-  message: String,
-  debugMessage: String)
+
+trait GenericErrorResponse {
+  val dateTime: Instant
+  val message: String
+  val debugMessage: String
+}
+
+case class ErrorResponse
+(
+  override val dateTime: Instant,
+  override val message: String,
+  override val debugMessage: String) extends GenericErrorResponse
 
 object ErrorResponse {
   implicit def format: OFormat[ErrorResponse] = Json.format[ErrorResponse]

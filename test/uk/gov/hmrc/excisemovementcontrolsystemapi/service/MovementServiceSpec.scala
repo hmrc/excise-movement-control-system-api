@@ -80,7 +80,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       result mustBe Right(successMovement)
     }
 
-    "throw an error when database throws a runtime exception" in {
+    "throw an error when cannot save movement" in {
       when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq.empty))
 
@@ -89,8 +89,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
       val result = await(movementService.saveNewMovement(exampleMovement))
 
-      val expectedError = ErrorResponse(testDateTime, "Database error", "Error occurred while saving movement")
-
+      val expectedError = ErrorResponse(testDateTime, "Database error", "error")
       result.left.value mustBe InternalServerError(Json.toJson(expectedError))
     }
 
@@ -103,8 +102,17 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       val result = await(movementService.saveNewMovement(exampleMovement))
 
       val expectedError = ErrorResponse(testDateTime, "Duplicate LRN error", "The local reference number 123 has already been used for another movement")
-
       result.left.value mustBe BadRequest(Json.toJson(expectedError))
+    }
+
+    "return an error if database fail on retrieving movement" in {
+      when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
+        .thenReturn(Future.failed(new RuntimeException("Database error")))
+
+      val result = await(movementService.saveNewMovement(exampleMovement))
+
+      val expectedError = ErrorResponse(testDateTime, "Database error", "Database error")
+      result.left.value mustBe InternalServerError(Json.toJson(expectedError))
     }
 
     "throw an error when LRN is already in database with no ARC for same consignor but different consignee" in {
@@ -116,7 +124,6 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       val result = await(movementService.saveNewMovement(exampleMovement))
 
       val expectedError = ErrorResponse(testDateTime, "Duplicate LRN error", "The local reference number 123 has already been used for another movement")
-
       result.left.value mustBe BadRequest(Json.toJson(expectedError))
     }
 
@@ -125,7 +132,6 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
       when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(movementInDB)))
-
       when(mockMovementRepository.saveMovement(any))
         .thenReturn(Future.successful(true))
 
@@ -139,7 +145,6 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
       when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(movementInDB)))
-
       when(mockMovementRepository.saveMovement(any))
         .thenReturn(Future.successful(true))
 
@@ -153,7 +158,6 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
       when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(movementInDB)))
-
       when(mockMovementRepository.saveMovement(any))
         .thenReturn(Future.successful(true))
 
@@ -187,8 +191,6 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       intercept[RuntimeException] {
         await(movementService.getMovementByLRNAndERNIn(lrn, List(consignorId)))
       }.getMessage mustBe s"[MovementService] - Multiple movement found for local reference number: $lrn"
-
-
     }
   }
 
@@ -212,7 +214,6 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       val result = await(movementService.getMatchingERN(lrn, List(consignorId)))
 
       result mustBe None
-
     }
 
     "return an ERN for the movement found" in {
@@ -373,7 +374,6 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
       result mustBe None
     }
-
   }
 
   "updateMovement" should {
@@ -429,7 +429,6 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
       verify(mockMovementRepository).updateMovement(eqTo(initialMovement.copy(messages =
         Seq(cachedMessage1, cachedMessage2, expectedMessage))))
-
     }
 
     "not overwrite ARC that are not empty" in {
@@ -451,7 +450,6 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
     }
 
     "throw an error" when {
-
       "message has both ARC and LRN missing" in {
         setUpForUpdateMovement(newMessage, Seq(None), None, "<foo>test</foo>", cachedMovements)
 
