@@ -33,6 +33,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{NewMessagesXml, Scheduli
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.StringSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.WireMockServerSpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.SuccessPushNotificationResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, MovementRepository}
@@ -90,12 +91,20 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
     timeService
   )
 
+  override def configureServices: Map[String, Any] = {
+    configureEisService ++
+      Map(
+        "mongodb.uri" -> mongoUri,
+        "microservice.services.notification.host" -> wireHost,
+        "microservice.services.notification.port" -> wireMock.port()
+      )
+  }
   protected def appBuilder: GuiceApplicationBuilder = {
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
 
     GuiceApplicationBuilder()
-      .configure(configureEisService ++ Map("mongodb.uri" -> mongoUri))
+      .configure(configureServices)
       .loadConfig(env => Configuration.load(env, Map("config.resource" -> "application.test.conf")))
       .overrides(
         bind[DateTimeService].to(timeService)
@@ -107,17 +116,13 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
 
   override def beforeEach(): Unit = {
     wireMock.resetAll()
-
     prepareDatabase()
-
+    wireMock.resetAll()
   }
 
-  override def afterEach(): Unit = {
-    super.afterEach()
-
-    //TODO Doing this breaks the timestamp check in "if fails three times work item marked as ToDo with a slow interval"
-    // Do we still need to do this??
-    //app.stop()
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    app
   }
 
   override def afterAll(): Unit = {
@@ -144,9 +149,6 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       movementRepository.saveMovement(Movement("boxId1", "token", "1", None, None, Instant.now, Seq.empty)).futureValue
       movementRepository.saveMovement(Movement("boxId2", "token", "3", None, None, Instant.now, Seq.empty)).futureValue
       movementRepository.saveMovement(Movement("boxId3", "token", "4", None, None, Instant.now, Seq.empty)).futureValue
-
-      // start application
-      app
 
       // todo: not a very good way to wait for the thread to do is job. Tried eventually but it does not
       // work. Try to find a better way.
@@ -178,6 +180,12 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       assertResults(movements.find(_.consignorId.equals("1")).get, Movement("boxId1", "token", "1", None, Some("tokentokentokentokent"), Instant.now, expectedMessage))
       assertResults(movements.find(_.consignorId.equals("3")).get, Movement("boxId2", "token", "3", None, Some("tokentokentokentokent"), Instant.now, expectedMessage.take(1)))
       assertResults(movements.find(_.consignorId.equals("4")).get, Movement("boxId3", "token", "4", None, Some("tokentokentokentokent"), Instant.now, Seq(createMessage(SchedulingTestData.ie704, MessageTypes.IE704.value))))
+
+      withClue("Should push a notification") {
+        wireMock.verify(postRequestedFor(urlEqualTo(s"/box/boxId1/notifications")))
+        wireMock.verify(postRequestedFor(urlEqualTo(s"/box/boxId2/notifications")))
+        wireMock.verify(postRequestedFor(urlEqualTo(s"/box/boxId3/notifications")))
+      }
     }
 
     "do not call EIS if nothing is in the work queue " in {
@@ -193,9 +201,6 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       movementRepository.saveMovement(Movement("boxId1", "token", "1", None, None, Instant.now, Seq.empty)).futureValue
       movementRepository.saveMovement(Movement("boxId2", "token", "3", None, None, Instant.now, Seq.empty)).futureValue
       movementRepository.saveMovement(Movement("boxId3", "token", "4", None, None, Instant.now, Seq.empty)).futureValue
-
-      // start application
-      app
 
       eventually {
         wireMock.verify(0, putRequestedFor(urlEqualTo(s"${showNewMessageUrl}1")))
@@ -215,7 +220,6 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       eventually {
         wireMock.verify(0, putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))
       }
-
 
       val movements = movementRepository.collection.find().toFuture().futureValue
 
@@ -239,9 +243,6 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       insert(createdWorkItem).futureValue
 
       movementRepository.saveMovement(Movement("boxId", "token", "1", None, None, Instant.now, Seq.empty)).futureValue
-
-      // start application
-      app
 
       // todo: not a very good way to wait for the thread to do is job. Tried eventually but it does not
       // work. Try to find a better way.
@@ -273,9 +274,6 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       insert(createWorkItem("1")).futureValue
 
       movementRepository.saveMovement(Movement("boxId", "token", "1", None, None, Instant.now, Seq.empty)).futureValue
-
-      // start application
-      app
 
       // todo: not a very good way to wait for the thread to do is job. Tried eventually but it does not
       // work. Try to find a better way.
@@ -314,7 +312,9 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
     stubMessageReceiptRequest("1")
     stubMessageReceiptRequest("3")
     stubMessageReceiptRequest("4")
-
+    stubPushNotification("boxId1")
+    stubPushNotification("boxId2")
+    stubPushNotification("boxId3")
   }
 
   private def stubShowNewMessageRequestForConsignorId3(): Unit = {
@@ -418,6 +418,15 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
             3
           )).toString()
         ))
+    )
+  }
+
+  private def stubPushNotification(boxId: String) = {
+    wireMock.stubFor(
+      post(s"/box/$boxId/notifications")
+        .willReturn(
+          ok().withBody(Json.toJson(SuccessPushNotificationResponse("123")).toString())
+        )
     )
   }
 

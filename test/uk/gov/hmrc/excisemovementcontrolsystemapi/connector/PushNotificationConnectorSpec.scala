@@ -125,7 +125,7 @@ class PushNotificationConnectorSpec
 
   "postNotification" should {
 
-    val notification = Notification("123", "/messageUli", "messageId", "ern123")
+    val notification = Notification("mvId", "messageId", "consignor", Some("consignee"), "arc", "ern123")
 
     "return a 200" in {
       val result = await(sut.postNotification("boxId", notification))

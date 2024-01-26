@@ -28,9 +28,11 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.NewMessagesXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementService, NewMessageParserService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.SuccessPushNotificationResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementService, NewMessageParserService, PushNotificationService, WorkItemService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, TestUtils}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
@@ -45,7 +47,8 @@ class PollingNewMessagesWithWorkItemJobSpec
     with BeforeAndAfterEach
     with NewMessagesXml {
 
-  implicit val ec: ExecutionContext = ExecutionContext.global
+  implicit private val ec: ExecutionContext = ExecutionContext.global
+  implicit private val hc: HeaderCarrier = HeaderCarrier()
 
   private val appConfig = mock[AppConfig]
   private val newMessageService = mock[GetNewMessageService]
@@ -55,6 +58,7 @@ class PollingNewMessagesWithWorkItemJobSpec
   private val workItemService = mock[WorkItemService]
   private val dateTimeService = mock[DateTimeService]
   private val message = mock[IEMessage]
+  private val notificationService = mock[PushNotificationService]
   private val newMessageResponse = EISConsumptionResponse(
     Instant.parse("2023-05-06T09:10:13Z"),
     "123",
@@ -72,13 +76,22 @@ class PollingNewMessagesWithWorkItemJobSpec
     workItemService,
     movementService,
     newMessageParserService,
+    notificationService,
     appConfig,
     dateTimeService
   )
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(movementService, appConfig, newMessageService, newMessageParserService, lockRepository, workItemService)
+    reset(
+      movementService,
+      appConfig,
+      newMessageService,
+      newMessageParserService,
+      lockRepository,
+      workItemService,
+      notificationService
+    )
 
     when(lockRepository.takeLock(any, any, any)).thenReturn(Future.successful(true))
     when(lockRepository.releaseLock(any, any)).thenReturn(successful(()))
@@ -90,10 +103,12 @@ class PollingNewMessagesWithWorkItemJobSpec
     when(appConfig.failureRetryAfter).thenReturn(Duration.create(5, MINUTES))
 
     when(newMessageParserService.extractMessages(any)).thenReturn(Seq(message))
-    when(movementService.updateMovement(any, any)).thenReturn(Future.successful(true))
+    when(movementService.updateMovement(any, any))
+      .thenReturn(Future.successful(Seq(Movement("boxId", "1", "2", Some("3"), Some("4")))))
     when(workItemService.markAs(any, any, any)).thenReturn(Future.successful(true))
     when(workItemService.rescheduleWorkItem(any)).thenReturn(Future.successful(true))
-
+    when(notificationService.sendNotification(any,any,any)(any))
+      .thenReturn(Future.successful(SuccessPushNotificationResponse("notificationId)")))
   }
 
   "Job" should {
@@ -272,6 +287,19 @@ class PollingNewMessagesWithWorkItemJobSpec
       }
     }
 
+    "push notification" in {
+      addOneItemToMockQueue(createWorkItem())
+
+      setGetNewMessagesAndAcknowledgeResponse(5)
+
+      await(job.executeInMutex)
+
+      //todo: compare with parameters
+      verify(notificationService).sendNotification(any,any,any)(any)
+      fail()
+
+    }
+
   }
 
   private def setGetNewMessagesAndAcknowledgeResponse(messageCount: Int = 0): Unit = {
@@ -304,7 +332,6 @@ class PollingNewMessagesWithWorkItemJobSpec
   }
 
   private def createWorkItem(failureCount: Int = 0,
-                             availableAt: Instant = Instant.now,
                              ern: String = "123"): WorkItem[ExciseNumberWorkItem] = {
 
     TestUtils.createWorkItem(

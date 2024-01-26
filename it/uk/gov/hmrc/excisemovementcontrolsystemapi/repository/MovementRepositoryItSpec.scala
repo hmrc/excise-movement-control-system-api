@@ -107,8 +107,9 @@ class MovementRepositoryItSpec extends PlaySpec
 
       val records = findAll().futureValue
 
-      val expected = Seq(movementLRN1, updatedMovement.copy(lastUpdated = timestamp))
-      assertUpdateMovementResult(records, expected, result)
+      val expectedUpdated = updatedMovement.copy(lastUpdated = timestamp)
+      result mustBe Some(expectedUpdated)
+      records mustBe Seq(movementLRN1, expectedUpdated)
     }
 
     "update a movement by lrn and consigneeId" in {
@@ -118,15 +119,17 @@ class MovementRepositoryItSpec extends PlaySpec
       insertMovement(movementLRN2)
 
       val message = Message("any, message", MessageTypes.IE801.value, timestamp)
-      val result = repository.updateMovement(movementLRN2.copy(administrativeReferenceCode = Some("arc"), messages = Seq(message))).futureValue
+      val updateMovement = movementLRN2.copy(administrativeReferenceCode = Some("arc"), messages = Seq(message))
+      val result = repository.updateMovement(updateMovement).futureValue
 
       val records = findAll().futureValue
 
+      result mustBe Some(updateMovement.copy(lastUpdated = timestamp))
       val expected = Seq(
         movementLRN1,
         movementLRN2.copy(administrativeReferenceCode = Some("arc"), lastUpdated =  timestamp, messages = Seq(message))
       )
-      assertUpdateMovementResult(records, expected, result)
+      records mustBe expected
     }
 
     "not update the movement if record not found" in {
@@ -141,15 +144,9 @@ class MovementRepositoryItSpec extends PlaySpec
 
       val records = findAll().futureValue
 
-      val expected = Seq(movementLRN1, movementLRN2)
-      assertUpdateMovementResult(records, expected, result)
+      result mustBe None
+      records mustBe Seq(movementLRN1, movementLRN2)
     }
-  }
-
-  private def assertUpdateMovementResult(actual: Seq[Movement], expected: Seq[Movement], result: Boolean) = {
-    result mustBe true
-    actual.size mustBe 2
-    actual.sortBy(_.localReferenceNumber) mustBe expected
   }
 
   "getMovementById" should {
@@ -292,7 +289,7 @@ class MovementRepositoryItSpec extends PlaySpec
 
         val result = repository.getMovementByARC("arc2").futureValue
 
-        result mustBe Seq(expectedMovement2)
+        result mustBe Some(expectedMovement2)
       }
     }
   }

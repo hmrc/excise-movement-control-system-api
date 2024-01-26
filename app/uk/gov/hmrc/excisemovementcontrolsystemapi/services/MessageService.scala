@@ -35,17 +35,18 @@ class MessageService @Inject()(
   }
 
   private def getConsignorFromArc(arc: Option[String], messageType: String): Future[Set[String]] = {
+
     arc match {
-      case Some(a) =>  getMovementUsingArc(a).map(m => Set(m.consignorId))
+      case Some(a) => getMovementUsingArc(a).map(m => Set(m.consignorId))
       case _ => throw new RuntimeException(s"[MessageService] - $messageType message must have an administrative reference code")
     }
   }
 
+  // todo: should this just return one movement?
   private def getMovementUsingArc(arc: String): Future[Movement] = {
     movementRepository.getMovementByARC(arc).map {
-      case Seq() => throw new RuntimeException(s"[MessageService] - Zero movements found for administrative reference code $arc")
-      case head :: Nil => head
-      case _ => throw new RuntimeException(s"[MessageService] - Multiple movements found for administrative reference code $arc")
+      case Some(m) => m
+      case _ => throw new RuntimeException(s"[MessageService] - Movement not found for administrative reference code: $arc")
     }
   }
 

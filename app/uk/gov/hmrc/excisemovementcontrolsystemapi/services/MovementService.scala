@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.Singleton
+import cats.syntax.all._
 import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.Result
@@ -37,6 +38,7 @@ class MovementService @Inject()(
                                  emcsUtils: EmcsUtils,
                                  dateTimeService: DateTimeService
                                )(implicit ec: ExecutionContext) extends Logging {
+
   def saveNewMovement(movement: Movement): Future[Either[Result, Movement]] = {
 
     getMovementByLRNAndERNIn(movement.localReferenceNumber, List(movement.consignorId)).
@@ -87,7 +89,7 @@ class MovementService @Inject()(
     }
   }
 
-  def updateMovement(message: IEMessage, ern: String): Future[Boolean] = {
+  def updateMovement(message: IEMessage, ern: String): Future[Seq[Movement]] = {
 
     movementRepository.getAllBy(ern).map(cachedMovements => {
 
@@ -95,15 +97,45 @@ class MovementService @Inject()(
       // Some messages (e.g. IE829) have multiple arcs in so we want to update them all
       // If no arc it will be Seq(None). This may need to be revisited as we may need to
       // use the SequenceNumber in this case.
-      val messageArcs = message.administrativeReferenceCode
-
-      val results: Seq[Future[Boolean]] = messageArcs.map { messageArc =>
+      message.administrativeReferenceCode
+        .map { messageArc =>
         updateMovementForIndividualArc(message, ern, cachedMovements, messageArc)
       }
-
-      Future.sequence(results).map { boolSeq => boolSeq.forall(identity) }
+        .sequence
+        .map((o: Seq[Option[Movement]]) =>
+          transformAndLogAnyError(o, ern, message.messageType)
+        )
     }).flatten
   }
+
+  private def transformAndLogAnyError(
+    movements: Seq[Option[Movement]],
+    ern: String,
+    messageType: String
+  ): Seq[Movement] = {
+    movements.foldLeft[Seq[Movement]](Seq()){
+      case (acc: Seq[Movement], mv: Option[Movement]) =>
+        mv match {
+          case Some(m) => acc :+ m
+          case _ =>
+            logger.warn(s"[MovementService] - Could not update movement with excise number $ern and message: $messageType")
+            acc
+        }}
+  }
+//  def getMovementByArcOrByErnAndLrn(ern: String, lrn: String, arc: String): Future[Option[Movement]] = {
+//
+//    for {
+//      movementFromArc: Option[Movement] <- movementRepository.getMovementByARC(arc)
+//      movement: Option[Movement] <- getMovementByLRNAndERNIn(lrn, List(ern))
+//    } yield {
+//      (movementFromArc, movement) match {
+//        case (mvArc@Some(_), None) => mvArc
+//        case (None, mvLrnErn@Some(_)) => mvLrnErn
+//        case other => other._1
+//      }
+//    }
+//  }
+
 
   private def createDuplicateErrorResponse(movement: Movement) = {
     Future.successful(Left(BadRequest(Json.toJson(
@@ -115,7 +147,7 @@ class MovementService @Inject()(
     ))))
   }
 
-  private def updateMovementForIndividualArc(message: IEMessage, ern: String, cachedMovements: Seq[Movement], messageArc: Option[String]) = {
+  private def updateMovementForIndividualArc(message: IEMessage, ern: String, cachedMovements: Seq[Movement], messageArc: Option[String]): Future[Option[Movement]] = {
     val movementWithArc = cachedMovements.find(o => o.administrativeReferenceCode.equals(messageArc))
     val movementWithLrn = cachedMovements.find(m => message.lrnEquals(m.localReferenceNumber))
 
@@ -126,7 +158,11 @@ class MovementService @Inject()(
     }
   }
 
-  private def saveDistinctMessage(movement: Movement, newMessage: IEMessage, messageArc: Option[String]): Future[Boolean] = {
+  private def saveDistinctMessage(
+    movement: Movement,
+    newMessage: IEMessage,
+    messageArc: Option[String]
+  ): Future[Option[Movement]] = {
 
     val encodedMessage = emcsUtils.encode(newMessage.toXml.toString)
     val messages = Seq(Message(encodedMessage, newMessage.messageType, dateTimeService.timestamp()))
@@ -140,10 +176,7 @@ class MovementService @Inject()(
       messages = allMessages
     )
 
-    movementRepository.updateMovement(newMovement).map {
-      case true => true
-      case _ => false
-    }
+    movementRepository.updateMovement(newMovement)
   }
 
   private def matchingERN(movement: Movement, erns: List[String]): Option[String] = {
