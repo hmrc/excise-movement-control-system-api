@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
 
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE801Message, IE810Message, IE813Message, IE815Message, IE818Message, IE819Message, IE837Message, IE871Message, IEMessage}
 
+// TODO: This may be superseded by the MessageValidation
 class ErnsMapper {
   /*
    The illegal state exception for IE818 message should never happen here,

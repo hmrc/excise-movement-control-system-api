@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
+import generated.{Number1Value31, Number2Value30, SubmitterType}
+
 import scala.xml.NodeSeq
 
 trait IEMessage {
@@ -35,4 +37,13 @@ trait IEMessage {
   def toXml: NodeSeq
 
   def lrnEquals(lrn: String): Boolean
+}
+
+object IEMessage {
+  def convertSubmitterType(submitterType: SubmitterType): ExciseTraderType = {
+    submitterType match {
+      case Number1Value31 => Consignor
+      case Number2Value30 => Consignee
+    }
+  }
 }

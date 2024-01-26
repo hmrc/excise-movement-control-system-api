@@ -46,6 +46,7 @@ class ValidateMovementIdActionImpl @Inject()
 
         val authorisedErns = request.validErns
 
+        // TODO this action may be superseded by the MessageValidation
         movementService.getMovementById(id).map {
           case Some(movement) =>
 
@@ -75,6 +76,7 @@ class ValidateMovementIdActionImpl @Inject()
     ))
   }
 
+  // TODO remove this in favour of the MessageValidation
   private def getErnsForMovement(movement: Movement): Set[String] = {
     Set(Some(movement.consignorId), movement.consigneeId).flatten
   }
