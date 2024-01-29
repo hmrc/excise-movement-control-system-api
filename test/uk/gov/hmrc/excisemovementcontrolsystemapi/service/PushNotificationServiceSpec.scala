@@ -56,7 +56,8 @@ class PushNotificationServiceSpec extends PlaySpec with BeforeAndAfterEach {
 
       result mustBe SuccessPushNotificationResponse("notificationId")
 
-      val notification = Notification("id", "messageId", "consignorId", Some("consigneeId"), "arc", "ern")
+      val messageUri = s"/customs/excise/movements/id/messages/messageId"
+      val notification = Notification("id", messageUri, "messageId", "consignorId", Some("consigneeId"), "arc", "ern")
       verify(notificationConnector).postNotification("boxId", notification)
     }
 

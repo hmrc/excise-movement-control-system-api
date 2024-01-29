@@ -85,6 +85,7 @@ object NotificationResponse {
 case class Notification
 (
   movementId: String,
+  messageUri: String,
   messageId: String,
   consignor: String,
   consignee: Option[String],

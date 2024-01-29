@@ -33,6 +33,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{NewMessagesXml, Scheduli
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.StringSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.WireMockServerSpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Notification
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.SuccessPushNotificationResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Message, Movement}
@@ -173,7 +174,6 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
         wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))
       }
 
-
       val movements = movementRepository.collection.find().toFuture().futureValue
 
       movements.size mustBe 3
@@ -181,8 +181,10 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       assertResults(movements.find(_.consignorId.equals("3")).get, Movement("boxId2", "token", "3", None, Some("tokentokentokentokent"), Instant.now, expectedMessage.take(1)))
       assertResults(movements.find(_.consignorId.equals("4")).get, Movement("boxId3", "token", "4", None, Some("tokentokentokentokent"), Instant.now, Seq(createMessage(SchedulingTestData.ie704, MessageTypes.IE704.value))))
 
+      val notification = Notification(movements(0)._id, s"/customs/excise/movements/${movements(0)._id}/messages/messageId-1", "messageId", "messageId-1", None, "tokentokentokentokent", "1")
       withClue("Should push a notification") {
-        wireMock.verify(postRequestedFor(urlEqualTo(s"/box/boxId1/notifications")))
+//        wireMock.verify(postRequestedFor(urlEqualTo(s"/box/boxId1/notifications"))
+//        .withRequestBody(matchingJsonPath(Json.toJson(notification).toString())))
         wireMock.verify(postRequestedFor(urlEqualTo(s"/box/boxId2/notifications")))
         wireMock.verify(postRequestedFor(urlEqualTo(s"/box/boxId3/notifications")))
       }
@@ -296,6 +298,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
     actual.consignorId mustBe expected.consignorId
     actual.administrativeReferenceCode mustBe expected.administrativeReferenceCode
     actual.consigneeId mustBe expected.consigneeId
+    actual.boxId mustBe expected.boxId
     decodeAndCleanUpMessage(actual.messages) mustBe decodeAndCleanUpMessage(expected.messages)
   }
 

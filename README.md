@@ -28,16 +28,7 @@ TBD
 
 ### Test push notification locally
 
-These instructions have been taken from the [Testing Push Pull Notifications on External Test - CTC](https://confluence.tools.tax.service.gov.uk/pages/viewpage.action?spaceKey=~tim.squires&title=Testing+Push+Pull+Notifications+on+External+Test+-+CTC) example. 
-Most of the step for testing the EMCS API are similar to that one in this page. 
-Only the services loaded with some other details are different.
-
-Notice: This may be moved to a confluence page in a later time.
-
-#### Set up callback listener
-
-You can use mocklab.io. See [Testing Push Pull Notifications on External Test - CTC](https://confluence.tools.tax.service.gov.uk/pages/viewpage.action?spaceKey=~tim.squires&title=Testing+Push+Pull+Notifications+on+External+Test+-+CTC) for an example how to do it. 
-
+Notice: Upu can use the run_local_with_push_notification.sh script file to create an Client application locally.
 #### Start the services
 * Open a terminal window, type the below command and press enter. This will load locally all the services necessary for testing :
 
@@ -53,7 +44,6 @@ You can use mocklab.io. See [Testing Push Pull Notifications on External Test - 
     API_SUBSCRIPTION_FIELDS \
     PUSH_PULL_NOTIFICATIONS_API \
     PUSH_PULL_NOTIFICATIONS_GATEWAY \
-    EXCISE_MOVEMENT_CONTROL_SYSTEM_API \
     EMCS_API_EIS_STUB
     ```
 
@@ -68,7 +58,7 @@ You can use mocklab.io. See [Testing Push Pull Notifications on External Test - 
   **Identifier Name**: ExciseNumber <br>
   **Identifier Value**: GBWK002281024 (or any thing else similer)
 <br><br>
-* Press submit. This will redirect to a new page with an access token.
+* Press submit. This will redirect to a new page showing an access token.
 * Copy the Bearer token
 
 #### Create a client application
@@ -140,20 +130,6 @@ You can use mocklab.io. See [Testing Push Pull Notifications on External Test - 
   }'
   ```
 
-#### Set the callback URL
-
-* in the terminal type the following command and press enter
-
-    ```
-    curl --location --request PUT 'http://localhost:9650/field/application/<paste the boxId here>/context/customs%2Fexcise/version/1.0' \
-    --header 'Content-Type: application/json' \
-    --data-raw '{
-        "fields": {
-            "notificationUrl": "<put here Mock Api Url that is in mocklab.io>"
-        }
-    }'
-    ```
-  In the mocklab request log, you should see the challenge
 #### Create a movement
 
 1. Open Postman 
@@ -225,14 +201,25 @@ change some configuration setting as below:**
         "notificationId": "6d984807-edcd-4e20-b13a-d61195529363",
         "boxId": "4cf8aa04-7215-45c6-a53a-181e6d6ce7e4",
         "messageContentType": "application/json",
-        "message": "{\"movementId\":\"c79da99b-4a7e-4dfa-b79c-3dbd6d280279\",\"messageId\":\"XI000001\",\"consignor\":\"GBWK002281024\",\"consignee\":\"GBWKQOZ8OVLYR\",\"arc\":\"23XI00000000000000012\",\"ern\":\"GBWK002281024\"}",
+        "message": "{\"movementId\":\"c79da99b-4a7e-4dfa-b79c-3dbd6d280279\", \"messageUri\":\"/customs/excise/movements/<movementid>/messages/<messageId>\",\"messageId\":\"XI000001\",\"consignor\":\"GBWK002281024\",\"consignee\":\"GBWKQOZ8OVLYR\",\"arc\":\"23XI00000000000000012\",\"ern\":\"GBWK002281024\"}",
         "status": "PENDING",
         "createdDateTime": "2024-01-27T21:11:28.453+0000"
     }
 ]
 ```
 
+### Create Client Application locally
 
+the **run_local_with_push_notification.sh** script file offer a quick way to create a Client application.
+You should acquire an access token and modify the file by overriding the ACCEES_TOKEN variable by assigning its value to 
+the newly acquired access token. Then from command line type the following command and press enter:
+
+  ```aidl
+  ./run_local_with_push_notification.sh
+  ```
+
+This will create a client application and give you back a clientId. This will also start the excise-movement-control-system-api
+ service locally.
 
 ### Further documentation
 

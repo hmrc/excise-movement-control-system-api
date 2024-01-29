@@ -33,20 +33,30 @@ class PushNotificationServiceImpl @Inject()
 
   def sendNotification(ern: String, movement: Movement,  messageId: String)(implicit hc: HeaderCarrier): Future[NotificationResponse] = {
 
-    if(!movement.administrativeReferenceCode.exists(_.trim.nonEmpty))
-      throw new RuntimeException(s"[PushNotificationService] - Could not push notification for message: $messageId. Administration Reference code is empty")
-
     val notification = Notification(
       movement._id,
+      buildMessageUriAsString(movement._id, messageId),
       messageId,
       movement.consignorId,
       movement.consigneeId,
-      movement.administrativeReferenceCode.get,
+      getArcOrThrowIfEmpty(movement.administrativeReferenceCode, messageId),
       ern)
 
     logger.info(s"[PushNotificationService] - pushing notification for message with Id: $messageId")
     notificationConnector.postNotification(movement.boxId, notification)
 
+  }
+
+  private def buildMessageUriAsString(movementId: String, messageId: String): String = {
+    s"/customs/excise/movements/$movementId/messages/$messageId"
+  }
+
+  private def getArcOrThrowIfEmpty(arc: Option[String], messageId: String): String = {
+
+    arc match {
+      case Some(v) if v.trim.nonEmpty => v
+      case _ => throw new RuntimeException(s"[PushNotificationService] - Could not push notification for message: $messageId. Administration Reference code is empty")
+    }
   }
 }
 
