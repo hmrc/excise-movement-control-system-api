@@ -27,7 +27,7 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.NewMessagesXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE801Message, IE813Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.SuccessPushNotificationResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementService, NewMessageParserService, PushNotificationService, WorkItemService}
@@ -127,7 +127,9 @@ class PollingNewMessagesWithWorkItemJobSpec
 
     "acquire a mongo lock" in {
       when(workItemService.pullOutstanding(any, any)).thenReturn(Future.successful(None))
-      setGetNewMessagesAndAcknowledgeResponse(5)
+      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+        .thenReturn(Future.successful(Some((newMessageResponse, 5))))
+
       await(job.executeInMutex)
 
       verify(lockRepository).takeLock(eqTo("PollingNewMessageWithWorkItem"), any, any)
@@ -138,12 +140,10 @@ class PollingNewMessagesWithWorkItemJobSpec
     }
 
     "should reschedule workItem when successfully run" in {
-
       val workItem = createWorkItem()
-
       addOneItemToMockQueue(workItem)
-
-      setGetNewMessagesAndAcknowledgeResponse(10)
+      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+        .thenReturn(Future.successful(Some((newMessageResponse, 10))))
 
       await(job.executeInMutex)
 
@@ -151,12 +151,10 @@ class PollingNewMessagesWithWorkItemJobSpec
     }
 
     "should immediately add workItem back to queue when successfully run and remaining messages" in {
-
       val workItem = createWorkItem()
-
       addOneItemToMockQueue(workItem)
-
-      setGetNewMessagesAndAcknowledgeResponse(17)
+      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+        .thenReturn(Future.successful(Some((newMessageResponse, 17))))
 
       await(job.executeInMutex)
 
@@ -213,8 +211,8 @@ class PollingNewMessagesWithWorkItemJobSpec
 
     "parse the messages" in {
       addOneItemToMockQueue()
-
-      setGetNewMessagesAndAcknowledgeResponse(5)
+      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+        .thenReturn(Future.successful(Some((newMessageResponse, 5))))
 
       await(job.executeInMutex)
 
@@ -222,10 +220,9 @@ class PollingNewMessagesWithWorkItemJobSpec
     }
 
     "send getNewMessage request for each pending ern if there are multiple" in {
-
       addTwoItemsToMockQueue(createWorkItem(), createWorkItem(ern = "124"))
-
-      setGetNewMessagesAndAcknowledgeResponse(5)
+      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+        .thenReturn(Future.successful(Some((newMessageResponse, 5))))
 
       val result = await(job.executeInMutex)
 
@@ -254,14 +251,14 @@ class PollingNewMessagesWithWorkItemJobSpec
     "not save message in the movement database" when {
       "API response has no messages inside" in {
         addOneItemToMockQueue()
-        setGetNewMessagesAndAcknowledgeResponse()
-
+        when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+          .thenReturn(Future.successful(Some((newMessageResponseEmpty, 0))))
         when(newMessageParserService.extractMessages(any)).thenReturn(Seq.empty)
 
         val result = await(job.executeInMutex)
 
         result.message mustBe "polling-new-messages Job ran successfully."
-        verify(movementService, never()).updateMovement(any, any)
+        verifyZeroInteractions(movementService)
       }
 
       "API returns no message" in {
@@ -272,7 +269,7 @@ class PollingNewMessagesWithWorkItemJobSpec
         val result = await(job.executeInMutex)
 
         result.message mustBe "polling-new-messages Job ran successfully."
-        verify(movementService, never()).updateMovement(any, any)
+        verifyZeroInteractions(movementService)
       }
 
       "API return an error" in {
@@ -287,29 +284,47 @@ class PollingNewMessagesWithWorkItemJobSpec
       }
     }
 
-    "push notification" in {
+    "save each message" in {
       addOneItemToMockQueue(createWorkItem())
+      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+        .thenReturn(Future.successful(Some((newMessageResponse, 3))))
 
-      setGetNewMessagesAndAcknowledgeResponse(5)
+      val ie815Message = mock[IE801Message]
+      val ie813Message = mock[IE813Message]
+      when(newMessageParserService.extractMessages(any))
+        .thenReturn(Seq(message, ie815Message, ie813Message))
 
       await(job.executeInMutex)
 
-      //todo: compare with parameters
-      verify(notificationService).sendNotification(any,any,any)(any)
-      fail()
-
+      verify(movementService).updateMovement(eqTo(message), eqTo("123"))
+      verify(movementService).updateMovement(eqTo(ie815Message), eqTo("123"))
+      verify(movementService).updateMovement(eqTo(ie813Message), eqTo("123"))
     }
 
-  }
+    "push notification" in {
+      addOneItemToMockQueue(createWorkItem())
 
-  private def setGetNewMessagesAndAcknowledgeResponse(messageCount: Int = 0): Unit = {
-    if (messageCount == 0) {
       when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
-        .thenReturn(Future.successful(Some((newMessageResponseEmpty, 0))))
-    } else {
-      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
-        .thenReturn(Future.successful(Some((newMessageResponse, messageCount))))
+        .thenReturn(Future.successful(Some((newMessageResponse, 3))))
+
+      val ie815Message = mock[IE801Message]
+      when(ie815Message.messageIdentifier).thenReturn("1")
+      val ie813Message = mock[IE813Message]
+      when(ie813Message.messageIdentifier).thenReturn("2")
+      when(message.messageIdentifier).thenReturn("3")
+      when(newMessageParserService.extractMessages(any))
+        .thenReturn(Seq(message, ie815Message, ie813Message))
+
+      when(movementService.updateMovement(any, any))
+        .thenReturn(Future.successful(Seq(Movement("id1", "boxId1", "consignor", Some("consignee")))))
+
+      await(job.executeInMutex)
+
+      verify(notificationService).sendNotification(eqTo("123"),any[Movement],eqTo("1"))(any)
+      verify(notificationService).sendNotification(eqTo("123"),any[Movement],eqTo("2"))(any)
+      verify(notificationService).sendNotification(eqTo("123"),any[Movement],eqTo("3"))(any)
     }
+
   }
 
   private def addOneItemToMockQueue(workItem1: WorkItem[ExciseNumberWorkItem] = createWorkItem()): Unit = {

@@ -39,7 +39,7 @@ class PushNotificationServiceSpec extends PlaySpec with BeforeAndAfterEach {
 
   private val notificationConnector = mock[PushNotificationConnector]
   private val sut = new PushNotificationServiceImpl(notificationConnector)
-  private val message = Message("this is a test", "IE801", Instant.now)
+  private val message = Message("this is a test", "IE801", "messageId", Instant.now)
   private val movement = Movement("id", "boxId", "lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
 
   override def beforeEach(): Unit = {

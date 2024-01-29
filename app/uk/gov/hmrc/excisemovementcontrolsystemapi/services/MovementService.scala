@@ -122,20 +122,6 @@ class MovementService @Inject()(
             acc
         }}
   }
-//  def getMovementByArcOrByErnAndLrn(ern: String, lrn: String, arc: String): Future[Option[Movement]] = {
-//
-//    for {
-//      movementFromArc: Option[Movement] <- movementRepository.getMovementByARC(arc)
-//      movement: Option[Movement] <- getMovementByLRNAndERNIn(lrn, List(ern))
-//    } yield {
-//      (movementFromArc, movement) match {
-//        case (mvArc@Some(_), None) => mvArc
-//        case (None, mvLrnErn@Some(_)) => mvLrnErn
-//        case other => other._1
-//      }
-//    }
-//  }
-
 
   private def createDuplicateErrorResponse(movement: Movement) = {
     Future.successful(Left(BadRequest(Json.toJson(
@@ -165,7 +151,7 @@ class MovementService @Inject()(
   ): Future[Option[Movement]] = {
 
     val encodedMessage = emcsUtils.encode(newMessage.toXml.toString)
-    val messages = Seq(Message(encodedMessage, newMessage.messageType, dateTimeService.timestamp()))
+    val messages = Seq(Message(encodedMessage, newMessage.messageType, newMessage.messageIdentifier, dateTimeService.timestamp()))
 
     //todo: remove hash from message class. Hash can calculate on the go in here
     val allMessages = (movement.messages ++ messages).distinctBy(_.hash)

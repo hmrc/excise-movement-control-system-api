@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.ImplementedBy
+import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PushNotificationConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.{Notification, NotificationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
@@ -28,7 +29,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class PushNotificationServiceImpl @Inject()
 (
   notificationConnector: PushNotificationConnector
-)(implicit val ec: ExecutionContext) extends PushNotificationService {
+)(implicit val ec: ExecutionContext) extends PushNotificationService with Logging{
 
   def sendNotification(ern: String, movement: Movement,  messageId: String)(implicit hc: HeaderCarrier): Future[NotificationResponse] = {
 
@@ -43,6 +44,7 @@ class PushNotificationServiceImpl @Inject()
       movement.administrativeReferenceCode.get,
       ern)
 
+    logger.info(s"[PushNotificationService] - pushing notification for message with Id: $messageId")
     notificationConnector.postNotification(movement.boxId, notification)
 
   }

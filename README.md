@@ -71,7 +71,7 @@ You can use mocklab.io. See [Testing Push Pull Notifications on External Test - 
 * Press submit. This will redirect to a new page with an access token.
 * Copy the Bearer token
 
-####Create a client application
+#### Create a client application
 
 * In the terminal type the following command and press enter
 
@@ -156,24 +156,84 @@ You can use mocklab.io. See [Testing Push Pull Notifications on External Test - 
   In the mocklab request log, you should see the challenge
 #### Create a movement
 
-* Open Postman
-* you can create your own request for the Draft Movement endpoint or you can import
-the postman json file that is in the excise-movement-control-system-api repo.
-* If you import the postman json file in the repo once imported
-* click on the **EMCSApiPollingScenarios** workflow
-* Select the **Pre-request Script** tab on the right windows
-* Enter the Excise Number 
-* Enter the access token
-* Expand this workflow
-* Click on the first **SubmitDraftOfMovement** request
-* Got to the **header** tab
-* Add the following header:
+1. Open Postman 
+2. you can create your own request for the Draft Movement endpoint or you can import
+the postman json file that is in the excise-movement-control-system-api repo. 
+3. If you import the postman json file in the repo once imported 
+4. click on the **EMCSApiPollingScenarios** workflow 
+5. Select the **Variables** tab on the right windows 
+6. Enter the Excise Number 
+7. Enter the access token 
+8. Enter the ClientId. Notice there are three client ID, so you may generate different one or you can use the same one. 
+9. Right click the **EMCSApiPollingScenarios** workflow 
+10. Select **Run Collection**
+11. Press the **Run EMCSApiPollingScenarios**" button
+12. You should see a response that contain the boxId for each EI815 submission
+
+Remember if you do not use the **SubmitDraftOfMovement** scenarion you need to
+add the ClientId to the header when you submit an EI815.
+
   ```
-  X-Client-Id, <the client id generate above for your app>
+  X-Client-Id, <the client id generated above for your app>
   ```
-  
-* Send the request
-* You should see a response that contain the boxId
+
+
+#### Verify push notification was sent
+
+When an EI815 message (Draft Movement) is sent, a movement object will be created
+and saved in the movements collection in a MongoDb database. At the same a workitem for that Excise Number is added to the excise-number-work-item collection in MongoDb.
+This collection contains Excise Number for which a movement was created and represent 
+a slow and a fast queue which will be processed by a thread
+every interval (which is configurable). So this thread will pick up the first processable
+item/excise number and will request all message for that excise number, save that message in the
+movement and send a notification to the push-pull-notification service. To see if that notification
+has been received do the following:
+
+**Notice: Before sending the EI815 following the steps above make sure you temporarily
+change some configuration setting as below:**
+
+* in the **application.conf** file change the following variable with the following settings:
+  * initialDelay = 20 seconds 
+  * interval = 20 seconds
+  * fastInterval = 10 seconds
+
+  This will start the scheduler after 20 seconds and run every 20 seconds
+
+
+* if you start the service from comannd line not using service manager use the following command:
+
+
+  ```
+  sbt start
+  ```
+
+1. to see if a push notification was sent we can check if the push-pull-notification service has received the request.
+2. create an access token using the [Auth Wizard](http://localhost:9949/auth-login-stub/application-login)
+3. in the **Redirect Url** enter the following URL:http://localhost:9949/auth-login-stub/session
+4. for the **Client Id** enter the client Id that was used in the header of the IE815
+5. Select **PrivilegedApplication**
+6. Press Submit
+7. This will create a Bearer token and show it in a page
+8. In postman create a GET request.
+9. As URL enter http://localhost:6701/box/:boxId/notifications. The boxId is the boxId that was returned by the EI815 response
+10. Paste the token in the Authorization
+11. Send the request. If everything is ok you should see the following response:
+
+```aidl
+[
+    {
+        "notificationId": "6d984807-edcd-4e20-b13a-d61195529363",
+        "boxId": "4cf8aa04-7215-45c6-a53a-181e6d6ce7e4",
+        "messageContentType": "application/json",
+        "message": "{\"movementId\":\"c79da99b-4a7e-4dfa-b79c-3dbd6d280279\",\"messageId\":\"XI000001\",\"consignor\":\"GBWK002281024\",\"consignee\":\"GBWKQOZ8OVLYR\",\"arc\":\"23XI00000000000000012\",\"ern\":\"GBWK002281024\"}",
+        "status": "PENDING",
+        "createdDateTime": "2024-01-27T21:11:28.453+0000"
+    }
+]
+```
+
+
+
 ### Further documentation
 
 TBD
