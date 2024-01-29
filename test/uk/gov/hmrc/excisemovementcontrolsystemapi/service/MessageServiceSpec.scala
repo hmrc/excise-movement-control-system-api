@@ -116,7 +116,7 @@ class MessageServiceSpec extends PlaySpec with EitherValues with TestXml {
 
     "return the consignor from the message for an IE871" in {
 
-      val ie871Message = IE871Message.createFromXml(IE871)
+      val ie871Message = IE871Message.createFromXml(IE871withConsignor)
 
       await(messageService.getErns(ie871Message)) mustBe Set("GBWK240176600")
 

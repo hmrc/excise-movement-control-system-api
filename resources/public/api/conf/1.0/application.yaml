@@ -251,7 +251,7 @@ paths:
               example:
                 "Invalid affinity group Individual"
         '403':
-          description: Consignor ID is not in authorisation bearer token
+          description: Excise Number is not in authorisation bearer token
           content:
             text/plain:
               example:
@@ -297,7 +297,7 @@ paths:
               example:
                 "Invalid affinity group Individual"
         '403':
-          description: Consignor ID is not in authorisation bearer token
+          description: Excise Number is not in authorisation bearer token
           content:
             text/plain:
               example:
@@ -473,7 +473,7 @@ paths:
                     emcsCorrelationId: b47a371c-01e6-4dc0-97c1-dd524f7035d0
 
         '422':
-          description: The draft movement message has failed validation
+          description: The message has failed validation
           content:
             application/vnd.hmrc.1.0+json:
               schema:

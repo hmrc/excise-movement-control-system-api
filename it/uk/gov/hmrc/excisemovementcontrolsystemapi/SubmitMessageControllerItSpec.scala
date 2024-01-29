@@ -252,7 +252,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       withAuthorizedTrader(consignorId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(IE871)
+      val result = postRequest(IE871withConsignor)
 
       result.status mustBe ACCEPTED
       result.body.isEmpty mustBe true
@@ -262,7 +262,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       withAuthorizedTrader(consigneeId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(IE871)
+      val result = postRequest(IE871withConsignor)
 
       result.status mustBe FORBIDDEN
       result.body.isEmpty mustBe false
