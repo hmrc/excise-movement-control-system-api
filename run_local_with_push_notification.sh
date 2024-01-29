@@ -1,7 +1,7 @@
 #!/bin/sh
 
 
-ACCESS_TOKEN='BXQ3/Treo4kQCZvVcCqKPjf1w0TwhghgxReqypl365PHg2J5ZeDHQLm3WwtuKp4R8zaXNJqipg8Z1Zcq/uHsWkAgq5IgLBPALGEMdNu1VY14czbsSLgedYOY82/Ew1+Xa5cl+zyaCKYh3HjmTbWEI2/TdP0QR1MMxGUetd5fZlf9KwIkeIPK/mMlBESjue4V'
+ACCESS_TOKEN=''
 
 
 echo "##################################################################"
