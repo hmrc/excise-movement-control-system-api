@@ -107,10 +107,10 @@ class PollingNewMessagesWithWorkItemJob @Inject()
     newMessageService.getNewMessagesAndAcknowledge(exciseNumber)
       .flatMap {
         case Some((consumptionResponse, messageCount)) if messageCount > 10 =>
-          saveToDB(exciseNumber, consumptionResponse).map(_ => MessagesOutstanding)
+          processMessages(exciseNumber, consumptionResponse).map(_ => MessagesOutstanding)
 
         case Some((consumptionResponse, _)) =>
-          saveToDB(exciseNumber, consumptionResponse).map(_ => Processed)
+          processMessages(exciseNumber, consumptionResponse).map(_ => Processed)
 
         case _ =>
           logger.error(s"[PollingNewMessageWithWorkItemJob] - Could not get messages for ern: $exciseNumber. Will retry later")
@@ -123,7 +123,7 @@ class PollingNewMessagesWithWorkItemJob @Inject()
       }
   }
 
-  private def saveToDB(
+  private def processMessages(
                         exciseNumber: String,
                         consumptionResponse: EISConsumptionResponse
                       ): Future[Boolean] = {
@@ -131,20 +131,23 @@ class PollingNewMessagesWithWorkItemJob @Inject()
     messageParser.extractMessages(consumptionResponse.message)
       .foldLeft(successful(true)) { case (acc, x) =>
         acc.flatMap {
-          _ => save(x, exciseNumber)
+          _ => saveToDbAndSendNotification(x, exciseNumber)
         }
       }
   }
 
-  private def save(message: IEMessage, exciseNumber: String)(implicit ec: ExecutionContext): Future[Boolean] = {
+  private def saveToDbAndSendNotification(
+    message: IEMessage,
+    exciseNumber: String
+  )(implicit ec: ExecutionContext): Future[Boolean] = {
 
     movementService.updateMovement(message, exciseNumber).map {
       movements =>
         movements.map(m =>
         notificationService.sendNotification(exciseNumber, m, message.messageIdentifier))
           .sequence
-          .map { case o => o.forall(r =>
-            r match {
+          .map { case o => o.forall(response =>
+            response match {
               case _: SuccessPushNotificationResponse => true
               case _ => false
             }

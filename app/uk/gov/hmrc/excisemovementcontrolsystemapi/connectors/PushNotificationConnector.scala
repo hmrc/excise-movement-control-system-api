@@ -39,7 +39,9 @@ class PushNotificationConnector @Inject()(
                                            dateTimeService: DateTimeService
                                          )(implicit val ec: ExecutionContext) extends ResponseHandler with Logging
 {
-  def getBoxId(clientId: String)(implicit hc: HeaderCarrier): Future[Either[Result, SuccessBoxNotificationResponse]] = {
+  def getBoxId(
+    clientId: String
+  )(implicit hc: HeaderCarrier): Future[Either[Result, SuccessBoxNotificationResponse]] = {
 
     val url = s"${appConfig.pushPullNotificationHost}/box"
     val queryParams = Seq(
@@ -61,7 +63,10 @@ class PushNotificationConnector @Inject()(
     }
   }
 
-  def postNotification(boxId: String, notification: Notification)(implicit hc: HeaderCarrier): Future[NotificationResponse] = {
+  def postNotification(
+    boxId: String,
+    notification: Notification
+  )(implicit hc: HeaderCarrier): Future[NotificationResponse] = {
 
     val url = appConfig.pushNotificationUri(boxId)
 
