@@ -26,7 +26,7 @@ import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.json.Json
+import play.api.libs.json.{JsValue, Json}
 import play.api.{Application, Configuration}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{NewMessagesXml, SchedulingTestData}
@@ -155,38 +155,27 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       // work. Try to find a better way.
       Thread.sleep(6000)
 
-      eventually {
-        wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}1")))
-      }
-      eventually {
-        wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}3")))
-      }
-      eventually {
-        wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}4")))
-      }
-      eventually {
-        wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}1")))
-      }
-      eventually {
-        wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}3")))
-      }
-      eventually {
-        wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))
-      }
+      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}1")))}
+      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}3")))}
+      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}4")))}
+      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}1")))}
+      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}3")))}
+      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))}
 
+      val expectedMovementForErn_1 =  Movement("boxId1", "token", "1", None, Some("tokentokentokentokent"), Instant.now, expectedMessage)
+      val expectedMovementForErn_3 = Movement("boxId2", "token", "3", None, Some("tokentokentokentokent"), Instant.now, expectedMessage.take(1))
+      val expectedMovementForErn_4 = Movement("boxId3", "token", "4", None, Some("tokentokentokentokent"), Instant.now, Seq(createMessage(SchedulingTestData.ie704, MessageTypes.IE704.value)))
       val movements = movementRepository.collection.find().toFuture().futureValue
 
       movements.size mustBe 3
-      assertResults(movements.find(_.consignorId.equals("1")).get, Movement("boxId1", "token", "1", None, Some("tokentokentokentokent"), Instant.now, expectedMessage))
-      assertResults(movements.find(_.consignorId.equals("3")).get, Movement("boxId2", "token", "3", None, Some("tokentokentokentokent"), Instant.now, expectedMessage.take(1)))
-      assertResults(movements.find(_.consignorId.equals("4")).get, Movement("boxId3", "token", "4", None, Some("tokentokentokentokent"), Instant.now, Seq(createMessage(SchedulingTestData.ie704, MessageTypes.IE704.value))))
+      assertResults(movements.find(_.consignorId.equals("1")).get, expectedMovementForErn_1)
+      assertResults(movements.find(_.consignorId.equals("3")).get, expectedMovementForErn_3)
+      assertResults(movements.find(_.consignorId.equals("4")).get, expectedMovementForErn_4)
 
-      val notification = Notification(movements(0)._id, s"/customs/excise/movements/${movements(0)._id}/messages/messageId-1", "messageId", "messageId-1", None, "tokentokentokentokent", "1")
       withClue("Should push a notification") {
-//        wireMock.verify(postRequestedFor(urlEqualTo(s"/box/boxId1/notifications"))
-//        .withRequestBody(matchingJsonPath(Json.toJson(notification).toString())))
-        wireMock.verify(postRequestedFor(urlEqualTo(s"/box/boxId2/notifications")))
-        wireMock.verify(postRequestedFor(urlEqualTo(s"/box/boxId3/notifications")))
+        assertPushNotificationApiForErn1(expectedMovementForErn_1, movements(0)._id)
+        assertPushNotificationApiForErn3(expectedMovementForErn_3, movements(1)._id)
+        assertPushNotificationApiForErn4(expectedMovementForErn_4, movements(2)._id)
       }
     }
 
@@ -291,6 +280,26 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       workItems.find(_.item.exciseNumber.equals("1")).get.status mustBe ProcessingStatus.ToDo
     }
 
+  }
+
+  private def assertPushNotificationApiForErn1(expectedMovement: Movement, movementId: String): Unit = {
+    val loggerRequests = wireMock.findAll(postRequestedFor(urlEqualTo(s"/box/boxId1/notifications")))
+    loggerRequests.size mustBe 3
+    loggerRequests.get(0).getBodyAsString mustBe createJsonNotificationBody("1", movementId, expectedMovement, "messageId-1").toString()
+    loggerRequests.get(1).getBodyAsString mustBe createJsonNotificationBody("1", movementId, expectedMovement, "messageId-2").toString()
+    loggerRequests.get(2).getBodyAsString mustBe createJsonNotificationBody("1", movementId, expectedMovement, "messageId-3").toString()
+  }
+
+  private def assertPushNotificationApiForErn3(expectedMovement: Movement, movementId: String): Unit = {
+    val loggerRequests = wireMock.findAll(postRequestedFor(urlEqualTo(s"/box/boxId2/notifications")))
+    loggerRequests.size mustBe 1
+    loggerRequests.get(0).getBodyAsString mustBe createJsonNotificationBody("3", movementId, expectedMovement, "messageId-1").toString()
+  }
+
+  private def assertPushNotificationApiForErn4(expectedMovement: Movement, movementId: String): Unit = {
+    val loggerRequests = wireMock.findAll(postRequestedFor(urlEqualTo(s"/box/boxId3/notifications")))
+    loggerRequests.size mustBe 1
+    loggerRequests.get(0).getBodyAsString mustBe createJsonNotificationBody("4", movementId, expectedMovement, "messageId-4").toString()
   }
 
   private def assertResults(actual: Movement, expected: Movement) = {
@@ -454,6 +463,23 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       "messageId",
       timeService.timestamp()
     )
+  }
+
+  private def createJsonNotificationBody(
+    ern: String,
+    movementId: String,
+    movement: Movement,
+    messageId: String
+  ): JsValue = {
+    Json.toJson(Notification(
+      movementId,
+      s"/customs/excise/movements/$movementId/messages/$messageId",
+      messageId,
+      movement.consignorId,
+      movement.consigneeId,
+      movement.administrativeReferenceCode.get,
+      ern
+    ))
   }
 }
 
