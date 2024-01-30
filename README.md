@@ -144,10 +144,10 @@ the postman json file that is in the excise-movement-control-system-api repo.
 9. Right click the **EMCSApiPollingScenarios** workflow 
 10. Select **Run Collection**
 11. Press the **Run EMCSApiPollingScenarios**" button
-12. You should see a response that contain the boxId for each EI815 submission
+12. You should see a response that contain the boxId for each IE815 submission
 
 Remember if you do not use the **SubmitDraftOfMovement** scenarion you need to
-add the ClientId to the header when you submit an EI815.
+add the ClientId to the header when you submit an IE815.
 
   ```
   X-Client-Id, <the client id generated above for your app>
@@ -156,7 +156,7 @@ add the ClientId to the header when you submit an EI815.
 
 #### Verify push notification was sent
 
-When an EI815 message (Draft Movement) is sent, a movement object will be created
+When an IE815 message (Draft Movement) is sent, a movement object will be created
 and saved in the movements collection in a MongoDb database. At the same a workitem for that Excise Number is added to the excise-number-work-item collection in MongoDb.
 This collection contains Excise Number for which a movement was created and represent 
 a slow and a fast queue which will be processed by a thread
@@ -165,7 +165,7 @@ item/excise number and will request all message for that excise number, save tha
 movement and send a notification to the push-pull-notification service. To see if that notification
 has been received do the following:
 
-**Notice: Before sending the EI815 following the steps above make sure you temporarily
+**Notice: Before sending the IE815 following the steps above make sure you temporarily
 change some configuration setting as below:**
 
 * in the **application.conf** file change the following variable with the following settings:
@@ -191,7 +191,7 @@ change some configuration setting as below:**
 6. Press Submit
 7. This will create a Bearer token and show it in a page
 8. In postman create a GET request.
-9. As URL enter http://localhost:6701/box/:boxId/notifications. The boxId is the boxId that was returned by the EI815 response
+9. As URL enter http://localhost:6701/box/:boxId/notifications. The boxId is the boxId that was returned by the IE815 response
 10. Paste the token in the Authorization
 11. Send the request. If everything is ok you should see the following response:
 
