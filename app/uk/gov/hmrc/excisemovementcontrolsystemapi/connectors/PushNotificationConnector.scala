@@ -17,16 +17,10 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import play.api.Logging
-import play.api.http.Status.INTERNAL_SERVER_ERROR
 import play.api.http.{HeaderNames, MimeTypes}
-import play.api.libs.json.Json
-import play.api.mvc.Result
-import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.{FailedBoxIdNotificationResponse, FailedPushNotification, SuccessBoxNotificationResponse, SuccessPushNotificationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
@@ -34,14 +28,11 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class PushNotificationConnector @Inject()(
-                                           httpClient: HttpClient,
-                                           appConfig: AppConfig,
-                                           dateTimeService: DateTimeService
-                                         )(implicit val ec: ExecutionContext) extends ResponseHandler with Logging
-{
-  def getBoxId(
-    clientId: String
-  )(implicit hc: HeaderCarrier): Future[Either[Result, SuccessBoxNotificationResponse]] = {
+  httpClient: HttpClient,
+  appConfig: AppConfig
+)(implicit val ec: ExecutionContext) {
+
+  def getBoxId(clientId: String)(implicit hc: HeaderCarrier): Future[HttpResponse] = {
 
     val url = s"${appConfig.pushPullNotificationHost}/box"
     val queryParams = Seq(
@@ -49,24 +40,13 @@ class PushNotificationConnector @Inject()(
       "clientId" -> clientId
     )
 
-    httpClient.GET[HttpResponse](
-      url,
-      queryParams
-    ).map { response =>
-      extractIfSuccessful[SuccessBoxNotificationResponse](response)
-        .fold(error => Left(handleBoxNotificationError(error, url)), Right(_))
-    }.recover {
-      case ex: Throwable =>
-        // todo: Is this an error?
-        logger.error(s"[PushNotificationConnector] - Error retrieving BoxId, url: $url, message: ${ex.getMessage}", ex)
-        Left(InternalServerError(Json.toJson(FailedBoxIdNotificationResponse(dateTimeService.timestamp(), ex.getMessage))))
-    }
+    httpClient.GET[HttpResponse](url, queryParams)
   }
 
   def postNotification(
     boxId: String,
     notification: Notification
-  )(implicit hc: HeaderCarrier): Future[NotificationResponse] = {
+  )(implicit hc: HeaderCarrier): Future[HttpResponse] = {
 
     val url = appConfig.pushNotificationUri(boxId)
 
@@ -74,29 +54,7 @@ class PushNotificationConnector @Inject()(
       url,
       notification,
       Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON)
-    ).map { response =>
-      extractIfSuccessful[SuccessPushNotificationResponse](response)
-        .fold(error => {
-          logger.error(s"[PushNotificationConnector] - push notification error, url: $url, status: ${response.status}, message: ${response.body}")
-          FailedPushNotification(error.status, error.body)
-        }, r => r)
-    }.recover {
-      case ex: Throwable => {
-        logger.error(s"[PushNotificationConnector] - push notification error: url: $url, message: ${ex.getMessage}", ex)
-        FailedPushNotification(INTERNAL_SERVER_ERROR, ex.getMessage)
-      }
-    }
-  }
-
-  private def handleBoxNotificationError(response: HttpResponse, url: String): Result = {
-    logger.error(s"[PushNotificationConnector] - Error retrieving BoxId, url: $url, status: ${response.status}, message: ${response.body}")
-    val errorResponse = FailedBoxIdNotificationResponse(dateTimeService.timestamp(), response.body)
-
-    response.status match {
-      case 400 => BadRequest(Json.toJson(errorResponse))
-      case 404 => NotFound(Json.toJson(errorResponse))
-      case _ => InternalServerError(Json.toJson(errorResponse))
-    }
+    )
   }
 }
 

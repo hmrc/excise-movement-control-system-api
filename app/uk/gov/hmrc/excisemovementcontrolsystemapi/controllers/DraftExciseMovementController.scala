@@ -18,14 +18,13 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PushNotificationConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction, ValidateErnInMessageAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Constants
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, SubmissionMessageService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, PushNotificationService, SubmissionMessageService, WorkItemService}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
@@ -41,7 +40,7 @@ class DraftExciseMovementController @Inject()(
   movementMessageService: MovementService,
   workItemService: WorkItemService,
   submissionMessageService: SubmissionMessageService,
-  notificationConnector: PushNotificationConnector,
+  notificationService: PushNotificationService,
   cc: ControllerComponents)(implicit ec: ExecutionContext)
   extends BackendController(cc) {
 
@@ -51,7 +50,7 @@ class DraftExciseMovementController @Inject()(
 
         request.headers.get(Constants.XClientIdHeader) match {
           case Some(clientId) =>
-            notificationConnector.getBoxId(clientId).flatMap {
+            notificationService.getBoxId(clientId).flatMap {
               case Right(box) => submitMessage(box.boxId)
               case Left(error) => Future.successful(error)
             }

@@ -18,20 +18,47 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.ImplementedBy
 import play.api.Logging
+import play.api.http.Status.INTERNAL_SERVER_ERROR
+import play.api.libs.json.Json
+import play.api.mvc.Result
+import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PushNotificationConnector
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.{FailedBoxIdNotificationResponse, FailedPushNotification, SuccessBoxNotificationResponse, SuccessPushNotificationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.{Notification, NotificationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-class PushNotificationServiceImpl @Inject()
-(
-  notificationConnector: PushNotificationConnector
-)(implicit val ec: ExecutionContext) extends PushNotificationService with Logging{
+class PushNotificationServiceImpl @Inject()(
+  notificationConnector: PushNotificationConnector,
+  dateTimeService: DateTimeService
+)(implicit val ec: ExecutionContext) extends PushNotificationService with ResponseHandler with Logging{
 
-  def sendNotification(ern: String, movement: Movement,  messageId: String)(implicit hc: HeaderCarrier): Future[NotificationResponse] = {
+  def getBoxId(
+    clientId: String
+  )(implicit hc: HeaderCarrier): Future[Either[Result, SuccessBoxNotificationResponse]] = {
+
+    notificationConnector.getBoxId(clientId)
+    .map { response =>
+      extractIfSuccessful[SuccessBoxNotificationResponse](response)
+        .fold(error => Left(handleBoxNotificationError(error)), Right(_))
+    }.recover {
+      case ex: Throwable =>
+        // todo: Is this an error?
+        logger.error(s"[PushNotificationService] - Error retrieving BoxId, message: ${ex.getMessage}", ex)
+        Left(InternalServerError(Json.toJson(FailedBoxIdNotificationResponse(dateTimeService.timestamp(), ex.getMessage))))
+    }
+  }
+
+  def sendNotification(
+    ern: String,
+    movement: Movement,
+    messageId: String
+  )(implicit hc: HeaderCarrier): Future[NotificationResponse] = {
 
     val notification = Notification(
       movement._id,
@@ -42,8 +69,20 @@ class PushNotificationServiceImpl @Inject()
       getArcOrThrowIfEmpty(movement.administrativeReferenceCode, messageId),
       ern)
 
-    logger.info(s"[PushNotificationService] - pushing notification for message with Id: $messageId")
     notificationConnector.postNotification(movement.boxId, notification)
+      .map { response =>
+        extractIfSuccessful[SuccessPushNotificationResponse](response)
+          .fold(error => {
+            logger.error(s"[PushNotificationService] - push notification error, status: ${response.status}, message: ${response.body}")
+            FailedPushNotification(error.status, error.body)
+          },
+            success => success)
+      }.recover {
+      case ex: Throwable => {
+        logger.error(s"[PushNotificationService] - push notification error, message: ${ex.getMessage}", ex)
+        FailedPushNotification(INTERNAL_SERVER_ERROR, ex.getMessage)
+      }
+    }
 
   }
 
@@ -52,18 +91,30 @@ class PushNotificationServiceImpl @Inject()
   }
 
   private def getArcOrThrowIfEmpty(arc: Option[String], messageId: String): String = {
-
     arc match {
       case Some(v) if v.trim.nonEmpty => v
       case _ => throw new RuntimeException(s"[PushNotificationService] - Could not push notification for message: $messageId. Administration Reference code is empty")
+    }
+  }
+
+  private def handleBoxNotificationError(response: HttpResponse): Result = {
+    logger.error(s"[PushNotificationService] - Error retrieving BoxId. Status: ${response.status}, message: ${response.body}")
+    val errorResponse = FailedBoxIdNotificationResponse(dateTimeService.timestamp(), response.body)
+
+    response.status match {
+      case 400 => BadRequest(Json.toJson(errorResponse))
+      case 404 => NotFound(Json.toJson(errorResponse))
+      case _ => InternalServerError(Json.toJson(errorResponse))
     }
   }
 }
 
 @ImplementedBy(classOf[PushNotificationServiceImpl])
 trait PushNotificationService {
-  def sendNotification
-  (
+
+  def getBoxId(clientId: String)(implicit hc: HeaderCarrier): Future[Either[Result, SuccessBoxNotificationResponse]]
+
+  def sendNotification(
     ern: String,
     movement: Movement,
     messageId: String

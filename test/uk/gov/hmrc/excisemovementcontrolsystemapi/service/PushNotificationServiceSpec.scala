@@ -16,40 +16,115 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.service
 
-import org.mockito.ArgumentMatchersSugar.any
+import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, verify, verifyZeroInteractions, when}
-import org.scalatest.BeforeAndAfterEach
+import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
+import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR}
+import play.api.libs.json.{JsValue, Json}
+import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PushNotificationConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Notification
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.SuccessPushNotificationResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.{FailedPushNotification, SuccessBoxNotificationResponse, SuccessPushNotificationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PushNotificationServiceImpl
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
+import scala.reflect.runtime.universe.typeOf
 
-class PushNotificationServiceSpec extends PlaySpec with BeforeAndAfterEach {
+class PushNotificationServiceSpec extends PlaySpec with EitherValues with BeforeAndAfterEach {
 
   implicit private val hc: HeaderCarrier = HeaderCarrier()
   implicit private val ex: ExecutionContext = ExecutionContext.global
 
   private val notificationConnector = mock[PushNotificationConnector]
-  private val sut = new PushNotificationServiceImpl(notificationConnector)
+  private val dateTimeService = mock[DateTimeService]
+  private val timestamp = Instant.now
+  private val sut = new PushNotificationServiceImpl(notificationConnector, dateTimeService)
   private val message = Message("this is a test", "IE801", "messageId", Instant.now)
   private val movement = Movement("id", "boxId", "lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
-
+  private val boxIdSuccessResponse = Json.parse("""
+  |{
+  | "boxId": "1c5b9365-18a6-55a5-99c9-83a091ac7f26",
+  |    "boxName":"BOX 2",
+  |    "boxCreator":{
+  |        "clientId": "X5ZasuQLH0xqKooV_IEw6yjQNfEa"
+  |    },
+  |    "subscriber": {
+  |        "subscribedDateTime": "2020-06-01T10:27:33.613+0000",
+  |        "callBackUrl": "https://www.example.com/callback",
+  |        "subscriptionType": "API_PUSH_SUBSCRIBER"
+  |    }
+  |}""".stripMargin)
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(notificationConnector)
+    reset(notificationConnector, dateTimeService)
 
+    when(notificationConnector.getBoxId(any)(any))
+      .thenReturn(Future.successful(HttpResponse(200, boxIdSuccessResponse.toString())))
     when(notificationConnector.postNotification(any, any)(any))
-      .thenReturn(Future.successful(SuccessPushNotificationResponse("notificationId")))
+      .thenReturn(Future.successful(HttpResponse(200, Json.parse("""{"notificationId": "notificationId"}"""").toString())))
+    when(dateTimeService.timestamp()).thenReturn(timestamp)
   }
 
+  "getBoxId" should {
+    "return 200 status" in {
+      val result = await(sut.getBoxId("clientId"))
+      result mustBe Right(SuccessBoxNotificationResponse("1c5b9365-18a6-55a5-99c9-83a091ac7f26"))
+    }
+
+    "send the request to the notification service" in {
+      await(sut.getBoxId("clientId"))
+      verify(notificationConnector).getBoxId(eqTo("clientId"))(any)
+    }
+
+    "return an error" when {
+      "Box Id not found" in {
+        when(notificationConnector.getBoxId(any)(any))
+          .thenReturn(Future.successful(HttpResponse(404, "Box does not exist")))
+
+        val result = await(sut.getBoxId("clientId"))
+
+        result.left.value mustBe NotFound(buildBoxIdJsonError("Box does not exist"))
+      }
+
+      "is bad request" in {
+        val debugMessage = "BAD_REQUEST"
+        when(notificationConnector.getBoxId(any)(any))
+          .thenReturn(Future.successful(HttpResponse(400, debugMessage)))
+
+        val result = await(sut.getBoxId("clientId"))
+
+        result.left.value mustBe BadRequest(buildBoxIdJsonError(debugMessage))
+      }
+
+      "is unknown error" in {
+        val debugMessage = "unknown error"
+        when(notificationConnector.getBoxId(any)(any))
+          .thenReturn(Future.successful(HttpResponse(500, debugMessage)))
+
+        val result = await(sut.getBoxId("clientId"))
+
+        result.left.value mustBe InternalServerError(buildBoxIdJsonError(debugMessage))
+      }
+
+      "cannot parse json" in {
+        val errorJson = Json.obj( "code" -> "UNKNOWN_ERROR", "message" -> "Box does not exist")
+        when(notificationConnector.getBoxId(any)(any))
+          .thenReturn(Future.successful(HttpResponse(200, errorJson.toString())))
+
+        val result = await(sut.getBoxId("clientId"))
+
+        val expectedError: JsValue = buildBoxIdJsonError(s"Response body could not be read as type ${typeOf[SuccessBoxNotificationResponse]}")
+        result.left.value mustBe InternalServerError(expectedError)
+      }
+    }
+  }
   "sendNotification" should {
     "send a notification" in {
       val result = await(sut.sendNotification("ern", movement, "messageId"))
@@ -62,6 +137,27 @@ class PushNotificationServiceSpec extends PlaySpec with BeforeAndAfterEach {
     }
 
     "return an error" when {
+
+      "the notification API return an error" in {
+        when(notificationConnector.postNotification(any, any)(any))
+          .thenReturn(Future.successful(HttpResponse(BAD_REQUEST, "Box ID is not a UUID")))
+
+        val result = await(sut.sendNotification("ern", movement, "messageId"))
+
+        Json.toJson(result.asInstanceOf[FailedPushNotification]) mustBe
+          buildPushNotificationJsonError(BAD_REQUEST, "Box ID is not a UUID")
+      }
+
+      "invalid json" in {
+        when(notificationConnector.postNotification(any, any)(any))
+          .thenReturn(Future.successful(HttpResponse(200, "invalid json")))
+
+        val result = await(sut.sendNotification("ern", movement, "messageId"))
+
+        result mustBe FailedPushNotification(INTERNAL_SERVER_ERROR,
+          s"Response body could not be read as type ${typeOf[SuccessPushNotificationResponse]}")
+      }
+
       "Administration reference code (ARC) is missing" in {
         the[RuntimeException] thrownBy
           await(sut.sendNotification("ern", movement.copy(administrativeReferenceCode = None), "messageId")) must
@@ -78,5 +174,19 @@ class PushNotificationServiceSpec extends PlaySpec with BeforeAndAfterEach {
         verifyZeroInteractions(notificationConnector)
       }
     }
+  }
+
+  private def buildBoxIdJsonError(debugMessage: String) = {
+    Json.parse(
+      s"""{"dateTime":"$timestamp",
+         |"message":"Box Id error",
+         |"debugMessage":"$debugMessage"}""".stripMargin)
+  }
+
+   def buildPushNotificationJsonError(status: Int, debugMessage: String) = {
+    Json.parse(
+      s"""{"status":$status,
+         |"message":"Push notification error",
+         |"debugMessage":"$debugMessage"}""".stripMargin)
   }
 }
