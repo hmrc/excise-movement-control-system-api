@@ -29,8 +29,10 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 
+import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 
 @Singleton
 class MovementService @Inject()(
@@ -61,6 +63,19 @@ class MovementService @Inject()(
 
   def getMovementById(id: String): Future[Option[Movement]] = {
     movementRepository.getMovementById(id)
+  }
+
+  def validateMovementId(id: String): Future[Either[MovementValidationError, Movement]] = {
+
+    Try(UUID.fromString(id)).toEither match {
+      case Left(_) => Future(Left(MovementIdFormatInvalid()))
+      case Right(_) =>
+        getMovementById(id).map {
+          case Some(movement) => Right(movement)
+          case None => Left(MovementIdNotFound())
+        }
+    }
+
   }
 
   def getMovementByLRNAndERNIn(lrn: String, erns: List[String]): Future[Option[Movement]] = {
@@ -175,4 +190,16 @@ class MovementService @Inject()(
       (movementFromDb.administrativeReferenceCode.isDefined
         || movementFromDb.consigneeId != movement.consigneeId)
   }
+}
+
+sealed trait MovementValidationError {
+  def errorMessage: String
+}
+
+case class MovementIdFormatInvalid() extends MovementValidationError {
+  override def errorMessage: String = "The movement ID format is invalid"
+}
+
+case class MovementIdNotFound() extends MovementValidationError {
+  override def errorMessage: String = "The movement ID could not be found in the database"
 }

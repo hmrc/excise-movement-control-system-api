@@ -277,7 +277,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     "return forbidden (403) when the consignor is empty" in {
       withAuthorizedTrader(consignorId)
 
-      postRequest(IE815WithNoCosignor).status mustBe FORBIDDEN
+      postRequest(IE815WithNoConsignor).status mustBe FORBIDDEN
     }
 
     "return a Unauthorized (401) when no authorized trader" in {
@@ -418,7 +418,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
             .withBody(
               s"""
                 {
-                  "boxId": "${boxId}",
+                  "boxId": "$boxId",
                   "boxName":"customs/excise##1.0##notificationUrl",
                   "boxCreator":{
                       "clientId": "testClientId"

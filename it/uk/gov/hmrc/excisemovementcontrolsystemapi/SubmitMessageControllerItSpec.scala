@@ -37,6 +37,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{AuthTestSupport, StringSupport}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, SubmitMessageTestSupport, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, Consignor}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, MovementRepository}
@@ -244,6 +245,28 @@ class SubmitMessageControllerItSpec extends PlaySpec
       result.body.isEmpty mustBe true
     }
 
+    "return 400 when consignor says they are consignee" in {
+
+      withAuthorizedTrader(consignorId)
+      stubEISSuccessfulRequest()
+
+      val result = postRequest(ie837Template(Consignee, consignorId))
+
+      result.status mustBe BAD_REQUEST
+
+    }
+
+    "return 400 when consignee says they are consignor" in {
+
+      withAuthorizedTrader(consigneeId)
+      stubEISSuccessfulRequest()
+
+      val result = postRequest(ie837Template(Consignor, consigneeId))
+
+      result.status mustBe BAD_REQUEST
+
+    }
+
   }
 
   "Submit IE871 Explanation On Shortage" should {
@@ -252,20 +275,42 @@ class SubmitMessageControllerItSpec extends PlaySpec
       withAuthorizedTrader(consignorId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(IE871withConsignor)
+      val result = postRequest(IE871WithConsignor)
 
       result.status mustBe ACCEPTED
       result.body.isEmpty mustBe true
     }
 
-    "return 403 when sent in by the consignee" in {
+    "return 202 when sent in by the consignee" in {
       withAuthorizedTrader(consigneeId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(IE871withConsignor)
+      val result = postRequest(IE871WithConsignee)
 
       result.status mustBe FORBIDDEN
       result.body.isEmpty mustBe false
+    }
+
+    "return 400 when consignor says they are consignee" in {
+
+      withAuthorizedTrader(consignorId)
+      stubEISSuccessfulRequest()
+
+      val result = postRequest(ie871ForConsignor(Consignee))
+
+      result.status mustBe BAD_REQUEST
+
+    }
+
+    "return 400 when consignee says they are consignor" in {
+
+      withAuthorizedTrader(consigneeId)
+      stubEISSuccessfulRequest()
+
+      val result = postRequest(ie871ForConsignee(Consignor))
+
+      result.status mustBe BAD_REQUEST
+
     }
 
   }

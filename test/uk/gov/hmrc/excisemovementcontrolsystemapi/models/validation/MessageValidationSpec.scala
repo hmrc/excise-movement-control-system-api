@@ -39,7 +39,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
       }
     }
 
-    "return consignor unauthorised error message" when {
+    "return consignor unauthorised error" when {
       "the consignor id is unauthorised" in {
         when(ie815.consignorId).thenReturn("789")
 
@@ -64,7 +64,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return ARC does not match message" when {
+      "return ARC does not match" when {
         "the message ARC does not match the movement ARC" in {
           when(movement.consignorId).thenReturn("123")
           when(movement.administrativeReferenceCode).thenReturn(Some("ARC1"))
@@ -76,7 +76,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return consignor unauthorised error message" when {
+      "return consignor unauthorised error" when {
         "the movement consignor id is unauthorised" in {
           when(movement.consignorId).thenReturn("789")
 
@@ -101,7 +101,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return ARC does not match message" when {
+      "return ARC does not match" when {
         "the message ARC does not match the movement ARC" in {
           when(movement.consignorId).thenReturn("123")
           when(movement.administrativeReferenceCode).thenReturn(Some("ARC1"))
@@ -113,7 +113,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return consignor unauthorised error message" when {
+      "return consignor unauthorised error" when {
         "the movement consignor id is unauthorised" in {
           when(movement.consignorId).thenReturn("789")
 
@@ -139,7 +139,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return ARC does not match message" when {
+      "return ARC does not match" when {
         "the message ARC does not match the movement ARC" in {
           when(movement.consigneeId).thenReturn(Some("123"))
           when(ie818.consigneeId).thenReturn(Some("123"))
@@ -153,7 +153,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return consignee does not match message" when {
+      "return consignee does not match" when {
         "the message consignee does not match the movement consignee" in {
           when(movement.consigneeId).thenReturn(Some("456"))
           when(ie818.consigneeId).thenReturn(Some("123"))
@@ -164,7 +164,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return consignee unauthorised message" when {
+      "return consignee unauthorised" when {
         "the message consignee id is unauthorised" in {
           when(ie818.consigneeId).thenReturn(Some("124"))
 
@@ -174,7 +174,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return consignee is missing message" when {
+      "return consignee is missing" when {
         "the message consignee id field is empty" in {
           when(ie818.consigneeId).thenReturn(None)
 
@@ -200,7 +200,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return ARC does not match message" when {
+      "return ARC does not match" when {
         "the message ARC does not match the movement ARC" in {
           when(movement.consigneeId).thenReturn(Some("123"))
           when(ie819.consigneeId).thenReturn(Some("123"))
@@ -214,7 +214,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return consignee does not match message" when {
+      "return consignee does not match" when {
         "the message consignee does not match the movement consignee" in {
           when(movement.consigneeId).thenReturn(Some("456"))
           when(ie819.consigneeId).thenReturn(Some("123"))
@@ -225,7 +225,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return consignee unauthorised message" when {
+      "return consignee unauthorised" when {
         "the message consignee id is unauthorised" in {
           when(ie819.consigneeId).thenReturn(Some("124"))
 
@@ -235,7 +235,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return consignee is missing message" when {
+      "return consignee is missing" when {
         "the message consignee id field is empty" in {
           when(ie819.consigneeId).thenReturn(None)
 
@@ -278,7 +278,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return ARC does not match message" when {
+      "return ARC does not match" when {
         "the message ARC does not match the movement ARC" when {
           "sending the message as the consignor" in {
             when(ie837.submitter).thenReturn(Consignor)
@@ -308,7 +308,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return consignor does not match message" when {
+      "return consignor does not match" when {
         "the message consignor does not match the movement consignor" in {
           when(ie837.submitter).thenReturn(Consignor)
           when(movement.consignorId).thenReturn("123")
@@ -320,7 +320,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return consignee does not match message" when {
+      "return consignee does not match" when {
         "the message consignee does not match the movement consignee" in {
           when(ie837.submitter).thenReturn(Consignee)
           when(movement.consigneeId).thenReturn(Some("123"))
@@ -332,7 +332,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return consignor unauthorised message" when {
+      "return consignor unauthorised" when {
         "the message consignor id is unauthorised" in {
           when(ie837.submitter).thenReturn(Consignor)
           when(ie837.consignorId).thenReturn(Some("124"))
@@ -343,7 +343,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return consignee unauthorised message" when {
+      "return consignee unauthorised" when {
         "the message consignee id is unauthorised" in {
           when(ie837.submitter).thenReturn(Consignee)
           when(ie837.consigneeId).thenReturn(Some("124"))
@@ -354,7 +354,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return consignor is missing message" when {
+      "return consignor is missing" when {
         "using consignor and the message consignor id field is empty" in {
           when(ie837.submitter).thenReturn(Consignor)
           when(ie837.consignorId).thenReturn(None)
@@ -365,7 +365,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return consignee is missing message" when {
+      "return consignee is missing" when {
         "using consignee and the message consignee id field is empty" in {
           when(ie837.submitter).thenReturn(Consignee)
           when(ie837.consigneeId).thenReturn(None)
@@ -409,7 +409,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return ARC does not match message" when {
+      "return ARC does not match" when {
         "the message ARC does not match the movement ARC" when {
           "sending the message as the consignor" in {
             when(ie871.submitter).thenReturn(Consignor)
@@ -439,7 +439,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return consignor does not match message" when {
+      "return consignor does not match" when {
         "the message consignor does not match the movement consignor" in {
           when(ie871.submitter).thenReturn(Consignor)
           when(movement.consignorId).thenReturn("123")
@@ -451,7 +451,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return consignee does not match message" when {
+      "return consignee does not match" when {
         "the message consignee does not match the movement consignee" in {
           when(ie871.submitter).thenReturn(Consignee)
           when(movement.consigneeId).thenReturn(Some("123"))
@@ -463,7 +463,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return consignor unauthorised message" when {
+      "return consignor unauthorised" when {
         "the message consignor id is unauthorised" in {
           when(ie871.submitter).thenReturn(Consignor)
           when(ie871.consignorId).thenReturn(Some("124"))
@@ -474,7 +474,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return consignee unauthorised message" when {
+      "return consignee unauthorised" when {
         "the message consignee id is unauthorised" in {
           when(ie871.submitter).thenReturn(Consignee)
           when(ie871.consigneeId).thenReturn(Some("124"))
@@ -485,7 +485,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return consignor is missing message" when {
+      "return consignor is missing" when {
         "using consignor and the message consignor id field is empty" in {
           when(ie871.submitter).thenReturn(Consignor)
           when(ie871.consignorId).thenReturn(None)
@@ -496,7 +496,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         }
       }
 
-      "return consignee is missing message" when {
+      "return consignee is missing" when {
         "using consignee and the message consignee id field is empty" in {
           when(ie871.submitter).thenReturn(Consignee)
           when(ie871.consigneeId).thenReturn(None)
@@ -509,7 +509,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
 
     }
 
-    "return invalid message type message" when {
+    "return invalid message type" when {
       "message type is not supported by the SubmitMessage endpoint" in {
 
         val ie801 = mock[IE801Message]
