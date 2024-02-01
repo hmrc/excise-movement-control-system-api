@@ -40,7 +40,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionRequest, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, ErnsMapper}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import java.time.Instant
@@ -63,7 +63,7 @@ class EISSubmissionConnectorSpec
 
   private val metrics = mock[Metrics](RETURNS_DEEP_STUBS)
 
-  private val connector = new EISSubmissionConnector(mockHttpClient, emcsUtils, appConfig, metrics, new ErnsMapper, dateTimeService)
+  private val connector = new EISSubmissionConnector(mockHttpClient, emcsUtils, appConfig, metrics, dateTimeService)
   private val emcsCorrelationId = "1234566"
   private val xml = <IE815></IE815>
   private val controlWrappedXml: Elem =
@@ -87,7 +87,7 @@ class EISSubmissionConnectorSpec
   private val ie815Message = mock[IE815Message]
   private val submissionBearerToken = "submissionBearerToken"
 
-
+  private val ern = "123"
   private val timestamp = Instant.parse("2023-09-17T09:32:50.345Z")
 
   override def beforeEach(): Unit = {
@@ -101,7 +101,7 @@ class EISSubmissionConnectorSpec
     when(appConfig.submissionBearerToken).thenReturn(submissionBearerToken)
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
     when(ie815Message.messageType).thenReturn("IE815")
-    when(ie815Message.consignorId).thenReturn("123")
+    when(ie815Message.consignorId).thenReturn(ern)
     when(emcsUtils.encode(any)).thenReturn("encode-message")
     when(ie815Message.messageIdentifier).thenReturn("DummyIdentifier")
 
@@ -115,15 +115,15 @@ class EISSubmissionConnectorSpec
     }
 
     "get URL from appConfig" in {
-      submitExciseMovementWithParams(xml, ie815Message, Set("123"), Set("123"))
+      submitExciseMovementWithParams(xml, ie815Message, ern)
 
       verify(appConfig).emcsReceiverMessageUrl
     }
 
     "send a request with the right parameters" in {
-      val expectedRequest = EISSubmissionRequest("123", "IE815", "encode-message")
+      val expectedRequest = EISSubmissionRequest(ern, "IE815", "encode-message")
 
-      submitExciseMovementWithParams(xml, ie815Message, Set("123"), Set("123"))
+      submitExciseMovementWithParams(xml, ie815Message, ern)
 
       verify(mockHttpClient).POST(
         eqTo("/eis/path"),
@@ -133,7 +133,7 @@ class EISSubmissionConnectorSpec
     }
 
     "wrap the xml in the control document" in {
-      submitExciseMovementWithParams(xml, ie815Message, Set("123"), Set("123"))
+      submitExciseMovementWithParams(xml, ie815Message, ern)
 
       val captor = ArgCaptor[String]
       verify(emcsUtils).encode(captor.capture)
@@ -142,12 +142,12 @@ class EISSubmissionConnectorSpec
     }
 
     "use the right request parameters in http client" in {
-      submitExciseMovementWithParams(xml, ie815Message, Set("123"), Set("123"))
+      submitExciseMovementWithParams(xml, ie815Message, ern)
 
       val eisHttpReader: EISHttpReader = verifyHttpHeader
 
       eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
-      eisHttpReader.ern mustBe "123"
+      eisHttpReader.ern mustBe ern
     }
 
     "return Bad request error" in {
@@ -227,23 +227,16 @@ class EISSubmissionConnectorSpec
   }
 
   private def submitExciseMovementForIE815: Future[Either[Result, EISSubmissionResponse]] = {
-    submitExciseMovementWithParams(xml, ie815Message, Set("123"), Set("123"))
+    submitExciseMovementWithParams(xml, ie815Message, ern)
   }
 
   private def submitExciseMovementWithParams(
                                               xml: NodeSeq,
                                               message: IEMessage,
-                                              enrolledErns: Set[String],
-                                              validatedErns: Set[String]
+                                              authErn: String
                                             ): Future[Either[Result, EISSubmissionResponse]] = {
-    val request = ValidatedXmlRequest(ParsedXmlRequest(
-      EnrolmentRequest(FakeRequest().withBody(xml), enrolledErns, "124"),
-      message,
-      enrolledErns,
-      "124"
-    ), validatedErns)
 
-    connector.submitMessage(request, emcsCorrelationId)
+    connector.submitMessage(message, xml.toString(), authErn, emcsCorrelationId)
   }
 
   private def expectedHeader =

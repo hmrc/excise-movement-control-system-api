@@ -16,10 +16,13 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import play.api.mvc.{Action, ControllerComponents}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction, ValidateErnInMessageAction, ValidateMovementIdAction}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{SubmissionMessageService, WorkItemService}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.ErnsMapper
+import play.api.libs.json.Json
+import play.api.mvc.{Action, ControllerComponents, Result}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -30,30 +33,71 @@ import scala.xml.NodeSeq
 class SubmitMessageController @Inject()(
                                          authAction: AuthAction,
                                          xmlParser: ParseXmlAction,
-                                         validateErnInMessageAction: ValidateErnInMessageAction,
-                                         validateMovementIdAction: ValidateMovementIdAction,
                                          submissionMessageService: SubmissionMessageService,
+                                         movementService: MovementService,
                                          workItemService: WorkItemService,
-                                         ernsMapper: ErnsMapper,
+                                         messageValidator: MessageValidation,
+                                         dateTimeService: DateTimeService,
                                          cc: ControllerComponents
                                        )(implicit ec: ExecutionContext)
   extends BackendController(cc) {
 
   def submit(movementId: String): Action[NodeSeq] = {
 
-    (authAction
-      andThen xmlParser
-      andThen validateErnInMessageAction
-      andThen validateMovementIdAction(movementId)).async(parse.xml) {
+    (authAction andThen xmlParser).async(parse.xml) {
       implicit request =>
-        val ern = ernsMapper.getSingleErnFromMessage(request.message, request.validErns)
 
-        workItemService.addWorkItemForErn(ern, fastMode = true)
+        val movement = movementService.validateMovementId(movementId)
 
-        submissionMessageService.submit(request).flatMap {
-          case Right(_) => Future.successful(Accepted(""))
-          case Left(error) => Future.successful(error)
-        }
+        movement.map {
+          case Left(error) => error match {
+            case x: MovementIdNotFound => Future.successful(NotFound(Json.toJson(
+              ErrorResponse(dateTimeService.timestamp(), "Movement not found", x.errorMessage)
+            )))
+            case x: MovementIdFormatInvalid => Future.successful(BadRequest(Json.toJson(
+              ErrorResponse(dateTimeService.timestamp(), "Movement Id format error", x.errorMessage)
+            )))
+          }
+
+          case Right(movement) =>
+            val b = messageValidator.validateSubmittedMessage(request.erns, movement, request.ieMessage)
+            val c: Either[MessageValidationResponse, Future[Result]] = b.map {
+              ern =>
+                workItemService.addWorkItemForErn(ern, fastMode = true)
+
+                val a: Future[Result] = submissionMessageService.submit(request, ern).flatMap {
+                  case Right(_) => Future.successful(Accepted(""))
+                  case Left(error) => Future.successful(error)
+                }
+
+                a
+            }
+
+            val d: Either[Future[Result], Future[Result]] = c.left.map {
+              case x: MessageDoesNotMatchMovement =>
+                Future.successful(BadRequest(Json.toJson(
+                  ErrorResponse(dateTimeService.timestamp(), "Message does not match movement", x.errorMessage)
+                )))
+              case x: MessageMissingKeyInformation =>
+                Future.successful(BadRequest(Json.toJson(
+                  ErrorResponse(dateTimeService.timestamp(), "Message missing key information", x.errorMessage)
+                )))
+
+              case x: MessageTypeInvalid =>
+                Future.successful(BadRequest(Json.toJson(
+                  ErrorResponse(dateTimeService.timestamp(), "Message type is invalid", x.errorMessage)
+                )))
+
+              case x: MessageIdentifierIsUnauthorised =>
+                Future.successful(Forbidden(Json.toJson(
+                  ErrorResponse(dateTimeService.timestamp(), "Message cannot be sent", x.errorMessage)
+                )))
+
+            }
+
+            d.merge
+
+        }.flatten
 
     }
 

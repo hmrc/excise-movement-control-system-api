@@ -28,12 +28,12 @@ import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest, ValidatedXmlRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService.NonRepudiationIdentityRetrievals
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, ErnsMapper, NrsEventIdMapper}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, NrsEventIdMapper}
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier}
 
 import java.nio.charset.StandardCharsets
@@ -60,7 +60,6 @@ class NrsServiceSpec
     nrsConnector,
     dateTimeService,
     new EmcsUtils,
-    new ErnsMapper,
     new NrsEventIdMapper
   )
 
@@ -126,10 +125,10 @@ class NrsServiceSpec
 
     val request = createRequest(message)
 
-    await(service.submitNrs(request, "correlationId")(hc))
+    await(service.submitNrs(request, "ern", "correlationId")(hc))
   }
 
-  private def createRequest(message: IEMessage): ValidatedXmlRequest[_] = {
+  private def createRequest(message: IEMessage): ParsedXmlRequest[_] = {
     val fakeRequest = FakeRequest()
       .withBody("<IE815>test</IE815>")
       .withHeaders(
@@ -137,7 +136,6 @@ class NrsServiceSpec
       )
 
     val enrolmentRequest = EnrolmentRequest(fakeRequest, Set("ern"), "123")
-    val parsedXmlRequest = ParsedXmlRequest(enrolmentRequest, message, Set("ern"), "123")
-    ValidatedXmlRequest(parsedXmlRequest, Set("ern"))
+    ParsedXmlRequest(enrolmentRequest, message, Set("ern"), "123")
   }
 }

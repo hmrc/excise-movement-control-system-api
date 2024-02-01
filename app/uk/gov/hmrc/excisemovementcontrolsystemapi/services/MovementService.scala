@@ -72,7 +72,7 @@ class MovementService @Inject()(
       case Right(_) =>
         getMovementById(id).map {
           case Some(movement) => Right(movement)
-          case None => Left(MovementIdNotFound())
+          case None => Left(MovementIdNotFound(id))
         }
     }
 
@@ -197,9 +197,9 @@ sealed trait MovementValidationError {
 }
 
 case class MovementIdFormatInvalid() extends MovementValidationError {
-  override def errorMessage: String = "The movement ID format is invalid"
+  override def errorMessage: String = "The movement ID should be a valid UUID"
 }
 
-case class MovementIdNotFound() extends MovementValidationError {
-  override def errorMessage: String = "The movement ID could not be found in the database"
+case class MovementIdNotFound(movementId: String) extends MovementValidationError {
+  override def errorMessage: String = s"Movement $movementId could not be found"
 }

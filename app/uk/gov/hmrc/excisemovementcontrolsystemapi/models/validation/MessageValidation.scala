@@ -19,19 +19,20 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
-sealed trait MessageValidation {
+sealed trait MessageValidationResponse {
   def errorMessage: String
 }
 
-object MessageValidation {
-  val arc: String = "ARC"
-  val consignor: String = Consignor.name
-  val consignee: String = Consignee.name
+case class MessageValidation() {
 
-  def validateDraftMovement(authorisedErns: Set[String], ie815: IE815Message): Either[MessageValidation, String] =
+  def validateDraftMovement(authorisedErns: Set[String], ie815: IE815Message): Either[MessageValidationResponse, String] =
     IE815MessageValidator(ie815).validate(authorisedErns)
 
-  def validateSubmittedMessage(authorisedErns: Set[String], movement: Movement, message: IEMessage): Either[MessageValidation, String] = {
+  def validateSubmittedMessage(
+                                authorisedErns: Set[String],
+                                movement: Movement,
+                                message: IEMessage
+                              ): Either[MessageValidationResponse, String] = {
     val validator: MovementMessageValidator = message match {
       case m: IE810Message => IE810MessageValidator(m, movement)
       case m: IE813Message => IE813MessageValidator(m, movement)
@@ -45,22 +46,26 @@ object MessageValidation {
   }
 }
 
-// TODO: When this is returned, convert to BAD_REQUEST in controllers
-abstract sealed class MessageDoesNotMatchMovement(val field: String) extends MessageValidation {
+object MessageValidation {
+  val arc: String = "ARC"
+  val consignor: String = Consignor.name
+  val consignee: String = Consignee.name
+}
+
+abstract class MessageDoesNotMatchMovement(val field: String) extends MessageValidationResponse {
   override def errorMessage: String = s"The $field in the message does not match the $field in the movement"
 }
 
-abstract sealed class MessageMissingKeyInformation(val field: String) extends MessageValidation {
+abstract class MessageMissingKeyInformation(val field: String) extends MessageValidationResponse {
   override def errorMessage: String = s"The $field in the message should not be empty"
 
 }
 
-case class MessageTypeInvalid(messageType: String) extends MessageValidation {
+case class MessageTypeInvalid(messageType: String) extends MessageValidationResponse {
   override def errorMessage: String = s"The supplied message type $messageType is not supported"
 }
 
-// TODO: When this is returned, convert to FORBIDDEN in controllers
-abstract class MessageIdentifierIsUnauthorised(val identifier: String) extends MessageValidation {
+abstract class MessageIdentifierIsUnauthorised(val identifier: String) extends MessageValidationResponse {
   override def errorMessage: String = s"The $identifier is not authorised to submit this message for the movement"
 }
 
@@ -81,7 +86,7 @@ private case object ConsigneeIsUnauthorised extends MessageIdentifierIsUnauthori
 private sealed trait MessageValidator {
   val message: IEMessage
 
-  def validate(authorisedErns: Set[String]): Either[MessageValidation, String]
+  def validate(authorisedErns: Set[String]): Either[MessageValidationResponse, String]
 }
 
 private sealed trait MovementValidator {
@@ -92,12 +97,12 @@ private sealed trait MovementValidator {
 private abstract class MovementMessageValidator(override val message: IEMessage, override val movement: Movement) extends MovementValidator with MessageValidator
 
 private case class IE815MessageValidator(override val message: IE815Message) extends MessageValidator {
-  override def validate(authorisedErns: Set[String]): Either[MessageValidation, String] =
+  override def validate(authorisedErns: Set[String]): Either[MessageValidationResponse, String] =
     Either.cond(authorisedErns.contains(message.consignorId), message.consignorId, ConsignorIsUnauthorised)
 }
 
 private case class IE810MessageValidator(override val message: IE810Message, override val movement: Movement) extends MovementMessageValidator(message, movement) {
-  override def validate(authorisedErns: Set[String]): Either[MessageValidation, String] = {
+  override def validate(authorisedErns: Set[String]): Either[MessageValidationResponse, String] = {
     if (authorisedErns.contains(movement.consignorId)) {
       Either.cond(message.administrativeReferenceCode.contains(movement.administrativeReferenceCode),
         movement.consignorId, ArcDoesNotMatch)
@@ -108,7 +113,7 @@ private case class IE810MessageValidator(override val message: IE810Message, ove
 }
 
 private case class IE813MessageValidator(override val message: IE813Message, override val movement: Movement) extends MovementMessageValidator(message, movement) {
-  override def validate(authorisedErns: Set[String]): Either[MessageValidation, String] = {
+  override def validate(authorisedErns: Set[String]): Either[MessageValidationResponse, String] = {
     if (authorisedErns.contains(movement.consignorId)) {
       Either.cond(message.administrativeReferenceCode.contains(movement.administrativeReferenceCode),
         movement.consignorId, ArcDoesNotMatch)
@@ -119,7 +124,7 @@ private case class IE813MessageValidator(override val message: IE813Message, ove
 }
 
 private case class IE818MessageValidator(override val message: IE818Message, override val movement: Movement) extends MovementMessageValidator(message, movement) {
-  override def validate(authorisedErns: Set[String]): Either[MessageValidation, String] = {
+  override def validate(authorisedErns: Set[String]): Either[MessageValidationResponse, String] = {
     message.consigneeId match {
 
       case Some(consignee) =>
@@ -141,7 +146,7 @@ private case class IE818MessageValidator(override val message: IE818Message, ove
 }
 
 private case class IE819MessageValidator(override val message: IE819Message, override val movement: Movement) extends MovementMessageValidator(message, movement) {
-  override def validate(authorisedErns: Set[String]): Either[MessageValidation, String] = {
+  override def validate(authorisedErns: Set[String]): Either[MessageValidationResponse, String] = {
     message.consigneeId match {
 
       case Some(consignee) =>
@@ -170,7 +175,7 @@ private case class SubmitterDetails(
                                    )
 
 private case class IE837MessageValidator(override val message: IE837Message, override val movement: Movement) extends MovementMessageValidator(message, movement) {
-  override def validate(authorisedErns: Set[String]): Either[MessageValidation, String] = {
+  override def validate(authorisedErns: Set[String]): Either[MessageValidationResponse, String] = {
     getSubmitter match {
       case SubmitterDetails(Some(ern), movementMatcher, noMatch, unauthorised) =>
         if (authorisedErns.contains(ern)) {
@@ -213,7 +218,7 @@ private case class IE837MessageValidator(override val message: IE837Message, ove
 }
 
 private case class IE871MessageValidator(override val message: IE871Message, override val movement: Movement) extends MovementMessageValidator(message, movement) {
-  override def validate(authorisedErns: Set[String]): Either[MessageValidation, String] = {
+  override def validate(authorisedErns: Set[String]): Either[MessageValidationResponse, String] = {
     getSubmitter match {
       case SubmitterDetails(Some(ern), movementMatcher, noMatch, unauthorised) =>
         if (authorisedErns.contains(ern)) {
@@ -256,7 +261,7 @@ private case class IE871MessageValidator(override val message: IE871Message, ove
 }
 
 private case class InvalidMessageTypeValidator(override val message: IEMessage, override val movement: Movement) extends MovementMessageValidator(message, movement) {
-  override def validate(authorisedErns: Set[String]): Either[MessageValidation, String] =
+  override def validate(authorisedErns: Set[String]): Either[MessageValidationResponse, String] =
     Left(MessageTypeInvalid(message.messageType))
 
 }

@@ -45,6 +45,8 @@ class DraftExciseMovementController @Inject()(
   extends BackendController(cc) {
 
   def submit: Action[NodeSeq] =
+
+  //TODO EMCS-400 - remove the validateErnInMessageAction and instead use the MessageValidation to find the correct Ern
     (authAction andThen xmlParser andThen validateErnInMessageAction).async(parse.xml) {
       implicit request: ValidatedXmlRequest[NodeSeq] =>
 
@@ -59,7 +61,11 @@ class DraftExciseMovementController @Inject()(
     }
 
   private def submitMessage(boxId: String)(implicit request: ValidatedXmlRequest[NodeSeq]): Future[Result] = {
-    submissionMessageService.submit(request).flatMap {
+    // TODO when using MessageValidation will have one ern returned after validation
+    // TODO For now, we know the consignor is fine because it passed the validate action above.
+    val submittingErn = request.message.asInstanceOf[IE815Message].consignorId
+
+    submissionMessageService.submit(request.parsedRequest, submittingErn).flatMap {
       case Right(_) => handleSuccess(boxId)
       case Left(error) => Future.successful(error)
     }

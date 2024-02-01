@@ -23,16 +23,20 @@ import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
+import play.api.libs.json.Json
 import play.api.mvc.Results.NotFound
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnInMessageAction, FakeValidateMovementIdAction, FakeXmlParsers}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeXmlParsers}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{SubmissionMessageService, WorkItemService}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.ErnsMapper
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
 
@@ -40,27 +44,32 @@ class SubmitMessageControllerSpec
   extends PlaySpec
     with FakeAuthentication
     with FakeXmlParsers
-    with FakeValidateErnInMessageAction
-    with FakeValidateMovementIdAction
     with BeforeAndAfterEach
     with TestXml {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val cc = stubControllerComponents()
   private val request = createRequest(IE818)
-  private val ieMessage = mock[IEMessage]
   private val submissionMessageService = mock[SubmissionMessageService]
+  private val movementService = mock[MovementService]
   private val workItemService = mock[WorkItemService]
-  private val ernsMapper = mock[ErnsMapper]
+  private val messageValidation = mock[MessageValidation]
+  private val dateTimeService = mock[DateTimeService]
+
+  private val consignorId = "testErn"
+  private val movement = Movement("boxId", "LRNQA20230909022221", consignorId, Some("GBWK002281023"), Some("23GB00000000000377161"))
+  private val timestamp = Instant.now
 
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(submissionMessageService, workItemService)
 
-    when(submissionMessageService.submit(any)(any))
+    when(submissionMessageService.submit(any, any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
-    when(ernsMapper.getSingleErnFromMessage(any, any)).thenReturn("testErn")
+    when(movementService.validateMovementId(any)).thenReturn(Future.successful(Right(movement)))
+    when(messageValidation.validateSubmittedMessage(any, any, any)).thenReturn(Right(consignorId))
+    when(dateTimeService.timestamp()).thenReturn(timestamp)
   }
 
   "submit" should {
@@ -73,7 +82,7 @@ class SubmitMessageControllerSpec
 
       await(createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request))
 
-      verify(submissionMessageService).submit(any)(any)
+      verify(submissionMessageService).submit(any, any)(any)
 
     }
 
@@ -81,12 +90,12 @@ class SubmitMessageControllerSpec
 
       await(createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request))
 
-      verify(workItemService).addWorkItemForErn("testErn", fastMode = true)
+      verify(workItemService).addWorkItemForErn(consignorId, fastMode = true)
 
     }
 
-    "return an error when EIS error" in {
-      when(submissionMessageService.submit(any)(any))
+    "return an error when EIS errors" in {
+      when(submissionMessageService.submit(any, any)(any))
         .thenReturn(Future.successful(Left(NotFound("not found"))))
 
       val result = createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request)
@@ -110,20 +119,120 @@ class SubmitMessageControllerSpec
       }
     }
 
-    "return an ern validation error" when {
-      "consignee is not valid" in {
-        val result = createWithValidateConsignorActionFailure.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request)
+    "handle movement validation errors" should {
 
-        status(result) mustBe FORBIDDEN
+      "return a 400 Bad Request" when {
+
+        "movement id validation fails" in {
+
+          val movementId = "49491927-aaa1-4835-b405-dd6e7fa3aaf0"
+          when(movementService.validateMovementId(any)).thenReturn(Future.successful(Left(MovementIdNotFound(movementId))))
+
+          val result = createWithSuccessfulAuth.submit(movementId)(request)
+
+          status(result) mustBe NOT_FOUND
+
+          contentAsJson(result) mustBe Json.toJson(ErrorResponse(
+            timestamp,
+            "Movement not found",
+            "Movement 49491927-aaa1-4835-b405-dd6e7fa3aaf0 could not be found"
+          ))
+        }
+      }
+
+      "return a 404 Not Found" when {
+
+        "movement id is invalid fails" in {
+
+          when(movementService.validateMovementId(any)).thenReturn(Future.successful(Left(MovementIdFormatInvalid())))
+
+          val result = createWithSuccessfulAuth.submit("b405")(request)
+
+          status(result) mustBe BAD_REQUEST
+          contentAsJson(result) mustBe Json.toJson(ErrorResponse(
+            timestamp,
+            "Movement Id format error",
+            "The movement ID should be a valid UUID"
+          ))
+        }
       }
     }
 
-    "return a not found error" when {
-      "movement id validation fails" in {
-        val result = createWithMovementIdFailure.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request)
+    "handle message validation errors" should {
 
-        status(result) mustBe NOT_FOUND
+      "return a 400 Bad Request" when {
+
+        "message details do not match movement details" in {
+
+          case object TestMessageDoesNotMatchMovement extends MessageDoesNotMatchMovement("Consignor")
+
+          when(messageValidation.validateSubmittedMessage(any, any, any)).thenReturn(Left(TestMessageDoesNotMatchMovement))
+
+          val result = createWithSuccessfulAuth.submit(movement._id)(request)
+
+          status(result) mustBe BAD_REQUEST
+
+          contentAsJson(result) mustBe Json.toJson(ErrorResponse(
+            timestamp,
+            "Message does not match movement",
+            "The Consignor in the message does not match the Consignor in the movement"
+          ))
+        }
+
+        "message is missing key information" in {
+
+          case object TestMessageMissingKeyInfo extends MessageMissingKeyInformation("Consignor")
+
+          when(messageValidation.validateSubmittedMessage(any, any, any)).thenReturn(Left(TestMessageMissingKeyInfo))
+
+          val result = createWithSuccessfulAuth.submit(movement._id)(request)
+
+          status(result) mustBe BAD_REQUEST
+
+          contentAsJson(result) mustBe Json.toJson(ErrorResponse(
+            timestamp,
+            "Message missing key information",
+            "The Consignor in the message should not be empty"
+          ))
+        }
+
+        "message type is invalid" in {
+
+          when(messageValidation.validateSubmittedMessage(any, any, any)).thenReturn(Left(MessageTypeInvalid("IE811")))
+
+          val result = createWithSuccessfulAuth.submit(movement._id)(request)
+
+          status(result) mustBe BAD_REQUEST
+
+          contentAsJson(result) mustBe Json.toJson(ErrorResponse(
+            timestamp,
+            "Message type is invalid",
+            "The supplied message type IE811 is not supported"
+          ))
+        }
       }
+
+      "return a 403 Forbidden" when {
+
+        "authenticated user cannot send this message for this movement" in {
+
+          case object TestMessageIdentifierIsUnauthorised extends MessageIdentifierIsUnauthorised("Consignor")
+
+          when(messageValidation.validateSubmittedMessage(any, any, any)).thenReturn(Left(TestMessageIdentifierIsUnauthorised))
+
+          val result = createWithSuccessfulAuth.submit(movement._id)(request)
+
+          status(result) mustBe FORBIDDEN
+
+          contentAsJson(result) mustBe Json.toJson(ErrorResponse(
+            timestamp,
+            "Message cannot be sent",
+            "The Consignor is not authorised to submit this message for the movement"
+          ))
+        }
+
+      }
+
     }
 
     "catch Future failure from Work Item service and log it but still process submission" in {
@@ -134,7 +243,7 @@ class SubmitMessageControllerSpec
 
       status(result) mustBe ACCEPTED
 
-      verify(submissionMessageService).submit(any)(any)
+      verify(submissionMessageService).submit(any, any)(any)
     }
 
   }
@@ -143,11 +252,11 @@ class SubmitMessageControllerSpec
     new SubmitMessageController(
       FakeSuccessAuthentication,
       FakeSuccessXMLParser,
-      FakeSuccessfulValidateErnInMessageAction(ieMessage),
-      FakeSuccessValidateMovementIdAction,
       submissionMessageService,
+      movementService,
       workItemService,
-      ernsMapper,
+      messageValidation,
+      dateTimeService,
       cc
     )
 
@@ -161,11 +270,11 @@ class SubmitMessageControllerSpec
     new SubmitMessageController(
       FakeFailingAuthentication,
       FakeSuccessXMLParser,
-      FakeSuccessfulValidateErnInMessageAction(ieMessage),
-      FakeSuccessValidateMovementIdAction,
       submissionMessageService,
+      movementService,
       workItemService,
-      ernsMapper,
+      messageValidation,
+      dateTimeService,
       cc
     )
 
@@ -173,35 +282,11 @@ class SubmitMessageControllerSpec
     new SubmitMessageController(
       FakeSuccessAuthentication,
       FakeFailureXMLParser,
-      FakeSuccessfulValidateErnInMessageAction(ieMessage),
-      FakeSuccessValidateMovementIdAction,
       submissionMessageService,
+      movementService,
       workItemService,
-      ernsMapper,
-      cc
-    )
-
-  private def createWithValidateConsignorActionFailure =
-    new SubmitMessageController(
-      FakeSuccessAuthentication,
-      FakeSuccessXMLParser,
-      FakeFailureValidateErnInMessageAction,
-      FakeSuccessValidateMovementIdAction,
-      submissionMessageService,
-      workItemService,
-      ernsMapper,
-      cc
-    )
-
-  private def createWithMovementIdFailure =
-    new SubmitMessageController(
-      FakeSuccessAuthentication,
-      FakeSuccessXMLParser,
-      FakeSuccessfulValidateErnInMessageAction(ieMessage),
-      FakeFailureValidateMovementIdAction,
-      submissionMessageService,
-      workItemService,
-      ernsMapper,
+      messageValidation,
+      dateTimeService,
       cc
     )
 

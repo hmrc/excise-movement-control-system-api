@@ -27,6 +27,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
 
   private val authorisedErns = Set("123", "456")
   private val movement = mock[Movement]
+  private val messageValidation = MessageValidation()
 
   "validateDraftMovement" should {
     val ie815 = mock[IE815Message]
@@ -35,7 +36,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
       "the consignor id is authorised" in {
         when(ie815.consignorId).thenReturn("123")
 
-        MessageValidation.validateDraftMovement(authorisedErns, ie815) mustBe Right("123")
+        messageValidation.validateDraftMovement(authorisedErns, ie815) mustBe Right("123")
       }
     }
 
@@ -43,7 +44,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
       "the consignor id is unauthorised" in {
         when(ie815.consignorId).thenReturn("789")
 
-        val result = MessageValidation.validateDraftMovement(authorisedErns, ie815).left.value
+        val result = messageValidation.validateDraftMovement(authorisedErns, ie815).left.value
         result mustBe a[MessageIdentifierIsUnauthorised]
         result.errorMessage mustBe "The Consignor is not authorised to submit this message for the movement"
       }
@@ -60,7 +61,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(movement.consignorId).thenReturn("123")
           when(movement.administrativeReferenceCode).thenReturn(Some("ARC1"))
           when(ie810.administrativeReferenceCode).thenReturn(Seq(Some("ARC1")))
-          MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie810) mustBe Right("123")
+          messageValidation.validateSubmittedMessage(authorisedErns, movement, ie810) mustBe Right("123")
         }
       }
 
@@ -70,7 +71,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(movement.administrativeReferenceCode).thenReturn(Some("ARC1"))
           when(ie810.administrativeReferenceCode).thenReturn(Seq(Some("ARC2")))
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie810).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie810).left.value
           result mustBe a[MessageDoesNotMatchMovement]
           result.errorMessage mustBe "The ARC in the message does not match the ARC in the movement"
         }
@@ -80,7 +81,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         "the movement consignor id is unauthorised" in {
           when(movement.consignorId).thenReturn("789")
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie810).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie810).left.value
           result mustBe a[MessageIdentifierIsUnauthorised]
           result.errorMessage mustBe "The Consignor is not authorised to submit this message for the movement"
         }
@@ -97,7 +98,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(movement.administrativeReferenceCode).thenReturn(Some("ARC1"))
           when(ie813.administrativeReferenceCode).thenReturn(Seq(Some("ARC1")))
 
-          MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie813) mustBe Right("123")
+          messageValidation.validateSubmittedMessage(authorisedErns, movement, ie813) mustBe Right("123")
         }
       }
 
@@ -107,7 +108,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(movement.administrativeReferenceCode).thenReturn(Some("ARC1"))
           when(ie813.administrativeReferenceCode).thenReturn(Seq(Some("ARC2")))
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie813).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie813).left.value
           result mustBe a[MessageDoesNotMatchMovement]
           result.errorMessage mustBe "The ARC in the message does not match the ARC in the movement"
         }
@@ -117,7 +118,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         "the movement consignor id is unauthorised" in {
           when(movement.consignorId).thenReturn("789")
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie813).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie813).left.value
           result mustBe a[MessageIdentifierIsUnauthorised]
           result.errorMessage mustBe "The Consignor is not authorised to submit this message for the movement"
         }
@@ -135,7 +136,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(movement.administrativeReferenceCode).thenReturn(Some("ARC1"))
           when(ie818.administrativeReferenceCode).thenReturn(Seq(Some("ARC1")))
 
-          MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie818) mustBe Right("123")
+          messageValidation.validateSubmittedMessage(authorisedErns, movement, ie818) mustBe Right("123")
         }
       }
 
@@ -147,7 +148,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(movement.administrativeReferenceCode).thenReturn(Some("ARC1"))
           when(ie818.administrativeReferenceCode).thenReturn(Seq(Some("ARC2")))
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie818).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie818).left.value
           result mustBe a[MessageDoesNotMatchMovement]
           result.errorMessage mustBe "The ARC in the message does not match the ARC in the movement"
         }
@@ -158,7 +159,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(movement.consigneeId).thenReturn(Some("456"))
           when(ie818.consigneeId).thenReturn(Some("123"))
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie818).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie818).left.value
           result mustBe a[MessageDoesNotMatchMovement]
           result.errorMessage mustBe "The Consignee in the message does not match the Consignee in the movement"
         }
@@ -168,7 +169,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         "the message consignee id is unauthorised" in {
           when(ie818.consigneeId).thenReturn(Some("124"))
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie818).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie818).left.value
           result mustBe a[MessageIdentifierIsUnauthorised]
           result.errorMessage mustBe "The Consignee is not authorised to submit this message for the movement"
         }
@@ -178,7 +179,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         "the message consignee id field is empty" in {
           when(ie818.consigneeId).thenReturn(None)
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie818).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie818).left.value
           result mustBe a[MessageMissingKeyInformation]
           result.errorMessage mustBe "The Consignee in the message should not be empty"
         }
@@ -196,7 +197,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(movement.administrativeReferenceCode).thenReturn(Some("ARC1"))
           when(ie819.administrativeReferenceCode).thenReturn(Seq(Some("ARC1")))
 
-          MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie819) mustBe Right("123")
+          messageValidation.validateSubmittedMessage(authorisedErns, movement, ie819) mustBe Right("123")
         }
       }
 
@@ -208,7 +209,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(movement.administrativeReferenceCode).thenReturn(Some("ARC1"))
           when(ie819.administrativeReferenceCode).thenReturn(Seq(Some("ARC2")))
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie819).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie819).left.value
           result mustBe a[MessageDoesNotMatchMovement]
           result.errorMessage mustBe "The ARC in the message does not match the ARC in the movement"
         }
@@ -219,7 +220,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(movement.consigneeId).thenReturn(Some("456"))
           when(ie819.consigneeId).thenReturn(Some("123"))
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie819).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie819).left.value
           result mustBe a[MessageDoesNotMatchMovement]
           result.errorMessage mustBe "The Consignee in the message does not match the Consignee in the movement"
         }
@@ -229,7 +230,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         "the message consignee id is unauthorised" in {
           when(ie819.consigneeId).thenReturn(Some("124"))
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie819).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie819).left.value
           result mustBe a[MessageIdentifierIsUnauthorised]
           result.errorMessage mustBe "The Consignee is not authorised to submit this message for the movement"
         }
@@ -239,7 +240,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
         "the message consignee id field is empty" in {
           when(ie819.consigneeId).thenReturn(None)
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie819).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie819).left.value
           result mustBe a[MessageMissingKeyInformation]
           result.errorMessage mustBe "The Consignee in the message should not be empty"
         }
@@ -260,7 +261,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(movement.administrativeReferenceCode).thenReturn(Some("ARC1"))
           when(ie837.administrativeReferenceCode).thenReturn(Seq(Some("ARC1")))
 
-          MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie837) mustBe Right("123")
+          messageValidation.validateSubmittedMessage(authorisedErns, movement, ie837) mustBe Right("123")
         }
       }
 
@@ -274,7 +275,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(movement.administrativeReferenceCode).thenReturn(Some("ARC1"))
           when(ie837.administrativeReferenceCode).thenReturn(Seq(Some("ARC1")))
 
-          MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie837) mustBe Right("123")
+          messageValidation.validateSubmittedMessage(authorisedErns, movement, ie837) mustBe Right("123")
         }
       }
 
@@ -288,7 +289,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
             when(movement.administrativeReferenceCode).thenReturn(Some("ARC1"))
             when(ie837.administrativeReferenceCode).thenReturn(Seq(Some("ARC2")))
 
-            val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie837).left.value
+            val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie837).left.value
             result mustBe a[MessageDoesNotMatchMovement]
             result.errorMessage mustBe "The ARC in the message does not match the ARC in the movement"
           }
@@ -301,7 +302,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
             when(movement.administrativeReferenceCode).thenReturn(Some("ARC1"))
             when(ie837.administrativeReferenceCode).thenReturn(Seq(Some("ARC2")))
 
-            val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie837).left.value
+            val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie837).left.value
             result mustBe a[MessageDoesNotMatchMovement]
             result.errorMessage mustBe "The ARC in the message does not match the ARC in the movement"
           }
@@ -314,7 +315,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(movement.consignorId).thenReturn("123")
           when(ie837.consignorId).thenReturn(Some("456"))
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie837).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie837).left.value
           result mustBe a[MessageDoesNotMatchMovement]
           result.errorMessage mustBe "The Consignor in the message does not match the Consignor in the movement"
         }
@@ -326,7 +327,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(movement.consigneeId).thenReturn(Some("123"))
           when(ie837.consigneeId).thenReturn(Some("456"))
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie837).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie837).left.value
           result mustBe a[MessageDoesNotMatchMovement]
           result.errorMessage mustBe "The Consignee in the message does not match the Consignee in the movement"
         }
@@ -337,7 +338,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(ie837.submitter).thenReturn(Consignor)
           when(ie837.consignorId).thenReturn(Some("124"))
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie837).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie837).left.value
           result mustBe a[MessageIdentifierIsUnauthorised]
           result.errorMessage mustBe "The Consignor is not authorised to submit this message for the movement"
         }
@@ -348,7 +349,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(ie837.submitter).thenReturn(Consignee)
           when(ie837.consigneeId).thenReturn(Some("124"))
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie837).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie837).left.value
           result mustBe a[MessageIdentifierIsUnauthorised]
           result.errorMessage mustBe "The Consignee is not authorised to submit this message for the movement"
         }
@@ -359,7 +360,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(ie837.submitter).thenReturn(Consignor)
           when(ie837.consignorId).thenReturn(None)
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie837).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie837).left.value
           result mustBe a[MessageMissingKeyInformation]
           result.errorMessage mustBe "The Consignor in the message should not be empty"
         }
@@ -370,7 +371,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(ie837.submitter).thenReturn(Consignee)
           when(ie837.consigneeId).thenReturn(None)
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie837).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie837).left.value
           result mustBe a[MessageMissingKeyInformation]
           result.errorMessage mustBe "The Consignee in the message should not be empty"
         }
@@ -391,7 +392,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(movement.administrativeReferenceCode).thenReturn(Some("ARC1"))
           when(ie871.administrativeReferenceCode).thenReturn(Seq(Some("ARC1")))
 
-          MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie871) mustBe Right("123")
+          messageValidation.validateSubmittedMessage(authorisedErns, movement, ie871) mustBe Right("123")
         }
       }
 
@@ -405,7 +406,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(movement.administrativeReferenceCode).thenReturn(Some("ARC1"))
           when(ie871.administrativeReferenceCode).thenReturn(Seq(Some("ARC1")))
 
-          MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie871) mustBe Right("123")
+          messageValidation.validateSubmittedMessage(authorisedErns, movement, ie871) mustBe Right("123")
         }
       }
 
@@ -419,7 +420,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
             when(movement.administrativeReferenceCode).thenReturn(Some("ARC1"))
             when(ie871.administrativeReferenceCode).thenReturn(Seq(Some("ARC2")))
 
-            val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie871).left.value
+            val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie871).left.value
             result mustBe a[MessageDoesNotMatchMovement]
             result.errorMessage mustBe "The ARC in the message does not match the ARC in the movement"
           }
@@ -432,7 +433,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
             when(movement.administrativeReferenceCode).thenReturn(Some("ARC1"))
             when(ie871.administrativeReferenceCode).thenReturn(Seq(Some("ARC2")))
 
-            val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie871).left.value
+            val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie871).left.value
             result mustBe a[MessageDoesNotMatchMovement]
             result.errorMessage mustBe "The ARC in the message does not match the ARC in the movement"
           }
@@ -445,7 +446,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(movement.consignorId).thenReturn("123")
           when(ie871.consignorId).thenReturn(Some("456"))
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie871).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie871).left.value
           result mustBe a[MessageDoesNotMatchMovement]
           result.errorMessage mustBe "The Consignor in the message does not match the Consignor in the movement"
         }
@@ -457,7 +458,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(movement.consigneeId).thenReturn(Some("123"))
           when(ie871.consigneeId).thenReturn(Some("456"))
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie871).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie871).left.value
           result mustBe a[MessageDoesNotMatchMovement]
           result.errorMessage mustBe "The Consignee in the message does not match the Consignee in the movement"
         }
@@ -468,7 +469,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(ie871.submitter).thenReturn(Consignor)
           when(ie871.consignorId).thenReturn(Some("124"))
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie871).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie871).left.value
           result mustBe a[MessageIdentifierIsUnauthorised]
           result.errorMessage mustBe "The Consignor is not authorised to submit this message for the movement"
         }
@@ -479,7 +480,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(ie871.submitter).thenReturn(Consignee)
           when(ie871.consigneeId).thenReturn(Some("124"))
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie871).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie871).left.value
           result mustBe a[MessageIdentifierIsUnauthorised]
           result.errorMessage mustBe "The Consignee is not authorised to submit this message for the movement"
         }
@@ -490,7 +491,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(ie871.submitter).thenReturn(Consignor)
           when(ie871.consignorId).thenReturn(None)
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie871).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie871).left.value
           result mustBe a[MessageMissingKeyInformation]
           result.errorMessage mustBe "The Consignor in the message should not be empty"
         }
@@ -501,7 +502,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
           when(ie871.submitter).thenReturn(Consignee)
           when(ie871.consigneeId).thenReturn(None)
 
-          val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie871).left.value
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie871).left.value
           result mustBe a[MessageMissingKeyInformation]
           result.errorMessage mustBe "The Consignee in the message should not be empty"
         }
@@ -516,7 +517,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
 
         when(ie801.messageType).thenReturn("IE801")
 
-        val result = MessageValidation.validateSubmittedMessage(authorisedErns, movement, ie801).left.value
+        val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie801).left.value
         result mustBe a[MessageTypeInvalid]
         result.errorMessage mustBe "The supplied message type IE801 is not supported"
       }

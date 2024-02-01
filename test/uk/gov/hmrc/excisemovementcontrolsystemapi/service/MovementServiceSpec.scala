@@ -580,7 +580,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       val result = await(movementService.validateMovementId(uuid)).left.value
 
       result mustBe a[MovementIdNotFound]
-      result.errorMessage mustBe "The movement ID could not be found in the database"
+      result.errorMessage mustBe "Movement 17425b8d-92e3-41e1-a7be-f21ab9241911 could not be found"
 
     }
 
@@ -589,7 +589,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       val result = await(movementService.validateMovementId("uuid")).left.value
 
       result mustBe a[MovementIdFormatInvalid]
-      result.errorMessage mustBe "The movement ID format is invalid"
+      result.errorMessage mustBe "The movement ID should be a valid UUID"
 
     }
   }

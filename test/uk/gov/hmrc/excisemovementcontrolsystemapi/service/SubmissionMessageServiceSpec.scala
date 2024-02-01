@@ -28,7 +28,7 @@ import play.api.mvc.Results.InternalServerError
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest, ValidatedXmlRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NonRepudiationSubmissionAccepted, NonRepudiationSubmissionFailed}
@@ -49,54 +49,60 @@ class SubmissionMessageServiceSpec
 
   private val connector = mock[EISSubmissionConnector]
   private val nrsService = mock[NrsService]
-  private val emcsUtil = mock[EmcsUtils]
-  private val sut = new SubmissionMessageServiceImpl(connector, nrsService, emcsUtil)
+  private val emcsUtils = mock[EmcsUtils]
+  private val sut = new SubmissionMessageServiceImpl(connector, nrsService, emcsUtils)
 
   private val message = mock[IE815Message]
-  val notableEventId = "notableEventId"
-  val fakeRequest = FakeRequest()
-    .withBody("<IE815>test</IE815>")
+  private val xmlBody = "<IE815>test</IE815>"
+  val fakeRequest: FakeRequest[String] = FakeRequest()
+    .withBody(xmlBody)
     .withHeaders(
       FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> "application/xml"))
     )
 
-  private val enrolmentRequest = EnrolmentRequest(fakeRequest, Set("ern"), "123")
-  private val parsedXmlRequest = ParsedXmlRequest(enrolmentRequest, message, Set("ern"), "123")
-  private val request = ValidatedXmlRequest(parsedXmlRequest, Set("ern"))
+  private val ern = "ern"
+  private val enrolmentRequest = EnrolmentRequest(fakeRequest, Set(ern), "123")
+  private val request = ParsedXmlRequest(enrolmentRequest, message, Set(ern), "123")
 
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(connector, nrsService)
 
     when(message.consignorId).thenReturn("1234")
-    when(emcsUtil.generateCorrelationId).thenReturn("correlationId")
-    when(connector.submitMessage(any, any)(any))
+    when(emcsUtils.generateCorrelationId).thenReturn("correlationId")
+    when(connector.submitMessage(any, any, any, any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "IE815", "correlationId"))))
-    when(nrsService.submitNrs(any, any)(any))
+    when(nrsService.submitNrs(any, any, any)(any))
       .thenReturn(Future.successful(NonRepudiationSubmissionAccepted("submissionId")))
   }
+
   "submit" should {
     "submit a message" in {
-      await(sut.submit(request))
+      await(sut.submit(request, ern))
 
-      verify(connector).submitMessage(eqTo(request), eqTo("correlationId"))(any)
+      verify(connector).submitMessage(
+        eqTo(message),
+        eqTo(xmlBody),
+        eqTo(ern),
+        eqTo("correlationId")
+      )(any)
 
       withClue("send to NRS when submitMessage is successful") {
-        verify(nrsService).submitNrs(eqTo(request), eqTo("correlationId"))(any)
+        verify(nrsService).submitNrs(eqTo(request), eqTo(ern), eqTo("correlationId"))(any)
       }
     }
 
     "return EISSubmissionResponse" in {
-      val result = await(sut.submit(request))
+      val result = await(sut.submit(request, ern))
 
       result mustBe Right(EISSubmissionResponse("ok", "IE815", "correlationId"))
     }
 
     "return an error" in {
-      when(connector.submitMessage(any, any)(any))
+      when(connector.submitMessage(any, any, any, any)(any))
         .thenReturn(Future.successful(Left(InternalServerError("error"))))
 
-      val result = await(sut.submit(request))
+      val result = await(sut.submit(request, ern))
 
       result.left.value mustBe InternalServerError("error")
 
@@ -107,19 +113,19 @@ class SubmissionMessageServiceSpec
 
     "return submit message result" when {
       "NRS fails" in {
-        when(nrsService.submitNrs(any, any)(any))
+        when(nrsService.submitNrs(any, any, any)(any))
           .thenReturn(Future.successful(NonRepudiationSubmissionFailed(INTERNAL_SERVER_ERROR, "NRS failure")))
 
-        val result = await(sut.submit(request))
+        val result = await(sut.submit(request, ern))
 
         result mustBe Right(EISSubmissionResponse("ok", "IE815", "correlationId"))
       }
 
       "NRS throw" in {
-        when(nrsService.submitNrs(any, any)(any))
+        when(nrsService.submitNrs(any, any, any)(any))
           .thenReturn(Future.failed(new RuntimeException("NRS error")))
 
-        val result = await(sut.submit(request))
+        val result = await(sut.submit(request, ern))
 
         result mustBe Right(EISSubmissionResponse("ok", "IE815", "correlationId"))
       }

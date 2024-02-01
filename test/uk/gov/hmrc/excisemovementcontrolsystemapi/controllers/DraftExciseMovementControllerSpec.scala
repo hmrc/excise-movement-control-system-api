@@ -30,7 +30,7 @@ import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnInMessageAction, FakeXmlParsers}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.SuccessBoxNotificationResponse
@@ -64,7 +64,7 @@ class DraftExciseMovementControllerSpec
     super.beforeEach()
     reset(submissionMessageService, movementService, workItemService, submissionMessageService)
 
-    when(submissionMessageService.submit(any)(any))
+    when(submissionMessageService.submit(any, any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
     when(notificationService.getBoxId(any)(any))
@@ -85,9 +85,9 @@ class DraftExciseMovementControllerSpec
       status(result) mustBe ACCEPTED
 
       withClue("submit the message") {
-        val captor = ArgCaptor[ValidatedXmlRequest[_]]
-        verify(submissionMessageService).submit(captor.capture)(any)
-        captor.value.message mustBe mockIeMessage
+        val captor = ArgCaptor[ParsedXmlRequest[_]]
+        verify(submissionMessageService).submit(captor.capture, any)(any)
+        captor.value.ieMessage mustBe mockIeMessage
       }
 
       withClue("should get the box id") {
@@ -151,7 +151,7 @@ class DraftExciseMovementControllerSpec
       }
 
       "cannot submit a message" in {
-        when(submissionMessageService.submit(any)(any))
+        when(submissionMessageService.submit(any, any)(any))
           .thenReturn(Future.successful(Left(NotFound("not found"))))
 
         val result = createWithSuccessfulAuth.submit(request)
