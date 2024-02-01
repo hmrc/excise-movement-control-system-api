@@ -98,7 +98,7 @@ class GetMessagesControllerItSpec extends PlaySpec
       withAuthorizedTrader(consignorId)
       stubShowNewMessageRequest(consignorId)
       when(dateTimeService.timestamp()).thenReturn(timestamp)
-      val message = Message("encodedMessage", "IE801", dateTimeService.timestamp())
+      val message = Message("encodedMessage", "IE801", "messageId", dateTimeService.timestamp())
       when(movementRepository.getMovementById(any))
         .thenReturn(Future.successful(Some(Movement(validUUID, "boxId", "lrn", consignorId, None, None, Instant.now, Seq(message)))))
 
@@ -124,7 +124,7 @@ class GetMessagesControllerItSpec extends PlaySpec
 
     "return 404 when movement is not valid for ERN" in {
       withAuthorizedTrader(consignorId)
-      val message = Message("encodedMessage", "IE801", dateTimeService.timestamp())
+      val message = Message("encodedMessage", "IE801", "messageId", dateTimeService.timestamp())
       when(movementRepository.getMovementById(any))
         .thenReturn(Future.successful(Some(Movement(validUUID, "boxId", "lrn", "consignor", None, None, Instant.now, Seq(message)))))
 
@@ -147,7 +147,7 @@ class GetMessagesControllerItSpec extends PlaySpec
     // for a combination of lrn consignorId/consigneeId
     "return 500 when multiple movements messages are found" in {
       withAuthorizedTrader(consignorId)
-      val movementMessage = Movement("boxId", "", "", None, None, timestamp, Seq(Message("", "", dateTimeService.timestamp())))
+      val movementMessage = Movement("boxId", "", "", None, None, timestamp, Seq(Message("", "", "messageId", dateTimeService.timestamp())))
       when(movementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(movementMessage, movementMessage)))
 

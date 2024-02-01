@@ -28,7 +28,6 @@ import play.api.http.HeaderNames
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound}
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PushNotificationConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnInMessageAction, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
@@ -36,7 +35,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionRespon
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.SuccessBoxNotificationResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, SubmissionMessageService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, PushNotificationService, SubmissionMessageService, WorkItemService}
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
@@ -58,7 +57,7 @@ class DraftExciseMovementControllerSpec
   private val request = createRequest
   private val mockIeMessage = mock[IE815Message]
   private val workItemService = mock[WorkItemService]
-  private val notificationConnector = mock[PushNotificationConnector]
+  private val notificationService = mock[PushNotificationService]
   private val boxId = "boxId"
 
   override def beforeEach(): Unit = {
@@ -68,7 +67,7 @@ class DraftExciseMovementControllerSpec
     when(submissionMessageService.submit(any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
-    when(notificationConnector.getBoxId(any)(any))
+    when(notificationService.getBoxId(any)(any))
       .thenReturn(Future.successful(Right(SuccessBoxNotificationResponse(boxId))))
 
     when(mockIeMessage.consigneeId).thenReturn(Some("789"))
@@ -92,7 +91,7 @@ class DraftExciseMovementControllerSpec
       }
 
       withClue("should get the box id") {
-        verify(notificationConnector).getBoxId(eqTo("clientId"))(any)
+        verify(notificationService).getBoxId(eqTo("clientId"))(any)
       }
 
       withClue("should save the new movement") {
@@ -130,7 +129,7 @@ class DraftExciseMovementControllerSpec
 
     "return an error" when {
       "get box id return an error" in {
-        when(notificationConnector.getBoxId(any)(any))
+        when(notificationService.getBoxId(any)(any))
           .thenReturn(Future.successful(Left(BadRequest("error"))))
 
         val result = createWithSuccessfulAuth.submit(request)
@@ -197,7 +196,7 @@ class DraftExciseMovementControllerSpec
       movementService,
       workItemService,
       submissionMessageService,
-      notificationConnector,
+      notificationService,
       cc
     )
 
@@ -209,7 +208,7 @@ class DraftExciseMovementControllerSpec
       movementService,
       workItemService,
       submissionMessageService,
-      notificationConnector,
+      notificationService,
       cc
     )
 
@@ -221,7 +220,7 @@ class DraftExciseMovementControllerSpec
       movementService,
       workItemService,
       submissionMessageService,
-      notificationConnector,
+      notificationService,
       cc
     )
 
@@ -233,7 +232,7 @@ class DraftExciseMovementControllerSpec
       movementService,
       workItemService,
       submissionMessageService,
-      notificationConnector,
+      notificationService,
       cc
     )
 

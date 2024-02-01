@@ -76,7 +76,7 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "return 200" in {
-      val message = Message("message", "IE801", messageCreateOn)
+      val message = Message("message", "IE801", "messageId", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message))
       when(movementService.getMovementById(any))
         .thenReturn(Future.successful(Some(movement)))
@@ -88,8 +88,8 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "get all the new messages" in {
-      val message = Message("message", "IE801", messageCreateOn)
-      val message2 = Message("message2", "IE801", messageCreateOn)
+      val message = Message("message", "IE801", "messageId1", messageCreateOn)
+      val message2 = Message("message2", "IE801", "messageId2", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message, message2))
       when(movementService.getMovementById(any))
         .thenReturn(Future.successful(Some(movement)))
@@ -105,8 +105,8 @@ class GetMessagesControllerSpec extends PlaySpec
     "get all the new messages when there is a time query parameter provided" in {
       val timeInFuture = Instant.now.plusSeconds(1000)
       val timeInPast = Instant.now.minusSeconds(1000)
-      val message = Message("message", "IE801", timeInFuture)
-      val message2 = Message("message2", "IE801", timeInPast)
+      val message = Message("message", "IE801", "messageId1", timeInFuture)
+      val message2 = Message("message2", "IE801", "messageId2", timeInPast)
       val movement = createMovementWithMessages(Seq(message, message2))
       when(movementService.getMovementById(any))
         .thenReturn(Future.successful(Some(movement)))
@@ -121,9 +121,9 @@ class GetMessagesControllerSpec extends PlaySpec
       val timeNowString = messageCreateOn.toString
       val timeInFuture = Instant.now.plusSeconds(1000)
       val timeInPast = Instant.now.minusSeconds(1000)
-      val message = Message("message", "IE801", timeInFuture)
-      val message2 = Message("message2", "IE801", timeInPast)
-      val message3 = Message("message3", "IE801", messageCreateOn)
+      val message = Message("message", "IE801", "messageId1", timeInFuture)
+      val message2 = Message("message2", "IE801", "messageId2", timeInPast)
+      val message3 = Message("message3", "IE801", "messageId3", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message, message2, message3))
       when(movementService.getMovementById(any))
         .thenReturn(Future.successful(Some(movement)))
@@ -136,7 +136,7 @@ class GetMessagesControllerSpec extends PlaySpec
 
     "succeed when a valid date format is provided" in {
       val timeInFuture = Instant.now.plusSeconds(1000)
-      val message = Message("message", "IE801", timeInFuture)
+      val message = Message("message", "IE801", "messageId", timeInFuture)
       val movement = createMovementWithMessages(Seq(message))
       when(movementService.getMovementById(any))
         .thenReturn(Future.successful(Some(movement)))
@@ -149,7 +149,7 @@ class GetMessagesControllerSpec extends PlaySpec
 
     "fail when an invalid date format is provided" in {
       val timeInFuture = Instant.now.plusSeconds(1000)
-      val message = Message("message", "IE801", timeInFuture)
+      val message = Message("message", "IE801", "messageId", timeInFuture)
       val movement = createMovementWithMessages(Seq(message))
       when(movementService.getMovementById(any))
         .thenReturn(Future.successful(Some(movement)))
@@ -164,7 +164,7 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "create a Work Item if there is not one for the ERN already" in {
-      val message = Message("message", "IE801", messageCreateOn)
+      val message = Message("message", "IE801", "messageId", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message))
       when(movementService.getMovementById(any))
         .thenReturn(Future.successful(Some(movement)))
@@ -200,7 +200,7 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "return NOT_FOUND when movement is for a different ern " in {
-      val message = Message("message", "IE801", Instant.now)
+      val message = Message("message", "IE801", "messageId", Instant.now)
       val movement = Movement(validUUID, "boxId", "consignor", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
       when(movementService.getMovementById(any))
         .thenReturn(Future.successful(Some(movement)))
@@ -215,7 +215,7 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "catch Future failure from Work Item service and log it but still process submission" in {
-      val message = Message("message", "IE801", messageCreateOn)
+      val message = Message("message", "IE801", "messageId", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message))
       when(movementService.getMovementById(any))
         .thenReturn(Future.successful(Some(movement)))

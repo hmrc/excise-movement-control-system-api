@@ -119,7 +119,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
   "Submit IE810 Cancellation" should {
 
     "return 202 when submitted by consignor" in {
-      when(movementRepository.getMovementByARC("23GB00000000000377161")).thenReturn(Future.successful(Seq(movement)))
+      when(movementRepository.getMovementByARC("23GB00000000000377161")).thenReturn(Future.successful(Some(movement)))
 
       withAuthorizedTrader(consignorId)
       stubEISSuccessfulRequest()
@@ -132,7 +132,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
     "return 202 when submitted by consignee" in {
       when(movementRepository.getMovementByARC("23GB00000000000377161"))
-        .thenReturn(Future.successful(Seq(movement)))
+        .thenReturn(Future.successful(Some(movement)))
 
       withAuthorizedTrader(consigneeId)
       stubEISSuccessfulRequest()
@@ -149,7 +149,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
     "return 202 when submitted by consignor" in {
       when(movementRepository.getMovementByARC("23GB00000000000378126"))
-        .thenReturn(Future.successful(Seq(movement)))
+        .thenReturn(Future.successful(Some(movement)))
 
       withAuthorizedTrader(consignorId)
       stubEISSuccessfulRequest()
@@ -162,7 +162,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
     "return 403 error when submitted by consignee" in {
       when(movementRepository.getMovementByARC("23GB00000000000378126"))
-        .thenReturn(Future.successful(Seq(movement)))
+        .thenReturn(Future.successful(Some(movement)))
 
       withAuthorizedTrader("consignee")
       stubEISSuccessfulRequest()
