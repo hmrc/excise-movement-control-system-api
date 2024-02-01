@@ -16,33 +16,39 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
+import akka.actor.ActorSystem
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, verify, when}
 import org.mongodb.scala.MongoException
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, OK}
+import play.api.http.HeaderNames
+import play.api.http.Status.{BAD_REQUEST, FORBIDDEN, NOT_FOUND, OK}
 import play.api.libs.json.{JsArray, Json}
-import play.api.mvc.AnyContent
+import play.api.mvc.{AnyContent, Result}
 import play.api.mvc.Results.BadRequest
-import play.api.test.FakeRequest
-import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
+import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeAuthentication
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MovementIdFormatInvalid, MovementIdValidation}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 
+import java.nio.charset.StandardCharsets
 import java.time.Instant
+import java.util.{Base64, UUID}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.xml.Elem
 
 class GetMessagesControllerSpec extends PlaySpec
   with FakeAuthentication
   with BeforeAndAfterEach {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
+  implicit val sys: ActorSystem = ActorSystem("GetMessagesControllerSpec")
+
   private val movementService = mock[MovementService]
   private val movementIdValidator = mock[MovementIdValidation]
   private val cc = stubControllerComponents()
@@ -241,6 +247,110 @@ class GetMessagesControllerSpec extends PlaySpec
 
   }
 
+  "getMessageForMovement" should {
+    val messageXml =
+      """
+        |<body>
+        | <received>
+        |   <where>london</where>
+        | </received>
+        |</body>
+        |""".stripMargin
+
+    val encodeMessage = Base64.getEncoder.encodeToString(messageXml.getBytes(StandardCharsets.UTF_8))
+
+    val messageId = UUID.randomUUID().toString
+    val message = Message(encodeMessage, "IE801", messageId, timeStamp)
+    val movementWithMessage = createMovementWithMessages(Seq(message))
+
+    "return 200" in {
+      when(movementService.getMovementById(any))
+        .thenReturn(Future.successful(Some(movementWithMessage)))
+
+      val result = createWithSuccessfulAuth.getMessageForMovement(validUUID, messageId)(createRequestForXML)
+
+      status(result) mustBe OK
+    }
+
+    "return the message as xml for that movement and messageId" in {
+      val message1 = Message("encodeMessage", "IE803", UUID.randomUUID().toString, timeStamp)
+      val movement = movementWithMessage.copy(messages = Seq(message, message1))
+      when(movementService.getMovementById(any))
+        .thenReturn(Future.successful(Some(movement)))
+
+      val result = createWithSuccessfulAuth.getMessageForMovement(validUUID, messageId)(createRequest())
+
+      status(result) mustBe OK
+      contentAsXml(result) mustBe xml.XML.loadString(messageXml)
+    }
+
+    "return an error" when {
+      "failed authentication" in {
+        val result = createWithFailedAuth.getMessageForMovement(validUUID, messageId)(createRequest())
+
+        status(result) mustBe FORBIDDEN
+      }
+
+      "movementId is invalid" in {
+        val result = createWithSuccessfulAuth.getMessageForMovement(
+          "invalidMovementId",
+          messageId
+        )(createRequest())
+
+        status(result) mustBe BAD_REQUEST
+      }
+
+      "movementId is empty" in {
+        val result = createWithSuccessfulAuth.getMessageForMovement(
+          "",
+          messageId
+        )(createRequest())
+
+        status(result) mustBe BAD_REQUEST
+        contentAsJson(result) mustBe Json.toJson(ErrorResponse(timeStamp, "Movement Id format error", "Movement Id should be a valid UUID"))
+      }
+
+      "return a 404 if movement is not found" in {
+        when(movementService.getMovementById(any)).thenReturn(Future.successful(None))
+
+        val result = createWithSuccessfulAuth.getMessageForMovement(
+          validUUID,
+          messageId
+        )(createRequest())
+
+        status(result) mustBe  NOT_FOUND
+        contentAsJson(result) mustBe Json.toJson(ErrorResponse(
+            timeStamp,
+            "No movement found for the MovementID provided",
+            s"MovementID $validUUID was not found in the database")
+        )
+      }
+
+      "return a 404 if message is not found" in {
+        val movementWithoutMessages: Movement = movementWithMessage.copy(messages = Seq.empty)
+        when(movementService.getMovementById(any))
+          .thenReturn(Future.successful(Some(movementWithoutMessages)))
+
+        val result = createWithSuccessfulAuth.getMessageForMovement(
+          validUUID,
+          messageId
+        )(createRequest())
+
+        status(result) mustBe  NOT_FOUND
+        contentAsJson(result) mustBe Json.toJson(ErrorResponse(
+          timeStamp,
+          "No message found for the MovementID provided",
+          s"MessageId $messageId was not found in the database")
+        )
+      }
+    }
+
+  }
+
+   private def contentAsXml(result: Future[Result]): Elem = {
+    xml.XML.loadString(contentAsString(result))
+  }
+
   private def createMovementWithMessages(messages: Seq[Message]): Movement = {
     Movement(validUUID, "boxId", "lrn", "testErn", Some("consigneeId"), Some("arc"), Instant.now, messages)
   }
@@ -252,10 +362,26 @@ class GetMessagesControllerSpec extends PlaySpec
       workItemService,
       movementIdValidator,
       cc,
+      new EmcsUtils,
+      dateTimeService
+    )
+
+  private def createWithFailedAuth =
+    new GetMessagesController(
+      FakeFailingAuthentication,
+      movementService,
+      workItemService,
+      cc,
+      new EmcsUtils,
       dateTimeService
     )
 
   private def createRequest(): FakeRequest[AnyContent] = {
     FakeRequest("GET", "/foo")
+  }
+
+  private def createRequestForXML = {
+    createRequest()
+      .withHeaders(FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> "application/xml")))
   }
 }

@@ -130,7 +130,7 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
 
       result mustBe SuccessPushNotificationResponse("notificationId")
 
-      val messageUri = s"/customs/excise/movements/id/messages/messageId"
+      val messageUri = s"/movements/id/message/messageId"
       val notification = Notification("id", messageUri, "messageId", "consignorId", Some("consigneeId"), "arc", "ern")
       verify(notificationConnector).postNotification("boxId", notification)
     }

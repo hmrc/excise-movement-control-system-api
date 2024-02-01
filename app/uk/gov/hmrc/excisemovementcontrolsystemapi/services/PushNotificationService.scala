@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 import com.google.inject.ImplementedBy
 import play.api.Logging
 import play.api.http.Status.INTERNAL_SERVER_ERROR
-import play.api.libs.json.{JsResultException, Json}
+import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PushNotificationConnector
@@ -31,6 +31,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
 import javax.inject.Inject
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.routes
+
 import scala.concurrent.{ExecutionContext, Future}
 
 class PushNotificationServiceImpl @Inject()(
@@ -90,7 +92,8 @@ class PushNotificationServiceImpl @Inject()(
   }
 
   private def buildMessageUriAsString(movementId: String, messageId: String): String = {
-    s"/customs/excise/movements/$movementId/messages/$messageId"
+    routes.GetMessagesController.getMessageForMovement(movementId, messageId).url
+   // s"/customs/excise/movements/$movementId/messages/$messageId"
   }
 
   private def getArcOrThrowIfEmpty(arc: Option[String], messageId: String): String = {
