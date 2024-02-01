@@ -554,55 +554,6 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
       result mustBe Seq.empty
     }
-
-//    "getMovementByArcOrByErnAndLrn" should {
-//      "get the movement from the repository" when {
-//        "arc matches " in {
-//
-//          val m1 = Movement("movementId1", "boxId1", "lrn1", "consignorid1", Some("consigneedId1"), Some("abc123"), Instant.now(), Seq.empty)
-//
-//          when(mockMovementRepository.getMovementByARC("abc123"))
-//            .thenReturn(Future.successful(Some(m1)))
-//          when(mockMovementRepository.getMovementByLRNAndERNIn(any,any))
-//            .thenReturn(Future.successful(Seq.empty))
-//
-//          //todo: some of the messages contains multiple ARC
-//          val result = await(movementService.getMovementByArcOrByErnAndLrn("123", "rgt456", "abc123"))
-//
-//          result mustBe Some(m1)
-//
-//          withClue("should not attempt to get movement by LRN and ERN") {
-//            verifyZeroInteractions(mockMovementRepository)
-//          }
-//        }
-//
-//        "lrn and ern are matched" in {
-//          val m1 = Movement("movementId1", "boxId1", "lrn1", "consignorid1", Some("consigneedId1"), Some("abc123"), Instant.now(), Seq.empty)
-//
-//          when(mockMovementRepository.getMovementByARC(any))
-//            .thenReturn(Future.successful(None))
-//          when(mockMovementRepository.getMovementByLRNAndERNIn(any,any))
-//            .thenReturn(Future.successful(Seq(m1)))
-//
-//          val result = await(movementService.getMovementByArcOrByErnAndLrn("123", "rgt456", "abc123"))
-//
-//          result mustBe Some(m1)
-//        }
-//
-//        "both matches" in {
-//          val m1 = Movement("movementId1", "boxId1", "lrn1", "consignorid1", Some("consigneedId1"), Some("abc123"), Instant.now(), Seq.empty)
-//
-//          when(mockMovementRepository.getMovementByARC(any))
-//            .thenReturn(Future.successful(Some(m1)))
-//          when(mockMovementRepository.getMovementByLRNAndERNIn(any,any))
-//            .thenReturn(Future.successful(Seq(m1)))
-//
-//          val result = await(movementService.getMovementByArcOrByErnAndLrn("123", "rgt456", "abc123"))
-//
-//          result mustBe Some(m1)
-//        }
-//      }
-//    }
   }
 
   private def setUpForUpdateMovement

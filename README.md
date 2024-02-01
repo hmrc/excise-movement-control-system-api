@@ -28,7 +28,7 @@ TBD
 
 ### Test push notification locally
 
-Notice: Upu can use the run_local_with_push_notification.sh script file to create an Client application locally.
+Notice: You can use the run_local_with_push_notification.sh script file to create an Client application locally.
 #### Start the services
 * Open a terminal window, type the below command and press enter. This will load locally all the services necessary for testing :
 
@@ -133,18 +133,18 @@ Notice: Upu can use the run_local_with_push_notification.sh script file to creat
 #### Create a movement
 
 1. Open Postman 
-2. you can create your own request for the Draft Movement endpoint or you can import
-the postman json file that is in the excise-movement-control-system-api repo. 
-3. If you import the postman json file in the repo once imported 
-4. click on the **EMCSApiPollingScenarios** workflow 
-5. Select the **Variables** tab on the right windows 
-6. Enter the Excise Number 
-7. Enter the access token 
-8. Enter the ClientId. Notice there are three client ID, so you may generate different one or you can use the same one. 
-9. Right click the **EMCSApiPollingScenarios** workflow 
-10. Select **Run Collection**
-11. Press the **Run EMCSApiPollingScenarios**" button
-12. You should see a response that contain the boxId for each IE815 submission
+2. You can create your own request for the Draft Movement endpoint or you can import.
+the postman json file that is in the emcs-api-eis-stub repo. 
+3. If you import the postman json file in the repo once imported.
+4. Click on the **EMCSApiPollingScenarios** workflow.
+5. Select the **Variables** tab on the right windows. 
+6. Enter the Excise Number. 
+7. Enter the access token. 
+8. Enter the ClientId that was generated previously in the steps above.
+9. Right click the **EMCSApiPollingScenarios** workflow. 
+10. Select **Run Collection**.
+11. Press the **Run EMCSApiPollingScenarios**" button.
+12. You should see a response that contains the boxId for each IE815 submission.
 
 Remember if you do not use the **SubmitDraftOfMovement** scenarion you need to
 add the ClientId to the header when you submit an IE815.
@@ -160,7 +160,7 @@ When an IE815 message (Draft Movement) is sent, a movement object will be create
 and saved in the movements collection in a MongoDb database. At the same a workitem for that Excise Number is added to the excise-number-work-item collection in MongoDb.
 This collection contains Excise Number for which a movement was created and represent 
 a slow and a fast queue which will be processed by a thread
-every interval (which is configurable). So this thread will pick up the first processable
+at every interval (which is configurable). So this thread will pick up the first processable
 item/excise number and will request all message for that excise number, save that message in the
 movement and send a notification to the push-pull-notification service. To see if that notification
 has been received do the following:
@@ -210,7 +210,7 @@ change some configuration setting as below:**
 
 ### Create Client Application locally
 
-the **run_local_with_push_notification.sh** script file offer a quick way to create a Client application.
+the **run_local_with_push_notification.sh** script file offers a quick way to create a Client application.
 You should acquire an access token and modify the file by overriding the ACCEES_TOKEN variable by assigning its value to 
 the newly acquired access token. Then from command line type the following command and press enter:
 

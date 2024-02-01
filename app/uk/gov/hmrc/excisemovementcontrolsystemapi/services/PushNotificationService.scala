@@ -50,7 +50,9 @@ class PushNotificationServiceImpl @Inject()(
       case ex: Throwable =>
         // todo: Is this an error?
         logger.error(s"[PushNotificationService] - Error retrieving BoxId, message: ${ex.getMessage}", ex)
-        Left(InternalServerError(Json.toJson(FailedBoxIdNotificationResponse(dateTimeService.timestamp(), ex.getMessage))))
+        Left(InternalServerError(Json.toJson(FailedBoxIdNotificationResponse(
+          dateTimeService.timestamp(),
+          s"Error occurred when getting boxId for clientId: $clientId"))))
     }
   }
 
@@ -80,7 +82,8 @@ class PushNotificationServiceImpl @Inject()(
       }.recover {
       case ex: Throwable => {
         logger.error(s"[PushNotificationService] - push notification error, message: ${ex.getMessage}", ex)
-        FailedPushNotification(INTERNAL_SERVER_ERROR, ex.getMessage)
+        //todo: we may need a better message.
+        FailedPushNotification(INTERNAL_SERVER_ERROR, s"An exception occurred when sending a notification with excise number: $ern, for message: $messageId")
       }
     }
 
