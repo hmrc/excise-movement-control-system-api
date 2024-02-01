@@ -35,7 +35,6 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
-import scala.reflect.runtime.universe.typeOf
 
 class PushNotificationServiceSpec extends PlaySpec with EitherValues with BeforeAndAfterEach {
 
@@ -120,7 +119,7 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
 
         val result = await(sut.getBoxId("clientId"))
 
-        val expectedError: JsValue = buildBoxIdJsonError(s"Response body could not be read as type ${typeOf[SuccessBoxNotificationResponse]}")
+        val expectedError: JsValue = buildBoxIdJsonError("Exception occurred when getting boxId for clientId: clientId")
         result.left.value mustBe InternalServerError(expectedError)
       }
     }
@@ -155,7 +154,7 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
         val result = await(sut.sendNotification("ern", movement, "messageId"))
 
         result mustBe FailedPushNotification(INTERNAL_SERVER_ERROR,
-          s"Response body could not be read as type ${typeOf[SuccessPushNotificationResponse]}")
+          "An exception occurred when sending a notification with excise number: ern, for message: messageId")
       }
 
       "Administration reference code (ARC) is missing" in {

@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 import com.google.inject.ImplementedBy
 import play.api.Logging
 import play.api.http.Status.INTERNAL_SERVER_ERROR
-import play.api.libs.json.Json
+import play.api.libs.json.{JsResultException, Json}
 import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PushNotificationConnector
@@ -52,7 +52,7 @@ class PushNotificationServiceImpl @Inject()(
         logger.error(s"[PushNotificationService] - Error retrieving BoxId, message: ${ex.getMessage}", ex)
         Left(InternalServerError(Json.toJson(FailedBoxIdNotificationResponse(
           dateTimeService.timestamp(),
-          s"Error occurred when getting boxId for clientId: $clientId"))))
+          s"Exception occurred when getting boxId for clientId: $clientId"))))
     }
   }
 
