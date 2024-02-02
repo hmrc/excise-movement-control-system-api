@@ -50,7 +50,7 @@ class MessageService @Inject()(
     }
   }
 
-  // TODO: This may be superseded by the MessageValidation
+  // TODO: EMCS-400 - This may be superseded by the MessageValidation
   def getErns(ieMessage: IEMessage): Future[Set[String]] = {
 
     ieMessage match {

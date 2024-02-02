@@ -73,7 +73,8 @@ class GetMessagesController @Inject()(
     }
   }
 
-  private def validateMovementID(movementId: String): EitherT[Future, Result, UUID] = EitherT.fromEither(Try(UUID.fromString(movementId)).toEither.left.map(_ =>
+  private def validateMovementID(movementId: String): EitherT[Future, Result, UUID] =
+    EitherT.fromEither(Try(UUID.fromString(movementId)).toEither.left.map(_ =>
     BadRequest(Json.toJson(ErrorResponse(
       dateTimeService.timestamp(),
       "Movement Id format error",
@@ -81,7 +82,8 @@ class GetMessagesController @Inject()(
     )))
   ))
 
-  private def validateUpdatedSince(updatedSince: Option[String]): EitherT[Future, Result, Option[Instant]] = EitherT.fromEither(Try(updatedSince.map(Instant.parse(_))).toEither.left.map(_ =>
+  private def validateUpdatedSince(updatedSince: Option[String]): EitherT[Future, Result, Option[Instant]] =
+    EitherT.fromEither(Try(updatedSince.map(Instant.parse(_))).toEither.left.map(_ =>
     BadRequest(Json.toJson(ErrorResponse(
       dateTimeService.timestamp(),
       "Invalid date format provided in the updatedSince query parameter",

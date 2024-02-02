@@ -16,13 +16,19 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
+import cats.data.EitherT
 import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -47,59 +53,66 @@ class SubmitMessageController @Inject()(
     (authAction andThen xmlParser).async(parse.xml) {
       implicit request =>
 
-        val movement = movementService.validateMovementId(movementId)
+        val result = for {
+          movement <- validateMovementId(movementId)
+          authorisedErn <- validateMessage(movement, request.ieMessage, request.erns)
+          _ <- sendRequest(request, authorisedErn)
+        } yield {
+          Accepted("")
+        }
 
-        movement.map {
-          case Left(error) => error match {
-            case x: MovementIdNotFound => Future.successful(NotFound(Json.toJson(
-              ErrorResponse(dateTimeService.timestamp(), "Movement not found", x.errorMessage)
-            )))
-            case x: MovementIdFormatInvalid => Future.successful(BadRequest(Json.toJson(
-              ErrorResponse(dateTimeService.timestamp(), "Movement Id format error", x.errorMessage)
-            )))
-          }
-
-          case Right(movement) =>
-            val b = messageValidator.validateSubmittedMessage(request.erns, movement, request.ieMessage)
-            val c: Either[MessageValidationResponse, Future[Result]] = b.map {
-              ern =>
-                workItemService.addWorkItemForErn(ern, fastMode = true)
-
-                val a: Future[Result] = submissionMessageService.submit(request, ern).flatMap {
-                  case Right(_) => Future.successful(Accepted(""))
-                  case Left(error) => Future.successful(error)
-                }
-
-                a
-            }
-
-            val d: Either[Future[Result], Future[Result]] = c.left.map {
-              case x: MessageDoesNotMatchMovement =>
-                Future.successful(BadRequest(Json.toJson(
-                  ErrorResponse(dateTimeService.timestamp(), "Message does not match movement", x.errorMessage)
-                )))
-              case x: MessageMissingKeyInformation =>
-                Future.successful(BadRequest(Json.toJson(
-                  ErrorResponse(dateTimeService.timestamp(), "Message missing key information", x.errorMessage)
-                )))
-
-              case x: MessageTypeInvalid =>
-                Future.successful(BadRequest(Json.toJson(
-                  ErrorResponse(dateTimeService.timestamp(), "Message type is invalid", x.errorMessage)
-                )))
-
-              case x: MessageIdentifierIsUnauthorised =>
-                Future.successful(Forbidden(Json.toJson(
-                  ErrorResponse(dateTimeService.timestamp(), "Message cannot be sent", x.errorMessage)
-                )))
-
-            }
-
-            d.merge
-
-        }.flatten
-
+        result.merge
     }
+
+  }
+
+  private def validateMovementId(movementId: String): EitherT[Future, Result, Movement] = {
+    EitherT(movementService.validateMovementId(movementId)).leftMap {
+      case x: MovementIdNotFound => NotFound(Json.toJson(
+        ErrorResponse(dateTimeService.timestamp(), "Movement not found", x.errorMessage
+        )))
+      case x: MovementIdFormatInvalid => BadRequest(Json.toJson(
+        ErrorResponse(dateTimeService.timestamp(), "Movement Id format error", x.errorMessage)
+      ))
+    }
+  }
+
+  private def validateMessage(
+                               movement: Movement,
+                               message: IEMessage,
+                               authErns: Set[String]
+                             ): EitherT[Future, Result, String] = {
+
+    EitherT.fromEither(messageValidator.validateSubmittedMessage(authErns, movement, message).left.map {
+      case x: MessageDoesNotMatchMovement =>
+        BadRequest(Json.toJson(
+          ErrorResponse(dateTimeService.timestamp(), "Message does not match movement", x.errorMessage)
+        ))
+
+      case x: MessageMissingKeyInformation =>
+        BadRequest(Json.toJson(
+          ErrorResponse(dateTimeService.timestamp(), "Message missing key information", x.errorMessage)
+        ))
+
+      case x: MessageTypeInvalid =>
+        BadRequest(Json.toJson(
+          ErrorResponse(dateTimeService.timestamp(), "Message type is invalid", x.errorMessage)
+        ))
+
+      case x: MessageIdentifierIsUnauthorised =>
+        Forbidden(Json.toJson(
+          ErrorResponse(dateTimeService.timestamp(), "Message cannot be sent", x.errorMessage)
+        ))
+    })
+
+
+  }
+
+  private def sendRequest(request: ParsedXmlRequest[_], authorisedErn: String)
+                         (implicit hc: HeaderCarrier) : EitherT[Future, Result, EISSubmissionResponse] = {
+    workItemService.addWorkItemForErn(authorisedErn, fastMode = true)
+
+    EitherT(submissionMessageService.submit(request, authorisedErn))
 
   }
 

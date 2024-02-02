@@ -29,7 +29,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-// TODO remove this in favour of the MessageValidation
+// TODO EMCS 400 - remove this in favour of the MessageValidation
 class ValidateErnInMessageActionImpl @Inject()(messageService: MessageService,
                                                dateTimeService: DateTimeService)(
                                                 implicit val executionContext: ExecutionContext
