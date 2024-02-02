@@ -58,7 +58,7 @@ class SubmitMessageController @Inject()(
           authorisedErn <- validateMessage(movement, request.ieMessage, request.erns)
           _ <- sendRequest(request, authorisedErn)
         } yield {
-          Accepted("")
+          Accepted
         }
 
         result.merge
