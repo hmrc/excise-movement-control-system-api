@@ -93,7 +93,6 @@ class PushNotificationServiceImpl @Inject()(
 
   private def buildMessageUriAsString(movementId: String, messageId: String): String = {
     routes.GetMessagesController.getMessageForMovement(movementId, messageId).url
-   // s"/customs/excise/movements/$movementId/messages/$messageId"
   }
 
   private def getArcOrThrowIfEmpty(arc: Option[String], messageId: String): String = {
