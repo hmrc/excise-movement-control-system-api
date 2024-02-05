@@ -240,7 +240,7 @@ class GetMessagesControllerItSpec extends PlaySpec
     "movementId is invalid UUID" in {
       withAuthorizedTrader(consignorId)
 
-      val invalidUrl = s"http://localhost:$port/movements/12345/messages/$messageId"
+      val invalidUrl = s"http://localhost:$port/movements/12345/message/$messageId"
       val result = getRequest(invalidUrl)
 
       result.status mustBe BAD_REQUEST
