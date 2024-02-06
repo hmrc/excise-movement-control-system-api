@@ -16,20 +16,20 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import cats.data.{EitherT, OptionT}
+import cats.data.EitherT
 import cats.implicits._
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
-import java.util.UUID
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -39,6 +39,7 @@ class GetMessagesController @Inject()(
                                        authAction: AuthAction,
                                        movementService: MovementService,
                                        workItemService: WorkItemService,
+                                       movementIdValidator: MovementIdValidation,
                                        cc: ControllerComponents,
                                        dateTimeService: DateTimeService
                                      )(implicit ec: ExecutionContext)
@@ -50,16 +51,15 @@ class GetMessagesController @Inject()(
       implicit request: EnrolmentRequest[AnyContent] => {
 
         val result = for {
-          mvtId <- validateMovementID(movementId)
           updatedSince <- validateUpdatedSince(updatedSince)
-          movement <- getMovement(mvtId.toString)
+          movement <- validateMovementId(movementId)
         } yield {
 
           if (getErnsForMovement(movement).intersect(request.erns).isEmpty) {
             NotFound(Json.toJson(ErrorResponse(
               dateTimeService.timestamp(),
               "Invalid MovementID supplied for ERN",
-              s"Movement $mvtId is not found within the data for ERNs ${request.erns.mkString("/")}"
+              s"Movement ${movement._id} is not found within the data for ERNs ${request.erns.mkString("/")}"
             )))
           } else {
             workItemService.addWorkItemForErn(movement.consignorId, fastMode = false)
@@ -73,33 +73,19 @@ class GetMessagesController @Inject()(
     }
   }
 
-  private def validateMovementID(movementId: String): EitherT[Future, Result, UUID] =
-    EitherT.fromEither(Try(UUID.fromString(movementId)).toEither.left.map(_ =>
-    BadRequest(Json.toJson(ErrorResponse(
-      dateTimeService.timestamp(),
-      "Movement Id format error",
-      "Movement Id should be a valid UUID"
-    )))
-  ))
-
   private def validateUpdatedSince(updatedSince: Option[String]): EitherT[Future, Result, Option[Instant]] =
     EitherT.fromEither(Try(updatedSince.map(Instant.parse(_))).toEither.left.map(_ =>
-    BadRequest(Json.toJson(ErrorResponse(
-      dateTimeService.timestamp(),
-      "Invalid date format provided in the updatedSince query parameter",
-      "Date format should be like '2020-11-15T17:02:34.00Z'")
-    ))
-  ))
-
-  private def getMovement(id: String): EitherT[Future, Result, Movement] = {
-    OptionT(movementService.getMovementById(id)).toRightF(
-      Future.successful(NotFound(
-        Json.toJson(ErrorResponse(
-          dateTimeService.timestamp(),
-          "No movement found for the MovementID provided",
-          s"MovementID $id was not found in the database"
-        )))
+      BadRequest(Json.toJson(ErrorResponse(
+        dateTimeService.timestamp(),
+        "Invalid date format provided in the updatedSince query parameter",
+        "Date format should be like '2020-11-15T17:02:34.00Z'")
       ))
+    ))
+
+  private def validateMovementId(movementId: String): EitherT[Future, Result, Movement] = {
+    EitherT(movementIdValidator.validateMovementId(movementId)).leftMap {
+      x => movementIdValidator.convertErrorToResponse(x, dateTimeService.timestamp())
+    }
   }
 
   private def filterMessagesByTime(messages: Seq[Message], updatedSince: Option[Instant]): Seq[Message] = {

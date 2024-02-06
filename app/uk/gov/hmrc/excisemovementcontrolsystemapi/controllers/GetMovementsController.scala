@@ -20,6 +20,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ValidateErnParameterAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilterBuilder
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, GetMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
@@ -27,10 +28,9 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
-import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Success, Try}
+import scala.util.Try
 
 class GetMovementsController @Inject()(
                                         authAction: AuthAction,
@@ -38,7 +38,8 @@ class GetMovementsController @Inject()(
                                         cc: ControllerComponents,
                                         movementService: MovementService,
                                         workItemService: WorkItemService,
-                                        dateTimeService: DateTimeService
+                                        dateTimeService: DateTimeService,
+                                        movementIdValidator: MovementIdValidation
                                       )(implicit ec: ExecutionContext)
   extends BackendController(cc) {
 
@@ -65,43 +66,25 @@ class GetMovementsController @Inject()(
     authAction.async(parse.default) {
       implicit request =>
 
-        Try(UUID.fromString(movementId)) match {
-          case Success(_) =>
-            movementService.getMovementById(movementId).map {
-              case Some(movement) =>
+        movementIdValidator.validateMovementId(movementId).map {
+          case Left(x) => movementIdValidator.convertErrorToResponse(x, dateTimeService.timestamp())
+          case Right(movement) =>
+            val authorisedErns = request.erns
+            val movementErns = getErnsForMovement(movement)
 
-                val authorisedErns = request.erns
-                val movementErns = getErnsForMovement(movement)
+            workItemService.addWorkItemForErn(movementErns.head, fastMode = false)
 
-                workItemService.addWorkItemForErn(movementErns.head, fastMode = false)
-
-                if (authorisedErns.intersect(movementErns).isEmpty) {
-                  NotFound(Json.toJson(ErrorResponse(
-                    dateTimeService.timestamp(),
-                    "Movement not found",
-                    s"Movement $movementId is not found within the data for ERNs ${authorisedErns.mkString("/")}"
-                  )))
-                } else {
-                  Ok(Json.toJson(createResponseFrom(movement)))
-                }
-
-              case None => NotFound(Json.toJson(ErrorResponse(
+            if (authorisedErns.intersect(movementErns).isEmpty) {
+              NotFound(Json.toJson(ErrorResponse(
                 dateTimeService.timestamp(),
                 "Movement not found",
-                s"Movement $movementId is not found"
+                s"Movement $movementId is not found within the data for ERNs ${authorisedErns.mkString("/")}"
               )))
-
+            } else {
+              Ok(Json.toJson(createResponseFrom(movement)))
             }
-
-          case _ =>
-            Future.successful(BadRequest(Json.toJson(ErrorResponse(
-              dateTimeService.timestamp(),
-              "Movement Id format error",
-              "Movement Id should be a valid UUID"
-            ))))
         }
     }
-
   }
 
   private def getErnsForMovement(movement: Movement): Set[String] = {

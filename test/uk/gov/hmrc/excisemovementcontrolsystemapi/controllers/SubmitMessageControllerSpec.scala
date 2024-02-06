@@ -55,6 +55,7 @@ class SubmitMessageControllerSpec
   private val movementService = mock[MovementService]
   private val workItemService = mock[WorkItemService]
   private val messageValidation = mock[MessageValidation]
+  private val movementValidation = mock[MovementIdValidation]
   private val dateTimeService = mock[DateTimeService]
 
   private val consignorId = "testErn"
@@ -68,7 +69,7 @@ class SubmitMessageControllerSpec
     when(submissionMessageService.submit(any, any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
-    when(movementService.validateMovementId(any)).thenReturn(Future.successful(Right(movement)))
+    when(movementValidation.validateMovementId(any)).thenReturn(Future.successful(Right(movement)))
     when(messageValidation.validateSubmittedMessage(any, any, any)).thenReturn(Right(consignorId))
     when(dateTimeService.timestamp()).thenReturn(timestamp)
   }
@@ -124,39 +125,46 @@ class SubmitMessageControllerSpec
 
       "return a 400 Bad Request" when {
 
-        "movement id validation fails" in {
+        "movement id is invalid" in {
 
-          val movementId = "49491927-aaa1-4835-b405-dd6e7fa3aaf0"
-          when(movementService.validateMovementId(any)).thenReturn(Future.successful(Left(MovementIdNotFound(movementId))))
-
-          val result = createWithSuccessfulAuth.submit(movementId)(request)
-
-          status(result) mustBe NOT_FOUND
-
-          contentAsJson(result) mustBe Json.toJson(ErrorResponse(
+          val expectedError = Json.toJson(ErrorResponse(
             timestamp,
-            "Movement not found",
-            "Movement 49491927-aaa1-4835-b405-dd6e7fa3aaf0 could not be found"
+            "Movement Id format error",
+            "The movement ID should be a valid UUID"
           ))
+
+          when(movementValidation.validateMovementId(any)).thenReturn(Future.successful(Left(MovementIdFormatInvalid())))
+          when(movementValidation.convertErrorToResponse(eqTo(MovementIdFormatInvalid()), eqTo(timestamp))).thenReturn(BadRequest(expectedError))
+
+          val result = createWithSuccessfulAuth.submit("b405")(request)
+
+          status(result) mustBe BAD_REQUEST
+          contentAsJson(result) mustBe expectedError
         }
       }
 
       "return a 404 Not Found" when {
 
-        "movement id is invalid fails" in {
+        "movement id validation fails" in {
 
-          when(movementService.validateMovementId(any)).thenReturn(Future.successful(Left(MovementIdFormatInvalid())))
-
-          val result = createWithSuccessfulAuth.submit("b405")(request)
-
-          status(result) mustBe BAD_REQUEST
-          contentAsJson(result) mustBe Json.toJson(ErrorResponse(
+          val expectedError = Json.toJson(ErrorResponse(
             timestamp,
-            "Movement Id format error",
-            "The movement ID should be a valid UUID"
+            "Movement not found",
+            "Movement 49491927-aaa1-4835-b405-dd6e7fa3aaf0 could not be found"
           ))
+
+          val movementId = "49491927-aaa1-4835-b405-dd6e7fa3aaf0"
+          when(movementValidation.validateMovementId(any)).thenReturn(Future.successful(Left(MovementIdNotFound(movementId))))
+          when(movementValidation.convertErrorToResponse(eqTo(MovementIdNotFound(movementId)), eqTo(timestamp))).thenReturn(NotFound(expectedError))
+
+          val result = createWithSuccessfulAuth.submit(movementId)(request)
+
+          status(result) mustBe NOT_FOUND
+
+          contentAsJson(result) mustBe expectedError
         }
       }
+
     }
 
     "handle message validation errors" should {
@@ -229,9 +237,9 @@ class SubmitMessageControllerSpec
       FakeSuccessAuthentication,
       FakeSuccessXMLParser(mock[IEMessage]),
       submissionMessageService,
-      movementService,
       workItemService,
       messageValidation,
+      movementValidation,
       dateTimeService,
       cc
     )
@@ -247,9 +255,9 @@ class SubmitMessageControllerSpec
       FakeFailingAuthentication,
       FakeSuccessXMLParser(mock[IEMessage]),
       submissionMessageService,
-      movementService,
       workItemService,
       messageValidation,
+      movementValidation,
       dateTimeService,
       cc
     )
@@ -259,9 +267,9 @@ class SubmitMessageControllerSpec
       FakeSuccessAuthentication,
       FakeFailureXMLParser,
       submissionMessageService,
-      movementService,
       workItemService,
       messageValidation,
+      movementValidation,
       dateTimeService,
       cc
     )

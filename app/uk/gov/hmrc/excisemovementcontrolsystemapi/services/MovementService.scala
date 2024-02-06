@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-import com.google.inject.Singleton
 import cats.syntax.all._
+import com.google.inject.Singleton
 import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.Result
@@ -29,10 +29,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 
-import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
 
 @Singleton
 class MovementService @Inject()(
@@ -63,19 +61,6 @@ class MovementService @Inject()(
 
   def getMovementById(id: String): Future[Option[Movement]] = {
     movementRepository.getMovementById(id)
-  }
-
-  def validateMovementId(id: String): Future[Either[MovementValidationError, Movement]] = {
-
-    Try(UUID.fromString(id)).toEither match {
-      case Left(_) => Future(Left(MovementIdFormatInvalid()))
-      case Right(_) =>
-        getMovementById(id).map {
-          case Some(movement) => Right(movement)
-          case None => Left(MovementIdNotFound(id))
-        }
-    }
-
   }
 
   def getMovementByLRNAndERNIn(lrn: String, erns: List[String]): Future[Option[Movement]] = {
@@ -114,8 +99,8 @@ class MovementService @Inject()(
       // use the SequenceNumber in this case.
       message.administrativeReferenceCode
         .map { messageArc =>
-        updateMovementForIndividualArc(message, ern, cachedMovements, messageArc)
-      }
+          updateMovementForIndividualArc(message, ern, cachedMovements, messageArc)
+        }
         .sequence
         .map((o: Seq[Option[Movement]]) =>
           transformAndLogAnyError(o, ern, message.messageType)
@@ -124,18 +109,19 @@ class MovementService @Inject()(
   }
 
   private def transformAndLogAnyError(
-    movements: Seq[Option[Movement]],
-    ern: String,
-    messageType: String
-  ): Seq[Movement] = {
-    movements.foldLeft[Seq[Movement]](Seq()){
+                                       movements: Seq[Option[Movement]],
+                                       ern: String,
+                                       messageType: String
+                                     ): Seq[Movement] = {
+    movements.foldLeft[Seq[Movement]](Seq()) {
       case (acc: Seq[Movement], mv: Option[Movement]) =>
         mv match {
           case Some(m) => acc :+ m
           case _ =>
             logger.warn(s"[MovementService] - Could not update movement with excise number $ern and message: $messageType")
             acc
-        }}
+        }
+    }
   }
 
   private def createDuplicateErrorResponse(movement: Movement) = {
@@ -160,10 +146,10 @@ class MovementService @Inject()(
   }
 
   private def saveDistinctMessage(
-    movement: Movement,
-    newMessage: IEMessage,
-    messageArc: Option[String]
-  ): Future[Option[Movement]] = {
+                                   movement: Movement,
+                                   newMessage: IEMessage,
+                                   messageArc: Option[String]
+                                 ): Future[Option[Movement]] = {
 
     val encodedMessage = emcsUtils.encode(newMessage.toXml.toString)
     val messages = Seq(Message(encodedMessage, newMessage.messageType, newMessage.messageIdentifier, dateTimeService.timestamp()))
@@ -192,14 +178,3 @@ class MovementService @Inject()(
   }
 }
 
-sealed trait MovementValidationError {
-  def errorMessage: String
-}
-
-case class MovementIdFormatInvalid() extends MovementValidationError {
-  override def errorMessage: String = "The movement ID should be a valid UUID"
-}
-
-case class MovementIdNotFound(movementId: String) extends MovementValidationError {
-  override def errorMessage: String = s"Movement $movementId could not be found"
-}

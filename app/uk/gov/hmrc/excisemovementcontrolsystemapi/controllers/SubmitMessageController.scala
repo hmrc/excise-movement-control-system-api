@@ -17,10 +17,8 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import cats.data.EitherT
-import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
@@ -40,9 +38,9 @@ class SubmitMessageController @Inject()(
                                          authAction: AuthAction,
                                          xmlParser: ParseXmlAction,
                                          submissionMessageService: SubmissionMessageService,
-                                         movementService: MovementService,
                                          workItemService: WorkItemService,
                                          messageValidator: MessageValidation,
+                                         movementIdValidator: MovementIdValidation,
                                          dateTimeService: DateTimeService,
                                          cc: ControllerComponents
                                        )(implicit ec: ExecutionContext)
@@ -67,13 +65,8 @@ class SubmitMessageController @Inject()(
   }
 
   private def validateMovementId(movementId: String): EitherT[Future, Result, Movement] = {
-    EitherT(movementService.validateMovementId(movementId)).leftMap {
-      case x: MovementIdNotFound => NotFound(Json.toJson(
-        ErrorResponse(dateTimeService.timestamp(), "Movement not found", x.errorMessage
-        )))
-      case x: MovementIdFormatInvalid => BadRequest(Json.toJson(
-        ErrorResponse(dateTimeService.timestamp(), "Movement Id format error", x.errorMessage)
-      ))
+    EitherT(movementIdValidator.validateMovementId(movementId)).leftMap {
+      x => movementIdValidator.convertErrorToResponse(x, dateTimeService.timestamp())
     }
   }
 

@@ -30,7 +30,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementIdFormatInvalid, MovementIdNotFound, MovementService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -553,44 +553,6 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       val result = await(movementService.updateMovement(newMessage, consignorId))
 
       result mustBe Seq.empty
-    }
-  }
-
-  "validateMovementId" should {
-
-    "return the movement for the id if it is valid and found" in {
-      val uuid = "17425b8d-92e3-41e1-a7be-f21ab9241911"
-      val expectedMovement1 = Movement(uuid, "boxId", "lrn1", consignorId, None, Some("arc1"), Instant.now, Seq.empty)
-
-      when(mockMovementRepository.getMovementById(uuid))
-        .thenReturn(Future.successful(Some(expectedMovement1)))
-
-      val result = await(movementService.validateMovementId(uuid))
-
-      result mustBe Right(expectedMovement1)
-    }
-
-    "return NotFound error if no match" in {
-
-      val uuid = "17425b8d-92e3-41e1-a7be-f21ab9241911"
-
-      when(mockMovementRepository.getMovementById(uuid))
-        .thenReturn(Future.successful(None))
-
-      val result = await(movementService.validateMovementId(uuid)).left.value
-
-      result mustBe a[MovementIdNotFound]
-      result.errorMessage mustBe "Movement 17425b8d-92e3-41e1-a7be-f21ab9241911 could not be found"
-
-    }
-
-    "return FormatInvalid error if format is invalid" in {
-
-      val result = await(movementService.validateMovementId("uuid")).left.value
-
-      result mustBe a[MovementIdFormatInvalid]
-      result.errorMessage mustBe "The movement ID should be a valid UUID"
-
     }
   }
 

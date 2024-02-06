@@ -24,11 +24,13 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.Status.{BAD_REQUEST, FORBIDDEN, NOT_FOUND, OK}
 import play.api.libs.json.Json
+import play.api.mvc.Results.{BadRequest, NotFound}
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilterBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnParameterAction, MovementTestUtils}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MovementIdFormatInvalid, MovementIdNotFound, MovementIdValidation}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -48,14 +50,18 @@ class GetMovementsControllerSpec
   private val movementService = mock[MovementService]
   private val workItemService = mock[WorkItemService]
   private val dateTimeService = mock[DateTimeService]
+  private val movementIdValidator = mock[MovementIdValidation]
+
   private val controller = new GetMovementsController(
     FakeSuccessAuthentication,
     FakeValidateErnParameterSuccessAction,
     cc,
     movementService,
     workItemService,
-    dateTimeService
+    dateTimeService,
+    movementIdValidator
   )
+
   private val timestamp = Instant.parse("2020-01-01T01:01:01.1Z")
   private val fakeRequest = FakeRequest("POST", "/foo")
 
@@ -67,7 +73,6 @@ class GetMovementsControllerSpec
       .thenReturn(Future.successful(Seq(Movement("cfdb20c7-d0b0-4b8b-a071-737d68dede5e", "boxId", "lrn", ern, Some("consigneeId"), Some("arc"), Instant.now(), Seq.empty))))
 
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
-
 
     when(dateTimeService.timestamp()).thenReturn(timestamp)
 
@@ -187,7 +192,7 @@ class GetMovementsControllerSpec
 
     "return the movement when successful" in {
 
-      when(movementService.getMovementById(eqTo(uuid))).thenReturn(Future.successful(Some(movement)))
+      when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Future.successful(Right(movement)))
 
       val result = controller.getMovement(uuid)(fakeRequest)
 
@@ -200,22 +205,27 @@ class GetMovementsControllerSpec
     "return Not Found error" when {
       "movement not found in database" in {
 
-        when(movementService.getMovementById(any)).thenReturn(Future.successful(None))
+        val expectedError = Json.toJson(
+          ErrorResponse(timestamp, "Movement not found",
+            s"Movement $uuid is not found")
+        )
+
+        when(movementIdValidator.validateMovementId(eqTo(uuid)))
+          .thenReturn(Future.successful(Left(MovementIdNotFound(uuid))))
+        when(movementIdValidator.convertErrorToResponse(eqTo(MovementIdNotFound(uuid)), eqTo(timestamp))).thenReturn(
+          NotFound(expectedError)
+        )
+
         val result = controller.getMovement(uuid)(fakeRequest)
 
         status(result) mustBe NOT_FOUND
-
-        contentAsJson(result) mustBe Json.toJson(
-          ErrorResponse(timestamp, "Movement not found", s"Movement $uuid is not found")
-        )
+        contentAsJson(result) mustBe expectedError
 
       }
 
       "movement in database is for different ERNs" in {
 
-        when(movementService.getMovementById(uuid)).thenReturn(Future.successful(Some(
-          movement.copy(consignorId = "ern8921")
-        )))
+        when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Future.successful(Right(movement.copy(consignorId = "ern8921"))))
 
         val result = controller.getMovement(uuid)(fakeRequest)
 
@@ -230,17 +240,21 @@ class GetMovementsControllerSpec
     "return Bad Request error" when {
       "supplied movement Id is not in correct format" in {
 
+        val expectedError = Json.toJson(
+          ErrorResponse(timestamp, "Movement Id format error",
+            s"Movement Id should be a valid UUID")
+        )
+
+        when(movementIdValidator.validateMovementId(any))
+          .thenReturn(Future.successful(Left(MovementIdFormatInvalid())))
+        when(movementIdValidator.convertErrorToResponse(eqTo(MovementIdFormatInvalid()), eqTo(timestamp))).thenReturn(
+          BadRequest(expectedError)
+        )
+
         val result = controller.getMovement("abcd43-r")(fakeRequest)
 
         status(result) mustBe BAD_REQUEST
-
-        contentAsJson(result) mustBe Json.toJson(
-          ErrorResponse(
-            dateTimeService.timestamp(),
-            "Movement Id format error",
-            "Movement Id should be a valid UUID"
-          )
-        )
+        contentAsJson(result) mustBe expectedError
 
       }
     }
@@ -255,7 +269,7 @@ class GetMovementsControllerSpec
 
     "create a Work Item if there is not one for the ERN already" in {
 
-      when(movementService.getMovementById(eqTo(uuid))).thenReturn(Future.successful(Some(movement)))
+      when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Future.successful(Right(movement)))
 
       await(controller.getMovement(uuid)(fakeRequest))
 
@@ -265,7 +279,7 @@ class GetMovementsControllerSpec
 
     "catch Future failure from Work Item service and log it but still process submission" in {
 
-      when(movementService.getMovementById(eqTo(uuid))).thenReturn(Future.successful(Some(movement)))
+      when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Future.successful(Right(movement)))
 
       when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.failed(new MongoException("Oh no!")))
 
@@ -285,7 +299,8 @@ class GetMovementsControllerSpec
       cc,
       movementService,
       workItemService,
-      dateTimeService
+      dateTimeService,
+      movementIdValidator
     )
 
   private def createWithAuthActionFailure =
@@ -295,6 +310,7 @@ class GetMovementsControllerSpec
       cc,
       movementService,
       workItemService,
-      dateTimeService
+      dateTimeService,
+      movementIdValidator
     )
 }
