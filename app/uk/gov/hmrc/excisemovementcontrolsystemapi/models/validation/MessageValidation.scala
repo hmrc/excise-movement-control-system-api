@@ -16,8 +16,14 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation
 
+import play.api.libs.json.Json
+import play.api.mvc.Result
+import play.api.mvc.Results.{BadRequest, Forbidden}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+
+import java.time.Instant
 
 sealed trait MessageValidationResponse {
   def errorMessage: String
@@ -43,6 +49,31 @@ case class MessageValidation() {
       case m: IEMessage => InvalidMessageTypeValidator(m, movement)
     }
     validator.validate(authorisedErns)
+  }
+
+  def convertErrorToResponse(error: MessageValidationResponse, timestamp: Instant): Result = {
+
+        error match {
+          case x: MessageDoesNotMatchMovement =>
+            BadRequest(Json.toJson(
+              ErrorResponse(timestamp, "Message does not match movement", x.errorMessage)
+            ))
+
+          case x: MessageMissingKeyInformation =>
+            BadRequest(Json.toJson(
+              ErrorResponse(timestamp, "Message missing key information", x.errorMessage)
+            ))
+
+          case x: MessageTypeInvalid =>
+            BadRequest(Json.toJson(
+              ErrorResponse(timestamp, "Message type is invalid", x.errorMessage)
+            ))
+
+          case x: MessageIdentifierIsUnauthorised =>
+            Forbidden(Json.toJson(
+              ErrorResponse(timestamp, "Message cannot be sent", x.errorMessage)
+            ))
+        }
   }
 }
 

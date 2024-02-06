@@ -37,13 +37,4 @@ case class ParsedXmlRequest[A]
 
 }
 
-case class ValidatedXmlRequest[A]
-(
-  parsedRequest: ParsedXmlRequest[A],
-  validErns: Set[String]
-) extends WrappedRequest[A](parsedRequest) {
-
-  def message: IEMessage = parsedRequest.ieMessage
-
-}
 

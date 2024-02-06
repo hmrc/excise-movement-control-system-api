@@ -84,32 +84,13 @@ class SubmitMessageController @Inject()(
                              ): EitherT[Future, Result, String] = {
 
     EitherT.fromEither(messageValidator.validateSubmittedMessage(authErns, movement, message).left.map {
-      case x: MessageDoesNotMatchMovement =>
-        BadRequest(Json.toJson(
-          ErrorResponse(dateTimeService.timestamp(), "Message does not match movement", x.errorMessage)
-        ))
-
-      case x: MessageMissingKeyInformation =>
-        BadRequest(Json.toJson(
-          ErrorResponse(dateTimeService.timestamp(), "Message missing key information", x.errorMessage)
-        ))
-
-      case x: MessageTypeInvalid =>
-        BadRequest(Json.toJson(
-          ErrorResponse(dateTimeService.timestamp(), "Message type is invalid", x.errorMessage)
-        ))
-
-      case x: MessageIdentifierIsUnauthorised =>
-        Forbidden(Json.toJson(
-          ErrorResponse(dateTimeService.timestamp(), "Message cannot be sent", x.errorMessage)
-        ))
+      x => messageValidator.convertErrorToResponse(x, dateTimeService.timestamp())
     })
-
 
   }
 
   private def sendRequest(request: ParsedXmlRequest[_], authorisedErn: String)
-                         (implicit hc: HeaderCarrier) : EitherT[Future, Result, EISSubmissionResponse] = {
+                         (implicit hc: HeaderCarrier): EitherT[Future, Result, EISSubmissionResponse] = {
     workItemService.addWorkItemForErn(authorisedErn, fastMode = true)
 
     EitherT(submissionMessageService.submit(request, authorisedErn))

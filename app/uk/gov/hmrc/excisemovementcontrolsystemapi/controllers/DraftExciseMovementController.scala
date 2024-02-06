@@ -16,15 +16,20 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
+import cats.data.EitherT
 import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction, ValidateErnInMessageAction}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Constants
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, PushNotificationService, SubmissionMessageService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
@@ -34,68 +39,106 @@ import scala.xml.NodeSeq
 
 @Singleton
 class DraftExciseMovementController @Inject()(
-  authAction: AuthAction,
-  xmlParser: ParseXmlAction,
-  validateErnInMessageAction: ValidateErnInMessageAction,
-  movementMessageService: MovementService,
-  workItemService: WorkItemService,
-  submissionMessageService: SubmissionMessageService,
-  notificationService: PushNotificationService,
-  cc: ControllerComponents)(implicit ec: ExecutionContext)
+                                               authAction: AuthAction,
+                                               xmlParser: ParseXmlAction,
+                                               movementMessageService: MovementService,
+                                               workItemService: WorkItemService,
+                                               submissionMessageService: SubmissionMessageService,
+                                               notificationService: PushNotificationService,
+                                               messageValidator: MessageValidation,
+                                               dateTimeService: DateTimeService,
+                                               cc: ControllerComponents)(implicit ec: ExecutionContext)
   extends BackendController(cc) {
 
   def submit: Action[NodeSeq] =
 
-  //TODO EMCS-400 - remove the validateErnInMessageAction and instead use the MessageValidation to find the correct Ern
-    (authAction andThen xmlParser andThen validateErnInMessageAction).async(parse.xml) {
-      implicit request: ValidatedXmlRequest[NodeSeq] =>
+    (authAction andThen xmlParser).async(parse.xml) {
+      implicit request: ParsedXmlRequest[NodeSeq] =>
 
-        request.headers.get(Constants.XClientIdHeader) match {
-          case Some(clientId) =>
-            notificationService.getBoxId(clientId).flatMap {
-              case Right(box) => submitMessage(box.boxId)
-              case Left(error) => Future.successful(error)
-            }
-          case _ => Future.successful(BadRequest(Json.toJson(ErrorResponse(Instant.now, s"ClientId error", s"Request header is missing ${Constants.XClientIdHeader}"))))
+        val result = for {
+          ie815Message <- getIe815Message(request.ieMessage)
+          authorisedErn <- validateMessage(ie815Message, request.erns)
+          boxId <- getBoxId(request)
+          _ <- submitMessage(request, authorisedErn)
+          movement <- saveMovement(ie815Message, boxId)
+        } yield {
+          Accepted(Json.toJson(ExciseMovementResponse(
+            "Accepted",
+            boxId,
+            movement._id,
+            movement.localReferenceNumber,
+            movement.consignorId,
+            movement.consigneeId)
+          ))
+
         }
+
+        result.merge
     }
 
-  private def submitMessage(boxId: String)(implicit request: ValidatedXmlRequest[NodeSeq]): Future[Result] = {
-    // TODO when using MessageValidation will have one ern returned after validation
-    // TODO For now, we know the consignor is fine because it passed the validate action above.
-    val submittingErn = request.message.asInstanceOf[IE815Message].consignorId
+  private def createMovementFomMessage(message: IE815Message, boxId: String): Movement = {
+    Movement(
+      boxId,
+      message.localReferenceNumber,
+      message.consignorId,
+      message.consigneeId,
+      None
+    )
+  }
 
-    submissionMessageService.submit(request.parsedRequest, submittingErn).flatMap {
-      case Right(_) => handleSuccess(boxId)
-      case Left(error) => Future.successful(error)
+  private def validateMessage(
+                               message: IE815Message,
+                               authErns: Set[String]
+                             ): EitherT[Future, Result, String] = {
+
+    EitherT.fromEither(messageValidator.validateDraftMovement(authErns, message).left.map {
+      x => messageValidator.convertErrorToResponse(x, dateTimeService.timestamp())
+    })
+  }
+
+  private def getBoxId(request: ParsedXmlRequest[_])
+                      (implicit hc: HeaderCarrier): EitherT[Future, Result, String] = {
+
+    request.headers.get(Constants.XClientIdHeader) match {
+      case Some(clientId) =>
+        EitherT(notificationService.getBoxId(clientId)).map(s => s.boxId)
+
+      case _ => EitherT.fromEither(Left(BadRequest(Json.toJson(
+        ErrorResponse(
+          Instant.now,
+          s"ClientId error",
+          s"Request header is missing ${Constants.XClientIdHeader}"
+        )
+        ))))
+
     }
   }
 
-  private def handleSuccess(boxId: String)(implicit request: ValidatedXmlRequest[NodeSeq]): Future[Result] = {
+  private def submitMessage(request: ParsedXmlRequest[NodeSeq], authorisedErn: String)
+                           (implicit hc: HeaderCarrier): EitherT[Future, Result, EISSubmissionResponse] = {
 
-    val newMovement: Movement = createMovementFomMessage(request.message, boxId)
+    EitherT(submissionMessageService.submit(request, authorisedErn))
+  }
+
+  private def saveMovement(ie815Message: IE815Message, boxId: String): EitherT[Future, Result, Movement] = {
+
+    val newMovement: Movement = createMovementFomMessage(ie815Message, boxId)
     workItemService.addWorkItemForErn(newMovement.consignorId, fastMode = true)
 
-    movementMessageService.saveNewMovement(newMovement).map {
-      case Right(m) =>
-        Accepted(Json.toJson(ExciseMovementResponse("Accepted", boxId, m._id, m.localReferenceNumber, m.consignorId, m.consigneeId)))
-      case Left(error) =>
-        error
-    }
+    EitherT(movementMessageService.saveNewMovement(newMovement))
   }
 
-  private def createMovementFomMessage(message: IEMessage, boxId: String): Movement = {
-    message match {
-      case x: IE815Message => Movement(
-        boxId,
-        x.localReferenceNumber,
-        x.consignorId,
-        x.consigneeId,
-        None
-      )
-      case _ =>
-        throw new Exception(s"[DraftExciseMovementController] - invalid message sent to draft excise movement controller, message type: ${message.messageType}")
-    }
+  private def getIe815Message(message: IEMessage): EitherT[Future, Result, IE815Message] = {
+    EitherT.fromEither(message match {
+      case x: IE815Message => Right(x)
+      case _ => Left(BadRequest(Json.toJson(
+        ErrorResponse(
+          dateTimeService.timestamp(),
+          "Invalid message type",
+          s"Message type ${message.messageType} cannot be sent to the draft excise movement endpoint"
+        )
+      )))
+    })
   }
 
 }

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import org.mockito.ArgumentMatchersSugar.any
+import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, verify, when}
 import org.mongodb.scala.MongoException
 import org.scalatest.BeforeAndAfterEach
@@ -24,13 +24,14 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
 import play.api.libs.json.Json
-import play.api.mvc.Results.NotFound
+import play.api.mvc.Results.{BadRequest, Forbidden, NotFound}
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
@@ -162,73 +163,48 @@ class SubmitMessageControllerSpec
 
       "return a 400 Bad Request" when {
 
-        "message details do not match movement details" in {
+        "message validation error is turned into a bad request" in {
 
           case object TestMessageDoesNotMatchMovement extends MessageDoesNotMatchMovement("Consignor")
 
-          when(messageValidation.validateSubmittedMessage(any, any, any)).thenReturn(Left(TestMessageDoesNotMatchMovement))
-
-          val result = createWithSuccessfulAuth.submit(movement._id)(request)
-
-          status(result) mustBe BAD_REQUEST
-
-          contentAsJson(result) mustBe Json.toJson(ErrorResponse(
+          val expectedError = Json.toJson(ErrorResponse(
             timestamp,
             "Message does not match movement",
             "The Consignor in the message does not match the Consignor in the movement"
           ))
-        }
 
-        "message is missing key information" in {
-
-          case object TestMessageMissingKeyInfo extends MessageMissingKeyInformation("Consignor")
-
-          when(messageValidation.validateSubmittedMessage(any, any, any)).thenReturn(Left(TestMessageMissingKeyInfo))
+          when(messageValidation.validateSubmittedMessage(any, any, any)).thenReturn(Left(TestMessageDoesNotMatchMovement))
+          when(messageValidation.convertErrorToResponse(eqTo(TestMessageDoesNotMatchMovement), eqTo(timestamp))).thenReturn(BadRequest(Json.toJson(expectedError)))
 
           val result = createWithSuccessfulAuth.submit(movement._id)(request)
 
           status(result) mustBe BAD_REQUEST
 
-          contentAsJson(result) mustBe Json.toJson(ErrorResponse(
-            timestamp,
-            "Message missing key information",
-            "The Consignor in the message should not be empty"
-          ))
+          contentAsJson(result) mustBe expectedError
         }
 
-        "message type is invalid" in {
-
-          when(messageValidation.validateSubmittedMessage(any, any, any)).thenReturn(Left(MessageTypeInvalid("IE811")))
-
-          val result = createWithSuccessfulAuth.submit(movement._id)(request)
-
-          status(result) mustBe BAD_REQUEST
-
-          contentAsJson(result) mustBe Json.toJson(ErrorResponse(
-            timestamp,
-            "Message type is invalid",
-            "The supplied message type IE811 is not supported"
-          ))
-        }
       }
 
       "return a 403 Forbidden" when {
 
-        "authenticated user cannot send this message for this movement" in {
+        "message validation converts the error into a Forbidden error" in {
 
-          case object TestMessageIdentifierIsUnauthorised extends MessageIdentifierIsUnauthorised("Consignor")
+          case object TestMessageIdentifierIsUnauthorised extends MessageIdentifierIsUnauthorised(MessageValidation.consignor)
+
+          val expectedError = Json.toJson(ErrorResponse(
+            timestamp,
+            "Message cannot be sent",
+            "The Consignor is not authorised to submit this message for the movement"
+          ))
 
           when(messageValidation.validateSubmittedMessage(any, any, any)).thenReturn(Left(TestMessageIdentifierIsUnauthorised))
+          when(messageValidation.convertErrorToResponse(eqTo(TestMessageIdentifierIsUnauthorised), eqTo(timestamp))).thenReturn(Forbidden(Json.toJson(expectedError)))
 
           val result = createWithSuccessfulAuth.submit(movement._id)(request)
 
           status(result) mustBe FORBIDDEN
 
-          contentAsJson(result) mustBe Json.toJson(ErrorResponse(
-            timestamp,
-            "Message cannot be sent",
-            "The Consignor is not authorised to submit this message for the movement"
-          ))
+          contentAsJson(result) mustBe expectedError
         }
 
       }
@@ -251,7 +227,7 @@ class SubmitMessageControllerSpec
   private def createWithSuccessfulAuth =
     new SubmitMessageController(
       FakeSuccessAuthentication,
-      FakeSuccessXMLParser,
+      FakeSuccessXMLParser(mock[IEMessage]),
       submissionMessageService,
       movementService,
       workItemService,
@@ -269,7 +245,7 @@ class SubmitMessageControllerSpec
   private def createWithAuthActionFailure =
     new SubmitMessageController(
       FakeFailingAuthentication,
-      FakeSuccessXMLParser,
+      FakeSuccessXMLParser(mock[IEMessage]),
       submissionMessageService,
       movementService,
       workItemService,

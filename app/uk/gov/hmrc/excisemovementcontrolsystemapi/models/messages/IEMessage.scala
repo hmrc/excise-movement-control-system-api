@@ -39,7 +39,7 @@ trait IEMessage {
   def lrnEquals(lrn: String): Boolean
 }
 
-object IEMessage {
+trait SubmitterTypeConverter {
   def convertSubmitterType(submitterType: SubmitterType): ExciseTraderType = {
     submitterType match {
       case Number1Value31 => Consignor

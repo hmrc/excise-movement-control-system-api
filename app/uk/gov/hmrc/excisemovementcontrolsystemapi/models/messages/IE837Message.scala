@@ -28,8 +28,8 @@ case class IE837Message
   private val obj: IE837Type,
   private val key: Option[String],
   private val namespace: Option[String]
-) extends IEMessage {
-  def submitter: ExciseTraderType = IEMessage.convertSubmitterType(obj.Body.ExplanationOnDelayForDelivery.AttributesValue.SubmitterType)
+) extends IEMessage with SubmitterTypeConverter{
+  def submitter: ExciseTraderType = convertSubmitterType(obj.Body.ExplanationOnDelayForDelivery.AttributesValue.SubmitterType)
   def consignorId: Option[String] = submitter match {
     case Consignor => Some(obj.Body.ExplanationOnDelayForDelivery.AttributesValue.SubmitterIdentification)
     case _ => None

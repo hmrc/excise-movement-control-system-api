@@ -26,8 +26,8 @@ case class IE871Message(
                          private val obj: IE871Type,
                          private val key: Option[String],
                          private val namespace: Option[String]
-                       ) extends IEMessage {
-  def submitter: ExciseTraderType = IEMessage.convertSubmitterType(obj.Body.ExplanationOnReasonForShortage.AttributesValue.SubmitterType)
+                       ) extends IEMessage with SubmitterTypeConverter {
+  def submitter: ExciseTraderType = convertSubmitterType(obj.Body.ExplanationOnReasonForShortage.AttributesValue.SubmitterType)
   def localReferenceNumber: Option[String] = None
 
   def consignorId: Option[String] = Some(obj.Body.ExplanationOnReasonForShortage.ConsignorTrader.map(_.TraderExciseNumber)).flatten

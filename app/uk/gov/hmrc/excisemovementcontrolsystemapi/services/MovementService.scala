@@ -109,7 +109,7 @@ class MovementService @Inject()(
     movementRepository.getAllBy(ern).map(cachedMovements => {
 
       //todo:
-      // Some messages (e.g. IE829) have multiple arcs in so we want to update them all
+      // Some messages (i.e. IE829 & IE839) have multiple arcs in so we want to update them all
       // If no arc it will be Seq(None). This may need to be revisited as we may need to
       // use the SequenceNumber in this case.
       message.administrativeReferenceCode

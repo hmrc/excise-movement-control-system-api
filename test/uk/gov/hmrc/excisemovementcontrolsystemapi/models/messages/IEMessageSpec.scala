@@ -20,15 +20,19 @@ import generated.{Number1Value31, Number2Value30}
 import org.scalatestplus.play.PlaySpec
 
 class IEMessageSpec extends PlaySpec {
+
+  object testClass extends SubmitterTypeConverter
+
   "convertSubmitterType" should {
     "return Consignor" when {
       "submitter type is consignor" in {
-        IEMessage.convertSubmitterType(Number1Value31) mustBe Consignor
+        testClass.convertSubmitterType(Number1Value31) mustBe Consignor
       }
     }
+
     "return Consignee" when {
       "submitter type is consignee" in {
-        IEMessage.convertSubmitterType(Number2Value30) mustBe Consignee
+        testClass.convertSubmitterType(Number2Value30) mustBe Consignee
       }
     }
   }

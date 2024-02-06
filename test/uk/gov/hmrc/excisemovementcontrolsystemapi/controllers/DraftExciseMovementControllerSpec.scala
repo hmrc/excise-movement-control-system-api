@@ -25,17 +25,21 @@ import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
-import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound}
+import play.api.libs.json.Json
+import play.api.mvc.Results.{BadRequest, Forbidden, InternalServerError, NotFound}
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnInMessageAction, FakeXmlParsers}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeXmlParsers}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IE818Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.SuccessBoxNotificationResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MessageIdentifierIsUnauthorised, MessageValidation}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, PushNotificationService, SubmissionMessageService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
@@ -45,7 +49,6 @@ class DraftExciseMovementControllerSpec
   extends PlaySpec
     with FakeAuthentication
     with FakeXmlParsers
-    with FakeValidateErnInMessageAction
     with TestXml
     with BeforeAndAfterEach
     with EitherValues {
@@ -58,7 +61,11 @@ class DraftExciseMovementControllerSpec
   private val mockIeMessage = mock[IE815Message]
   private val workItemService = mock[WorkItemService]
   private val notificationService = mock[PushNotificationService]
+  private val messageValidation = mock[MessageValidation]
+  private val dateTimeService = mock[DateTimeService]
   private val boxId = "boxId"
+  private val consignorId = "456"
+  private val timestamp = Instant.now
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -70,15 +77,18 @@ class DraftExciseMovementControllerSpec
     when(notificationService.getBoxId(any)(any))
       .thenReturn(Future.successful(Right(SuccessBoxNotificationResponse(boxId))))
 
+    when(messageValidation.validateDraftMovement(any, any)).thenReturn(Right(consignorId))
+    when(dateTimeService.timestamp()).thenReturn(timestamp)
+
     when(mockIeMessage.consigneeId).thenReturn(Some("789"))
-    when(mockIeMessage.consignorId).thenReturn("456")
+    when(mockIeMessage.consignorId).thenReturn(consignorId)
     when(mockIeMessage.localReferenceNumber).thenReturn("123")
   }
 
   "submit" should {
     "return 200" in {
       when(movementService.saveNewMovement(any))
-        .thenReturn(Future.successful(Right(Movement(boxId, "123", "456", Some("789"), None, Instant.now))))
+        .thenReturn(Future.successful(Right(Movement(boxId, "123", consignorId, Some("789"), None, Instant.now))))
 
       val result = createWithSuccessfulAuth.submit(request)
 
@@ -99,7 +109,7 @@ class DraftExciseMovementControllerSpec
         verify(movementService).saveNewMovement(captor.capture)
         val newMovement = captor.value
         newMovement.localReferenceNumber mustBe "123"
-        newMovement.consignorId mustBe "456"
+        newMovement.consignorId mustBe consignorId
         newMovement.consigneeId mustBe Some("789")
         newMovement.administrativeReferenceCode mustBe None
         newMovement.messages mustBe Seq.empty
@@ -113,7 +123,7 @@ class DraftExciseMovementControllerSpec
 
       await(createWithSuccessfulAuth.submit(request))
 
-      verify(workItemService).addWorkItemForErn("456", fastMode = true)
+      verify(workItemService).addWorkItemForErn(consignorId, fastMode = true)
     }
 
     "return ACCEPTED if failing to add workItem " in {
@@ -128,7 +138,39 @@ class DraftExciseMovementControllerSpec
     }
 
     "return an error" when {
-      "get box id return an error" in {
+
+      "message is wrong type" in {
+        val result = createWithWrongMessageType.submit(request)
+
+        status(result) mustBe BAD_REQUEST
+        contentAsJson(result) mustBe Json.toJson(ErrorResponse(
+          timestamp,
+          "Invalid message type",
+          "Message type IE818 cannot be sent to the draft excise movement endpoint"
+        ))
+
+      }
+
+      "not authorised to send message" in {
+        case object TestMessageIdentifierIsUnauthorised extends MessageIdentifierIsUnauthorised(MessageValidation.consignor)
+
+        val expectedError = ErrorResponse(
+          timestamp,
+          "Message cannot be sent",
+          "The Consignor is not authorised to submit this message for the movement"
+        )
+
+        when(messageValidation.validateDraftMovement(any, any)).thenReturn(Left(TestMessageIdentifierIsUnauthorised))
+        when(messageValidation.convertErrorToResponse(eqTo(TestMessageIdentifierIsUnauthorised), eqTo(timestamp))).thenReturn(Forbidden(Json.toJson(expectedError)))
+
+        val result = createWithSuccessfulAuth.submit(request)
+
+        status(result) mustBe FORBIDDEN
+        contentAsJson(result) mustBe Json.toJson(expectedError)
+
+      }
+
+      "get box id returns an error" in {
         when(notificationService.getBoxId(any)(any))
           .thenReturn(Future.successful(Left(BadRequest("error"))))
 
@@ -142,8 +184,6 @@ class DraftExciseMovementControllerSpec
       }
 
       "clientId is not available" in {
-        when(movementService.saveNewMovement(any))
-          .thenReturn(Future.successful(Right(Movement(boxId, "123", "456", Some("789"), None, Instant.now))))
 
         val result = createWithSuccessfulAuth.submit(createRequestWithoutClientId)
 
@@ -171,12 +211,6 @@ class DraftExciseMovementControllerSpec
         status(result) mustBe FORBIDDEN
       }
 
-      "consignor is not valid" in {
-        val result = createWithValidateConsignorActionFailure.submit(request)
-
-        status(result) mustBe FORBIDDEN
-      }
-
       "cannot save the movement" in {
         when(movementService.saveNewMovement(any))
           .thenReturn(Future.successful(Left(InternalServerError("error"))))
@@ -191,12 +225,13 @@ class DraftExciseMovementControllerSpec
   private def createWithAuthActionFailure =
     new DraftExciseMovementController(
       FakeFailingAuthentication,
-      FakeSuccessXMLParser,
-      FakeSuccessfulValidateErnInMessageAction(mockIeMessage),
+      FakeSuccessXMLParser(mockIeMessage),
       movementService,
       workItemService,
       submissionMessageService,
       notificationService,
+      messageValidation,
+      dateTimeService,
       cc
     )
 
@@ -204,37 +239,45 @@ class DraftExciseMovementControllerSpec
     new DraftExciseMovementController(
       FakeSuccessAuthentication,
       FakeFailureXMLParser,
-      FakeSuccessfulValidateErnInMessageAction(mockIeMessage),
       movementService,
       workItemService,
       submissionMessageService,
       notificationService,
+      messageValidation,
+      dateTimeService,
       cc
     )
 
   private def createWithSuccessfulAuth =
     new DraftExciseMovementController(
       FakeSuccessAuthentication,
-      FakeSuccessXMLParser,
-      FakeSuccessfulValidateErnInMessageAction(mockIeMessage),
+      FakeSuccessXMLParser(mockIeMessage),
       movementService,
       workItemService,
       submissionMessageService,
       notificationService,
+      messageValidation,
+      dateTimeService,
       cc
     )
 
-  private def createWithValidateConsignorActionFailure =
+  private def createWithWrongMessageType = {
+    val mockIe818Message = mock[IE818Message]
+
+    when(mockIe818Message.messageType).thenReturn("IE818")
+
     new DraftExciseMovementController(
       FakeSuccessAuthentication,
-      FakeSuccessXMLParser,
-      FakeFailureValidateErnInMessageAction,
+      FakeSuccessXMLParser(mockIe818Message),
       movementService,
       workItemService,
       submissionMessageService,
       notificationService,
+      messageValidation,
+      dateTimeService,
       cc
     )
+  }
 
   private def createRequest: FakeRequest[Elem] = {
     FakeRequest()
