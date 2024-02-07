@@ -25,10 +25,9 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
-import scala.concurrent.ExecutionContext
 import scala.util.Try
 
-case class MovementIdValidation @Inject()(movementService: MovementService)(implicit ec: ExecutionContext) {
+case class MovementIdValidation @Inject()(movementService: MovementService) {
 
   def validateMovementId(id: String): Either[MovementValidationError, String] = {
 
