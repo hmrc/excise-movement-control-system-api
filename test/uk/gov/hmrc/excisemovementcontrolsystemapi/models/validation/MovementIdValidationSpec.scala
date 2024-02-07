@@ -16,19 +16,16 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation
 
-import org.mockito.MockitoSugar.when
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, NotFound}
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 
 import java.time.Instant
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class MovementIdValidationSpec extends PlaySpec with EitherValues with BeforeAndAfterEach {
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
@@ -41,35 +38,17 @@ class MovementIdValidationSpec extends PlaySpec with EitherValues with BeforeAnd
 
   "validateMovementId" should {
 
-    "return the movement for the id if it is valid and found" in {
-      val uuid = "17425b8d-92e3-41e1-a7be-f21ab9241911"
-      val expectedMovement1 = Movement(uuid, "boxId", "lrn1", consignorId, None, Some("arc1"), Instant.now, Seq.empty)
-
-      when(movementService.getMovementById(uuid))
-        .thenReturn(Future.successful(Some(expectedMovement1)))
-
-      val result = await(movementIdValidator.validateMovementId(uuid))
-
-      result mustBe Right(expectedMovement1)
-    }
-
-    "return NotFound error if no match" in {
-
+    "return the movement id if it is valid" in {
       val uuid = "17425b8d-92e3-41e1-a7be-f21ab9241911"
 
-      when(movementService.getMovementById(uuid))
-        .thenReturn(Future.successful(None))
+      val result = movementIdValidator.validateMovementId(uuid)
 
-      val result = await(movementIdValidator.validateMovementId(uuid)).left.value
-
-      result mustBe a[MovementIdNotFound]
-      result.errorMessage mustBe "Movement 17425b8d-92e3-41e1-a7be-f21ab9241911 could not be found"
-
+      result mustBe Right(uuid)
     }
 
     "return FormatInvalid error if format is invalid" in {
 
-      val result = await(movementIdValidator.validateMovementId("uuid")).left.value
+      val result = movementIdValidator.validateMovementId("uuid").left.value
 
       result mustBe a[MovementIdFormatInvalid]
       result.errorMessage mustBe "The movement ID should be a valid UUID"
@@ -89,21 +68,6 @@ class MovementIdValidationSpec extends PlaySpec with EitherValues with BeforeAnd
           timestamp,
           "Movement Id format error",
           "The movement ID should be a valid UUID"
-        )))
-      }
-
-    }
-
-    "return a 404 Not Found" when {
-
-      "movement id format invalid error" in {
-
-        val result = movementIdValidator.convertErrorToResponse(MovementIdNotFound("badId"), timestamp)
-
-        result mustBe NotFound(Json.toJson(ErrorResponse(
-          timestamp,
-          "Movement not found",
-          "Movement badId could not be found"
         )))
       }
 

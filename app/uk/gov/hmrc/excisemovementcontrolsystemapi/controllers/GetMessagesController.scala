@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import cats.data.EitherT
+import cats.data.{EitherT, OptionT}
 import cats.implicits._
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
@@ -51,8 +51,9 @@ class GetMessagesController @Inject()(
       implicit request: EnrolmentRequest[AnyContent] => {
 
         val result = for {
+          validatedMovementId <- validateMovementId(movementId)
           updatedSince <- validateUpdatedSince(updatedSince)
-          movement <- validateMovementId(movementId)
+          movement <- getMovement(validatedMovementId)
         } yield {
 
           if (getErnsForMovement(movement).intersect(request.erns).isEmpty) {
@@ -82,10 +83,18 @@ class GetMessagesController @Inject()(
       ))
     ))
 
-  private def validateMovementId(movementId: String): EitherT[Future, Result, Movement] = {
-    EitherT(movementIdValidator.validateMovementId(movementId)).leftMap {
+  private def validateMovementId(movementId: String): EitherT[Future, Result, String] = {
+    EitherT.fromEither[Future](movementIdValidator.validateMovementId(movementId)).leftMap {
       x => movementIdValidator.convertErrorToResponse(x, dateTimeService.timestamp())
     }
+  }
+
+  private def getMovement(id: String): EitherT[Future, Result, Movement] = {
+    OptionT(movementService.getMovementById(id)).toRightF(
+      Future.successful(NotFound(Json.toJson(
+        ErrorResponse(dateTimeService.timestamp(), "Movement not found", s"Movement $id could not be found")
+      )))
+    )
   }
 
   private def filterMessagesByTime(messages: Seq[Message], updatedSince: Option[Instant]): Seq[Message] = {

@@ -17,8 +17,10 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import cats.data.EitherT
+import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
@@ -39,6 +41,7 @@ class SubmitMessageController @Inject()(
                                          xmlParser: ParseXmlAction,
                                          submissionMessageService: SubmissionMessageService,
                                          workItemService: WorkItemService,
+                                         movementService: MovementService,
                                          messageValidator: MessageValidation,
                                          movementIdValidator: MovementIdValidation,
                                          dateTimeService: DateTimeService,
@@ -52,8 +55,9 @@ class SubmitMessageController @Inject()(
       implicit request =>
 
         val result = for {
-          movement <- validateMovementId(movementId)
-          authorisedErn <- validateMessage(movement, request.ieMessage, request.erns)
+          validatedMovementId <- validateMovementId(movementId)
+          movement <- getMovement(validatedMovementId)
+            authorisedErn <- validateMessage(movement, request.ieMessage, request.erns)
           _ <- sendRequest(request, authorisedErn)
         } yield {
           Accepted
@@ -64,10 +68,22 @@ class SubmitMessageController @Inject()(
 
   }
 
-  private def validateMovementId(movementId: String): EitherT[Future, Result, Movement] = {
-    EitherT(movementIdValidator.validateMovementId(movementId)).leftMap {
+  private def validateMovementId(movementId: String): EitherT[Future, Result, String] = {
+
+    EitherT.fromEither[Future](movementIdValidator.validateMovementId(movementId)).leftMap {
       x => movementIdValidator.convertErrorToResponse(x, dateTimeService.timestamp())
     }
+  }
+
+  private def getMovement(movementId: String): EitherT[Future, Result, Movement] = {
+
+    EitherT(movementService.getMovementById(movementId).map {
+      case Some(mvt) => Right(mvt)
+      case None => Left(NotFound(Json.toJson(
+        ErrorResponse(dateTimeService.timestamp(), "Movement not found", s"Movement $movementId could not be found")
+      )))
+    })
+
   }
 
   private def validateMessage(

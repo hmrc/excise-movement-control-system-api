@@ -16,8 +16,9 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
+import cats.data.{EitherT, OptionT}
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ValidateErnParameterAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilterBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
@@ -66,25 +67,43 @@ class GetMovementsController @Inject()(
     authAction.async(parse.default) {
       implicit request =>
 
-        movementIdValidator.validateMovementId(movementId).map {
-          case Left(x) => movementIdValidator.convertErrorToResponse(x, dateTimeService.timestamp())
-          case Right(movement) =>
-            val authorisedErns = request.erns
-            val movementErns = getErnsForMovement(movement)
+        val result = for {
+          validatedMovementId <- validateMovementId(movementId)
+          movement <- getMovementFromDb(validatedMovementId)
+        } yield {
+          val authorisedErns = request.erns
+          val movementErns = getErnsForMovement(movement)
 
-            workItemService.addWorkItemForErn(movementErns.head, fastMode = false)
+          workItemService.addWorkItemForErn(movementErns.head, fastMode = false)
 
-            if (authorisedErns.intersect(movementErns).isEmpty) {
-              NotFound(Json.toJson(ErrorResponse(
-                dateTimeService.timestamp(),
-                "Movement not found",
-                s"Movement $movementId is not found within the data for ERNs ${authorisedErns.mkString("/")}"
-              )))
-            } else {
-              Ok(Json.toJson(createResponseFrom(movement)))
-            }
+          if (authorisedErns.intersect(movementErns).isEmpty) {
+            NotFound(Json.toJson(ErrorResponse(
+              dateTimeService.timestamp(),
+              "Movement not found",
+              s"Movement $movementId is not found within the data for ERNs ${authorisedErns.mkString("/")}"
+            )))
+          } else {
+            Ok(Json.toJson(createResponseFrom(movement)))
+          }
+
         }
+
+        result.merge
     }
+  }
+
+  private def validateMovementId(movementId: String): EitherT[Future, Result, String] = {
+    EitherT.fromEither[Future](movementIdValidator.validateMovementId(movementId)).leftMap {
+      x => movementIdValidator.convertErrorToResponse(x, dateTimeService.timestamp())
+    }
+  }
+
+  private def getMovementFromDb(id: String): EitherT[Future, Result, Movement] = {
+    OptionT(movementService.getMovementById(id)).toRightF(
+      Future.successful(NotFound(Json.toJson(
+        ErrorResponse(dateTimeService.timestamp(), "Movement not found", s"Movement $id could not be found")
+      )))
+    )
   }
 
   private def getErnsForMovement(movement: Movement): Set[String] = {

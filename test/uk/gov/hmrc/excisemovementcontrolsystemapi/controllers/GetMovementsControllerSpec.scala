@@ -24,13 +24,13 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.Status.{BAD_REQUEST, FORBIDDEN, NOT_FOUND, OK}
 import play.api.libs.json.Json
-import play.api.mvc.Results.{BadRequest, NotFound}
+import play.api.mvc.Results.BadRequest
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilterBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnParameterAction, MovementTestUtils}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MovementIdFormatInvalid, MovementIdNotFound, MovementIdValidation}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MovementIdFormatInvalid, MovementIdValidation}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -192,7 +192,8 @@ class GetMovementsControllerSpec
 
     "return the movement when successful" in {
 
-      when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Future.successful(Right(movement)))
+      when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))
+      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
       val result = controller.getMovement(uuid)(fakeRequest)
 
@@ -207,14 +208,12 @@ class GetMovementsControllerSpec
 
         val expectedError = Json.toJson(
           ErrorResponse(timestamp, "Movement not found",
-            s"Movement $uuid is not found")
+            s"Movement $uuid could not be found")
         )
 
-        when(movementIdValidator.validateMovementId(eqTo(uuid)))
-          .thenReturn(Future.successful(Left(MovementIdNotFound(uuid))))
-        when(movementIdValidator.convertErrorToResponse(eqTo(MovementIdNotFound(uuid)), eqTo(timestamp))).thenReturn(
-          NotFound(expectedError)
-        )
+        when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))
+        when(movementService.getMovementById(any)).thenReturn(Future.successful(None))
+
 
         val result = controller.getMovement(uuid)(fakeRequest)
 
@@ -225,7 +224,8 @@ class GetMovementsControllerSpec
 
       "movement in database is for different ERNs" in {
 
-        when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Future.successful(Right(movement.copy(consignorId = "ern8921"))))
+        when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))
+        when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement.copy(consignorId = "ern8921"))))
 
         val result = controller.getMovement(uuid)(fakeRequest)
 
@@ -246,7 +246,7 @@ class GetMovementsControllerSpec
         )
 
         when(movementIdValidator.validateMovementId(any))
-          .thenReturn(Future.successful(Left(MovementIdFormatInvalid())))
+          .thenReturn(Left(MovementIdFormatInvalid()))
         when(movementIdValidator.convertErrorToResponse(eqTo(MovementIdFormatInvalid()), eqTo(timestamp))).thenReturn(
           BadRequest(expectedError)
         )
@@ -269,7 +269,8 @@ class GetMovementsControllerSpec
 
     "create a Work Item if there is not one for the ERN already" in {
 
-      when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Future.successful(Right(movement)))
+      when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))
+      when(movementService.getMovementById(eqTo(uuid))).thenReturn(Future(Some(movement)))
 
       await(controller.getMovement(uuid)(fakeRequest))
 
@@ -279,7 +280,8 @@ class GetMovementsControllerSpec
 
     "catch Future failure from Work Item service and log it but still process submission" in {
 
-      when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Future.successful(Right(movement)))
+      when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))
+      when(movementService.getMovementById(eqTo(uuid))).thenReturn(Future(Some(movement)))
 
       when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.failed(new MongoException("Oh no!")))
 

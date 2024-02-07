@@ -64,12 +64,15 @@ class SubmitMessageControllerSpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(submissionMessageService, workItemService)
+    reset(submissionMessageService, workItemService, movementService, movementValidation)
 
     when(submissionMessageService.submit(any, any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
-    when(movementValidation.validateMovementId(any)).thenReturn(Future.successful(Right(movement)))
+
+    when(movementValidation.validateMovementId(any)).thenReturn(Right(movement._id))
+    when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
+
     when(messageValidation.validateSubmittedMessage(any, any, any)).thenReturn(Right(consignorId))
     when(dateTimeService.timestamp()).thenReturn(timestamp)
   }
@@ -133,7 +136,7 @@ class SubmitMessageControllerSpec
             "The movement ID should be a valid UUID"
           ))
 
-          when(movementValidation.validateMovementId(any)).thenReturn(Future.successful(Left(MovementIdFormatInvalid())))
+          when(movementValidation.validateMovementId(any)).thenReturn(Left(MovementIdFormatInvalid()))
           when(movementValidation.convertErrorToResponse(eqTo(MovementIdFormatInvalid()), eqTo(timestamp))).thenReturn(BadRequest(expectedError))
 
           val result = createWithSuccessfulAuth.submit("b405")(request)
@@ -145,7 +148,7 @@ class SubmitMessageControllerSpec
 
       "return a 404 Not Found" when {
 
-        "movement id validation fails" in {
+        "movement does not exist in database" in {
 
           val expectedError = Json.toJson(ErrorResponse(
             timestamp,
@@ -154,8 +157,8 @@ class SubmitMessageControllerSpec
           ))
 
           val movementId = "49491927-aaa1-4835-b405-dd6e7fa3aaf0"
-          when(movementValidation.validateMovementId(any)).thenReturn(Future.successful(Left(MovementIdNotFound(movementId))))
-          when(movementValidation.convertErrorToResponse(eqTo(MovementIdNotFound(movementId)), eqTo(timestamp))).thenReturn(NotFound(expectedError))
+          when(movementValidation.validateMovementId(any)).thenReturn(Right(movementId))
+          when(movementService.getMovementById(any)).thenReturn(Future.successful(None))
 
           val result = createWithSuccessfulAuth.submit(movementId)(request)
 
@@ -238,6 +241,7 @@ class SubmitMessageControllerSpec
       FakeSuccessXMLParser(mock[IEMessage]),
       submissionMessageService,
       workItemService,
+      movementService,
       messageValidation,
       movementValidation,
       dateTimeService,
@@ -256,6 +260,7 @@ class SubmitMessageControllerSpec
       FakeSuccessXMLParser(mock[IEMessage]),
       submissionMessageService,
       workItemService,
+      movementService,
       messageValidation,
       movementValidation,
       dateTimeService,
@@ -268,6 +273,7 @@ class SubmitMessageControllerSpec
       FakeFailureXMLParser,
       submissionMessageService,
       workItemService,
+      movementService,
       messageValidation,
       movementValidation,
       dateTimeService,

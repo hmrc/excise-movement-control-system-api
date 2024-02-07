@@ -18,37 +18,29 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation
 
 import play.api.libs.json.Json
 import play.api.mvc.Result
-import play.api.mvc.Results.{BadRequest, NotFound}
+import play.api.mvc.Results.BadRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 
 import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 case class MovementIdValidation @Inject()(movementService: MovementService)(implicit ec: ExecutionContext) {
 
-  def validateMovementId(id: String): Future[Either[MovementValidationError, Movement]] = {
+  def validateMovementId(id: String): Either[MovementValidationError, String] = {
 
     Try(UUID.fromString(id)).toEither match {
-      case Left(_) => Future(Left(MovementIdFormatInvalid()))
-      case Right(_) =>
-        movementService.getMovementById(id).map {
-          case Some(movement) => Right(movement)
-          case None => Left(MovementIdNotFound(id))
-        }
+      case Left(_) => Left(MovementIdFormatInvalid())
+      case Right(_) => Right(id)
     }
 
   }
 
   def convertErrorToResponse(error: MovementValidationError, timestamp: Instant): Result = {
     error match {
-      case x: MovementIdNotFound => NotFound(Json.toJson(
-        ErrorResponse(timestamp, "Movement not found", x.errorMessage
-        )))
       case x: MovementIdFormatInvalid => BadRequest(Json.toJson(
         ErrorResponse(timestamp, "Movement Id format error", x.errorMessage)
       ))
@@ -63,8 +55,4 @@ sealed trait MovementValidationError {
 
 case class MovementIdFormatInvalid() extends MovementValidationError {
   override def errorMessage: String = "The movement ID should be a valid UUID"
-}
-
-case class MovementIdNotFound(movementId: String) extends MovementValidationError {
-  override def errorMessage: String = s"Movement $movementId could not be found"
 }
