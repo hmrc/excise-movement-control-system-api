@@ -60,7 +60,7 @@ class GetMessagesController @Inject()(
             NotFound(Json.toJson(ErrorResponse(
               dateTimeService.timestamp(),
               "Invalid MovementID supplied for ERN",
-              s"Movement ${movement._id} is not found within the data for ERNs ${request.erns.mkString("/")}"
+              s"Movement $validatedMovementId is not found within the data for ERNs ${request.erns.mkString("/")}"
             )))
           } else {
             workItemService.addWorkItemForErn(movement.consignorId, fastMode = false)
@@ -74,6 +74,12 @@ class GetMessagesController @Inject()(
     }
   }
 
+  private def validateMovementId(movementId: String): EitherT[Future, Result, String] = {
+    EitherT.fromEither[Future](movementIdValidator.validateMovementId(movementId)).leftMap {
+      x => movementIdValidator.convertErrorToResponse(x, dateTimeService.timestamp())
+    }
+  }
+
   private def validateUpdatedSince(updatedSince: Option[String]): EitherT[Future, Result, Option[Instant]] =
     EitherT.fromEither(Try(updatedSince.map(Instant.parse(_))).toEither.left.map(_ =>
       BadRequest(Json.toJson(ErrorResponse(
@@ -83,17 +89,15 @@ class GetMessagesController @Inject()(
       ))
     ))
 
-  private def validateMovementId(movementId: String): EitherT[Future, Result, String] = {
-    EitherT.fromEither[Future](movementIdValidator.validateMovementId(movementId)).leftMap {
-      x => movementIdValidator.convertErrorToResponse(x, dateTimeService.timestamp())
-    }
-  }
-
   private def getMovement(id: String): EitherT[Future, Result, Movement] = {
     OptionT(movementService.getMovementById(id)).toRightF(
-      Future.successful(NotFound(Json.toJson(
-        ErrorResponse(dateTimeService.timestamp(), "Movement not found", s"Movement $id could not be found")
-      )))
+      Future.successful(NotFound(
+        Json.toJson(ErrorResponse(
+          dateTimeService.timestamp(),
+          "Movement not found",
+          s"Movement $id could not be found"
+        ))
+      ))
     )
   }
 
