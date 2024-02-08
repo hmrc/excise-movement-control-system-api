@@ -21,7 +21,6 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Constants
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation._
@@ -29,7 +28,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseM
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, PushNotificationService, SubmissionMessageService, WorkItemService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
@@ -39,29 +37,31 @@ import scala.xml.NodeSeq
 
 @Singleton
 class DraftExciseMovementController @Inject()(
-                                               authAction: AuthAction,
-                                               xmlParser: ParseXmlAction,
-                                               movementMessageService: MovementService,
-                                               workItemService: WorkItemService,
-                                               submissionMessageService: SubmissionMessageService,
-                                               notificationService: PushNotificationService,
-                                               messageValidator: MessageValidation,
-                                               dateTimeService: DateTimeService,
-                                               cc: ControllerComponents)(implicit ec: ExecutionContext)
+  authAction: AuthAction,
+  xmlParser: ParseXmlAction,
+  movementMessageService: MovementService,
+  workItemService: WorkItemService,
+  submissionMessageService: SubmissionMessageService,
+  notificationService: PushNotificationService,
+  messageValidator: MessageValidation,
+  dateTimeService: DateTimeService,
+  cc: ControllerComponents
+)(implicit ec: ExecutionContext)
   extends BackendController(cc) {
 
   def submit: Action[NodeSeq] =
 
 
     (authAction andThen xmlParser).async(parse.xml) {
-      implicit request: ParsedXmlRequest[NodeSeq] =>
+      implicit request =>
 
         val result = for {
           ie815Message <- getIe815Message(request.ieMessage)
           authorisedErn <- validateMessage(ie815Message, request.erns)
-          boxId <- getBoxId(request)
-          _ <- submitMessage(request, authorisedErn)
-          movement <- saveMovement(ie815Message, boxId)
+          clientId <- retrieveClientIdFromHeader(request)
+          boxId <- getBoxId(clientId)
+          _ <- EitherT(submissionMessageService.submit(request, authorisedErn))
+          movement <- saveMovement(boxId, ie815Message)
         } yield {
           Accepted(Json.toJson(ExciseMovementResponse(
             "Accepted",
@@ -77,16 +77,6 @@ class DraftExciseMovementController @Inject()(
         result.merge
     }
 
-  private def createMovementFomMessage(message: IE815Message, boxId: String): Movement = {
-    Movement(
-      boxId,
-      message.localReferenceNumber,
-      message.consignorId,
-      message.consigneeId,
-      None
-    )
-  }
-
   private def validateMessage(
                                message: IE815Message,
                                authErns: Set[String]
@@ -97,36 +87,34 @@ class DraftExciseMovementController @Inject()(
     })
   }
 
-  private def getBoxId(request: ParsedXmlRequest[_])
-                      (implicit hc: HeaderCarrier): EitherT[Future, Result, String] = {
 
-    request.headers.get(Constants.XClientIdHeader) match {
-      case Some(clientId) =>
-        EitherT(notificationService.getBoxId(clientId)).map(s => s.boxId)
+  private def saveMovement(
+    boxId: String,
+    message: IE815Message
+  ): EitherT[Future, Result, Movement] = {
 
-      case _ => EitherT.fromEither(Left(BadRequest(Json.toJson(
-        ErrorResponse(
-          Instant.now,
-          s"ClientId error",
-          s"Request header is missing ${Constants.XClientIdHeader}"
-        )
-        ))))
-
-    }
-  }
-
-  private def submitMessage(request: ParsedXmlRequest[NodeSeq], authorisedErn: String)
-                           (implicit hc: HeaderCarrier): EitherT[Future, Result, EISSubmissionResponse] = {
-
-    EitherT(submissionMessageService.submit(request, authorisedErn))
-  }
-
-  private def saveMovement(ie815Message: IE815Message, boxId: String): EitherT[Future, Result, Movement] = {
-
-    val newMovement: Movement = createMovementFomMessage(ie815Message, boxId)
+    val newMovement: Movement = createMovementFomMessage(message, boxId)
     workItemService.addWorkItemForErn(newMovement.consignorId, fastMode = true)
 
     EitherT(movementMessageService.saveNewMovement(newMovement))
+  }
+
+  private def createMovementFomMessage(message: IE815Message, boxId: String): Movement = {
+    Movement(
+      boxId,
+      message.localReferenceNumber,
+      message.consignorId,
+      message.consigneeId,
+      None
+    )
+  }
+
+  private def getBoxId(
+    clientId : String
+  )(implicit request: ParsedXmlRequest[_]) : EitherT[Future, Result, String] = {
+
+    val clientBoxId = request.headers.get(Constants.XCallbackBoxId)
+    EitherT(notificationService.getBoxId(clientId, clientBoxId)).map(_.boxId)
   }
 
   private def getIe815Message(message: IEMessage): EitherT[Future, Result, IE815Message] = {
@@ -142,4 +130,14 @@ class DraftExciseMovementController @Inject()(
     })
   }
 
+  private def retrieveClientIdFromHeader(implicit request: ParsedXmlRequest[_]) : EitherT[Future, Result, String] = {
+    EitherT.fromOption(
+      request.headers.get(Constants.XClientIdHeader),
+      BadRequest(Json.toJson(ErrorResponse(
+        Instant.now,
+        s"ClientId error",
+        s"Request header is missing ${Constants.XClientIdHeader}"))
+      )
+    )
+  }
 }

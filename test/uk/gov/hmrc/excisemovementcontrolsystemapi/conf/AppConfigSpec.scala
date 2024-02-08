@@ -41,8 +41,8 @@ class AppConfigSpec extends PlaySpec {
       |scheduler.workItems.slowInterval=32 minutes
       |mongodb.workItem.TTL = 10 days
       |microservice.services.nrs.api-key="test-key"
-      |microservice.services.notification.host="notification"
-      |microservice.services.notification.port="1111"
+      |microservice.services.push-pull-notifications.host="notification"
+      |microservice.services.push-pull-notifications.port="1111"
     """.stripMargin
 
   private def createAppConfig = {
@@ -99,7 +99,7 @@ class AppConfigSpec extends PlaySpec {
     }
 
     "return pushNotificationUrl" in {
-      configService.pushNotificationUri("boxid") mustBe "http://notification:1111/box/boxid/notifications"
+      configService.pushPullNotificationsUri("boxid") mustBe "http://notification:1111/box/boxid/notifications"
     }
   }
 }

@@ -27,20 +27,17 @@ import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.http.HeaderNames
 import play.api.http.Status._
-import play.api.inject.bind
-import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
+import uk.gov.hmrc.auth.core.InternalError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{AuthTestSupport, StringSupport}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, SubmitMessageTestSupport, WireMockServerSpec}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.StringSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{ApplicationBuilderSupport, SubmitMessageTestSupport, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, Consignor}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, MovementRepository}
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.Instant
@@ -50,10 +47,9 @@ import scala.xml.NodeSeq
 
 class SubmitMessageControllerItSpec extends PlaySpec
   with GuiceOneServerPerSuite
-  with AuthTestSupport
+  with ApplicationBuilderSupport
   with TestXml
   with WireMockServerSpec
-  with RepositoryTestStub
   with SubmitMessageTestSupport
   with StringSupport
   with BeforeAndAfterAll
@@ -85,14 +81,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
   override lazy val app: Application = {
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
-    GuiceApplicationBuilder()
-      .configure(configureServices)
-      .overrides(
-        bind[AuthConnector].to(authConnector),
-        bind[MovementRepository].to(movementRepository),
-        bind[ExciseNumberQueueWorkItemRepository].to(workItemRepository)
-      )
-      .build()
+    applicationBuilder(configureServices).build()
   }
 
   override def beforeAll(): Unit = {
@@ -102,13 +91,14 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(authConnector, movementRepository)
+    reset(authConnector, movementRepository, dateTimeService, workItemRepository)
 
     when(movementRepository.getMovementById(eqTo(movement._id)))
       .thenReturn(Future.successful(Some(movement)))
 
     when(workItemRepository.pushNew(any, any, any)).thenReturn(Future.successful(workItem))
     when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
+    when(dateTimeService.timestamp()).thenReturn(Instant.now)
     authorizeNrsWithIdentityData
     stubNrsResponse
 

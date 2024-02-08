@@ -37,8 +37,8 @@ trait WireMockServerSpec {
       "microservice.services.eis.port" -> wireMock.port(),
       "microservice.services.nrs.host" -> wireHost,
       "microservice.services.nrs.port" -> wireMock.port(),
-      "microservice.services.notification.host" -> wireHost,
-      "microservice.services.notification.port" -> wireMock.port()
+      "microservice.services.push-pull-notifications.host" -> wireHost,
+      "microservice.services.push-pull-notifications.port" -> wireMock.port()
     )
   }
 

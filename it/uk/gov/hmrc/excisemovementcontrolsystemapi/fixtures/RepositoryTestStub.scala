@@ -18,9 +18,11 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures
 
 import org.scalatestplus.mockito.MockitoSugar.mock
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, MovementRepository}
+import uk.gov.hmrc.mongo.lock.LockRepository
 
 trait RepositoryTestStub {
-  protected lazy val movementRepository: MovementRepository = mock[MovementRepository]
-  protected lazy val workItemRepository: ExciseNumberQueueWorkItemRepository = mock[ExciseNumberQueueWorkItemRepository]
+  lazy val movementRepository: MovementRepository = mock[MovementRepository]
+  lazy val workItemRepository: ExciseNumberQueueWorkItemRepository = mock[ExciseNumberQueueWorkItemRepository]
+  lazy val lockRepository: LockRepository = mock[LockRepository]
 
 }
