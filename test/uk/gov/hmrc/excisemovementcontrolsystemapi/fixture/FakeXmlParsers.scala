@@ -20,13 +20,14 @@ import play.api.mvc.Result
 import play.api.mvc.Results.BadRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ParseXmlAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 
 import scala.concurrent.{ExecutionContext, Future}
 
 trait FakeXmlParsers {
-  object FakeSuccessXMLParser extends ParseXmlAction {
+  case class FakeSuccessXMLParser(mockIeMessage: IEMessage) extends ParseXmlAction {
     override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
-      Future.successful(Right(ParsedXmlRequest(EnrolmentRequest(request, Set.empty, "123"), null, Set.empty, "123")))
+      Future.successful(Right(ParsedXmlRequest(EnrolmentRequest(request, Set.empty, "123"), mockIeMessage, Set.empty, "123")))
     }
 
     override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global

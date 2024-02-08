@@ -16,10 +16,19 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import play.api.mvc.{Action, ControllerComponents}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction, ValidateErnInMessageAction, ValidateMovementIdAction}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{SubmissionMessageService, WorkItemService}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.ErnsMapper
+import cats.data.EitherT
+import play.api.libs.json.Json
+import play.api.mvc.{Action, ControllerComponents, Result}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -30,32 +39,70 @@ import scala.xml.NodeSeq
 class SubmitMessageController @Inject()(
                                          authAction: AuthAction,
                                          xmlParser: ParseXmlAction,
-                                         validateErnInMessageAction: ValidateErnInMessageAction,
-                                         validateMovementIdAction: ValidateMovementIdAction,
                                          submissionMessageService: SubmissionMessageService,
                                          workItemService: WorkItemService,
-                                         ernsMapper: ErnsMapper,
+                                         movementService: MovementService,
+                                         messageValidator: MessageValidation,
+                                         movementIdValidator: MovementIdValidation,
+                                         dateTimeService: DateTimeService,
                                          cc: ControllerComponents
                                        )(implicit ec: ExecutionContext)
   extends BackendController(cc) {
 
   def submit(movementId: String): Action[NodeSeq] = {
 
-    (authAction
-      andThen xmlParser
-      andThen validateErnInMessageAction
-      andThen validateMovementIdAction(movementId)).async(parse.xml) {
+    (authAction andThen xmlParser).async(parse.xml) {
       implicit request =>
-        val ern = ernsMapper.getSingleErnFromMessage(request.message, request.validErns)
 
-        workItemService.addWorkItemForErn(ern, fastMode = true)
-
-        submissionMessageService.submit(request).flatMap {
-          case Right(_) => Future.successful(Accepted(""))
-          case Left(error) => Future.successful(error)
+        val result = for {
+          validatedMovementId <- validateMovementId(movementId)
+          movement <- getMovement(validatedMovementId)
+            authorisedErn <- validateMessage(movement, request.ieMessage, request.erns)
+          _ <- sendRequest(request, authorisedErn)
+        } yield {
+          Accepted
         }
 
+        result.merge
     }
+
+  }
+
+  private def validateMovementId(movementId: String): EitherT[Future, Result, String] = {
+
+    EitherT.fromEither[Future](movementIdValidator.validateMovementId(movementId)).leftMap {
+      x => movementIdValidator.convertErrorToResponse(x, dateTimeService.timestamp())
+    }
+  }
+
+  private def getMovement(movementId: String): EitherT[Future, Result, Movement] = {
+
+    EitherT(movementService.getMovementById(movementId).map {
+      case Some(mvt) => Right(mvt)
+      case None => Left(NotFound(Json.toJson(
+        ErrorResponse(dateTimeService.timestamp(), "Movement not found", s"Movement $movementId could not be found")
+      )))
+    })
+
+  }
+
+  private def validateMessage(
+                               movement: Movement,
+                               message: IEMessage,
+                               authErns: Set[String]
+                             ): EitherT[Future, Result, String] = {
+
+    EitherT.fromEither(messageValidator.validateSubmittedMessage(authErns, movement, message).left.map {
+      x => messageValidator.convertErrorToResponse(x, dateTimeService.timestamp())
+    })
+
+  }
+
+  private def sendRequest(request: ParsedXmlRequest[_], authorisedErn: String)
+                         (implicit hc: HeaderCarrier): EitherT[Future, Result, EISSubmissionResponse] = {
+    workItemService.addWorkItemForErn(authorisedErn, fastMode = true)
+
+    EitherT(submissionMessageService.submit(request, authorisedErn))
 
   }
 

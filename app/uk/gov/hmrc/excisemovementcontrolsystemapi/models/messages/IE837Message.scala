@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
-import generated.{IE837Type, MessagesOption, Number1Value31, Number2Value30}
+import generated.{IE837Type, MessagesOption}
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 
@@ -28,17 +28,17 @@ case class IE837Message
   private val obj: IE837Type,
   private val key: Option[String],
   private val namespace: Option[String]
-) extends IEMessage {
-  def consignorId: Option[String] = {
-    if (obj.Body.ExplanationOnDelayForDelivery.AttributesValue.SubmitterType == Number1Value31) { //Generated class for SubmitterType 1
-      Some(obj.Body.ExplanationOnDelayForDelivery.AttributesValue.SubmitterIdentification)
-    } else None
+) extends IEMessage with SubmitterTypeConverter{
+  def submitter: ExciseTraderType = convertSubmitterType(obj.Body.ExplanationOnDelayForDelivery.AttributesValue.SubmitterType)
+  def consignorId: Option[String] = submitter match {
+    case Consignor => Some(obj.Body.ExplanationOnDelayForDelivery.AttributesValue.SubmitterIdentification)
+    case _ => None
   }
 
-  override def consigneeId: Option[String] =
-    if (obj.Body.ExplanationOnDelayForDelivery.AttributesValue.SubmitterType == Number2Value30) { //Generated class for SubmitterType 2
-      Some(obj.Body.ExplanationOnDelayForDelivery.AttributesValue.SubmitterIdentification)
-    } else None
+  override def consigneeId: Option[String] = submitter match {
+    case Consignee => Some(obj.Body.ExplanationOnDelayForDelivery.AttributesValue.SubmitterIdentification)
+    case _ => None
+  }
 
   override def administrativeReferenceCode: Seq[Option[String]] =
     Seq(Some(obj.Body.ExplanationOnDelayForDelivery.ExciseMovement.AdministrativeReferenceCode))

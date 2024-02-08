@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-import com.google.inject.Singleton
 import cats.syntax.all._
+import com.google.inject.Singleton
 import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.Result
@@ -94,13 +94,13 @@ class MovementService @Inject()(
     movementRepository.getAllBy(ern).map(cachedMovements => {
 
       //todo:
-      // Some messages (e.g. IE829) have multiple arcs in so we want to update them all
+      // Some messages (i.e. IE829 & IE839) have multiple arcs in so we want to update them all
       // If no arc it will be Seq(None). This may need to be revisited as we may need to
       // use the SequenceNumber in this case.
       message.administrativeReferenceCode
         .map { messageArc =>
-        updateMovementForIndividualArc(message, ern, cachedMovements, messageArc)
-      }
+          updateMovementForIndividualArc(message, ern, cachedMovements, messageArc)
+        }
         .sequence
         .map((o: Seq[Option[Movement]]) =>
           transformAndLogAnyError(o, ern, message.messageType)
@@ -109,18 +109,19 @@ class MovementService @Inject()(
   }
 
   private def transformAndLogAnyError(
-    movements: Seq[Option[Movement]],
-    ern: String,
-    messageType: String
-  ): Seq[Movement] = {
-    movements.foldLeft[Seq[Movement]](Seq()){
+                                       movements: Seq[Option[Movement]],
+                                       ern: String,
+                                       messageType: String
+                                     ): Seq[Movement] = {
+    movements.foldLeft[Seq[Movement]](Seq()) {
       case (acc: Seq[Movement], mv: Option[Movement]) =>
         mv match {
           case Some(m) => acc :+ m
           case _ =>
             logger.warn(s"[MovementService] - Could not update movement with excise number $ern and message: $messageType")
             acc
-        }}
+        }
+    }
   }
 
   private def createDuplicateErrorResponse(movement: Movement) = {
@@ -145,10 +146,10 @@ class MovementService @Inject()(
   }
 
   private def saveDistinctMessage(
-    movement: Movement,
-    newMessage: IEMessage,
-    messageArc: Option[String]
-  ): Future[Option[Movement]] = {
+                                   movement: Movement,
+                                   newMessage: IEMessage,
+                                   messageArc: Option[String]
+                                 ): Future[Option[Movement]] = {
 
     val encodedMessage = emcsUtils.encode(newMessage.toXml.toString)
     val messages = Seq(Message(encodedMessage, newMessage.messageType, newMessage.messageIdentifier, dateTimeService.timestamp()))
@@ -176,3 +177,4 @@ class MovementService @Inject()(
         || movementFromDb.consigneeId != movement.consigneeId)
   }
 }
+
