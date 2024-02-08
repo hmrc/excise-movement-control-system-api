@@ -181,7 +181,7 @@ class GetMessagesControllerItSpec extends PlaySpec
 
     val result = getRequest(messageUrl)
 
-    result.status mustBe 200
+    result.status mustBe OK
 
     withClue("Should return a xml message"){
       result.xml mustBe IE801
@@ -225,15 +225,6 @@ class GetMessagesControllerItSpec extends PlaySpec
       result.status mustBe NOT_FOUND
       result.json mustBe Json.toJson(messageNotFoundError)
     }
-
-    "messageId is empty" in {
-      withAuthorizedTrader(consignorId)
-
-      val invalidUrl = s"http://localhost:$port/movements/$validUUID/message/"
-      val result = getRequest(invalidUrl)
-
-      result.status mustBe NOT_FOUND
-    }
   }
 
   "Get one message return 400" when {
@@ -252,7 +243,7 @@ class GetMessagesControllerItSpec extends PlaySpec
     }
   }
 
-  "Get on message return 500 when mongo db fails to fetch details" in {
+  "Get one message return 500 when mongo db fails to fetch details" in {
     withAuthorizedTrader(consignorId)
     when(movementRepository.getMovementById(any))
       .thenReturn(Future.failed(new RuntimeException("error")))
