@@ -53,17 +53,12 @@ class GetMessagesController @Inject()(
         // of the message abd according to the xsd this is not a UUID and can be
         // of any char between 1 and 44 char length
        val result = for {
-         mvtId <- validateMovementID(movementId)
-         movement <- getMovement(mvtId.toString)
+         mvtId <- validateMovementId(movementId)
+         movement <- getMovement(mvtId)
         } yield {
-
-         movement.messages.filter(o =>
-           o.messageId.equals(messageId)).toList match {
-           case Nil => NotFound(Json.toJson(ErrorResponse(
-             dateTimeService.timestamp(),
-             "No message found for the MovementID provided",
-             s"MessageId $messageId was not found in the database"
-           )))
+         movement.messages.filter(o => o.messageId.equals(messageId))
+           .toList match {
+           case Nil => messageNotFoundError(messageId)
            case head :: _ =>
              val decodedXml = emcsUtil.decode(head.encodedMessage)
              Ok(xml.XML.loadString(decodedXml))
@@ -72,7 +67,6 @@ class GetMessagesController @Inject()(
         result.merge
     }
   }
-
 
   def getMessagesForMovement(movementId: String, updatedSince: Option[String]): Action[AnyContent] = {
     // todo: how we handle error here if for example MongoDb throws?
@@ -101,6 +95,14 @@ class GetMessagesController @Inject()(
 
       }
     }
+  }
+
+  private def messageNotFoundError(messageId: String) = {
+    NotFound(Json.toJson(ErrorResponse(
+      dateTimeService.timestamp(),
+      "No message found for the MovementID provided",
+      s"MessageId $messageId was not found in the database"
+    )))
   }
 
   private def validateMovementId(movementId: String): EitherT[Future, Result, String] = {

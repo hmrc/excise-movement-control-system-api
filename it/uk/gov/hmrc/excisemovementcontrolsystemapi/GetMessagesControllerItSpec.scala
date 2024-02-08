@@ -238,7 +238,7 @@ class GetMessagesControllerItSpec extends PlaySpec
       result.json mustBe Json.toJson(ErrorResponse(
         timestamp,
         "Movement Id format error",
-        "Movement Id should be a valid UUID"
+        "The movement ID should be a valid UUID"
       ))
     }
   }
@@ -296,8 +296,8 @@ class GetMessagesControllerItSpec extends PlaySpec
   private def movementNotFoundError: ErrorResponse = {
     ErrorResponse(
       timestamp,
-      "No movement found for the MovementID provided",
-      s"MovementID $validUUID was not found in the database"
+      "Movement not found",
+      s"Movement $validUUID could not be found"
     )
   }
 

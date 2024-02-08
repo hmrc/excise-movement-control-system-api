@@ -17,12 +17,10 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation
 
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
-import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
 import play.api.mvc.Results.BadRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext
@@ -30,10 +28,8 @@ import scala.concurrent.ExecutionContext
 class MovementIdValidationSpec extends PlaySpec with EitherValues with BeforeAndAfterEach {
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
-  private val movementService = mock[MovementService]
   private val timestamp = Instant.now()
-
-  private val movementIdValidator = MovementIdValidation(movementService)
+  private val movementIdValidator = new MovementIdValidation()
 
   "validateMovementId" should {
 
@@ -51,7 +47,6 @@ class MovementIdValidationSpec extends PlaySpec with EitherValues with BeforeAnd
 
       result mustBe a[MovementIdFormatInvalid]
       result.errorMessage mustBe "The movement ID should be a valid UUID"
-
     }
   }
 

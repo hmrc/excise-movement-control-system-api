@@ -28,6 +28,7 @@ import play.api.http.Status.{BAD_REQUEST, FORBIDDEN, NOT_FOUND, OK}
 import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.{AnyContent, Result}
 import play.api.mvc.Results.BadRequest
+import play.api.test.Helpers.{await, contentAsJson, contentAsString, defaultAwaitTimeout, status, stubControllerComponents}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeAuthentication
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
@@ -50,7 +51,6 @@ class GetMessagesControllerSpec extends PlaySpec
   implicit val sys: ActorSystem = ActorSystem("GetMessagesControllerSpec")
 
   private val movementService = mock[MovementService]
-  private val movementIdValidator = mock[MovementIdValidation]
   private val cc = stubControllerComponents()
   private val validUUID = "cfdb20c7-d0b0-4b8b-a071-737d68dede5e"
   private val dateTimeService = mock[DateTimeService]
@@ -58,9 +58,17 @@ class GetMessagesControllerSpec extends PlaySpec
   private val workItemService = mock[WorkItemService]
   private val messageCreateOn = Instant.now()
 
+  private val MovementIdFormatError = Json.parse(
+    """
+      |{
+      | "dateTime":"2020-01-01T01:01:01.100Z",
+      | "message":"Movement Id format error",
+      | "debugMessage":"The movement ID should be a valid UUID"
+      | }""".stripMargin)
+
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(movementService, dateTimeService, workItemService, movementIdValidator)
+    reset(movementService, dateTimeService, workItemService)
 
     when(movementService.getMatchingERN(any, any))
       .thenReturn(Future.successful(Some(ern)))
@@ -72,27 +80,16 @@ class GetMessagesControllerSpec extends PlaySpec
 
   "getMessagesForMovement" should {
     "respond with BAD_REQUEST when the MovementID is an invalid UUID" in {
-      val expectedError = Json.toJson(
-        ErrorResponse(timeStamp, "Movement Id format error",
-          s"Movement Id should be a valid UUID")
-      )
-
-      when(movementIdValidator.validateMovementId(eqTo("invalidUUID")))
-        .thenReturn(Left(MovementIdFormatInvalid()))
-      when(movementIdValidator.convertErrorToResponse(eqTo(MovementIdFormatInvalid()), eqTo(timeStamp))).thenReturn(
-        BadRequest(expectedError)
-      )
 
       val result = createWithSuccessfulAuth.getMessagesForMovement("invalidUUID", None)(createRequest())
 
       status(result) mustBe BAD_REQUEST
-      contentAsJson(result) mustBe expectedError
+      contentAsJson(result) mustBe MovementIdFormatError
     }
 
     "return 200" in {
       val message = Message("message", "IE801", "messageId", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message))
-      when(movementIdValidator.validateMovementId(any)).thenReturn(Right(movement._id))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
@@ -105,15 +102,12 @@ class GetMessagesControllerSpec extends PlaySpec
       val message = Message("message", "IE801", "messageId1", messageCreateOn)
       val message2 = Message("message2", "IE801", "messageId2", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message, message2))
-      when(movementIdValidator.validateMovementId(any)).thenReturn(Right(movement._id))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
 
       status(result) mustBe OK
       contentAsJson(result) mustBe Json.toJson(Seq(message, message2))
-
-      verify(movementIdValidator).validateMovementId(eqTo(validUUID))
     }
 
     "get all the new messages when there is a time query parameter provided" in {
@@ -122,7 +116,6 @@ class GetMessagesControllerSpec extends PlaySpec
       val message = Message("message", "IE801", "messageId1", timeInFuture)
       val message2 = Message("message2", "IE801", "messageId2", timeInPast)
       val movement = createMovementWithMessages(Seq(message, message2))
-      when(movementIdValidator.validateMovementId(any)).thenReturn(Right(movement._id))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, Some(messageCreateOn.toString))(createRequest())
@@ -139,7 +132,6 @@ class GetMessagesControllerSpec extends PlaySpec
       val message2 = Message("message2", "IE801", "messageId2", timeInPast)
       val message3 = Message("message3", "IE801", "messageId3", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message, message2, message3))
-      when(movementIdValidator.validateMovementId(any)).thenReturn(Right(movement._id))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, Some(timeNowString))(createRequest())
@@ -152,7 +144,6 @@ class GetMessagesControllerSpec extends PlaySpec
       val timeInFuture = Instant.now.plusSeconds(1000)
       val message = Message("message", "IE801", "messageId", timeInFuture)
       val movement = createMovementWithMessages(Seq(message))
-      when(movementIdValidator.validateMovementId(any)).thenReturn(Right(movement._id))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, Some("2020-11-15T17:02:34.00Z"))(createRequest())
@@ -165,7 +156,6 @@ class GetMessagesControllerSpec extends PlaySpec
       val timeInFuture = Instant.now.plusSeconds(1000)
       val message = Message("message", "IE801", "messageId", timeInFuture)
       val movement = createMovementWithMessages(Seq(message))
-      when(movementIdValidator.validateMovementId(any)).thenReturn(Right(movement._id))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, Some("invalid date"))(createRequest())
@@ -180,7 +170,6 @@ class GetMessagesControllerSpec extends PlaySpec
     "create a Work Item if there is not one for the ERN already" in {
       val message = Message("message", "IE801", "messageId", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message))
-      when(movementIdValidator.validateMovementId(any)).thenReturn(Right(movement._id))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
       await(createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest()))
@@ -191,7 +180,6 @@ class GetMessagesControllerSpec extends PlaySpec
 
     "return an empty array when no messages" in {
       val movement = createMovementWithMessages(Seq.empty)
-      when(movementIdValidator.validateMovementId(any)).thenReturn(Right(movement._id))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
@@ -201,9 +189,6 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "return NOT_FOUND when no movement exists for given movementID" in {
-
-
-      when(movementIdValidator.validateMovementId(any)).thenReturn(Right(validUUID))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(None))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
@@ -218,8 +203,6 @@ class GetMessagesControllerSpec extends PlaySpec
     "return NOT_FOUND when movement is for a different ern " in {
       val message = Message("message", "IE801", "messageId", Instant.now)
       val movement = Movement(validUUID, "lrn", "boxId", "consignor", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
-
-      when(movementIdValidator.validateMovementId(any)).thenReturn(Right(movement._id))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
@@ -234,10 +217,7 @@ class GetMessagesControllerSpec extends PlaySpec
     "catch Future failure from Work Item service and log it but still process submission" in {
       val message = Message("message", "IE801", "messageId", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message))
-
-      when(movementIdValidator.validateMovementId(any)).thenReturn(Right(movement._id))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
-
       when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.failed(new MongoException("Oh no!")))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
@@ -307,7 +287,7 @@ class GetMessagesControllerSpec extends PlaySpec
         )(createRequest())
 
         status(result) mustBe BAD_REQUEST
-        contentAsJson(result) mustBe Json.toJson(ErrorResponse(timeStamp, "Movement Id format error", "Movement Id should be a valid UUID"))
+        contentAsJson(result) mustBe MovementIdFormatError
       }
 
       "return a 404 if movement is not found" in {
@@ -321,8 +301,8 @@ class GetMessagesControllerSpec extends PlaySpec
         status(result) mustBe  NOT_FOUND
         contentAsJson(result) mustBe Json.toJson(ErrorResponse(
             timeStamp,
-            "No movement found for the MovementID provided",
-            s"MovementID $validUUID was not found in the database")
+            "Movement not found",
+            s"Movement $validUUID could not be found")
         )
       }
 
@@ -360,7 +340,7 @@ class GetMessagesControllerSpec extends PlaySpec
       FakeSuccessAuthentication,
       movementService,
       workItemService,
-      movementIdValidator,
+      new MovementIdValidation,
       cc,
       new EmcsUtils,
       dateTimeService
@@ -371,6 +351,7 @@ class GetMessagesControllerSpec extends PlaySpec
       FakeFailingAuthentication,
       movementService,
       workItemService,
+      new MovementIdValidation,
       cc,
       new EmcsUtils,
       dateTimeService
