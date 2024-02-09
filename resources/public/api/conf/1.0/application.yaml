@@ -54,6 +54,7 @@ paths:
                 $ref: '#/components/schemas/ExciseMovement'
               example:
                 status: "Accepted"
+                boxId: 42c75e22-7bba-44f2-a610-4b4c3b262e3e
                 movementId: b6ba6a73-d723-4c9f-b9b7-99e533fb614f
                 consignorId: "GBWK002281023"
                 consigneeId: "GBWKQOZ8OVLYR"
@@ -251,7 +252,7 @@ paths:
               example:
                 "Invalid affinity group Individual"
         '403':
-          description: Consignor ID is not in authorisation bearer token
+          description: Excise Number is not in authorisation bearer token
           content:
             text/plain:
               example:
@@ -297,7 +298,7 @@ paths:
               example:
                 "Invalid affinity group Individual"
         '403':
-          description: Consignor ID is not in authorisation bearer token
+          description: Excise Number is not in authorisation bearer token
           content:
             text/plain:
               example:
@@ -473,7 +474,7 @@ paths:
                     emcsCorrelationId: b47a371c-01e6-4dc0-97c1-dd524f7035d0
 
         '422':
-          description: The draft movement message has failed validation
+          description: The message has failed validation
           content:
             application/vnd.hmrc.1.0+json:
               schema:
@@ -804,6 +805,10 @@ components:
       type: string
       format: uuid
       example: b6ba6a73-d723-4c9f-b9b7-99e533fb614f
+    BoxId:
+      type: string
+      format: uuid
+      example: 42c75e22-7bba-44f2-a610-4b4c3b262e3e
     IE810:
       type: object
       description: Submit cancellation
@@ -870,11 +875,14 @@ components:
     ExciseMovement:
       type: object
       required:
+        - boxId
         - movementId
         - consignorId
         - localReferenceNumber
         - status
       properties:
+        boxId:
+          $ref: '#/components/schemas/BoxId'
         movementId:
           $ref: '#/components/schemas/MovementId'
         consignorId:

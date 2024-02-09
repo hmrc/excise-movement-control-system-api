@@ -23,13 +23,13 @@ import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
-import java.util.UUID
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -39,27 +39,51 @@ class GetMessagesController @Inject()(
                                        authAction: AuthAction,
                                        movementService: MovementService,
                                        workItemService: WorkItemService,
+                                       movementIdValidator: MovementIdValidation,
                                        cc: ControllerComponents,
+                                       emcsUtil: EmcsUtils,
                                        dateTimeService: DateTimeService
                                      )(implicit ec: ExecutionContext)
   extends BackendController(cc) {
+  def getMessageForMovement(movementId: String, messageId: String): Action[AnyContent] = {
+    authAction.async(parse.default) {
+      implicit request =>
+
+        //todo: do we need to validate messageId here? This is the messageIdentifier
+        // of the message abd according to the xsd this is not a UUID and can be
+        // of any char between 1 and 44 char length
+       val result = for {
+         mvtId <- validateMovementId(movementId)
+         movement <- getMovement(mvtId)
+        } yield {
+         movement.messages.filter(o => o.messageId.equals(messageId))
+           .toList match {
+           case Nil => messageNotFoundError(messageId)
+           case head :: _ =>
+             val decodedXml = emcsUtil.decode(head.encodedMessage)
+             Ok(xml.XML.loadString(decodedXml))
+         }
+        }
+        result.merge
+    }
+  }
 
   def getMessagesForMovement(movementId: String, updatedSince: Option[String]): Action[AnyContent] = {
     // todo: how we handle error here if for example MongoDb throws?
     authAction.async(parse.default) {
       implicit request: EnrolmentRequest[AnyContent] => {
 
-        val result = for {
-          mvtId <- validateMovementID(movementId)
+        val result: EitherT[Future, Result, Result] = for {
+          validatedMovementId <- validateMovementId(movementId)
           updatedSince <- validateUpdatedSince(updatedSince)
-          movement <- getMovement(mvtId.toString)
+          movement <- getMovement(validatedMovementId)
         } yield {
 
           if (getErnsForMovement(movement).intersect(request.erns).isEmpty) {
             NotFound(Json.toJson(ErrorResponse(
               dateTimeService.timestamp(),
               "Invalid MovementID supplied for ERN",
-              s"Movement $mvtId is not found within the data for ERNs ${request.erns.mkString("/")}"
+              s"Movement $validatedMovementId is not found within the data for ERNs ${request.erns.mkString("/")}"
             )))
           } else {
             workItemService.addWorkItemForErn(movement.consignorId, fastMode = false)
@@ -73,31 +97,39 @@ class GetMessagesController @Inject()(
     }
   }
 
-  private def validateMovementID(movementId: String): EitherT[Future, Result, UUID] = EitherT.fromEither(Try(UUID.fromString(movementId)).toEither.left.map(_ =>
-    BadRequest(Json.toJson(ErrorResponse(
+  private def messageNotFoundError(messageId: String) = {
+    NotFound(Json.toJson(ErrorResponse(
       dateTimeService.timestamp(),
-      "Movement Id format error",
-      "Movement Id should be a valid UUID"
+      "No message found for the MovementID provided",
+      s"MessageId $messageId was not found in the database"
     )))
-  ))
+  }
 
-  private def validateUpdatedSince(updatedSince: Option[String]): EitherT[Future, Result, Option[Instant]] = EitherT.fromEither(Try(updatedSince.map(Instant.parse(_))).toEither.left.map(_ =>
-    BadRequest(Json.toJson(ErrorResponse(
-      dateTimeService.timestamp(),
-      "Invalid date format provided in the updatedSince query parameter",
-      "Date format should be like '2020-11-15T17:02:34.00Z'")
+  private def validateMovementId(movementId: String): EitherT[Future, Result, String] = {
+    EitherT.fromEither[Future](movementIdValidator.validateMovementId(movementId)).leftMap {
+      x => movementIdValidator.convertErrorToResponse(x, dateTimeService.timestamp())
+    }
+  }
+
+  private def validateUpdatedSince(updatedSince: Option[String]): EitherT[Future, Result, Option[Instant]] =
+    EitherT.fromEither(Try(updatedSince.map(Instant.parse(_))).toEither.left.map(_ =>
+      BadRequest(Json.toJson(ErrorResponse(
+        dateTimeService.timestamp(),
+        "Invalid date format provided in the updatedSince query parameter",
+        "Date format should be like '2020-11-15T17:02:34.00Z'")
+      ))
     ))
-  ))
 
   private def getMovement(id: String): EitherT[Future, Result, Movement] = {
     OptionT(movementService.getMovementById(id)).toRightF(
       Future.successful(NotFound(
         Json.toJson(ErrorResponse(
           dateTimeService.timestamp(),
-          "No movement found for the MovementID provided",
-          s"MovementID $id was not found in the database"
-        )))
+          "Movement not found",
+          s"Movement $id could not be found"
+        ))
       ))
+    )
   }
 
   private def filterMessagesByTime(messages: Seq[Message], updatedSince: Option[Instant]): Seq[Message] = {

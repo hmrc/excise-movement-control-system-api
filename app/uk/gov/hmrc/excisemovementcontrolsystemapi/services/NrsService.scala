@@ -18,14 +18,14 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import play.api.Logging
 import play.api.http.Status.INTERNAL_SERVER_ERROR
+import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals
-import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{IdentityData, NonRepudiationSubmission, NonRepudiationSubmissionFailed, NrsMetadata, NrsPayload}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService.nonRepudiationIdentityRetrievals
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, ErnsMapper, NrsEventIdMapper}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, NrsEventIdMapper}
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier, InternalServerException}
 
 import javax.inject.{Inject, Singleton}
@@ -38,25 +38,25 @@ class NrsService @Inject()
   nrsConnector: NrsConnector,
   dateTimeService: DateTimeService,
   emcsUtils: EmcsUtils,
-  ernsMapper: ErnsMapper,
   nrsEventIdMapper: NrsEventIdMapper
 )(implicit ec: ExecutionContext) extends AuthorisedFunctions with Logging {
 
   def submitNrs(
-    request: ValidatedXmlRequest[_],
-    correlationId: String
-  )(implicit headerCarrier: HeaderCarrier): Future[NonRepudiationSubmission] = {
+                 request: ParsedXmlRequest[_],
+                 authorisedErn: String,
+                 correlationId: String
+               )(implicit headerCarrier: HeaderCarrier): Future[NonRepudiationSubmission] = {
 
     val payload = request.body.toString
     val userHeaderData = request.headersAsMap
-    val message = request.message
-    val exciseNumber = ernsMapper.getSingleErnFromMessage(message, request.validErns)
+    val message = request.ieMessage
+    val exciseNumber = authorisedErn
     val notableEventId = nrsEventIdMapper.mapMessageToEventId(message)
 
     (for {
       identityData <- retrieveIdentityData()
       userAuthToken = retrieveUserAuthToken(headerCarrier)
-      metaData = NrsMetadata.create(payload, emcsUtils,notableEventId, identityData, dateTimeService.timestamp().toString,
+      metaData = NrsMetadata.create(payload, emcsUtils, notableEventId, identityData, dateTimeService.timestamp().toString,
         userAuthToken, userHeaderData, exciseNumber)
       encodedPayload = emcsUtils.encode(payload)
       nrsPayload = NrsPayload(encodedPayload, metaData)
@@ -101,10 +101,10 @@ class NrsService @Inject()
         ))
     }
 
-  def retrieveUserAuthToken(hc: HeaderCarrier): String =
+  private def retrieveUserAuthToken(hc: HeaderCarrier): String =
     hc.authorization match {
       case Some(Authorization(authToken)) => authToken
-      case _                              => throw new InternalServerException("No auth token available for NRS")
+      case _ => throw new InternalServerException("No auth token available for NRS")
     }
 }
 

@@ -31,7 +31,7 @@ trait NewMessagesXml {
           <urn:MessageRecipient>token</urn:MessageRecipient>
           <urn:DateOfPreparation>2018-11-01</urn:DateOfPreparation>
           <urn:TimeOfPreparation>02:02:49+01:00</urn:TimeOfPreparation>
-          <urn:MessageIdentifier>token</urn:MessageIdentifier>
+          <urn:MessageIdentifier>messageId-1</urn:MessageIdentifier>
           <!--Optional:-->
           <urn:CorrelationIdentifier>token</urn:CorrelationIdentifier>
         </urn1:Header>
@@ -276,7 +276,7 @@ trait NewMessagesXml {
           <urn:MessageRecipient>token</urn:MessageRecipient>
           <urn:DateOfPreparation>2008-09-29</urn:DateOfPreparation>
           <urn:TimeOfPreparation>00:18:33</urn:TimeOfPreparation>
-          <urn:MessageIdentifier>token</urn:MessageIdentifier>
+          <urn:MessageIdentifier>messageId-4</urn:MessageIdentifier>
           <!--Optional:-->
           <urn:CorrelationIdentifier>token</urn:CorrelationIdentifier>
         </ns1:Header>
@@ -800,7 +800,7 @@ trait NewMessagesXml {
           <urn:MessageRecipient>token</urn:MessageRecipient>
           <urn:DateOfPreparation>2008-09-29</urn:DateOfPreparation>
           <urn:TimeOfPreparation>00:18:33</urn:TimeOfPreparation>
-          <urn:MessageIdentifier>token</urn:MessageIdentifier>
+          <urn:MessageIdentifier>messageId-2</urn:MessageIdentifier>
           <urn:CorrelationIdentifier>token</urn:CorrelationIdentifier>
         </urn1:Header>
         <urn1:Body>
@@ -857,7 +857,7 @@ trait NewMessagesXml {
           <urn:MessageRecipient>token</urn:MessageRecipient>
           <urn:DateOfPreparation>2015-08-24</urn:DateOfPreparation>
           <urn:TimeOfPreparation>23:07:00+01:00</urn:TimeOfPreparation>
-          <urn:MessageIdentifier>token</urn:MessageIdentifier>
+          <urn:MessageIdentifier>messageId-3</urn:MessageIdentifier>
           <!--Optional:-->
           <urn:CorrelationIdentifier>token</urn:CorrelationIdentifier>
         </urn2:Header>

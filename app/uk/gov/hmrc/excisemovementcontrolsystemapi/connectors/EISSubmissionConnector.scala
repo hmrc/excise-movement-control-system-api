@@ -23,9 +23,9 @@ import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, ErnsMapper}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import javax.inject.Inject
@@ -38,34 +38,37 @@ class EISSubmissionConnector @Inject()
   emcsUtils: EmcsUtils,
   appConfig: AppConfig,
   metrics: Metrics,
-  ernsMapper: ErnsMapper,
   dateTimeService: DateTimeService
 )(implicit ec: ExecutionContext) extends EISSubmissionHeaders with Logging {
 
-  def submitMessage(request: ValidatedXmlRequest[_], correlationId: String)(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
+  def submitMessage(
+                     message: IEMessage,
+                     requestXmlAsString: String,
+                     authorisedErn: String,
+                     correlationId: String
+                   )(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
 
     val timer = metrics.defaultRegistry.timer("emcs.submission.connector.timer").time()
 
     val timestamp = dateTimeService.timestamp()
     //todo: add retry
     val createdDateTime = timestamp.toString
-    val wrappedXml = wrapXmlInControlDocument(request.message.messageIdentifier, request.body.toString)
-    val messageType = request.message.messageType
+    val wrappedXml = wrapXmlInControlDocument(message.messageIdentifier, requestXmlAsString)
+    val messageType = message.messageType
     val encodedMessage = emcsUtils.encode(wrappedXml.toString)
 
-    val ern = ernsMapper.getSingleErnFromMessage(request.message, request.validErns)
-    val eisRequest = EISSubmissionRequest(ern, messageType, encodedMessage)
+    val eisRequest = EISSubmissionRequest(authorisedErn, messageType, encodedMessage)
 
     httpClient.POST[EISSubmissionRequest, Either[Result, EISSubmissionResponse]](
-        appConfig.emcsReceiverMessageUrl,
-        eisRequest,
-        build(correlationId, createdDateTime, appConfig.submissionBearerToken)
-      )(EISSubmissionRequest.format, EISHttpReader(correlationId, ern, createdDateTime), hc, ec)
+      appConfig.emcsReceiverMessageUrl,
+      eisRequest,
+      build(correlationId, createdDateTime, appConfig.submissionBearerToken)
+    )(EISSubmissionRequest.format, EISHttpReader(correlationId, authorisedErn, createdDateTime), hc, ec)
       .andThen { case _ => timer.stop() }
       .recover {
         case ex: Throwable =>
 
-          logger.warn(EISErrorMessage(createdDateTime, ern, ex.getMessage, correlationId, messageType), ex)
+          logger.warn(EISErrorMessage(createdDateTime, authorisedErn, ex.getMessage, correlationId, messageType), ex)
 
           val error = EISErrorResponse(
             timestamp,

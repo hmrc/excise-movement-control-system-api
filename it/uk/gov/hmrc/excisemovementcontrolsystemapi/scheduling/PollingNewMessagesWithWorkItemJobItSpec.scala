@@ -26,13 +26,15 @@ import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.json.Json
+import play.api.libs.json.{JsValue, Json}
 import play.api.{Application, Configuration}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{NewMessagesXml, SchedulingTestData}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.StringSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.WireMockServerSpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Notification
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.SuccessPushNotificationResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, MovementRepository}
@@ -90,12 +92,20 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
     timeService
   )
 
+  override def configureServices: Map[String, Any] = {
+    configureEisService ++
+      Map(
+        "mongodb.uri" -> mongoUri,
+        "microservice.services.notification.host" -> wireHost,
+        "microservice.services.notification.port" -> wireMock.port()
+      )
+  }
   protected def appBuilder: GuiceApplicationBuilder = {
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
 
     GuiceApplicationBuilder()
-      .configure(configureEisService ++ Map("mongodb.uri" -> mongoUri))
+      .configure(configureServices)
       .loadConfig(env => Configuration.load(env, Map("config.resource" -> "application.test.conf")))
       .overrides(
         bind[DateTimeService].to(timeService)
@@ -107,17 +117,13 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
 
   override def beforeEach(): Unit = {
     wireMock.resetAll()
-
     prepareDatabase()
-
+    wireMock.resetAll()
   }
 
-  override def afterEach(): Unit = {
-    super.afterEach()
-
-    //TODO Doing this breaks the timestamp check in "if fails three times work item marked as ToDo with a slow interval"
-    // Do we still need to do this??
-    //app.stop()
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    app
   }
 
   override def afterAll(): Unit = {
@@ -145,39 +151,32 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       movementRepository.saveMovement(Movement("boxId2", "token", "3", None, None, Instant.now, Seq.empty)).futureValue
       movementRepository.saveMovement(Movement("boxId3", "token", "4", None, None, Instant.now, Seq.empty)).futureValue
 
-      // start application
-      app
-
       // todo: not a very good way to wait for the thread to do is job. Tried eventually but it does not
       // work. Try to find a better way.
       Thread.sleep(6000)
 
-      eventually {
-        wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}1")))
-      }
-      eventually {
-        wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}3")))
-      }
-      eventually {
-        wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}4")))
-      }
-      eventually {
-        wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}1")))
-      }
-      eventually {
-        wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}3")))
-      }
-      eventually {
-        wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))
-      }
+      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}1")))}
+      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}3")))}
+      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}4")))}
+      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}1")))}
+      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}3")))}
+      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))}
 
-
+      val expectedMovementForErn_1 =  Movement("boxId1", "token", "1", None, Some("tokentokentokentokent"), Instant.now, expectedMessage)
+      val expectedMovementForErn_3 = Movement("boxId2", "token", "3", None, Some("tokentokentokentokent"), Instant.now, expectedMessage.take(1))
+      val expectedMovementForErn_4 = Movement("boxId3", "token", "4", None, Some("tokentokentokentokent"), Instant.now, Seq(createMessage(SchedulingTestData.ie704, MessageTypes.IE704.value)))
       val movements = movementRepository.collection.find().toFuture().futureValue
 
       movements.size mustBe 3
-      assertResults(movements.find(_.consignorId.equals("1")).get, Movement("boxId1", "token", "1", None, Some("tokentokentokentokent"), Instant.now, expectedMessage))
-      assertResults(movements.find(_.consignorId.equals("3")).get, Movement("boxId2", "token", "3", None, Some("tokentokentokentokent"), Instant.now, expectedMessage.take(1)))
-      assertResults(movements.find(_.consignorId.equals("4")).get, Movement("boxId3", "token", "4", None, Some("tokentokentokentokent"), Instant.now, Seq(createMessage(SchedulingTestData.ie704, MessageTypes.IE704.value))))
+      assertResults(movements.find(_.consignorId.equals("1")).get, expectedMovementForErn_1)
+      assertResults(movements.find(_.consignorId.equals("3")).get, expectedMovementForErn_3)
+      assertResults(movements.find(_.consignorId.equals("4")).get, expectedMovementForErn_4)
+
+      withClue("Should push a notification") {
+        assertPushNotificationApiForErn1(expectedMovementForErn_1, movements(0)._id)
+        assertPushNotificationApiForErn3(expectedMovementForErn_3, movements(1)._id)
+        assertPushNotificationApiForErn4(expectedMovementForErn_4, movements(2)._id)
+      }
     }
 
     "do not call EIS if nothing is in the work queue " in {
@@ -193,9 +192,6 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       movementRepository.saveMovement(Movement("boxId1", "token", "1", None, None, Instant.now, Seq.empty)).futureValue
       movementRepository.saveMovement(Movement("boxId2", "token", "3", None, None, Instant.now, Seq.empty)).futureValue
       movementRepository.saveMovement(Movement("boxId3", "token", "4", None, None, Instant.now, Seq.empty)).futureValue
-
-      // start application
-      app
 
       eventually {
         wireMock.verify(0, putRequestedFor(urlEqualTo(s"${showNewMessageUrl}1")))
@@ -215,7 +211,6 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       eventually {
         wireMock.verify(0, putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))
       }
-
 
       val movements = movementRepository.collection.find().toFuture().futureValue
 
@@ -239,9 +234,6 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       insert(createdWorkItem).futureValue
 
       movementRepository.saveMovement(Movement("boxId", "token", "1", None, None, Instant.now, Seq.empty)).futureValue
-
-      // start application
-      app
 
       // todo: not a very good way to wait for the thread to do is job. Tried eventually but it does not
       // work. Try to find a better way.
@@ -274,9 +266,6 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
 
       movementRepository.saveMovement(Movement("boxId", "token", "1", None, None, Instant.now, Seq.empty)).futureValue
 
-      // start application
-      app
-
       // todo: not a very good way to wait for the thread to do is job. Tried eventually but it does not
       // work. Try to find a better way.
       Thread.sleep(100)
@@ -293,11 +282,32 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
 
   }
 
+  private def assertPushNotificationApiForErn1(expectedMovement: Movement, movementId: String): Unit = {
+    val loggerRequests = wireMock.findAll(postRequestedFor(urlEqualTo(s"/box/boxId1/notifications")))
+    loggerRequests.size mustBe 3
+    loggerRequests.get(0).getBodyAsString mustBe createJsonNotificationBody("1", movementId, expectedMovement, "messageId-1").toString()
+    loggerRequests.get(1).getBodyAsString mustBe createJsonNotificationBody("1", movementId, expectedMovement, "messageId-2").toString()
+    loggerRequests.get(2).getBodyAsString mustBe createJsonNotificationBody("1", movementId, expectedMovement, "messageId-3").toString()
+  }
+
+  private def assertPushNotificationApiForErn3(expectedMovement: Movement, movementId: String): Unit = {
+    val loggerRequests = wireMock.findAll(postRequestedFor(urlEqualTo(s"/box/boxId2/notifications")))
+    loggerRequests.size mustBe 1
+    loggerRequests.get(0).getBodyAsString mustBe createJsonNotificationBody("3", movementId, expectedMovement, "messageId-1").toString()
+  }
+
+  private def assertPushNotificationApiForErn4(expectedMovement: Movement, movementId: String): Unit = {
+    val loggerRequests = wireMock.findAll(postRequestedFor(urlEqualTo(s"/box/boxId3/notifications")))
+    loggerRequests.size mustBe 1
+    loggerRequests.get(0).getBodyAsString mustBe createJsonNotificationBody("4", movementId, expectedMovement, "messageId-4").toString()
+  }
+
   private def assertResults(actual: Movement, expected: Movement) = {
     actual.localReferenceNumber mustBe expected.localReferenceNumber
     actual.consignorId mustBe expected.consignorId
     actual.administrativeReferenceCode mustBe expected.administrativeReferenceCode
     actual.consigneeId mustBe expected.consigneeId
+    actual.boxId mustBe expected.boxId
     decodeAndCleanUpMessage(actual.messages) mustBe decodeAndCleanUpMessage(expected.messages)
   }
 
@@ -314,7 +324,9 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
     stubMessageReceiptRequest("1")
     stubMessageReceiptRequest("3")
     stubMessageReceiptRequest("4")
-
+    stubPushNotification("boxId1")
+    stubPushNotification("boxId2")
+    stubPushNotification("boxId3")
   }
 
   private def stubShowNewMessageRequestForConsignorId3(): Unit = {
@@ -421,6 +433,15 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
     )
   }
 
+  private def stubPushNotification(boxId: String) = {
+    wireMock.stubFor(
+      post(s"/box/$boxId/notifications")
+        .willReturn(
+          ok().withBody(Json.toJson(SuccessPushNotificationResponse("123")).toString())
+        )
+    )
+  }
+
   private def createWorkItem(ern: String): WorkItem[ExciseNumberWorkItem] = {
 
     val sixtySecsAgo = availableBefore.minusSeconds(60)
@@ -439,8 +460,26 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
     Message(
       Base64.getEncoder.encodeToString(xml.getBytes(StandardCharsets.UTF_8)),
       messageType,
+      "messageId",
       timeService.timestamp()
     )
+  }
+
+  private def createJsonNotificationBody(
+    ern: String,
+    movementId: String,
+    movement: Movement,
+    messageId: String
+  ): JsValue = {
+    Json.toJson(Notification(
+      movementId,
+      s"/movements/$movementId/message/$messageId",
+      messageId,
+      movement.consignorId,
+      movement.consigneeId,
+      movement.administrativeReferenceCode.get,
+      ern
+    ))
   }
 }
 

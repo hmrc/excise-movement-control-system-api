@@ -30,17 +30,11 @@ case class ParsedXmlRequest[A]
   ieMessage: IEMessage,
   erns: Set[String],
   internalId: String
-) extends WrappedRequest[A](request)
-
-case class ValidatedXmlRequest[A]
-(
-  private val parsedRequest: ParsedXmlRequest[A],
-  validErns: Set[String]
-) extends WrappedRequest[A](parsedRequest) {
-
-  def message = parsedRequest.ieMessage
+) extends WrappedRequest[A](request) {
 
   def headersAsMap: Map[String, String] =
-    parsedRequest.request.request.headers.headers.toMap
+    request.request.headers.headers.toMap
+
 }
+
 

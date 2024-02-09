@@ -17,12 +17,14 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
 import akka.http.scaladsl.util.FastFuture.successful
+import cats.syntax.all._
 import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.SuccessPushNotificationResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.PollingNewMessagesWithWorkItemJob._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementService, NewMessageParserService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
@@ -42,6 +44,7 @@ class PollingNewMessagesWithWorkItemJob @Inject()
   workItemService: WorkItemService,
   movementService: MovementService,
   messageParser: NewMessageParserService,
+  notificationService: PushNotificationService,
   appConfig: AppConfig,
   dateTimeService: DateTimeService
 )(implicit ec: ExecutionContext) extends ScheduledMongoJob
@@ -66,9 +69,7 @@ class PollingNewMessagesWithWorkItemJob @Inject()
   private def process(failedBefore: Instant, availableBefore: Instant, maximumRetries: Int): Future[RunningOfJobSuccessful] = {
     workItemService.pullOutstanding(failedBefore, availableBefore)
       .flatMap {
-        case None =>
-          Future.successful(RunningOfJobSuccessful)
-
+        case None => Future.successful(RunningOfJobSuccessful)
         case Some(wi) =>
 
           val ern = wi.item.exciseNumber
@@ -106,10 +107,10 @@ class PollingNewMessagesWithWorkItemJob @Inject()
     newMessageService.getNewMessagesAndAcknowledge(exciseNumber)
       .flatMap {
         case Some((consumptionResponse, messageCount)) if messageCount > 10 =>
-          saveToDB(exciseNumber, consumptionResponse).map(_ => MessagesOutstanding)
+          processMessages(exciseNumber, consumptionResponse).map(_ => MessagesOutstanding)
 
-        case Some((consumptionResponse, _))  =>
-          saveToDB(exciseNumber, consumptionResponse).map(_ => Processed)
+        case Some((consumptionResponse, _)) =>
+          processMessages(exciseNumber, consumptionResponse).map(_ => Processed)
 
         case _ =>
           logger.error(s"[PollingNewMessageWithWorkItemJob] - Could not get messages for ern: $exciseNumber. Will retry later")
@@ -122,7 +123,7 @@ class PollingNewMessagesWithWorkItemJob @Inject()
       }
   }
 
-  private def saveToDB(
+  private def processMessages(
                         exciseNumber: String,
                         consumptionResponse: EISConsumptionResponse
                       ): Future[Boolean] = {
@@ -130,20 +131,28 @@ class PollingNewMessagesWithWorkItemJob @Inject()
     messageParser.extractMessages(consumptionResponse.message)
       .foldLeft(successful(true)) { case (acc, x) =>
         acc.flatMap {
-          _ => save(x, exciseNumber)
+          _ => saveToDbAndSendNotification(x, exciseNumber)
         }
       }
   }
 
-  private def save(message: IEMessage, exciseNumber: String)(implicit ec: ExecutionContext): Future[Boolean] = {
-    movementService.updateMovement(message, exciseNumber)
-      .flatMap {
-        case true =>
-          successful(true)
-        case _ =>
-          logger.warn(s"[PollingNewMessageWithWorkItemJob] - Could not update movement for ern: $exciseNumber")
-          successful(false)
-      }
+  private def saveToDbAndSendNotification(
+    message: IEMessage,
+    exciseNumber: String
+  )(implicit ec: ExecutionContext): Future[Boolean] = {
+
+    movementService.updateMovement(message, exciseNumber).map {
+      movements =>
+        movements.map(m =>
+        notificationService.sendNotification(exciseNumber, m, message.messageIdentifier))
+          .sequence
+          .map { case o => o.forall(response =>
+            response match {
+              case _: SuccessPushNotificationResponse => true
+              case _ => false
+            }
+          )}
+    }.flatten
   }
 }
 
@@ -152,8 +161,6 @@ object PollingNewMessagesWithWorkItemJob {
   private sealed trait NewMessageResult
 
   private case object Processed extends NewMessageResult
-
   private case object MessagesOutstanding extends NewMessageResult
-
   private case object PollingFailed extends NewMessageResult
 }

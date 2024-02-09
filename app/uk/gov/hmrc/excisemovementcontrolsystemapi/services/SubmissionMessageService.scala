@@ -20,7 +20,7 @@ import com.google.inject.ImplementedBy
 import play.api.Logging
 import play.api.mvc.Result
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ValidatedXmlRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmission
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
@@ -39,23 +39,25 @@ class SubmissionMessageServiceImpl @Inject()(
 
 
   def submit(
-    request: ValidatedXmlRequest[_]
-  )(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
+              request: ParsedXmlRequest[_],
+              authorisedErn: String
+            )(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
 
     val correlationId = emcsUtils.generateCorrelationId
 
     for {
-      submitMessageResponse <- connector.submitMessage(request, correlationId)
+      submitMessageResponse <- connector.submitMessage(request.ieMessage, request.body.toString, authorisedErn, correlationId)
       isSuccess = submitMessageResponse.isRight
-      _ = if(isSuccess) sendToNrs(request, correlationId)
-      } yield submitMessageResponse
+      _ = if (isSuccess) sendToNrs(request, authorisedErn, correlationId)
+    } yield submitMessageResponse
   }
 
   private def sendToNrs(
-    request: ValidatedXmlRequest[_],
-    correlationId: String
-  )(implicit hc: HeaderCarrier): Future[Option[NonRepudiationSubmission]] = {
-    nrsService.submitNrs(request, correlationId).transformWith {
+                         request: ParsedXmlRequest[_],
+                         authorisedErn: String,
+                         correlationId: String
+                       )(implicit hc: HeaderCarrier): Future[Option[NonRepudiationSubmission]] = {
+    nrsService.submitNrs(request, authorisedErn, correlationId).transformWith {
       case Success(value) => Future.successful(Some(value))
       case _ => Future.successful(None)
     }
@@ -65,6 +67,7 @@ class SubmissionMessageServiceImpl @Inject()(
 @ImplementedBy(classOf[SubmissionMessageServiceImpl])
 trait SubmissionMessageService {
   def submit(
-    request: ValidatedXmlRequest[_]
-  )(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]]
+              request: ParsedXmlRequest[_],
+              authorisedErn: String
+            )(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]]
 }

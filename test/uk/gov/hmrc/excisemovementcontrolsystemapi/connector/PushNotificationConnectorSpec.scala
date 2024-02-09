@@ -21,20 +21,14 @@ import org.mockito.MockitoSugar.{reset, verify, when}
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR}
-import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound}
+import play.api.http.Status.{CREATED, OK}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PushNotificationConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Notification
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.{FailedPushNotification, SuccessBoxNotificationResponse, SuccessPushNotificationResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
-import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
-import scala.reflect.runtime.universe.typeOf
 
 class PushNotificationConnectorSpec
   extends PlaySpec
@@ -46,28 +40,27 @@ class PushNotificationConnectorSpec
 
   private val httpClient = mock[HttpClient]
   private val appConfig = mock[AppConfig]
-  private val dateTimeService = mock[DateTimeService]
-  private val timestamp = Instant.now
 
-  private val sut = new PushNotificationConnector(httpClient, appConfig, dateTimeService)
+  private val sut = new PushNotificationConnector(httpClient, appConfig)
 
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(httpClient, appConfig)
 
     when(httpClient.GET[Any](any, any, any)(any,any,any))
-      .thenReturn(Future.successful(HttpResponse(200, Json.toJson(SuccessBoxNotificationResponse("123")).toString())))
-    when(appConfig.pushPullNotificationHost).thenReturn("/notificationUrl")
-    when(dateTimeService.timestamp()).thenReturn(timestamp)
-    when(appConfig.pushNotificationUri(any)).thenReturn("/pushNotificationUrl")
+      .thenReturn(Future.successful(HttpResponse(200, """{"boxId": "123"}""")))
     when(httpClient.POST[Any,Any](any, any, any)(any, any, any, any))
       .thenReturn(Future.successful(HttpResponse(201, """{"notificationId": "123"}""")))
+    when(appConfig.pushPullNotificationHost).thenReturn("/notificationUrl")
+    when(appConfig.pushNotificationUri(any)).thenReturn("/pushNotificationUrl")
   }
 
   "getBoxId" should {
     "return 200 status" in {
       val result = await(sut.getBoxId("clientId"))
-      result mustBe Right(SuccessBoxNotificationResponse("123"))
+
+      result.status mustBe OK
+      result.body mustBe """{"boxId": "123"}"""
     }
 
     "send the request to the notification service" in {
@@ -78,59 +71,17 @@ class PushNotificationConnectorSpec
       await(sut.getBoxId("clientId"))
       verify(httpClient).GET(eqTo("/notificationUrl/box"), eqTo(queryParams), any)(any,any,any)
     }
-
-    "return an error" when {
-      "Box Id not found" in {
-        val debugMessage = "Box does not exist"
-        when(httpClient.GET[Any](any, any, any)(any,any,any))
-          .thenReturn(Future.successful(HttpResponse(404, debugMessage)))
-
-        val result = await(sut.getBoxId("clientId"))
-
-        result.left.value mustBe NotFound(buildBoxIdJsonError(debugMessage))
-      }
-
-      "is bad request" in {
-        val debugMessage = "BAD_REQUEST"
-        when(httpClient.GET[Any](any, any, any)(any,any,any))
-          .thenReturn(Future.successful(HttpResponse(400, debugMessage)))
-
-        val result = await(sut.getBoxId("clientId"))
-
-        result.left.value mustBe BadRequest(buildBoxIdJsonError(debugMessage))
-      }
-
-      "is unknown error" in {
-        val debugMessage = "unknown error"
-        when(httpClient.GET[Any](any, any, any)(any,any,any))
-          .thenReturn(Future.successful(HttpResponse(500, debugMessage)))
-
-        val result = await(sut.getBoxId("clientId"))
-
-        result.left.value mustBe InternalServerError(buildBoxIdJsonError(debugMessage))
-      }
-
-      "cannot parse json" in {
-        val errorJson = Json.obj( "code" -> "UNKNOWN_ERROR", "message" -> "Box does not exist")
-        when(httpClient.GET[Any](any, any, any)(any,any,any))
-          .thenReturn(Future.successful(HttpResponse(200, errorJson.toString())))
-
-        val result = await(sut.getBoxId("clientId"))
-
-        val expectedError: JsValue = buildBoxIdJsonError(s"Response body could not be read as type ${typeOf[SuccessBoxNotificationResponse]}")
-        result.left.value mustBe InternalServerError(expectedError)
-      }
-    }
   }
 
   "postNotification" should {
 
-    val notification = Notification("123", "/messageUli", "messageId", "ern123")
+    val notification = Notification("mvId", "/url", "messageId", "consignor", Some("consignee"), "arc", "ern123")
 
-    "return a 200" in {
+    "return an HttpResponse" in {
       val result = await(sut.postNotification("boxId", notification))
 
-      result mustBe SuccessPushNotificationResponse("123")
+      result.status mustBe CREATED
+      result.body mustBe """{"notificationId": "123"}"""
     }
 
     "post the notification" in {
@@ -142,42 +93,6 @@ class PushNotificationConnectorSpec
         eqTo(Seq("Content-Type" -> "application/json"))
       )(any, any, any, any)
     }
-
-    "return an error" when {
-      "the notification API return an error" in {
-        when(httpClient.POST[Any,Any](any, any, any)(any, any, any, any))
-          .thenReturn(Future.successful(HttpResponse(BAD_REQUEST, "Box ID is not a UUID")))
-
-        val result = await(sut.postNotification("boxId", notification))
-
-       Json.toJson(result.asInstanceOf[FailedPushNotification]) mustBe
-         buildPushNotificationJsonError(BAD_REQUEST, "Box ID is not a UUID")
-      }
-
-      "invalid json" in {
-        when(httpClient.POST[Any,Any](any, any, any)(any, any, any, any))
-          .thenReturn(Future.successful(HttpResponse(200, "invalid json")))
-
-        val result = await(sut.postNotification("boxId", notification))
-
-        result mustBe FailedPushNotification(INTERNAL_SERVER_ERROR,
-            s"Response body could not be read as type ${typeOf[SuccessPushNotificationResponse]}")
-      }
-    }
-  }
-
-  private def buildBoxIdJsonError(debugMessage: String) = {
-    Json.parse(
-      s"""{"dateTime":"$timestamp",
-         |"message":"Box Id error",
-         |"debugMessage":"$debugMessage"}""".stripMargin)
-  }
-
-  private def buildPushNotificationJsonError(status: Int, debugMessage: String) = {
-    Json.parse(
-      s"""{"status":$status,
-         |"message":"Push notification error",
-         |"debugMessage":"$debugMessage"}""".stripMargin)
   }
 }
 

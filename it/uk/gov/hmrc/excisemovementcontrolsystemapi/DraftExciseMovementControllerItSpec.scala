@@ -124,27 +124,58 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
   "Draft Excise Movement" should {
 
-    "return 202" in {
-      withAuthorizedTrader(consignorId)
-      stubEISSuccessfulRequest
-      setupRepositories
-      when(workItemRepository.pushNew(any, any, any)).thenReturn(Future.successful(workItem))
-      when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
+    "return 202" when {
 
-      val result = postRequest(IE815)
+      "all is successful" in {
+        withAuthorizedTrader(consignorId)
+        stubEISSuccessfulRequest
+        setupRepositories
+        when(workItemRepository.pushNew(any, any, any)).thenReturn(Future.successful(workItem))
+        when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
 
-      result.status mustBe ACCEPTED
-      withClue("return the json response") {
-        assertValidResult(result)
+        val result = postRequest(IE815)
+
+        result.status mustBe ACCEPTED
+        withClue("return the json response") {
+          assertValidResult(result)
+        }
+
+        withClue("submit to NRS") {
+          verify(postRequestedFor(urlEqualTo("/submission")))
+        }
       }
 
-      withClue("submit to NRS") {
-        verify(postRequestedFor(urlEqualTo("/submission")))
+      "NRS fails" in {
+        withAuthorizedTrader(consignorId)
+        stubEISSuccessfulRequest
+        stubNrsErrorResponse
+        setupRepositories
+
+        val result = postRequest(IE815)
+
+        result.status mustBe ACCEPTED
+        withClue("return the json response") {
+          assertValidResult(result)
+        }
       }
+
+      "NRS throws an exception" in {
+        withAuthorizedTrader(consignorId)
+        stubEISSuccessfulRequest
+        stubNrsErrorResponse
+        setupRepositories
+
+        // no Authorization header added
+        val result = await(wsClient.url(url).addHttpHeaders("X-Client-Id" -> "clientId").post(IE815))
+
+        result.status mustBe ACCEPTED
+      }
+
     }
 
-    "return an error" when {
-      "notification service return a 400" in {
+    "return a 400 Bad Request error" when {
+
+      "notification service returns a 400" in {
         withAuthorizedTrader(consignorId)
         stubEISSuccessfulRequest
         setupRepositories
@@ -171,151 +202,155 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
           verify(0, postRequestedFor(urlEqualTo(eisUrl)))
         }
       }
-    }
 
-    "clientId is missing in the header" in {
-      val result = postRequestWithoutClientId
+      "clientId is missing in the header" in {
+        val result = postRequestWithoutClientId
 
-      result.status mustBe BAD_REQUEST
-      withClue("return the json response") {
-        val responseBody = result.json.as[ErrorResponse]
-        responseBody.dateTime.truncatedTo(ChronoUnit.MINUTES) mustBe Instant.now.truncatedTo(ChronoUnit.MINUTES)
-        responseBody.message mustBe "ClientId error"
-        responseBody.debugMessage mustBe "Request header is missing X-Client-Id"
+        result.status mustBe BAD_REQUEST
+        withClue("return the json response") {
+          val responseBody = result.json.as[ErrorResponse]
+          responseBody.dateTime.truncatedTo(ChronoUnit.MINUTES) mustBe Instant.now.truncatedTo(ChronoUnit.MINUTES)
+          responseBody.message mustBe "ClientId error"
+          responseBody.debugMessage mustBe "Request header is missing X-Client-Id"
+        }
+      }
+
+      "EIS returns BAD_REQUEST" in {
+        withAuthorizedTrader(consignorId)
+        stubEISErrorResponse(BAD_REQUEST, createEISErrorResponseBodyAsJson("BAD_REQUEST").toString())
+
+        postRequest(IE815).status mustBe BAD_REQUEST
+      }
+
+      "xml cannot be parsed" in {
+        withAuthorizedTrader("GBWK002281023")
+
+        postRequest(<IE815></IE815>).status mustBe BAD_REQUEST
+      }
+
+      "body is not xml" in {
+        withAuthorizedTrader("GBWK002281023")
+
+        val result = await(wsClient.url(url)
+          .addHttpHeaders(
+            HeaderNames.AUTHORIZATION -> "TOKEN",
+            HeaderNames.CONTENT_TYPE -> """application/vnd.hmrc.1.0+xml"""
+          ).post("test")
+        )
+
+        result.status mustBe BAD_REQUEST
+      }
+
+      "rim validation error" in {
+
+        withAuthorizedTrader(consignorId)
+        stubEISErrorResponse(BAD_REQUEST, rimValidationErrorResponse(messageWithControlDoc))
+
+        val response = postRequest(IE815)
+
+        withClue("must remove control document references in any paths") {
+          clean(response.body) mustBe clean(rimValidationErrorResponse(messageWithoutControlDoc))
+        }
+      }
+
+      "supplied with message that is not an IE815" in {
+        withAuthorizedTrader(consignorId)
+
+        postRequest(IE818).status mustBe BAD_REQUEST
+
       }
     }
 
-    "return success also if NRS fails" in {
-      withAuthorizedTrader(consignorId)
-      stubEISSuccessfulRequest
-      stubNrsErrorResponse
-      setupRepositories
+    "return a 401 Unauthorised" when {
+      "no authorized trader" in {
+        withUnauthorizedTrader(InternalError("A general auth failure"))
 
-      val result = postRequest(IE815)
+        postRequest(IE815).status mustBe UNAUTHORIZED
+      }
 
-      result.status mustBe ACCEPTED
-      withClue("return the json response") {
-        assertValidResult(result)
+    }
+
+    "return a 403 Forbidden" when {
+      "there are no authorized ERN" in {
+        withAnEmptyERN()
+
+        postRequest(IE815).status mustBe FORBIDDEN
+      }
+
+      "the consignee is trying to send in an IE815" in {
+        withAuthorizedTrader(consigneeId)
+
+        postRequest(IE815).status mustBe FORBIDDEN
+      }
+
+      "the consignor is empty" in {
+        withAuthorizedTrader(consignorId)
+
+        postRequest(IE815WithNoConsignor).status mustBe FORBIDDEN
+      }
+
+      "consignor id cannot be validate" in {
+        withAuthorizedTrader()
+
+        postRequest(IE815).status mustBe FORBIDDEN
+      }
+
+
+    }
+
+    "return a 404 Not Found error" when {
+      "return not found if EIS returns not found" in {
+        withAuthorizedTrader(consignorId)
+        val eisErrorResponse = createEISErrorResponseBodyAsJson("NOT_FOUND")
+        stubEISErrorResponse(NOT_FOUND, eisErrorResponse.toString())
+
+        val result = postRequest(IE815)
+
+        result.status mustBe NOT_FOUND
+
+        withClue("return the EIS error response") {
+          result.json mustBe Json.toJson(eisErrorResponse)
+        }
       }
     }
 
-    "return success also if NRS throws" in {
-      withAuthorizedTrader(consignorId)
-      stubEISSuccessfulRequest
-      stubNrsErrorResponse
-      setupRepositories
-
-      // no Authorization header added
-      val result = await(wsClient.url(url).addHttpHeaders("X-Client-Id" -> "clientId").post(IE815))
-
-      result.status mustBe ACCEPTED
-    }
-
-    "return not found if EIS returns not found" in {
-      withAuthorizedTrader(consignorId)
-      val eisErrorResponse = createEISErrorResponseBodyAsJson("NOT_FOUND")
-      stubEISErrorResponse(NOT_FOUND, eisErrorResponse.toString())
-
-      val result = postRequest(IE815)
-
-      result.status mustBe NOT_FOUND
-
-      withClue("return the EIS error response") {
-        result.json mustBe Json.toJson(eisErrorResponse)
+    "return a 415 Unsupported Media Type" when {
+      "supplied with Json" in {
+        withAuthorizedTrader("GBWK002281023")
+        postRequest(contentType = """application/json""").status mustBe UNSUPPORTED_MEDIA_TYPE
       }
+
     }
 
-    "return bad request (400) if EIS returns BAD_REQUEST" in {
-      withAuthorizedTrader(consignorId)
-      stubEISErrorResponse(BAD_REQUEST, createEISErrorResponseBodyAsJson("BAD_REQUEST").toString())
+    "return a 422 Unprocessable Entity" when {
+      "EIS returns UNPROCESSABLE_ENTRY" in {
+        withAuthorizedTrader(consignorId)
+        stubEISErrorResponse(UNPROCESSABLE_ENTITY, createEISErrorResponseBodyAsJson("Unprocessable_Entity").toString())
 
-      postRequest(IE815).status mustBe BAD_REQUEST
+        postRequest(IE815).status mustBe UNPROCESSABLE_ENTITY
+      }
+
     }
 
-    "remove control document references in any paths for a BAD_REQUEST" in {
+    "return a 500 Internal Server Error" when {
+      "EIS returns 500" in {
+        withAuthorizedTrader(consignorId)
+        stubEISErrorResponse(INTERNAL_SERVER_ERROR, createEISErrorResponseBodyAsJson("INTERNAL_SERVER_ERROR").toString())
 
-      withAuthorizedTrader(consignorId)
-      stubEISErrorResponse(BAD_REQUEST, rimValidationErrorResponse(messageWithControlDoc))
+        postRequest(IE815).status mustBe INTERNAL_SERVER_ERROR
+      }
 
-      val response = postRequest(IE815)
-      clean(response.body) mustBe clean(rimValidationErrorResponse(messageWithoutControlDoc))
+      "EIS returns bad json" in {
+        withAuthorizedTrader(consignorId)
+        stubEISErrorResponse(INTERNAL_SERVER_ERROR, """"{"json": "is-bad"}""")
+
+        postRequest(IE815).status mustBe INTERNAL_SERVER_ERROR
+      }
+
     }
 
-    "return unprocessable entity (422) if EIS returns UNPROCESSABLE_ENTRY" in {
-      withAuthorizedTrader(consignorId)
-      stubEISErrorResponse(UNPROCESSABLE_ENTITY, createEISErrorResponseBodyAsJson("Unprocessable_Entity").toString())
-
-      postRequest(IE815).status mustBe UNPROCESSABLE_ENTITY
-    }
-
-    "return internal server error (500) if EIS returns 500" in {
-      withAuthorizedTrader(consignorId)
-      stubEISErrorResponse(INTERNAL_SERVER_ERROR, createEISErrorResponseBodyAsJson("INTERNAL_SERVER_ERROR").toString())
-
-      postRequest(IE815).status mustBe INTERNAL_SERVER_ERROR
-    }
-
-    "return internal server error (500) if EIS returns bad json" in {
-      withAuthorizedTrader(consignorId)
-      stubEISErrorResponse(INTERNAL_SERVER_ERROR, """"{"json": "is-bad"}""")
-
-      postRequest(IE815).status mustBe INTERNAL_SERVER_ERROR
-    }
-
-    "return forbidden (403) when there are no authorized ERN" in {
-      withAnEmptyERN()
-
-      postRequest(IE815).status mustBe FORBIDDEN
-    }
-
-    "return forbidden (403) when the consignee is trying to send in an IE815" in {
-      withAuthorizedTrader(consigneeId)
-
-      postRequest(IE815).status mustBe FORBIDDEN
-    }
-
-    "return forbidden (403) when the consignor is empty" in {
-      withAuthorizedTrader(consignorId)
-
-      postRequest(IE815WithNoCosignor).status mustBe FORBIDDEN
-    }
-
-    "return a Unauthorized (401) when no authorized trader" in {
-      withUnauthorizedTrader(InternalError("A general auth failure"))
-
-      postRequest(IE815).status mustBe UNAUTHORIZED
-    }
-
-    "return bad request (400) when xml cannot be parsed" in {
-      withAuthorizedTrader("GBWK002281023")
-
-      postRequest(<IE815></IE815>).status mustBe BAD_REQUEST
-    }
-
-    "return Unsupported Media Type (415)" in {
-      withAuthorizedTrader("GBWK002281023")
-      postRequest(contentType = """application/json""").status mustBe UNSUPPORTED_MEDIA_TYPE
-    }
-
-    "return bad request (400) when body is not xml" in {
-      withAuthorizedTrader("GBWK002281023")
-
-      val result = await(wsClient.url(url)
-        .addHttpHeaders(
-          HeaderNames.AUTHORIZATION -> "TOKEN",
-          HeaderNames.CONTENT_TYPE -> """application/vnd.hmrc.1.0+xml"""
-        ).post("test")
-      )
-
-      result.status mustBe BAD_REQUEST
-    }
-
-    "return forbidden (403) when consignor id cannot be validate" in {
-      withAuthorizedTrader()
-
-      postRequest(IE815).status mustBe FORBIDDEN
-    }
   }
+
 
   private def setupRepositories = {
     when(movementRepository.saveMovement(any))
@@ -359,7 +394,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     await(wsClient.url(url)
       .addHttpHeaders(
         HeaderNames.AUTHORIZATION -> "TOKEN",
-        HeaderNames.CONTENT_TYPE ->  "application/vnd.hmrc.1.0+xml",
+        HeaderNames.CONTENT_TYPE -> "application/vnd.hmrc.1.0+xml",
       ).post(IE815)
     )
   }
@@ -410,7 +445,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   private def stubGetBoxIdSuccessRequest = {
     wireMock.stubFor {
       get(urlPathEqualTo(s"""/box"""))
-        .withQueryParam("boxName",equalTo(Constants.BoxName))
+        .withQueryParam("boxName", equalTo(Constants.BoxName))
         .withQueryParam("clientId", equalTo("clientId"))
         .willReturn(
           aResponse()
@@ -418,7 +453,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
             .withBody(
               s"""
                 {
-                  "boxId": "${boxId}",
+                  "boxId": "$boxId",
                   "boxName":"customs/excise##1.0##notificationUrl",
                   "boxCreator":{
                       "clientId": "testClientId"
@@ -437,7 +472,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   private def stubGetBoxIdFailureRequest(status: Int, body: String) = {
     wireMock.stubFor {
       get(urlPathEqualTo(s"""/box"""))
-        .withQueryParam("boxName",equalTo(Constants.BoxName))
+        .withQueryParam("boxName", equalTo(Constants.BoxName))
         .withQueryParam("clientId", equalTo("clientId"))
         .willReturn(
           aResponse()

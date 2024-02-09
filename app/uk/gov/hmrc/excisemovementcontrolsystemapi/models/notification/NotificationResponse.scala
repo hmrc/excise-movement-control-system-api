@@ -80,10 +80,16 @@ object NotificationResponse {
   }
 }
 
-case class Notification(
+//todo: Update consignee to be Non Optional as this
+// is not Optional anymore with the schema version 4.1.
+case class Notification
+(
   movementId: String,
   messageUri: String,
   messageId: String,
+  consignor: String,
+  consignee: Option[String],
+  arc: String,
   ern: String
 )
 
