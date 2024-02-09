@@ -17,8 +17,10 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
 import generated.{IE837Type, MessagesOption, Number1Value31, Number2Value30}
+import play.api.libs.json.Json
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
 
 import scala.xml.NodeSeq
 
@@ -28,7 +30,7 @@ case class IE837Message
   private val obj: IE837Type,
   private val key: Option[String],
   private val namespace: Option[String]
-) extends IEMessage {
+) extends IEMessage with GeneratedJsonWriters {
   def consignorId: Option[String] = {
     if (obj.Body.ExplanationOnDelayForDelivery.AttributesValue.SubmitterType == Number1Value31) { //Generated class for SubmitterType 1
       Some(obj.Body.ExplanationOnDelayForDelivery.AttributesValue.SubmitterIdentification)
@@ -48,6 +50,7 @@ case class IE837Message
   override def toXml: NodeSeq = {
     scalaxb.toXML[IE837Type](obj, namespace, key, generated.defaultScope)
   }
+  override def toJson = Json.toJson(obj)
 
   override def lrnEquals(lrn: String): Boolean = false
 

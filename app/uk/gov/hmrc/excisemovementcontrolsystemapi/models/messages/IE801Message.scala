@@ -17,8 +17,10 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
 import generated.{IE801Type, MessagesOption}
+import play.api.libs.json.Json
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
 
 import scala.xml.NodeSeq
 
@@ -27,7 +29,7 @@ case class IE801Message
   private val obj: IE801Type,
   private val key: Option[String],
   private val namespace: Option[String]
-) extends IEMessage {
+) extends IEMessage with GeneratedJsonWriters {
   def localReferenceNumber: Option[String] = {
     Some(obj.Body.EADESADContainer.EadEsad.LocalReferenceNumber)
   }
@@ -46,6 +48,7 @@ case class IE801Message
   override def toXml: NodeSeq = {
     scalaxb.toXML[IE801Type](obj, namespace, key, generated.defaultScope)
   }
+  override def toJson = Json.toJson(obj)
 
   override def lrnEquals(lrn: String): Boolean = localReferenceNumber.contains(lrn)
 

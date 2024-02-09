@@ -17,8 +17,10 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
 import generated.{IE829Type, MessagesOption}
+import play.api.libs.json.Json
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
 
 import scala.xml.NodeSeq
 
@@ -28,7 +30,7 @@ case class IE829Message
   private val obj: IE829Type,
   private val key: Option[String],
   private val namespace: Option[String]
-) extends IEMessage {
+) extends IEMessage with GeneratedJsonWriters {
 
   override def consigneeId: Option[String] =
     obj.Body.NotificationOfAcceptedExport.ConsigneeTrader.flatMap(_.Traderid)
@@ -42,6 +44,7 @@ case class IE829Message
   override def toXml: NodeSeq = {
     scalaxb.toXML[IE829Type](obj, namespace, key, generated.defaultScope)
   }
+  override def toJson = Json.toJson(obj)
 
   override def lrnEquals(lrn: String): Boolean = false
 

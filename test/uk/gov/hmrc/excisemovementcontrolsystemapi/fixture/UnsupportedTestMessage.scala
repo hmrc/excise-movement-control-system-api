@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
+import play.api.libs.json.{JsObject, JsValue}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 
 import scala.xml.NodeSeq
@@ -32,4 +33,6 @@ object UnsupportedTestMessage extends IEMessage {
   override def lrnEquals(lrn: String): Boolean = false
 
   override def messageIdentifier: String = "message-id"
+
+  override def toJson: JsValue = JsObject.empty
 }

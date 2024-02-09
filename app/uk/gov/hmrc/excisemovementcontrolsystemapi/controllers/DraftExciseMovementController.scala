@@ -48,7 +48,6 @@ class DraftExciseMovementController @Inject()(
   def submit: Action[NodeSeq] =
     (authAction andThen xmlParser andThen validateErnInMessageAction).async(parse.xml) {
       implicit request: ValidatedXmlRequest[NodeSeq] =>
-
         request.headers.get(Constants.XClientIdHeader) match {
           case Some(clientId) =>
             notificationConnector.getBoxId(clientId).flatMap {
