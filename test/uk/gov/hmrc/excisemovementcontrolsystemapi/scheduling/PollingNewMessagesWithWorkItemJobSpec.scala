@@ -30,9 +30,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionRespo
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE801Message, IE813Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.SuccessPushNotificationResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageService, MovementService, NewMessageParserService, PushNotificationService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, TestUtils}
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
@@ -48,7 +47,6 @@ class PollingNewMessagesWithWorkItemJobSpec
     with NewMessagesXml {
 
   implicit private val ec: ExecutionContext = ExecutionContext.global
-  implicit private val hc: HeaderCarrier = HeaderCarrier()
 
   private val appConfig = mock[AppConfig]
   private val newMessageService = mock[GetNewMessageService]

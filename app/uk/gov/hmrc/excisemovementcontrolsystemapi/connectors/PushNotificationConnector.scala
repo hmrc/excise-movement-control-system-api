@@ -16,10 +16,8 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
-import play.api.Logging
 import play.api.http.{HeaderNames, MimeTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification._
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}

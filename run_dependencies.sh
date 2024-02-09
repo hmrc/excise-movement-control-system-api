@@ -9,5 +9,6 @@ sm2 --start AUTH_LOGIN_API \
  NRS_STUBS \
  THIRD_PARTY_APPLICATION \
  API_SUBSCRIPTION_FIELDS \
+ EMCS_API_EIS_STUB \
  PUSH_PULL_NOTIFICATIONS_API --appendArgs '{"PUSH_PULL_NOTIFICATIONS_API":["-Dallowlisted.useragents.0=api-subscription-fields","-Dallowlisted.useragents.1=excise-movement-control-system-api"]}' \
  PUSH_PULL_NOTIFICATIONS_GATEWAY --appendArgs '{"PUSH_PULL_NOTIFICATIONS_GATEWAY":["-DvalidateHttpsCallbackUrl=false"]}'

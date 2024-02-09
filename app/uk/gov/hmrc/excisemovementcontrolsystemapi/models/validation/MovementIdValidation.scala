@@ -20,14 +20,12 @@ import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.BadRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 
 import java.time.Instant
 import java.util.UUID
-import javax.inject.Inject
 import scala.util.Try
 
-case class MovementIdValidation @Inject()(movementService: MovementService) {
+class MovementIdValidation {
 
   def validateMovementId(id: String): Either[MovementValidationError, String] = {
 
@@ -35,7 +33,6 @@ case class MovementIdValidation @Inject()(movementService: MovementService) {
       case Left(_) => Left(MovementIdFormatInvalid())
       case Right(_) => Right(id)
     }
-
   }
 
   def convertErrorToResponse(error: MovementValidationError, timestamp: Instant): Result = {
