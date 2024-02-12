@@ -20,19 +20,23 @@ import cats.data.EitherT
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.Mockito.never
 import org.mockito.MockitoSugar.{reset, times, verify, verifyZeroInteractions, when}
+import org.mockito.VerifyInOrder
 import org.mockito.captor.ArgCaptor
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
+import play.api.http.Status.BAD_REQUEST
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.NewMessagesXml
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptSuccessResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE801Message, IE813Message, IEMessage}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.SuccessPushNotificationResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.{FailedPushNotification, SuccessPushNotificationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, TestUtils}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
@@ -48,6 +52,7 @@ class PollingNewMessagesWithWorkItemJobSpec
     with NewMessagesXml {
 
   implicit private val ec: ExecutionContext = ExecutionContext.global
+  implicit val hc: HeaderCarrier = HeaderCarrier()
 
   private val appConfig = mock[AppConfig]
   private val newMessageService = mock[GetNewMessageService]
@@ -58,6 +63,7 @@ class PollingNewMessagesWithWorkItemJobSpec
   private val dateTimeService = mock[DateTimeService]
   private val message = mock[IEMessage]
   private val notificationService = mock[PushNotificationService]
+  private val timestamp = Instant.now
   private val newMessageResponse = EISConsumptionResponse(
     Instant.parse("2023-05-06T09:10:13Z"),
     "123",
@@ -97,7 +103,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
     when(lockRepository.takeLock(any, any, any)).thenReturn(Future.successful(true))
     when(lockRepository.releaseLock(any, any)).thenReturn(successful(()))
-    when(dateTimeService.timestamp()).thenReturn(Instant.now())
+    when(dateTimeService.timestamp()).thenReturn(timestamp)
 
     when(appConfig.maxFailureRetryAttempts).thenReturn(3)
     when(appConfig.workItemFastInterval).thenReturn(Duration.create(5, MINUTES))
@@ -110,7 +116,7 @@ class PollingNewMessagesWithWorkItemJobSpec
       .thenReturn(Future.successful(Seq(Movement(Some("boxId"), "1", "2", Some("3"), Some("4")))))
     when(workItemService.markAs(any, any, any)).thenReturn(Future.successful(true))
     when(workItemService.rescheduleWorkItem(any)).thenReturn(Future.successful(true))
-    when(notificationService.sendNotification(any,any,any)(any))
+    when(notificationService.sendNotification(any, any, any)(any))
       .thenReturn(Future.successful(SuccessPushNotificationResponse("notificationId)")))
 
     when(auditService.auditMessage(any)(any)).thenReturn(EitherT.fromEither(Right(())))
@@ -132,7 +138,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
     "acquire a mongo lock" in {
       when(workItemService.pullOutstanding(any, any)).thenReturn(Future.successful(None))
-      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+      when(newMessageService.getNewMessages(any)(any))
         .thenReturn(Future.successful(Some((newMessageResponse, 5))))
 
       await(job.executeInMutex)
@@ -147,8 +153,10 @@ class PollingNewMessagesWithWorkItemJobSpec
     "should reschedule workItem when successfully run" in {
       val workItem = createWorkItem()
       addOneItemToMockQueue(workItem)
-      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+      when(newMessageService.getNewMessages(any)(any))
         .thenReturn(Future.successful(Some((newMessageResponse, 10))))
+      when(newMessageService.acknowledgeMessage(any)(any))
+        .thenReturn(successful(MessageReceiptSuccessResponse(timestamp, "", 0)))
 
       await(job.executeInMutex)
 
@@ -158,8 +166,10 @@ class PollingNewMessagesWithWorkItemJobSpec
     "should immediately add workItem back to queue when successfully run and remaining messages" in {
       val workItem = createWorkItem()
       addOneItemToMockQueue(workItem)
-      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+      when(newMessageService.getNewMessages(any)(any))
         .thenReturn(Future.successful(Some((newMessageResponse, 17))))
+      when(newMessageService.acknowledgeMessage(any)(any))
+        .thenReturn(successful(MessageReceiptSuccessResponse(timestamp, "", 0)))
 
       await(job.executeInMutex)
 
@@ -186,7 +196,7 @@ class PollingNewMessagesWithWorkItemJobSpec
       val workItem = createWorkItem()
       addOneItemToMockQueue(workItem)
 
-      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+      when(newMessageService.getNewMessages(any)(any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
       await(job.executeInMutex)
@@ -205,7 +215,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
       when(workItemService.rescheduleWorkItemForceSlow(any)).thenReturn(Future.successful(true))
       when(appConfig.maxFailureRetryAttempts).thenReturn(retryAttempt)
-      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+      when(newMessageService.getNewMessages(any)(any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
       val result = await(job.executeInMutex)
@@ -216,7 +226,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
     "parse the messages" in {
       addOneItemToMockQueue()
-      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+      when(newMessageService.getNewMessages(any)(any))
         .thenReturn(Future.successful(Some((newMessageResponse, 5))))
 
       await(job.executeInMutex)
@@ -226,14 +236,14 @@ class PollingNewMessagesWithWorkItemJobSpec
 
     "send getNewMessage request for each pending ern if there are multiple" in {
       addTwoItemsToMockQueue(createWorkItem(), createWorkItem(ern = "124"))
-      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+      when(newMessageService.getNewMessages(any)(any))
         .thenReturn(Future.successful(Some((newMessageResponse, 5))))
 
       val result = await(job.executeInMutex)
 
       result.message mustBe "polling-new-messages Job ran successfully."
       val captor = ArgCaptor[String]
-      verify(newMessageService, times(2)).getNewMessagesAndAcknowledge(captor.capture)(any)
+      verify(newMessageService, times(2)).getNewMessages(captor.capture)(any)
 
       captor.values mustBe Seq("123", "124")
 
@@ -253,10 +263,10 @@ class PollingNewMessagesWithWorkItemJobSpec
       verifyZeroInteractions(newMessageService)
     }
 
-    "not save message in the movement database" when {
+    "not save any messages in the movement database" when {
       "API response has no messages inside" in {
         addOneItemToMockQueue()
-        when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+        when(newMessageService.getNewMessages(any)(any))
           .thenReturn(Future.successful(Some((newMessageResponseEmpty, 0))))
         when(newMessageParserService.extractMessages(any)).thenReturn(Seq.empty)
 
@@ -269,7 +279,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
       "API returns no message" in {
         addOneItemToMockQueue()
-        when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+        when(newMessageService.getNewMessages(any)(any))
           .thenReturn(Future.successful(None))
 
         val result = await(job.executeInMutex)
@@ -279,9 +289,9 @@ class PollingNewMessagesWithWorkItemJobSpec
         verifyZeroInteractions(notificationService)
       }
 
-      "API return an error" in {
+      "API returns an error" in {
         addOneItemToMockQueue()
-        when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+        when(newMessageService.getNewMessages(any)(any))
           .thenReturn(Future.failed(new RuntimeException("error")))
 
         val result = await(job.executeInMutex)
@@ -292,9 +302,9 @@ class PollingNewMessagesWithWorkItemJobSpec
       }
     }
 
-    "save each message" in {
+    "save each message in sequential order" in {
       addOneItemToMockQueue(createWorkItem())
-      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+      when(newMessageService.getNewMessages(any)(any))
         .thenReturn(Future.successful(Some((newMessageResponse, 3))))
 
       val ie815Message = mock[IE801Message]
@@ -304,9 +314,11 @@ class PollingNewMessagesWithWorkItemJobSpec
 
       await(job.executeInMutex)
 
-      verify(movementService).updateMovement(eqTo(message), eqTo("123"))
-      verify(movementService).updateMovement(eqTo(ie815Message), eqTo("123"))
-      verify(movementService).updateMovement(eqTo(ie813Message), eqTo("123"))
+      val inOrder = VerifyInOrder(Seq(movementService))
+
+      inOrder.verify(movementService).updateMovement(eqTo(message), eqTo("123"))
+      inOrder.verify(movementService).updateMovement(eqTo(ie815Message), eqTo("123"))
+      inOrder.verify(movementService).updateMovement(eqTo(ie813Message), eqTo("123"))
     }
 
     "audit each message" in {
@@ -331,7 +343,7 @@ class PollingNewMessagesWithWorkItemJobSpec
       "feature flag enabled" in {
         addOneItemToMockQueue(createWorkItem())
 
-        when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+      when(newMessageService.getNewMessages(any)(any))
           .thenReturn(Future.successful(Some((newMessageResponse, 3))))
 
         val ie801Message = mock[IE801Message]
@@ -347,9 +359,9 @@ class PollingNewMessagesWithWorkItemJobSpec
 
         await(job.executeInMutex)
 
-        verify(notificationService).sendNotification(eqTo("123"), any[Movement], eqTo("1"))(any)
-        verify(notificationService).sendNotification(eqTo("123"), any[Movement], eqTo("2"))(any)
-        verify(notificationService).sendNotification(eqTo("123"), any[Movement], eqTo("3"))(any)
+      verify(notificationService).sendNotification(eqTo("123"), any[Movement], eqTo("1"))(any)
+      verify(notificationService).sendNotification(eqTo("123"), any[Movement], eqTo("2"))(any)
+      verify(notificationService).sendNotification(eqTo("123"), any[Movement], eqTo("3"))(any)
       }
 
     }
@@ -380,6 +392,153 @@ class PollingNewMessagesWithWorkItemJobSpec
 
     }
 
+    "not send a push notification" when {
+      "a message could not be saved in the database" in {
+        addOneItemToMockQueue(createWorkItem())
+
+        when(newMessageService.getNewMessages(any)(any))
+          .thenReturn(Future.successful(Some((newMessageResponse, 3))))
+
+        when(newMessageParserService.extractMessages(any))
+          .thenReturn(Seq(message))
+
+        when(movementService.updateMovement(any, any))
+          .thenReturn(Future.successful(Seq.empty))
+
+        await(job.executeInMutex)
+
+        verifyZeroInteractions(notificationService)
+      }
+
+    }
+
+    "acknowledge the messages when all messages are saved to db" in {
+      addOneItemToMockQueue()
+      when(newMessageService.getNewMessages(any)(any))
+        .thenReturn(Future.successful(Some((newMessageResponse, 5))))
+
+      val movement = Movement("bixId", "lrn", "consigneeId", None, None, timestamp)
+      when(movementService.updateMovement(any, any))
+        .thenReturn(
+          Future.successful(Seq(movement)))
+
+      await(job.executeInMutex)
+
+      val order1 = VerifyInOrder(Seq(movementService, newMessageService))
+
+      order1.verify(movementService).updateMovement(any, any)
+      order1.verify(newMessageService).acknowledgeMessage(any)(any)
+
+    }
+
+    "not acknowledge the messages" when {
+
+      "none of the messages have been saved in the db" in {
+        addOneItemToMockQueue()
+        when(newMessageService.getNewMessages(any)(any))
+          .thenReturn(Future.successful(Some((newMessageResponse, 5))))
+
+        when(movementService.updateMovement(any, any))
+          .thenReturn(Future.successful(Seq.empty))
+
+        await(job.executeInMutex)
+
+        verify(newMessageService, never()).acknowledgeMessage(any)(any)
+        verify(notificationService, never()).sendNotification(any, any, any)(any)
+      }
+
+      "any individual message is not saved to the database" in {
+        addOneItemToMockQueue()
+        when(newMessageService.getNewMessages(any)(any))
+          .thenReturn(Future.successful(Some((newMessageResponse, 5))))
+
+        when(newMessageParserService.extractMessages(any)).thenReturn(Seq(message, message, message, message, message))
+        when(movementService.updateMovement(any, any))
+          .thenReturn(
+            Future.successful(Seq(Movement("boxId1", "lrn1", "consignor", Some("consignee")))),
+            Future.successful(Seq(Movement("boxId2", "lrn2", "consignor", Some("consignee")))),
+            Future.successful(Seq.empty),
+            Future.successful(Seq(Movement("boxId3", "lrn3", "consignor", Some("consignee")))),
+            Future.successful(Seq(Movement("boxId4", "lrn4", "consignor", Some("consignee")))),
+          )
+
+        await(job.executeInMutex)
+
+        verify(newMessageService, never()).acknowledgeMessage(any)(any)
+        verify(notificationService, times(4)).sendNotification(any, any, any)(any)
+      }
+
+      "update movement throws" in {
+        addOneItemToMockQueue()
+        when(newMessageService.getNewMessages(any)(any))
+          .thenReturn(Future.successful(Some((newMessageResponse, 5))))
+
+        when(movementService.updateMovement(any, any))
+          .thenReturn(Future.failed(new RuntimeException("error")))
+
+        await(job.executeInMutex)
+
+        verify(newMessageService, never()).acknowledgeMessage(any)(any)
+        verify(notificationService, never()).sendNotification(any, any, any)(any)
+      }
+
+      "there are no messages" in {
+        addOneItemToMockQueue()
+        when(newMessageService.getNewMessages(any)(any))
+          .thenReturn(Future.successful(Some((newMessageResponse, 5))))
+
+        when(newMessageParserService.extractMessages(any))
+          .thenReturn(Seq.empty)
+
+        await(job.executeInMutex)
+
+        verify(newMessageService, never()).acknowledgeMessage(any)(any)
+        verify(notificationService, never()).sendNotification(any, any, any)(any)
+      }
+
+    }
+
+    "acknowledge receipt" when {
+
+      "the push notification could not be sent for all the messages" in {
+        addOneItemToMockQueue()
+        when(newMessageService.getNewMessages(any)(any))
+          .thenReturn(Future.successful(Some((newMessageResponse, 5))))
+
+        when(movementService.updateMovement(any, any))
+          .thenReturn(Future.successful(Seq(Movement("boxId1", "lrn1", "consignor", Some("consignee")))))
+
+        when(notificationService.sendNotification(any, any, any)(any))
+          .thenReturn(Future.successful(FailedPushNotification(BAD_REQUEST, "something went wrong :(")))
+
+        await(job.executeInMutex)
+
+        verify(newMessageService).acknowledgeMessage(any)(any)
+      }
+
+      "any individual push notification could not be sent" in {
+        addOneItemToMockQueue()
+        when(newMessageService.getNewMessages(any)(any))
+          .thenReturn(Future.successful(Some((newMessageResponse, 5))))
+
+        when(newMessageParserService.extractMessages(any)).thenReturn(Seq(message, message, message, message, message))
+
+        when(movementService.updateMovement(any, any))
+          .thenReturn(Future.successful(Seq(Movement("boxId1", "lrn1", "consignor", Some("consignee")))))
+
+        when(notificationService.sendNotification(any, any, any)(any))
+          .thenReturn(
+            Future.successful(SuccessPushNotificationResponse("notificationId")),
+            Future.successful(SuccessPushNotificationResponse("notificationId")),
+            Future.successful(FailedPushNotification(BAD_REQUEST, "something went wrong :(")),
+            Future.successful(SuccessPushNotificationResponse("notificationId")),
+            Future.successful(SuccessPushNotificationResponse("notificationId"))
+          )
+        await(job.executeInMutex)
+
+        verify(newMessageService).acknowledgeMessage(any)(any)
+      }
+    }
   }
 
   private def addOneItemToMockQueue(workItem1: WorkItem[ExciseNumberWorkItem] = createWorkItem()): Unit = {

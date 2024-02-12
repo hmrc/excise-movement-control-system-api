@@ -21,10 +21,10 @@ import org.mockito.MockitoSugar.{reset, verify, verifyZeroInteractions, when}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.mvc.Results.{BadRequest, InternalServerError}
+import play.api.mvc.Results.InternalServerError
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageReceiptConnector, ShowNewMessagesConnector}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptSuccessResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{GetNewMessageServiceImpl, NewMessageParserService}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -55,31 +55,12 @@ class GetNewMessageServiceSpec
       when(showNewMessageParser.countOfMessagesAvailable(any)).thenReturn(10)
       when(showNewMessageConnector.get(any)(any))
         .thenReturn(Future.successful(Right(EISConsumptionResponse(dateTime, "123", "any message"))))
-      when(messageReceiptConnector.put(any)(any))
-        .thenReturn(Future.successful(Right(MessageReceiptResponse(dateTime, "123", 10))))
 
-      val result = await(sut.getNewMessagesAndAcknowledge("123"))
+      val result = await(sut.getNewMessages("123"))
 
       verify(showNewMessageConnector).get(eqTo("123"))(any)
       result mustBe Some((EISConsumptionResponse(dateTime, "123", "any message"), 10))
 
-      withClue("acknowledge the messages") {
-        verify(messageReceiptConnector).put(eqTo("123"))(any)
-      }
-    }
-
-    "not call the message-receipt api if no new message found" in {
-      when(showNewMessageParser.countOfMessagesAvailable(any)).thenReturn(0)
-      when(showNewMessageConnector.get(any)(any))
-        .thenReturn(Future.successful(Right(EISConsumptionResponse(dateTime, "123", ""))))
-      when(messageReceiptConnector.put(any)(any))
-        .thenReturn(Future.successful(Right(MessageReceiptResponse(dateTime, "123", 10))))
-
-      await(sut.getNewMessagesAndAcknowledge("123"))
-
-      withClue("acknowledge the messages") {
-        verifyZeroInteractions(messageReceiptConnector)
-      }
     }
 
     "return the response and zero message count if no messages returned" in {
@@ -87,35 +68,19 @@ class GetNewMessageServiceSpec
       val consumptionResponse = EISConsumptionResponse(dateTime, "123", "")
       when(showNewMessageConnector.get(any)(any))
         .thenReturn(Future.successful(Right(consumptionResponse)))
-      when(messageReceiptConnector.put(any)(any))
-        .thenReturn(Future.successful(Right(MessageReceiptResponse(dateTime, "123", 10))))
 
-      val result = await(sut.getNewMessagesAndAcknowledge("123"))
+      val result = await(sut.getNewMessages("123"))
 
       result mustBe Some((consumptionResponse, 0))
 
-    }
-
-    "return message if message-receipt fails" in {
-      when(showNewMessageParser.countOfMessagesAvailable(any)).thenReturn(7)
-      when(showNewMessageConnector.get(any)(any))
-        .thenReturn(Future.successful(Right(EISConsumptionResponse(dateTime, "123", "any message"))))
-      when(messageReceiptConnector.put(any)(any))
-        .thenReturn(Future.successful(Left(BadRequest("error"))))
-
-      val result = await(sut.getNewMessagesAndAcknowledge("123"))
-
-      result mustBe Some((EISConsumptionResponse(dateTime, "123", "any message"), 7))
     }
 
     "return No messages" when {
       "show-new-message api return an error" in {
         when(showNewMessageConnector.get(any)(any))
           .thenReturn(Future.successful(Left(InternalServerError("error"))))
-        when(messageReceiptConnector.put(any)(any))
-          .thenReturn(Future.successful(Right(MessageReceiptResponse(dateTime, "123", 10))))
 
-        val result = await(sut.getNewMessagesAndAcknowledge("123"))
+        val result = await(sut.getNewMessages("123"))
 
         result mustBe None
 
@@ -125,17 +90,19 @@ class GetNewMessageServiceSpec
       }
     }
 
-    "return empty response and message count as 0 when message-receipt fails and there are no messages" in {
-      when(showNewMessageParser.countOfMessagesAvailable(any)).thenReturn(0)
-      val eisResponse = EISConsumptionResponse(dateTime, "123", "any message")
-      when(showNewMessageConnector.get(any)(any))
-        .thenReturn(Future.successful(Right(eisResponse)))
+  }
+
+  "acknowledgeReceipt" should {
+
+    "call the connector with the excise number supplied" in {
+
+      val expectedResponse = MessageReceiptSuccessResponse(dateTime, "ern123", 10)
+
       when(messageReceiptConnector.put(any)(any))
-        .thenReturn(Future.successful(Left(BadRequest("error"))))
+        .thenReturn(Future.successful(expectedResponse))
 
-      val result = await(sut.getNewMessagesAndAcknowledge("123"))
+      await(sut.acknowledgeMessage("ern123")) mustBe expectedResponse
 
-      result mustBe Some((eisResponse, 0))
     }
 
   }

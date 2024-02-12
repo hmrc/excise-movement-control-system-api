@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
-import org.mockito.MockitoSugar.when
+import org.mockito.MockitoSugar.{reset, when}
 import org.mongodb.scala.model.Filters
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, OptionValues}
@@ -24,6 +24,7 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
+import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
@@ -46,8 +47,8 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val appConfig = app.injector.instanceOf[AppConfig]
-  private val dateTimeService = mock[DateTimeService]
-  private val timestamp = Instant.parse("2018-11-30T18:35:24.00Z")
+  private lazy val dateTimeService = mock[DateTimeService]
+  private lazy val timestamp = Instant.parse("2018-11-30T18:35:24.00Z")
 
   protected override val repository = new ExciseNumberQueueWorkItemRepository(
     appConfig,
@@ -57,27 +58,27 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
 
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
-      .configure(
-        "mongodb.uri" -> mongoUri
-      )
+      .configure("mongodb.uri" -> mongoUri)
+      .overrides(bind[DateTimeService].to(dateTimeService))
 
   override implicit lazy val app: Application = appBuilder.build()
 
   override def beforeEach(): Unit = {
     super.beforeEach()
+    reset(dateTimeService)
 
     when(dateTimeService.timestamp()).thenReturn(timestamp)
   }
 
   override def afterAll(): Unit = {
     super.afterAll()
-    dropDatabase()
   }
 
   "getWorkItemForErn" should {
 
     "return Work Item with that ern if one exists in the db " in {
-      val expectedWorkItem = insertWorkItemForErn("ern123")
+      val expectedWorkItem = createWorkItemForErn("ern123")
+      insert(expectedWorkItem).futureValue
 
       val result = repository.getWorkItemForErn("ern123").futureValue
 
@@ -97,11 +98,8 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
 
     "update Work Item in db" in {
 
-      val originalWI = insertWorkItemForErn("ern1")
-
-      //Want to make sure the updatedAt is...updated. It is already set to "timestamp" so use a new one
-      val newTimestamp = Instant.parse("2023-11-23T16:00:00.00Z")
-      when(dateTimeService.timestamp()).thenReturn(newTimestamp)
+      val originalWI = createWorkItemForErn("ern1", timestamp.minusSeconds(120))
+      insert(originalWI).futureValue
 
       val updatedWI = originalWI.copy(
         item = originalWI.item.copy(fastPollRetriesLeft = 23),
@@ -113,10 +111,9 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
 
       repository.saveUpdatedWorkItem(updatedWI).futureValue mustBe true
 
-      val savedWorkItems = repository.collection
-        .find(
+      val savedWorkItems = find(
           Filters.in("item.exciseNumber", "ern1"),
-        ).toFuture().futureValue
+        ).futureValue
 
       withClue("should update rather than insert an item - ern is unique index") {
         savedWorkItems.size mustBe 1
@@ -133,7 +130,7 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
       }
 
       withClue("should update updatedAt") {
-        savedWorkItem.updatedAt mustBe newTimestamp
+        savedWorkItem.updatedAt mustBe timestamp
       }
 
       withClue("should update ReceivedAt (lastSubmitted)") {
@@ -151,16 +148,11 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
     }
   }
 
-  private def insertWorkItemForErn(ern: String) = {
-    val workItem = TestUtils.createWorkItem(
+  private def createWorkItemForErn(ern: String, updateAt: Instant = timestamp)  =
+    TestUtils.createWorkItem(
       ern = ern,
       availableAt = timestamp,
       updatedAt = timestamp,
       receivedAt = timestamp
     )
-
-    repository.collection.insertOne(workItem).toFuture().map(_ => workItem).futureValue
-
-  }
-
 }

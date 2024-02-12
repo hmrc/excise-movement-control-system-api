@@ -19,6 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 import com.google.inject.ImplementedBy
 import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageReceiptConnector, ShowNewMessagesConnector}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -26,12 +27,12 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class GetNewMessageServiceImpl @Inject()(
-                                          showNewMessageConnector: ShowNewMessagesConnector,
-                                          messageReceiptConnector: MessageReceiptConnector,
-                                          newMessageParserService: NewMessageParserService
-                                        )(implicit val ec: ExecutionContext )extends GetNewMessageService with Logging {
+  showNewMessageConnector: ShowNewMessagesConnector,
+  messageReceiptConnector: MessageReceiptConnector,
+  newMessageParserService: NewMessageParserService
+)(implicit val ec: ExecutionContext )extends GetNewMessageService with Logging {
 
-  def getNewMessagesAndAcknowledge(
+  def getNewMessages(
                                     exciseNumber: String
                                   )(implicit hc: HeaderCarrier): Future[Option[(EISConsumptionResponse, Long)]] = {
     showNewMessageConnector.get(exciseNumber).flatMap(response =>
@@ -42,10 +43,16 @@ class GetNewMessageServiceImpl @Inject()(
     )
   }
 
+  def acknowledgeMessage(
+    exciseNumber: String
+    )(implicit hc: HeaderCarrier): Future[MessageReceiptResponse] = {
+    messageReceiptConnector.put(exciseNumber)
+  }
+
   private def handleSuccess(
                              exciseNumber: String,
                              newMessageResponse: EISConsumptionResponse
-                           )(implicit hc: HeaderCarrier): Future[Option[(EISConsumptionResponse, Long)]] = {
+                           ): Future[Option[(EISConsumptionResponse, Long)]] = {
 
     val messageCount = newMessageParserService.countOfMessagesAvailable(newMessageResponse.message)
     val hasMessage = messageCount  > 0
@@ -54,16 +61,15 @@ class GetNewMessageServiceImpl @Inject()(
       logger.info(s"[GetNewMessageService] - No new messages available for Excise Registration Number: $exciseNumber")
       Future.successful(Some((newMessageResponse,0)))
     } else {
-      messageReceiptConnector.put(exciseNumber).map {
         logger.debug(s"[GetNewMessageService] - $messageCount messages available for Excise Registration Number: $exciseNumber")
-        _ => Some((newMessageResponse, messageCount))
-      }
+        Future.successful(Some((newMessageResponse, messageCount)))
     }
   }
 }
 
 @ImplementedBy(classOf[GetNewMessageServiceImpl])
 trait GetNewMessageService {
-  def getNewMessagesAndAcknowledge(exciseNumber: String)(implicit hc: HeaderCarrier): Future[Option[(EISConsumptionResponse, Long)]]
+  def getNewMessages(exciseNumber: String)(implicit hc: HeaderCarrier): Future[Option[(EISConsumptionResponse, Long)]]
+  def acknowledgeMessage(exciseNumber: String)(implicit hc: HeaderCarrier): Future[MessageReceiptResponse]
 }
 

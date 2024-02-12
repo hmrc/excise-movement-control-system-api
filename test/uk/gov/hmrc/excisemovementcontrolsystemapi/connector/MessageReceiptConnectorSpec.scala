@@ -25,19 +25,18 @@ import org.mockito.MockitoSugar.{reset, verify, when}
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
+import play.api.http.Status.{INTERNAL_SERVER_ERROR, NOT_FOUND}
 import play.api.libs.json.Json
-import play.api.mvc.Results.InternalServerError
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageReceiptConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptFailResponse, MessageReceiptSuccessResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext
-import scala.reflect.runtime.universe.typeOf
 
 class MessageReceiptConnectorSpec
   extends PlaySpec
@@ -56,7 +55,7 @@ class MessageReceiptConnectorSpec
   private val sut = new MessageReceiptConnector(httpClient, appConfig, emcsUtil, metrics, dateTimeService)
 
   private val timestamp = Instant.parse("2023-01-02T03:04:05Z")
-  private val response = MessageReceiptResponse(timestamp, "123", 10)
+  private val response = MessageReceiptSuccessResponse(timestamp, "123", 10)
 
   private val messagesBearerToken = "messagesBearerToken"
 
@@ -77,7 +76,7 @@ class MessageReceiptConnectorSpec
     "return a response" in {
       val result = await(sut.put("123"))
 
-      result mustBe Right(response)
+      result mustBe response
     }
 
     "should sent a request with the right parameters" in {
@@ -108,20 +107,20 @@ class MessageReceiptConnectorSpec
     "return an error" when {
       "eis api return an error" in {
         when(httpClient.PUTString[Any](any, any, any)(any, any, any))
-          .thenReturn(Future.successful(HttpResponse(404, "error")))
+          .thenReturn(Future.successful(HttpResponse(NOT_FOUND, "error")))
 
         val result = await(sut.put("123"))
 
-        result.left.value mustBe InternalServerError("error")
+        result mustBe MessageReceiptFailResponse(NOT_FOUND, timestamp, "error")
       }
 
-      "can parse Json" in {
+      "can't parse Json" in {
         when(httpClient.PUTString[Any](any, any, any)(any, any, any))
           .thenReturn(Future.successful(HttpResponse(200, "error")))
 
         val result = await(sut.put("123"))
 
-        result.left.value mustBe InternalServerError(s"Response body could not be read as type ${typeOf[MessageReceiptResponse]}")
+        result mustBe MessageReceiptFailResponse(INTERNAL_SERVER_ERROR, timestamp, "Exception occurred when Acknowledging messages for ern: 123")
 
       }
     }

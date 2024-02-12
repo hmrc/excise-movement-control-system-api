@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.service
 
 import dispatch.Future
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
-import org.mockito.MockitoSugar.{reset, verify, when}
+import org.mockito.MockitoSugar.{reset, times, verify, when}
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
@@ -526,9 +526,10 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       setUpForUpdateMovement(newMessage, Seq(None), Some("123"), "<foo>test</foo>", cachedMovements, messageIdForNewMessage)
       when(mockMovementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movementWithMessagesAlready)))
 
-      await(movementService.updateMovement(newMessage, consignorId))
+      val result = await(movementService.updateMovement(newMessage, consignorId))
 
-      verify(mockMovementRepository).updateMovement(eqTo(movementWithMessagesAlready))
+      result mustBe Seq.empty
+      verify(mockMovementRepository, times(0)).updateMovement(any)
     }
 
     "save to DB when message has different content but the same message type" in {

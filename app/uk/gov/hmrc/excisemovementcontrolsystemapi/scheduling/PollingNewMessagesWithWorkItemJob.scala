@@ -16,13 +16,11 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
-import akka.http.scaladsl.util.FastFuture.successful
 import cats.syntax.all._
 import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.SuccessPushNotificationResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.PollingNewMessagesWithWorkItemJob._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
@@ -94,7 +92,6 @@ class PollingNewMessagesWithWorkItemJob @Inject()
               logger.error(s"[PollingNewMessageWithWorkItemJob] - Work item for ERN $ern has" +
                 s" failed $maximumRetries times and has been moved to the slower polling interval")
               workItemService.rescheduleWorkItemForceSlow(wi)
-
           }
             .flatMap(_ => process(failedBefore, availableBefore, maximumRetries))
       }
@@ -106,7 +103,7 @@ class PollingNewMessagesWithWorkItemJob @Inject()
   }
 
   private def getNewMessages(exciseNumber: String): Future[NewMessageResult] = {
-    newMessageService.getNewMessagesAndAcknowledge(exciseNumber)
+    newMessageService.getNewMessages(exciseNumber)
       .flatMap {
         case Some((consumptionResponse, messageCount)) if messageCount > 10 =>
           processMessages(exciseNumber, consumptionResponse).map(_ => MessagesOutstanding)
@@ -125,23 +122,27 @@ class PollingNewMessagesWithWorkItemJob @Inject()
       }
   }
 
+
   private def processMessages(
     exciseNumber: String,
     consumptionResponse: EISConsumptionResponse
-  ): Future[Boolean] = {
+  )(implicit hc: HeaderCarrier): Future[Boolean] = {
+    val messages = messageParser.extractMessages(consumptionResponse.message)
 
-    messageParser.extractMessages(consumptionResponse.message)
-      .foldLeft(successful(true)) { case (acc, x) =>
-        acc.flatMap {
-          _ => {
-            for {
-              saveResult <- saveToDbAndSendNotification(x, exciseNumber)
-              _ <- auditService.auditMessage(x).value
+    for {
+      success <- process(messages, exciseNumber)
+      _       <- if (success) newMessageService.acknowledgeMessage(exciseNumber) else Future.unit
+    } yield success
+  }
+
+  private def process(messages: Seq[IEMessage], exciseNumber: String): Future[Boolean] = {
+    messages.traverse(message => {
+    for {
+              saveResult <- saveToDbAndSendNotification(message, exciseNumber)
+              _ <- auditService.auditMessage(message).value
             } yield saveResult
-
-          }
-        }
-      }
+    })
+      .map(result => !result.contains(false) && result.nonEmpty)
   }
 
   private def saveToDbAndSendNotification(
@@ -150,7 +151,7 @@ class PollingNewMessagesWithWorkItemJob @Inject()
   )(implicit ec: ExecutionContext): Future[Boolean] = {
 
     movementService.updateMovement(message, exciseNumber).map {
-      movements =>
+      case Nil => Future(false)
         if (!appConfig.pushNotificationsEnabled) {
           movements match {
             case Nil => successful(false)
@@ -164,21 +165,18 @@ class PollingNewMessagesWithWorkItemJob @Inject()
   }
 
   private def sendNotification(exciseNumber: String, movements: Seq[Movement], messageId: String) = {
-    movements.map(m =>
-      notificationService.sendNotification(exciseNumber, m, messageId)
-    ).sequence
-      .map { o =>
-        o.forall {
-          case _: SuccessPushNotificationResponse => true
-          case _ => false
-        }
-      }
+    movementService.updateMovement(message, exciseNumber).map {
+      case Nil => Future(false)
+      case movements =>
+        movements.map { movement =>
+          notificationService.sendNotification(exciseNumber, movement, message.messageIdentifier)
+        }.sequence
+          .map {responseSequence => responseSequence.forall(_ => true)}
   }
 
 }
 
 object PollingNewMessagesWithWorkItemJob {
-
   private sealed trait NewMessageResult
 
   private case object Processed extends NewMessageResult
