@@ -25,7 +25,6 @@ import scala.util.Try
 
 trait GeneratedJsonWriters {
 
-  //TODO: Check that this prints out the attribute and value (language, etc -> vals)
   implicit val mapWrites: OWrites[Map[String, DataRecord[Any]]] = OWrites {
     map => {
       JsObject(map.toSeq.map { case (s, r) =>
