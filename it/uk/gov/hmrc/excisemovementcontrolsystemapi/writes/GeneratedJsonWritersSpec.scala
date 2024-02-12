@@ -41,7 +41,7 @@ class GeneratedJsonWritersSpec extends AnyFreeSpec with GeneratedJsonWriters wit
   "IE837Message" - new TestType[IE837Type](IE837TestMessageType, IE837Message.createFromXml(IE837WithConsignor))
   "IE839Message" - new TestType[IE839Type](IE839TestMessageType, IE839Message.createFromXml(IE839))
   "IE840Message" - new TestType[IE840Type](IE840TestMessageType, IE840Message.createFromXml(IE840))
-  "IE871Message" - new TestType[IE871Type](IE871TestMessageType, IE871Message.createFromXml(IE871))
+  "IE871Message" - new TestType[IE871Type](IE871TestMessageType, IE871Message.createFromXml(IE871WithConsignor))
   "IE881Message" - new TestType[IE881Type](IE881TestMessageType, IE881Message.createFromXml(IE881))
   "IE905Message" - new TestType[IE905Type](IE905TestMessageType, IE905Message.createFromXml(IE905))
 
