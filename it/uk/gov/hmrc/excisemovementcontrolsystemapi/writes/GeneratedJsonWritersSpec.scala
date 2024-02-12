@@ -17,38 +17,38 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.writes
 
 import generated.{IE704Type, IE801Type, IE802Type, IE803Type, IE807Type, IE810Type, IE813Type, IE815Type, IE818Type, IE819Type, IE829Type, IE837Type, IE839Type, IE840Type, IE871Type, IE881Type, IE905Type, XMLProtocol}
-import play.api.libs.json.OWrites
 import scalaxb.XMLFormat
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE704Message, IE801Message, IE802Message, IE803Message, IE807Message, IE810Message, IE813Message, IE815Message, IE818Message, IE819Message, IE829Message, IE837Message, IE839Message, IE840Message, IE871Message, IE881Message, IE905Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.writes.testObjects._
 
-class GeneratedJsonWritersSpec extends AnyFreeSpec with GeneratedJsonWriters with Matchers {
+class GeneratedJsonWritersSpec extends AnyFreeSpec with GeneratedJsonWriters with Matchers with TestXml {
 
-  "ie704Writes" - new TestType[IE704Type](IE704TestMessageType, this.IE704Type)
-  "ie801Writes" - new TestType[IE801Type](IE801TestMessageType, this.IE801Type)
-  "ie802Writes" - new TestType[IE802Type](IE802TestMessageType, this.IE802Type)
-  "ie803Writes" - new TestType[IE803Type](IE803TestMessageType, this.IE803Type)
-  "ie807Writes" - new TestType[IE807Type](IE807TestMessageType, this.IE807Type)
-  "ie810Writes" - new TestType[IE810Type](IE810TestMessageType, this.IE810Type)
-  "ie813Writes" - new TestType[IE813Type](IE813TestMessageType, this.IE813Type)
-  "ie815Writes" - new TestType[IE815Type](IE815TestMessageType, this.IE815Type)
-  "ie818Writes" - new TestType[IE818Type](IE818TestMessageType, this.IE818Type)
-  "ie819Writes" - new TestType[IE819Type](IE819TestMessageType, this.IE819Type)
-  "ie829Writes" - new TestType[IE829Type](IE829TestMessageType, this.IE829Type)
-  "ie837Writes" - new TestType[IE837Type](IE837TestMessageType, this.IE837Type)
-  "ie839Writes" - new TestType[IE839Type](IE839TestMessageType, this.IE839Type)
-  "ie840Writes" - new TestType[IE840Type](IE840TestMessageType, this.IE840Type)
-  "ie871Writes" - new TestType[IE871Type](IE871TestMessageType, this.IE871Type)
-  "ie881Writes" - new TestType[IE881Type](IE881TestMessageType, this.IE881Type)
-  "ie905Writes" - new TestType[IE905Type](IE905TestMessageType, this.IE905Type)
+  "IE704Message" - new TestType[IE704Type](IE704TestMessageType, IE704Message.createFromXml(IE704))
+  "IE801Message" - new TestType[IE801Type](IE801TestMessageType, IE801Message.createFromXml(IE801))
+  "IE802Message" - new TestType[IE802Type](IE802TestMessageType, IE802Message.createFromXml(IE802))
+  "IE803Message" - new TestType[IE803Type](IE803TestMessageType, IE803Message.createFromXml(IE803))
+  "IE807Message" - new TestType[IE807Type](IE807TestMessageType, IE807Message.createFromXml(IE807))
+  "IE810Message" - new TestType[IE810Type](IE810TestMessageType, IE810Message.createFromXml(IE810))
+  "IE813Message" - new TestType[IE813Type](IE813TestMessageType, IE813Message.createFromXml(IE813))
+  "IE815Message" - new TestType[IE815Type](IE815TestMessageType, IE815Message.createFromXml(IE815))
+  "IE818Message" - new TestType[IE818Type](IE818TestMessageType, IE818Message.createFromXml(IE818))
+  "IE819Message" - new TestType[IE819Type](IE819TestMessageType, IE819Message.createFromXml(IE819))
+  "IE829Message" - new TestType[IE829Type](IE829TestMessageType, IE829Message.createFromXml(IE829))
+  "IE837Message" - new TestType[IE837Type](IE837TestMessageType, IE837Message.createFromXml(IE837WithConsignor))
+  "IE839Message" - new TestType[IE839Type](IE839TestMessageType, IE839Message.createFromXml(IE839))
+  "IE840Message" - new TestType[IE840Type](IE840TestMessageType, IE840Message.createFromXml(IE840))
+  "IE871Message" - new TestType[IE871Type](IE871TestMessageType, IE871Message.createFromXml(IE871))
+  "IE881Message" - new TestType[IE881Type](IE881TestMessageType, IE881Message.createFromXml(IE881))
+  "IE905Message" - new TestType[IE905Type](IE905TestMessageType, IE905Message.createFromXml(IE905))
 
-  case class TestType[T](testObject: TestMessageType, writes: OWrites[T])(implicit xmlFormat: XMLFormat[T]) extends XMLProtocol {
-    lazy val model: T = scalaxb.fromXML[T](testObject.xml1)
+  case class TestType[T](testObject: TestMessageType, message: IEMessage)(implicit xmlFormat: XMLFormat[T]) extends XMLProtocol {
 
-    "converting model to Json" in {
-      writes.writes(model) mustBe testObject.json1
+    "successfully converts model to Json" in {
+      message.toJson mustBe testObject.json1
     }
 
   }

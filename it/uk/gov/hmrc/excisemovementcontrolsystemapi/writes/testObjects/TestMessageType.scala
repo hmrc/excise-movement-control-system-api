@@ -22,8 +22,6 @@ import scala.xml.NodeSeq
 
 trait TestMessageType {
 
-  def xml1: NodeSeq
-
   def json1: JsValue
 
 }
