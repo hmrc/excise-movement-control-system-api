@@ -363,9 +363,18 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
       }
 
       "return consignor is missing" when {
-        "using consignor and the message consignor id field is empty" in {
+        "using consignor and the message consignor id field is not set" in {
           when(ie837.submitter).thenReturn(Consignor)
           when(ie837.consignorId).thenReturn(None)
+
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie837).left.value
+          result mustBe a[MessageMissingKeyInformation]
+          result.errorMessage mustBe "The Consignor in the message should not be empty"
+        }
+
+        "using consignor and the message consignor id field is empty string" in {
+          when(ie837.submitter).thenReturn(Consignor)
+          when(ie837.consignorId).thenReturn(Some(""))
 
           val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie837).left.value
           result mustBe a[MessageMissingKeyInformation]
@@ -374,9 +383,18 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
       }
 
       "return consignee is missing" when {
-        "using consignee and the message consignee id field is empty" in {
+        "using consignee and the message consignee id field is not set" in {
           when(ie837.submitter).thenReturn(Consignee)
           when(ie837.consigneeId).thenReturn(None)
+
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie837).left.value
+          result mustBe a[MessageMissingKeyInformation]
+          result.errorMessage mustBe "The Consignee in the message should not be empty"
+        }
+
+        "using consignee and the message consignee id field is empty string" in {
+          when(ie837.submitter).thenReturn(Consignee)
+          when(ie837.consigneeId).thenReturn(Some(""))
 
           val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie837).left.value
           result mustBe a[MessageMissingKeyInformation]
@@ -494,9 +512,18 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
       }
 
       "return consignor is missing" when {
-        "using consignor and the message consignor id field is empty" in {
+        "using consignor and the message consignor id field is not set" in {
           when(ie871.submitter).thenReturn(Consignor)
           when(ie871.consignorId).thenReturn(None)
+
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie871).left.value
+          result mustBe a[MessageMissingKeyInformation]
+          result.errorMessage mustBe "The Consignor in the message should not be empty"
+        }
+
+        "using consignor and the message consignor id field is empty string" in {
+          when(ie871.submitter).thenReturn(Consignor)
+          when(ie871.consignorId).thenReturn(Some(""))
 
           val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie871).left.value
           result mustBe a[MessageMissingKeyInformation]
@@ -505,9 +532,18 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
       }
 
       "return consignee is missing" when {
-        "using consignee and the message consignee id field is empty" in {
+        "using consignee and the message consignee id field is not set" in {
           when(ie871.submitter).thenReturn(Consignee)
           when(ie871.consigneeId).thenReturn(None)
+
+          val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie871).left.value
+          result mustBe a[MessageMissingKeyInformation]
+          result.errorMessage mustBe "The Consignee in the message should not be empty"
+        }
+
+        "using consignee and the message consignee id field is empty string" in {
+          when(ie871.submitter).thenReturn(Consignee)
+          when(ie871.consigneeId).thenReturn(Some(""))
 
           val result = messageValidation.validateSubmittedMessage(authorisedErns, movement, ie871).left.value
           result mustBe a[MessageMissingKeyInformation]

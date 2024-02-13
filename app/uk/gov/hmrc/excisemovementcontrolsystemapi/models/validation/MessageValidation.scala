@@ -208,7 +208,7 @@ private case class SubmitterDetails(
 private case class IE837MessageValidator(override val message: IE837Message, override val movement: Movement) extends MovementMessageValidator(message, movement) {
   override def validate(authorisedErns: Set[String]): Either[MessageValidationResponse, String] = {
     getSubmitter match {
-      case SubmitterDetails(Some(ern), movementMatcher, noMatch, unauthorised) =>
+      case SubmitterDetails(Some(ern), movementMatcher, noMatch, unauthorised) if ern != "" =>
         if (authorisedErns.contains(ern)) {
           if (movementMatcher(movement, ern)) {
             Either.cond(message.administrativeReferenceCode.contains(movement.administrativeReferenceCode),
@@ -251,7 +251,7 @@ private case class IE837MessageValidator(override val message: IE837Message, ove
 private case class IE871MessageValidator(override val message: IE871Message, override val movement: Movement) extends MovementMessageValidator(message, movement) {
   override def validate(authorisedErns: Set[String]): Either[MessageValidationResponse, String] = {
     getSubmitter match {
-      case SubmitterDetails(Some(ern), movementMatcher, noMatch, unauthorised) =>
+      case SubmitterDetails(Some(ern), movementMatcher, noMatch, unauthorised) if ern != "" =>
         if (authorisedErns.contains(ern)) {
           if (movementMatcher(movement, ern)) {
             Either.cond(message.administrativeReferenceCode.contains(movement.administrativeReferenceCode),
