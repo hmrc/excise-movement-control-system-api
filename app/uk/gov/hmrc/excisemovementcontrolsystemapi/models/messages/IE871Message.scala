@@ -17,8 +17,10 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
 import generated.{IE871Type, MessagesOption}
+import play.api.libs.json.Json
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
 
 import scala.xml.NodeSeq
 
@@ -26,7 +28,7 @@ case class IE871Message(
                          private val obj: IE871Type,
                          private val key: Option[String],
                          private val namespace: Option[String]
-                       ) extends IEMessage with SubmitterTypeConverter {
+                       ) extends IEMessage with SubmitterTypeConverter with GeneratedJsonWriters{
   def submitter: ExciseTraderType = convertSubmitterType(obj.Body.ExplanationOnReasonForShortage.AttributesValue.SubmitterType)
   def localReferenceNumber: Option[String] = None
 
@@ -42,6 +44,7 @@ case class IE871Message(
   override def toXml: NodeSeq = {
     scalaxb.toXML[IE871Type](obj, namespace, key, generated.defaultScope)
   }
+  override def toJson = Json.toJson(obj)
 
   override def lrnEquals(lrn: String): Boolean = false
 

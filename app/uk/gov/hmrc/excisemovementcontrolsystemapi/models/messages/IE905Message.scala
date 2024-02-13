@@ -17,8 +17,10 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
 import generated.{IE905Type, MessagesOption}
+import play.api.libs.json.Json
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
 
 import scala.xml.NodeSeq
 
@@ -26,7 +28,7 @@ case class IE905Message(
                          private val obj: IE905Type,
                          private val key: Option[String],
                          private val namespace: Option[String]
-                       ) extends IEMessage {
+                       ) extends IEMessage with GeneratedJsonWriters{
 
   override def consigneeId: Option[String] = None
 
@@ -38,6 +40,7 @@ case class IE905Message(
   override def toXml: NodeSeq = {
     scalaxb.toXML[IE905Type](obj, namespace, key, generated.defaultScope)
   }
+  override def toJson = Json.toJson(obj)
 
   override def lrnEquals(lrn: String): Boolean = false
 
