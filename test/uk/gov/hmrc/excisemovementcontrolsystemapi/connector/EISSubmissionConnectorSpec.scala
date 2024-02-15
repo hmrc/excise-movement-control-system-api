@@ -72,6 +72,7 @@ class EISSubmissionConnectorSpec
       </con:MetaData>
       <con:OperationRequest>
         <con:Parameters>
+          <con:Parameter Name="ExciseRegistrationNumber">123</con:Parameter>
           <con:Parameter Name="message">
             <![CDATA[<IE815></IE815>]]>
           </con:Parameter>
