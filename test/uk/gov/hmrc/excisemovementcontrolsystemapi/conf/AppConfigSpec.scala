@@ -43,6 +43,7 @@ class AppConfigSpec extends PlaySpec {
       |microservice.services.nrs.api-key="test-key"
       |microservice.services.push-pull-notifications.host="notification"
       |microservice.services.push-pull-notifications.port="1111"
+      |featureFlags.pushPullNotificationFlag=false
     """.stripMargin
 
   private def createAppConfig = {
@@ -100,6 +101,10 @@ class AppConfigSpec extends PlaySpec {
 
     "return pushNotificationUrl" in {
       configService.pushPullNotificationsUri("boxid") mustBe "http://notification:1111/box/boxid/notifications"
+    }
+
+    "return feature flag for Push Pull Notifications" in {
+      configService.featureFlagPPN mustBe false
     }
   }
 }

@@ -75,6 +75,8 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   lazy val workItemTTL: Duration = config.getOptional[String]("mongodb.workItem.TTL")
     .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
 
+  lazy val featureFlagPPN: Boolean = servicesConfig.getBoolean("featureFlags.pushPullNotificationFlag")
+
   def emcsReceiverMessageUrl: String = s"$eisHost/emcs/digital-submit-new-message/v1"
   def submissionBearerToken: String = servicesConfig.getConfString("eis.submission-bearer-token", "dummySubmissionBearerToken")
   def showNewMessageUrl(ern: String): String = s"$eisHost/emcs/messages/v1/show-new-messages?exciseregistrationnumber=$ern"
