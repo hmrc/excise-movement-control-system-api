@@ -18,6 +18,9 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.extension.Parameters
+import com.github.tomakehurst.wiremock.http.Request
+import com.github.tomakehurst.wiremock.matching.{MatchResult, RequestMatcherExtension}
 import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.{when, reset => mockitoSugerReset}
@@ -38,7 +41,7 @@ import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{AuthTestSupport, StringSupport}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, SubmitMessageTestSupport, WireMockServerSpec}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionRequest, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Constants
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
@@ -49,8 +52,9 @@ import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.UUID
+import java.util.{Base64, UUID}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 import scala.xml.NodeSeq
 
 
@@ -402,13 +406,16 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   private def stubEISSuccessfulRequest = {
 
     val response = EISSubmissionResponse("OK", "message", "123")
+
     wireMock.stubFor(
       post(eisUrl)
+        .andMatching(new Base64DecodedMatcher)
         .willReturn(ok().withBody(Json.toJson(response).toString()))
     )
+
   }
 
-  private def stubEISErrorResponse(status: Int, body: String): Any = {
+  private def stubEISErrorResponse(status: Int, body: String) = {
 
     wireMock.stubFor(
       post(urlEqualTo(eisUrl))
@@ -481,4 +488,34 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         )
     }
   }
+
+  private class Base64DecodedMatcher extends RequestMatcherExtension {
+
+    override def `match`(request: Request, parameters: Parameters): MatchResult = {
+
+      if (request.getUrl == eisUrl) {
+        // Only want to check the base 64 body if the request is for submitting the message
+
+        Try(Json.parse(request.getBodyAsString).as[EISSubmissionRequest].message) match {
+          case Success(message) =>
+            val decodedBody = Base64.getDecoder.decode(message).map(_.toChar).mkString("")
+
+            MatchResult.aggregate(
+              MatchResult.of(decodedBody.contains("con:Parameter Name=\"ExciseRegistrationNumber\"")),
+              MatchResult.of(decodedBody.contains("con:Parameter Name=\"message\""))
+            )
+
+          case Failure(_) =>
+            MatchResult.noMatch()
+        }
+
+      } else {
+        // If it is here because it is trying to match say GetBoxId then nothing to check
+        MatchResult.exactMatch()
+      }
+
+    }
+
+  }
+
 }

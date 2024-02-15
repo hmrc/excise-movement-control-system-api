@@ -53,7 +53,7 @@ class EISSubmissionConnector @Inject()
     val timestamp = dateTimeService.timestamp()
     //todo: add retry
     val createdDateTime = timestamp.toString
-    val wrappedXml = wrapXmlInControlDocument(message.messageIdentifier, requestXmlAsString)
+    val wrappedXml = wrapXmlInControlDocument(message.messageIdentifier, requestXmlAsString, authorisedErn)
     val messageType = message.messageType
     val encodedMessage = emcsUtils.encode(wrappedXml.toString)
 
@@ -81,7 +81,7 @@ class EISSubmissionConnector @Inject()
       }
   }
 
-  private def wrapXmlInControlDocument(messageIdentifier: String, innerXml: String): NodeSeq = {
+  private def wrapXmlInControlDocument(messageIdentifier: String, innerXml: String, ern: String): NodeSeq = {
     <con:Control xmlns:con="http://www.govtalk.gov.uk/taxation/InternationalTrade/Common/ControlDocument">
       <con:MetaData>
         <con:MessageId>
@@ -93,6 +93,7 @@ class EISSubmissionConnector @Inject()
       </con:MetaData>
       <con:OperationRequest>
         <con:Parameters>
+          <con:Parameter Name="ExciseRegistrationNumber">{ern}</con:Parameter>
           <con:Parameter Name="message">
             {scala.xml.PCData(innerXml)}
           </con:Parameter>

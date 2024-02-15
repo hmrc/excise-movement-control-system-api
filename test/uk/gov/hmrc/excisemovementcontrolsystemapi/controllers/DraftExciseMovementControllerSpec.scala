@@ -86,7 +86,7 @@ class DraftExciseMovementControllerSpec
   }
 
   "submit" should {
-    "return 200" in {
+    "return 202" in {
       when(movementService.saveNewMovement(any))
         .thenReturn(Future.successful(Right(Movement(boxId, "123", consignorId, Some("789"), None, Instant.now))))
 
