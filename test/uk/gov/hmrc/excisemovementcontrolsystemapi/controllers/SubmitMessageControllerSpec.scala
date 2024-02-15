@@ -61,7 +61,7 @@ class SubmitMessageControllerSpec
   private val auditService = mock[AuditService]
 
   private val consignorId = "testErn"
-  private val movement = Movement("boxId", "LRNQA20230909022221", consignorId, Some("GBWK002281023"), Some("23GB00000000000377161"))
+  private val movement = Movement(Some("boxId"), "LRNQA20230909022221", consignorId, Some("GBWK002281023"), Some("23GB00000000000377161"))
   private val timestamp = Instant.now
 
   override def beforeEach(): Unit = {

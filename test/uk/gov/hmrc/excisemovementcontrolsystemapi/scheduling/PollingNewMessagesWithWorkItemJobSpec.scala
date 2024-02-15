@@ -106,7 +106,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
     when(newMessageParserService.extractMessages(any)).thenReturn(Seq(message))
     when(movementService.updateMovement(any, any))
-      .thenReturn(Future.successful(Seq(Movement("boxId", "1", "2", Some("3"), Some("4")))))
+      .thenReturn(Future.successful(Seq(Movement(Some("boxId"), "1", "2", Some("3"), Some("4")))))
     when(workItemService.markAs(any, any, any)).thenReturn(Future.successful(true))
     when(workItemService.rescheduleWorkItem(any)).thenReturn(Future.successful(true))
     when(notificationService.sendNotification(any,any,any)(any))
@@ -337,7 +337,7 @@ class PollingNewMessagesWithWorkItemJobSpec
         .thenReturn(Seq(message, ie815Message, ie813Message))
 
       when(movementService.updateMovement(any, any))
-        .thenReturn(Future.successful(Seq(Movement("id1", "boxId1", "consignor", Some("consignee")))))
+        .thenReturn(Future.successful(Seq(Movement(Some("id1"), "boxId1", "consignor", Some("consignee")))))
 
       await(job.executeInMutex)
 

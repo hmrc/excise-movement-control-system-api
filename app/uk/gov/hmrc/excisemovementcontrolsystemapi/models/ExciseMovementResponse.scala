@@ -20,7 +20,7 @@ import play.api.libs.json.{Json, OFormat}
 
 case class ExciseMovementResponse(
                                    status: String,
-                                   boxId: String,
+                                   boxId: Option[String],
                                    movementId: String,
                                    localReferenceNumber: String,
                                    consignorId: String,

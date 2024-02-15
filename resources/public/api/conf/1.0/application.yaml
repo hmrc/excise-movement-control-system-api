@@ -875,7 +875,6 @@ components:
     ExciseMovement:
       type: object
       required:
-        - boxId
         - movementId
         - consignorId
         - localReferenceNumber

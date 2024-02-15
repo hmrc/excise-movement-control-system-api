@@ -202,7 +202,7 @@ class GetMessagesControllerSpec extends PlaySpec
 
     "return NOT_FOUND when movement is for a different ern " in {
       val message = Message("message", "IE801", "messageId", Instant.now)
-      val movement = Movement(validUUID, "lrn", "boxId", "consignor", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
+      val movement = Movement(validUUID, Some("boxId"), "lrn", "consignor", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
@@ -332,7 +332,7 @@ class GetMessagesControllerSpec extends PlaySpec
   }
 
   private def createMovementWithMessages(messages: Seq[Message]): Movement = {
-    Movement(validUUID, "boxId", "lrn", "testErn", Some("consigneeId"), Some("arc"), Instant.now, messages)
+    Movement(validUUID, Some("boxId"), "lrn", "testErn", Some("consigneeId"), Some("arc"), Instant.now, messages)
   }
 
   private def createWithSuccessfulAuth =

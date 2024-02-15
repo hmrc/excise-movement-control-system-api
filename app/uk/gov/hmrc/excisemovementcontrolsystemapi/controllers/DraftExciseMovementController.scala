@@ -19,6 +19,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 import cats.data.EitherT
 import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
@@ -28,6 +30,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseM
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, MovementService, PushNotificationService, SubmissionMessageService, WorkItemService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
@@ -37,16 +40,18 @@ import scala.xml.NodeSeq
 
 @Singleton
 class DraftExciseMovementController @Inject()(
-                                               authAction: AuthAction,
-                                               xmlParser: ParseXmlAction,
-                                               movementMessageService: MovementService,
-                                               workItemService: WorkItemService,
-                                               submissionMessageService: SubmissionMessageService,
-                                               notificationService: PushNotificationService,
-                                               messageValidator: MessageValidation,
-                                               dateTimeService: DateTimeService,
-                                               auditService: AuditService,
-                                               cc: ControllerComponents)(implicit ec: ExecutionContext)
+  authAction: AuthAction,
+  xmlParser: ParseXmlAction,
+  movementMessageService: MovementService,
+  workItemService: WorkItemService,
+  submissionMessageService: SubmissionMessageService,
+  notificationService: PushNotificationService,
+  messageValidator: MessageValidation,
+  dateTimeService: DateTimeService,
+  auditService: AuditService,
+  appConfig: AppConfig,
+  cc: ControllerComponents
+)(implicit ec: ExecutionContext)
   extends BackendController(cc) {
 
   def submit: Action[NodeSeq] =
@@ -78,6 +83,16 @@ class DraftExciseMovementController @Inject()(
         result.merge
     }
 
+  private def createMovementFomMessage(message: IE815Message, boxId: Option[String]): Movement = {
+    Movement(
+      boxId,
+      message.localReferenceNumber,
+      message.consignorId,
+      message.consigneeId,
+      None
+    )
+  }
+
   private def validateMessage(
                                message: IE815Message,
                                authErns: Set[String]
@@ -88,9 +103,8 @@ class DraftExciseMovementController @Inject()(
     })
   }
 
-
   private def saveMovement(
-    boxId: String,
+    boxId: Option[String],
     message: IE815Message
   ): EitherT[Future, Result, Movement] = {
 
@@ -100,7 +114,7 @@ class DraftExciseMovementController @Inject()(
     EitherT(movementMessageService.saveNewMovement(newMovement))
   }
 
-  private def createMovementFomMessage(message: IE815Message, boxId: String): Movement = {
+  private def createMovementFomMessage(message: IE815Message, boxId: Option[String]): Movement = {
     Movement(
       boxId,
       message.localReferenceNumber,
@@ -117,6 +131,30 @@ class DraftExciseMovementController @Inject()(
     val clientBoxId = request.headers.get(Constants.XCallbackBoxId)
     EitherT(notificationService.getBoxId(clientId, clientBoxId)).map(_.boxId)
   }
+
+  private def getBoxId(request: ParsedXmlRequest[_])
+                      (implicit hc: HeaderCarrier): EitherT[Future, Result, Option[String]] = {
+
+    //  if (appConfig.featureFlagPPN) {
+
+    request.headers.get(Constants.XClientIdHeader) match {
+      case Some(clientId) =>
+        EitherT(notificationService.getBoxId(clientId))
+
+      case _ => EitherT.fromEither(Left(BadRequest(Json.toJson(
+        ErrorResponse(
+          Instant.now,
+          s"ClientId error",
+          s"Request header is missing ${Constants.XClientIdHeader}"
+        )
+      ))))
+    }
+
+    // } else {
+    //   EitherT.fromEither(Right(None))
+    //  }
+  }
+
 
   private def getIe815Message(message: IEMessage): EitherT[Future, Result, IE815Message] = {
     EitherT.fromEither(message match {

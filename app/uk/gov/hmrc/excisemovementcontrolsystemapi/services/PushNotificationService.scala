@@ -20,7 +20,8 @@ import com.google.inject.ImplementedBy
 import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.Result
-import play.api.mvc.Results.BadRequest
+import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PushNotificationConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.{FailedBoxIdNotificationResponse, SuccessBoxNotificationResponse}
@@ -38,16 +39,27 @@ import scala.util.{Failure, Success, Try}
 
 class PushNotificationServiceImpl @Inject()(
   notificationConnector: PushNotificationConnector,
-  dateTimeService: DateTimeService
+  dateTimeService: DateTimeService,
+  appConfig: AppConfig
 )(implicit val ec: ExecutionContext) extends PushNotificationService with ResponseHandler with Logging{
 
   def getBoxId(
     clientId: String,
     clientBoxId: Option[String] = None
-  )(implicit hc: HeaderCarrier): Future[Either[Result, SuccessBoxNotificationResponse]] = {
+  )(implicit hc: HeaderCarrier): Future[Either[Result, Option[String]]] = {
 
+    notificationConnector.getBoxId(clientId)
+    .map { response =>
+      extractIfSuccessful[SuccessBoxNotificationResponse](response)
+        .map(s => Some(s.boxId))
+        .fold(error => Left(handleBoxNotificationError(error)), Right(_))
+    }.recover {
+      case ex: Throwable =>
+        // todo: Is this an error?
+        logger.error(s"[PushNotificationService] - Error retrieving BoxId, message: ${ex.getMessage}", ex)
+        Left(InternalServerError(Json.toJson(FailedBoxIdNotificationResponse(
     clientBoxId match {
-      case Some(id) => Future.successful(validateClientBoxId(id))
+      case Some(id) => Future.successful(validateClientBoxId(id).map(s => s.boxId))
       case _ => notificationConnector.getDefaultBoxId(clientId)
     }
   }
@@ -99,7 +111,7 @@ trait PushNotificationService {
   def getBoxId(
     clientId: String,
     boxId: Option[String] = None
-  )(implicit hc: HeaderCarrier): Future[Either[Result, SuccessBoxNotificationResponse]]
+  )(implicit hc: HeaderCarrier): Future[Either[Result, Option[String]]]
 
   def sendNotification(
     ern: String,

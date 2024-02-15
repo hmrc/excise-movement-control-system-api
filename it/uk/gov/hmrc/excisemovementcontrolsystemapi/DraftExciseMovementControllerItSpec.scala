@@ -415,7 +415,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   private def assertValidResult(result: WSResponse, expectedBoxId: String = defaultBoxId) = {
     val responseBody = Json.parse(result.body).as[ExciseMovementResponse]
     responseBody.status mustBe "Accepted"
-    responseBody.boxId mustBe expectedBoxId
+    responseBody.boxId mustBe Some(expectedBoxId)
     UUID.fromString(responseBody.movementId).toString must not be empty //mustNot Throw An Exception
     responseBody.consignorId mustBe consignorId
     responseBody.localReferenceNumber mustBe "LRNQA20230909022221"
