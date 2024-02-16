@@ -83,16 +83,6 @@ class DraftExciseMovementController @Inject()(
         result.merge
     }
 
-  private def createMovementFomMessage(message: IE815Message, boxId: Option[String]): Movement = {
-    Movement(
-      boxId,
-      message.localReferenceNumber,
-      message.consignorId,
-      message.consigneeId,
-      None
-    )
-  }
-
   private def validateMessage(
                                message: IE815Message,
                                authErns: Set[String]
@@ -126,36 +116,17 @@ class DraftExciseMovementController @Inject()(
 
   private def getBoxId(
     clientId : String
-  )(implicit request: ParsedXmlRequest[_]) : EitherT[Future, Result, String] = {
-
-    val clientBoxId = request.headers.get(Constants.XCallbackBoxId)
-    EitherT(notificationService.getBoxId(clientId, clientBoxId)).map(_.boxId)
-  }
-
-  private def getBoxId(request: ParsedXmlRequest[_])
-                      (implicit hc: HeaderCarrier): EitherT[Future, Result, Option[String]] = {
+  )(implicit request: ParsedXmlRequest[_]) : EitherT[Future, Result, Option[String]] = {
 
     if (appConfig.featureFlagPPN) {
-    //  if (appConfig.featureFlagPPN) {
-
-      request.headers.get(Constants.XClientIdHeader) match {
-        case Some(clientId) =>
-          EitherT(notificationService.getBoxId(clientId))
-
-      case _ => EitherT.fromEither(Left(BadRequest(Json.toJson(
-        ErrorResponse(
-          Instant.now,
-          s"ClientId error",
-          s"Request header is missing ${Constants.XClientIdHeader}"
-        )
-      ))))
-    }
-
+      val clientBoxId = request.headers.get(Constants.XCallbackBoxId)
+      EitherT(notificationService.getBoxId(clientId, clientBoxId).map(futureValue =>
+        futureValue.map(boxId => Some(boxId))
+      ))
     } else {
       EitherT.fromEither(Right(None))
     }
   }
-
 
   private def getIe815Message(message: IEMessage): EitherT[Future, Result, IE815Message] = {
     EitherT.fromEither(message match {

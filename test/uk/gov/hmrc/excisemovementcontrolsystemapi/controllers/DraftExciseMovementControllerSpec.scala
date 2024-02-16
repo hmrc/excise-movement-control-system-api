@@ -33,12 +33,11 @@ import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeXmlParsers}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IE818Message}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.SuccessBoxNotificationResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MessageIdentifierIsUnauthorised, MessageValidation}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, MovementService, PushNotificationService, SubmissionMessageService, WorkItemService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -68,12 +67,10 @@ class DraftExciseMovementControllerSpec
   private val dateTimeService = mock[DateTimeService]
   private val auditService = mock[AuditService]
   private val appConfig = mock[AppConfig]
-  private val boxId = "boxId"
   private val consignorId = "456"
   private val timestamp = Instant.now
   private val defaultBoxId = "boxId"
-    private val clientBoxId = "clientBoxId"
-  private val consignorId = "456"
+  private val clientBoxId = "clientBoxId"
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -82,8 +79,8 @@ class DraftExciseMovementControllerSpec
     when(submissionMessageService.submit(any, any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
-    when(notificationService.getBoxId(any)(any))
-      .thenReturn(Future.successful(Right(Some(defaultBoxId))))
+    when(notificationService.getBoxId(any, any)(any))
+      .thenReturn(Future.successful(Right(defaultBoxId)))
 
     when(messageValidation.validateDraftMovement(any, any)).thenReturn(Right(consignorId))
     when(dateTimeService.timestamp()).thenReturn(timestamp)
@@ -91,6 +88,7 @@ class DraftExciseMovementControllerSpec
     when(mockIeMessage.consigneeId).thenReturn(Some("789"))
     when(mockIeMessage.consignorId).thenReturn(consignorId)
     when(mockIeMessage.localReferenceNumber).thenReturn("123")
+
     when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(appConfig.featureFlagPPN).thenReturn(true)
     when(auditService.auditMessage(any)(any)).thenReturn(EitherT.fromEither(Right(())))
@@ -98,11 +96,9 @@ class DraftExciseMovementControllerSpec
 
   "submit" should {
 
-   // "return 202" in {
-
     "return 202" when {
 
-     "push pull notifications feature flag is enabled" in {
+      "push pull notifications feature flag is enabled" in {
         when(movementService.saveNewMovement(any))
           .thenReturn(Future.successful(Right(Movement(Some(defaultBoxId), "123", consignorId, Some("789"), None, Instant.now))))
 
@@ -116,9 +112,9 @@ class DraftExciseMovementControllerSpec
           captor.value.ieMessage mustBe mockIeMessage
         }
 
-      withClue("should get the box id") {
-        verify(notificationService).getBoxId(eqTo("clientId"), eqTo(None))(any)
-      }
+        withClue("should get the box id") {
+          verify(notificationService).getBoxId(eqTo("clientId"), eqTo(None))(any)
+        }
 
         withClue("should save the new movement") {
           val captor = ArgCaptor[Movement]
@@ -137,14 +133,14 @@ class DraftExciseMovementControllerSpec
         when(appConfig.featureFlagPPN).thenReturn(false)
 
         when(movementService.saveNewMovement(any))
-          .thenReturn(Future.successful(Right(Movement(Some(boxId), "123", consignorId, Some("789"), None, Instant.now))))
+          .thenReturn(Future.successful(Right(Movement(Some(defaultBoxId), "123", consignorId, Some("789"), None, Instant.now))))
 
         val result = createWithSuccessfulAuth.submit(request)
 
         status(result) mustBe ACCEPTED
 
         withClue("should not access the notification service") {
-          verify(notificationService, times(0)).getBoxId(any)(any)
+          verify(notificationService, times(0)).getBoxId(any, any)(any)
         }
 
         withClue("should save the new movement with no box id") {
@@ -232,7 +228,7 @@ class DraftExciseMovementControllerSpec
       }
 
       "get box id returns an error" in {
-        when(notificationService.getBoxId(any,any)(any))
+        when(notificationService.getBoxId(any, any)(any))
           .thenReturn(Future.successful(Left(BadRequest("error"))))
 
         val result = createWithSuccessfulAuth.submit(request)
@@ -280,9 +276,9 @@ class DraftExciseMovementControllerSpec
         status(result) mustBe INTERNAL_SERVER_ERROR
       }
 
-      "not XMl is not a IE815 message" in {
+      "XML is not a IE815 message" in {
         when(movementService.saveNewMovement(any))
-          .thenReturn(Future.successful(Right(Movement(defaultBoxId, "123", "456", Some("789"), None, Instant.now))))
+          .thenReturn(Future.successful(Right(Movement(Some(defaultBoxId), "123", "456", Some("789"), None, Instant.now))))
 
         val result = createWithWrongMessageType.submit(request)
 
@@ -316,6 +312,7 @@ class DraftExciseMovementControllerSpec
       cc
     )
   }
+
   private def createWithAuthActionFailure =
     new DraftExciseMovementController(
       FakeFailingAuthentication,
@@ -390,10 +387,10 @@ class DraftExciseMovementControllerSpec
 
   private def createRequestWithClientBoxId: FakeRequest[Elem] = {
     createRequest(Seq(
-        HeaderNames.CONTENT_TYPE -> "application/xml",
-        "X-Client-Id" -> "clientId",
-        "X-Callback-Box-Id" -> clientBoxId
-      ))
+      HeaderNames.CONTENT_TYPE -> "application/xml",
+      "X-Client-Id" -> "clientId",
+      "X-Callback-Box-Id" -> clientBoxId
+    ))
   }
 
   private def createRequestWithoutClientId: FakeRequest[Elem] = {

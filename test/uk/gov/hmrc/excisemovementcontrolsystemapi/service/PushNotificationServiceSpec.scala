@@ -22,7 +22,7 @@ import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.Status.NOT_FOUND
-import play.api.libs.json.Json
+import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.Results.{BadRequest, InternalServerError}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
@@ -33,7 +33,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Notificati
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PushNotificationServiceImpl
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
@@ -47,7 +47,7 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
   private val dateTimeService = mock[DateTimeService]
   private val appConfig = mock[AppConfig]
   private val timestamp = Instant.now
-  private val sut = new PushNotificationServiceImpl(notificationConnector, dateTimeService, appConfig)
+  private val sut = new PushNotificationServiceImpl(notificationConnector, dateTimeService)
   private val message = Message("this is a test", "IE801", "messageId", Instant.now)
   private val movement = Movement("id", Some("boxId"), "lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
   private val boxIdSuccessResponse = Json.parse("""
@@ -80,11 +80,9 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
 
   "getBoxId" should {
 
-    "return the boxId from the notification service" in {
     "return the default box id" in {
       val result = await(sut.getBoxId("clientId"))
-      result mustBe Right("1c5b9365-18a6-55a5-99c9-83a091ac7f26")
-      result mustBe Right(Some(boxId))
+      result mustBe Right(boxId)
 
       withClue("send the request to the notification service") {
         verify(notificationConnector).getDefaultBoxId(eqTo("clientId"))(any)
@@ -94,18 +92,12 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
     "return the client box id when this is present" in {
       val result = await(sut.getBoxId("clientId", Some(boxId)))
 
-      result mustBe Right(SuccessBoxNotificationResponse(boxId))
+      result mustBe Right(boxId)
 
       withClue("not request box Id from the push-poll-notification service") {
         verifyZeroInteractions(notificationConnector)
       }
     }
-
-    //    "return None if the PPN feature flag is disabled" in {
-    //      when(appConfig.featureFlagPPN).thenReturn(false)
-    //      val result = await(sut.getBoxId("clientId"))
-    //      result mustBe Right(None)
-    //    }
 
     "return an error" when {
 
@@ -127,17 +119,6 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
         result.left.value mustBe BadRequest(buildBoxIdJsonError("Client box id should be a valid UUID"))
         verifyZeroInteractions(notificationConnector)
 
-      }
-
-      "cannot parse json" in {
-        val errorJson = Json.obj("code" -> "UNKNOWN_ERROR", "message" -> "Box does not exist")
-        when(notificationConnector.getBoxId(any)(any))
-          .thenReturn(Future.successful(HttpResponse(200, errorJson.toString())))
-
-        val result = await(sut.getBoxId("clientId"))
-
-        val expectedError: JsValue = buildBoxIdJsonError("Exception occurred when getting boxId for clientId: clientId")
-        result.left.value mustBe InternalServerError(expectedError)
       }
     }
   }

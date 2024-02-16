@@ -401,7 +401,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   private def verifyBoxIdIsSavedToDB(boxId: String) = {
     val captor = ArgCaptor[Movement]
     verify(movementRepository).saveMovement(captor.capture)
-    captor.value.boxId mustBe boxId
+    captor.value.boxId mustBe Some(boxId)
   }
 
   private def setupRepositories = {
@@ -520,7 +520,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
             .withBody(
               s"""
                 {
-                  "boxId": "${defaultBoxId}",
+                  "boxId": "$defaultBoxId",
                   "boxName":"customs/excise##1.0##notificationUrl",
                   "boxCreator":{
                       "clientId": "testClientId"
