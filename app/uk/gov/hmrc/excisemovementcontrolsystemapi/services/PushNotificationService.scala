@@ -45,8 +45,6 @@ class PushNotificationServiceImpl @Inject()(
     clientBoxId: Option[String] = None
   )(implicit hc: HeaderCarrier): Future[Either[Result, String]] = {
 
-    logger.error("<<<<<IN GET BOXID>>>>")
-
     (clientBoxId match {
       case Some(id) => Future.successful(validateClientBoxId(id))
       case _ => notificationConnector.getDefaultBoxId(clientId)
@@ -72,8 +70,6 @@ class PushNotificationServiceImpl @Inject()(
     messageId: String
   )(implicit hc: HeaderCarrier): Future[NotificationResponse] = {
 
-    logger.error("<<<<<IN SEND NOTIFICATION>>>>")
-
     val notification = Notification(
       movement._id,
       buildMessageUriAsString(movement._id, messageId),
@@ -88,7 +84,6 @@ class PushNotificationServiceImpl @Inject()(
         notificationConnector.postNotification(boxId, notification)
 
       case None =>
-        logger.error("<<<<<NONE>>>>")
         Future.successful(NotInUseNotificationResponse())
     }
   }

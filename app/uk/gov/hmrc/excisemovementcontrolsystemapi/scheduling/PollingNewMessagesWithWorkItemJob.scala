@@ -125,9 +125,9 @@ class PollingNewMessagesWithWorkItemJob @Inject()
   }
 
   private def processMessages(
-                               exciseNumber: String,
-                               consumptionResponse: EISConsumptionResponse
-                             ): Future[Boolean] = {
+    exciseNumber: String,
+    consumptionResponse: EISConsumptionResponse
+  ): Future[Boolean] = {
 
     messageParser.extractMessages(consumptionResponse.message)
       .foldLeft(successful(true)) { case (acc, x) =>
@@ -144,9 +144,9 @@ class PollingNewMessagesWithWorkItemJob @Inject()
   }
 
   private def saveToDbAndSendNotification(
-                                           message: IEMessage,
-                                           exciseNumber: String
-                                         )(implicit ec: ExecutionContext): Future[Boolean] = {
+    message: IEMessage,
+    exciseNumber: String
+  )(implicit ec: ExecutionContext): Future[Boolean] = {
 
     movementService.updateMovement(message, exciseNumber).map {
       movements =>

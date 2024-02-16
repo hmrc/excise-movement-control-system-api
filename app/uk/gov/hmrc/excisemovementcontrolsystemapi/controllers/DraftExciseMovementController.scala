@@ -30,7 +30,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseM
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, MovementService, PushNotificationService, SubmissionMessageService, WorkItemService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
@@ -84,9 +83,9 @@ class DraftExciseMovementController @Inject()(
     }
 
   private def validateMessage(
-                               message: IE815Message,
-                               authErns: Set[String]
-                             ): EitherT[Future, Result, String] = {
+    message: IE815Message,
+    authErns: Set[String]
+  ): EitherT[Future, Result, String] = {
 
     EitherT.fromEither(messageValidator.validateDraftMovement(authErns, message).left.map {
       x => messageValidator.convertErrorToResponse(x, dateTimeService.timestamp())
@@ -115,8 +114,8 @@ class DraftExciseMovementController @Inject()(
   }
 
   private def getBoxId(
-    clientId : String
-  )(implicit request: ParsedXmlRequest[_]) : EitherT[Future, Result, Option[String]] = {
+    clientId: String
+  )(implicit request: ParsedXmlRequest[_]): EitherT[Future, Result, Option[String]] = {
 
     if (appConfig.featureFlagPPN) {
       val clientBoxId = request.headers.get(Constants.XCallbackBoxId)
@@ -141,7 +140,7 @@ class DraftExciseMovementController @Inject()(
     })
   }
 
-  private def retrieveClientIdFromHeader(implicit request: ParsedXmlRequest[_]) : EitherT[Future, Result, String] = {
+  private def retrieveClientIdFromHeader(implicit request: ParsedXmlRequest[_]): EitherT[Future, Result, String] = {
     EitherT.fromOption(
       request.headers.get(Constants.XClientIdHeader),
       BadRequest(Json.toJson(ErrorResponse(
