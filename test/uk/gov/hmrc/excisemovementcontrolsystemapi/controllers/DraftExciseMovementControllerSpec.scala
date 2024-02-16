@@ -98,11 +98,11 @@ class DraftExciseMovementControllerSpec
 
   "submit" should {
 
-    "return 202" in {
+   // "return 202" in {
 
-   // "return 202" when {
+    "return 202" when {
 
-    // "push pull notifications feature flag is enabled" in {
+     "push pull notifications feature flag is enabled" in {
         when(movementService.saveNewMovement(any))
           .thenReturn(Future.successful(Right(Movement(Some(defaultBoxId), "123", consignorId, Some("789"), None, Instant.now))))
 
@@ -131,30 +131,30 @@ class DraftExciseMovementControllerSpec
           newMovement.messages mustBe Seq.empty
           newMovement.boxId mustBe Some(defaultBoxId)
         }
-     // }
+      }
 
-//      "push pull notifications feature flag is disabled" in {
-//        when(appConfig.featureFlagPPN).thenReturn(false)
-//
-//        when(movementService.saveNewMovement(any))
-//          .thenReturn(Future.successful(Right(Movement(Some(boxId), "123", consignorId, Some("789"), None, Instant.now))))
-//
-//        val result = createWithSuccessfulAuth.submit(request)
-//
-//        status(result) mustBe ACCEPTED
-//
-//        withClue("should not access the notification service") {
-//          verify(notificationService, times(0)).getBoxId(any)(any)
-//        }
-//
-//        withClue("should save the new movement with no box id") {
-//          val captor = ArgCaptor[Movement]
-//          verify(movementService).saveNewMovement(captor.capture)
-//          val newMovement = captor.value
-//          newMovement.boxId mustBe None
-//        }
-//
-//      }
+      "push pull notifications feature flag is disabled" in {
+        when(appConfig.featureFlagPPN).thenReturn(false)
+
+        when(movementService.saveNewMovement(any))
+          .thenReturn(Future.successful(Right(Movement(Some(boxId), "123", consignorId, Some("789"), None, Instant.now))))
+
+        val result = createWithSuccessfulAuth.submit(request)
+
+        status(result) mustBe ACCEPTED
+
+        withClue("should not access the notification service") {
+          verify(notificationService, times(0)).getBoxId(any)(any)
+        }
+
+        withClue("should save the new movement with no box id") {
+          val captor = ArgCaptor[Movement]
+          verify(movementService).saveNewMovement(captor.capture)
+          val newMovement = captor.value
+          newMovement.boxId mustBe None
+        }
+
+      }
     }
 
     "pass the Client Box id to notification service when is present" in {

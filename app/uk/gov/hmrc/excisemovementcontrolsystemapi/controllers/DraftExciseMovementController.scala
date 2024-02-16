@@ -135,11 +135,12 @@ class DraftExciseMovementController @Inject()(
   private def getBoxId(request: ParsedXmlRequest[_])
                       (implicit hc: HeaderCarrier): EitherT[Future, Result, Option[String]] = {
 
+    if (appConfig.featureFlagPPN) {
     //  if (appConfig.featureFlagPPN) {
 
-    request.headers.get(Constants.XClientIdHeader) match {
-      case Some(clientId) =>
-        EitherT(notificationService.getBoxId(clientId))
+      request.headers.get(Constants.XClientIdHeader) match {
+        case Some(clientId) =>
+          EitherT(notificationService.getBoxId(clientId))
 
       case _ => EitherT.fromEither(Left(BadRequest(Json.toJson(
         ErrorResponse(
@@ -150,9 +151,9 @@ class DraftExciseMovementController @Inject()(
       ))))
     }
 
-    // } else {
-    //   EitherT.fromEither(Right(None))
-    //  }
+    } else {
+      EitherT.fromEither(Right(None))
+    }
   }
 
 

@@ -47,6 +47,8 @@ class PushNotificationServiceImpl @Inject()(
     clientId: String,
     clientBoxId: Option[String] = None
   )(implicit hc: HeaderCarrier): Future[Either[Result, Option[String]]] = {
+    clientId: String
+              )(implicit hc: HeaderCarrier): Future[Either[Result, String]] = {
 
     notificationConnector.getBoxId(clientId)
     .map { response =>
@@ -73,6 +75,27 @@ class PushNotificationServiceImpl @Inject()(
           "Client box id should be a valid UUID")))
         )
     }
+  //  )(implicit hc: HeaderCarrier): Future[Either[Result, Option[String]]] = {
+
+//    if (appConfig.featureFlagPPN) {
+      notificationConnector.getBoxId(clientId)
+        .map { response =>
+          extractIfSuccessful[SuccessBoxNotificationResponse](response)
+            .map(s => s.boxId)
+            .fold(error => Left(handleBoxNotificationError(error)), Right(_))
+        }.recover {
+        case ex: Throwable =>
+          // todo: Is this an error?
+          logger.error(s"[PushNotificationService] - Error retrieving BoxId, message: ${ex.getMessage}", ex)
+          Left(InternalServerError(Json.toJson(FailedBoxIdNotificationResponse(
+            dateTimeService.timestamp(),
+            s"Exception occurred when getting boxId for clientId: $clientId"))))
+      }
+
+//    } else {
+//      Future.successful(Right(None))
+//    }
+
   }
   def sendNotification(
     ern: String,
@@ -112,6 +135,7 @@ trait PushNotificationService {
     clientId: String,
     boxId: Option[String] = None
   )(implicit hc: HeaderCarrier): Future[Either[Result, Option[String]]]
+  def getBoxId(clientId: String)(implicit hc: HeaderCarrier): Future[Either[Result, String]]
 
   def sendNotification(
     ern: String,

@@ -103,6 +103,7 @@ class PollingNewMessagesWithWorkItemJobSpec
     when(appConfig.workItemFastInterval).thenReturn(Duration.create(5, MINUTES))
     when(appConfig.workItemSlowInterval).thenReturn(Duration.create(1, HOURS))
     when(appConfig.failureRetryAfter).thenReturn(Duration.create(5, MINUTES))
+    when(appConfig.featureFlagPPN).thenReturn(true)
 
     when(newMessageParserService.extractMessages(any)).thenReturn(Seq(message))
     when(movementService.updateMovement(any, any))
@@ -263,6 +264,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
         result.message mustBe "polling-new-messages Job ran successfully."
         verifyZeroInteractions(movementService)
+        verifyZeroInteractions(notificationService)
       }
 
       "API returns no message" in {
@@ -274,6 +276,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
         result.message mustBe "polling-new-messages Job ran successfully."
         verifyZeroInteractions(movementService)
+        verifyZeroInteractions(notificationService)
       }
 
       "API return an error" in {
@@ -285,6 +288,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
         result.message mustBe "polling-new-messages Job ran successfully."
         verify(movementService, never()).updateMovement(any, any)
+        verifyZeroInteractions(notificationService)
       }
     }
 
@@ -322,28 +326,58 @@ class PollingNewMessagesWithWorkItemJobSpec
       verify(auditService).auditMessage(eqTo(ie813Message))(any)
     }
 
-    "push notification" in {
-      addOneItemToMockQueue(createWorkItem())
+    "send a push notification" when {
 
-      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
-        .thenReturn(Future.successful(Some((newMessageResponse, 3))))
+      "feature flag enabled" in {
+        addOneItemToMockQueue(createWorkItem())
 
-      val ie815Message = mock[IE801Message]
-      when(ie815Message.messageIdentifier).thenReturn("1")
-      val ie813Message = mock[IE813Message]
-      when(ie813Message.messageIdentifier).thenReturn("2")
-      when(message.messageIdentifier).thenReturn("3")
-      when(newMessageParserService.extractMessages(any))
-        .thenReturn(Seq(message, ie815Message, ie813Message))
+        when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+          .thenReturn(Future.successful(Some((newMessageResponse, 3))))
 
-      when(movementService.updateMovement(any, any))
-        .thenReturn(Future.successful(Seq(Movement(Some("id1"), "boxId1", "consignor", Some("consignee")))))
+        val ie801Message = mock[IE801Message]
+        when(ie801Message.messageIdentifier).thenReturn("1")
+        val ie813Message = mock[IE813Message]
+        when(ie813Message.messageIdentifier).thenReturn("2")
+        when(message.messageIdentifier).thenReturn("3")
+        when(newMessageParserService.extractMessages(any))
+          .thenReturn(Seq(message, ie801Message, ie813Message))
 
-      await(job.executeInMutex)
+        when(movementService.updateMovement(any, any))
+          .thenReturn(Future.successful(Seq(Movement(Some("id1"), "boxId1", "consignor", Some("consignee")))))
 
-      verify(notificationService).sendNotification(eqTo("123"),any[Movement],eqTo("1"))(any)
-      verify(notificationService).sendNotification(eqTo("123"),any[Movement],eqTo("2"))(any)
-      verify(notificationService).sendNotification(eqTo("123"),any[Movement],eqTo("3"))(any)
+        await(job.executeInMutex)
+
+        verify(notificationService).sendNotification(eqTo("123"), any[Movement], eqTo("1"))(any)
+        verify(notificationService).sendNotification(eqTo("123"), any[Movement], eqTo("2"))(any)
+        verify(notificationService).sendNotification(eqTo("123"), any[Movement], eqTo("3"))(any)
+      }
+
+    }
+
+    "not send a push notification" when {
+
+      "feature flag is not enabled" in {
+
+        when(appConfig.featureFlagPPN).thenReturn(false)
+
+        addOneItemToMockQueue(createWorkItem())
+
+        when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+          .thenReturn(Future.successful(Some((newMessageResponse, 1))))
+
+        when(message.messageIdentifier).thenReturn("3")
+        when(newMessageParserService.extractMessages(any))
+          .thenReturn(Seq(message))
+
+        when(movementService.updateMovement(any, any))
+          .thenReturn(Future.successful(Seq(Movement(Some("id1"), "boxId1", "consignor", Some("consignee")))))
+
+        await(job.executeInMutex)
+
+        verifyZeroInteractions(notificationService)
+
+      }
+
     }
 
   }

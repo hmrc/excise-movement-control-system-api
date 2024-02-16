@@ -78,8 +78,11 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
   }
 
   "getBoxId" should {
+
+    "return the boxId from the notification service" in {
     "return the default box id" in {
       val result = await(sut.getBoxId("clientId"))
+      result mustBe Right("1c5b9365-18a6-55a5-99c9-83a091ac7f26")
       result mustBe Right(Some(boxId))
 
       withClue("send the request to the notification service") {
@@ -96,6 +99,12 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
         verifyZeroInteractions(notificationConnector)
       }
     }
+
+//    "return None if the PPN feature flag is disabled" in {
+//      when(appConfig.featureFlagPPN).thenReturn(false)
+//      val result = await(sut.getBoxId("clientId"))
+//      result mustBe Right(None)
+//    }
 
     "return an error" when {
 
@@ -121,6 +130,7 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
 
     }
   }
+
   "sendNotification" should {
     "send a notification" in {
       val result = await(sut.sendNotification("ern", movement, "messageId"))
