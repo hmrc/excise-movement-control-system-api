@@ -49,20 +49,6 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
   private val sut = new PushNotificationServiceImpl(notificationConnector, dateTimeService)
   private val message = Message("this is a test", "IE801", "messageId", Instant.now)
   private val movement = Movement("id", Some("boxId"), "lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
-  private val boxIdSuccessResponse = Json.parse(
-    """
-      |{
-      | "boxId": "1c5b9365-18a6-55a5-99c9-83a091ac7f26",
-      |    "boxName":"BOX 2",
-      |    "boxCreator":{
-      |        "clientId": "X5ZasuQLH0xqKooV_IEw6yjQNfEa"
-      |    },
-      |    "subscriber": {
-      |        "subscribedDateTime": "2020-06-01T10:27:33.613+0000",
-      |        "callBackUrl": "https://www.example.com/callback",
-      |        "subscriptionType": "API_PUSH_SUBSCRIBER"
-      |    }
-      |}""".stripMargin)
   private val boxId = "1c5b9365-18a6-55a5-99c9-83a091ac7f26"
 
   override def beforeEach(): Unit = {
