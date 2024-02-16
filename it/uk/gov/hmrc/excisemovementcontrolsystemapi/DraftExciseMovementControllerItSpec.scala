@@ -23,31 +23,27 @@ import com.github.tomakehurst.wiremock.http.Request
 import com.github.tomakehurst.wiremock.matching.{MatchResult, RequestMatcherExtension}
 import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchersSugar.any
-import org.mockito.MockitoSugar.{when, reset => mockitoSugerReset}
+import org.mockito.MockitoSugar.{verify, when, reset => mockitoSugerReset}
+import org.mockito.captor.ArgCaptor
 import org.scalatest.concurrent.{Eventually, IntegrationPatience}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
-import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.http.HeaderNames
 import play.api.http.Status._
-import play.api.inject.bind
-import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
+import uk.gov.hmrc.auth.core.InternalError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{AuthTestSupport, StringSupport}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, SubmitMessageTestSupport, WireMockServerSpec}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.StringSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{ApplicationBuilderSupport, SubmitMessageTestSupport, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionRequest, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Constants
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Movement}
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.Instant
@@ -60,11 +56,10 @@ import scala.xml.NodeSeq
 
 class DraftExciseMovementControllerItSpec extends PlaySpec
   with GuiceOneServerPerSuite
-  with AuthTestSupport
+  with ApplicationBuilderSupport
   with TestXml
   with WireMockServerSpec
   with SubmitMessageTestSupport
-  with RepositoryTestStub
   with StringSupport
   with Eventually
   with IntegrationPatience
@@ -76,8 +71,8 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   private val eisUrl = "/emcs/digital-submit-new-message/v1"
   private val consignorId = "GBWK002281023"
   private val consigneeId = "GBWKQOZ8OVLYR"
-  private val boxId = "testBoxId"
-  private lazy val dateTimeService = mock[DateTimeService]
+  private val defaultBoxId = "testBoxId"
+  private val clientBoxId = UUID.randomUUID().toString
   private val timeStamp = Instant.now
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
@@ -95,14 +90,8 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   override lazy val app: Application = {
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
-    GuiceApplicationBuilder()
-      .configure(configureServices)
-      .overrides(
-        bind[AuthConnector].to(authConnector),
-        bind[MovementRepository].to(movementRepository),
-        bind[DateTimeService].to(dateTimeService)
-      )
-      .build()
+
+    applicationBuilder(configureServices).build()
   }
 
   override def beforeAll(): Unit = {
@@ -117,12 +106,20 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    mockitoSugerReset(dateTimeService)
+    mockitoSugerReset(
+      dateTimeService,
+      movementRepository,
+      dateTimeService,
+      authConnector,
+      workItemRepository
+    )
 
     wireMock.resetAll()
     stubNrsResponse
     authorizeNrsWithIdentityData
     stubGetBoxIdSuccessRequest
+    when(workItemRepository.pushNew(any, any, any)).thenReturn(Future.successful(workItem))
+    when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
     when(dateTimeService.timestamp()).thenReturn(timeStamp)
   }
 
@@ -134,18 +131,53 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         withAuthorizedTrader(consignorId)
         stubEISSuccessfulRequest
         setupRepositories
-        when(workItemRepository.pushNew(any, any, any)).thenReturn(Future.successful(workItem))
-        when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
 
         val result = postRequest(IE815)
 
         result.status mustBe ACCEPTED
         withClue("return the json response") {
-          assertValidResult(result)
+          assertValidResult(result, defaultBoxId)
         }
 
         withClue("submit to NRS") {
-          verify(postRequestedFor(urlEqualTo("/submission")))
+          wireMock.verify(postRequestedFor(urlEqualTo("/submission")))
+        }
+      }
+
+      "should get the default box Id when X-Callback-Box-Id is not in the header" in {
+        withAuthorizedTrader(consignorId)
+        stubEISSuccessfulRequest
+        setupRepositories
+
+        val result = postRequest(IE815)
+
+        result.status mustBe ACCEPTED
+
+        withClue("get the default boxId") {
+          wireMock.verify(getRequestedFor(urlMatching("^/box.*"))
+            .withQueryParam("boxName", equalTo("customs/excise##1.0##notificationUrl"))
+            .withQueryParam("clientId", matching("clientId"))
+          )
+        }
+        withClue("should save the default box id to db") {
+          verifyBoxIdIsSavedToDB(defaultBoxId)
+        }
+      }
+
+      "return the client box id when X-Callback-Box-Id is present in the header" in {
+        withAuthorizedTrader(consignorId)
+        stubEISSuccessfulRequest
+        setupRepositories
+
+        val result = postRequestWithClientBoxId
+
+        assertValidResult(result, clientBoxId)
+        withClue("should not send a request to the push notification service") {
+          wireMock.verify(0, getRequestedFor(urlMatching("^/box.*")))
+        }
+
+        withClue("should save the client box id to db") {
+          verifyBoxIdIsSavedToDB(clientBoxId)
         }
       }
 
@@ -184,8 +216,6 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         stubEISSuccessfulRequest
         setupRepositories
         stubGetBoxIdFailureRequest(BAD_REQUEST, "Missing or incorrect query parameter")
-        when(workItemRepository.pushNew(any, any, any)).thenReturn(Future.successful(workItem))
-        when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
 
         val result = postRequest(IE815)
 
@@ -199,15 +229,17 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         }
 
         withClue("should not submit to NRS") {
-          verify(0, postRequestedFor(urlEqualTo("/submission")))
+          wireMock.verify(0, postRequestedFor(urlEqualTo("/submission")))
         }
 
         withClue("should not submit message") {
-          verify(0, postRequestedFor(urlEqualTo(eisUrl)))
+          wireMock.verify(0, postRequestedFor(urlEqualTo(eisUrl)))
         }
       }
 
       "clientId is missing in the header" in {
+        withAuthorizedTrader(consignorId)
+
         val result = postRequestWithoutClientId
 
         result.status mustBe BAD_REQUEST
@@ -224,6 +256,22 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         stubEISErrorResponse(BAD_REQUEST, createEISErrorResponseBodyAsJson("BAD_REQUEST").toString())
 
         postRequest(IE815).status mustBe BAD_REQUEST
+      }
+
+      "user sending the wrong message" in {
+        withAuthorizedTrader(consignorId)
+        stubEISSuccessfulRequest
+        setupRepositories
+
+        val result = postRequest(IE818)
+
+        result.status mustBe BAD_REQUEST
+        val expectedJson =
+          s"""{"dateTime":"$timeStamp",
+             |"message":"Invalid message type",
+             |"debugMessage":"Message type IE818 cannot be sent to the draft excise movement endpoint"}""".stripMargin
+
+        Json.parse(result.body) mustBe Json.parse(expectedJson)
       }
 
       "xml cannot be parsed" in {
@@ -271,7 +319,6 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
         postRequest(IE815).status mustBe UNAUTHORIZED
       }
-
     }
 
     "return a 403 Forbidden" when {
@@ -298,8 +345,6 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
         postRequest(IE815).status mustBe FORBIDDEN
       }
-
-
     }
 
     "return a 404 Not Found error" when {
@@ -323,7 +368,6 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         withAuthorizedTrader("GBWK002281023")
         postRequest(contentType = """application/json""").status mustBe UNSUPPORTED_MEDIA_TYPE
       }
-
     }
 
     "return a 422 Unprocessable Entity" when {
@@ -352,9 +396,13 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       }
 
     }
-
   }
 
+  private def verifyBoxIdIsSavedToDB(boxId: String) = {
+    val captor = ArgCaptor[Movement]
+    verify(movementRepository).saveMovement(captor.capture)
+    captor.value.boxId mustBe boxId
+  }
 
   private def setupRepositories = {
     when(movementRepository.saveMovement(any))
@@ -364,10 +412,10 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       .thenReturn(Future.successful(Seq.empty))
   }
 
-  private def assertValidResult(result: WSResponse) = {
+  private def assertValidResult(result: WSResponse, expectedBoxId: String = defaultBoxId) = {
     val responseBody = Json.parse(result.body).as[ExciseMovementResponse]
     responseBody.status mustBe "Accepted"
-    responseBody.boxId mustBe boxId
+    responseBody.boxId mustBe expectedBoxId
     UUID.fromString(responseBody.movementId).toString must not be empty //mustNot Throw An Exception
     responseBody.consignorId mustBe consignorId
     responseBody.localReferenceNumber mustBe "LRNQA20230909022221"
@@ -384,6 +432,17 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     ))
   }
 
+  private def postRequestWithClientBoxId = {
+    await(wsClient.url(url)
+      .addHttpHeaders(
+        HeaderNames.AUTHORIZATION -> "TOKEN",
+        HeaderNames.CONTENT_TYPE -> """application/vnd.hmrc.1.0+xml""",
+        "X-Client-Id" -> "clientId",
+        "X-Callback-Box-Id" -> clientBoxId
+      ).post(IE815)
+    )
+  }
+
   private def postRequest(xml: NodeSeq = IE815, contentType: String = """application/vnd.hmrc.1.0+xml""") = {
     await(wsClient.url(url)
       .addHttpHeaders(
@@ -393,6 +452,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       ).post(xml)
     )
   }
+
 
   private def postRequestWithoutClientId = {
     await(wsClient.url(url)
@@ -460,7 +520,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
             .withBody(
               s"""
                 {
-                  "boxId": "$boxId",
+                  "boxId": "${defaultBoxId}",
                   "boxName":"customs/excise##1.0##notificationUrl",
                   "boxCreator":{
                       "clientId": "testClientId"

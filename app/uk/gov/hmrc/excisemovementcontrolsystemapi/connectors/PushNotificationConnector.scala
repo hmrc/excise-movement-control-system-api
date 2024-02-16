@@ -16,9 +16,17 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
+import play.api.Logging
+import play.api.http.Status.INTERNAL_SERVER_ERROR
 import play.api.http.{HeaderNames, MimeTypes}
+import play.api.libs.json.Json
+import play.api.mvc.Result
+import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.{FailedBoxIdNotificationResponse, FailedPushNotification, SuccessBoxNotificationResponse, SuccessPushNotificationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
@@ -27,32 +35,69 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class PushNotificationConnector @Inject()(
   httpClient: HttpClient,
-  appConfig: AppConfig
-)(implicit val ec: ExecutionContext) {
+  appConfig: AppConfig,
+  dateTimeService: DateTimeService
+)(implicit val ec: ExecutionContext) extends ResponseHandler with Logging {
 
-  def getBoxId(clientId: String)(implicit hc: HeaderCarrier): Future[HttpResponse] = {
+  def getDefaultBoxId(clientId: String)(implicit hc: HeaderCarrier): Future[Either[Result, SuccessBoxNotificationResponse]] = {
 
-    val url = s"${appConfig.pushPullNotificationHost}/box"
+    val url = s"${appConfig.pushPullNotificationsHost}/box"
     val queryParams = Seq(
       "boxName"  -> Constants.BoxName,
       "clientId" -> clientId
     )
 
     httpClient.GET[HttpResponse](url, queryParams)
+      .map { response =>
+        extractIfSuccessful[SuccessBoxNotificationResponse](response)
+          .fold(error => Left(handleBoxNotificationError(error, clientId)), Right(_))
+      }.recover {
+      case ex: Throwable =>
+        logger.error(s"[PushNotificationConnector] - Error retrieving BoxId for clientId: $clientId", ex)
+        Left(InternalServerError(Json.toJson(FailedBoxIdNotificationResponse(
+          dateTimeService.timestamp(),
+          s"Exception occurred when getting boxId for clientId: $clientId"))))
+    }
   }
 
   def postNotification(
     boxId: String,
     notification: Notification
-  )(implicit hc: HeaderCarrier): Future[HttpResponse] = {
+  )(implicit hc: HeaderCarrier): Future[NotificationResponse] = {
 
-    val url = appConfig.pushNotificationUri(boxId)
+    val url = appConfig.pushPullNotificationsUri(boxId)
 
     httpClient.POST[Notification, HttpResponse](
       url,
       notification,
       Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON)
-    )
+    ).map { response =>
+      extractIfSuccessful[SuccessPushNotificationResponse](response)
+        .fold(error => {
+          logger.error(s"[PushNotificationConnector] - error sending notification with boxId: $boxId, status: ${response.status}, message: ${response.body}")
+          FailedPushNotification(error.status, error.body)
+        },
+          success => {
+            logger.info(s"[PushNotificationConnector] - notification successfully sent to boxId: $boxId, for messageId: ${notification.messageId}")
+            success
+          }
+        )
+    }.recover {
+      case ex: Throwable =>
+        logger.error(s"[PushNotificationConnector] - error sending notification with boxId: $boxId error, for messageId: ${notification.messageId}", ex)
+        FailedPushNotification(INTERNAL_SERVER_ERROR, s"An exception occurred when sending a notification with excise number: ${notification.ern}, boxId: $boxId, messageId: ${notification.messageId}")
+    }
+  }
+
+  private def handleBoxNotificationError(response: HttpResponse, clientId: String): Result = {
+    logger.error(s"[PushNotificationConnector] - Error retrieving BoxId for clientId: $clientId, status: ${response.status}, message: ${response.body}")
+    val errorResponse = FailedBoxIdNotificationResponse(dateTimeService.timestamp(), response.body)
+
+    response.status match {
+      case 400 => BadRequest(Json.toJson(errorResponse))
+      case 404 => NotFound(Json.toJson(errorResponse))
+      case _ => InternalServerError(Json.toJson(errorResponse))
+    }
   }
 }
 

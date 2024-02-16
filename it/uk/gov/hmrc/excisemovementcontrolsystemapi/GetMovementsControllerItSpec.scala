@@ -16,23 +16,20 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi
 
-import org.mockito.ArgumentMatchersSugar.eqTo
-import org.mockito.MockitoSugar.when
-import org.scalatest.BeforeAndAfterAll
+import org.mockito.ArgumentMatchersSugar.{any, eqTo}
+import org.mockito.MockitoSugar.{reset, when}
+import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.http.HeaderNames
 import play.api.http.Status._
-import play.api.inject.bind
-import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{AuthTestSupport, MovementTestUtils}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.RepositoryTestStub
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
+import uk.gov.hmrc.auth.core.InternalError
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.MovementTestUtils
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.ApplicationBuilderSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
 import java.time.Instant
@@ -41,10 +38,9 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class GetMovementsControllerItSpec extends PlaySpec
   with GuiceOneServerPerSuite
-  with AuthTestSupport
-  with RepositoryTestStub
+  with ApplicationBuilderSupport
   with MovementTestUtils
-  with BeforeAndAfterAll {
+  with BeforeAndAfterEach {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
@@ -60,14 +56,14 @@ class GetMovementsControllerItSpec extends PlaySpec
   private val movement2 = Movement("boxId", "lrn1", consignorId, Some("consignee2"), Some("arc2"), timestampTwoDaysAgo)
   private val movement3 = Movement("boxId", "lrn2", "ern2", Some(consigneeId), Some("arc3"), timestampTwoDaysAgo)
 
-  override lazy val app: Application = {
+  override lazy val app: Application = applicationBuilder.build()
 
-    GuiceApplicationBuilder()
-      .overrides(
-        bind[AuthConnector].to(authConnector),
-        bind[MovementRepository].to(movementRepository),
-      )
-      .build()
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    reset(workItemRepository, dateTimeService)
+
+    when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
+    when(dateTimeService.timestamp()).thenReturn(Instant.now)
   }
 
   "Get Movements" should {

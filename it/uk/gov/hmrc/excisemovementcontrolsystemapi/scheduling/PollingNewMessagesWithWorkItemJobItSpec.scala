@@ -67,7 +67,6 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
   private val messageReceiptUrl = "/emcs/messages/v1/message-receipt?exciseregistrationnumber="
 
   private lazy val timeService = mock[DateTimeService]
-  // The DB truncates it to milliseconds so to make exact comparisons in the asserts we need to ditch the nanos
   private val availableBefore = Instant.now.truncatedTo(ChronoUnit.MILLIS)
   when(timeService.timestamp()).thenReturn(availableBefore)
 
@@ -96,8 +95,8 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
     configureEisService ++
       Map(
         "mongodb.uri" -> mongoUri,
-        "microservice.services.notification.host" -> wireHost,
-        "microservice.services.notification.port" -> wireMock.port()
+        "microservice.services.push-pull-notifications.host" -> wireHost,
+        "microservice.services.push-pull-notifications.port" -> wireMock.port()
       )
   }
   protected def appBuilder: GuiceApplicationBuilder = {

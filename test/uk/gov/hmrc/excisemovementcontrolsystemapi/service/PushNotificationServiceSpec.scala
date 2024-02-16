@@ -21,17 +21,17 @@ import org.mockito.MockitoSugar.{reset, verify, verifyZeroInteractions, when}
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR}
-import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound}
+import play.api.http.Status.NOT_FOUND
+import play.api.libs.json.Json
+import play.api.mvc.Results.{BadRequest, InternalServerError}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PushNotificationConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Notification
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.{FailedPushNotification, SuccessBoxNotificationResponse, SuccessPushNotificationResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.{FailedBoxIdNotificationResponse, FailedPushNotification, SuccessBoxNotificationResponse, SuccessPushNotificationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PushNotificationServiceImpl
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
@@ -47,81 +47,61 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
   private val sut = new PushNotificationServiceImpl(notificationConnector, dateTimeService)
   private val message = Message("this is a test", "IE801", "messageId", Instant.now)
   private val movement = Movement("id", "boxId", "lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
-  private val boxIdSuccessResponse = Json.parse("""
-  |{
-  | "boxId": "1c5b9365-18a6-55a5-99c9-83a091ac7f26",
-  |    "boxName":"BOX 2",
-  |    "boxCreator":{
-  |        "clientId": "X5ZasuQLH0xqKooV_IEw6yjQNfEa"
-  |    },
-  |    "subscriber": {
-  |        "subscribedDateTime": "2020-06-01T10:27:33.613+0000",
-  |        "callBackUrl": "https://www.example.com/callback",
-  |        "subscriptionType": "API_PUSH_SUBSCRIBER"
-  |    }
-  |}""".stripMargin)
+  private val boxId = "1c5b9365-18a6-55a5-99c9-83a091ac7f26"
+
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(notificationConnector, dateTimeService)
 
-    when(notificationConnector.getBoxId(any)(any))
-      .thenReturn(Future.successful(HttpResponse(200, boxIdSuccessResponse.toString())))
+    when(notificationConnector.getDefaultBoxId(any)(any))
+      .thenReturn(Future.successful(Right(SuccessBoxNotificationResponse(boxId))))
     when(notificationConnector.postNotification(any, any)(any))
-      .thenReturn(Future.successful(HttpResponse(200, Json.parse("""{"notificationId": "notificationId"}"""").toString())))
+      .thenReturn(Future.successful(SuccessPushNotificationResponse("notificationId")))
     when(dateTimeService.timestamp()).thenReturn(timestamp)
   }
 
   "getBoxId" should {
-    "return 200 status" in {
+    "return the default box id" in {
       val result = await(sut.getBoxId("clientId"))
-      result mustBe Right(SuccessBoxNotificationResponse("1c5b9365-18a6-55a5-99c9-83a091ac7f26"))
+      result mustBe Right(SuccessBoxNotificationResponse(boxId))
+
+      withClue("send the request to the notification service") {
+        verify(notificationConnector).getDefaultBoxId(eqTo("clientId"))(any)
+      }
     }
 
-    "send the request to the notification service" in {
-      await(sut.getBoxId("clientId"))
-      verify(notificationConnector).getBoxId(eqTo("clientId"))(any)
+    "return the client box id when this is present" in {
+      val result = await(sut.getBoxId("clientId", Some(boxId)))
+
+      result mustBe Right(SuccessBoxNotificationResponse(boxId))
+
+      withClue("not request box Id from the push-poll-notification service") {
+        verifyZeroInteractions(notificationConnector)
+      }
     }
 
     "return an error" when {
-      "Box Id not found" in {
-        when(notificationConnector.getBoxId(any)(any))
-          .thenReturn(Future.successful(HttpResponse(404, "Box does not exist")))
+
+      "default box id return an error" in {
+        when(notificationConnector.getDefaultBoxId(any)(any))
+          .thenReturn(Future.successful(Left(
+            InternalServerError(
+              Json.toJson(FailedBoxIdNotificationResponse(timestamp, "error")))))
+          )
 
         val result = await(sut.getBoxId("clientId"))
 
-        result.left.value mustBe NotFound(buildBoxIdJsonError("Box does not exist"))
+        result.left.value mustBe InternalServerError(Json.toJson(FailedBoxIdNotificationResponse(timestamp, "error")))
       }
 
-      "is bad request" in {
-        val debugMessage = "BAD_REQUEST"
-        when(notificationConnector.getBoxId(any)(any))
-          .thenReturn(Future.successful(HttpResponse(400, debugMessage)))
+      "clientBoxId is not a valid UUID" in {
+        val result = await(sut.getBoxId("clientId", Some("client-box-id")))
 
-        val result = await(sut.getBoxId("clientId"))
+        result.left.value mustBe BadRequest(buildBoxIdJsonError("Client box id should be a valid UUID"))
+        verifyZeroInteractions(notificationConnector)
 
-        result.left.value mustBe BadRequest(buildBoxIdJsonError(debugMessage))
       }
 
-      "is unknown error" in {
-        val debugMessage = "unknown error"
-        when(notificationConnector.getBoxId(any)(any))
-          .thenReturn(Future.successful(HttpResponse(500, debugMessage)))
-
-        val result = await(sut.getBoxId("clientId"))
-
-        result.left.value mustBe InternalServerError(buildBoxIdJsonError(debugMessage))
-      }
-
-      "cannot parse json" in {
-        val errorJson = Json.obj( "code" -> "UNKNOWN_ERROR", "message" -> "Box does not exist")
-        when(notificationConnector.getBoxId(any)(any))
-          .thenReturn(Future.successful(HttpResponse(200, errorJson.toString())))
-
-        val result = await(sut.getBoxId("clientId"))
-
-        val expectedError: JsValue = buildBoxIdJsonError("Exception occurred when getting boxId for clientId: clientId")
-        result.left.value mustBe InternalServerError(expectedError)
-      }
     }
   }
   "sendNotification" should {
@@ -139,22 +119,12 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
 
       "the notification API return an error" in {
         when(notificationConnector.postNotification(any, any)(any))
-          .thenReturn(Future.successful(HttpResponse(BAD_REQUEST, "Box ID is not a UUID")))
+          .thenReturn(Future.successful(FailedPushNotification(NOT_FOUND, "not found")))
 
         val result = await(sut.sendNotification("ern", movement, "messageId"))
 
         Json.toJson(result.asInstanceOf[FailedPushNotification]) mustBe
-          buildPushNotificationJsonError(BAD_REQUEST, "Box ID is not a UUID")
-      }
-
-      "invalid json" in {
-        when(notificationConnector.postNotification(any, any)(any))
-          .thenReturn(Future.successful(HttpResponse(200, "invalid json")))
-
-        val result = await(sut.sendNotification("ern", movement, "messageId"))
-
-        result mustBe FailedPushNotification(INTERNAL_SERVER_ERROR,
-          "An exception occurred when sending a notification with excise number: ern, for message: messageId")
+          buildPushNotificationJsonError(NOT_FOUND, "not found")
       }
 
       "Administration reference code (ARC) is missing" in {

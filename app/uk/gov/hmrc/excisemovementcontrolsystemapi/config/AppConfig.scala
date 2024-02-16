@@ -29,7 +29,7 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
 
   lazy val eisHost: String = servicesConfig.baseUrl("eis")
   lazy val nrsHost:  String = servicesConfig.baseUrl("nrs")
-  lazy val pushPullNotificationHost: String = servicesConfig.baseUrl("notification")
+  lazy val pushPullNotificationsHost: String = servicesConfig.baseUrl("push-pull-notifications")
 
   lazy val nrsApiKey: String = servicesConfig.getConfString("nrs.api-key", "dummyNrsApiKey")
   lazy val nrsRetryDelays: Seq[FiniteDuration] = config.get[Seq[FiniteDuration]]("microservice.services.nrs.retryDelays")
@@ -89,7 +89,7 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   def preValidateTraderUrl: String = s"$eisHost/emcs/pre-validate-trader/v1"
   def preValidateTraderBearerToken: String = servicesConfig.getConfString("eis.pre-validate-trader-bearer-token", "dummyPreValidateTraderBearerToken")
 
-  def pushNotificationUri(boxId: String) =
-    s"$pushPullNotificationHost/box/$boxId/notifications"
+  def pushPullNotificationsUri(boxId: String) =
+    s"$pushPullNotificationsHost/box/$boxId/notifications"
 
 }

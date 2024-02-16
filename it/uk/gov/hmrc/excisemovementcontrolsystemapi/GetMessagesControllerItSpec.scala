@@ -20,25 +20,19 @@ import com.github.tomakehurst.wiremock.client.WireMock
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.{reset, when}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
-import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.http.HeaderNames
 import play.api.http.Status._
-import play.api.inject.bind
-import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
+import uk.gov.hmrc.auth.core.InternalError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{NewMessagesXml, TestXml}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{RepositoryTestStub, WireMockServerSpec}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{ApplicationBuilderSupport, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import java.nio.charset.StandardCharsets
 import java.time.Instant
@@ -47,11 +41,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class GetMessagesControllerItSpec extends PlaySpec
   with GuiceOneServerPerSuite
-  with AuthTestSupport
+  with ApplicationBuilderSupport
   with TestXml
   with NewMessagesXml
   with WireMockServerSpec
-  with RepositoryTestStub
   with BeforeAndAfterAll
   with BeforeAndAfterEach {
 
@@ -63,21 +56,13 @@ class GetMessagesControllerItSpec extends PlaySpec
   private val messageId = UUID.randomUUID().toString
   private val url = s"http://localhost:$port/movements/$validUUID/messages"
   private val messageUrl = s"http://localhost:$port/movements/$validUUID/message/$messageId"
-  private lazy val dateTimeService: DateTimeService = mock[DateTimeService]
   private val timestamp = Instant.now()
 
   override lazy val app: Application = {
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
 
-    GuiceApplicationBuilder()
-      .configure(configureEisService)
-      .overrides(
-        bind[AuthConnector].to(authConnector),
-        bind[MovementRepository].to(movementRepository),
-        bind[DateTimeService].to(dateTimeService)
-      )
-      .build()
+    applicationBuilder(configureEisService).build()
   }
 
   override def beforeEach(): Unit = {
@@ -102,6 +87,7 @@ class GetMessagesControllerItSpec extends PlaySpec
       val message = Message(encodedMessage, "IE801", messageId, timestamp)
       when(movementRepository.getMovementById(any))
         .thenReturn(Future.successful(Some(Movement(validUUID, "boxId", "lrn", consignorId, None, None, Instant.now, Seq(message)))))
+      when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
 
       val result = getRequest()
 

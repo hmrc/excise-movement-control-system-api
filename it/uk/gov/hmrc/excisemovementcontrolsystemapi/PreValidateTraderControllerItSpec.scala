@@ -18,27 +18,27 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, ok, post, urlEqualTo}
+import org.mockito.MockitoSugar.when
 import org.scalatest.{BeforeAndAfterAll, OptionValues}
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.http.HeaderNames
 import play.api.http.Status._
-import play.api.inject.bind
-import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.auth.core.{AuthConnector, InternalError}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.WireMockServerSpec
+import uk.gov.hmrc.auth.core.InternalError
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{ApplicationBuilderSupport, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderRequest, getPreValidateTraderSuccessResponse}
+
+import java.time.Instant
 
 
 class PreValidateTraderControllerItSpec extends PlaySpec
   with GuiceOneServerPerSuite
-  with AuthTestSupport
+  with ApplicationBuilderSupport
   with WireMockServerSpec
   with BeforeAndAfterAll
   with OptionValues {
@@ -53,17 +53,14 @@ class PreValidateTraderControllerItSpec extends PlaySpec
   override lazy val app: Application = {
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
-    GuiceApplicationBuilder()
-      .configure(configureEisService)
-      .overrides(
-        bind[AuthConnector].to(authConnector),
-      )
-      .build()
+    applicationBuilder(configureEisService).build()
   }
 
   override def beforeAll(): Unit = {
     super.beforeAll()
     wireMock.resetAll()
+
+    when(dateTimeService.timestamp()).thenReturn(Instant.now)
   }
 
   override def afterAll(): Unit = {
