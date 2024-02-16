@@ -28,6 +28,7 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PushNotificationConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Notification
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.{FailedPushNotification, NotInUseNotificationResponse, SuccessPushNotificationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.{FailedBoxIdNotificationResponse, FailedPushNotification, SuccessBoxNotificationResponse, SuccessPushNotificationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PushNotificationServiceImpl
@@ -100,11 +101,11 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
       }
     }
 
-//    "return None if the PPN feature flag is disabled" in {
-//      when(appConfig.featureFlagPPN).thenReturn(false)
-//      val result = await(sut.getBoxId("clientId"))
-//      result mustBe Right(None)
-//    }
+    //    "return None if the PPN feature flag is disabled" in {
+    //      when(appConfig.featureFlagPPN).thenReturn(false)
+    //      val result = await(sut.getBoxId("clientId"))
+    //      result mustBe Right(None)
+    //    }
 
     "return an error" when {
 
@@ -128,6 +129,16 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
 
       }
 
+      "cannot parse json" in {
+        val errorJson = Json.obj("code" -> "UNKNOWN_ERROR", "message" -> "Box does not exist")
+        when(notificationConnector.getBoxId(any)(any))
+          .thenReturn(Future.successful(HttpResponse(200, errorJson.toString())))
+
+        val result = await(sut.getBoxId("clientId"))
+
+        val expectedError: JsValue = buildBoxIdJsonError("Exception occurred when getting boxId for clientId: clientId")
+        result.left.value mustBe InternalServerError(expectedError)
+      }
     }
   }
 
@@ -140,6 +151,16 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
       val messageUri = s"/movements/id/message/messageId"
       val notification = Notification("id", messageUri, "messageId", "consignorId", Some("consigneeId"), "arc", "ern")
       verify(notificationConnector).postNotification("boxId", notification)
+    }
+
+    "return not in use status" when {
+
+      "box Id is not set on the movement" in {
+        val result = await(sut.sendNotification("ern", movement.copy(boxId = None), "messageId"))
+        result mustBe NotInUseNotificationResponse()
+        verifyZeroInteractions(notificationConnector)
+      }
+
     }
 
     "return an error" when {
@@ -179,7 +200,7 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
          |"debugMessage":"$debugMessage"}""".stripMargin)
   }
 
-   private def buildPushNotificationJsonError(status: Int, debugMessage: String) = {
+  private def buildPushNotificationJsonError(status: Int, debugMessage: String) = {
     Json.parse(
       s"""{"status":$status,
          |"message":"Push notification error",

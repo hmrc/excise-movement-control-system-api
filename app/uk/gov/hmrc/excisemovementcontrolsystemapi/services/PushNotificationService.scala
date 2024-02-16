@@ -24,6 +24,8 @@ import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PushNotificationConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.routes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.{FailedBoxIdNotificationResponse, SuccessBoxNotificationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.{Notification, NotificationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
@@ -32,22 +34,21 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import java.util.UUID
 import javax.inject.Inject
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.routes
-
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 class PushNotificationServiceImpl @Inject()(
-  notificationConnector: PushNotificationConnector,
-  dateTimeService: DateTimeService,
-  appConfig: AppConfig
-)(implicit val ec: ExecutionContext) extends PushNotificationService with ResponseHandler with Logging{
+                                             notificationConnector: PushNotificationConnector,
+                                             dateTimeService: DateTimeService,
+                                             appConfig: AppConfig
+                                           )(implicit val ec: ExecutionContext) extends PushNotificationService with ResponseHandler with Logging {
 
   def getBoxId(
     clientId: String,
     clientBoxId: Option[String] = None
   )(implicit hc: HeaderCarrier): Future[Either[Result, Option[String]]] = {
     clientId: String
+                clientId: String
               )(implicit hc: HeaderCarrier): Future[Either[Result, String]] = {
 
     notificationConnector.getBoxId(clientId)
@@ -76,34 +77,39 @@ class PushNotificationServiceImpl @Inject()(
         )
     }
   //  )(implicit hc: HeaderCarrier): Future[Either[Result, Option[String]]] = {
+    logger.debug("<<<<<IN GET BOXID>>>>")
 
-//    if (appConfig.featureFlagPPN) {
-      notificationConnector.getBoxId(clientId)
-        .map { response =>
-          extractIfSuccessful[SuccessBoxNotificationResponse](response)
-            .map(s => s.boxId)
-            .fold(error => Left(handleBoxNotificationError(error)), Right(_))
-        }.recover {
-        case ex: Throwable =>
-          // todo: Is this an error?
-          logger.error(s"[PushNotificationService] - Error retrieving BoxId, message: ${ex.getMessage}", ex)
-          Left(InternalServerError(Json.toJson(FailedBoxIdNotificationResponse(
-            dateTimeService.timestamp(),
-            s"Exception occurred when getting boxId for clientId: $clientId"))))
-      }
+    //  )(implicit hc: HeaderCarrier): Future[Either[Result, Option[String]]] = {
 
-//    } else {
-//      Future.successful(Right(None))
-//    }
+    //    if (appConfig.featureFlagPPN) {
+    notificationConnector.getBoxId(clientId)
+      .map { response =>
+        extractIfSuccessful[SuccessBoxNotificationResponse](response)
+          .map(s => s.boxId)
+          .fold(error => Left(handleBoxNotificationError(error)), Right(_))
+      }.recover {
+      case ex: Throwable =>
+        // todo: Is this an error?
+        logger.error(s"[PushNotificationService] - Error retrieving BoxId, message: ${ex.getMessage}", ex)
+        Left(InternalServerError(Json.toJson(FailedBoxIdNotificationResponse(
+          dateTimeService.timestamp(),
+          s"Exception occurred when getting boxId for clientId: $clientId"))))
+    }
+
+    //    } else {
+    //      Future.successful(Right(None))
+    //    }
 
   }
   def sendNotification(
-    ern: String,
-    movement: Movement,
-    messageId: String
-  )(implicit hc: HeaderCarrier): Future[NotificationResponse] = {
+                        ern: String,
+                        movement: Movement,
+                        messageId: String
+                      )(implicit hc: HeaderCarrier): Future[NotificationResponse] = {
 
     val boxId = movement.boxId
+    logger.debug("<<<<<IN SEND NOTIFICATION>>>>")
+
     val notification = Notification(
       movement._id,
       buildMessageUriAsString(movement._id, messageId),
@@ -114,6 +120,29 @@ class PushNotificationServiceImpl @Inject()(
       ern)
 
     notificationConnector.postNotification(boxId, notification)
+    movement.boxId match {
+      case Some(boxId) =>
+
+        notificationConnector.postNotification(boxId, notification)
+          .map { response =>
+            extractIfSuccessful[SuccessPushNotificationResponse](response)
+              .fold(error => {
+                logger.error(s"[PushNotificationService] - push notification error, status: ${response.status}, message: ${response.body}")
+                FailedPushNotification(error.status, error.body)
+              },
+                success => success)
+          }.recover {
+          case ex: Throwable =>
+            logger.error(s"[PushNotificationService] - push notification error, message: ${ex.getMessage}", ex)
+            //todo: we may need a better message.
+            FailedPushNotification(INTERNAL_SERVER_ERROR, s"An exception occurred when sending a notification with excise number: $ern, for message: $messageId")
+
+        }
+
+      case None =>
+        logger.error("<<<<<NONE>>>>")
+        Future.successful(NotInUseNotificationResponse())
+    }
   }
 
   private def buildMessageUriAsString(movementId: String, messageId: String): String = {
@@ -138,8 +167,8 @@ trait PushNotificationService {
   def getBoxId(clientId: String)(implicit hc: HeaderCarrier): Future[Either[Result, String]]
 
   def sendNotification(
-    ern: String,
-    movement: Movement,
-    messageId: String
-  )(implicit hc: HeaderCarrier): Future[NotificationResponse]
+                        ern: String,
+                        movement: Movement,
+                        messageId: String
+                      )(implicit hc: HeaderCarrier): Future[NotificationResponse]
 }
