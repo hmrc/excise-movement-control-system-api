@@ -17,9 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.writes.testObjects
 import play.api.libs.json.{JsValue, Json}
 
-import scala.xml.NodeSeq
+object IE803TestMessageType extends TestMessageType {
 
-object IE905TestMessageType extends TestMessageType {
-
-  override def json1: JsValue = Json.parse("{\"Header\":{\"MessageSender\":\"NDEA.GB\",\"MessageRecipient\":\"NDEA.XI\",\"DateOfPreparation\":\"2023-07-02\",\"TimeOfPreparation\":\"21:23:41\",\"MessageIdentifier\":\"XI00432RR\",\"CorrelationIdentifier\":\"6774741231ff3111f3233\"},\"Body\":{\"StatusResponse\":{\"AttributesValue\":{\"AdministrativeReferenceCode\":\"23XI00000000000056349\",\"SequenceNumber\":\"1\",\"Status\":\"X07\",\"LastReceivedMessageType\":\"IE881\"}}}}")
+  override def json1: JsValue = Json.parse("{\"Header\":{\"MessageSender\":\"NDEA.GB\",\"MessageRecipient\":\"NDEA.XI\",\"DateOfPreparation\":\"2023-06-27\",\"TimeOfPreparation\":\"00:23:33\",\"MessageIdentifier\":\"GB002312688\",\"CorrelationIdentifier\":\"6dddasfffff3abcb344bbcbcbcbc3435\"},\"Body\":{\"NotificationOfDivertedEADESAD\":{\"ExciseNotification\":{\"NotificationType\":\"1\",\"NotificationDateAndTime\":\"2023-06-26T23:56:46\",\"AdministrativeReferenceCode\":\"23XI00000000000056333\",\"SequenceNumber\":\"1\"},\"DownstreamArc\":[]}}}")
 }

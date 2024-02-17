@@ -366,6 +366,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
         movements.size mustBe 1
         assertResults(movements.find(_.consignorId.equals("1")).get, cachedMovement1)
 
+<<<<<<< HEAD:it/uk/gov/hmrc/excisemovementcontrolsystemapi/scheduling/PollingNewMessagesWithWorkItemJobItSpec.scala
         val workItems = findAll().futureValue
 
       val workItem = workItems.find(_.item.exciseNumber.equals("1")).get
@@ -373,11 +374,22 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
 
       //Work Item repo truncates to Milliseconds
       workItem.availableAt mustBe createdWorkItem.availableAt.plusSeconds(2 * 60).truncatedTo(ChronoUnit.MILLIS)
+=======
+        eventually {
+          verifyItemAvailableAt(
+            createdWorkItem.availableAt.plusSeconds(2 * 60)
+          ).futureValue mustBe true
+>>>>>>> f545de1 (initial upgrade for play-30):it/test/uk/gov/hmrc/excisemovementcontrolsystemapi/scheduling/PollingNewMessagesWithWorkItemJobItSpec.scala
 
+          eventually {
+            verifyItemStatus(ProcessingStatus.ToDo).futureValue mustBe true
+          }
+        }
       }
     }
 
-    "if fails mark work item as failed so can be retried" in {
+    //todo: This test seems to be the same as the above one. Can it be removed?
+    "if fails mark work item as ToDo so can be retried" in {
 
       val movementRepository = new MovementRepository(
         mongoComponent,
@@ -394,17 +406,40 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       val app = appBuilder.build()
       running(app) {
 
+        Thread.sleep(3000)
+
         val movements = movementRepository.collection.find().toFuture().futureValue
 
         movements.size mustBe 1
         assertResults(movements.find(_.consignorId.equals("1")).get, cachedMovement1)
 
-        val workItems = findAll().futureValue
-
-        workItems.find(_.item.exciseNumber.equals("1")).get.status mustBe ProcessingStatus.ToDo
+        eventually {
+          verifyItemStatus(ProcessingStatus.ToDo).futureValue mustBe true
+        }
       }
     }
 
+  }
+
+  def verifyItemStatus(expectedProcessingStatus: ProcessingStatus): Future[Boolean] = {
+    findAll().map { records =>
+      records.toList match {
+        case Nil => false
+        case head :: _ => head.status.equals(expectedProcessingStatus)
+      }
+    }
+  }
+
+  def verifyItemAvailableAt(
+    expectedAvailableDate: Instant
+  ): Future[Boolean] = {
+
+    findAll().map { records =>
+      records.toList match {
+        case Nil => false
+        case head :: _ => head.availableAt.compareTo(expectedAvailableDate) == 0
+      }
+    }
   }
 
   private def setUpMovementRepository(movementRepository: MovementRepository) = {

@@ -17,10 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.writes.testObjects
 import play.api.libs.json.{JsValue, Json}
 
-import scala.xml.NodeSeq
+object IE905TestMessageType extends TestMessageType {
 
-object IE704TestMessageType extends TestMessageType {
-
-  override def json1: JsValue = Json.parse("""{"Header":{"MessageSender":"NDEA.XI","MessageRecipient":"NDEA.XI","DateOfPreparation":"2008-09-29","TimeOfPreparation":"00:18:33","MessageIdentifier":"XI000001","CorrelationIdentifier":"9b8effe4-adca-4431-bfc2-d65bb5f1e15d"},"Body":{"GenericRefusalMessage":{"AttributesValue":{"AdministrativeReferenceCode":"23XI00000000000000012","SequenceNumber":"1","LocalReferenceNumber":"lrnie8158976912"},"FunctionalError":[{"ErrorType":"4401","ErrorReason":"token","ErrorLocation":"token","OriginalAttributeValue":"token"}]}}}""".stripMargin)
-
+  override def json1: JsValue = Json.parse("{\"Header\":{\"MessageSender\":\"NDEA.GB\",\"MessageRecipient\":\"NDEA.XI\",\"DateOfPreparation\":\"2023-07-02\",\"TimeOfPreparation\":\"21:23:41\",\"MessageIdentifier\":\"XI00432RR\",\"CorrelationIdentifier\":\"6774741231ff3111f3233\"},\"Body\":{\"StatusResponse\":{\"AttributesValue\":{\"AdministrativeReferenceCode\":\"23XI00000000000056349\",\"SequenceNumber\":\"1\",\"Status\":\"X07\",\"LastReceivedMessageType\":\"IE881\"}}}}")
 }

@@ -17,8 +17,6 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.writes.testObjects
 import play.api.libs.json.{JsValue, Json}
 
-import scala.xml.NodeSeq
-
 object IE839TestMessageType extends TestMessageType {
 
   override def json1: JsValue = Json.parse("{\"Header\":{\"MessageSender\":\"NDEA.XI\",\"MessageRecipient\":\"NDEA.FR\",\"DateOfPreparation\":\"2024-06-26\",\"TimeOfPreparation\":\"00:18:33\",\"MessageIdentifier\":\"XI004322\",\"CorrelationIdentifier\":\"6dddas1231ff3a678fefffff3233\"},\"Body\":{\"RefusalByCustoms\":{\"AttributesValue\":{\"DateAndTimeOfIssuance\":\"2023-06-24T18:27:14\"},\"ConsigneeTrader\":{\"Traderid\":\"AT00000612158\",\"TraderName\":\"Chaz's Cigars\",\"StreetName\":\"The Street\",\"Postcode\":\"MC232\",\"City\":\"Happy Town\",\"EoriNumber\":\"91\",\"attributes\":{\"@language\":\"en\"}},\"ExportPlaceCustomsOffice\":{\"ReferenceNumber\":\"FR883393\"},\"ExportCrossCheckingDiagnoses\":{\"LocalReferenceNumber\":\"lrnie8155755329\",\"DocumentReferenceNumber\":\"123\",\"Diagnosis\":[{\"AdministrativeReferenceCode\":\"23XI00000000000056341\",\"BodyRecordUniqueReference\":\"1\",\"DiagnosisCode\":\"5\"}]},\"Rejection\":{\"RejectionDateAndTime\":\"2023-06-22T02:02:49\",\"RejectionReasonCode\":\"4\"},\"CEadVal\":[{\"AdministrativeReferenceCode\":\"23XI00000000000056341\",\"SequenceNumber\":\"1\"}],\"NEadSub\":{\"LocalReferenceNumber\":\"lrnie8155755329\"}}}}")

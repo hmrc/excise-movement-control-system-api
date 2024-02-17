@@ -17,8 +17,8 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.writes.testObjects
 import play.api.libs.json.{JsValue, Json}
 
-import scala.xml.NodeSeq
+object IE704TestMessageType extends TestMessageType {
 
-object IE810TestMessageType extends TestMessageType {
-  override def json1: JsValue = Json.parse("{\"Header\":{\"MessageSender\":\"NDEA.GB\",\"MessageRecipient\":\"NDEA.GB\",\"DateOfPreparation\":\"2023-06-13\",\"TimeOfPreparation\":\"10:16:58\",\"MessageIdentifier\":\"GB100000000302249\",\"CorrelationIdentifier\":\"49ec29186e2c471eb1fb2e98313bd1ce\"},\"Body\":{\"CancellationOfEAD\":{\"AttributesValue\":{\"DateAndTimeOfValidationOfCancellation\":\"2023-06-13T10:17:05\"},\"ExciseMovementEad\":{\"AdministrativeReferenceCode\":\"23GB00000000000377161\"},\"Cancellation\":{\"CancellationReasonCode\":\"3\"}}}}")
+  override def json1: JsValue = Json.parse("""{"Header":{"MessageSender":"NDEA.XI","MessageRecipient":"NDEA.XI","DateOfPreparation":"2008-09-29","TimeOfPreparation":"00:18:33","MessageIdentifier":"XI000001","CorrelationIdentifier":"9b8effe4-adca-4431-bfc2-d65bb5f1e15d"},"Body":{"GenericRefusalMessage":{"AttributesValue":{"AdministrativeReferenceCode":"23XI00000000000000012","SequenceNumber":"1","LocalReferenceNumber":"lrnie8158976912"},"FunctionalError":[{"ErrorType":"4401","ErrorReason":"token","ErrorLocation":"token","OriginalAttributeValue":"token"}]}}}""".stripMargin)
+
 }

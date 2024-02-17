@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 
 import com.codahale.metrics.Timer
-import com.kenshoo.play.metrics.Metrics
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.mockito.MockitoSugar.{reset, verify, when}
