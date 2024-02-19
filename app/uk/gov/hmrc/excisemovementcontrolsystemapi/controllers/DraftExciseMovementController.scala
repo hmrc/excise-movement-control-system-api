@@ -117,7 +117,7 @@ class DraftExciseMovementController @Inject()(
     clientId: String
   )(implicit request: ParsedXmlRequest[_]): EitherT[Future, Result, Option[String]] = {
 
-    if (appConfig.featureFlagPPN) {
+    if (appConfig.pushNotificationsEnabled) {
       val clientBoxId = request.headers.get(Constants.XCallbackBoxId)
       EitherT(notificationService.getBoxId(clientId, clientBoxId).map(futureValue =>
         futureValue.map(boxId => Some(boxId))

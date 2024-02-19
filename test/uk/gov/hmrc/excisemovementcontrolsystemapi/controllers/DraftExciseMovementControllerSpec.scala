@@ -89,8 +89,8 @@ class DraftExciseMovementControllerSpec
     when(mockIeMessage.consignorId).thenReturn(consignorId)
     when(mockIeMessage.localReferenceNumber).thenReturn("123")
 
+    when(appConfig.pushNotificationsEnabled).thenReturn(true)
     when(dateTimeService.timestamp()).thenReturn(timestamp)
-    when(appConfig.featureFlagPPN).thenReturn(true)
     when(auditService.auditMessage(any)(any)).thenReturn(EitherT.fromEither(Right(())))
   }
 
@@ -130,7 +130,7 @@ class DraftExciseMovementControllerSpec
       }
 
       "push pull notifications feature flag is disabled" in {
-        when(appConfig.featureFlagPPN).thenReturn(false)
+        when(appConfig.pushNotificationsEnabled).thenReturn(false)
 
         when(movementService.saveNewMovement(any))
           .thenReturn(Future.successful(Right(Movement(Some(defaultBoxId), "123", consignorId, Some("789"), None, Instant.now))))

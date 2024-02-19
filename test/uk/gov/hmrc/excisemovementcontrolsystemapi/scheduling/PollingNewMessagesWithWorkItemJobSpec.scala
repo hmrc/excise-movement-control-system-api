@@ -103,7 +103,7 @@ class PollingNewMessagesWithWorkItemJobSpec
     when(appConfig.workItemFastInterval).thenReturn(Duration.create(5, MINUTES))
     when(appConfig.workItemSlowInterval).thenReturn(Duration.create(1, HOURS))
     when(appConfig.failureRetryAfter).thenReturn(Duration.create(5, MINUTES))
-    when(appConfig.featureFlagPPN).thenReturn(true)
+    when(appConfig.pushNotificationsEnabled).thenReturn(true)
 
     when(newMessageParserService.extractMessages(any)).thenReturn(Seq(message))
     when(movementService.updateMovement(any, any))
@@ -358,7 +358,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
       "feature flag is not enabled" in {
 
-        when(appConfig.featureFlagPPN).thenReturn(false)
+        when(appConfig.pushNotificationsEnabled).thenReturn(false)
 
         addOneItemToMockQueue(createWorkItem())
 

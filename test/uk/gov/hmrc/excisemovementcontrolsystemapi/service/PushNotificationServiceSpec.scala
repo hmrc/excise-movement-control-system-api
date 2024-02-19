@@ -61,7 +61,7 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
       .thenReturn(Future.successful(SuccessPushNotificationResponse("notificationId")))
     when(dateTimeService.timestamp()).thenReturn(timestamp)
 
-    when(appConfig.featureFlagPPN).thenReturn(true)
+    when(appConfig.pushNotificationsEnabled).thenReturn(true)
   }
 
   "getBoxId" should {

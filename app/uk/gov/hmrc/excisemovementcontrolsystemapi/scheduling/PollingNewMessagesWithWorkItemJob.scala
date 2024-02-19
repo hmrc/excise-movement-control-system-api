@@ -22,7 +22,8 @@ import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.{NotInUseNotificationResponse, SuccessPushNotificationResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.SuccessPushNotificationResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.PollingNewMessagesWithWorkItemJob._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -150,24 +151,30 @@ class PollingNewMessagesWithWorkItemJob @Inject()
 
     movementService.updateMovement(message, exciseNumber).map {
       movements =>
-
-        movements.map(m =>
-          if (appConfig.featureFlagPPN) {
-            notificationService.sendNotification(exciseNumber, m, message.messageIdentifier)
-          } else {
-            Future.successful(NotInUseNotificationResponse())
+        if (!appConfig.pushNotificationsEnabled) {
+          movements match {
+            case Nil => successful(false)
+            case _ :: _ => successful(true)
           }
-        )
-          .sequence
-          .map { o =>
-            o.forall {
-              case _: SuccessPushNotificationResponse => true
-              case _: NotInUseNotificationResponse => true
-              case _ => false
-            }
-          }
+        } else {
+          sendNotification(exciseNumber, movements, message.messageIdentifier)
+        }
     }.flatten
+
   }
+
+  private def sendNotification(exciseNumber: String, movements: Seq[Movement], messageId: String) = {
+    movements.map(m =>
+      notificationService.sendNotification(exciseNumber, m, messageId)
+    ).sequence
+      .map { o =>
+        o.forall {
+          case _: SuccessPushNotificationResponse => true
+          case _ => false
+        }
+      }
+  }
+
 }
 
 object PollingNewMessagesWithWorkItemJob {
