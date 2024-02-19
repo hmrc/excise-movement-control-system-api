@@ -16,10 +16,12 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
-import generated.{IE837Type, MessagesOption, Number1Value31, Number2Value30}
+import generated.{IE837Type, MessagesOption}
 import play.api.libs.json.Json
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType.Delay
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
 
 import scala.xml.NodeSeq
@@ -29,7 +31,8 @@ case class IE837Message
 (
   private val obj: IE837Type,
   private val key: Option[String],
-  private val namespace: Option[String]
+  private val namespace: Option[String],
+  auditType: AuditType
 
 ) extends IEMessage with SubmitterTypeConverter with GeneratedJsonWriters{
   def submitter: ExciseTraderType = convertSubmitterType(obj.Body.ExplanationOnDelayForDelivery.AttributesValue.SubmitterType)
@@ -60,11 +63,11 @@ case class IE837Message
 
 object IE837Message {
   def apply(message: DataRecord[MessagesOption]): IE837Message = {
-    IE837Message(message.as[IE837Type], message.key, message.namespace)
+    IE837Message(message.as[IE837Type], message.key, message.namespace, Delay)
   }
 
   def createFromXml(xml: NodeSeq): IE837Message = {
     val ie837: IE837Type = scalaxb.fromXML[IE837Type](xml)
-    IE837Message(ie837, Some(ie837.productPrefix), None)
+    IE837Message(ie837, Some(ie837.productPrefix), None, Delay)
   }
 }

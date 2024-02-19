@@ -20,6 +20,8 @@ import generated.{IE819Type, MessagesOption}
 import play.api.libs.json.Json
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType.AlertRejection
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
 
 import scala.xml.NodeSeq
@@ -29,7 +31,8 @@ case class IE819Message
 (
   private val obj: IE819Type,
   private val key: Option[String],
-  private val namespace: Option[String]
+  private val namespace: Option[String],
+  auditType: AuditType
 ) extends IEMessage with GeneratedJsonWriters {
   def consignorId: Option[String] = None
 
@@ -53,11 +56,11 @@ case class IE819Message
 
 object IE819Message {
   def apply(message: DataRecord[MessagesOption]): IE819Message = {
-    IE819Message(message.as[IE819Type], message.key, message.namespace)
+    IE819Message(message.as[IE819Type], message.key, message.namespace, AlertRejection)
   }
 
   def createFromXml(xml: NodeSeq): IE819Message = {
     val ie819: IE819Type = scalaxb.fromXML[IE819Type](xml)
-    IE819Message(ie819, Some(ie819.productPrefix), None)
+    IE819Message(ie819, Some(ie819.productPrefix), None, AlertRejection)
   }
 }
