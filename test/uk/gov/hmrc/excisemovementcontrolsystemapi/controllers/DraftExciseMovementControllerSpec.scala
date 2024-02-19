@@ -136,7 +136,7 @@ class DraftExciseMovementControllerSpec
 
     "sends an audit event" in {
       when(movementService.saveNewMovement(any))
-        .thenReturn(Future.successful(Right(Movement(boxId, "123", consignorId, Some("789"), None, Instant.now))))
+        .thenReturn(Future.successful(Right(Movement(defaultBoxId, "123", consignorId, Some("789"), None, Instant.now))))
 
       when(auditService.auditMessage(any)(any)).thenReturn(EitherT.fromEither(Right(())))
 
