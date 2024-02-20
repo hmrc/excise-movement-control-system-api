@@ -23,7 +23,7 @@ trait NewMessagesXml {
   def newMessageWithIE801(messageCount: Int = 1): Elem = <ns:NewMessagesDataResponse
   xmlns:ns="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/NewMessagesData/3"
   xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.01"
-  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01">
+  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4::V3.01">
     <ns:Messages>
       <urn1:IE801>
         <urn1:Header>
