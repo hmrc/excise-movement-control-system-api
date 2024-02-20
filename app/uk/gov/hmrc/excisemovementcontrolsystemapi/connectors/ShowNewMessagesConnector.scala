@@ -43,7 +43,7 @@ class ShowNewMessagesConnector @Inject()(
 
     val timer = metrics.defaultRegistry.timer("emcs.shownewmessage.timer").time()
     val correlationId = emcsUtils.generateCorrelationId
-    val dateTime = dateTimeService.timestamp().toString
+    val dateTime = dateTimeService.timestampToMilliseconds().toString
 
     httpClient.PUTString[HttpResponse](
         appConfig.showNewMessageUrl(ern),

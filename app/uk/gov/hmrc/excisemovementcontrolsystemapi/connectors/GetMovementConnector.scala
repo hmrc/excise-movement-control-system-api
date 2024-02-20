@@ -47,7 +47,7 @@ class GetMovementConnector @Inject()
 
     val timer = metrics.defaultRegistry.timer("emcs.getmovements.timer").time()
     val correlationId = emcsUtils.generateCorrelationId
-    val createDateTime = dateTimeService.timestamp().toString
+    val createDateTime = dateTimeService.timestampToMilliseconds().toString
 
     httpClient.GET[HttpResponse](
         appConfig.traderMovementUrl,

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.connector
+package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 
 import com.codahale.metrics.Timer
@@ -75,7 +75,7 @@ class PreValidateTraderConnectorSpec extends PlaySpec with BeforeAndAfterEach wi
     when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
       .thenReturn(Future.successful(Right(Right(validResponse))))
 
-    when(dateTimeService.timestamp()).thenReturn(timestamp)
+    when(dateTimeService.timestampToMilliseconds()).thenReturn(timestamp)
     when(emcsUtils.generateCorrelationId).thenReturn(emcsCorrelationId)
     when(appConfig.preValidateTraderUrl).thenReturn("/eis/path")
     when(appConfig.preValidateTraderBearerToken).thenReturn(preValidateTraderBearerToken)

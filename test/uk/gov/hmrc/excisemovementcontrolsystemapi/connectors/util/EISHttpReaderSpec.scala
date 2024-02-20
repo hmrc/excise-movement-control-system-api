@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.connector.util
+package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util
 
 
 import org.scalatest.EitherValues

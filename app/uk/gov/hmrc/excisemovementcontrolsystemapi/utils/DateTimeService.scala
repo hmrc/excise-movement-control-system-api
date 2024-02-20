@@ -19,13 +19,18 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
 import com.google.inject.{ImplementedBy, Singleton}
 
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 @ImplementedBy(classOf[DateTimeServiceImpl])
 trait DateTimeService {
   def timestamp(): Instant
+
+  def timestampToMilliseconds(): Instant
 }
 
 @Singleton
 class DateTimeServiceImpl extends DateTimeService {
   override def timestamp(): Instant = Instant.now()
+
+  override def timestampToMilliseconds(): Instant = timestamp().truncatedTo(ChronoUnit.MILLIS)
 }

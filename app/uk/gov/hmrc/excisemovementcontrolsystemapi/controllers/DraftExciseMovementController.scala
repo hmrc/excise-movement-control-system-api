@@ -143,7 +143,7 @@ class DraftExciseMovementController @Inject()(
     EitherT.fromOption(
       request.headers.get(Constants.XClientIdHeader),
       BadRequest(Json.toJson(ErrorResponse(
-        Instant.now,
+        dateTimeService.timestamp(),
         s"ClientId error",
         s"Request header is missing ${Constants.XClientIdHeader}"))
       )
