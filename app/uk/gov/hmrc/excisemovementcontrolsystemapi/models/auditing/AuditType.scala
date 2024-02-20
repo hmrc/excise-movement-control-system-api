@@ -18,7 +18,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
  abstract class AuditType(val name: String)
 
-//TODO: Do we need this?
 object AuditType {
 
   val values: Seq[AuditType] = Seq(
@@ -28,7 +27,17 @@ object AuditType {
     ReportOfReceipt,
     AlertRejection,
     Delay,
-    ShortageOrExcess
+    ShortageOrExcess,
+    Refused,
+    MovementGenerated,
+    Reminder,
+    NotificationOfDivertedMovement,
+    InterruptionOfMovement,
+    NotificationOfAcceptedExport,
+    RefusalByCustoms,
+    EventReport,
+    ManualClosure,
+    StatusResponse
   )
 
   case object CancelMovement                  extends AuditType("CancelMovement")

@@ -20,7 +20,7 @@ import cats.data.EitherT
 import com.google.inject.ImplementedBy
 import play.api.Logging
 import play.api.mvc.Result
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.ConvertAudit
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.Auditing
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
@@ -30,11 +30,11 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 @Singleton
-class AuditServiceImpl @Inject() (auditConnector: AuditConnector)(implicit ec: ExecutionContext) extends ConvertAudit with AuditService with Logging {
+class AuditServiceImpl @Inject() (auditConnector: AuditConnector)(implicit ec: ExecutionContext) extends Auditing with AuditService with Logging {
 
   def auditMessage(message: IEMessage)(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit] = {
       EitherT {
-        auditConnector.sendExtendedEvent(Converter.convert(message)).map {
+        auditConnector.sendExtendedEvent(AuditEventFactory.createAuditEvent(message)).map {
           res => res match {
             case f: AuditResult.Failure => Right(logger.error(f.msg))
             case _ => Right(())

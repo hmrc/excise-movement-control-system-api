@@ -19,13 +19,13 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.ConvertAudit
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.Auditing
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.writes.testObjects._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.model.ExtendedDataEvent
 
-class ConverterSpec extends AnyFreeSpec with Matchers with ConvertAudit with TestXml {
+class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with TestXml {
 
   implicit val hc = HeaderCarrier()
 
@@ -51,7 +51,7 @@ class ConverterSpec extends AnyFreeSpec with Matchers with ConvertAudit with Tes
 
     "successfully converted to audit event" in {
 
-      val result = Converter.convert(message)
+      val result = AuditEventFactory.createAuditEvent(message)
       val expectedResult =  ExtendedDataEvent(
         auditSource = "excise-movement-control-system-api",
         auditType = message.auditType.name,

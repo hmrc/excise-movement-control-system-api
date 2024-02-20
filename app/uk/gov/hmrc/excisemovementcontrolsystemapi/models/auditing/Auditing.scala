@@ -21,13 +21,13 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
 import uk.gov.hmrc.play.audit.model.ExtendedDataEvent
 
-trait ConvertAudit {
+trait Auditing {
 
   val auditSource = "excise-movement-control-system-api"
 
-  object Converter {
+  object AuditEventFactory {
 
-    def convert(input: IEMessage)(implicit hc: HeaderCarrier): ExtendedDataEvent = {
+    def createAuditEvent(input: IEMessage)(implicit hc: HeaderCarrier): ExtendedDataEvent = {
       ExtendedDataEvent(
           auditSource = auditSource,
           auditType = input.auditType.name,

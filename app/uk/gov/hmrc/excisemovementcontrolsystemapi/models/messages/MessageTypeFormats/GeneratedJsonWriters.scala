@@ -25,7 +25,7 @@ import scala.util.Try
 
 /**
  * It is important to make sure that the implicit writers are in child-first order in this file.
- * Implicit writes in the same file must always be before the writes that use them.
+ * xImplicit writes in the same file must always be before the writes that use them.
  */
 trait GeneratedJsonWriters {
 
