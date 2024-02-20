@@ -5,7 +5,7 @@
   <!--===== DATA PACKAGING -->
   <!--=========================================-->
   <!--===== Imports =====-->
-  <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:EMCS:V3.13" schemaLocation="types-.xsd" />
+  <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:EMCS:V3.13" schemaLocation="types.xsd" />
   <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13" schemaLocation="tms.xsd" />
   <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TCL:V3.13" schemaLocation="tcl.xsd" />
   <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:DOC:V3.13" schemaLocation="doc.xsd" />
