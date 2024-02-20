@@ -62,7 +62,7 @@ class GetMovementsControllerSpec
     movementIdValidator
   )
 
-  private val timestamp = Instant.parse("2020-01-01T01:01:01.1Z")
+  private val timestamp = Instant.parse("2020-01-01T01:01:01.123456Z")
   private val fakeRequest = FakeRequest("POST", "/foo")
 
   override def beforeEach(): Unit = {

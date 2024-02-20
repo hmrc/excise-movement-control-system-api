@@ -27,7 +27,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTra
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderErrorResponse, getPreValidateTraderSuccessResponse}
 import uk.gov.hmrc.http.HttpResponse
 
-class PreValidateTraderHttpReaderSpec extends PlaySpec with EitherValues with OptionValues {
+class PreValidateTraderHttpReaderSpec extends PlaySpec with EitherValues {
 
   private val validResponse = getPreValidateTraderSuccessResponse
   private val businessError = getPreValidateTraderErrorResponse

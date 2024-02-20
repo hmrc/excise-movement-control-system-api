@@ -33,7 +33,7 @@ import scala.reflect.runtime.universe.typeOf
 class EISHttpReaderSpec extends PlaySpec with EitherValues {
 
   private val eisHttpParser = EISHttpReader("123", "GB123", "date time")
-  private val localDateTime = Instant.parse("2023-09-19T15:57:23Z")
+  private val localDateTime = Instant.parse("2023-09-19T15:57:23.654Z")
   private val exampleError = Json.toJson(
     EISErrorResponse(
       localDateTime,

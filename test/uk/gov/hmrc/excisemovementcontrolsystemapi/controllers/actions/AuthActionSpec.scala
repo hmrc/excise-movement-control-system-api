@@ -50,7 +50,7 @@ class AuthActionSpec
     reset(authConnector)
   }
 
-  def block(authRequest: EnrolmentRequest[_]) =
+  private def block(authRequest: EnrolmentRequest[_]) =
     Future.successful(Results.Ok)
 
   "authorisation" should {
