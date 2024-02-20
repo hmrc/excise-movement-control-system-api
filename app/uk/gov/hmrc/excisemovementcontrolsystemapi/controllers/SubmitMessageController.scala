@@ -42,6 +42,7 @@ class SubmitMessageController @Inject()(
                                          submissionMessageService: SubmissionMessageService,
                                          workItemService: WorkItemService,
                                          movementService: MovementService,
+                                         auditService: AuditService,
                                          messageValidator: MessageValidation,
                                          movementIdValidator: MovementIdValidation,
                                          dateTimeService: DateTimeService,
@@ -102,7 +103,10 @@ class SubmitMessageController @Inject()(
                          (implicit hc: HeaderCarrier): EitherT[Future, Result, EISSubmissionResponse] = {
     workItemService.addWorkItemForErn(authorisedErn, fastMode = true)
 
-    EitherT(submissionMessageService.submit(request, authorisedErn))
+    for {
+      _ <- auditService.auditMessage(request.ieMessage)
+      result <- EitherT(submissionMessageService.submit(request, authorisedErn))
+    } yield result
 
   }
 

@@ -45,6 +45,7 @@ class PollingNewMessagesWithWorkItemJob @Inject()
   movementService: MovementService,
   messageParser: NewMessageParserService,
   notificationService: PushNotificationService,
+  auditService: AuditService,
   appConfig: AppConfig,
   dateTimeService: DateTimeService
 )(implicit ec: ExecutionContext) extends ScheduledMongoJob
@@ -131,7 +132,13 @@ class PollingNewMessagesWithWorkItemJob @Inject()
     messageParser.extractMessages(consumptionResponse.message)
       .foldLeft(successful(true)) { case (acc, x) =>
         acc.flatMap {
-          _ => saveToDbAndSendNotification(x, exciseNumber)
+          _ => {
+            for {
+              saveResult <- saveToDbAndSendNotification(x, exciseNumber)
+              _ <- auditService.auditMessage(x).value
+            } yield saveResult
+
+          }
         }
       }
   }

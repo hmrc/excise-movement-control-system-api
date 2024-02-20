@@ -26,7 +26,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Constants
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, PushNotificationService, SubmissionMessageService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, MovementService, PushNotificationService, SubmissionMessageService, WorkItemService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -37,16 +37,16 @@ import scala.xml.NodeSeq
 
 @Singleton
 class DraftExciseMovementController @Inject()(
-  authAction: AuthAction,
-  xmlParser: ParseXmlAction,
-  movementMessageService: MovementService,
-  workItemService: WorkItemService,
-  submissionMessageService: SubmissionMessageService,
-  notificationService: PushNotificationService,
-  messageValidator: MessageValidation,
-  dateTimeService: DateTimeService,
-  cc: ControllerComponents
-)(implicit ec: ExecutionContext)
+                                               authAction: AuthAction,
+                                               xmlParser: ParseXmlAction,
+                                               movementMessageService: MovementService,
+                                               workItemService: WorkItemService,
+                                               submissionMessageService: SubmissionMessageService,
+                                               notificationService: PushNotificationService,
+                                               messageValidator: MessageValidation,
+                                               dateTimeService: DateTimeService,
+                                               auditService: AuditService,
+                                               cc: ControllerComponents)(implicit ec: ExecutionContext)
   extends BackendController(cc) {
 
   def submit: Action[NodeSeq] =
@@ -61,6 +61,7 @@ class DraftExciseMovementController @Inject()(
           clientId <- retrieveClientIdFromHeader(request)
           boxId <- getBoxId(clientId)
           _ <- EitherT(submissionMessageService.submit(request, authorisedErn))
+          _ <- auditService.auditMessage(ie815Message)
           movement <- saveMovement(boxId, ie815Message)
         } yield {
           Accepted(Json.toJson(ExciseMovementResponse(

@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 
+import cats.data.EitherT
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, verify, verifyZeroInteractions, when}
 import org.mockito.captor.ArgCaptor
@@ -38,7 +39,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.SuccessBoxNotificationResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MessageIdentifierIsUnauthorised, MessageValidation}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, PushNotificationService, SubmissionMessageService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, MovementService, PushNotificationService, SubmissionMessageService, WorkItemService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import java.time.Instant
@@ -64,14 +65,15 @@ class DraftExciseMovementControllerSpec
   private val notificationService = mock[PushNotificationService]
   private val messageValidation = mock[MessageValidation]
   private val dateTimeService = mock[DateTimeService]
-  private val timestamp = Instant.now
+  private val auditService = mock[AuditService]
   private val defaultBoxId = "boxId"
     private val clientBoxId = "clientBoxId"
+  private val timestamp = Instant.now
   private val consignorId = "456"
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(submissionMessageService, movementService, workItemService, submissionMessageService)
+    reset(submissionMessageService, movementService, workItemService, submissionMessageService, auditService)
 
     when(submissionMessageService.submit(any, any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
@@ -86,6 +88,7 @@ class DraftExciseMovementControllerSpec
     when(mockIeMessage.consignorId).thenReturn(consignorId)
     when(mockIeMessage.localReferenceNumber).thenReturn("123")
     when(dateTimeService.timestamp()).thenReturn(timestamp)
+    when(auditService.auditMessage(any)(any)).thenReturn(EitherT.fromEither(Right(())))
   }
 
   "submit" should {
@@ -129,6 +132,17 @@ class DraftExciseMovementControllerSpec
 
       status(result) mustBe ACCEPTED
       verify(notificationService).getBoxId(eqTo("clientId"), eqTo(Some(clientBoxId)))(any)
+    }
+
+    "sends an audit event" in {
+      when(movementService.saveNewMovement(any))
+        .thenReturn(Future.successful(Right(Movement(defaultBoxId, "123", consignorId, Some("789"), None, Instant.now))))
+
+      when(auditService.auditMessage(any)(any)).thenReturn(EitherT.fromEither(Right(())))
+
+      await(createWithSuccessfulAuth.submit(request))
+
+      verify(auditService).auditMessage(any)(any)
     }
 
     "call the add work item routine to create or update the database" in {
@@ -264,6 +278,7 @@ class DraftExciseMovementControllerSpec
       notificationService,
       messageValidation,
       dateTimeService,
+      auditService,
       cc
     )
   }
@@ -277,6 +292,7 @@ class DraftExciseMovementControllerSpec
       notificationService,
       messageValidation,
       dateTimeService,
+      auditService,
       cc
     )
 
@@ -290,6 +306,7 @@ class DraftExciseMovementControllerSpec
       notificationService,
       messageValidation,
       dateTimeService,
+      auditService,
       cc
     )
 
@@ -303,6 +320,7 @@ class DraftExciseMovementControllerSpec
       notificationService,
       messageValidation,
       dateTimeService,
+      auditService,
       cc
     )
 

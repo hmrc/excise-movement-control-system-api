@@ -20,6 +20,8 @@ import generated.{IE801Type, MessagesOption}
 import play.api.libs.json.Json
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType.MovementGenerated
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
 
 import scala.xml.NodeSeq
@@ -28,7 +30,8 @@ case class IE801Message
 (
   private val obj: IE801Type,
   private val key: Option[String],
-  private val namespace: Option[String]
+  private val namespace: Option[String],
+  auditType: AuditType
 ) extends IEMessage with GeneratedJsonWriters {
   def localReferenceNumber: Option[String] = {
     Some(obj.Body.EADESADContainer.EadEsad.LocalReferenceNumber)
@@ -57,11 +60,11 @@ case class IE801Message
 
 object IE801Message {
   def apply(message: DataRecord[MessagesOption]): IE801Message = {
-    IE801Message(message.as[IE801Type], message.key, message.namespace)
+    IE801Message(message.as[IE801Type], message.key, message.namespace, MovementGenerated)
   }
 
   def createFromXml(xml: NodeSeq): IE801Message = {
     val ie801: IE801Type = scalaxb.fromXML[IE801Type](xml)
-    IE801Message(ie801, Some(ie801.productPrefix), None)
+    IE801Message(ie801, Some(ie801.productPrefix), None, MovementGenerated)
   }
 }

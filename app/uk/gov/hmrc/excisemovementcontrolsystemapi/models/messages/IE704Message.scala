@@ -19,6 +19,8 @@ import generated.{IE704Type, MessagesOption}
 import play.api.libs.json.Json
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType.Refused
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
 
 import scala.xml.NodeSeq
@@ -27,7 +29,8 @@ case class IE704Message
 (
   private val obj: IE704Type,
   private val key: Option[String],
-  private val namespace: Option[String]
+  private val namespace: Option[String],
+  auditType: AuditType
 ) extends IEMessage with GeneratedJsonWriters {
   override def consigneeId: Option[String] = None
 
@@ -55,11 +58,11 @@ case class IE704Message
 
 object IE704Message {
   def apply(message: DataRecord[MessagesOption]): IE704Message = {
-    IE704Message(message.as[IE704Type], message.key, message.namespace)
+    IE704Message(message.as[IE704Type], message.key, message.namespace, Refused)
   }
 
   def createFromXml(xml: NodeSeq): IE704Message = {
     val ie704: IE704Type = scalaxb.fromXML[IE704Type](xml)
-    IE704Message(ie704, Some(ie704.productPrefix), None)
+    IE704Message(ie704, Some(ie704.productPrefix), None, Refused)
   }
 }

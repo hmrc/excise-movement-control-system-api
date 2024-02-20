@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
+import cats.data.EitherT
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.Mockito.never
 import org.mockito.MockitoSugar.{reset, times, verify, verifyZeroInteractions, when}
@@ -67,6 +68,7 @@ class PollingNewMessagesWithWorkItemJobSpec
     "123",
     emptyNewMessageDataXml.toString()
   )
+  private val auditService = mock[AuditService]
 
   private val job = new PollingNewMessagesWithWorkItemJob(
     lockRepository,
@@ -75,6 +77,7 @@ class PollingNewMessagesWithWorkItemJobSpec
     movementService,
     newMessageParserService,
     notificationService,
+    auditService,
     appConfig,
     dateTimeService
   )
@@ -88,7 +91,8 @@ class PollingNewMessagesWithWorkItemJobSpec
       newMessageParserService,
       lockRepository,
       workItemService,
-      notificationService
+      notificationService,
+      auditService
     )
 
     when(lockRepository.takeLock(any, any, any)).thenReturn(Future.successful(true))
@@ -107,6 +111,8 @@ class PollingNewMessagesWithWorkItemJobSpec
     when(workItemService.rescheduleWorkItem(any)).thenReturn(Future.successful(true))
     when(notificationService.sendNotification(any,any,any)(any))
       .thenReturn(Future.successful(SuccessPushNotificationResponse("notificationId)")))
+
+    when(auditService.auditMessage(any)(any)).thenReturn(EitherT.fromEither(Right(())))
   }
 
   "Job" should {
@@ -297,6 +303,23 @@ class PollingNewMessagesWithWorkItemJobSpec
       verify(movementService).updateMovement(eqTo(message), eqTo("123"))
       verify(movementService).updateMovement(eqTo(ie815Message), eqTo("123"))
       verify(movementService).updateMovement(eqTo(ie813Message), eqTo("123"))
+    }
+
+    "audit each message" in {
+      addOneItemToMockQueue(createWorkItem())
+      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+        .thenReturn(Future.successful(Some((newMessageResponse, 3))))
+
+      val ie815Message = mock[IE801Message]
+      val ie813Message = mock[IE813Message]
+      when(newMessageParserService.extractMessages(any))
+        .thenReturn(Seq(message, ie815Message, ie813Message))
+
+      await(job.executeInMutex)
+
+      verify(auditService).auditMessage(eqTo(message))(any)
+      verify(auditService).auditMessage(eqTo(ie815Message))(any)
+      verify(auditService).auditMessage(eqTo(ie813Message))(any)
     }
 
     "push notification" in {

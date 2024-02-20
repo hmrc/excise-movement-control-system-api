@@ -20,6 +20,8 @@ import generated.{IE871Type, MessagesOption}
 import play.api.libs.json.Json
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType.ShortageOrExcess
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
 
 import scala.xml.NodeSeq
@@ -27,7 +29,8 @@ import scala.xml.NodeSeq
 case class IE871Message(
                          private val obj: IE871Type,
                          private val key: Option[String],
-                         private val namespace: Option[String]
+                         private val namespace: Option[String],
+                         auditType: AuditType
                        ) extends IEMessage with SubmitterTypeConverter with GeneratedJsonWriters{
   def submitter: ExciseTraderType = convertSubmitterType(obj.Body.ExplanationOnReasonForShortage.AttributesValue.SubmitterType)
   def localReferenceNumber: Option[String] = None
@@ -53,11 +56,11 @@ case class IE871Message(
 
 object IE871Message {
   def apply(message: DataRecord[MessagesOption]): IE871Message = {
-    IE871Message(message.as[IE871Type], message.key, message.namespace)
+    IE871Message(message.as[IE871Type], message.key, message.namespace, ShortageOrExcess)
   }
 
   def createFromXml(xml: NodeSeq): IE871Message = {
     val ie871: IE871Type = scalaxb.fromXML[IE871Type](xml)
-    IE871Message(ie871, Some(ie871.productPrefix), None)
+    IE871Message(ie871, Some(ie871.productPrefix), None, ShortageOrExcess)
   }
 }

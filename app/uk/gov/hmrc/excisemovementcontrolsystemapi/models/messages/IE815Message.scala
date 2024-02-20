@@ -20,10 +20,12 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
 import generated.IE815Type
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType.DraftMovement
 
 import scala.xml.NodeSeq
 
-case class IE815Message(private val obj: IE815Type) extends IEMessage with GeneratedJsonWriters {
+case class IE815Message(private val obj: IE815Type, auditType: AuditType) extends IEMessage with GeneratedJsonWriters {
   def localReferenceNumber: String =
     obj.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber
 
@@ -49,7 +51,7 @@ case class IE815Message(private val obj: IE815Type) extends IEMessage with Gener
 
 object IE815Message {
   def createFromXml(xml: NodeSeq): IE815Message = {
-    IE815Message(scalaxb.fromXML[IE815Type](xml))
+    IE815Message(scalaxb.fromXML[IE815Type](xml), DraftMovement)
   }
 
 }

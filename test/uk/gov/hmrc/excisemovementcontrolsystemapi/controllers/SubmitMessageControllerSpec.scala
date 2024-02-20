@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
+import cats.data.EitherT
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, verify, when}
 import org.mongodb.scala.MongoException
@@ -57,6 +58,7 @@ class SubmitMessageControllerSpec
   private val messageValidation = mock[MessageValidation]
   private val movementValidation = mock[MovementIdValidation]
   private val dateTimeService = mock[DateTimeService]
+  private val auditService = mock[AuditService]
 
   private val consignorId = "testErn"
   private val movement = Movement("boxId", "LRNQA20230909022221", consignorId, Some("GBWK002281023"), Some("23GB00000000000377161"))
@@ -64,7 +66,7 @@ class SubmitMessageControllerSpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(submissionMessageService, workItemService, movementService, movementValidation)
+    reset(submissionMessageService, workItemService, movementService, movementValidation, auditService)
 
     when(submissionMessageService.submit(any, any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
@@ -75,6 +77,7 @@ class SubmitMessageControllerSpec
 
     when(messageValidation.validateSubmittedMessage(any, any, any)).thenReturn(Right(consignorId))
     when(dateTimeService.timestamp()).thenReturn(timestamp)
+    when(auditService.auditMessage(any)(any)).thenReturn(EitherT.fromEither(Right(())))
   }
 
   "submit" should {
@@ -89,6 +92,12 @@ class SubmitMessageControllerSpec
 
       verify(submissionMessageService).submit(any, any)(any)
 
+    }
+
+    "sends an audit event" in {
+      await(createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request))
+
+      verify(auditService).auditMessage(any)(any)
     }
 
     "call the add work item routine to create or update the database" in {
@@ -242,6 +251,7 @@ class SubmitMessageControllerSpec
       submissionMessageService,
       workItemService,
       movementService,
+      auditService,
       messageValidation,
       movementValidation,
       dateTimeService,
@@ -261,6 +271,7 @@ class SubmitMessageControllerSpec
       submissionMessageService,
       workItemService,
       movementService,
+      auditService,
       messageValidation,
       movementValidation,
       dateTimeService,
@@ -274,6 +285,7 @@ class SubmitMessageControllerSpec
       submissionMessageService,
       workItemService,
       movementService,
+      auditService,
       messageValidation,
       movementValidation,
       dateTimeService,
