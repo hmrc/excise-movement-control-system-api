@@ -22,7 +22,7 @@ import scala.xml.Elem
 
 trait TestXml {
 
-  lazy val IE704: Elem = <ns1:IE704 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
+  lazy val IE704: Elem = <ns1:IE704 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                     xmlns:ns1="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3">
     <ns1:Header>
       <urn:MessageSender>NDEA.XI</urn:MessageSender>
@@ -57,7 +57,7 @@ trait TestXml {
     </ns1:Body>
   </ns1:IE704>
 
-  lazy val IE704NoArc: Elem = <ns1:IE704 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
+  lazy val IE704NoArc: Elem = <ns1:IE704 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                          xmlns:ns1="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3">
     <ns1:Header>
       <urn:MessageSender>NDEA.XI</urn:MessageSender>
@@ -85,8 +85,8 @@ trait TestXml {
 
   lazy val IE801: Elem =
     <urn:IE801
-    xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.01"
-    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01">
+    xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.13"
+    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
       <urn:Header>
         <urn1:MessageSender>token</urn1:MessageSender>
         <urn1:MessageRecipient>token</urn1:MessageRecipient>
@@ -249,8 +249,8 @@ trait TestXml {
       </urn:Body>
     </urn:IE801>
 
-  lazy val IE802: Elem = <urn7:IE802 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
-                                     xmlns:urn7="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE802:V3.01">
+  lazy val IE802: Elem = <urn7:IE802 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
+                                     xmlns:urn7="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE802:V3.13">
     <urn7:Header>
       <urn:MessageSender>CSMISE.EC</urn:MessageSender>
       <urn:MessageRecipient>CSMISE.EC</urn:MessageRecipient>
@@ -277,8 +277,8 @@ trait TestXml {
     </urn7:Body>
   </urn7:IE802>
 
-  lazy val IE803: Elem = <urn6:IE803 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
-                                     xmlns:urn6="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE803:V3.01">
+  lazy val IE803: Elem = <urn6:IE803 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
+                                     xmlns:urn6="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE803:V3.13">
     <urn6:Header>
       <urn:MessageSender>NDEA.GB</urn:MessageSender>
       <urn:MessageRecipient>NDEA.XI</urn:MessageRecipient>
@@ -299,8 +299,8 @@ trait TestXml {
     </urn6:Body>
   </urn6:IE803>
 
-  lazy val IE807: Elem = <urn4:IE807 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
-                                     xmlns:urn4="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE807:V3.01">
+  lazy val IE807: Elem = <urn4:IE807 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
+                                     xmlns:urn4="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE807:V3.13">
     <urn4:Header>
       <urn:MessageSender>NDEA.GB</urn:MessageSender>
       <urn:MessageRecipient>NDEA.XI</urn:MessageRecipient>
@@ -332,8 +332,8 @@ trait TestXml {
     </urn4:Body>
   </urn4:IE807>
 
-  lazy val IE810: Elem = <urn:IE810 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE810:V3.01"
-                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
+  lazy val IE810: Elem = <urn:IE810 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE810:V3.13"
+                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                     xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                                     xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -360,8 +360,8 @@ trait TestXml {
     </urn:Body>
   </urn:IE810>
 
-  lazy val IE813: Elem = <urn:IE813 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE813:V3.01"
-                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
+  lazy val IE813: Elem = <urn:IE813 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE813:V3.13"
+                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                     xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                                     xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -426,8 +426,8 @@ trait TestXml {
   lazy val IE815: Elem = IE815Template("GBWK002281023")
   lazy val IE815WithNoConsignor: Elem = IE815Template("")
 
-  private def IE815Template(consignor: String): Elem = <urn:IE815 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.01"
-                                                                  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
+  private def IE815Template(consignor: String): Elem = <urn:IE815 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13"
+                                                                  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                                                   xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                                                                   xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                                                                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -532,8 +532,8 @@ trait TestXml {
     </urn:Body>
   </urn:IE815>
 
-  lazy val IE818: Elem = <urn:IE818 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE818:V3.01"
-                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
+  lazy val IE818: Elem = <urn:IE818 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE818:V3.13"
+                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                     xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                                     xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -590,8 +590,8 @@ trait TestXml {
   </urn:IE818>
 
   lazy val IE819: Elem =
-    <urn:IE819 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE819:V3.01"
-               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
+    <urn:IE819 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE819:V3.13"
+               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -635,49 +635,55 @@ trait TestXml {
       </urn:Body>
     </urn:IE819>
 
-  lazy val IE829: Elem = <urn2:IE829 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
-                                     xmlns:urn2="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE829:V3.01">
-    <urn2:Header>
-      <urn:MessageSender>NDEA.XI</urn:MessageSender>
-      <urn:MessageRecipient>NDEA.AT</urn:MessageRecipient>
-      <urn:DateOfPreparation>2023-06-26</urn:DateOfPreparation>
-      <urn:TimeOfPreparation>09:15:33</urn:TimeOfPreparation>
-      <urn:MessageIdentifier>XI004321B</urn:MessageIdentifier>
-      <urn:CorrelationIdentifier>6dddas342231ff3a67888bbcedec3435</urn:CorrelationIdentifier>
-    </urn2:Header>
-    <urn2:Body>
-      <urn2:NotificationOfAcceptedExport>
-        <urn2:Attributes>
-          <urn2:DateAndTimeOfIssuance>2024-06-26T09:14:54</urn2:DateAndTimeOfIssuance>
-        </urn2:Attributes>
-        <urn2:ConsigneeTrader language="en">
-          <urn2:Traderid>AT00000612157</urn2:Traderid>
-          <urn2:TraderName>Whale Oil Lamps Co.</urn2:TraderName>
-          <urn2:StreetName>The Street</urn2:StreetName>
-          <urn2:Postcode>MC232</urn2:Postcode>
-          <urn2:City>Happy Town</urn2:City>
-          <urn2:EoriNumber>7</urn2:EoriNumber>
-        </urn2:ConsigneeTrader>
-        <urn2:ExciseMovementEad>
-          <urn2:AdministrativeReferenceCode>23XI00000000000056339</urn2:AdministrativeReferenceCode>
-          <urn2:SequenceNumber>1</urn2:SequenceNumber>
-        </urn2:ExciseMovementEad>
-        <urn2:ExciseMovementEad>
-          <urn2:AdministrativeReferenceCode>23XI00000000000056340</urn2:AdministrativeReferenceCode>
-          <urn2:SequenceNumber>1</urn2:SequenceNumber>
-        </urn2:ExciseMovementEad>
-        <urn2:ExportPlaceCustomsOffice>
-          <urn2:ReferenceNumber>AT633734</urn2:ReferenceNumber>
-        </urn2:ExportPlaceCustomsOffice>
-        <urn2:ExportAcceptance>
-          <urn2:ReferenceNumberOfSenderCustomsOffice>AT324234</urn2:ReferenceNumberOfSenderCustomsOffice>
-          <urn2:IdentificationOfSenderCustomsOfficer>84884</urn2:IdentificationOfSenderCustomsOfficer>
-          <urn2:DateOfAcceptance>2023-06-26</urn2:DateOfAcceptance>
-          <urn2:DocumentReferenceNumber>123123vmnfhsdf3AT</urn2:DocumentReferenceNumber>
-        </urn2:ExportAcceptance>
-      </urn2:NotificationOfAcceptedExport>
-    </urn2:Body>
-  </urn2:IE829>
+  lazy val IE829: Elem = <urn:IE829
+  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE829:V3.13"
+  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
+    <urn:Header>
+      <urn1:MessageSender>NDEA.XI</urn1:MessageSender>
+      <urn1:MessageRecipient>NDEA.AT</urn1:MessageRecipient>
+      <urn1:DateOfPreparation>2023-06-26</urn1:DateOfPreparation>
+      <urn1:TimeOfPreparation>09:15:33</urn1:TimeOfPreparation>
+      <urn1:MessageIdentifier>XI004321B</urn1:MessageIdentifier>
+      <!--Optional:-->
+      <urn1:CorrelationIdentifier>6dddas342231ff3a67888bbcedec3435</urn1:CorrelationIdentifier>
+    </urn:Header>
+    <urn:Body>
+      <urn:NotificationOfAcceptedExport>
+        <urn:Attributes>
+          <urn:DateAndTimeOfIssuance>2024-06-26T09:14:54</urn:DateAndTimeOfIssuance>
+        </urn:Attributes>
+        <urn:ConsigneeTrader language="en">
+          <urn:Traderid>AT00000612157</urn:Traderid>
+          <urn:TraderName>Whale Oil Lamps Co.</urn:TraderName>
+          <urn:StreetName>The Street</urn:StreetName>
+          <urn:StreetNumber>token</urn:StreetNumber>
+          <urn:Postcode>MC232</urn:Postcode>
+          <urn:City>Happy Town</urn:City>
+          <urn:EoriNumber>7</urn:EoriNumber>
+        </urn:ConsigneeTrader>
+        <urn:ExciseMovementEad>
+          <urn:AdministrativeReferenceCode>23XI00000000000056339</urn:AdministrativeReferenceCode>
+          <urn:SequenceNumber>1</urn:SequenceNumber>
+          <urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>1</urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>
+        </urn:ExciseMovementEad>
+        <urn:ExciseMovementEad>
+          <urn:AdministrativeReferenceCode>23XI00000000000056340</urn:AdministrativeReferenceCode>
+          <urn:SequenceNumber>1</urn:SequenceNumber>
+          <urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>1</urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>
+        </urn:ExciseMovementEad>
+        <urn:ExportPlaceCustomsOffice>
+          <urn:ReferenceNumber>tokentok</urn:ReferenceNumber>
+        </urn:ExportPlaceCustomsOffice>
+        <urn:ExportDeclarationAcceptanceRelease>
+          <urn:ReferenceNumberOfSenderCustomsOffice>tokentok</urn:ReferenceNumberOfSenderCustomsOffice>
+          <urn:IdentificationOfSenderCustomsOfficer>token</urn:IdentificationOfSenderCustomsOfficer>
+          <urn:DateOfAcceptance>2013-05-22+01:00</urn:DateOfAcceptance>
+          <urn:DateOfRelease>2002-11-05+00:00</urn:DateOfRelease>
+          <urn:DocumentReferenceNumber>token</urn:DocumentReferenceNumber>
+        </urn:ExportDeclarationAcceptanceRelease>
+      </urn:NotificationOfAcceptedExport>
+    </urn:Body>
+  </urn:IE829>
 
   lazy val IE837WithConsignor: Elem = ie837Template(Consignor, "GBWK240176600")
 
@@ -687,8 +693,8 @@ trait TestXml {
 
     val submitterTypeAsInt = if (submitterType == Consignor) 1 else 2
 
-    <urn:IE837 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE837:V3.01"
-               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
+    <urn:IE837 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE837:V3.13"
+               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -719,116 +725,150 @@ trait TestXml {
     </urn:IE837>
   }
 
-  lazy val IE839: Elem = <urn4:IE839 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
-                                     xmlns:urn4="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.01">
-    <urn4:Header>
-      <urn:MessageSender>NDEA.XI</urn:MessageSender>
-      <urn:MessageRecipient>NDEA.FR</urn:MessageRecipient>
-      <urn:DateOfPreparation>2024-06-26</urn:DateOfPreparation>
-      <urn:TimeOfPreparation>00:18:33</urn:TimeOfPreparation>
-      <urn:MessageIdentifier>XI004322</urn:MessageIdentifier>
-      <urn:CorrelationIdentifier>6dddas1231ff3a678fefffff3233</urn:CorrelationIdentifier>
-    </urn4:Header>
-    <urn4:Body>
-      <urn4:RefusalByCustoms>
-        <urn4:Attributes>
-          <urn4:DateAndTimeOfIssuance>2023-06-24T18:27:14</urn4:DateAndTimeOfIssuance>
-        </urn4:Attributes>
-        <urn4:ConsigneeTrader language="en">
-          <urn4:Traderid>AT00000612158</urn4:Traderid>
-          <urn4:TraderName>Chaz's Cigars</urn4:TraderName>
-          <urn4:StreetName>The Street</urn4:StreetName>
-          <urn4:Postcode>MC232</urn4:Postcode>
-          <urn4:City>Happy Town</urn4:City>
-          <urn4:EoriNumber>91</urn4:EoriNumber>
-        </urn4:ConsigneeTrader>
-        <urn4:ExportPlaceCustomsOffice>
-          <urn4:ReferenceNumber>FR883393</urn4:ReferenceNumber>
-        </urn4:ExportPlaceCustomsOffice>
-        <urn4:ExportCrossCheckingDiagnoses>
-          <urn4:LocalReferenceNumber>lrnie8155755329</urn4:LocalReferenceNumber>
-          <urn4:DocumentReferenceNumber>123</urn4:DocumentReferenceNumber>
-          <urn4:Diagnosis>
-            <urn4:AdministrativeReferenceCode>23XI00000000000056341</urn4:AdministrativeReferenceCode>
-            <urn4:BodyRecordUniqueReference>1</urn4:BodyRecordUniqueReference>
-            <urn4:DiagnosisCode>5</urn4:DiagnosisCode>
-          </urn4:Diagnosis>
-        </urn4:ExportCrossCheckingDiagnoses>
-        <urn4:Rejection>
-          <urn4:RejectionDateAndTime>2023-06-22T02:02:49</urn4:RejectionDateAndTime>
-          <urn4:RejectionReasonCode>4</urn4:RejectionReasonCode>
-        </urn4:Rejection>
-        <urn4:CEadVal>
-          <urn4:AdministrativeReferenceCode>23XI00000000000056341</urn4:AdministrativeReferenceCode>
-          <urn4:SequenceNumber>1</urn4:SequenceNumber>
-        </urn4:CEadVal>
-        <urn4:NEadSub>
-          <urn4:LocalReferenceNumber>lrnie8155755329</urn4:LocalReferenceNumber>
-        </urn4:NEadSub>
-      </urn4:RefusalByCustoms>
-    </urn4:Body>
-  </urn4:IE839>
+  lazy val IE839: Elem = <urn:IE839
+  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.13"
+  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
+    <urn:Header>
+      <urn1:MessageSender>NDEA.XI</urn1:MessageSender>
+      <urn1:MessageRecipient>NDEA.FR</urn1:MessageRecipient>
+      <urn1:DateOfPreparation>2024-06-26</urn1:DateOfPreparation>
+      <urn1:TimeOfPreparation>00:18:33</urn1:TimeOfPreparation>
+      <urn1:MessageIdentifier>XI004322</urn1:MessageIdentifier>
+      <urn1:CorrelationIdentifier>6dddas1231ff3a678fefffff3233</urn1:CorrelationIdentifier>
+    </urn:Header>
+      <urn:Body>
+        <urn:RefusalByCustoms>
+          <urn:Attributes>
+            <urn:DateAndTimeOfIssuance>2023-06-24T18:27:14</urn:DateAndTimeOfIssuance>
+          </urn:Attributes>
+          <urn:ConsigneeTrader language="en">
+            <urn:Traderid>AT00000612158</urn:Traderid>
+            <urn:TraderName>Chaz's Cigars</urn:TraderName>
+            <urn:StreetName>The Street</urn:StreetName>
+            <urn:StreetNumber>token</urn:StreetNumber>
+            <urn:Postcode>MC232</urn:Postcode>
+            <urn:City>Happy Town</urn:City>
+            <urn:EoriNumber>91</urn:EoriNumber>
+          </urn:ConsigneeTrader>
+          <urn:ExportPlaceCustomsOffice>
+            <urn:ReferenceNumber>FR883393</urn:ReferenceNumber>
+          </urn:ExportPlaceCustomsOffice>
+          <urn:Rejection>
+            <urn:RejectionDateAndTime>2009-05-16T13:42:28</urn:RejectionDateAndTime>
+            <urn:RejectionReasonCode>3</urn:RejectionReasonCode>
+          </urn:Rejection>
+          <urn:ExportDeclarationInformation>
+            <urn:LocalReferenceNumber>lrnie8155755329</urn:LocalReferenceNumber>
+            <urn:DocumentReferenceNumber>123</urn:DocumentReferenceNumber>
+            <urn:NegativeCrosscheckValidationResults>
+              <urn:UbrCrosscheckResult>
+                <urn:AdministrativeReferenceCode>23XI00000000000056341</urn:AdministrativeReferenceCode>
+                <urn:BodyRecordUniqueReference>1</urn:BodyRecordUniqueReference>
+                <urn:DiagnosisCode>4</urn:DiagnosisCode>
+                <urn:ValidationResult>1</urn:ValidationResult>
+                <urn:RejectionReason>token</urn:RejectionReason>
+                <urn:CombinedNomenclatureCodeCrosscheckResult>
+                  <urn:ValidationResult>1</urn:ValidationResult>
+                  <urn:RejectionReason>token</urn:RejectionReason>
+                </urn:CombinedNomenclatureCodeCrosscheckResult>
+                <urn:NetMassCrosscheckResult>
+                  <urn:ValidationResult>1</urn:ValidationResult>
+                  <urn:RejectionReason>token</urn:RejectionReason>
+                </urn:NetMassCrosscheckResult>
+              </urn:UbrCrosscheckResult>
+            </urn:NegativeCrosscheckValidationResults>
+            <urn:NNonDes>
+              <urn:DocumentReferenceNumber>token</urn:DocumentReferenceNumber>
+            </urn:NNonDes>
+          </urn:ExportDeclarationInformation>
+          <urn:CEadVal>
+            <urn:AdministrativeReferenceCode>23XI00000000000056341</urn:AdministrativeReferenceCode>
+            <urn:SequenceNumber>1</urn:SequenceNumber>
+          </urn:CEadVal>
+          <urn:NEadSub>
+            <urn:LocalReferenceNumber>lrnie8155755329</urn:LocalReferenceNumber>
+          </urn:NEadSub>
+        </urn:RefusalByCustoms>
+      </urn:Body>
+  </urn:IE839>
 
-  lazy val IE839MultipleArcs: Elem = <urn4:IE839 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
-                                                 xmlns:urn4="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.01">
-    <urn4:Header>
-      <urn:MessageSender>NDEA.XI</urn:MessageSender>
-      <urn:MessageRecipient>NDEA.FR</urn:MessageRecipient>
-      <urn:DateOfPreparation>2024-06-26</urn:DateOfPreparation>
-      <urn:TimeOfPreparation>00:18:33</urn:TimeOfPreparation>
-      <urn:MessageIdentifier>XI004322</urn:MessageIdentifier>
-      <urn:CorrelationIdentifier>6dddas1231ff3a678fefffff3233</urn:CorrelationIdentifier>
-    </urn4:Header>
-    <urn4:Body>
-      <urn4:RefusalByCustoms>
-        <urn4:Attributes>
-          <urn4:DateAndTimeOfIssuance>2023-06-24T18:27:14</urn4:DateAndTimeOfIssuance>
-        </urn4:Attributes>
-        <urn4:ConsigneeTrader language="en">
-          <urn4:Traderid>AT00000612158</urn4:Traderid>
-          <urn4:TraderName>Chaz's Cigars</urn4:TraderName>
-          <urn4:StreetName>The Street</urn4:StreetName>
-          <urn4:Postcode>MC232</urn4:Postcode>
-          <urn4:City>Happy Town</urn4:City>
-          <urn4:EoriNumber>91</urn4:EoriNumber>
-        </urn4:ConsigneeTrader>
-        <urn4:ExportPlaceCustomsOffice>
-          <urn4:ReferenceNumber>FR883393</urn4:ReferenceNumber>
-        </urn4:ExportPlaceCustomsOffice>
-        <urn4:ExportCrossCheckingDiagnoses>
-          <urn4:LocalReferenceNumber>lrnie8155755329</urn4:LocalReferenceNumber>
-          <urn4:DocumentReferenceNumber>123</urn4:DocumentReferenceNumber>
-          <urn4:Diagnosis>
-            <urn4:AdministrativeReferenceCode>23XI00000000000056341</urn4:AdministrativeReferenceCode>
-            <urn4:BodyRecordUniqueReference>1</urn4:BodyRecordUniqueReference>
-            <urn4:DiagnosisCode>5</urn4:DiagnosisCode>
-          </urn4:Diagnosis>
-        </urn4:ExportCrossCheckingDiagnoses>
-        <urn4:Rejection>
-          <urn4:RejectionDateAndTime>2023-06-22T02:02:49</urn4:RejectionDateAndTime>
-          <urn4:RejectionReasonCode>4</urn4:RejectionReasonCode>
-        </urn4:Rejection>
-        <urn4:CEadVal>
-          <urn4:AdministrativeReferenceCode>23XI00000000000056341</urn4:AdministrativeReferenceCode>
-          <urn4:SequenceNumber>1</urn4:SequenceNumber>
-        </urn4:CEadVal>
-        <urn4:CEadVal>
-          <urn4:AdministrativeReferenceCode>23XI00000000000056342</urn4:AdministrativeReferenceCode>
-          <urn4:SequenceNumber>1</urn4:SequenceNumber>
-        </urn4:CEadVal>
-        <urn4:CEadVal>
-          <urn4:AdministrativeReferenceCode>23XI00000000000056343</urn4:AdministrativeReferenceCode>
-          <urn4:SequenceNumber>1</urn4:SequenceNumber>
-        </urn4:CEadVal>
-        <urn4:NEadSub>
-          <urn4:LocalReferenceNumber>lrnie8155755329</urn4:LocalReferenceNumber>
-        </urn4:NEadSub>
-      </urn4:RefusalByCustoms>
-    </urn4:Body>
-  </urn4:IE839>
+  lazy val IE839MultipleArcs: Elem = <urn:IE839
+  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.13"
+  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
+    <urn:Header>
+      <urn1:MessageSender>NDEA.XI</urn1:MessageSender>
+      <urn1:MessageRecipient>NDEA.FR</urn1:MessageRecipient>
+      <urn1:DateOfPreparation>2024-06-26</urn1:DateOfPreparation>
+      <urn1:TimeOfPreparation>00:18:33</urn1:TimeOfPreparation>
+      <urn1:MessageIdentifier>XI004322</urn1:MessageIdentifier>
+      <urn1:CorrelationIdentifier>6dddas1231ff3a678fefffff3233</urn1:CorrelationIdentifier>
+    </urn:Header>
+    <urn:Body>
+      <urn:RefusalByCustoms>
+        <urn:Attributes>
+          <urn:DateAndTimeOfIssuance>2023-06-24T18:27:14</urn:DateAndTimeOfIssuance>
+        </urn:Attributes>
+        <urn:ConsigneeTrader language="to">
+          <urn:Traderid>AT00000612158</urn:Traderid>
+          <urn:TraderName>Chaz's Cigars</urn:TraderName>
+          <urn:StreetName>The Street</urn:StreetName>
+          <urn:StreetNumber>token</urn:StreetNumber>
+          <urn:Postcode>MC232</urn:Postcode>
+          <urn:City>Happy Town</urn:City>
+          <urn:EoriNumber>91</urn:EoriNumber>
+        </urn:ConsigneeTrader>
+        <urn:ExportPlaceCustomsOffice>
+          <urn:ReferenceNumber>FR883393</urn:ReferenceNumber>
+        </urn:ExportPlaceCustomsOffice>
+        <urn:Rejection>
+          <urn:RejectionDateAndTime>2009-05-16T13:42:28</urn:RejectionDateAndTime>
+          <urn:RejectionReasonCode>3</urn:RejectionReasonCode>
+        </urn:Rejection>
+        <urn:ExportDeclarationInformation>
+          <urn:LocalReferenceNumber>lrnie8155755329</urn:LocalReferenceNumber>
+          <urn:DocumentReferenceNumber>123</urn:DocumentReferenceNumber>
+          <urn:NegativeCrosscheckValidationResults>
+            <urn:UbrCrosscheckResult>
+              <urn:AdministrativeReferenceCode>23XI00000000000056341</urn:AdministrativeReferenceCode>
+              <urn:BodyRecordUniqueReference>1</urn:BodyRecordUniqueReference>
+              <urn:DiagnosisCode>4</urn:DiagnosisCode>
+              <urn:ValidationResult>1</urn:ValidationResult>
+              <urn:RejectionReason>token</urn:RejectionReason>
+              <urn:CombinedNomenclatureCodeCrosscheckResult>
+                <urn:ValidationResult>1</urn:ValidationResult>
+                <urn:RejectionReason>token</urn:RejectionReason>
+              </urn:CombinedNomenclatureCodeCrosscheckResult>
+              <urn:NetMassCrosscheckResult>
+                <urn:ValidationResult>1</urn:ValidationResult>
+                <urn:RejectionReason>token</urn:RejectionReason>
+              </urn:NetMassCrosscheckResult>
+            </urn:UbrCrosscheckResult>
+          </urn:NegativeCrosscheckValidationResults>
+          <urn:NNonDes>
+            <urn:DocumentReferenceNumber>token</urn:DocumentReferenceNumber>
+          </urn:NNonDes>
+        </urn:ExportDeclarationInformation>
+        <urn:CEadVal>
+          <urn:AdministrativeReferenceCode>23XI00000000000056341</urn:AdministrativeReferenceCode>
+          <urn:SequenceNumber>1</urn:SequenceNumber>
+        </urn:CEadVal>
+        <urn:CEadVal>
+          <urn:AdministrativeReferenceCode>23XI00000000000056342</urn:AdministrativeReferenceCode>
+          <urn:SequenceNumber>1</urn:SequenceNumber>
+        </urn:CEadVal>
+        <urn:CEadVal>
+          <urn:AdministrativeReferenceCode>23XI00000000000056343</urn:AdministrativeReferenceCode>
+          <urn:SequenceNumber>1</urn:SequenceNumber>
+        </urn:CEadVal>
+        <urn:NEadSub>
+          <urn:LocalReferenceNumber>lrnie8155755329</urn:LocalReferenceNumber>
+        </urn:NEadSub>
+      </urn:RefusalByCustoms>
+    </urn:Body>
+  </urn:IE839>
 
-  lazy val IE840: Elem = <urn5:IE840 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
-                                     xmlns:urn5="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE840:V3.01">
+  lazy val IE840: Elem = <urn5:IE840 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
+                                     xmlns:urn5="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE840:V3.13">
     <urn5:Header>
       <urn:MessageSender>NDEA.XI</urn:MessageSender>
       <urn:MessageRecipient>NDEA.GB</urn:MessageRecipient>
@@ -958,8 +998,8 @@ trait TestXml {
 
     val submitterTypeAsInt = if (submitterType == Consignor) 1 else 2
 
-    <urn:IE871 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE871:V3.01"
-               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
+    <urn:IE871 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE871:V3.13"
+               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -1002,8 +1042,8 @@ trait TestXml {
 
     val submitterTypeAsInt = if (submitterType == Consignor) 1 else 2
 
-    <urn:IE871 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE871:V3.01"
-               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01"
+    <urn:IE871 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE871:V3.13"
+               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -1042,8 +1082,8 @@ trait TestXml {
   }
 
   lazy val IE881: Elem =
-    <urn5:IE881 xmlns:urn5="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE881:V3.01"
-                xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01">
+    <urn5:IE881 xmlns:urn5="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE881:V3.13"
+                xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
       <urn5:Header>
         <urn:MessageSender>NDEA.GB</urn:MessageSender>
         <urn:MessageRecipient>NDEA.XI</urn:MessageRecipient>
@@ -1088,8 +1128,8 @@ trait TestXml {
       </urn5:Body>
     </urn5:IE881>
 
-  lazy val IE905: Elem = <urn6:IE905 xmlns:urn6="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE905:V3.01"
-                                     xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01">
+  lazy val IE905: Elem = <urn6:IE905 xmlns:urn6="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE905:V3.13"
+                                     xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
     <urn6:Header>
       <urn:MessageSender>NDEA.GB</urn:MessageSender>
       <urn:MessageRecipient>NDEA.XI</urn:MessageRecipient>

@@ -36,7 +36,7 @@ case class IE829Message
 ) extends IEMessage with GeneratedJsonWriters {
 
   override def consigneeId: Option[String] =
-    obj.Body.NotificationOfAcceptedExport.ConsigneeTrader.flatMap(_.Traderid)
+    obj.Body.NotificationOfAcceptedExport.ConsigneeTrader.Traderid
 
   override def administrativeReferenceCode: Seq[Option[String]] = {
     obj.Body.NotificationOfAcceptedExport.ExciseMovementEad.map(x => Some(x.AdministrativeReferenceCode))
