@@ -34,6 +34,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.respo
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderRequest, getPreValidateTraderSuccessResponse}
 
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 
 class PreValidateTraderControllerItSpec extends PlaySpec
@@ -47,6 +48,7 @@ class PreValidateTraderControllerItSpec extends PlaySpec
   private val url = s"http://localhost:$port/traders/pre-validate"
   private val eisUrl = "/emcs/pre-validate-trader/v1"
   private val authErn = "GBWK002281023"
+  private val timestamp = Instant.now
 
   private val request = Json.toJson(getPreValidateTraderRequest)
 
@@ -60,7 +62,9 @@ class PreValidateTraderControllerItSpec extends PlaySpec
     super.beforeAll()
     wireMock.resetAll()
 
-    when(dateTimeService.timestamp()).thenReturn(Instant.now)
+    when(dateTimeService.timestamp()).thenReturn(timestamp)
+    when(dateTimeService.timestampToMilliseconds()).thenReturn(timestamp.truncatedTo(ChronoUnit.MILLIS))
+
   }
 
   override def afterAll(): Unit = {

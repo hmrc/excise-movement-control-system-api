@@ -34,6 +34,7 @@ import uk.gov.hmrc.mongo.workitem.ProcessingStatus.InProgress
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import scala.concurrent.ExecutionContext
 
 class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
@@ -48,7 +49,8 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val appConfig = app.injector.instanceOf[AppConfig]
   private lazy val dateTimeService = mock[DateTimeService]
-  private lazy val timestamp = Instant.parse("2018-11-30T18:35:24.00Z")
+  private lazy val timestamp = Instant.parse("2018-11-30T18:35:24.001234Z")
+  private lazy val timestampInMillis = timestamp.truncatedTo(ChronoUnit.MILLIS)
 
   protected override val repository = new ExciseNumberQueueWorkItemRepository(
     appConfig,
@@ -103,7 +105,7 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
 
       val updatedWI = originalWI.copy(
         item = originalWI.item.copy(fastPollRetriesLeft = 23),
-        availableAt = Instant.parse("2023-11-23T15:25:21.12Z"),
+        availableAt = Instant.parse("2023-11-23T15:25:21.123456Z"),
         receivedAt = timestamp.plusSeconds(10),
         status = InProgress,
         failureCount = 18
@@ -125,16 +127,17 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
         savedWorkItem.item mustBe updatedWI.item
       }
 
+      // The database is storing these as ISODates and so truncated to milliseconds
       withClue("should update availableAt") {
-        savedWorkItem.availableAt mustBe updatedWI.availableAt
+        savedWorkItem.availableAt mustBe updatedWI.availableAt.truncatedTo(ChronoUnit.MILLIS)
       }
 
       withClue("should update updatedAt") {
-        savedWorkItem.updatedAt mustBe timestamp
+        savedWorkItem.updatedAt mustBe timestamp.truncatedTo(ChronoUnit.MILLIS)
       }
 
       withClue("should update ReceivedAt (lastSubmitted)") {
-        savedWorkItem.receivedAt mustBe updatedWI.receivedAt
+        savedWorkItem.receivedAt mustBe updatedWI.receivedAt.truncatedTo(ChronoUnit.MILLIS)
       }
 
       withClue("should update status") {
@@ -151,8 +154,8 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
   private def createWorkItemForErn(ern: String, updateAt: Instant = timestamp)  =
     TestUtils.createWorkItem(
       ern = ern,
-      availableAt = timestamp,
-      updatedAt = timestamp,
-      receivedAt = timestamp
+      availableAt = timestampInMillis,
+      updatedAt = timestampInMillis,
+      receivedAt = timestampInMillis
     )
 }

@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures
 
 import org.scalatestplus.mockito.MockitoSugar.mock
+import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -27,7 +28,7 @@ import uk.gov.hmrc.mongo.lock.LockRepository
 
 trait ApplicationBuilderSupport extends RepositoryTestStub with AuthTestSupport{
 
-  protected lazy val dateTimeService = mock[DateTimeService]
+  protected lazy val dateTimeService: DateTimeService = mock[DateTimeService]
 
   def applicationBuilder(config: Map[String, Any]): GuiceApplicationBuilder = {
     applicationBuilder.configure(config)
@@ -45,7 +46,7 @@ trait ApplicationBuilderSupport extends RepositoryTestStub with AuthTestSupport{
       )
   }
 
-  def application = {
+  def application: Application = {
         GuiceApplicationBuilder()
           .configure("metrics.enabled" -> false)
           .build()

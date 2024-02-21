@@ -69,8 +69,10 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
   private val messageReceiptUrl = "/emcs/messages/v1/message-receipt?exciseregistrationnumber="
 
   private lazy val timeService = mock[DateTimeService]
-  private val availableBefore = Instant.now.truncatedTo(ChronoUnit.MILLIS)
-  when(timeService.timestamp()).thenReturn(availableBefore)
+  private val timestamp = Instant.now
+  private val timestampToMillis = timestamp.truncatedTo(ChronoUnit.MILLIS)
+  when(timeService.timestamp()).thenReturn(timestamp)
+  when(timeService.timestampToMilliseconds()).thenReturn(timestampToMillis)
 
   private val expectedMessage = Seq(
     createMessage(SchedulingTestData.ie801, MessageTypes.IE801.value),
@@ -366,9 +368,11 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
 
         val workItems = findAll().futureValue
 
-        val workItem = workItems.find(_.item.exciseNumber.equals("1")).get
-        workItem.status mustBe ProcessingStatus.ToDo
-        workItem.availableAt mustBe createdWorkItem.availableAt.plusSeconds(2 * 60)
+      val workItem = workItems.find(_.item.exciseNumber.equals("1")).get
+      workItem.status mustBe ProcessingStatus.ToDo
+
+      //Work Item repo truncates to Milliseconds
+      workItem.availableAt mustBe createdWorkItem.availableAt.plusSeconds(2 * 60).truncatedTo(ChronoUnit.MILLIS)
 
       }
     }
@@ -495,7 +499,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
         .whenScenarioStateIs(Scenario.STARTED)
         .willReturn(ok().withBody(Json.toJson(
           EISConsumptionResponse(
-            Instant.parse("2023-01-02T03:04:05Z"),
+            Instant.parse("2023-01-02T03:04:05.123Z"),
             "3",
             Base64.getEncoder.encodeToString(newMessageWithIE801().toString().getBytes(StandardCharsets.UTF_8)),
           )).toString()
@@ -513,7 +517,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
         .whenScenarioStateIs(Scenario.STARTED)
         .willReturn(ok().withBody(Json.toJson(
           EISConsumptionResponse(
-            Instant.parse("2023-01-02T03:04:05Z"),
+            Instant.parse("2023-01-02T03:04:05.123Z"),
             "4",
             Base64.getEncoder.encodeToString(newMessageXmlWithIE704.toString().getBytes(StandardCharsets.UTF_8)),
           )).toString()
@@ -531,7 +535,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
         .whenScenarioStateIs(Scenario.STARTED)
         .willReturn(ok().withBody(Json.toJson(
           EISConsumptionResponse(
-            Instant.parse("2023-01-02T03:04:05Z"),
+            Instant.parse("2023-01-02T03:04:05.123Z"),
             "1",
             //Set the new message count so it will poll again and get the item below
             Base64.getEncoder.encodeToString(newMessageWithIE801(11).toString().getBytes(StandardCharsets.UTF_8)),
@@ -546,7 +550,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
         .whenScenarioStateIs("show-second-response")
         .willReturn(ok().withBody(Json.toJson(
           EISConsumptionResponse(
-            Instant.parse("2024-01-02T03:04:05Z"),
+            Instant.parse("2024-01-02T03:04:05.123Z"),
             "1",
             Base64.getEncoder.encodeToString(newMessageWith818And802.toString().getBytes(StandardCharsets.UTF_8)),
           )).toString()
@@ -618,7 +622,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
         .whenScenarioStateIs("show-empty-message")
         .willReturn(ok().withBody(Json.toJson(
           EISConsumptionResponse(
-            Instant.parse("2024-01-02T03:04:05Z"),
+            Instant.parse("2024-01-02T03:04:05.123Z"),
             exciseNumber,
             Base64.getEncoder.encodeToString(emptyNewMessageDataXml.toString().getBytes(StandardCharsets.UTF_8)),
           )).toString()
@@ -631,7 +635,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       put(s"$messageReceiptUrl$exciseNumber")
         .willReturn(ok().withBody(Json.toJson(
           MessageReceiptSuccessResponse(
-            Instant.parse("2023-01-02T03:04:05Z"),
+            Instant.parse("2023-01-02T03:04:05.123Z"),
             exciseNumber,
             3
           )).toString()
@@ -650,7 +654,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
 
   private def createWorkItem(ern: String): WorkItem[ExciseNumberWorkItem] = {
 
-    val sixtySecsAgo = availableBefore.minusSeconds(60)
+    val sixtySecsAgo = timestamp.minusSeconds(60)
 
     TestUtils.createWorkItem(
       ern = ern,
@@ -667,7 +671,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       Base64.getEncoder.encodeToString(xml.getBytes(StandardCharsets.UTF_8)),
       messageType,
       "messageId",
-      timeService.timestamp()
+      timestamp
     )
   }
 
