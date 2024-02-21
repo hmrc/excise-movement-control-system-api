@@ -165,7 +165,7 @@ class DraftExciseMovementControllerSpec
 
     "sends an audit event" in {
       when(movementService.saveNewMovement(any))
-        .thenReturn(Future.successful(Right(Movement(defaultBoxId, "123", consignorId, Some("789"), None, Instant.now))))
+        .thenReturn(Future.successful(Right(Movement(Some(defaultBoxId), "123", consignorId, Some("789"), None, Instant.now))))
 
       when(auditService.auditMessage(any)(any)).thenReturn(EitherT.fromEither(Right(())))
 
@@ -357,26 +357,6 @@ class DraftExciseMovementControllerSpec
       appConfig,
       cc
     )
-
-  private def createWithWrongMessageType = {
-    val mockIe818Message = mock[IE818Message]
-
-    when(mockIe818Message.messageType).thenReturn("IE818")
-
-    new DraftExciseMovementController(
-      FakeSuccessAuthentication,
-      FakeSuccessXMLParser(mockIe818Message),
-      movementService,
-      workItemService,
-      submissionMessageService,
-      notificationService,
-      messageValidation,
-      dateTimeService,
-      appConfig,
-      auditService,
-      cc
-    )
-  }
 
   private def createRequestWithClientId: FakeRequest[Elem] = {
     createRequest(Seq(

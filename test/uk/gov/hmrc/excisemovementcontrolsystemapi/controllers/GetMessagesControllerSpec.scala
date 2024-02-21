@@ -27,12 +27,11 @@ import play.api.http.HeaderNames
 import play.api.http.Status.{BAD_REQUEST, FORBIDDEN, NOT_FOUND, OK}
 import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.{AnyContent, Result}
-import play.api.mvc.Results.BadRequest
 import play.api.test.Helpers.{await, contentAsJson, contentAsString, defaultAwaitTimeout, status, stubControllerComponents}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeAuthentication
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MovementIdFormatInvalid, MovementIdValidation}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
@@ -298,11 +297,11 @@ class GetMessagesControllerSpec extends PlaySpec
           messageId
         )(createRequest())
 
-        status(result) mustBe  NOT_FOUND
+        status(result) mustBe NOT_FOUND
         contentAsJson(result) mustBe Json.toJson(ErrorResponse(
-            timeStamp,
-            "Movement not found",
-            s"Movement $validUUID could not be found")
+          timeStamp,
+          "Movement not found",
+          s"Movement $validUUID could not be found")
         )
       }
 
@@ -316,7 +315,7 @@ class GetMessagesControllerSpec extends PlaySpec
           messageId
         )(createRequest())
 
-        status(result) mustBe  NOT_FOUND
+        status(result) mustBe NOT_FOUND
         contentAsJson(result) mustBe Json.toJson(ErrorResponse(
           timeStamp,
           "No message found for the MovementID provided",
@@ -327,7 +326,7 @@ class GetMessagesControllerSpec extends PlaySpec
 
   }
 
-   private def contentAsXml(result: Future[Result]): Elem = {
+  private def contentAsXml(result: Future[Result]): Elem = {
     xml.XML.loadString(contentAsString(result))
   }
 
