@@ -36,14 +36,14 @@ import scala.util.Try
 
 @Singleton
 class GetMessagesController @Inject()(
-                                       authAction: AuthAction,
-                                       movementService: MovementService,
-                                       workItemService: WorkItemService,
-                                       movementIdValidator: MovementIdValidation,
-                                       cc: ControllerComponents,
-                                       emcsUtil: EmcsUtils,
-                                       dateTimeService: DateTimeService
-                                     )(implicit ec: ExecutionContext)
+  authAction: AuthAction,
+  movementService: MovementService,
+  workItemService: WorkItemService,
+  movementIdValidator: MovementIdValidation,
+  cc: ControllerComponents,
+  emcsUtil: EmcsUtils,
+  dateTimeService: DateTimeService
+)(implicit ec: ExecutionContext)
   extends BackendController(cc) {
   def getMessageForMovement(movementId: String, messageId: String): Action[AnyContent] = {
     authAction.async(parse.default) {
@@ -52,17 +52,17 @@ class GetMessagesController @Inject()(
         //todo: do we need to validate messageId here? This is the messageIdentifier
         // of the message abd according to the xsd this is not a UUID and can be
         // of any char between 1 and 44 char length
-       val result = for {
-         mvtId <- validateMovementId(movementId)
-         movement <- getMovement(mvtId)
+        val result = for {
+          mvtId <- validateMovementId(movementId)
+          movement <- getMovement(mvtId)
         } yield {
-         movement.messages.filter(o => o.messageId.equals(messageId))
-           .toList match {
-           case Nil => messageNotFoundError(messageId)
-           case head :: _ =>
-             val decodedXml = emcsUtil.decode(head.encodedMessage)
-             Ok(xml.XML.loadString(decodedXml))
-         }
+          movement.messages.filter(o => o.messageId.equals(messageId))
+            .toList match {
+            case Nil => messageNotFoundError(messageId)
+            case head :: _ =>
+              val decodedXml = emcsUtil.decode(head.encodedMessage)
+              Ok(xml.XML.loadString(decodedXml))
+          }
         }
         result.merge
     }

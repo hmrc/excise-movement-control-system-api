@@ -17,13 +17,13 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.service
 
 import org.mockito.ArgumentMatchersSugar.any
-import org.mockito.MockitoSugar.{verify, when}
+import org.mockito.MockitoSugar.when
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, AuditServiceImpl}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.AuditServiceImpl
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
 

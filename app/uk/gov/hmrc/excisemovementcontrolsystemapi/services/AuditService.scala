@@ -27,7 +27,6 @@ import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.control.NonFatal
 
 @Singleton
 class AuditServiceImpl @Inject() (auditConnector: AuditConnector)(implicit ec: ExecutionContext) extends Auditing with AuditService with Logging {

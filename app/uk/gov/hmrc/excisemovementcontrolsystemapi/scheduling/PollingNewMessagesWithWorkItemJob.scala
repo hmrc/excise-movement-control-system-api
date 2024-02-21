@@ -23,6 +23,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.SuccessPushNotificationResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.PollingNewMessagesWithWorkItemJob._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -125,9 +126,9 @@ class PollingNewMessagesWithWorkItemJob @Inject()
   }
 
   private def processMessages(
-                        exciseNumber: String,
-                        consumptionResponse: EISConsumptionResponse
-                      ): Future[Boolean] = {
+    exciseNumber: String,
+    consumptionResponse: EISConsumptionResponse
+  ): Future[Boolean] = {
 
     messageParser.extractMessages(consumptionResponse.message)
       .foldLeft(successful(true)) { case (acc, x) =>
@@ -150,17 +151,30 @@ class PollingNewMessagesWithWorkItemJob @Inject()
 
     movementService.updateMovement(message, exciseNumber).map {
       movements =>
-        movements.map(m =>
-        notificationService.sendNotification(exciseNumber, m, message.messageIdentifier))
-          .sequence
-          .map { case o => o.forall(response =>
-            response match {
-              case _: SuccessPushNotificationResponse => true
-              case _ => false
-            }
-          )}
+        if (!appConfig.pushNotificationsEnabled) {
+          movements match {
+            case Nil => successful(false)
+            case _ :: _ => successful(true)
+          }
+        } else {
+          sendNotification(exciseNumber, movements, message.messageIdentifier)
+        }
     }.flatten
+
   }
+
+  private def sendNotification(exciseNumber: String, movements: Seq[Movement], messageId: String) = {
+    movements.map(m =>
+      notificationService.sendNotification(exciseNumber, m, messageId)
+    ).sequence
+      .map { o =>
+        o.forall {
+          case _: SuccessPushNotificationResponse => true
+          case _ => false
+        }
+      }
+  }
+
 }
 
 object PollingNewMessagesWithWorkItemJob {
@@ -168,6 +182,8 @@ object PollingNewMessagesWithWorkItemJob {
   private sealed trait NewMessageResult
 
   private case object Processed extends NewMessageResult
+
   private case object MessagesOutstanding extends NewMessageResult
+
   private case object PollingFailed extends NewMessageResult
 }

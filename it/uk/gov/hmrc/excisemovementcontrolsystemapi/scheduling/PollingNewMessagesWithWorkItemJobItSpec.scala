@@ -146,9 +146,9 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       insert(createWorkItem("3")).futureValue
       insert(createWorkItem("4")).futureValue
 
-      movementRepository.saveMovement(Movement("boxId1", "token", "1", None, None, Instant.now, Seq.empty)).futureValue
-      movementRepository.saveMovement(Movement("boxId2", "token", "3", None, None, Instant.now, Seq.empty)).futureValue
-      movementRepository.saveMovement(Movement("boxId3", "token", "4", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.saveMovement(Movement(Some("boxId1"), "token", "1", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.saveMovement(Movement(Some("boxId2"), "token", "3", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.saveMovement(Movement(Some("boxId3"), "token", "4", None, None, Instant.now, Seq.empty)).futureValue
 
       // todo: not a very good way to wait for the thread to do is job. Tried eventually but it does not
       // work. Try to find a better way.
@@ -161,9 +161,9 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}3")))}
       eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))}
 
-      val expectedMovementForErn_1 =  Movement("boxId1", "token", "1", None, Some("tokentokentokentokent"), Instant.now, expectedMessage)
-      val expectedMovementForErn_3 = Movement("boxId2", "token", "3", None, Some("tokentokentokentokent"), Instant.now, expectedMessage.take(1))
-      val expectedMovementForErn_4 = Movement("boxId3", "token", "4", None, Some("tokentokentokentokent"), Instant.now, Seq(createMessage(SchedulingTestData.ie704, MessageTypes.IE704.value)))
+      val expectedMovementForErn_1 =  Movement(Some("boxId1"), "token", "1", None, Some("tokentokentokentokent"), Instant.now, expectedMessage)
+      val expectedMovementForErn_3 = Movement(Some("boxId2"), "token", "3", None, Some("tokentokentokentokent"), Instant.now, expectedMessage.take(1))
+      val expectedMovementForErn_4 = Movement(Some("boxId3"), "token", "4", None, Some("tokentokentokentokent"), Instant.now, Seq(createMessage(SchedulingTestData.ie704, MessageTypes.IE704.value)))
       val movements = movementRepository.collection.find().toFuture().futureValue
 
       movements.size mustBe 3
@@ -188,9 +188,9 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
 
       setUpWireMockStubs()
 
-      movementRepository.saveMovement(Movement("boxId1", "token", "1", None, None, Instant.now, Seq.empty)).futureValue
-      movementRepository.saveMovement(Movement("boxId2", "token", "3", None, None, Instant.now, Seq.empty)).futureValue
-      movementRepository.saveMovement(Movement("boxId3", "token", "4", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.saveMovement(Movement(Some("boxId1"), "token", "1", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.saveMovement(Movement(Some("boxId2"), "token", "3", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.saveMovement(Movement(Some("boxId3"), "token", "4", None, None, Instant.now, Seq.empty)).futureValue
 
       eventually {
         wireMock.verify(0, putRequestedFor(urlEqualTo(s"${showNewMessageUrl}1")))
@@ -214,9 +214,9 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       val movements = movementRepository.collection.find().toFuture().futureValue
 
       movements.size mustBe 3
-      assertResults(movements.find(_.consignorId.equals("1")).get, Movement("boxId1", "token", "1", None, None, Instant.now, Seq.empty))
-      assertResults(movements.find(_.consignorId.equals("3")).get, Movement("boxId2", "token", "3", None, None, Instant.now, Seq.empty))
-      assertResults(movements.find(_.consignorId.equals("4")).get, Movement("boxId3", "token", "4", None, None, Instant.now, Seq.empty))
+      assertResults(movements.find(_.consignorId.equals("1")).get, Movement(Some("boxId1"), "token", "1", None, None, Instant.now, Seq.empty))
+      assertResults(movements.find(_.consignorId.equals("3")).get, Movement(Some("boxId2"), "token", "3", None, None, Instant.now, Seq.empty))
+      assertResults(movements.find(_.consignorId.equals("4")).get, Movement(Some("boxId3"), "token", "4", None, None, Instant.now, Seq.empty))
     }
 
     "if fails three times work item marked as ToDo with a slow interval" in {
@@ -232,7 +232,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       val createdWorkItem = createWorkItem("1")
       insert(createdWorkItem).futureValue
 
-      movementRepository.saveMovement(Movement("boxId", "token", "1", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.saveMovement(Movement(Some("boxId"), "token", "1", None, None, Instant.now, Seq.empty)).futureValue
 
       // todo: not a very good way to wait for the thread to do is job. Tried eventually but it does not
       // work. Try to find a better way.
@@ -241,7 +241,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       val movements = movementRepository.collection.find().toFuture().futureValue
 
       movements.size mustBe 1
-      assertResults(movements.find(_.consignorId.equals("1")).get, Movement("boxId", "token", "1", None, None, Instant.now, Seq.empty))
+      assertResults(movements.find(_.consignorId.equals("1")).get, Movement(Some("boxId"), "token", "1", None, None, Instant.now, Seq.empty))
 
       val workItems = findAll().futureValue
 
@@ -263,7 +263,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
 
       insert(createWorkItem("1")).futureValue
 
-      movementRepository.saveMovement(Movement("boxId", "token", "1", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.saveMovement(Movement(Some("boxId"), "token", "1", None, None, Instant.now, Seq.empty)).futureValue
 
       // todo: not a very good way to wait for the thread to do is job. Tried eventually but it does not
       // work. Try to find a better way.
@@ -272,7 +272,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       val movements = movementRepository.collection.find().toFuture().futureValue
 
       movements.size mustBe 1
-      assertResults(movements.find(_.consignorId.equals("1")).get, Movement("boxId", "token", "1", None, None, Instant.now, Seq.empty))
+      assertResults(movements.find(_.consignorId.equals("1")).get, Movement(Some("boxId"), "token", "1", None, None, Instant.now, Seq.empty))
 
       val workItems = findAll().futureValue
 

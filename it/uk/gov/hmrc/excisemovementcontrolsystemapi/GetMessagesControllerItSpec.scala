@@ -86,7 +86,7 @@ class GetMessagesControllerItSpec extends PlaySpec
       val encodedMessage = Base64.getEncoder.encodeToString(IE801.toString().getBytes(StandardCharsets.UTF_8))
       val message = Message(encodedMessage, "IE801", messageId, timestamp)
       when(movementRepository.getMovementById(any))
-        .thenReturn(Future.successful(Some(Movement(validUUID, "boxId", "lrn", consignorId, None, None, Instant.now, Seq(message)))))
+        .thenReturn(Future.successful(Some(Movement(validUUID, Some("boxId"), "lrn", consignorId, None, None, Instant.now, Seq(message)))))
       when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
 
       val result = getRequest()
@@ -113,7 +113,7 @@ class GetMessagesControllerItSpec extends PlaySpec
       withAuthorizedTrader(consignorId)
       val message = Message("encodedMessage", "IE801", "messageId", dateTimeService.timestamp())
       when(movementRepository.getMovementById(any))
-        .thenReturn(Future.successful(Some(Movement(validUUID, "boxId", "lrn", "consignor", None, None, Instant.now, Seq(message)))))
+        .thenReturn(Future.successful(Some(Movement(validUUID, Some("boxId"), "lrn", "consignor", None, None, Instant.now, Seq(message)))))
 
       val result = getRequest()
 
@@ -134,7 +134,7 @@ class GetMessagesControllerItSpec extends PlaySpec
     // for a combination of lrn consignorId/consigneeId
     "return 500 when multiple movements messages are found" in {
       withAuthorizedTrader(consignorId)
-      val movementMessage = Movement("boxId", "", "", None, None, timestamp, Seq(Message("", "", "messageId", dateTimeService.timestamp())))
+      val movementMessage = Movement(Some("boxId"), "", "", None, None, timestamp, Seq(Message("", "", "messageId", dateTimeService.timestamp())))
       when(movementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(movementMessage, movementMessage)))
 
@@ -163,7 +163,7 @@ class GetMessagesControllerItSpec extends PlaySpec
     val encodedMessage = Base64.getEncoder.encodeToString(IE801.toString().getBytes(StandardCharsets.UTF_8))
     val message = Message(encodedMessage, "IE801", messageId, timestamp)
     when(movementRepository.getMovementById(any))
-      .thenReturn(Future.successful(Some(Movement(validUUID, "boxId", "lrn", consignorId, None, None, Instant.now, Seq(message)))))
+      .thenReturn(Future.successful(Some(Movement(validUUID, Some("boxId"), "lrn", consignorId, None, None, Instant.now, Seq(message)))))
 
     val result = getRequest(messageUrl)
 
@@ -276,7 +276,7 @@ class GetMessagesControllerItSpec extends PlaySpec
   }
 
   private def createMovementWithMessages(movementId: String = validUUID, messages: Seq[Message] = Seq.empty):Movement = {
-    Movement(movementId, "boxId", "lrn", consignorId, Some("consigneeId"), Some("arc"), Instant.now, messages)
+    Movement(movementId, Some("boxId"), "lrn", consignorId, Some("consigneeId"), Some("arc"), Instant.now, messages)
   }
 
   private def movementNotFoundError: ErrorResponse = {

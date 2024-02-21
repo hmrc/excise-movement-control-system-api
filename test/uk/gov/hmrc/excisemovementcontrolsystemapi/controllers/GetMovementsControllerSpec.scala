@@ -70,7 +70,7 @@ class GetMovementsControllerSpec
     reset(movementService, workItemService)
 
     when(movementService.getMovementByErn(any, any))
-      .thenReturn(Future.successful(Seq(Movement("cfdb20c7-d0b0-4b8b-a071-737d68dede5e", "boxId", "lrn", ern, Some("consigneeId"), Some("arc"), Instant.now(), Seq.empty))))
+      .thenReturn(Future.successful(Seq(Movement("cfdb20c7-d0b0-4b8b-a071-737d68dede5e", Some("boxId"), "lrn", ern, Some("consigneeId"), Some("arc"), Instant.now(), Seq.empty))))
 
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
 
@@ -95,6 +95,7 @@ class GetMovementsControllerSpec
     "return multiple movement" in {
       val movement1 = Movement(
         "cfdb20c7-d0b0-4b8b-a071-737d68dede5a",
+        Some("boxId"),
         "lrn",
         ern,
         Some("consigneeId"),
@@ -104,6 +105,7 @@ class GetMovementsControllerSpec
       )
       val movement2 = Movement(
         "cfdb20c7-d0b0-4b8b-a071-737d68dede5b",
+        Some("boxId"),
         "lrn2",
         ern,
         Some("consigneeId2"),
@@ -188,7 +190,7 @@ class GetMovementsControllerSpec
   "Get movement controller" should {
 
     val uuid = "cfdb20c7-d0b0-4b8b-a071-737d68dede5b"
-    val movement = Movement(uuid, "id123", "lrn1", "testErn", Some("consignee"), Some("arc"), Instant.now(), Seq.empty)
+    val movement = Movement(uuid, Some("id123"), "lrn1", "testErn", Some("consignee"), Some("arc"), Instant.now(), Seq.empty)
 
     "return the movement when successful" in {
 

@@ -37,6 +37,8 @@ object NotificationResponse {
     implicit val format: OFormat[SuccessBoxNotificationResponse] = Json.format[SuccessBoxNotificationResponse]
   }
 
+  final case class NotInUseNotificationResponse() extends NotificationResponse
+
   case class FailedBoxIdNotificationResponse(dateTime: Instant, debugMessage: String) extends GenericErrorResponse {
     override val message: String = "Box Id error"
   }

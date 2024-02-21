@@ -401,7 +401,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   private def verifyBoxIdIsSavedToDB(boxId: String) = {
     val captor = ArgCaptor[Movement]
     verify(movementRepository).saveMovement(captor.capture)
-    captor.value.boxId mustBe boxId
+    captor.value.boxId mustBe Some(boxId)
   }
 
   private def setupRepositories = {
@@ -415,7 +415,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   private def assertValidResult(result: WSResponse, expectedBoxId: String = defaultBoxId) = {
     val responseBody = Json.parse(result.body).as[ExciseMovementResponse]
     responseBody.status mustBe "Accepted"
-    responseBody.boxId mustBe expectedBoxId
+    responseBody.boxId mustBe Some(expectedBoxId)
     UUID.fromString(responseBody.movementId).toString must not be empty //mustNot Throw An Exception
     responseBody.consignorId mustBe consignorId
     responseBody.localReferenceNumber mustBe "LRNQA20230909022221"
@@ -520,7 +520,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
             .withBody(
               s"""
                 {
-                  "boxId": "${defaultBoxId}",
+                  "boxId": "$defaultBoxId",
                   "boxName":"customs/excise##1.0##notificationUrl",
                   "boxCreator":{
                       "clientId": "testClientId"

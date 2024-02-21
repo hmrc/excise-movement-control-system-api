@@ -23,7 +23,8 @@ import play.api.mvc.Result
 import play.api.mvc.Results.BadRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PushNotificationConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.{FailedBoxIdNotificationResponse, SuccessBoxNotificationResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.routes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.{Notification, NotificationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -31,28 +32,28 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import java.util.UUID
 import javax.inject.Inject
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.routes
-
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 class PushNotificationServiceImpl @Inject()(
   notificationConnector: PushNotificationConnector,
   dateTimeService: DateTimeService
-)(implicit val ec: ExecutionContext) extends PushNotificationService with ResponseHandler with Logging{
+)(implicit val ec: ExecutionContext) extends PushNotificationService with ResponseHandler with Logging {
 
   def getBoxId(
     clientId: String,
     clientBoxId: Option[String] = None
-  )(implicit hc: HeaderCarrier): Future[Either[Result, SuccessBoxNotificationResponse]] = {
+  )(implicit hc: HeaderCarrier): Future[Either[Result, String]] = {
 
-    clientBoxId match {
+    (clientBoxId match {
       case Some(id) => Future.successful(validateClientBoxId(id))
       case _ => notificationConnector.getDefaultBoxId(clientId)
-    }
+    }).map(futureValue => futureValue
+      .map(response => response.boxId)
+    )
   }
 
-  def validateClientBoxId(boxId: String): Either[Result, SuccessBoxNotificationResponse] = {
+  private def validateClientBoxId(boxId: String): Either[Result, SuccessBoxNotificationResponse] = {
     Try(UUID.fromString(boxId)) match {
       case Success(value) => Right(SuccessBoxNotificationResponse(value.toString))
       case Failure(_) =>
@@ -62,13 +63,13 @@ class PushNotificationServiceImpl @Inject()(
         )
     }
   }
+
   def sendNotification(
     ern: String,
     movement: Movement,
     messageId: String
   )(implicit hc: HeaderCarrier): Future[NotificationResponse] = {
 
-    val boxId = movement.boxId
     val notification = Notification(
       movement._id,
       buildMessageUriAsString(movement._id, messageId),
@@ -78,7 +79,13 @@ class PushNotificationServiceImpl @Inject()(
       getArcOrThrowIfEmpty(movement.administrativeReferenceCode, messageId),
       ern)
 
-    notificationConnector.postNotification(boxId, notification)
+    movement.boxId match {
+      case Some(boxId) =>
+        notificationConnector.postNotification(boxId, notification)
+
+      case None =>
+        Future.successful(NotInUseNotificationResponse())
+    }
   }
 
   private def buildMessageUriAsString(movementId: String, messageId: String): String = {
@@ -99,7 +106,7 @@ trait PushNotificationService {
   def getBoxId(
     clientId: String,
     boxId: Option[String] = None
-  )(implicit hc: HeaderCarrier): Future[Either[Result, SuccessBoxNotificationResponse]]
+  )(implicit hc: HeaderCarrier): Future[Either[Result, String]]
 
   def sendNotification(
     ern: String,

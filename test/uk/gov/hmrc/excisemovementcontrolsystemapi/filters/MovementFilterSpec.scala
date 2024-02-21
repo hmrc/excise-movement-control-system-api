@@ -25,11 +25,11 @@ class MovementFilterSpec extends PlaySpec {
 
   private val now = Instant.now()
 
-  private val m1 = Movement("boxId", "lrn3", "test1", Some("consigneeId"), Some("arc1"), now.plusSeconds(500))
-  private val m2 = Movement("boxId","2", "test2", Some("consigneeId2"), Some("arc2"), now.plusSeconds(1000))
-  private val m3 = Movement("boxId","5", "test2", Some("consigneeId2"), Some("arc3"), now.minusSeconds(1000))
-  private val m4 = Movement("boxId","2", "test4", Some("consigneeId2"), Some("arc4"), now.minusSeconds(1000))
-  private val m5 = Movement("boxId","lrn345", "test2abc", Some("consigneeId2"), Some("arc3fgn"), now.minusSeconds(1000))
+  private val m1 = Movement(Some("boxId"), "lrn3", "test1", Some("consigneeId"), Some("arc1"), now.plusSeconds(500))
+  private val m2 = Movement(Some("boxId"),"2", "test2", Some("consigneeId2"), Some("arc2"), now.plusSeconds(1000))
+  private val m3 = Movement(Some("boxId"),"5", "test2", Some("consigneeId2"), Some("arc3"), now.minusSeconds(1000))
+  private val m4 = Movement(Some("boxId"),"2", "test4", Some("consigneeId2"), Some("arc4"), now.minusSeconds(1000))
+  private val m5 = Movement(Some("boxId"),"lrn345", "test2abc", Some("consigneeId2"), Some("arc3fgn"), now.minusSeconds(1000))
 
   private val movements = Seq(m1, m2, m3, m4, m5)
 

@@ -25,9 +25,10 @@ import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, InternalServerError}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PushNotificationConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Notification
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.{FailedBoxIdNotificationResponse, FailedPushNotification, SuccessBoxNotificationResponse, SuccessPushNotificationResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PushNotificationServiceImpl
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -43,10 +44,11 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
 
   private val notificationConnector = mock[PushNotificationConnector]
   private val dateTimeService = mock[DateTimeService]
+  private val appConfig = mock[AppConfig]
   private val timestamp = Instant.now
   private val sut = new PushNotificationServiceImpl(notificationConnector, dateTimeService)
   private val message = Message("this is a test", "IE801", "messageId", Instant.now)
-  private val movement = Movement("id", "boxId", "lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
+  private val movement = Movement("id", Some("boxId"), "lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
   private val boxId = "1c5b9365-18a6-55a5-99c9-83a091ac7f26"
 
   override def beforeEach(): Unit = {
@@ -58,12 +60,15 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
     when(notificationConnector.postNotification(any, any)(any))
       .thenReturn(Future.successful(SuccessPushNotificationResponse("notificationId")))
     when(dateTimeService.timestamp()).thenReturn(timestamp)
+
+    when(appConfig.pushNotificationsEnabled).thenReturn(true)
   }
 
   "getBoxId" should {
+
     "return the default box id" in {
       val result = await(sut.getBoxId("clientId"))
-      result mustBe Right(SuccessBoxNotificationResponse(boxId))
+      result mustBe Right(boxId)
 
       withClue("send the request to the notification service") {
         verify(notificationConnector).getDefaultBoxId(eqTo("clientId"))(any)
@@ -73,7 +78,7 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
     "return the client box id when this is present" in {
       val result = await(sut.getBoxId("clientId", Some(boxId)))
 
-      result mustBe Right(SuccessBoxNotificationResponse(boxId))
+      result mustBe Right(boxId)
 
       withClue("not request box Id from the push-poll-notification service") {
         verifyZeroInteractions(notificationConnector)
@@ -101,9 +106,9 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
         verifyZeroInteractions(notificationConnector)
 
       }
-
     }
   }
+
   "sendNotification" should {
     "send a notification" in {
       val result = await(sut.sendNotification("ern", movement, "messageId"))
@@ -113,6 +118,16 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
       val messageUri = s"/movements/id/message/messageId"
       val notification = Notification("id", messageUri, "messageId", "consignorId", Some("consigneeId"), "arc", "ern")
       verify(notificationConnector).postNotification("boxId", notification)
+    }
+
+    "return not in use status" when {
+
+      "box Id is not set on the movement" in {
+        val result = await(sut.sendNotification("ern", movement.copy(boxId = None), "messageId"))
+        result mustBe NotInUseNotificationResponse()
+        verifyZeroInteractions(notificationConnector)
+      }
+
     }
 
     "return an error" when {
@@ -152,7 +167,7 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
          |"debugMessage":"$debugMessage"}""".stripMargin)
   }
 
-   def buildPushNotificationJsonError(status: Int, debugMessage: String) = {
+  private def buildPushNotificationJsonError(status: Int, debugMessage: String) = {
     Json.parse(
       s"""{"status":$status,
          |"message":"Push notification error",

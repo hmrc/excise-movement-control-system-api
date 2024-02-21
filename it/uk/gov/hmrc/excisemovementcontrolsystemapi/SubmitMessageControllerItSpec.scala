@@ -64,7 +64,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
   private val consigneeId = "GBWK002281023"
 
   //This matches the data from the IE818 test message
-  private val movement = Movement("boxId", "LRNQA20230909022221", consignorId, Some(consigneeId), Some("23GB00000000000378553"))
+  private val movement = Movement(Some("boxId"), "LRNQA20230909022221", consignorId, Some(consigneeId), Some("23GB00000000000378553"))
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
