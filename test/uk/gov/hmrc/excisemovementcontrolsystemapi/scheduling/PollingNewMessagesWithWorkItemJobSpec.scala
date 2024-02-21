@@ -323,7 +323,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
     "audit each message" in {
       addOneItemToMockQueue(createWorkItem())
-      when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+      when(newMessageService.getNewMessages(any)(any))
         .thenReturn(Future.successful(Some((newMessageResponse, 3))))
 
       val ie815Message = mock[IE801Message]
