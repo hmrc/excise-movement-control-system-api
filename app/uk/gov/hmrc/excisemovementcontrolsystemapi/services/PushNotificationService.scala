@@ -37,7 +37,7 @@ import scala.util.{Failure, Success, Try}
 
 class PushNotificationServiceImpl @Inject()(
   notificationConnector: PushNotificationConnector,
-  dateTimeService: DateTimeService,
+  dateTimeService: DateTimeService
 )(implicit val ec: ExecutionContext) extends PushNotificationService with ResponseHandler with Logging {
 
   def getBoxId(
