@@ -104,8 +104,8 @@ class SubmitMessageController @Inject()(
     workItemService.addWorkItemForErn(authorisedErn, fastMode = true)
 
     for {
-      _ <- auditService.auditMessage(request.ieMessage)
       result <- EitherT(submissionMessageService.submit(request, authorisedErn))
+      _ <- auditService.auditMessage(request.ieMessage)
     } yield result
 
   }
