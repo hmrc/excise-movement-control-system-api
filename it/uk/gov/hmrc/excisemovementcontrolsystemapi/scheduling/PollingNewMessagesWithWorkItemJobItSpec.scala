@@ -96,7 +96,8 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       Map(
         "mongodb.uri" -> mongoUri,
         "microservice.services.push-pull-notifications.host" -> wireHost,
-        "microservice.services.push-pull-notifications.port" -> wireMock.port()
+        "microservice.services.push-pull-notifications.port" -> wireMock.port(),
+        "auditing.enabled" -> false
       )
   }
   protected def appBuilder: GuiceApplicationBuilder = {
