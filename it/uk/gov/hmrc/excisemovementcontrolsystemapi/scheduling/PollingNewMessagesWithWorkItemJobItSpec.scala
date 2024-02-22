@@ -78,9 +78,9 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
     createMessage(SchedulingTestData.ie802, MessageTypes.IE802.value)
   )
 
-  private val cachedMovement1 = Movement("boxId1", "token", "1", None, None, Instant.now, Seq.empty)
-  private val cachedMovement2 = Movement("boxId2", "token", "3", None, None, Instant.now, Seq.empty)
-  private val cachedMovement3 = Movement("boxId3", "token", "4", None, None, Instant.now, Seq.empty)
+  private val cachedMovement1 = Movement(Some("boxId1"), "token", "1", None, None, Instant.now, Seq.empty)
+  private val cachedMovement2 = Movement(Some("boxId2"), "token", "3", None, None, Instant.now, Seq.empty)
+  private val cachedMovement3 = Movement(Some("boxId3"), "token", "4", None, None, Instant.now, Seq.empty)
 
   // This is used by repository and movementRepository to set the databases before
   // the application start. Once the application has started, the app will load a real
@@ -101,7 +101,8 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       Map(
         "mongodb.uri" -> mongoUri,
         "microservice.services.push-pull-notifications.host" -> wireHost,
-        "microservice.services.push-pull-notifications.port" -> wireMock.port()
+        "microservice.services.push-pull-notifications.port" -> wireMock.port(),
+        "auditing.enabled" -> false
       )
   }
   protected def appBuilder: GuiceApplicationBuilder = {
@@ -193,9 +194,9 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
           wireMock.verify(1, putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))
         }
 
-        val expectedMovementForErn_1 = Movement("boxId1", "token", "1", None, Some("tokentokentokentokent"), Instant.now, expectedMessage)
-        val expectedMovementForErn_3 = Movement("boxId2", "token", "3", None, Some("tokentokentokentokent"), Instant.now, expectedMessage.take(1))
-        val expectedMovementForErn_4 = Movement("boxId3", "token", "4", None, Some("tokentokentokentokent"), Instant.now, Seq(createMessage(SchedulingTestData.ie704, MessageTypes.IE704.value)))
+        val expectedMovementForErn_1 = Movement(Some("boxId1"), "token", "1", None, Some("tokentokentokentokent"), Instant.now, expectedMessage)
+        val expectedMovementForErn_3 = Movement(Some("boxId2"), "token", "3", None, Some("tokentokentokentokent"), Instant.now, expectedMessage.take(1))
+        val expectedMovementForErn_4 = Movement(Some("boxId3"), "token", "4", None, Some("tokentokentokentokent"), Instant.now, Seq(createMessage(SchedulingTestData.ie704, MessageTypes.IE704.value)))
         val movements = movementRepository.collection.find().toFuture().futureValue
 
         movements.size mustBe 3
@@ -250,9 +251,9 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
           wireMock.verify(1, putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))
         }
 
-        val expectedMovementForErn_1 = Movement("boxId1", "token", "1", None, Some("tokentokentokentokent"), Instant.now, expectedMessage)
-        val expectedMovementForErn_3 = Movement("boxId2", "token", "3", None, Some("tokentokentokentokent"), Instant.now, expectedMessage.take(1))
-        val expectedMovementForErn_4 = Movement("boxId3", "token", "4", None, Some("tokentokentokentokent"), Instant.now, Seq(createMessage(SchedulingTestData.ie704, MessageTypes.IE704.value)))
+        val expectedMovementForErn_1 = Movement(Some("boxId1"), "token", "1", None, Some("tokentokentokentokent"), Instant.now, expectedMessage)
+        val expectedMovementForErn_3 = Movement(Some("boxId2"), "token", "3", None, Some("tokentokentokentokent"), Instant.now, expectedMessage.take(1))
+        val expectedMovementForErn_4 = Movement(Some("boxId3"), "token", "4", None, Some("tokentokentokentokent"), Instant.now, Seq(createMessage(SchedulingTestData.ie704, MessageTypes.IE704.value)))
         val movements = movementRepository.collection.find().toFuture().futureValue
 
         movements.size mustBe 3
@@ -333,9 +334,9 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
         val movements = movementRepository.collection.find().toFuture().futureValue
 
         movements.size mustBe 3
-        assertResults(movements.find(_.consignorId.equals("1")).get, Movement("boxId1", "token", "1", None, None, Instant.now, Seq.empty))
-        assertResults(movements.find(_.consignorId.equals("3")).get, Movement("boxId2", "token", "3", None, None, Instant.now, Seq.empty))
-        assertResults(movements.find(_.consignorId.equals("4")).get, Movement("boxId3", "token", "4", None, None, Instant.now, Seq.empty))
+        assertResults(movements.find(_.consignorId.equals("1")).get, Movement(Some("boxId1"), "token", "1", None, None, Instant.now, Seq.empty))
+        assertResults(movements.find(_.consignorId.equals("3")).get, Movement(Some("boxId2"), "token", "3", None, None, Instant.now, Seq.empty))
+        assertResults(movements.find(_.consignorId.equals("4")).get, Movement(Some("boxId3"), "token", "4", None, None, Instant.now, Seq.empty))
       }
     }
 

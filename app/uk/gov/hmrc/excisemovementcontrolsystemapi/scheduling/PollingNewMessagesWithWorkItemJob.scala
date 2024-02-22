@@ -31,6 +31,7 @@ import uk.gov.hmrc.mongo.workitem.ProcessingStatus
 
 import java.time.Instant
 import javax.inject.Inject
+import scala.concurrent.Future.successful
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.DurationConverters.ScalaDurationOps
@@ -152,6 +153,7 @@ class PollingNewMessagesWithWorkItemJob @Inject()
 
     movementService.updateMovement(message, exciseNumber).map {
       case Nil => Future(false)
+      case movements =>
         if (!appConfig.pushNotificationsEnabled) {
           movements match {
             case Nil => successful(false)
@@ -165,11 +167,8 @@ class PollingNewMessagesWithWorkItemJob @Inject()
   }
 
   private def sendNotification(exciseNumber: String, movements: Seq[Movement], messageId: String) = {
-    movementService.updateMovement(message, exciseNumber).map {
-      case Nil => Future(false)
-      case movements =>
         movements.map { movement =>
-          notificationService.sendNotification(exciseNumber, movement, message.messageIdentifier)
+          notificationService.sendNotification(exciseNumber, movement, messageId)
         }.sequence
           .map {responseSequence => responseSequence.forall(_ => true)}
   }

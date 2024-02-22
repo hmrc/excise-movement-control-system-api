@@ -374,7 +374,7 @@ class PollingNewMessagesWithWorkItemJobSpec
 
         addOneItemToMockQueue(createWorkItem())
 
-        when(newMessageService.getNewMessagesAndAcknowledge(any)(any))
+        when(newMessageService.getNewMessages(any)(any))
           .thenReturn(Future.successful(Some((newMessageResponse, 1))))
 
         when(message.messageIdentifier).thenReturn("3")
@@ -417,7 +417,7 @@ class PollingNewMessagesWithWorkItemJobSpec
       when(newMessageService.getNewMessages(any)(any))
         .thenReturn(Future.successful(Some((newMessageResponse, 5))))
 
-      val movement = Movement("bixId", "lrn", "consigneeId", None, None, timestamp)
+      val movement = Movement(Some("bixId"), "lrn", "consigneeId", None, None, timestamp)
       when(movementService.updateMovement(any, any))
         .thenReturn(
           Future.successful(Seq(movement)))
@@ -455,11 +455,11 @@ class PollingNewMessagesWithWorkItemJobSpec
         when(newMessageParserService.extractMessages(any)).thenReturn(Seq(message, message, message, message, message))
         when(movementService.updateMovement(any, any))
           .thenReturn(
-            Future.successful(Seq(Movement("boxId1", "lrn1", "consignor", Some("consignee")))),
-            Future.successful(Seq(Movement("boxId2", "lrn2", "consignor", Some("consignee")))),
+            Future.successful(Seq(Movement(Some("boxId1"), "lrn1", "consignor", Some("consignee")))),
+            Future.successful(Seq(Movement(Some("boxId2"), "lrn2", "consignor", Some("consignee")))),
             Future.successful(Seq.empty),
-            Future.successful(Seq(Movement("boxId3", "lrn3", "consignor", Some("consignee")))),
-            Future.successful(Seq(Movement("boxId4", "lrn4", "consignor", Some("consignee")))),
+            Future.successful(Seq(Movement(Some("boxId3"), "lrn3", "consignor", Some("consignee")))),
+            Future.successful(Seq(Movement(Some("boxId4"), "lrn4", "consignor", Some("consignee")))),
           )
 
         await(job.executeInMutex)
@@ -506,7 +506,7 @@ class PollingNewMessagesWithWorkItemJobSpec
           .thenReturn(Future.successful(Some((newMessageResponse, 5))))
 
         when(movementService.updateMovement(any, any))
-          .thenReturn(Future.successful(Seq(Movement("boxId1", "lrn1", "consignor", Some("consignee")))))
+          .thenReturn(Future.successful(Seq(Movement(Some("boxId1"), "lrn1", "consignor", Some("consignee")))))
 
         when(notificationService.sendNotification(any, any, any)(any))
           .thenReturn(Future.successful(FailedPushNotification(BAD_REQUEST, "something went wrong :(")))
@@ -524,7 +524,7 @@ class PollingNewMessagesWithWorkItemJobSpec
         when(newMessageParserService.extractMessages(any)).thenReturn(Seq(message, message, message, message, message))
 
         when(movementService.updateMovement(any, any))
-          .thenReturn(Future.successful(Seq(Movement("boxId1", "lrn1", "consignor", Some("consignee")))))
+          .thenReturn(Future.successful(Seq(Movement(Some("boxId1"), "lrn1", "consignor", Some("consignee")))))
 
         when(notificationService.sendNotification(any, any, any)(any))
           .thenReturn(
