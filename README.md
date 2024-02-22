@@ -146,7 +146,7 @@ the postman json file that is in the emcs-api-eis-stub repo.
 11. Press the **Run EMCSApiPollingScenarios**" button.
 12. You should see a response that contains the boxId for each IE815 submission.
 
-Remember if you do not use the **SubmitDraftOfMovement** scenarion you need to
+Remember if you do not use the **SubmitDraftOfMovement** scenario you need to
 add the ClientId to the header when you submit an IE815.
 
   ```

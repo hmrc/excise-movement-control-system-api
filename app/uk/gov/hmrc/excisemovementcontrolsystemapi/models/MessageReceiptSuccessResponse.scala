@@ -20,13 +20,29 @@ import play.api.libs.json.{Json, OFormat}
 
 import java.time.Instant
 
-case class MessageReceiptResponse
+sealed trait MessageReceiptResponse
+
+case class MessageReceiptSuccessResponse
 (
   dateTime: Instant,
   exciseRegistrationNumber: String,
   recordsAffected: Int
-)
+) extends MessageReceiptResponse
 
-object MessageReceiptResponse {
-  implicit val format: OFormat[MessageReceiptResponse] = Json.format[MessageReceiptResponse]
+object MessageReceiptSuccessResponse {
+  implicit val format: OFormat[MessageReceiptSuccessResponse] = Json.format[MessageReceiptSuccessResponse]
+}
+
+case class MessageReceiptFailResponse
+(
+  status: Int,
+  dateTime: Instant,
+  debugMessage: String
+
+) extends MessageReceiptResponse with GenericErrorResponse {
+  override val message = "Message Receipt error"
+}
+
+object MessageReceiptFailResponse {
+  implicit val format: OFormat[MessageReceiptFailResponse] = Json.format[MessageReceiptFailResponse]
 }

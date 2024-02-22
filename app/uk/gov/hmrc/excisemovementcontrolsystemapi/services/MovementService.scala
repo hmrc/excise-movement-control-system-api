@@ -30,6 +30,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Mov
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 
 import javax.inject.Inject
+import scala.concurrent.Future.successful
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -134,7 +135,12 @@ class MovementService @Inject()(
     ))))
   }
 
-  private def updateMovementForIndividualArc(message: IEMessage, ern: String, cachedMovements: Seq[Movement], messageArc: Option[String]): Future[Option[Movement]] = {
+  private def updateMovementForIndividualArc(
+    message: IEMessage,
+    ern: String,
+    cachedMovements: Seq[Movement],
+    messageArc: Option[String]
+  ): Future[Option[Movement]] = {
     val movementWithArc = cachedMovements.find(o => o.administrativeReferenceCode.equals(messageArc))
     val movementWithLrn = cachedMovements.find(m => message.lrnEquals(m.localReferenceNumber))
 
@@ -151,19 +157,26 @@ class MovementService @Inject()(
                                    messageArc: Option[String]
                                  ): Future[Option[Movement]] = {
 
-    val encodedMessage = emcsUtils.encode(newMessage.toXml.toString)
-    val messages = Seq(Message(encodedMessage, newMessage.messageType, newMessage.messageIdentifier, dateTimeService.timestamp()))
-
-    //todo: remove hash from message class. Hash can calculate on the go in here
-    val allMessages = (movement.messages ++ messages).distinctBy(_.hash)
-    val newArc = messageArc.orElse(movement.administrativeReferenceCode)
-
-    val newMovement = movement.copy(
-      administrativeReferenceCode = movement.administrativeReferenceCode.fold(newArc)(Some(_)),
-      messages = allMessages
+    val message = Message(
+      encodedMessage = emcsUtils.encode(newMessage.toXml.toString),
+      messageType = newMessage.messageType,
+      messageId = newMessage.messageIdentifier,
+      createdOn = dateTimeService.timestamp()
     )
 
-    movementRepository.updateMovement(newMovement)
+    //todo: remove hash from message class. Hash can calculate on the go in here
+    movement.messages.find(o => o.hash.equals(message.hash)) match {
+      case Some(_) => successful(None)
+      case _ =>
+        val newArc = messageArc.orElse(movement.administrativeReferenceCode)
+
+        val newMovement = movement.copy(
+          administrativeReferenceCode = movement.administrativeReferenceCode.fold(newArc)(Some(_)),
+          messages = movement.messages :+ message
+        )
+
+        movementRepository.updateMovement(newMovement)
+    }
   }
 
   private def matchingERN(movement: Movement, erns: List[String]): Option[String] = {

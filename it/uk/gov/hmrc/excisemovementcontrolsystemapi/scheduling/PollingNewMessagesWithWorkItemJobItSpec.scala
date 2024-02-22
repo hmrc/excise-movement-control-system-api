@@ -19,15 +19,17 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.{Scenario, StubMapping}
+import org.mockito.ArgumentMatchersSugar.{eqTo, any => mockitoAny}
 import org.mockito.MockitoSugar.when
 import org.scalatest.concurrent.{Eventually, IntegrationPatience, ScalaFutures}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
+import play.api.Configuration
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsValue, Json}
-import play.api.{Application, Configuration}
+import play.api.test.Helpers.running
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{NewMessagesXml, SchedulingTestData}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.StringSupport
@@ -35,7 +37,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.WireMockServerSpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Notification
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.SuccessPushNotificationResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptResponse, MessageTypes}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptSuccessResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, TestUtils}
@@ -46,8 +48,8 @@ import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.Base64
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{DAYS, Duration, MINUTES}
+import scala.concurrent.{ExecutionContext, Future}
 
 class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
   with DefaultPlayMongoRepositorySupport[WorkItem[ExciseNumberWorkItem]]
@@ -76,6 +78,9 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
     createMessage(SchedulingTestData.ie802, MessageTypes.IE802.value)
   )
 
+  private val cachedMovement1 = Movement(Some("boxId1"), "token", "1", None, None, Instant.now, Seq.empty)
+  private val cachedMovement2 = Movement(Some("boxId2"), "token", "3", None, None, Instant.now, Seq.empty)
+  private val cachedMovement3 = Movement(Some("boxId3"), "token", "4", None, None, Instant.now, Seq.empty)
 
   // This is used by repository and movementRepository to set the databases before
   // the application start. Once the application has started, the app will load a real
@@ -113,17 +118,33 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
 
   }
 
-  lazy val app: Application = appBuilder.build()
+  protected def fakeApplication
+  (
+    movementRepository: MovementRepository
+  ): GuiceApplicationBuilder = {
+      wireMock.start()
+      WireMock.configureFor(wireHost, wireMock.port())
+
+      GuiceApplicationBuilder()
+        .configure(configureServices)
+        .loadConfig(env => Configuration.load(env, Map("config.resource" -> "application.test.conf")))
+        .overrides(
+          bind[MovementRepository].to(movementRepository),
+          bind[DateTimeService].to(timeService)
+        )
+
+    }
+
+
 
   override def beforeEach(): Unit = {
     wireMock.resetAll()
     prepareDatabase()
-    wireMock.resetAll()
   }
+
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    app
   }
 
   override def afterAll(): Unit = {
@@ -147,35 +168,130 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       insert(createWorkItem("3")).futureValue
       insert(createWorkItem("4")).futureValue
 
-      movementRepository.saveMovement(Movement(Some("boxId1"), "token", "1", None, None, Instant.now, Seq.empty)).futureValue
-      movementRepository.saveMovement(Movement(Some("boxId2"), "token", "3", None, None, Instant.now, Seq.empty)).futureValue
-      movementRepository.saveMovement(Movement(Some("boxId3"), "token", "4", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.saveMovement(cachedMovement1).futureValue
+      movementRepository.saveMovement(cachedMovement2).futureValue
+      movementRepository.saveMovement(cachedMovement3).futureValue
 
-      // todo: not a very good way to wait for the thread to do is job. Tried eventually but it does not
-      // work. Try to find a better way.
-      Thread.sleep(6000)
+      val app = appBuilder.build()
+      running(app) {
 
-      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}1")))}
-      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}3")))}
-      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}4")))}
-      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}1")))}
-      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}3")))}
-      eventually {wireMock.verify(putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))}
+        eventually {
+          wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}1")))
+        }
+        eventually {
+          wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}3")))
+        }
+        eventually {
+          wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}4")))
+        }
+        eventually {
+          wireMock.verify(2, putRequestedFor(urlEqualTo(s"${messageReceiptUrl}1")))
+        }
+        eventually {
+          wireMock.verify(1, putRequestedFor(urlEqualTo(s"${messageReceiptUrl}3")))
+        }
+        eventually {
+          wireMock.verify(1, putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))
+        }
 
-      val expectedMovementForErn_1 =  Movement(Some("boxId1"), "token", "1", None, Some("tokentokentokentokent"), Instant.now, expectedMessage)
-      val expectedMovementForErn_3 = Movement(Some("boxId2"), "token", "3", None, Some("tokentokentokentokent"), Instant.now, expectedMessage.take(1))
-      val expectedMovementForErn_4 = Movement(Some("boxId3"), "token", "4", None, Some("tokentokentokentokent"), Instant.now, Seq(createMessage(SchedulingTestData.ie704, MessageTypes.IE704.value)))
-      val movements = movementRepository.collection.find().toFuture().futureValue
+        val expectedMovementForErn_1 = Movement(Some("boxId1"), "token", "1", None, Some("tokentokentokentokent"), Instant.now, expectedMessage)
+        val expectedMovementForErn_3 = Movement(Some("boxId2"), "token", "3", None, Some("tokentokentokentokent"), Instant.now, expectedMessage.take(1))
+        val expectedMovementForErn_4 = Movement(Some("boxId3"), "token", "4", None, Some("tokentokentokentokent"), Instant.now, Seq(createMessage(SchedulingTestData.ie704, MessageTypes.IE704.value)))
+        val movements = movementRepository.collection.find().toFuture().futureValue
 
-      movements.size mustBe 3
-      assertResults(movements.find(_.consignorId.equals("1")).get, expectedMovementForErn_1)
-      assertResults(movements.find(_.consignorId.equals("3")).get, expectedMovementForErn_3)
-      assertResults(movements.find(_.consignorId.equals("4")).get, expectedMovementForErn_4)
+        movements.size mustBe 3
+        assertResults(movements.find(_.consignorId.equals("1")).get, expectedMovementForErn_1)
+        assertResults(movements.find(_.consignorId.equals("3")).get, expectedMovementForErn_3)
+        assertResults(movements.find(_.consignorId.equals("4")).get, expectedMovementForErn_4)
 
-      withClue("Should push a notification") {
-        assertPushNotificationApiForErn1(expectedMovementForErn_1, movements(0)._id)
-        assertPushNotificationApiForErn3(expectedMovementForErn_3, movements(1)._id)
-        assertPushNotificationApiForErn4(expectedMovementForErn_4, movements(2)._id)
+        withClue("Should push a notification") {
+          assertPushNotificationApiForErn1(expectedMovementForErn_1, movements(0)._id)
+          assertPushNotificationApiForErn3(expectedMovementForErn_3, movements(1)._id)
+          assertPushNotificationApiForErn4(expectedMovementForErn_4, movements(2)._id)
+        }
+      }
+    }
+
+    "not save duplicate to db" in {
+      val movementRepository = new MovementRepository(
+        mongoComponent,
+        mongoAppConfig,
+        timeService
+      )
+
+      setUpWireMockStubsWithDuplicate()
+
+      insert(createWorkItem("1")).futureValue
+      insert(createWorkItem("3")).futureValue
+      insert(createWorkItem("4")).futureValue
+
+      movementRepository.saveMovement(cachedMovement1).futureValue
+      movementRepository.saveMovement(cachedMovement2).futureValue
+      movementRepository.saveMovement(cachedMovement3).futureValue
+
+      val app = appBuilder.build()
+      running(app) {
+
+        eventually {
+          wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}1")))
+        }
+        eventually {
+          wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}3")))
+        }
+        eventually {
+          wireMock.verify(putRequestedFor(urlEqualTo(s"${showNewMessageUrl}4")))
+        }
+        eventually {
+          wireMock.verify(2, putRequestedFor(urlEqualTo(s"${messageReceiptUrl}1")))
+        }
+        eventually {
+          wireMock.verify(1, putRequestedFor(urlEqualTo(s"${messageReceiptUrl}3")))
+        }
+        eventually {
+          wireMock.verify(1, putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))
+        }
+
+        val expectedMovementForErn_1 = Movement(Some("boxId1"), "token", "1", None, Some("tokentokentokentokent"), Instant.now, expectedMessage)
+        val expectedMovementForErn_3 = Movement(Some("boxId2"), "token", "3", None, Some("tokentokentokentokent"), Instant.now, expectedMessage.take(1))
+        val expectedMovementForErn_4 = Movement(Some("boxId3"), "token", "4", None, Some("tokentokentokentokent"), Instant.now, Seq(createMessage(SchedulingTestData.ie704, MessageTypes.IE704.value)))
+        val movements = movementRepository.collection.find().toFuture().futureValue
+
+        movements.size mustBe 3
+        assertResults(movements.find(_.consignorId.equals("1")).get, expectedMovementForErn_1)
+        assertResults(movements.find(_.consignorId.equals("3")).get, expectedMovementForErn_3)
+        assertResults(movements.find(_.consignorId.equals("4")).get, expectedMovementForErn_4)
+
+        withClue("Should push a notification") {
+          assertPushNotificationApiForErn1(expectedMovementForErn_1, movements(0)._id)
+          assertPushNotificationApiForErn3(expectedMovementForErn_3, movements(1)._id)
+          assertPushNotificationApiForErn4(expectedMovementForErn_4, movements(2)._id)
+        }
+      }
+    }
+    "not send acknowledge if cannot save a movement" in {
+
+      val movementRepository = mock[MovementRepository]
+
+      setUpWireMockStubs()
+
+      insert(createWorkItem("1")).futureValue
+      insert(createWorkItem("3")).futureValue
+      insert(createWorkItem("4")).futureValue
+
+      setUpMovementRepository(movementRepository)
+
+      val app = fakeApplication(movementRepository).build()
+      running(app) {
+
+        eventually {
+          wireMock.verify(1, putRequestedFor(urlEqualTo(s"${messageReceiptUrl}1")))
+        }
+        eventually {
+          wireMock.verify(1, putRequestedFor(urlEqualTo(s"${messageReceiptUrl}3")))
+        }
+        eventually {
+          wireMock.verify(1, putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))
+        }
       }
     }
 
@@ -189,36 +305,41 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
 
       setUpWireMockStubs()
 
-      movementRepository.saveMovement(Movement(Some("boxId1"), "token", "1", None, None, Instant.now, Seq.empty)).futureValue
-      movementRepository.saveMovement(Movement(Some("boxId2"), "token", "3", None, None, Instant.now, Seq.empty)).futureValue
-      movementRepository.saveMovement(Movement(Some("boxId3"), "token", "4", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.saveMovement(cachedMovement1).futureValue
+      movementRepository.saveMovement(cachedMovement2).futureValue
+      movementRepository.saveMovement(cachedMovement3).futureValue
 
-      eventually {
-        wireMock.verify(0, putRequestedFor(urlEqualTo(s"${showNewMessageUrl}1")))
-      }
-      eventually {
-        wireMock.verify(0, putRequestedFor(urlEqualTo(s"${showNewMessageUrl}3")))
-      }
-      eventually {
-        wireMock.verify(0, putRequestedFor(urlEqualTo(s"${showNewMessageUrl}4")))
-      }
-      eventually {
-        wireMock.verify(0, putRequestedFor(urlEqualTo(s"${messageReceiptUrl}1")))
-      }
-      eventually {
-        wireMock.verify(0, putRequestedFor(urlEqualTo(s"${messageReceiptUrl}3")))
-      }
-      eventually {
-        wireMock.verify(0, putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))
-      }
+      val app = appBuilder.build()
+      running(app) {
 
-      val movements = movementRepository.collection.find().toFuture().futureValue
+        eventually {
+          wireMock.verify(0, putRequestedFor(urlEqualTo(s"${showNewMessageUrl}1")))
+        }
+        eventually {
+          wireMock.verify(0, putRequestedFor(urlEqualTo(s"${showNewMessageUrl}3")))
+        }
+        eventually {
+          wireMock.verify(0, putRequestedFor(urlEqualTo(s"${showNewMessageUrl}4")))
+        }
+        eventually {
+          wireMock.verify(0, putRequestedFor(urlEqualTo(s"${messageReceiptUrl}1")))
+        }
+        eventually {
+          wireMock.verify(0, putRequestedFor(urlEqualTo(s"${messageReceiptUrl}3")))
+        }
+        eventually {
+          wireMock.verify(0, putRequestedFor(urlEqualTo(s"${messageReceiptUrl}4")))
+        }
 
-      movements.size mustBe 3
-      assertResults(movements.find(_.consignorId.equals("1")).get, Movement(Some("boxId1"), "token", "1", None, None, Instant.now, Seq.empty))
-      assertResults(movements.find(_.consignorId.equals("3")).get, Movement(Some("boxId2"), "token", "3", None, None, Instant.now, Seq.empty))
-      assertResults(movements.find(_.consignorId.equals("4")).get, Movement(Some("boxId3"), "token", "4", None, None, Instant.now, Seq.empty))
+        val movements = movementRepository.collection.find().toFuture().futureValue
+
+        movements.size mustBe 3
+        assertResults(movements.find(_.consignorId.equals("1")).get, Movement(Some("boxId1"), "token", "1", None, None, Instant.now, Seq.empty))
+        assertResults(movements.find(_.consignorId.equals("3")).get, Movement(Some("boxId2"), "token", "3", None, None, Instant.now, Seq.empty))
+        assertResults(movements.find(_.consignorId.equals("4")).get, Movement(Some("boxId3"), "token", "4", None, None, Instant.now, Seq.empty))
+      }
     }
+
 
     "if fails three times work item marked as ToDo with a slow interval" in {
 
@@ -233,23 +354,23 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       val createdWorkItem = createWorkItem("1")
       insert(createdWorkItem).futureValue
 
-      movementRepository.saveMovement(Movement(Some("boxId"), "token", "1", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.saveMovement(cachedMovement1).futureValue
 
-      // todo: not a very good way to wait for the thread to do is job. Tried eventually but it does not
-      // work. Try to find a better way.
-      Thread.sleep(6000)
+      val app = appBuilder.build()
+      running(app) {
 
-      val movements = movementRepository.collection.find().toFuture().futureValue
+        val movements = movementRepository.collection.find().toFuture().futureValue
 
-      movements.size mustBe 1
-      assertResults(movements.find(_.consignorId.equals("1")).get, Movement(Some("boxId"), "token", "1", None, None, Instant.now, Seq.empty))
+        movements.size mustBe 1
+        assertResults(movements.find(_.consignorId.equals("1")).get, cachedMovement1)
 
-      val workItems = findAll().futureValue
+        val workItems = findAll().futureValue
 
-      val workItem = workItems.find(_.item.exciseNumber.equals("1")).get
-      workItem.status mustBe ProcessingStatus.ToDo
-      workItem.availableAt mustBe createdWorkItem.availableAt.plusSeconds(2 * 60)
+        val workItem = workItems.find(_.item.exciseNumber.equals("1")).get
+        workItem.status mustBe ProcessingStatus.ToDo
+        workItem.availableAt mustBe createdWorkItem.availableAt.plusSeconds(2 * 60)
 
+      }
     }
 
     "if fails mark work item as failed so can be retried" in {
@@ -264,22 +385,48 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
 
       insert(createWorkItem("1")).futureValue
 
-      movementRepository.saveMovement(Movement(Some("boxId"), "token", "1", None, None, Instant.now, Seq.empty)).futureValue
+      movementRepository.saveMovement(cachedMovement1).futureValue
 
-      // todo: not a very good way to wait for the thread to do is job. Tried eventually but it does not
-      // work. Try to find a better way.
-      Thread.sleep(100)
+      val app = appBuilder.build()
+      running(app) {
 
-      val movements = movementRepository.collection.find().toFuture().futureValue
+        val movements = movementRepository.collection.find().toFuture().futureValue
 
-      movements.size mustBe 1
-      assertResults(movements.find(_.consignorId.equals("1")).get, Movement(Some("boxId"), "token", "1", None, None, Instant.now, Seq.empty))
+        movements.size mustBe 1
+        assertResults(movements.find(_.consignorId.equals("1")).get, cachedMovement1)
 
-      val workItems = findAll().futureValue
+        val workItems = findAll().futureValue
 
-      workItems.find(_.item.exciseNumber.equals("1")).get.status mustBe ProcessingStatus.ToDo
+        workItems.find(_.item.exciseNumber.equals("1")).get.status mustBe ProcessingStatus.ToDo
+      }
     }
 
+  }
+
+  private def setUpMovementRepository(movementRepository: MovementRepository) = {
+    val message1 = Message(123, "encodedMessage","IE801", "messageId")
+    val message2 = Message(123, "encodedMessage","IE802", "messageId-2")
+
+    when(movementRepository.getAllBy(eqTo("1")))
+      .thenReturn(
+        Future.successful(Seq(cachedMovement1)),
+        Future.successful(Seq(cachedMovement1.copy(administrativeReferenceCode = Some("tokentokentokentokent"), messages = Seq(message1)))),
+        Future.successful(Seq(cachedMovement1.copy(administrativeReferenceCode = Some("tokentokentokentokent"), messages = Seq(message1, message2))))
+      )
+    when(movementRepository.getAllBy(eqTo("3")))
+      .thenReturn(Future.successful(Seq(cachedMovement2)))
+    when(movementRepository.getAllBy(eqTo("4")))
+      .thenReturn(Future.successful(Seq(cachedMovement3)))
+
+    when(movementRepository.updateMovement(mockitoAny)) thenAnswer {
+      (m: Movement) => {
+        val hasMessageWithId = m.consignorId.equals("1") && m.messages.filter(o => o.messageId.equals("messageId-2")).size > 0
+        if (hasMessageWithId) {
+          throw new RuntimeException("error saving movement")
+        } else
+          Future.successful(Some(m))
+      }
+    }
   }
 
   private def assertPushNotificationApiForErn1(expectedMovement: Movement, movementId: String): Unit = {
@@ -319,6 +466,18 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
 
   private def setUpWireMockStubs(): Unit = {
     stubShowNewMessageRequestForConsignorId1()
+    stubShowNewMessageRequestForConsignorId3()
+    stubShowNewMessageRequestForConsignorId4()
+    stubMessageReceiptRequest("1")
+    stubMessageReceiptRequest("3")
+    stubMessageReceiptRequest("4")
+    stubPushNotification("boxId1")
+    stubPushNotification("boxId2")
+    stubPushNotification("boxId3")
+  }
+
+  private def setUpWireMockStubsWithDuplicate(): Unit = {
+    stubShowNewMessageRequestForConsignorId1WithDuplicate()
     stubShowNewMessageRequestForConsignorId3()
     stubShowNewMessageRequestForConsignorId4()
     stubMessageReceiptRequest("1")
@@ -398,6 +557,53 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
     stubForEmptyMessageData("1")
   }
 
+  private def stubShowNewMessageRequestForConsignorId1WithDuplicate(): Unit = {
+    wireMock.stubFor(
+      put(s"${showNewMessageUrl}1")
+        .inScenario("requesting-new-message-for-ern-1")
+        .whenScenarioStateIs(Scenario.STARTED)
+        .willReturn(ok().withBody(Json.toJson(
+          EISConsumptionResponse(
+            Instant.parse("2023-01-02T03:04:05Z"),
+            "1",
+            //Set the new message count so it will poll again and get the item below
+            Base64.getEncoder.encodeToString(newMessageWithIE801(11).toString().getBytes(StandardCharsets.UTF_8)),
+          )).toString()
+        ))
+        .willSetStateTo("show-second-response")
+    )
+
+    wireMock.stubFor(
+      put(s"${showNewMessageUrl}1")
+        .inScenario("requesting-new-message-for-ern-1")
+        .whenScenarioStateIs("show-second-response")
+        .willReturn(ok().withBody(Json.toJson(
+          EISConsumptionResponse(
+            Instant.parse("2024-01-02T03:04:05Z"),
+            "1",
+            Base64.getEncoder.encodeToString(newMessageWith818And802.toString().getBytes(StandardCharsets.UTF_8)),
+          )).toString()
+        ))
+        .willSetStateTo("show-duplicate-messages")
+    )
+
+    wireMock.stubFor(
+      put(s"${showNewMessageUrl}1")
+        .inScenario("requesting-new-message-for-ern-1")
+        .whenScenarioStateIs("show-duplicate-messages")
+        .willReturn(ok().withBody(Json.toJson(
+          EISConsumptionResponse(
+            Instant.parse("2024-01-02T03:04:05Z"),
+            "1",
+            Base64.getEncoder.encodeToString(newMessageWith818And802.toString().getBytes(StandardCharsets.UTF_8)),
+          )).toString()
+        ))
+        .willSetStateTo("show-empty-message")
+    )
+
+    stubForEmptyMessageData("1")
+  }
+
   private def stubForThrowingError(): StubMapping = {
     wireMock.stubFor(
       put(s"${showNewMessageUrl}1")
@@ -424,7 +630,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
     wireMock.stubFor(
       put(s"$messageReceiptUrl$exciseNumber")
         .willReturn(ok().withBody(Json.toJson(
-          MessageReceiptResponse(
+          MessageReceiptSuccessResponse(
             Instant.parse("2023-01-02T03:04:05Z"),
             exciseNumber,
             3
