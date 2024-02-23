@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import cats.data.EitherT
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
-import org.mockito.MockitoSugar.{reset, verify, when}
+import org.mockito.MockitoSugar.{reset, times, verify, when}
 import org.mongodb.scala.MongoException
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
@@ -94,10 +94,17 @@ class SubmitMessageControllerSpec
 
     }
 
-    "sends an audit event" in {
+    "send an audit event" in {
       await(createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request))
 
       verify(auditService).auditMessage(any)(any)
+    }
+
+    "not send an audit event if submit call fails" in {
+      reset(submissionMessageService)
+      when(submissionMessageService.submit(any, any)(any)).thenReturn(Future.successful(Left(BadRequest(""))))
+
+      verify(auditService, times(0)).auditMessage(any)(any)
     }
 
     "call the add work item routine to create or update the database" in {
