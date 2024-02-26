@@ -120,6 +120,9 @@ class PollingNewMessagesWithWorkItemJobSpec
       .thenReturn(Future.successful(SuccessPushNotificationResponse("notificationId)")))
 
     when(auditService.auditMessage(any)(any)).thenReturn(EitherT.fromEither(Right(())))
+
+    when(newMessageService.acknowledgeMessage(any)(any))
+      .thenReturn(successful(MessageReceiptSuccessResponse(timestamp, "", 0)))
   }
 
   "Job" should {
@@ -155,8 +158,6 @@ class PollingNewMessagesWithWorkItemJobSpec
       addOneItemToMockQueue(workItem)
       when(newMessageService.getNewMessages(any)(any))
         .thenReturn(Future.successful(Some((newMessageResponse, 10))))
-      when(newMessageService.acknowledgeMessage(any)(any))
-        .thenReturn(successful(MessageReceiptSuccessResponse(timestamp, "", 0)))
 
       await(job.executeInMutex)
 
@@ -168,8 +169,6 @@ class PollingNewMessagesWithWorkItemJobSpec
       addOneItemToMockQueue(workItem)
       when(newMessageService.getNewMessages(any)(any))
         .thenReturn(Future.successful(Some((newMessageResponse, 17))))
-      when(newMessageService.acknowledgeMessage(any)(any))
-        .thenReturn(successful(MessageReceiptSuccessResponse(timestamp, "", 0)))
 
       await(job.executeInMutex)
 
@@ -355,13 +354,16 @@ class PollingNewMessagesWithWorkItemJobSpec
           .thenReturn(Seq(message, ie801Message, ie813Message))
 
         when(movementService.updateMovement(any, any))
-          .thenReturn(Future.successful(Seq(Movement(Some("id1"), "boxId1", "consignor", Some("consignee")))))
+          .thenReturn(Future.successful(Seq(
+            Movement(Some("id1"), "boxId1", "consignor", Some("consignee")),
+            Movement(Some("id2"), "boxId1", "consignor", Some("consignee"))
+          )))
 
         await(job.executeInMutex)
 
-      verify(notificationService).sendNotification(eqTo("123"), any[Movement], eqTo("1"))(any)
-      verify(notificationService).sendNotification(eqTo("123"), any[Movement], eqTo("2"))(any)
-      verify(notificationService).sendNotification(eqTo("123"), any[Movement], eqTo("3"))(any)
+      verify(notificationService, times(2)).sendNotification(eqTo("123"), any[Movement], eqTo("1"))(any)
+      verify(notificationService, times(2)).sendNotification(eqTo("123"), any[Movement], eqTo("2"))(any)
+      verify(notificationService,  times(2)).sendNotification(eqTo("123"), any[Movement], eqTo("3"))(any)
       }
 
     }

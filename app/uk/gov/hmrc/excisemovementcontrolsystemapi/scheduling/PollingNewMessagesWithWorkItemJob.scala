@@ -147,23 +147,15 @@ class PollingNewMessagesWithWorkItemJob @Inject()
   }
 
   private def saveToDbAndSendNotification(
-    message: IEMessage,
-    exciseNumber: String
-  )(implicit ec: ExecutionContext): Future[Boolean] = {
+                                            message: IEMessage,
+                                            exciseNumber: String
+                                          )(implicit ec: ExecutionContext): Future[Boolean] = {
 
-    movementService.updateMovement(message, exciseNumber).map {
-      case Nil => Future(false)
-      case movements =>
-        if (!appConfig.pushNotificationsEnabled) {
-          movements match {
-            case Nil => successful(false)
-            case _ :: _ => successful(true)
-          }
-        } else {
-          sendNotification(exciseNumber, movements, message.messageIdentifier)
-        }
-    }.flatten
-
+    movementService.updateMovement(message, exciseNumber).flatMap {
+      case Nil => successful(false)
+      case _: Seq[_] if !appConfig.pushNotificationsEnabled => successful(true)
+      case movements: Seq[_] => sendNotification(exciseNumber, movements, message.messageIdentifier)
+    }
   }
 
   private def sendNotification(exciseNumber: String, movements: Seq[Movement], messageId: String) = {
