@@ -155,7 +155,7 @@ class PollingNewMessagesWithWorkItemJob @Inject()
       case Nil => Future(false)
       case movements =>
         if (!appConfig.pushNotificationsEnabled) {
-          movements match {
+          movements.toList match {
             case Nil => successful(false)
             case _ :: _ => successful(true)
           }
