@@ -101,7 +101,6 @@ class SubmitMessageControllerSpec
     }
 
     "not send an audit event if submit call fails" in {
-      reset(submissionMessageService)
       when(submissionMessageService.submit(any, any)(any)).thenReturn(Future.successful(Left(BadRequest(""))))
 
       verify(auditService, times(0)).auditMessage(any)(any)
