@@ -34,7 +34,6 @@ import uk.gov.hmrc.mongo.workitem.ProcessingStatus.InProgress
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 import scala.concurrent.ExecutionContext
 
 class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
@@ -49,8 +48,7 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val appConfig = app.injector.instanceOf[AppConfig]
   private lazy val dateTimeService = mock[DateTimeService]
-  private lazy val timestamp = Instant.parse("2018-11-30T18:35:24.001234Z")
-  private lazy val timestampInMillis = timestamp.truncatedTo(ChronoUnit.MILLIS)
+  private lazy val timestamp = Instant.parse("2018-11-30T18:35:24.001Z")
 
   protected override val repository = new ExciseNumberQueueWorkItemRepository(
     appConfig,
@@ -100,12 +98,12 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
 
     "update Work Item in db" in {
 
-      val originalWI = createWorkItemForErn("ern1", timestamp.minusSeconds(120))
+      val originalWI = createWorkItemForErn("ern1")
       insert(originalWI).futureValue
 
       val updatedWI = originalWI.copy(
         item = originalWI.item.copy(fastPollRetriesLeft = 23),
-        availableAt = Instant.parse("2023-11-23T15:25:21.123456Z"),
+        availableAt = Instant.parse("2023-11-23T15:25:21.123Z"),
         receivedAt = timestamp.plusSeconds(10),
         status = InProgress,
         failureCount = 18
@@ -114,8 +112,8 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
       repository.saveUpdatedWorkItem(updatedWI).futureValue mustBe true
 
       val savedWorkItems = find(
-          Filters.in("item.exciseNumber", "ern1"),
-        ).futureValue
+        Filters.in("item.exciseNumber", "ern1"),
+      ).futureValue
 
       withClue("should update rather than insert an item - ern is unique index") {
         savedWorkItems.size mustBe 1
@@ -127,17 +125,16 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
         savedWorkItem.item mustBe updatedWI.item
       }
 
-      // The database is storing these as ISODates and so truncated to milliseconds
       withClue("should update availableAt") {
-        savedWorkItem.availableAt mustBe updatedWI.availableAt.truncatedTo(ChronoUnit.MILLIS)
+        savedWorkItem.availableAt mustBe updatedWI.availableAt
       }
 
       withClue("should update updatedAt") {
-        savedWorkItem.updatedAt mustBe timestamp.truncatedTo(ChronoUnit.MILLIS)
+        savedWorkItem.updatedAt mustBe timestamp
       }
 
       withClue("should update ReceivedAt (lastSubmitted)") {
-        savedWorkItem.receivedAt mustBe updatedWI.receivedAt.truncatedTo(ChronoUnit.MILLIS)
+        savedWorkItem.receivedAt mustBe updatedWI.receivedAt
       }
 
       withClue("should update status") {
@@ -151,11 +148,11 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
     }
   }
 
-  private def createWorkItemForErn(ern: String, updateAt: Instant = timestamp)  =
+  private def createWorkItemForErn(ern: String) =
     TestUtils.createWorkItem(
       ern = ern,
-      availableAt = timestampInMillis,
-      updatedAt = timestampInMillis,
-      receivedAt = timestampInMillis
+      availableAt = timestamp,
+      updatedAt = timestamp,
+      receivedAt = timestamp
     )
 }
