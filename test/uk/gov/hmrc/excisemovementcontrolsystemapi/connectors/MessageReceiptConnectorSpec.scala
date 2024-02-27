@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.connector
+package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import com.codahale.metrics.Timer
 import com.kenshoo.play.metrics.Metrics
@@ -54,7 +54,7 @@ class MessageReceiptConnectorSpec
   private val dateTimeService = mock[DateTimeService]
   private val sut = new MessageReceiptConnector(httpClient, appConfig, emcsUtil, metrics, dateTimeService)
 
-  private val timestamp = Instant.parse("2023-01-02T03:04:05Z")
+  private val timestamp = Instant.parse("2023-01-02T03:04:05.986Z")
   private val response = MessageReceiptSuccessResponse(timestamp, "123", 10)
 
   private val messagesBearerToken = "messagesBearerToken"
@@ -65,7 +65,7 @@ class MessageReceiptConnectorSpec
 
     when(httpClient.PUTString[Any](any, any, any)(any, any, any))
       .thenReturn(Future.successful(HttpResponse(200, Json.toJson(response).toString())))
-    when(dateTimeService.timestamp()).thenReturn(timestamp)
+    when(dateTimeService.timestampToMilliseconds()).thenReturn(timestamp)
     when(emcsUtil.generateCorrelationId).thenReturn("12345")
     when(appConfig.messageReceiptUrl(any)).thenReturn("/messageReceipt")
     when(appConfig.messagesBearerToken).thenReturn(messagesBearerToken)
@@ -82,7 +82,7 @@ class MessageReceiptConnectorSpec
     "should sent a request with the right parameters" in {
       await(sut.put("123"))
 
-      val headers = Seq(
+      val expectedHeaders = Seq(
         XForwardedHostName -> MDTPHost,
         XCorrelationIdName -> "12345",
         SourceName -> APIPSource,
@@ -92,7 +92,7 @@ class MessageReceiptConnectorSpec
       verify(httpClient).PUTString[Any](
         eqTo("/messageReceipt"),
         eqTo(""),
-        eqTo(headers)
+        eqTo(expectedHeaders)
       )(any, any, any)
     }
 

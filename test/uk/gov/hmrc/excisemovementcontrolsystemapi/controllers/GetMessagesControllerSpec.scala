@@ -53,14 +53,14 @@ class GetMessagesControllerSpec extends PlaySpec
   private val cc = stubControllerComponents()
   private val validUUID = "cfdb20c7-d0b0-4b8b-a071-737d68dede5e"
   private val dateTimeService = mock[DateTimeService]
-  private val timeStamp = Instant.parse("2020-01-01T01:01:01.1Z")
+  private val timeStamp = Instant.parse("2020-01-01T01:01:01.123456Z")
   private val workItemService = mock[WorkItemService]
   private val messageCreateOn = Instant.now()
 
   private val MovementIdFormatError = Json.parse(
     """
       |{
-      | "dateTime":"2020-01-01T01:01:01.100Z",
+      | "dateTime":"2020-01-01T01:01:01.123456Z",
       | "message":"Movement Id format error",
       | "debugMessage":"The movement ID should be a valid UUID"
       | }""".stripMargin)

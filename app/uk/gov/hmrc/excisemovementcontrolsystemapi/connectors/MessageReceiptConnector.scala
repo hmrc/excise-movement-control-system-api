@@ -42,7 +42,7 @@ class MessageReceiptConnector @Inject()
   def put(ern: String)(implicit hc: HeaderCarrier): Future[MessageReceiptResponse] = {
 
     val timer = metrics.defaultRegistry.timer("emcs.messagereceipt.timer").time()
-    val dateTime = dateTimeService.timestamp()
+    val dateTime = dateTimeService.timestampToMilliseconds()
     val correlationId = eisUtils.generateCorrelationId
 
     httpClient.PUTString[HttpResponse](

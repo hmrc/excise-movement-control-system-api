@@ -47,7 +47,7 @@ class PreValidateTraderConnector @Inject()
     val timer = metrics.defaultRegistry.timer("emcs.prevalidatetrader.connector.timer").time()
 
     val correlationId = emcsUtils.generateCorrelationId
-    val timestamp = dateTimeService.timestamp()
+    val timestamp = dateTimeService.timestampToMilliseconds()
     val createdDateTime = timestamp.toString
 
     httpClient.POST[PreValidateTraderRequest, Either[Result, PreValidateTraderResponse]](

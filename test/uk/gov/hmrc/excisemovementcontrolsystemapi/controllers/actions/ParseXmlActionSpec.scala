@@ -52,7 +52,7 @@ class ParseXmlActionSpec
     dateTimeService,
     stubControllerComponents()
   )
-  private val timestamp = Instant.parse("2023-05-11T01:01:01Z")
+  private val timestamp = Instant.parse("2023-05-11T01:01:01.987654Z")
 
   private val xmlStr =
     """<IE815>

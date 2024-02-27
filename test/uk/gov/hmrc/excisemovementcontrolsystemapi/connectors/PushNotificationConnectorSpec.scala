@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.connector
+package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, verify, when}
@@ -40,7 +40,7 @@ class PushNotificationConnectorSpec
     with EitherValues
     with BeforeAndAfterEach {
 
-  implicit val ec: ExecutionContext = ExecutionContext.global;
+  implicit val ec: ExecutionContext = ExecutionContext.global
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
   private val httpClient = mock[HttpClient]
@@ -191,7 +191,7 @@ class PushNotificationConnectorSpec
          |"debugMessage":"$debugMessage"}""".stripMargin)
   }
 
-  def buildPushNotificationJsonError(status: Int, debugMessage: String) = {
+  private def buildPushNotificationJsonError(status: Int, debugMessage: String) = {
     Json.parse(
       s"""{"status":$status,
          |"message":"Push notification error",

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.connector
+package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import com.codahale.metrics.Timer
 import com.kenshoo.play.metrics.Metrics
@@ -52,7 +52,7 @@ class GetMovementConnectorSpec extends PlaySpec
   private val emcsUtil = mock[EmcsUtils]
   private val dateTimeService = mock[DateTimeService]
   private val sut = new GetMovementConnector(httpClient, appConfig, emcsUtil, metrics, dateTimeService)
-  private val timestamp = Instant.parse("2023-02-03T05:06:07Z")
+  private val timestamp = Instant.parse("2023-02-03T05:06:07.312Z")
   private val response = EISConsumptionResponse(
     timestamp,
     "ern",
@@ -73,7 +73,7 @@ class GetMovementConnectorSpec extends PlaySpec
     when(appConfig.traderMovementUrl).thenReturn("/trader-movement-url")
     when(appConfig.movementBearerToken).thenReturn(movementBearerToken)
     when(emcsUtil.generateCorrelationId).thenReturn("1234")
-    when(dateTimeService.timestamp()).thenReturn(timestamp)
+    when(dateTimeService.timestampToMilliseconds()).thenReturn(timestamp)
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
   }
 

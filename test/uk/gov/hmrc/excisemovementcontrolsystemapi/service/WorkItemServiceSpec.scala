@@ -46,7 +46,7 @@ class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
   private val mockWorkItemRepo = mock[ExciseNumberQueueWorkItemRepository]
   private val dateTimeService = mock[DateTimeService]
   private val appConfig = mock[AppConfig]
-  private val timestamp = Instant.parse("2023-11-30T18:35:24.00Z")
+  private val timestamp = Instant.parse("2023-11-30T18:35:24.000001Z")
   private val timestampPlusFastInterval = timestamp.plusSeconds(3 * 60)
   private val timestampPlusSlowInterval = timestamp.plusSeconds(2 * 60 * 60)
 

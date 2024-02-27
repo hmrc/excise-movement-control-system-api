@@ -48,7 +48,7 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val appConfig = app.injector.instanceOf[AppConfig]
   private lazy val dateTimeService = mock[DateTimeService]
-  private lazy val timestamp = Instant.parse("2018-11-30T18:35:24.00Z")
+  private lazy val timestamp = Instant.parse("2018-11-30T18:35:24.001Z")
 
   protected override val repository = new ExciseNumberQueueWorkItemRepository(
     appConfig,
@@ -98,12 +98,12 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
 
     "update Work Item in db" in {
 
-      val originalWI = createWorkItemForErn("ern1", timestamp.minusSeconds(120))
+      val originalWI = createWorkItemForErn("ern1")
       insert(originalWI).futureValue
 
       val updatedWI = originalWI.copy(
         item = originalWI.item.copy(fastPollRetriesLeft = 23),
-        availableAt = Instant.parse("2023-11-23T15:25:21.12Z"),
+        availableAt = Instant.parse("2023-11-23T15:25:21.123Z"),
         receivedAt = timestamp.plusSeconds(10),
         status = InProgress,
         failureCount = 18
@@ -112,8 +112,8 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
       repository.saveUpdatedWorkItem(updatedWI).futureValue mustBe true
 
       val savedWorkItems = find(
-          Filters.in("item.exciseNumber", "ern1"),
-        ).futureValue
+        Filters.in("item.exciseNumber", "ern1"),
+      ).futureValue
 
       withClue("should update rather than insert an item - ern is unique index") {
         savedWorkItems.size mustBe 1
@@ -148,7 +148,7 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
     }
   }
 
-  private def createWorkItemForErn(ern: String, updateAt: Instant = timestamp)  =
+  private def createWorkItemForErn(ern: String) =
     TestUtils.createWorkItem(
       ern = ern,
       availableAt = timestamp,

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.connector
+package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 
 import com.codahale.metrics.Timer
@@ -95,7 +95,7 @@ class EISSubmissionConnectorSpec
 
     when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "Success", emcsCorrelationId))))
-    when(dateTimeService.timestamp()).thenReturn(timestamp)
+    when(dateTimeService.timestampToMilliseconds()).thenReturn(timestamp)
     when(appConfig.emcsReceiverMessageUrl).thenReturn("/eis/path")
     when(appConfig.submissionBearerToken).thenReturn(submissionBearerToken)
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext

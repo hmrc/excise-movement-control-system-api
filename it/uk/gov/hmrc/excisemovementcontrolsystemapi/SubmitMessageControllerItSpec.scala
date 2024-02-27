@@ -41,6 +41,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumber
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
@@ -65,6 +66,8 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
   //This matches the data from the IE818 test message
   private val movement = Movement(Some("boxId"), "LRNQA20230909022221", consignorId, Some(consigneeId), Some("23GB00000000000378553"))
+
+  private val timestamp = Instant.now
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
@@ -98,7 +101,9 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
     when(workItemRepository.pushNew(any, any, any)).thenReturn(Future.successful(workItem))
     when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
-    when(dateTimeService.timestamp()).thenReturn(Instant.now)
+    when(dateTimeService.timestamp()).thenReturn(timestamp)
+    when(dateTimeService.timestampToMilliseconds()).thenReturn(timestamp.truncatedTo(ChronoUnit.MILLIS))
+
     authorizeNrsWithIdentityData
     stubNrsResponse
 

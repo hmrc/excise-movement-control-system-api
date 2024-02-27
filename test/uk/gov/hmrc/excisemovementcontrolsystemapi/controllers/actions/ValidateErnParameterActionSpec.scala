@@ -35,7 +35,7 @@ class ValidateErnParameterActionSpec extends PlaySpec {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val dateTimeService = mock[DateTimeService]
-  private val currentDateTime = Instant.parse("2023-10-18T15:33:33Z")
+  private val currentDateTime = Instant.parse("2023-10-18T15:33:33.987654Z")
   private val sut = new ValidateErnParameterActionImpl(dateTimeService, stubMessagesControllerComponents())
 
   when(dateTimeService.timestamp()).thenReturn(currentDateTime)

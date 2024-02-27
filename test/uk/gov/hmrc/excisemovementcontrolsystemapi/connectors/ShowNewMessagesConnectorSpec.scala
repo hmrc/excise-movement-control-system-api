@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.connector
+package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import com.codahale.metrics.Timer
 import com.kenshoo.play.metrics.Metrics
@@ -71,7 +71,7 @@ class ShowNewMessagesConnectorSpec
     when(httpClient.PUTString[Any](any, any, any)(any, any, any))
       .thenReturn(Future.successful(HttpResponse(200, Json.toJson(response).toString())))
     when(eisUtil.generateCorrelationId).thenReturn("1234")
-    when(dateTimeService.timestamp()).thenReturn(timestamp)
+    when(dateTimeService.timestampToMilliseconds()).thenReturn(timestamp)
     when(appConfig.showNewMessageUrl(any)).thenReturn("/showNewMessage")
     when(appConfig.messagesBearerToken).thenReturn(messagesBearerToken)
     when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext

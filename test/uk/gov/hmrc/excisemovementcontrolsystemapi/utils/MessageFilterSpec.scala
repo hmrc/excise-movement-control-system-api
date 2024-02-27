@@ -38,7 +38,7 @@ class MessageFilterSpec extends PlaySpec
   private val emcsUtils = new EmcsUtils
   private val messageFactory = new IEMessageFactory
 
-  private val timestamp = Instant.parse("2018-11-30T18:35:24.00Z")
+  private val timestamp = Instant.parse("2018-11-30T18:35:24.001234Z")
   when(dateTimeService.timestamp()).thenReturn(timestamp)
 
   "filter" should {

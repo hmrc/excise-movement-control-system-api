@@ -14,20 +14,19 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.connector.util
+package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util
 
 
+import org.scalatest.EitherValues
 import org.scalatest.Inspectors.forAll
-import org.scalatest.{EitherValues, OptionValues}
 import org.scalatestplus.play.PlaySpec
 import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, SERVICE_UNAVAILABLE}
 import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTraderHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderErrorResponse, getPreValidateTraderSuccessResponse}
 import uk.gov.hmrc.http.HttpResponse
 
-class PreValidateTraderHttpReaderSpec extends PlaySpec with EitherValues with OptionValues {
+class PreValidateTraderHttpReaderSpec extends PlaySpec with EitherValues {
 
   private val validResponse = getPreValidateTraderSuccessResponse
   private val businessError = getPreValidateTraderErrorResponse

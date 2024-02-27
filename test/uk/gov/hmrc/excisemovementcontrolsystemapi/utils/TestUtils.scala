@@ -43,7 +43,7 @@ object TestUtils {
 
   def getPreValidateTraderSuccessResponse: PreValidateTraderResponse = PreValidateTraderResponse(Some(
     ExciseTraderValidationResponse(
-      validationTimeStamp = "2021-12-17T09:31:12Z",
+      validationTimeStamp = "2021-12-17T09:31:123Z",
       exciseTraderResponse = Array(ExciseTraderResponse(
         exciseRegistrationNumber = "GBWK002281023",
         entityGroup = "UK Record",
@@ -56,7 +56,7 @@ object TestUtils {
   )
 
   def getPreValidateTraderErrorResponse: PreValidateTraderResponse = PreValidateTraderResponse(
-    validationTimeStamp = Some("2021-12-17T09:31:12Z"),
+    validationTimeStamp = Some("2021-12-17T09:31:123Z"),
     exciseTraderResponse = Some(Array(ExciseTraderResponse(
       validTrader = false,
       exciseRegistrationNumber = "GBWK000000000",

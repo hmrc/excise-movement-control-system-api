@@ -39,7 +39,7 @@ class GetNewMessageServiceSpec
   protected implicit val ec: ExecutionContext = ExecutionContext.global
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  private val dateTime = Instant.parse("2023-03-04T05:06:07Z")
+  private val dateTime = Instant.parse("2023-03-04T05:06:07.123Z")
   private val showNewMessageConnector = mock[ShowNewMessagesConnector]
   private val messageReceiptConnector = mock[MessageReceiptConnector]
   private val showNewMessageParser = mock[NewMessageParserService]
