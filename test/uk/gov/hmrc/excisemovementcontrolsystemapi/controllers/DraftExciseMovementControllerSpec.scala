@@ -163,7 +163,7 @@ class DraftExciseMovementControllerSpec
       verify(notificationService).getBoxId(eqTo("clientId"), eqTo(Some(clientBoxId)))(any)
     }
 
-    "sends an audit event" in {
+    "send an audit event" in {
       when(movementService.saveNewMovement(any))
         .thenReturn(Future.successful(Right(Movement(Some(defaultBoxId), "123", consignorId, Some("789"), None, Instant.now))))
 
@@ -172,6 +172,12 @@ class DraftExciseMovementControllerSpec
       await(createWithSuccessfulAuth.submit(request))
 
       verify(auditService).auditMessage(any)(any)
+    }
+
+    "not send an audit event if submit call fails" in {
+      when(submissionMessageService.submit(any, any)(any)).thenReturn(Future.successful(Left(BadRequest(""))))
+
+      verify(auditService, times(0)).auditMessage(any)(any)
     }
 
     "call the add work item routine to create or update the database" in {
