@@ -370,12 +370,12 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
           verifyItemAvailableAt(
             createdWorkItem.availableAt.plusSeconds(2 * 60).truncatedTo(ChronoUnit.MILLIS)
           ).futureValue mustBe true
-	}
-
-          eventually {
-            verifyItemStatus(ProcessingStatus.ToDo).futureValue mustBe true
-          }
         }
+
+        eventually {
+          verifyItemStatus(ProcessingStatus.ToDo).futureValue mustBe true
+        }
+
       }
     }
 
