@@ -29,6 +29,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseM
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -51,7 +52,7 @@ class DraftExciseMovementController @Inject()(
 )(implicit ec: ExecutionContext)
   extends BackendController(cc) {
 
-  def submit: Action[NodeSeq] =
+  def submit: Action[NodeSeq] = {
 
 
     (authAction andThen xmlParser).async(parse.xml) {
@@ -62,9 +63,7 @@ class DraftExciseMovementController @Inject()(
           authorisedErn <- validateMessage(ie815Message, request.erns)
           clientId <- retrieveClientIdFromHeader(request)
           boxId <- getBoxId(clientId)
-          _ <- EitherT(submissionMessageService.submit(request, authorisedErn))
-          _ <- auditService.auditMessage(ie815Message)
-          movement <- saveMovement(boxId, ie815Message)
+          movement <- ssa_internal(request, authorisedErn, boxId, ie815Message)
         } yield {
           Accepted(Json.toJson(ExciseMovementResponse(
             "Accepted",
@@ -80,6 +79,22 @@ class DraftExciseMovementController @Inject()(
         result.merge
     }
 
+
+
+  }
+
+  private def ssa_internal(request: ParsedXmlRequest[_], ern: String, boxId: Option[String], message: IE815Message)(implicit hc: HeaderCarrier): EitherT[Future, Result, Movement] = {
+    EitherT {
+      submissionMessageService.submit(request, ern).flatMap {
+        case Left(result) => auditService.auditMessage(message, "Failed to Submit"); Future.successful(Left(result))
+        case Right(_) => saveMovement(boxId, message).value.map {
+          case Left(result) => auditService.auditMessage(message, "Failed to Save"); Left(result)
+          case Right(movement) => auditService.auditMessage(message); Right(movement)
+        }
+      }
+    }
+  }
+
   private def validateMessage(
     message: IE815Message,
     authErns: Set[String]
@@ -89,6 +104,7 @@ class DraftExciseMovementController @Inject()(
       x => messageValidator.convertErrorToResponse(x, dateTimeService.timestamp())
     })
   }
+
 
   private def saveMovement(
     boxId: Option[String],

@@ -49,13 +49,27 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
 
   case class TestType(testObject: TestMessageType, message: IEMessage) {
 
-    "successfully converted to audit event" in {
+    "successfully converted to success audit event" in {
 
-      val result = AuditEventFactory.createAuditEvent(message)
+      val result = AuditEventFactory.createAuditEvent(message, None)
       val expectedResult =  ExtendedDataEvent(
         auditSource = "excise-movement-control-system-api",
         auditType = message.auditType.name,
-        detail = testObject.json1
+        detail = testObject.auditEvent
+      )
+
+      result.auditSource mustBe expectedResult.auditSource
+      result.auditType mustBe expectedResult.auditType
+      result.detail mustBe expectedResult.detail
+    }
+
+    "converted to failure audit event" in {
+      val testMessage = "Test Message"
+      val result = AuditEventFactory.createAuditEvent(message, Some(testMessage))
+      val expectedResult = ExtendedDataEvent(
+        auditSource = "excise-movement-control-system-api",
+        auditType = message.auditType.name,
+        detail = testObject.auditFailure(testMessage)
       )
 
       result.auditSource mustBe expectedResult.auditSource

@@ -21,5 +21,7 @@ import play.api.libs.json.JsValue
 trait TestMessageType {
 
   def json1: JsValue
+  def auditEvent: JsValue
+  def auditFailure(failureReason: String): JsValue
 
 }

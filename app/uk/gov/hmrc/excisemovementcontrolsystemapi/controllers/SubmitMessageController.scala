@@ -103,11 +103,12 @@ class SubmitMessageController @Inject()(
                          (implicit hc: HeaderCarrier): EitherT[Future, Result, EISSubmissionResponse] = {
     workItemService.addWorkItemForErn(authorisedErn, fastMode = true)
 
-    for {
-      result <- EitherT(submissionMessageService.submit(request, authorisedErn))
-      _ <- auditService.auditMessage(request.ieMessage)
-    } yield result
-
+    EitherT {
+      submissionMessageService.submit(request, authorisedErn).map {
+        case Left(result) => auditService.auditMessage(request.ieMessage, "Failed to Submit"); Left(result)
+        case Right(response) => auditService.auditMessage(request.ieMessage); Right(response)
+      }
+    }
   }
 
 }
