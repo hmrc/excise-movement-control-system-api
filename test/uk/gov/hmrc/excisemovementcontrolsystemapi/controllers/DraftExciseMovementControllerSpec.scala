@@ -174,10 +174,28 @@ class DraftExciseMovementControllerSpec
       verify(auditService).auditMessage(any)(any)
     }
 
-    "not send an audit event if submit call fails" in {
+    "sends a failure audit when a message isn't submitted" in {
       when(submissionMessageService.submit(any, any)(any)).thenReturn(Future.successful(Left(BadRequest(""))))
 
-      verify(auditService, times(0)).auditMessage(any)(any)
+      await(createWithSuccessfulAuth.submit(request))
+
+      verify(auditService).auditMessage(any, any)(any)
+    }
+
+    "sends a failure audit when a message submits but doesn't save" in {
+      when(movementService.saveNewMovement(any)).thenReturn(Future.successful(Left(BadRequest(""))))
+
+      await(createWithSuccessfulAuth.submit(request))
+
+      verify(auditService).auditMessage(any, any)(any)
+    }
+
+    "sends a failure audit on unexpected error in movement service" in {
+      when(movementService.saveNewMovement(any)).thenThrow(new Exception(""))
+
+      await(createWithSuccessfulAuth.submit(request))
+
+      verify(auditService).auditMessage(any, any)(any)
     }
 
     "call the add work item routine to create or update the database" in {

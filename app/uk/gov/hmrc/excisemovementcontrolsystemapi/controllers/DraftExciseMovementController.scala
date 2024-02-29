@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import cats.data.EitherT
+import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
@@ -50,7 +51,7 @@ class DraftExciseMovementController @Inject()(
   appConfig: AppConfig,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-  extends BackendController(cc) {
+  extends BackendController(cc) with Logging{
 
   def submit: Action[NodeSeq] = {
 
@@ -63,7 +64,7 @@ class DraftExciseMovementController @Inject()(
           authorisedErn <- validateMessage(ie815Message, request.erns)
           clientId <- retrieveClientIdFromHeader(request)
           boxId <- getBoxId(clientId)
-          movement <- ssa_internal(request, authorisedErn, boxId, ie815Message)
+          movement <- submitSaveAudit(request, authorisedErn, boxId, ie815Message)
         } yield {
           Accepted(Json.toJson(ExciseMovementResponse(
             "Accepted",
@@ -83,14 +84,22 @@ class DraftExciseMovementController @Inject()(
 
   }
 
-  private def ssa_internal(request: ParsedXmlRequest[_], ern: String, boxId: Option[String], message: IE815Message)(implicit hc: HeaderCarrier): EitherT[Future, Result, Movement] = {
-    EitherT {
+  private def submitSaveAudit(request: ParsedXmlRequest[_], ern: String, boxId: Option[String], message: IE815Message)(implicit hc: HeaderCarrier): EitherT[Future, Result, Movement] = {
+    EitherT { //TODO: Is there a possibility to refactor this to the lower layers (i.e. in submissionMessage Service and workItemService)
       submissionMessageService.submit(request, ern).flatMap {
-        case Left(result) => auditService.auditMessage(message, "Failed to Submit"); Future.successful(Left(result))
+        case Left(result) => auditService.auditMessage(message, "Failed to Submit")
+          Future.successful(Left(result))
         case Right(_) => saveMovement(boxId, message).value.map {
-          case Left(result) => auditService.auditMessage(message, "Failed to Save"); Left(result)
-          case Right(movement) => auditService.auditMessage(message); Right(movement)
+          case Left(result) => auditService.auditMessage(message, "Failed to Save")
+            Left(result)
+          case Right(movement) => auditService.auditMessage(message)
+            Right(movement)
         }
+      }.recover {
+        case e =>
+          auditService.auditMessage(message, "Failed to Save and Submit (Recovered)")
+          logger.logger.error(e.getMessage)
+          Left(InternalServerError("Unexpected error when persisting and forwarding message"))
       }
     }
   }
