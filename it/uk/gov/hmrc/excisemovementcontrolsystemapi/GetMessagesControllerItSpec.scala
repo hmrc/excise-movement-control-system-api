@@ -130,19 +130,6 @@ class GetMessagesControllerItSpec extends PlaySpec
       result.status mustBe INTERNAL_SERVER_ERROR
     }
 
-    //todo: This may be deleted as it may not be a valid case. We should only have one movement,
-    // for a combination of lrn consignorId/consigneeId
-    "return 500 when multiple movements messages are found" in {
-      withAuthorizedTrader(consignorId)
-      val movementMessage = Movement(Some("boxId"), "", "", None, None, timestamp, Seq(Message("", "", "messageId", timestamp)))
-      when(movementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq(movementMessage, movementMessage)))
-
-      val result = getRequest()
-
-      result.status mustBe INTERNAL_SERVER_ERROR
-    }
-
     "return forbidden (403) when there are no authorized ERN" in {
       withAnEmptyERN()
 

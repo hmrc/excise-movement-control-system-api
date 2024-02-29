@@ -49,7 +49,7 @@ class GetMessagesController @Inject()(
     authAction.async(parse.default) {
       implicit request =>
 
-        //todo: do we need to validate messageId here? This is the messageIdentifier
+        //todo EMCS-529: do we need to validate messageId here? This is the messageIdentifier
         // of the message abd according to the xsd this is not a UUID and can be
         // of any char between 1 and 44 char length
         val result = for {
@@ -69,7 +69,7 @@ class GetMessagesController @Inject()(
   }
 
   def getMessagesForMovement(movementId: String, updatedSince: Option[String]): Action[AnyContent] = {
-    // todo: how we handle error here if for example MongoDb throws?
+
     authAction.async(parse.default) {
       implicit request: EnrolmentRequest[AnyContent] => {
 

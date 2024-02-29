@@ -20,7 +20,7 @@ import play.api.libs.json.{Json, OFormat}
 
 import java.time.Instant
 
-//todo: this could be refactor to create specific error response
+//todo - EMCS-389: this could be refactor to create specific error response
 // for each endpoint, (submission, notification, clientid error, etc
 
 trait GenericErrorResponse {

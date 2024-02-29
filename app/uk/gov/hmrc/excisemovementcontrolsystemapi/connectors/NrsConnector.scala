@@ -55,7 +55,6 @@ class NrsConnector @Inject()
             logger.info(s"[NrsConnector] - Non repudiation submission accepted with nrSubmissionId: ${submissionId.nrSubmissionId}")
             submissionId
           case _ =>
-            //todo: Add explicit audit error
             logger.warn(s"[NrsConnector] - Error when submitting to Non repudiation system (NRS) with status: ${response.status}, correlationId: $correlationId")
             NonRepudiationSubmissionFailed(response.status, response.body)
         }

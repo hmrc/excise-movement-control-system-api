@@ -275,25 +275,6 @@ class MovementRepositoryItSpec extends PlaySpec
 
   }
 
-  "getMovementByArc" should {
-    "return a list of movement" when {
-      "arc matches the supplied arc " in {
-        val expectedMovement1 = Movement(Some("boxId"), "lrn", "ern1", None, Some("arc1"))
-        val expectedMovement2 = Movement(Some("boxId"), "lrn", "ern2", None, Some("arc2"))
-        val expectedMovement3 = Movement(Some("boxId"), "lrn1", "ern1", None, Some("arc3"))
-        val expectedMovement4 = Movement(Some("boxId"), "lrn4", "ern4", None, Some("arc4"))
-        insertMovement(expectedMovement1)
-        insertMovement(expectedMovement2)
-        insertMovement(expectedMovement3)
-        insertMovement(expectedMovement4)
-
-        val result = repository.getMovementByARC("arc2").futureValue
-
-        result mustBe Some(expectedMovement2)
-      }
-    }
-  }
-
   "getAll" should {
     "get all record for a consignorId" in {
       val instant = Instant.now

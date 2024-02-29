@@ -119,7 +119,6 @@ class WorkItemService @Inject()
       failureCount = 0
     )
 
-    //TODO what happens if Work Item is locked in the db because the job is running at the same time as we get a submission???
     workItemRepository.saveUpdatedWorkItem(updatedWorkItem)
 
   }
