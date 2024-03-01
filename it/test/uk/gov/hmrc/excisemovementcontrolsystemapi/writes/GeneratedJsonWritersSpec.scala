@@ -17,12 +17,11 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.writes
 
 import generated.{IE704Type, IE801Type, IE802Type, IE803Type, IE807Type, IE810Type, IE813Type, IE815Type, IE818Type, IE819Type, IE829Type, IE837Type, IE839Type, IE840Type, IE871Type, IE881Type, IE905Type, XMLProtocol}
-import scalaxb.XMLFormat
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE704Message, IE801Message, IE802Message, IE803Message, IE807Message, IE810Message, IE813Message, IE815Message, IE818Message, IE819Message, IE829Message, IE837Message, IE839Message, IE840Message, IE871Message, IE881Message, IE905Message, IEMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.writes.testObjects._
 
 class GeneratedJsonWritersSpec extends AnyFreeSpec with GeneratedJsonWriters with Matchers with TestXml {
@@ -45,7 +44,7 @@ class GeneratedJsonWritersSpec extends AnyFreeSpec with GeneratedJsonWriters wit
   "IE881Message" - new TestType[IE881Type](IE881TestMessageType, IE881Message.createFromXml(IE881))
   "IE905Message" - new TestType[IE905Type](IE905TestMessageType, IE905Message.createFromXml(IE905))
 
-  case class TestType[T](testObject: TestMessageType, message: IEMessage)(implicit xmlFormat: XMLFormat[T]) extends XMLProtocol {
+  case class TestType[T](testObject: TestMessageType, message: IEMessage) extends XMLProtocol {
 
     "successfully converts model to Json" in {
       message.toJson mustBe testObject.json1

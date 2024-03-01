@@ -37,7 +37,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumber
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, TestUtils}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.lock.MongoLockRepository
+import uk.gov.hmrc.mongo.lock.{Lock, MongoLockRepository}
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
@@ -101,7 +101,7 @@ class PollingNewMessagesWithWorkItemJobSpec
       auditService
     )
 
-    when(lockRepository.takeLock(any, any, any)).thenReturn(Future.successful(true))
+    when(lockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(Lock("id", "owner", Instant.now, Instant.now))))
     when(lockRepository.releaseLock(any, any)).thenReturn(successful(()))
     when(dateTimeService.timestamp()).thenReturn(timestamp)
 

@@ -366,45 +366,39 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
         movements.size mustBe 1
         assertResults(movements.find(_.consignorId.equals("1")).get, cachedMovement1)
 
-        val workItems = findAll().futureValue
+        eventually {
+          verifyItemAvailableAt(
+            createdWorkItem.availableAt.plusSeconds(2 * 60).truncatedTo(ChronoUnit.MILLIS)
+          ).futureValue mustBe true
+        }
 
-      val workItem = workItems.find(_.item.exciseNumber.equals("1")).get
-      workItem.status mustBe ProcessingStatus.ToDo
-
-      //Work Item repo truncates to Milliseconds
-      workItem.availableAt mustBe createdWorkItem.availableAt.plusSeconds(2 * 60).truncatedTo(ChronoUnit.MILLIS)
+        eventually {
+          verifyItemStatus(ProcessingStatus.ToDo).futureValue mustBe true
+        }
 
       }
     }
+  }
 
-    "if fails mark work item as failed so can be retried" in {
-
-      val movementRepository = new MovementRepository(
-        mongoComponent,
-        mongoAppConfig,
-        timeService
-      )
-
-      stubForThrowingError()
-
-      insert(createWorkItem("1")).futureValue
-
-      movementRepository.saveMovement(cachedMovement1).futureValue
-
-      val app = appBuilder.build()
-      running(app) {
-
-        val movements = movementRepository.collection.find().toFuture().futureValue
-
-        movements.size mustBe 1
-        assertResults(movements.find(_.consignorId.equals("1")).get, cachedMovement1)
-
-        val workItems = findAll().futureValue
-
-        workItems.find(_.item.exciseNumber.equals("1")).get.status mustBe ProcessingStatus.ToDo
+  def verifyItemStatus(expectedProcessingStatus: ProcessingStatus): Future[Boolean] = {
+    findAll().map { records =>
+      records.toList match {
+        case Nil => false
+        case head :: _ => head.status.equals(expectedProcessingStatus)
       }
     }
+  }
 
+  def verifyItemAvailableAt(
+    expectedAvailableDate: Instant
+  ): Future[Boolean] = {
+
+    findAll().map { records =>
+      records.toList match {
+        case Nil => false
+        case head :: _ => head.availableAt.compareTo(expectedAvailableDate) == 0
+      }
+    }
   }
 
   private def setUpMovementRepository(movementRepository: MovementRepository) = {

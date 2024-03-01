@@ -29,8 +29,8 @@ import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem, WorkItemFields, W
 import java.time.{Duration, Instant}
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
-import scala.compat.java8.DurationConverters.FiniteDurationops
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.DurationConverters.ScalaDurationOps
 
 class ExciseNumberQueueWorkItemRepository @Inject()
 (

@@ -18,8 +18,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.writes.testObjects
 
 import play.api.libs.json.JsValue
 
-import scala.xml.NodeSeq
-
 trait TestMessageType {
 
   def json1: JsValue

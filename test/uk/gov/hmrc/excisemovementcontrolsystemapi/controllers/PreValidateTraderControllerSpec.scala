@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.{reset, verify, when}
 import org.scalatest.BeforeAndAfterEach

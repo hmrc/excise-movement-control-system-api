@@ -34,9 +34,9 @@ import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{Failed, InProgress, ToDo}
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.Instant
-import scala.compat.java8.DurationConverters.FiniteDurationops
 import scala.concurrent.duration.{Duration, HOURS, MINUTES, SECONDS}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.DurationConverters.ScalaDurationOps
 
 class WorkItemServiceSpec extends PlaySpec with EitherValues with BeforeAndAfterEach {
 

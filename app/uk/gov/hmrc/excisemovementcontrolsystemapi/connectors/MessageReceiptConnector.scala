@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
-import com.kenshoo.play.metrics.Metrics
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status.INTERNAL_SERVER_ERROR
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig

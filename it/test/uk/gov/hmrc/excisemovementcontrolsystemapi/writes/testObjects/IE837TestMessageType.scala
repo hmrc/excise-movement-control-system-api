@@ -17,8 +17,6 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.writes.testObjects
 import play.api.libs.json.{JsValue, Json}
 
-import scala.xml.NodeSeq
-
 object IE837TestMessageType extends TestMessageType {
 
   override def json1: JsValue = Json.parse("{\"Header\":{\"MessageSender\":\"NDEA.GB\",\"MessageRecipient\":\"NDEA.EU\",\"DateOfPreparation\":\"2023-08-10\",\"TimeOfPreparation\":\"09:56:40.695540\",\"MessageIdentifier\":\"GB100000000302681\",\"CorrelationIdentifier\":\"a2f65a81-c297-4117-bea5-556129529463\"},\"Body\":{\"ExplanationOnDelayForDelivery\":{\"AttributesValue\":{\"SubmitterIdentification\":\"GBWK240176600\",\"SubmitterType\":\"1\",\"ExplanationCode\":\"6\",\"ComplementaryInformation\":{\"value\":\"Accident on M5\",\"attributes\":{\"@language\":\"en\"}},\"MessageRole\":\"1\",\"DateAndTimeOfValidationOfExplanationOnDelay\":\"2023-08-10T10:56:42\"},\"ExciseMovement\":{\"AdministrativeReferenceCode\":\"16GB00000000000192223\",\"SequenceNumber\":\"2\"}}}}")

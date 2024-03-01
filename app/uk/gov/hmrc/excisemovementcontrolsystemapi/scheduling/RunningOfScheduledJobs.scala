@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
-import akka.actor.{Cancellable, Scheduler}
 import dispatch.Future
 import org.apache.commons.lang3.time.StopWatch
+import org.apache.pekko.actor.{Cancellable, Scheduler}
 import play.api.inject.ApplicationLifecycle
 import play.api.{Application, Logging}
 
