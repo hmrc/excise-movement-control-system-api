@@ -378,38 +378,6 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
 
       }
     }
-
-    //todo: This test seems to be the same as the above one. Can it be removed?
-    "if fails mark work item as ToDo so can be retried" in {
-
-      val movementRepository = new MovementRepository(
-        mongoComponent,
-        mongoAppConfig,
-        timeService
-      )
-
-      stubForThrowingError()
-
-      insert(createWorkItem("1")).futureValue
-
-      movementRepository.saveMovement(cachedMovement1).futureValue
-
-      val app = appBuilder.build()
-      running(app) {
-
-        Thread.sleep(3000)
-
-        val movements = movementRepository.collection.find().toFuture().futureValue
-
-        movements.size mustBe 1
-        assertResults(movements.find(_.consignorId.equals("1")).get, cachedMovement1)
-
-        eventually {
-          verifyItemStatus(ProcessingStatus.ToDo).futureValue mustBe true
-        }
-      }
-    }
-
   }
 
   def verifyItemStatus(expectedProcessingStatus: ProcessingStatus): Future[Boolean] = {
