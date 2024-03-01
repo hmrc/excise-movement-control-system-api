@@ -72,14 +72,6 @@ class MovementService @Inject()(
     }
   }
 
-  def getMatchingERN(lrn: String, erns: List[String]): Future[Option[String]] = {
-    movementRepository.getMovementByLRNAndERNIn(lrn, erns).map {
-      case Seq() => None
-      case head :: Nil => matchingERN(head, erns)
-      case _ => throw new RuntimeException(s"[MovementService] - Multiple movements found for local reference number: $lrn")
-    }
-  }
-
   def getMovementByErn(
                         ern: Seq[String],
                         filter: MovementFilter = MovementFilter.empty
@@ -94,10 +86,6 @@ class MovementService @Inject()(
 
     movementRepository.getAllBy(ern).map(cachedMovements => {
 
-      //todo:
-      // Some messages (i.e. IE829 & IE839) have multiple arcs in so we want to update them all
-      // If no arc it will be Seq(None). This may need to be revisited as we may need to
-      // use the SequenceNumber in this case.
       message.administrativeReferenceCode
         .map { messageArc =>
           updateMovementForIndividualArc(message, ern, cachedMovements, messageArc)
@@ -164,7 +152,7 @@ class MovementService @Inject()(
       createdOn = dateTimeService.timestamp()
     )
 
-    //todo: remove hash from message class. Hash can calculate on the go in here
+    //todo EMCS-382: remove hash from message class. Hash can calculate on the go in here
     movement.messages.find(o => o.hash.equals(message.hash)) match {
       case Some(_) => successful(None)
       case _ =>

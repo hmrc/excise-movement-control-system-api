@@ -204,48 +204,6 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
     }
   }
 
-  "getMatchingERN" should {
-
-    "return None if no movement found" in {
-      when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq.empty))
-
-      val result = await(movementService.getMatchingERN(lrn, List(consignorId)))
-
-      result mustBe None
-    }
-
-    "return an ERN for the movement found" in {
-      when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq(exampleMovement)))
-
-      val result = await(movementService.getMatchingERN(lrn, List(consignorId)))
-
-      result mustBe Some(consignorId)
-    }
-
-    "return an ERN for the movement for a consigneeId match" in {
-      when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq(exampleMovement)))
-
-      val result = await(movementService.getMatchingERN(lrn, List(consigneeId)))
-
-      result mustBe Some(consigneeId)
-    }
-
-    "throw an exception if more then one movement found" in {
-      when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq(
-          exampleMovement,
-          exampleMovement
-        )))
-
-      intercept[RuntimeException] {
-        await(movementService.getMatchingERN(lrn, List(consignorId)))
-      }.getMessage mustBe s"[MovementService] - Multiple movements found for local reference number: $lrn"
-    }
-  }
-
   "getMovementByErn" should {
 
     val lrnToFilterBy = "lrn2"

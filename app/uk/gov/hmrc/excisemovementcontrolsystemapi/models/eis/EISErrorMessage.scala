@@ -25,7 +25,7 @@ object EISErrorMessage {
              correlationId: String,
              messageTypes: String,
   ): String = {
-    //todo: Sore messageIdentifier from the header of the message as meesageId
+    //todo EMCS-528: Store messageIdentifier from the header of the message as messageId
     s"""EIS error with message: $message,
     | messageId: $correlationId,
     | correlationId: $correlationId,

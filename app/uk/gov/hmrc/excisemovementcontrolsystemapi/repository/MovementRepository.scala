@@ -81,7 +81,7 @@ class MovementRepository @Inject()
   }
 
   def getMovementByLRNAndERNIn(lrn: String, erns: List[String]): Future[Seq[Movement]] = {
-    //TODO case where returns more than one (e.g. consignee has the same LRN for two different consignors)
+    //TODO EMCS-527 -  case where returns more than one (e.g. consignee has the same LRN for two different consignors)
     // IN this case would this be the same movement? So we are ok to get the head?
     collection.find(byLrnAndErns(lrn, erns)).toFuture()
   }
@@ -93,11 +93,6 @@ class MovementRepository @Inject()
         in("consigneeId", ern: _*)
       ))
       .toFuture()
-  }
-
-  // todo: this may return one record only as ARC are unique
-  def getMovementByARC(arc: String): Future[Option[Movement]] = {
-    collection.find(equal("administrativeReferenceCode", arc)).headOption()
   }
 
   def getAllBy(ern: String): Future[Seq[Movement]] = {

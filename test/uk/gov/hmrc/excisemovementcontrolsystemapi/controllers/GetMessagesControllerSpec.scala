@@ -69,9 +69,6 @@ class GetMessagesControllerSpec extends PlaySpec
     super.beforeEach()
     reset(movementService, dateTimeService, workItemService)
 
-    when(movementService.getMatchingERN(any, any))
-      .thenReturn(Future.successful(Some(ern)))
-
     when(dateTimeService.timestamp()).thenReturn(timeStamp)
 
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
