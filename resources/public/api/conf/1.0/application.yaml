@@ -614,6 +614,97 @@ paths:
         - userRestricted:
             - excise-movement-control-system
 
+  /customs/excise/movements/{movementId}/messages/{messageId}:
+    get:
+      tags:
+        - Movements
+      summary: Get a message for an excise movement using the movementId and messageId
+      description: Get a message for a specific excise movement. </br></br>**Note:** The consignor ID or consignee ID must match an excise reference number (ERN) in the bearer token that you use for API authentication. If it does not, a 403 Forbidden error will be thrown.
+      operationId: getMessage
+      parameters:
+        - $ref: "#/components/parameters/ContentTypeHeader"
+        - name: movementId
+          in: path
+          description: The movement to get messages for
+          required: true
+          schema:
+            $ref: "#/components/schemas/MovementId"
+        - name: messageId
+          in: path
+          description: The message to retrieve
+          required: true
+          schema:
+            $ref: "#/components/schemas/MessageId"
+
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/vnd.hmrc.1.0+xml:
+              example:
+                <IEMessage><!-- Example message --></IEMessage>'
+              schema:
+                type: object
+                xml:
+                  name: IEMessage
+
+        '400':
+          description: Invalid movement Id
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: "#/components/schemas/ExciseMovementError"
+              examples:
+                movementIdFormat:
+                  summary: Movement Id not valid
+                  value:
+                    dateTime: '2024-01-17T16:27:41.095827Z'
+                    message: Movement Id format error
+                    debugMessage: Movement Id should be a valid UUID
+                dateFormat:
+                  summary: Invalid updated since format
+                  value:
+                    dateTime: '2024-01-17T16:27:41.095827Z'
+                    message: Invalid date format provided in the updatedSince query parameter
+                    debugMessage: Date format should be like '2020-11-15T17:02:34.00Z'
+
+        '401':
+          description: Consignor or Consignee not authorised. Invalid enrolment parameter.
+          content:
+            text/plain:
+              example:
+                "Invalid affinity group Individual"
+        '403':
+          description: Consignor ID or Consignee ID is not in authorisation bearer token
+          content:
+            text/plain:
+              example:
+                "Could not find ExciseNumber"
+
+        '404':
+          description: Movement with supplied id not found for this ERN
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: "#/components/schemas/ExciseMovementError"
+              examples:
+                movementNotFound:
+                  summary: Movement not in database
+                  value:
+                    dateTime: '2024-01-17T16:26:18.062304Z'
+                    message: Movement not found
+                    debugMessage: Movement b6ba6a73-d723-4c9f-b9b7-99e533fb614f is not found
+                movementNotForErn:
+                  summary: Movement not valid for ERN
+                  value:
+                    dateTime: '2024-01-17T16:27:41.095827Z'
+                    message: Movement not found
+                    debugMessage: Movement b6ba6a73-d723-4c9f-b9b7-99e533fb614f is not found within the data for ERNs GBWK002281022
+
+      security:
+        - userRestricted:
+            - excise-movement-control-system
+
   /customs/excise/traders/pre-validate:
     post:
       tags:
@@ -761,8 +852,7 @@ components:
       description: The media type of the request body.
       schema:
         type: string
-        enum:
-          - application/xml
+        enum: ["application/vnd.hmrc.1.0+xml", "application/xml"]
       required: true
   schemas:
     AdministrativeReferenceCode:
@@ -805,6 +895,9 @@ components:
       type: string
       format: uuid
       example: b6ba6a73-d723-4c9f-b9b7-99e533fb614f
+    MessageId:
+      type: string
+      pattern: ".{1,44}"
     BoxId:
       type: string
       format: uuid
