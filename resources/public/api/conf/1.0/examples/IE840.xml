@@ -1,0 +1,124 @@
+<urn:IE840 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE840:V3.01"
+           xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01">
+    <urn:Header>
+        <urn1:MessageSender>NDEA.XI</urn1:MessageSender>
+        <urn1:MessageRecipient>NDEA.GB</urn1:MessageRecipient>
+        <urn1:DateOfPreparation>2023-06-28</urn1:DateOfPreparation>
+        <urn1:TimeOfPreparation>00:17:33</urn1:TimeOfPreparation>
+        <urn1:MessageIdentifier>XI0003265</urn1:MessageIdentifier>
+        <urn1:CorrelationIdentifier>6de24ff423abcb344bbcbcbcbc3499</urn1:CorrelationIdentifier>
+    </urn:Header>
+    <urn:Body>
+        <urn:EventReportEnvelope>
+            <urn:Attributes>
+                <urn:EventReportMessageType>1</urn:EventReportMessageType>
+                <urn:DateAndTimeOfValidationOfEventReport>2023-06-28T00:17:33</urn:DateAndTimeOfValidationOfEventReport>
+            </urn:Attributes>
+            <urn:HeaderEventReport>
+                <urn:EventReportNumber>GBAA2C3F4244ADB3</urn:EventReportNumber>
+                <urn:MsOfSubmissionEventReportReference>GB</urn:MsOfSubmissionEventReportReference>
+                <urn:ReferenceNumberOfExciseOffice>GB848884</urn:ReferenceNumberOfExciseOffice>
+                <urn:MemberStateOfEvent>GB</urn:MemberStateOfEvent>
+            </urn:HeaderEventReport>
+            <urn:ExciseMovement>
+                <urn:AdministrativeReferenceCode>23XI00000000000000333</urn:AdministrativeReferenceCode>
+                <urn:SequenceNumber>1</urn:SequenceNumber>
+            </urn:ExciseMovement>
+            <urn:OtherAccompanyingDocument>
+                <urn:OtherAccompanyingDocumentType>0</urn:OtherAccompanyingDocumentType>
+                <urn:ShortDescriptionOfOtherAccompanyingDocument language="to">token</urn:ShortDescriptionOfOtherAccompanyingDocument>
+                <urn:OtherAccompanyingDocumentNumber>jfj3423jfsjf</urn:OtherAccompanyingDocumentNumber>
+                <urn:OtherAccompanyingDocumentDate>2023-06-15</urn:OtherAccompanyingDocumentDate>
+                <urn:ImageOfOtherAccompanyingDocument>ZnJlbXVudA==</urn:ImageOfOtherAccompanyingDocument>
+                <urn:MemberStateOfDispatch>to</urn:MemberStateOfDispatch>
+                <urn:MemberStateOfDestination>to</urn:MemberStateOfDestination>
+                <urn:PersonInvolvedInMovementTrader language="to">
+                    <urn:TraderExciseNumber>IT34HD7413733</urn:TraderExciseNumber>
+                    <urn:Traderid>jj4123</urn:Traderid>
+                    <urn:TraderName>Roman Parties Ltd</urn:TraderName>
+                    <urn:TraderPersonType>5</urn:TraderPersonType>
+                    <urn:MemberStateCode>IT</urn:MemberStateCode>
+                    <urn:StreetName>Circus Maximus</urn:StreetName>
+                    <urn:StreetNumber>3</urn:StreetNumber>
+                    <urn:Postcode>RM32</urn:Postcode>
+                    <urn:City>Rome</urn:City>
+                    <urn:PhoneNumber>992743614324</urn:PhoneNumber>
+                    <urn:FaxNumber>848848484</urn:FaxNumber>
+                    <urn:EmailAddress>test@example.com</urn:EmailAddress>
+                </urn:PersonInvolvedInMovementTrader>
+                <urn:GoodsItem>
+                    <urn:DescriptionOfTheGoods>Booze</urn:DescriptionOfTheGoods>
+                    <urn:CnCode>84447744</urn:CnCode>
+                    <urn:CommercialDescriptionOfTheGoods>Alcoholic beverages</urn:CommercialDescriptionOfTheGoods>
+                    <urn:AdditionalCode>token</urn:AdditionalCode>
+                    <urn:Quantity>1000</urn:Quantity>
+                    <urn:UnitOfMeasureCode>12</urn:UnitOfMeasureCode>
+                    <urn:GrossMass>1000</urn:GrossMass>
+                    <urn:NetMass>1000</urn:NetMass>
+                </urn:GoodsItem>
+                <urn:MeansOfTransport>
+                    <urn:TraderName>Big Lorries Ltd</urn:TraderName>
+                    <urn:StreetName>Magic Road</urn:StreetName>
+                    <urn:StreetNumber>42</urn:StreetNumber>
+                    <urn:TransporterCountry>FR</urn:TransporterCountry>
+                    <urn:Postcode>DRA231</urn:Postcode>
+                    <urn:City>Paris</urn:City>
+                    <urn:TransportModeCode>12</urn:TransportModeCode>
+                    <urn:AcoComplementaryInformation language="en">The lorry is taking the goods</urn:AcoComplementaryInformation>
+                    <urn:Registration>tj32343</urn:Registration>
+                    <urn:CountryOfRegistration>FR</urn:CountryOfRegistration>
+                </urn:MeansOfTransport>
+            </urn:OtherAccompanyingDocument>
+            <urn:EventReport>
+                <urn:DateOfEvent>2023-06-28</urn:DateOfEvent>
+                <urn:PlaceOfEvent language="en">Dover</urn:PlaceOfEvent>
+                <urn:ExciseOfficerIdentification>NG28324234</urn:ExciseOfficerIdentification>
+                <urn:SubmittingPerson>NG2j23432</urn:SubmittingPerson>
+                <urn:SubmittingPersonCode>12</urn:SubmittingPersonCode>
+                <urn:SubmittingPersonComplement language="en">Looking good</urn:SubmittingPersonComplement>
+                <urn:ChangedTransportArrangement>2</urn:ChangedTransportArrangement>
+                <urn:Comments language="en">words</urn:Comments>
+            </urn:EventReport>
+            <urn:EvidenceOfEvent>
+                <urn:IssuingAuthority language="en">CSN123</urn:IssuingAuthority>
+                <urn:EvidenceTypeCode>7</urn:EvidenceTypeCode>
+                <urn:ReferenceOfEvidence language="en">token</urn:ReferenceOfEvidence>
+                <urn:ImageOfEvidence>dHVyYmluZQ==</urn:ImageOfEvidence>
+                <urn:EvidenceTypeComplement language="en">Nice job</urn:EvidenceTypeComplement>
+            </urn:EvidenceOfEvent>
+            <urn:NewTransportArrangerTrader language="en">
+                <urn:VatNumber>GB823482</urn:VatNumber>
+                <urn:TraderName>New Transport Arrangers Inc.</urn:TraderName>
+                <urn:StreetName>Main Street</urn:StreetName>
+                <urn:StreetNumber>7655</urn:StreetNumber>
+                <urn:Postcode>ZL23 XD1</urn:Postcode>
+                <urn:City>Atlantis</urn:City>
+            </urn:NewTransportArrangerTrader>
+            <urn:NewTransporterTrader language="en">
+                <urn:VatNumber>GDM23423</urn:VatNumber>
+                <urn:TraderName>New Transporters Co.</urn:TraderName>
+                <urn:StreetName>Main Street</urn:StreetName>
+                <urn:StreetNumber>7654</urn:StreetNumber>
+                <urn:Postcode>ZL23 XD1</urn:Postcode>
+                <urn:City>Atlantis</urn:City>
+            </urn:NewTransporterTrader>
+            <urn:TransportDetails>
+                <urn:TransportUnitCode>12</urn:TransportUnitCode>
+                <urn:IdentityOfTransportUnits>Boxes</urn:IdentityOfTransportUnits>
+                <urn:CommercialSealIdentification>Sealed</urn:CommercialSealIdentification>
+                <urn:ComplementaryInformation language="en">Boxes are sealed</urn:ComplementaryInformation>
+                <urn:SealInformation language="en">There are 33 species of seal</urn:SealInformation>
+            </urn:TransportDetails>
+            <urn:BodyEventReport>
+                <urn:EventTypeCode>5</urn:EventTypeCode>
+                <urn:AssociatedInformation language="en">Customs aren't happy</urn:AssociatedInformation>
+                <urn:BodyRecordUniqueReference>244</urn:BodyRecordUniqueReference>
+                <urn:DescriptionOfTheGoods>some are missing</urn:DescriptionOfTheGoods>
+                <urn:CnCode>43478962</urn:CnCode>
+                <urn:AdditionalCode>NFH412</urn:AdditionalCode>
+                <urn:IndicatorOfShortageOrExcess>S</urn:IndicatorOfShortageOrExcess>
+                <urn:ObservedShortageOrExcess>112</urn:ObservedShortageOrExcess>
+            </urn:BodyEventReport>
+        </urn:EventReportEnvelope>
+    </urn:Body>
+</urn:IE840>

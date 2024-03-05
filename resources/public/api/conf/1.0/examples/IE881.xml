@@ -1,0 +1,46 @@
+<urn:IE881
+        xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE881:V3.01"
+        xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01">
+    <urn:Header>
+        <urn1:MessageSender>NDEA.GB</urn1:MessageSender>
+        <urn1:MessageRecipient>NDEA.XI</urn1:MessageRecipient>
+        <urn1:DateOfPreparation>2023-07-01</urn1:DateOfPreparation>
+        <urn1:TimeOfPreparation>03:18:33</urn1:TimeOfPreparation>
+        <urn1:MessageIdentifier>XI00432M</urn1:MessageIdentifier>
+        <urn1:CorrelationIdentifier>ed6af92d-52ed-4552-bff6-1a8ae9f537c3</urn1:CorrelationIdentifier>
+    </urn:Header>
+    <urn:Body>
+        <urn:ManualClosureResponse>
+            <urn:Attributes>
+                <urn:AdministrativeReferenceCode>23XI00000000000056349</urn:AdministrativeReferenceCode>
+                <urn:SequenceNumber>1</urn:SequenceNumber>
+                <urn:DateOfArrivalOfExciseProducts>2023-06-30</urn:DateOfArrivalOfExciseProducts>
+                <urn:GlobalConclusionOfReceipt>3</urn:GlobalConclusionOfReceipt>
+                <urn:ComplementaryInformation language="en">Manual closure request recieved</urn:ComplementaryInformation>
+                <urn:ManualClosureRequestReasonCode>1</urn:ManualClosureRequestReasonCode>
+                <urn:ManualClosureRequestReasonCodeComplement language="en">Nice try</urn:ManualClosureRequestReasonCodeComplement>
+                <urn:ManualClosureRequestAccepted>1</urn:ManualClosureRequestAccepted>
+            </urn:Attributes>
+            <urn:SupportingDocuments>
+                <urn:SupportingDocumentDescription language="en">XI8466333A</urn:SupportingDocumentDescription>
+                <urn:ReferenceOfSupportingDocument language="en">Closure request</urn:ReferenceOfSupportingDocument>
+                <urn:ImageOfDocument>Y2lyY3Vt</urn:ImageOfDocument>
+                <urn:SupportingDocumentType>pdf</urn:SupportingDocumentType>
+            </urn:SupportingDocuments>
+            <urn:SupportingDocuments>
+                <urn:SupportingDocumentDescription language="en">XI8466333B</urn:SupportingDocumentDescription>
+                <urn:ReferenceOfSupportingDocument language="en">Closure request</urn:ReferenceOfSupportingDocument>
+                <urn:ImageOfDocument>Y2lyY3Vt</urn:ImageOfDocument>
+                <urn:SupportingDocumentType>pdf</urn:SupportingDocumentType>
+            </urn:SupportingDocuments>
+            <urn:BodyManualClosure>
+                <urn:BodyRecordUniqueReference>11</urn:BodyRecordUniqueReference>
+                <urn:IndicatorOfShortageOrExcess>S</urn:IndicatorOfShortageOrExcess>
+                <urn:ObservedShortageOrExcess>1000</urn:ObservedShortageOrExcess>
+                <urn:ExciseProductCode>W200</urn:ExciseProductCode>
+                <urn:RefusedQuantity>1000</urn:RefusedQuantity>
+                <urn:ComplementaryInformation language="en">Not supplied goods promised</urn:ComplementaryInformation>
+            </urn:BodyManualClosure>
+        </urn:ManualClosureResponse>
+    </urn:Body>
+</urn:IE881>

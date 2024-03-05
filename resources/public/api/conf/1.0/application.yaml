@@ -641,12 +641,133 @@ paths:
           description: Successful operation
           content:
             application/vnd.hmrc.1.0+xml:
-              example:
-                <IEMessage><!-- Example message --></IEMessage>'
               schema:
+                # I tried to use a "oneOf" here but the examples didn't work so using a GenericXML object instead.
                 type: object
                 xml:
-                  name: IEMessage
+                  name: GenericXML
+              examples:
+                refusal:
+                  summary: Generic Refusal (IE704uk)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE704uk XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie704uk.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE704uk.xml)
+                  value: '<IE704><!-- Example IE704 message --></IE704>'
+                control report envelope:
+                  summary: Control Report (IE717)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE717 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie717.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE717.xml)
+                  value: '<IE717><!-- Example IE717 message --></IE717>'
+                E-AD/E-SAD :
+                  summary: Acceptance (IE801)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE801 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie801.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE801.xml)
+                  value: '<IE801><!-- Example IE801 message --></IE801>'
+                reminder:
+                  summary: Reminder (IE802)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE801 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie802.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE802.xml)
+                  value: '<IE802><!-- Example IE802 message --></IE802>'
+                notificationOfDiverted:
+                  summary: Notification of diverted E-AD/E-SAD  (IE803)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE803 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie803.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE803.xml)
+                  value: '<IE803><!-- Example IE803 message --></IE803>'
+                interruption:
+                  summary: Interruption of Movement (IE807)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE807 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie807.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE807.xml)
+                  value: '<IE807><!-- Example IE807 message --></IE807>'
+                cancellation:
+                  summary: Submit cancellation (IE810)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE810 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie810.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE810.xml)
+                  value: '<IE810><!-- Example IE810 message --></IE810>'
+                changeOfDestination:
+                  summary: Change of Destination (IE813)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE813 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie813.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE813.xml)
+                  value: '<IE813><!-- Example IE813 message --></IE813>'
+                acceptedOrRejected:
+                  summary: Accpted or Rejected Report (IE818)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE818 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie818.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE818.xml)
+                  value: '<IE818><!-- Example IE818 message --></IE818>'
+                alertOrRejection:
+                  summary: Alert or Rejection on an E-AD/E-SAD (IE819)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE819 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie819.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE819.xml)
+                  value: '<IE819><!-- Example IE819 message --></IE819>'
+                notificationOdAcceptance:
+                  summary: Notification of Acceptance Export (IE829)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE829 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie829.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE829.xml)
+                  value: '<IE829><!-- Example IE829 message --></IE829>'
+                explanationOdDelayOfDelivery:
+                  summary: Explanation of Delay for Delivery (IE837)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE837 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie837.xsd)
+
+                    An example submitted by the consignor can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE837_consignor.xml)
+
+                    An example submitted by the consignee can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE837_consignee.xml)
+                  value: '<IE837><!-- Example IE837 message --></IE837>'
+                customRejection:
+                  summary: Custom Rejection of E-AD (IE839)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE839 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie839.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE839.xml)
+                  value: '<IE839><!-- Example IE839 message --></IE839>'
+                eventReport:
+                  summary: Event Report (IE840)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE840 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie840.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE840.xml)
+                  value: '<IE840><!-- Example IE840 message --></IE840>'
+                explenationOfReasonsForShortage:
+                  summary: Explenation on Reason for Shortage (IE871)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE871 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie871.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE871.xml)
+                  value: '<IE871><!-- Example IE871 message --></IE871>'
+                manualClosureResponse:
+                  summary: Manual Closure Response (IE881)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE881 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie881.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE881.xml)
+                  value: '<IE881><!-- Example IE881 message --></IE881>'
+                statusResponse:
+                  summary: Status Response (IE905)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE905 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie905.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE905.xml)
+                  value: '<IE905><!-- Example IE905 message --></IE905>'
 
         '400':
           description: Invalid movement Id
