@@ -594,22 +594,22 @@
 				<xs:annotation>
 					<xs:documentation>The New Consignee Trader information must not be present where the destination of the split is unknown</xs:documentation>
 				</xs:annotation>
-			</xs:enumeration>			
+			</xs:enumeration>
 			<xs:enumeration value="4521">
 				<xs:annotation>
 					<xs:documentation>The New Consignee Trader information must be present unless the destination of the split is unknown</xs:documentation>
 				</xs:annotation>
-			</xs:enumeration>						
+			</xs:enumeration>
 			<xs:enumeration value="4522">
 				<xs:annotation>
 					<xs:documentation>Version of the Movement status invalid for Explanation for Shortage or Excess Message</xs:documentation>
 				</xs:annotation>
-			</xs:enumeration>						
+			</xs:enumeration>
 			<xs:enumeration value="4523">
 				<xs:annotation>
 					<xs:documentation>Consignor Trader Excise Number does not match Consignor ID on the Movement</xs:documentation>
 				</xs:annotation>
-			</xs:enumeration>		
+			</xs:enumeration>
 			<xs:enumeration value="4524">
 				<xs:annotation>
 					<xs:documentation>Consignee Trader ID does not match Consignee ID on the Version of the Movement</xs:documentation>
@@ -659,7 +659,7 @@
 				<xs:annotation>
 					<xs:documentation>The submitting Trader must be an Authorised Warehouse Keeper or 'Registered Consignor'</xs:documentation>
 				</xs:annotation>
-			</xs:enumeration>	
+			</xs:enumeration>
 			<xs:enumeration value="4601">
 				<xs:annotation>
 					<xs:documentation>Rule 216: transport mode must be either 1(sea transport) or 7 (Fixed transport intallations) if guarantor type code = 5.</xs:documentation>
@@ -689,19 +689,19 @@
 					<xs:documentation>This message cannot be processed as the Consignee is located in a Member State of the European Union.</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
-			
+
 			<!-- BSPEMCS - 247 -->
 			<xs:enumeration value="9004">
 				<xs:annotation>
 					<xs:documentation>This message cannot be processed as the Customs Office Place of Delivery is located in a Member State of the European Union</xs:documentation>
 				</xs:annotation>
-			</xs:enumeration>		
-			
+			</xs:enumeration>
+
 			<xs:enumeration value="9005">
 				<xs:annotation>
-					<xs:documentation>This message cannot be processed until we have proper error message from Mr Olatunde Oyinioye</xs:documentation>
+					<xs:documentation>A GB Trader cannot 1) raise movements to EU destinations 2) raise exports with a non-GB export office 3) use anything other than NDEA.GB in 'Message Sender' 4) raise movements other than to a Warehouse or Rest of World Export. Also, a NI Trader cannot 1) raise an export with a GB export office 2) use anything other than NDEA.XI in 'Message Sender'.</xs:documentation>
 				</xs:annotation>
-			</xs:enumeration>					
+			</xs:enumeration>
 		</xs:restriction>
 	</xs:simpleType>
 </xs:schema>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:tcl="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TCL:V3.01" targetNamespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TCL:V3.01" elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.00">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:tcl="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TCL:V3.13" targetNamespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TCL:V3.13" elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.00">
   <!--=========================================-->
   <!--===== Common Request Type =====-->
   <!--=========================================-->
@@ -543,6 +543,11 @@
           <xs:documentation>Event submitting persons</xs:documentation>
         </xs:annotation>
       </xs:enumeration>
+      <xs:enumeration value="26">
+        <xs:annotation>
+          <xs:documentation>National Administration - Degree Plato</xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
       <xs:enumeration value="3">
         <xs:annotation>
           <xs:documentation>Evidence types</xs:documentation>
@@ -605,7 +610,7 @@
       </xs:enumeration>
       <xs:enumeration value="22">
         <xs:annotation>
-          <xs:documentation>Exit accepted although unsatisfactory</xs:documentation>
+          <xs:documentation>Exit accepted with minor discrepancies detected</xs:documentation>
         </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="23">
@@ -645,17 +650,17 @@
       </xs:enumeration>
       <xs:enumeration value="3">
         <xs:annotation>
-          <xs:documentation>Export data not found</xs:documentation>
+          <xs:documentation>(reserved)</xs:documentation>
         </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="4">
         <xs:annotation>
-          <xs:documentation>The content of the e-AD does not match with export data</xs:documentation>
+          <xs:documentation>Negative Cross-check result</xs:documentation>
         </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="5">
         <xs:annotation>
-          <xs:documentation>Goods are rejected at export procedure</xs:documentation>
+          <xs:documentation>Unsatisfactory Control Result at OoExp</xs:documentation>
         </xs:annotation>
       </xs:enumeration>
     </xs:restriction>
@@ -963,6 +968,11 @@
       <xs:documentation>Guarantor Type Code</xs:documentation>
     </xs:annotation>
     <xs:restriction base="xs:nonNegativeInteger">
+      <xs:enumeration value="0">
+        <xs:annotation>
+          <xs:documentation>Guarantor not required (qualifying UK to UK movements)</xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
       <xs:enumeration value="1">
         <xs:annotation>
           <xs:documentation>Consignor</xs:documentation>
@@ -1368,6 +1378,16 @@
           <xs:documentation>Stopped</xs:documentation>
         </xs:annotation>
       </xs:enumeration>
+      <xs:enumeration value="X14">
+        <xs:annotation>
+          <xs:documentation>Accepted Export Declaration</xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="X15">
+        <xs:annotation>
+          <xs:documentation>e-AD Request Accepted for Export</xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
   <!--=========================================-->
@@ -1426,6 +1446,11 @@
       <xs:enumeration value="IE829">
         <xs:annotation>
           <xs:documentation>NOTIFICATION OF ACCEPTED EXPORT</xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="IE836">
+        <xs:annotation>
+          <xs:documentation>EXPORT DECLARATION INVALIDATION NOTIFICATION TO MSA OF DISPATCH/CONSIGNOR</xs:documentation>
         </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="IE837">
@@ -1628,6 +1653,11 @@
           <xs:documentation>NOTIFICATION OF ACCEPTED EXPORT</xs:documentation>
         </xs:annotation>
       </xs:enumeration>
+      <xs:enumeration value="IE836">
+        <xs:annotation>
+          <xs:documentation>EXPORT DECLARATION INVALIDATION NOTIFICATION</xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
       <xs:enumeration value="IE839">
         <xs:annotation>
           <xs:documentation>REJECTION OF E-AD FOR EXPORT</xs:documentation>
@@ -1750,7 +1780,7 @@
       </xs:enumeration>
       <xs:enumeration value="2">
         <xs:annotation>
-          <xs:documentation>Submission for export (local clearance)</xs:documentation>
+          <xs:documentation>(reserved)</xs:documentation>
         </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="3">
@@ -1770,7 +1800,7 @@
     <xs:restriction base="xs:nonNegativeInteger">
       <xs:enumeration value="1">
         <xs:annotation>
-          <xs:documentation>Unknown ARC</xs:documentation>
+          <xs:documentation>(reserved)</xs:documentation>
         </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="2">
@@ -2135,7 +2165,7 @@
       </xs:enumeration>
       <xs:enumeration value="4">
         <xs:annotation>
-          <xs:documentation>Annotated paper copy of documents (e.g. SAAD)</xs:documentation>
+          <xs:documentation>Annotated paper copy of documents</xs:documentation>
         </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="5">
@@ -2635,7 +2665,7 @@
       </xs:enumeration>
       <xs:enumeration value="2">
         <xs:annotation>
-          <xs:documentation>SAAD</xs:documentation>
+          <xs:documentation>(reserved)</xs:documentation>
         </xs:annotation>
       </xs:enumeration>
     </xs:restriction>

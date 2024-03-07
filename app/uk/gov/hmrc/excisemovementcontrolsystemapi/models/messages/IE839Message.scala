@@ -39,7 +39,7 @@ case class IE839Message
     obj.Body.RefusalByCustoms.NEadSub.map(_.LocalReferenceNumber)
 
   override def consigneeId: Option[String] =
-    obj.Body.RefusalByCustoms.ConsigneeTrader.flatMap(_.Traderid)
+    obj.Body.RefusalByCustoms.ConsigneeTrader.Traderid
 
   override def administrativeReferenceCode: Seq[Option[String]] = {
     obj.Body.RefusalByCustoms.CEadVal.map(x => Some(x.AdministrativeReferenceCode))
@@ -50,7 +50,8 @@ case class IE839Message
   override def toXml: NodeSeq = {
     scalaxb.toXML[IE839Type](obj, namespace, key, generated.defaultScope)
   }
-  override def toJson = Json.toJson(obj)
+  override def toJson =
+    Json.toJson(obj)
 
   override def lrnEquals(lrn: String): Boolean = localReferenceNumber.contains(lrn)
 

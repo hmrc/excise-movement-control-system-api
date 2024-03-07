@@ -91,6 +91,7 @@ trait GeneratedJsonWriters {
   implicit val LSDCommercialDescriptionTypeType2: OWrites[LSDCommercialDescriptionTypeType2] = Json.writes[LSDCommercialDescriptionTypeType2]
   implicit val LSDBrandNameOfProductsTypeType2: OWrites[LSDBrandNameOfProductsTypeType2] = Json.writes[LSDBrandNameOfProductsTypeType2]
   implicit val LSDMaturationPeriodOrAgeOfProductsTypeType: OWrites[LSDMaturationPeriodOrAgeOfProductsTypeType] = Json.writes[LSDMaturationPeriodOrAgeOfProductsTypeType]
+  implicit val LSDIndependentSmallProducersDeclarationTypeType: OWrites[LSDIndependentSmallProducersDeclarationTypeType] = Json.writes[LSDIndependentSmallProducersDeclarationTypeType]
   implicit val ImportSadTypeType: OWrites[ImportSadTypeType] = Json.writes[ImportSadTypeType]
   implicit val LSDSealInformationTypeType5: OWrites[LSDSealInformationTypeType5] = Json.writes[LSDSealInformationTypeType5]
 
@@ -153,6 +154,7 @@ trait GeneratedJsonWriters {
   implicit val WineProductType: OWrites[WineProductType] = Json.writes[WineProductType]
   implicit val PackageTypeType: OWrites[PackageTypeType] = Json.writes[PackageTypeType]
   implicit val LSDMaturationPeriodOrAgeOfProductsType: OWrites[LSDMaturationPeriodOrAgeOfProductsType] = Json.writes[LSDMaturationPeriodOrAgeOfProductsType]
+  implicit val LSDIndependentSmallProducersDeclarationType: OWrites[LSDIndependentSmallProducersDeclarationType] = Json.writes[LSDIndependentSmallProducersDeclarationType]
   implicit val LSDBrandNameOfProductsTypeType: OWrites[LSDBrandNameOfProductsTypeType] = Json.writes[LSDBrandNameOfProductsTypeType]
   implicit val LSDCommercialDescriptionTypeType: OWrites[LSDCommercialDescriptionTypeType] = Json.writes[LSDCommercialDescriptionTypeType]
   implicit val LSDDesignationOfOriginType: OWrites[LSDDesignationOfOriginType] = Json.writes[LSDDesignationOfOriginType]
@@ -279,7 +281,7 @@ trait GeneratedJsonWriters {
 
   //IE829
 
-  implicit val ExportAcceptanceType: OWrites[ExportAcceptanceType] = Json.writes[ExportAcceptanceType]
+  implicit val ExportDeclarationAcceptanceReleaseType: OWrites[ExportDeclarationAcceptanceReleaseType] = Json.writes[ExportDeclarationAcceptanceReleaseType]
   implicit val ExportPlaceCustomsOfficeType: OWrites[ExportPlaceCustomsOfficeType] = Json.writes[ExportPlaceCustomsOfficeType]
   implicit val ExciseMovementEadTypeType: OWrites[ExciseMovementEadTypeType] = Json.writes[ExciseMovementEadTypeType]
   implicit val ConsigneeTraderTypeType4: OWrites[ConsigneeTraderTypeType4] = Json.writes[ConsigneeTraderTypeType4]
@@ -311,14 +313,19 @@ trait GeneratedJsonWriters {
   implicit val DiagnosisCode: Writes[DiagnosisCode] = Writes[DiagnosisCode] {
     code => JsString(code.toString)
   }
-  implicit val DiagnosisType: OWrites[DiagnosisType] = Json.writes[DiagnosisType]
+
   implicit val NEadSubType: OWrites[NEadSubType] = Json.writes[NEadSubType]
   implicit val CEadValType: OWrites[CEadValType] = Json.writes[CEadValType]
   implicit val RejectionType: OWrites[RejectionType] = Json.writes[RejectionType]
-  implicit val ExportCrossCheckingDiagnosesType: OWrites[ExportCrossCheckingDiagnosesType] = Json.writes[ExportCrossCheckingDiagnosesType]
   implicit val ExportPlaceCustomsOfficeTypeType: OWrites[ExportPlaceCustomsOfficeTypeType] = Json.writes[ExportPlaceCustomsOfficeTypeType]
   implicit val ConsigneeTraderTypeType5: OWrites[ConsigneeTraderTypeType5] = Json.writes[ConsigneeTraderTypeType5]
   implicit val AttributesTypeType14: OWrites[AttributesTypeType14] = Json.writes[AttributesTypeType14]
+  implicit val CombinedNomenclatureCodeCrosscheckResultType: OWrites[CombinedNomenclatureCodeCrosscheckResultType] = Json.writes[CombinedNomenclatureCodeCrosscheckResultType]
+  implicit val NetMassCrosscheckResultType: OWrites[NetMassCrosscheckResultType] = Json.writes[NetMassCrosscheckResultType]
+  implicit val UbrCrosscheckResultType: OWrites[UbrCrosscheckResultType] = Json.writes[UbrCrosscheckResultType]
+  implicit val NegativeCrosscheckValidationResultsType: OWrites[NegativeCrosscheckValidationResultsType] = Json.writes[NegativeCrosscheckValidationResultsType]
+  implicit val NNonDesType: OWrites[NNonDesType] = Json.writes[NNonDesType]
+  implicit val ExportDeclarationInformationType: OWrites[ExportDeclarationInformationType] = Json.writes[ExportDeclarationInformationType]
   implicit val RefusalByCustomsType: OWrites[RefusalByCustomsType] = Json.writes[RefusalByCustomsType]
   implicit val BodyTypeType17: OWrites[BodyTypeType17] = Json.writes[BodyTypeType17]
   implicit val IE839Type: OWrites[IE839Type] = Json.writes[IE839Type]
