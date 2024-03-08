@@ -16,8 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
-import com.codahale.metrics.Timer
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
+import com.codahale.metrics.{MetricRegistry, Timer}
 import dispatch.Future
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
@@ -29,7 +28,6 @@ import play.api.http.Status.{INTERNAL_SERVER_ERROR, NOT_FOUND}
 import play.api.libs.json.Json
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageReceiptConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptFailResponse, MessageReceiptSuccessResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
@@ -49,7 +47,7 @@ class MessageReceiptConnectorSpec
   private val timerContext = mock[Timer.Context]
   private val httpClient = mock[HttpClient]
   private val appConfig = mock[AppConfig]
-  private val metrics = mock[Metrics](RETURNS_DEEP_STUBS)
+  private val metrics = mock[MetricRegistry](RETURNS_DEEP_STUBS)
   private val emcsUtil = mock[EmcsUtils]
   private val dateTimeService = mock[DateTimeService]
   private val sut = new MessageReceiptConnector(httpClient, appConfig, emcsUtil, metrics, dateTimeService)
@@ -69,7 +67,7 @@ class MessageReceiptConnectorSpec
     when(emcsUtil.generateCorrelationId).thenReturn("12345")
     when(appConfig.messageReceiptUrl(any)).thenReturn("/messageReceipt")
     when(appConfig.messagesBearerToken).thenReturn(messagesBearerToken)
-    when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
+    when(metrics.timer(any).time()) thenReturn timerContext
   }
 
   "put" should {
@@ -99,8 +97,8 @@ class MessageReceiptConnectorSpec
     "should start a timer" in {
       await(sut.put("123"))
 
-      verify(metrics.defaultRegistry).timer(eqTo("emcs.messagereceipt.timer"))
-      verify(metrics.defaultRegistry.timer(eqTo("emcs.messagereceipt.timer"))).time()
+      verify(metrics).timer(eqTo("emcs.messagereceipt.timer"))
+      verify(metrics.timer(eqTo("emcs.messagereceipt.timer"))).time()
       verify(timerContext).stop()
     }
 

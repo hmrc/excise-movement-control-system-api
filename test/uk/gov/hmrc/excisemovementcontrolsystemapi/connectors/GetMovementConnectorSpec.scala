@@ -16,8 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
-import com.codahale.metrics.Timer
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
+import com.codahale.metrics.{MetricRegistry, Timer}
 import dispatch.Future
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
@@ -29,7 +28,6 @@ import play.api.libs.json.Json
 import play.api.mvc.Results.InternalServerError
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.GetMovementConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
@@ -48,7 +46,7 @@ class GetMovementConnectorSpec extends PlaySpec
 
   private val httpClient = mock[HttpClient]
   private val appConfig = mock[AppConfig]
-  private val metrics = mock[Metrics](RETURNS_DEEP_STUBS)
+  private val metrics = mock[MetricRegistry](RETURNS_DEEP_STUBS)
   private val emcsUtil = mock[EmcsUtils]
   private val dateTimeService = mock[DateTimeService]
   private val sut = new GetMovementConnector(httpClient, appConfig, emcsUtil, metrics, dateTimeService)
@@ -74,7 +72,7 @@ class GetMovementConnectorSpec extends PlaySpec
     when(appConfig.movementBearerToken).thenReturn(movementBearerToken)
     when(emcsUtil.generateCorrelationId).thenReturn("1234")
     when(dateTimeService.timestampToMilliseconds()).thenReturn(timestamp)
-    when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
+    when(metrics.timer(any).time()) thenReturn timerContext
   }
 
   "get" should {
@@ -117,8 +115,8 @@ class GetMovementConnectorSpec extends PlaySpec
     "should start a timer" in {
       await(sut.get("123", "arc"))
 
-      verify(metrics.defaultRegistry).timer(eqTo("emcs.getmovements.timer"))
-      verify(metrics.defaultRegistry.timer(eqTo("emcs.getmovements.timer"))).time()
+      verify(metrics).timer(eqTo("emcs.getmovements.timer"))
+      verify(metrics.timer(eqTo("emcs.getmovements.timer"))).time()
       verify(timerContext).stop()
     }
   }

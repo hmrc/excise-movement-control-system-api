@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
+import com.codahale.metrics.MetricRegistry
 import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.Result
@@ -37,14 +37,14 @@ class PreValidateTraderConnector @Inject()
   httpClient: HttpClient,
   emcsUtils: EmcsUtils,
   appConfig: AppConfig,
-  metrics: Metrics,
+  metrics: MetricRegistry,
   dateTimeService: DateTimeService
 )(implicit ec: ExecutionContext) extends EISSubmissionHeaders with Logging {
 
   def submitMessage(request: PreValidateTraderRequest, ern: String)(implicit hc: HeaderCarrier):
   Future[Either[Result, PreValidateTraderResponse]] = {
 
-    val timer = metrics.defaultRegistry.timer("emcs.prevalidatetrader.connector.timer").time()
+    val timer = metrics.timer("emcs.prevalidatetrader.connector.timer").time()
 
     val correlationId = emcsUtils.generateCorrelationId
     val timestamp = dateTimeService.timestampToMilliseconds()

@@ -17,8 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 
-import com.codahale.metrics.Timer
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
+import com.codahale.metrics.{MetricRegistry, Timer}
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.mockito.MockitoSugar.{reset, verify, when}
@@ -32,7 +31,6 @@ import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable, UnprocessableEntity}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.StringSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
@@ -59,7 +57,7 @@ class EISSubmissionConnectorSpec
   private val appConfig = mock[AppConfig]
   private val dateTimeService = mock[DateTimeService]
 
-  private val metrics = mock[Metrics](RETURNS_DEEP_STUBS)
+  private val metrics = mock[MetricRegistry](RETURNS_DEEP_STUBS)
 
   private val connector = new EISSubmissionConnector(mockHttpClient, emcsUtils, appConfig, metrics, dateTimeService)
   private val emcsCorrelationId = "1234566"
@@ -98,7 +96,7 @@ class EISSubmissionConnectorSpec
     when(dateTimeService.timestampToMilliseconds()).thenReturn(timestamp)
     when(appConfig.emcsReceiverMessageUrl).thenReturn("/eis/path")
     when(appConfig.submissionBearerToken).thenReturn(submissionBearerToken)
-    when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
+    when(metrics.timer(any).time()) thenReturn timerContext
     when(ie815Message.messageType).thenReturn("IE815")
     when(ie815Message.consignorId).thenReturn(ern)
     when(emcsUtils.encode(any)).thenReturn("encode-message")
@@ -210,8 +208,8 @@ class EISSubmissionConnectorSpec
 
       await(submitExciseMovementForIE815)
 
-      verify(metrics.defaultRegistry).timer(eqTo("emcs.submission.connector.timer"))
-      verify(metrics.defaultRegistry.timer(eqTo("emcs.submission.connector.timer"))).time()
+      verify(metrics).timer(eqTo("emcs.submission.connector.timer"))
+      verify(metrics.timer(eqTo("emcs.submission.connector.timer"))).time()
       verify(timerContext).stop()
     }
   }

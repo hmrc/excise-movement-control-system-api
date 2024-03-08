@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
+import com.codahale.metrics.MetricRegistry
 import play.api.Logging
 import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
@@ -35,13 +35,13 @@ class ShowNewMessagesConnector @Inject()(
                                           httpClient: HttpClient,
                                           appConfig: AppConfig,
                                           emcsUtils: EmcsUtils,
-                                          metrics: Metrics,
+                                          metrics: MetricRegistry,
                                           dateTimeService: DateTimeService
                                         )(implicit ec: ExecutionContext) extends EISConsumptionHeaders with ResponseHandler with Logging {
 
   def get(ern: String)(implicit hc: HeaderCarrier): Future[Either[Result, EISConsumptionResponse]] = {
 
-    val timer = metrics.defaultRegistry.timer("emcs.shownewmessage.timer").time()
+    val timer = metrics.timer("emcs.shownewmessage.timer").time()
     val correlationId = emcsUtils.generateCorrelationId
     val dateTime = dateTimeService.timestampToMilliseconds().toString
 

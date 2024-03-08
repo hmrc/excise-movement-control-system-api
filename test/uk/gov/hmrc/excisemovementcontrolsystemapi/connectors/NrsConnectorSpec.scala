@@ -16,9 +16,8 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
-import com.codahale.metrics.Timer
+import com.codahale.metrics.{MetricRegistry, Timer}
 import org.apache.pekko.Done
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.mockito.MockitoSugar.{reset, times, verify, when}
@@ -30,7 +29,6 @@ import play.api.http.Status.BAD_REQUEST
 import play.api.libs.concurrent.Futures
 import play.api.libs.json.Json
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NonRepudiationSubmissionAccepted, NonRepudiationSubmissionFailed, NrsMetadata, NrsPayload}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
@@ -54,7 +52,7 @@ class NrsConnectorSpec
   private val httpClient = mock[HttpClient]
   private val appConfig = mock[AppConfig]
   private val emcsUtils = mock[EmcsUtils]
-  private val metrics = mock[Metrics](RETURNS_DEEP_STUBS)
+  private val metrics = mock[MetricRegistry](RETURNS_DEEP_STUBS)
   private val connector = new NrsConnector(httpClient, appConfig, metrics)
   private val timerContext = mock[Timer.Context]
   private val timeStamp = ZonedDateTime.now()
@@ -90,7 +88,7 @@ class NrsConnectorSpec
       Duration.create(1L, "seconds")
     ))
     when(futures.delay(any)).thenReturn(Future.successful(Done))
-    when(metrics.defaultRegistry.timer(any).time()) thenReturn timerContext
+    when(metrics.timer(any).time()) thenReturn timerContext
   }
 
   "submit" should {
@@ -148,8 +146,8 @@ class NrsConnectorSpec
     "start and stop a timer" in {
       connector.sendToNrs(NrsPayload("encodepayload", nrsMetadata), "correlationId").futureValue
 
-      verify(metrics.defaultRegistry).timer(eqTo("emcs.nrs.submission.timer"))
-      verify(metrics.defaultRegistry.timer(eqTo("emcs.nrs.submission.timer"))).time()
+      verify(metrics).timer(eqTo("emcs.nrs.submission.timer"))
+      verify(metrics.timer(eqTo("emcs.nrs.submission.timer"))).time()
       verify(timerContext).stop()
     }
   }
