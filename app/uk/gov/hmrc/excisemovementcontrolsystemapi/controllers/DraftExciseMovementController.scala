@@ -85,7 +85,7 @@ class DraftExciseMovementController @Inject()(
   }
 
   private def submitSaveAudit(request: ParsedXmlRequest[_], ern: String, boxId: Option[String], message: IE815Message)(implicit hc: HeaderCarrier): EitherT[Future, Result, Movement] = {
-    EitherT { //TODO: Is there a possibility to refactor this to the lower layers (i.e. in submissionMessage Service and workItemService)
+    EitherT {
       submissionMessageService.submit(request, ern).flatMap {
         case Left(result) => auditService.auditMessage(message, "Failed to Submit")
           Future.successful(Left(result))

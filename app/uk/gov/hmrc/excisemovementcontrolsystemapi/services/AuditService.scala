@@ -31,16 +31,14 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class AuditServiceImpl @Inject() (auditConnector: AuditConnector)(implicit ec: ExecutionContext) extends Auditing with AuditService with Logging {
 
-  def auditMessage(message: IEMessage)(implicit hc: HeaderCarrier) = auditMessage(message, None)
-  def auditMessage(message: IEMessage, failureReason: String)(implicit hc: HeaderCarrier) = auditMessage(message, Some(failureReason))
+  def auditMessage(message: IEMessage)(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit] = auditMessage(message, None)
+  def auditMessage(message: IEMessage, failureReason: String)(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit] = auditMessage(message, Some(failureReason))
 
   private def auditMessage(message: IEMessage, failureOpt: Option[String] = None)(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit] = {
       EitherT {
         auditConnector.sendExtendedEvent(AuditEventFactory.createAuditEvent(message, failureOpt)).map {
-          res => res match {
-            case f: AuditResult.Failure => Right(logger.error(f.msg))
-            case _ => Right(())
-          }
+          case f: AuditResult.Failure => Right(logger.error(f.msg))
+          case _ => Right(())
         }
       }
   }

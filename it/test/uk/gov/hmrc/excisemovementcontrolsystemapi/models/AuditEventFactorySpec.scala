@@ -27,25 +27,25 @@ import uk.gov.hmrc.play.audit.model.ExtendedDataEvent
 
 class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with TestXml {
 
-  implicit val hc = HeaderCarrier()
+  implicit val hc: HeaderCarrier = HeaderCarrier()
 
-    "IE704Message" - new TestType(IE704TestMessageType, IE704Message.createFromXml(IE704))
-    "IE801Message" - new TestType(IE801TestMessageType, IE801Message.createFromXml(IE801))
-    "IE802Message" - new TestType(IE802TestMessageType, IE802Message.createFromXml(IE802))
-    "IE803Message" - new TestType(IE803TestMessageType, IE803Message.createFromXml(IE803))
-    "IE807Message" - new TestType(IE807TestMessageType, IE807Message.createFromXml(IE807))
-    "IE810Message" - new TestType(IE810TestMessageType, IE810Message.createFromXml(IE810))
-    "IE813Message" - new TestType(IE813TestMessageType, IE813Message.createFromXml(IE813))
-    "IE815Message" - new TestType(IE815TestMessageType, IE815Message.createFromXml(IE815))
-    "IE818Message" - new TestType(IE818TestMessageType, IE818Message.createFromXml(IE818))
-    "IE819Message" - new TestType(IE819TestMessageType, IE819Message.createFromXml(IE819))
-    "IE829Message" - new TestType(IE829TestMessageType, IE829Message.createFromXml(IE829))
-    "IE837Message" - new TestType(IE837TestMessageType, IE837Message.createFromXml(IE837WithConsignor))
-    "IE839Message" - new TestType(IE839TestMessageType, IE839Message.createFromXml(IE839))
-    "IE840Message" - new TestType(IE840TestMessageType, IE840Message.createFromXml(IE840))
-    "IE871Message" - new TestType(IE871TestMessageType, IE871Message.createFromXml(IE871WithConsignor))
-    "IE881Message" - new TestType(IE881TestMessageType, IE881Message.createFromXml(IE881))
-    "IE905Message" - new TestType(IE905TestMessageType, IE905Message.createFromXml(IE905))
+    "IE704Message" - TestType(IE704TestMessageType, IE704Message.createFromXml(IE704))
+    "IE801Message" - TestType(IE801TestMessageType, IE801Message.createFromXml(IE801))
+    "IE802Message" - TestType(IE802TestMessageType, IE802Message.createFromXml(IE802))
+    "IE803Message" - TestType(IE803TestMessageType, IE803Message.createFromXml(IE803))
+    "IE807Message" - TestType(IE807TestMessageType, IE807Message.createFromXml(IE807))
+    "IE810Message" - TestType(IE810TestMessageType, IE810Message.createFromXml(IE810))
+    "IE813Message" - TestType(IE813TestMessageType, IE813Message.createFromXml(IE813))
+    "IE815Message" - TestType(IE815TestMessageType, IE815Message.createFromXml(IE815))
+    "IE818Message" - TestType(IE818TestMessageType, IE818Message.createFromXml(IE818))
+    "IE819Message" - TestType(IE819TestMessageType, IE819Message.createFromXml(IE819))
+    "IE829Message" - TestType(IE829TestMessageType, IE829Message.createFromXml(IE829))
+    "IE837Message" - TestType(IE837TestMessageType, IE837Message.createFromXml(IE837WithConsignor))
+    "IE839Message" - TestType(IE839TestMessageType, IE839Message.createFromXml(IE839))
+    "IE840Message" - TestType(IE840TestMessageType, IE840Message.createFromXml(IE840))
+    "IE871Message" - TestType(IE871TestMessageType, IE871Message.createFromXml(IE871WithConsignor))
+    "IE881Message" - TestType(IE881TestMessageType, IE881Message.createFromXml(IE881))
+    "IE905Message" - TestType(IE905TestMessageType, IE905Message.createFromXml(IE905))
 
   case class TestType(testObject: TestMessageType, message: IEMessage) {
 

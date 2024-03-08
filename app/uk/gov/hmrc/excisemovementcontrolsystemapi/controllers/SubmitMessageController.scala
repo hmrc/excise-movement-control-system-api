@@ -104,7 +104,6 @@ class SubmitMessageController @Inject()(
                          (implicit hc: HeaderCarrier): EitherT[Future, Result, EISSubmissionResponse] = {
     workItemService.addWorkItemForErn(authorisedErn, fastMode = true)
 
-    //TODO: Are we missing a 'Failed to Save' audit event here? (To resolve in future)
     EitherT {
       submissionMessageService.submit(request, authorisedErn).map {
         case Left(result) => auditService.auditMessage(request.ieMessage, "Failed to Submit")
