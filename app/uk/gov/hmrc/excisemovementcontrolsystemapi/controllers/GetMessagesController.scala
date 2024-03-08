@@ -20,7 +20,7 @@ import cats.data.{EitherT, OptionT}
 import cats.implicits._
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ValidateAcceptHeaderAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
@@ -37,6 +37,7 @@ import scala.util.Try
 @Singleton
 class GetMessagesController @Inject()(
   authAction: AuthAction,
+  validateAcceptHeaderAction: ValidateAcceptHeaderAction,
   movementService: MovementService,
   workItemService: WorkItemService,
   movementIdValidator: MovementIdValidation,
@@ -46,7 +47,11 @@ class GetMessagesController @Inject()(
 )(implicit ec: ExecutionContext)
   extends BackendController(cc) {
   def getMessageForMovement(movementId: String, messageId: String): Action[AnyContent] = {
-    authAction.async(parse.default) {
+    (
+      Action andThen
+      validateAcceptHeaderAction andThen
+      authAction
+      ).async(parse.default) {
       implicit request =>
 
         //todo EMCS-529: do we need to validate messageId here? This is the messageIdentifier

@@ -24,11 +24,12 @@ import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
-import play.api.http.Status.{BAD_REQUEST, FORBIDDEN, NOT_FOUND, OK}
+import play.api.http.Status.{BAD_REQUEST, FORBIDDEN, NOT_ACCEPTABLE, NOT_FOUND, OK}
 import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.{AnyContent, Result}
 import play.api.test.Helpers.{await, contentAsJson, contentAsString, defaultAwaitTimeout, status, stubControllerComponents}
 import play.api.test.{FakeHeaders, FakeRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateAcceptHeaderAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeAuthentication
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
@@ -321,6 +322,15 @@ class GetMessagesControllerSpec extends PlaySpec
       }
     }
 
+    "return an error iƒAccept header is not hmrc xml" in {
+      when(movementService.getMovementById(any))
+        .thenReturn(Future.successful(Some(movementWithMessage)))
+
+      val result = createWithSuccessfulAuth.getMessageForMovement(validUUID, messageId)(createRequestForXML)
+
+      status(result) mustBe NOT_ACCEPTABLE
+    }
+
   }
 
   private def contentAsXml(result: Future[Result]): Elem = {
@@ -334,6 +344,7 @@ class GetMessagesControllerSpec extends PlaySpec
   private def createWithSuccessfulAuth =
     new GetMessagesController(
       FakeSuccessAuthentication,
+      new ValidateAcceptHeaderAction(dateTimeService),
       movementService,
       workItemService,
       new MovementIdValidation,
@@ -345,6 +356,7 @@ class GetMessagesControllerSpec extends PlaySpec
   private def createWithFailedAuth =
     new GetMessagesController(
       FakeFailingAuthentication,
+      new ValidateAcceptHeaderAction(dateTimeService),
       movementService,
       workItemService,
       new MovementIdValidation,
@@ -359,6 +371,9 @@ class GetMessagesControllerSpec extends PlaySpec
 
   private def createRequestForXML = {
     createRequest()
-      .withHeaders(FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> "application/xml")))
+      .withHeaders(FakeHeaders(Seq(
+        HeaderNames.CONTENT_TYPE -> "application/xml",
+        HeaderNames.ACCEPT -> "application/json"
+      )))
   }
 }
