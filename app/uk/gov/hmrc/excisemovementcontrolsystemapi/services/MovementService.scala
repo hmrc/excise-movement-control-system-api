@@ -167,11 +167,6 @@ class MovementService @Inject()(
     }
   }
 
-  private def matchingERN(movement: Movement, erns: List[String]): Option[String] = {
-    if (erns.contains(movement.consignorId)) Some(movement.consignorId)
-    else movement.consigneeId
-  }
-
   private def isLrnAlreadyUsed(movement: Movement, movementFromDb: Movement) = {
     movement.consignorId == movementFromDb.consignorId &&
       (movementFromDb.administrativeReferenceCode.isDefined

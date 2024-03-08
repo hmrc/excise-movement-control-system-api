@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
+import com.codahale.metrics.MetricRegistry
 import play.api.Logging
 import play.api.http.Status.INTERNAL_SERVER_ERROR
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
@@ -35,13 +35,13 @@ class MessageReceiptConnector @Inject()
   httpClient: HttpClient,
   appConfig: AppConfig,
   eisUtils: EmcsUtils,
-  metrics: Metrics,
+  metrics: MetricRegistry,
   dateTimeService: DateTimeService
 )(implicit val ec: ExecutionContext) extends EISConsumptionHeaders with ResponseHandler with Logging {
 
   def put(ern: String)(implicit hc: HeaderCarrier): Future[MessageReceiptResponse] = {
 
-    val timer = metrics.defaultRegistry.timer("emcs.messagereceipt.timer").time()
+    val timer = metrics.timer("emcs.messagereceipt.timer").time()
     val dateTime = dateTimeService.timestampToMilliseconds()
     val correlationId = eisUtils.generateCorrelationId
 

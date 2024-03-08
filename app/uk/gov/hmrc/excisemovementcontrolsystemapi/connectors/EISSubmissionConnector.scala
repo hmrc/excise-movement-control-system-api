@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
+import com.codahale.metrics.MetricRegistry
 import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.Result
@@ -26,7 +27,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -37,7 +37,7 @@ class EISSubmissionConnector @Inject()
   httpClient: HttpClient,
   emcsUtils: EmcsUtils,
   appConfig: AppConfig,
-  metrics: Metrics,
+  metrics: MetricRegistry,
   dateTimeService: DateTimeService
 )(implicit ec: ExecutionContext) extends EISSubmissionHeaders with Logging {
 
@@ -48,7 +48,7 @@ class EISSubmissionConnector @Inject()
                      correlationId: String
                    )(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
 
-    val timer = metrics.defaultRegistry.timer("emcs.submission.connector.timer").time()
+    val timer = metrics.timer("emcs.submission.connector.timer").time()
 
     //todo EMCS-530: add retry
     val timestamp = dateTimeService.timestampToMilliseconds()

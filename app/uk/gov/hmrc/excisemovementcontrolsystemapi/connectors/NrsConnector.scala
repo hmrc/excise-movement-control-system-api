@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
+import com.codahale.metrics.MetricRegistry
 import play.api.Logging
 import play.api.http.Status.ACCEPTED
 import play.api.libs.concurrent.Futures
@@ -25,8 +25,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.XApiKeyHeaderKey
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NonRepudiationSubmission, NonRepudiationSubmissionAccepted, NonRepudiationSubmissionFailed, NrsPayload}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.Retrying
-import uk.gov.hmrc.http.HttpReads.is2xx
 import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpReads.is2xx
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
 import javax.inject.Inject
@@ -37,12 +37,12 @@ class NrsConnector @Inject()
 (
   httpClient: HttpClient,
   appConfig: AppConfig,
-  metrics: Metrics
+  metrics: MetricRegistry
 )(implicit val ec: ExecutionContext, val futures: Futures) extends Retrying with Logging {
 
   def sendToNrs(payload: NrsPayload, correlationId: String)(implicit hc: HeaderCarrier): Future[NonRepudiationSubmission] = {
 
-    val timer = metrics.defaultRegistry.timer("emcs.nrs.submission.timer").time()
+    val timer = metrics.timer("emcs.nrs.submission.timer").time()
     val jsonObject = payload.toJsObject
 
     retry(appConfig.nrsRetryDelays.toList, canRetry, appConfig.getNrsSubmissionUrl) {
