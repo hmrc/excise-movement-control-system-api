@@ -677,7 +677,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
   ): JsValue = {
     Json.toJson(Notification(
       movementId,
-      s"/movements/$movementId/message/$messageId",
+      s"/movements/$movementId/messages/$messageId",
       messageId,
       movement.consignorId,
       movement.consigneeId,

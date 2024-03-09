@@ -38,18 +38,28 @@ class ValidateAcceptHeaderActionSpec extends PlaySpec {
 
   private val dateTimeService = mock[DateTimeService]
   private val timestamp = Instant.now
-  when(dateTimeService.timestampToMilliseconds()).thenReturn(timestamp)
+  when(dateTimeService.timestamp()).thenReturn(timestamp)
 
   private val sut = new ValidateAcceptHeaderAction(dateTimeService)
 
   "filter" should {
 
-    "return None if Accept header is xml" in {
+    "return None" when {
+      "Accept header is xml with version 1.0" in {
 
-      val request = createRequestWithAcceptHeader("application/vnd.hmrc.1.0+xml")
-      val result = await(sut.filter(request))
+        val request = createRequestWithAcceptHeader("application/vnd.hmrc.1.0+xml")
+        val result = await(sut.filter(request))
 
-      result mustBe None
+        result mustBe None
+      }
+
+      "Accept header is xml with version 2.0" in {
+
+        val request = createRequestWithAcceptHeader("application/vnd.hmrc.2.0+xml")
+        val result = await(sut.filter(request))
+
+        result mustBe None
+      }
     }
 
     "return an error" when {
@@ -76,6 +86,13 @@ class ValidateAcceptHeaderActionSpec extends PlaySpec {
       "Accept header is application/json" in {
 
         val result = await(sut.filter(createRequestWithAcceptHeader("application/json")))
+
+        result mustBe expectedError
+      }
+
+      "accept header is the wrong version" in {
+        val request = createRequestWithAcceptHeader("application/vnd.hmrc.3.0+xml")
+        val result = await(sut.filter(request))
 
         result mustBe expectedError
       }

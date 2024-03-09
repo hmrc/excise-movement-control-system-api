@@ -244,7 +244,7 @@ class GetMessagesControllerSpec extends PlaySpec
       when(movementService.getMovementById(any))
         .thenReturn(Future.successful(Some(movementWithMessage)))
 
-      val result = createWithSuccessfulAuth.getMessageForMovement(validUUID, messageId)(createRequestForXML)
+      val result = createWithSuccessfulAuth.getMessageForMovement(validUUID, messageId)(createRequest())
 
       status(result) mustBe OK
     }
@@ -322,11 +322,15 @@ class GetMessagesControllerSpec extends PlaySpec
       }
     }
 
-    "return an error iƒAccept header is not hmrc xml" in {
+    "return an error iƒ Accept header is not hmrc xml" in {
       when(movementService.getMovementById(any))
         .thenReturn(Future.successful(Some(movementWithMessage)))
 
-      val result = createWithSuccessfulAuth.getMessageForMovement(validUUID, messageId)(createRequestForXML)
+      val result = createWithSuccessfulAuth
+        .getMessageForMovement(
+          validUUID,
+          messageId
+        )(createRequest("application/vnd.hmrc.1.0+json"))
 
       status(result) mustBe NOT_ACCEPTABLE
     }
@@ -365,15 +369,12 @@ class GetMessagesControllerSpec extends PlaySpec
       dateTimeService
     )
 
-  private def createRequest(): FakeRequest[AnyContent] = {
-    FakeRequest("GET", "/foo")
-  }
-
-  private def createRequestForXML = {
-    createRequest()
+  private def createRequest(
+    acceptHeader: String = "application/vnd.hmrc.1.0+xml"
+  ): FakeRequest[AnyContent] = {
+    FakeRequest()
       .withHeaders(FakeHeaders(Seq(
-        HeaderNames.CONTENT_TYPE -> "application/xml",
-        HeaderNames.ACCEPT -> "application/json"
+        HeaderNames.ACCEPT -> acceptHeader
       )))
   }
 }

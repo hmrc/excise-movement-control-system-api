@@ -26,7 +26,7 @@ import play.api.Application
 import play.api.http.HeaderNames
 import play.api.http.Status._
 import play.api.libs.json.Json
-import play.api.libs.ws.WSClient
+import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.InternalError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{NewMessagesXml, TestXml}
@@ -55,8 +55,9 @@ class GetMessagesControllerItSpec extends PlaySpec
   private val validUUID = "cfdb20c7-d0b0-4b8b-a071-737d68dede5e"
   private val messageId = UUID.randomUUID().toString
   private val url = s"http://localhost:$port/movements/$validUUID/messages"
-  private val messageUrl = s"http://localhost:$port/movements/$validUUID/message/$messageId"
+  private val messageUrl = s"http://localhost:$port/movements/$validUUID/messages/$messageId"
   private val timestamp = Instant.now()
+
 
   override lazy val app: Application = {
     wireMock.start()
@@ -70,6 +71,7 @@ class GetMessagesControllerItSpec extends PlaySpec
     reset(movementRepository, dateTimeService, authConnector)
     when(dateTimeService.timestamp()).thenReturn(timestamp)
   }
+
   override def beforeAll(): Unit = {
     super.beforeAll()
     wireMock.resetAll()
@@ -83,10 +85,11 @@ class GetMessagesControllerItSpec extends PlaySpec
   "Get Messages" should {
     "return 200" in {
       withAuthorizedTrader(consignorId)
-      val encodedMessage = Base64.getEncoder.encodeToString(IE801.toString().getBytes(StandardCharsets.UTF_8))
-      val message = Message(encodedMessage, "IE801", messageId, timestamp)
+
+      val message = createEncodeMessage
+      val movement = Movement(validUUID, Some("boxId"), "lrn", consignorId, None, None, Instant.now, Seq(message))
       when(movementRepository.getMovementById(any))
-        .thenReturn(Future.successful(Some(Movement(validUUID, Some("boxId"), "lrn", consignorId, None, None, Instant.now, Seq(message)))))
+        .thenReturn(Future.successful(Some(movement)))
       when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
 
       val result = getRequest()
@@ -144,19 +147,23 @@ class GetMessagesControllerItSpec extends PlaySpec
 
   }
 
+
+  private def movement(message: Message) = {
+    Movement(validUUID, Some("boxId"), "lrn", consignorId, None, None, Instant.now, Seq(message))
+  }
+
   "GET a message for a movement and a messageId" in {
     withAuthorizedTrader(consignorId)
 
-    val encodedMessage = Base64.getEncoder.encodeToString(IE801.toString().getBytes(StandardCharsets.UTF_8))
-    val message = Message(encodedMessage, "IE801", messageId, timestamp)
+    val movement = Movement(validUUID, Some("boxId"), "lrn", consignorId, None, None, Instant.now, Seq(createEncodeMessage))
     when(movementRepository.getMovementById(any))
-      .thenReturn(Future.successful(Some(Movement(validUUID, Some("boxId"), "lrn", consignorId, None, None, Instant.now, Seq(message)))))
+      .thenReturn(Future.successful(Some(movement)))
 
     val result = getRequest(messageUrl)
 
     result.status mustBe OK
 
-    withClue("Should return a xml message"){
+    withClue("Should return a xml message") {
       result.xml mustBe IE801
     }
   }
@@ -204,7 +211,7 @@ class GetMessagesControllerItSpec extends PlaySpec
     "movementId is invalid UUID" in {
       withAuthorizedTrader(consignorId)
 
-      val invalidUrl = s"http://localhost:$port/movements/12345/message/$messageId"
+      val invalidUrl = s"http://localhost:$port/movements/12345/messages/$messageId"
       val result = getRequest(invalidUrl)
 
       result.status mustBe BAD_REQUEST
@@ -249,12 +256,33 @@ class GetMessagesControllerItSpec extends PlaySpec
     result.status mustBe INTERNAL_SERVER_ERROR
   }
 
-  private def getRequest(url: String = url) = {
+  "return an error if Accept header is not supported" in {
+    withAuthorizedTrader(consignorId)
+
+    val movement = Movement(validUUID, Some("boxId"), "lrn", consignorId, None, None, Instant.now, Seq(createEncodeMessage))
+    when(movementRepository.getMovementById(any))
+      .thenReturn(Future.successful(Some(movement)))
+
+    val result = getRequest(messageUrl, "application/json")
+
+    result.status mustBe NOT_ACCEPTABLE
+  }
+
+  private def getRequest(
+    url: String = url,
+    acceptHeader: String = "application/vnd.hmrc.1.0+xml"
+  ): WSResponse = {
     await(wsClient.url(url)
       .addHttpHeaders(
-        HeaderNames.AUTHORIZATION -> "TOKEN"
+        HeaderNames.AUTHORIZATION -> "TOKEN",
+        HeaderNames.ACCEPT -> acceptHeader
       ).get()
     )
+  }
+
+  private def createEncodeMessage = {
+    val encodedMessage = Base64.getEncoder.encodeToString(IE801.toString().getBytes(StandardCharsets.UTF_8))
+    Message(encodedMessage, "IE801", messageId, timestamp)
   }
 
   private def assertResponseContent(actual: Seq[Message], expected: Seq[Message]) = {

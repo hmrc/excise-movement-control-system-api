@@ -16,13 +16,11 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
-import com.google.inject.ImplementedBy
 import play.api.http.HeaderNames
 import play.api.libs.json.Json
 import play.api.mvc.Results.NotAcceptable
 import play.api.mvc.{ActionFilter, Request, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import javax.inject.{Inject, Singleton}
@@ -34,14 +32,17 @@ class ValidateAcceptHeaderAction @Inject()(datetimeService: DateTimeService)(imp
   override val executionContext: ExecutionContext = ec
 
   override def filter[A](request: Request[A]): Future[Option[Result]] = Future.successful {
-        request.headers.get(HeaderNames.ACCEPT) match {
-          case Some("application/vnd.hmrc.1.0+xml") => None
-          case _ => Some(NotAcceptable(Json.toJson(
-            ErrorResponse(
-              datetimeService.timestampToMilliseconds(),
-              "Invalid Accept header",
-              "The accept header is missing or invalid"))))
-        }
+
+    val pattern = """^application/vnd[.]{1}hmrc[.]{1}(1|2){1}[.]0[+]{1}xml$""".r
+
+    request.headers.get(HeaderNames.ACCEPT) match {
+      case Some(value) if pattern.matches(value) => None
+      case _ => Some(NotAcceptable(Json.toJson(
+        ErrorResponse(
+          datetimeService.timestamp(),
+          "Invalid Accept header",
+          "The accept header is missing or invalid"))))
+    }
   }
 
 }
