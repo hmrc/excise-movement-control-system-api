@@ -52,14 +52,6 @@ class ValidateAcceptHeaderActionSpec extends PlaySpec {
 
         result mustBe None
       }
-
-      "Accept header is xml with version 2.0" in {
-
-        val request = createRequestWithAcceptHeader("application/vnd.hmrc.2.0+xml")
-        val result = await(sut.filter(request))
-
-        result mustBe None
-      }
     }
 
     "return an error" when {

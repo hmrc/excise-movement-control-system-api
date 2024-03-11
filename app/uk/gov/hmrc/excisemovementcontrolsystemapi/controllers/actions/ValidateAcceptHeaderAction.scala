@@ -33,7 +33,7 @@ class ValidateAcceptHeaderAction @Inject()(datetimeService: DateTimeService)(imp
 
   override def filter[A](request: Request[A]): Future[Option[Result]] = Future.successful {
 
-    val pattern = """^application/vnd[.]{1}hmrc[.]{1}(1|2){1}[.]0[+]{1}xml$""".r
+    val pattern = """^application/vnd[.]{1}hmrc[.]{1}1{1}[.]0[+]{1}xml$""".r
 
     request.headers.get(HeaderNames.ACCEPT) match {
       case Some(value) if pattern.matches(value) => None

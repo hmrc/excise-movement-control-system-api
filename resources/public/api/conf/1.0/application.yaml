@@ -622,7 +622,7 @@ paths:
       description: Get a message for a specific excise movement. </br></br>**Note:** The consignor ID or consignee ID must match an excise reference number (ERN) in the bearer token that you use for API authentication. If it does not, a 403 Forbidden error will be thrown.
       operationId: getMessage
       parameters:
-        - $ref: "#/components/parameters/ContentTypeHeader"
+        - $ref: "#/components/parameters/AcceptHeaderXml"
         - name: movementId
           in: path
           description: The movement to get messages for
@@ -774,7 +774,7 @@ paths:
           content:
             application/vnd.hmrc.1.0+json:
               schema:
-                $ref: "#/components/schemas/ExciseMovementError"
+                $ref: "#/components/schemas/ErrorResponse"
               examples:
                 movementIdFormat:
                   summary: Movement Id not valid
@@ -807,7 +807,7 @@ paths:
           content:
             application/vnd.hmrc.1.0+json:
               schema:
-                $ref: "#/components/schemas/ExciseMovementError"
+                $ref: "#/components/schemas/ErrorResponse"
               examples:
                 movementNotFound:
                   summary: Movement not in database
@@ -821,6 +821,20 @@ paths:
                     dateTime: '2024-01-17T16:27:41.095827Z'
                     message: Movement not found
                     debugMessage: Movement b6ba6a73-d723-4c9f-b9b7-99e533fb614f is not found within the data for ERNs GBWK002281022
+
+        '406':
+          description: Accepted header is not acceptable
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                acceptHeaderNotAcceptable:
+                  summary: "Invalid Accept header"
+                  value:
+                    dateTime: '2024-01-17T16:26:18.062304Z'
+                    message: "Invalid Accept header"
+                    debugMessage: The accept header is missing or invalid
 
       security:
         - userRestricted:
@@ -966,6 +980,19 @@ components:
         type: string
         enum: [
           "application/vnd.hmrc.1.0+json"
+        ]
+    AcceptHeaderXml:
+      name: Accept
+      in: header
+      description: >-
+        Specifies the response format and the
+        [version](/api-documentation/docs/reference-guide#versioning) of the API
+        to be used.
+      required: true
+      schema:
+        type: string
+        enum: [
+            "application/vnd.hmrc.1.0+xml"
         ]
     ContentTypeHeader:
       name: Content-Type
@@ -1128,6 +1155,20 @@ components:
           type: string
         emcsCorrelationId:
           $ref: '#/components/schemas/CorrelationId'
+
+    ErrorResponse:
+      type: object
+      required:
+        - dateTime
+        - message
+        - debugMessage
+      properties:
+        dateTime:
+          $ref: '#/components/schemas/DateTime'
+        message:
+          type: string
+        debugMessage:
+          type: string
 
     DownstreamValidationError:
       type: object
