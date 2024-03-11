@@ -148,10 +148,6 @@ class GetMessagesControllerItSpec extends PlaySpec
   }
 
 
-  private def movement(message: Message) = {
-    Movement(validUUID, Some("boxId"), "lrn", consignorId, None, None, Instant.now, Seq(message))
-  }
-
   "GET a message for a movement and a messageId" in {
     withAuthorizedTrader(consignorId)
 
@@ -266,6 +262,10 @@ class GetMessagesControllerItSpec extends PlaySpec
     val result = getRequest(messageUrl, "application/json")
 
     result.status mustBe NOT_ACCEPTABLE
+    result.json mustBe Json.toJson(ErrorResponse(
+      timestamp,
+      "Invalid Accept header",
+      "The accept header is missing or invalid"))
   }
 
   private def getRequest(

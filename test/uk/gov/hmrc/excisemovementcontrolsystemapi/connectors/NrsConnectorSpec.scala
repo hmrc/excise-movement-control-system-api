@@ -21,13 +21,13 @@ import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.mockito.MockitoSugar.{reset, times, verify, when}
-import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.Status.BAD_REQUEST
 import play.api.libs.concurrent.Futures
 import play.api.libs.json.Json
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NonRepudiationSubmissionAccepted, NonRepudiationSubmissionFailed, NrsMetadata, NrsPayload}
@@ -40,7 +40,6 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class NrsConnectorSpec
   extends PlaySpec
-    with ScalaFutures
     with NrsTestData
     with EitherValues
     with BeforeAndAfterEach {
@@ -93,7 +92,7 @@ class NrsConnectorSpec
 
   "submit" should {
     "return success" in {
-      val result = connector.sendToNrs(nrsPayLoad, "correlationId").futureValue
+      val result = await(connector.sendToNrs(nrsPayLoad, "correlationId"))
 
       result mustBe NonRepudiationSubmissionAccepted("testNesSubmissionId")
     }
@@ -103,7 +102,7 @@ class NrsConnectorSpec
       when(httpClient.POST[Any,Any](any,any,any)(any,any,any,any))
         .thenReturn(Future.successful(HttpResponse(400, "bad request")))
 
-      val result = connector.sendToNrs(nrsPayLoad, "correlationId").futureValue
+      val result = await(connector.sendToNrs(nrsPayLoad, "correlationId"))
 
       result mustBe NonRepudiationSubmissionFailed(400, "bad request")
     }
@@ -113,7 +112,7 @@ class NrsConnectorSpec
         when(httpClient.POST[Any, Any](any, any, any)(any, any, any, any))
           .thenReturn(Future.successful(HttpResponse(BAD_REQUEST, "bad request")))
 
-        val result = connector.sendToNrs(nrsPayLoad, "correlationId").futureValue
+        val result = await(connector.sendToNrs(nrsPayLoad, "correlationId"))
 
         result mustBe NonRepudiationSubmissionFailed(BAD_REQUEST, "bad request")
         verifyHttpPostCAll(3)
@@ -124,7 +123,7 @@ class NrsConnectorSpec
           .thenReturn(Future.failed(new RuntimeException("error")))
 
         intercept[RuntimeException] {
-          connector.sendToNrs(nrsPayLoad, "correlationId").futureValue
+          await(connector.sendToNrs(nrsPayLoad, "correlationId"))
           verifyHttpPostCAll(3)
         }
       }
@@ -137,14 +136,14 @@ class NrsConnectorSpec
           Future.successful(successFulNrsResponse)
         )
 
-      val result = connector.sendToNrs(nrsPayLoad, "correlationId").futureValue
+      val result = await(connector.sendToNrs(nrsPayLoad, "correlationId"))
 
       result mustBe NonRepudiationSubmissionAccepted("testNesSubmissionId")
       verifyHttpPostCAll(2)
     }
 
     "start and stop a timer" in {
-      connector.sendToNrs(NrsPayload("encodepayload", nrsMetadata), "correlationId").futureValue
+      await(connector.sendToNrs(NrsPayload("encodepayload", nrsMetadata), "correlationId"))
 
       verify(metrics).timer(eqTo("emcs.nrs.submission.timer"))
       verify(metrics.timer(eqTo("emcs.nrs.submission.timer"))).time()
