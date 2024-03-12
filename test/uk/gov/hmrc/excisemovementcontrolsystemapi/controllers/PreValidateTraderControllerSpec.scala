@@ -27,8 +27,8 @@ import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.Results.NotFound
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PreValidateTraderConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeJsonParsers}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PreValidateTraderService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderErrorResponse, getPreValidateTraderRequest, getPreValidateTraderSuccessResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -41,15 +41,15 @@ class PreValidateTraderControllerSpec
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val sys: ActorSystem = ActorSystem("DraftExciseMovementControllerSpec")
-  private val connector = mock[PreValidateTraderConnector]
+  private val service = mock[PreValidateTraderService]
   private val cc = stubControllerComponents()
   private val request = createRequest(Json.toJson(getPreValidateTraderRequest))
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(connector)
+    reset(service)
 
-    when(connector.submitMessage(any, any)(any)).
+    when(service.submitMessage(any)(any)).
       thenReturn(Future.successful(Right(getPreValidateTraderSuccessResponse)))
   }
 
@@ -63,7 +63,7 @@ class PreValidateTraderControllerSpec
     }
 
     "return 200 when business error" in {
-      when(connector.submitMessage(any, any)(any)).
+      when(service.submitMessage(any)(any)).
         thenReturn(Future.successful(Right(getPreValidateTraderErrorResponse)))
 
       val result = createWithSuccessfulAuth.submit(request)
@@ -76,12 +76,12 @@ class PreValidateTraderControllerSpec
     "send a request to EIS" in {
       await(createWithSuccessfulAuth.submit(request))
 
-      verify(connector).submitMessage(any, any)(any)
+      verify(service).submitMessage(any)(any)
 
     }
 
     "return an error when EIS error" in {
-      when(connector.submitMessage(any, any)(any))
+      when(service.submitMessage(any)(any))
         .thenReturn(Future.successful(Left(NotFound("not found"))))
 
       val result = createWithSuccessfulAuth.submit(request)
@@ -111,7 +111,7 @@ class PreValidateTraderControllerSpec
     new PreValidateTraderController(
       FakeFailingAuthentication,
       FakeSuccessJsonParser,
-      connector,
+      service,
       cc
     )
 
@@ -119,7 +119,7 @@ class PreValidateTraderControllerSpec
     new PreValidateTraderController(
       FakeSuccessAuthentication,
       FakeFailureJsonParser,
-      connector,
+      service,
       cc
     )
 
@@ -127,7 +127,7 @@ class PreValidateTraderControllerSpec
     new PreValidateTraderController(
       FakeSuccessAuthentication,
       FakeSuccessJsonParser,
-      connector,
+      service,
       cc
     )
 

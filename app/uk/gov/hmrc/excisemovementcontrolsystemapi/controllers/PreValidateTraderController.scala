@@ -18,9 +18,9 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{Action, ControllerComponents}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PreValidateTraderConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseJsonAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.ParsedPreValidateTraderRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PreValidateTraderService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -28,18 +28,18 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class PreValidateTraderController @Inject()(
-                                             authAction: AuthAction,
-                                             parseJsonAction: ParseJsonAction,
-                                             connector: PreValidateTraderConnector,
-                                             cc: ControllerComponents
-                                           )(implicit ec: ExecutionContext)
+  authAction: AuthAction,
+  parseJsonAction: ParseJsonAction,
+  preValidateTraderService: PreValidateTraderService,
+  cc: ControllerComponents
+)(implicit ec: ExecutionContext)
   extends BackendController(cc) {
 
   def submit: Action[JsValue] = {
 
     (authAction andThen parseJsonAction).async(parse.json) {
       implicit request: ParsedPreValidateTraderRequest[JsValue] =>
-        connector.submitMessage(request.json, request.request.erns.head).flatMap {
+        preValidateTraderService.submitMessage(request).flatMap {
           case Right(response) => Future.successful(Ok(Json.toJson(response)))
           case Left(error) => Future.successful(error)
         }

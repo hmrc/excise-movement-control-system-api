@@ -23,13 +23,13 @@ import org.scalatestplus.play.PlaySpec
 import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, SERVICE_UNAVAILABLE}
 import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderErrorResponse, getPreValidateTraderSuccessResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderErrorEISResponse, getPreValidateTraderSuccessEISResponse}
 import uk.gov.hmrc.http.HttpResponse
 
 class PreValidateTraderHttpReaderSpec extends PlaySpec with EitherValues {
 
-  private val validResponse = getPreValidateTraderSuccessResponse
-  private val businessError = getPreValidateTraderErrorResponse
+  private val validResponse = getPreValidateTraderSuccessEISResponse
+  private val businessError = getPreValidateTraderErrorEISResponse
 
   private val preValidateTraderHttpReader = PreValidateTraderHttpReader("123", "GB123", "date time")
   "read" should {
