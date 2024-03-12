@@ -22,7 +22,7 @@ import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ValidateErnParameterAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilterBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, GetMovementResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -34,14 +34,14 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 class GetMovementsController @Inject()(
-                                        authAction: AuthAction,
-                                        validateErnParameterAction: ValidateErnParameterAction,
-                                        cc: ControllerComponents,
-                                        movementService: MovementService,
-                                        workItemService: WorkItemService,
-                                        dateTimeService: DateTimeService,
-                                        movementIdValidator: MovementIdValidation
-                                      )(implicit ec: ExecutionContext)
+  authAction: AuthAction,
+  validateErnParameterAction: ValidateErnParameterAction,
+  cc: ControllerComponents,
+  movementService: MovementService,
+  workItemService: WorkItemService,
+  dateTimeService: DateTimeService,
+  movementIdValidator: MovementIdValidation
+)(implicit ec: ExecutionContext)
   extends BackendController(cc) {
 
   def getMovements(ern: Option[String], lrn: Option[String], arc: Option[String], updatedSince: Option[String]): Action[AnyContent] = {
@@ -111,10 +111,11 @@ class GetMovementsController @Inject()(
   }
 
   private def createResponseFrom(movement: Movement) = {
-    GetMovementResponse(
+    ExciseMovementResponse(
       movement._id,
-      movement.consignorId,
+      None,
       movement.localReferenceNumber,
+      movement.consignorId,
       movement.consigneeId,
       movement.administrativeReferenceCode
     )

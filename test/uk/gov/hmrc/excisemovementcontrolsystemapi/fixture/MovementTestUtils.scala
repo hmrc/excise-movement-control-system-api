@@ -16,33 +16,35 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GetMovementResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
 trait MovementTestUtils {
 
   def createMovementResponse(
-                              ern: String,
-                              lrn: String,
-                              arc: String,
-                              consigneeId: Some[String]
-                            ): GetMovementResponse = {
-    GetMovementResponse(
+    consignorId: String,
+    lrn: String,
+    arc: String,
+    consigneeId: Option[String]
+  ): ExciseMovementResponse = {
+    ExciseMovementResponse(
       "cfdb20c7-d0b0-4b8b-a071-737d68dede5e",
-      ern,
+      None,
       lrn,
+      consignorId,
       consigneeId,
       Some(arc)
     )
   }
 
   def createMovementResponseFromMovement(
-                             movement: Movement
-                            ): GetMovementResponse = {
-    GetMovementResponse(
+    movement: Movement
+  ): ExciseMovementResponse = {
+    ExciseMovementResponse(
       movement._id,
-      movement.consignorId,
+      None,
       movement.localReferenceNumber,
+      movement.consignorId,
       movement.consigneeId,
       movement.administrativeReferenceCode
     )
