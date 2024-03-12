@@ -461,9 +461,11 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       "message has both ARC and LRN missing" in {
         setUpForUpdateMovement(newMessage, Seq(None), None, "<foo>test</foo>", cachedMovements, messageIdForNewMessage)
 
+        when(newMessage.toString).thenReturn("message type: Mocked Message")
+
         intercept[RuntimeException] {
           await(movementService.updateMovement(newMessage, consignorId))
-        }.getMessage mustBe "[MovementService] - Cannot retrieve a movement. Local reference number or administration reference code are not present for ERN: ABC, message: IE818"
+        }.getMessage mustBe "[MovementService] - Cannot find movement for ERN: ABC, message type: Mocked Message"
       }
 
       "movement is not present" in {

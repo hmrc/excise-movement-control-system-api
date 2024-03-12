@@ -16,12 +16,12 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
-import play.api.libs.json.Json
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
 import generated.IE815Type
+import play.api.libs.json.{JsValue, Json}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType.DraftMovement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
 
 import scala.xml.NodeSeq
 
@@ -42,11 +42,14 @@ case class IE815Message(private val obj: IE815Type, auditType: AuditType) extend
   override def toXml: NodeSeq =
     scalaxb.toXML[IE815Type](obj, MessageTypes.IE815.value, generated.defaultScope)
 
-  override def toJson = Json.toJson(obj)
+  override def toJson: JsValue = Json.toJson(obj)
 
   override def lrnEquals(lrn: String): Boolean = localReferenceNumber.equals(lrn)
 
   override def messageIdentifier: String = obj.Header.MessageIdentifier
+
+  override def toString: String = s"Message type: $messageType, message identifier: $messageIdentifier, LRN: $localReferenceNumber"
+
 }
 
 object IE815Message {

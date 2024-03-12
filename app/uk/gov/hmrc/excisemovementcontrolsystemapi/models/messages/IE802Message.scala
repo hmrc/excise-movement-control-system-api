@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
 import generated.{IE802Type, MessagesOption}
-import play.api.libs.json.Json
+import play.api.libs.json.{JsValue, Json}
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType
@@ -32,7 +32,7 @@ case class IE802Message
   private val key: Option[String],
   private val namespace: Option[String],
   auditType: AuditType
-) extends IEMessage with GeneratedJsonWriters{
+) extends IEMessage with GeneratedJsonWriters {
 
   def consigneeId: Option[String] = None
 
@@ -42,13 +42,17 @@ case class IE802Message
   override def toXml: NodeSeq = {
     scalaxb.toXML[IE802Type](obj, namespace, key, generated.defaultScope)
   }
-  override def toJson = Json.toJson(obj)
+
+  override def toJson: JsValue = Json.toJson(obj)
 
   override def messageType: String = MessageTypes.IE802.value
 
   override def messageIdentifier: String = obj.Header.MessageIdentifier
 
   override def lrnEquals(lrn: String): Boolean = false
+
+  override def toString: String = s"Message type: $messageType, message identifier: $messageIdentifier, ARC: $administrativeReferenceCode"
+
 }
 
 object IE802Message {

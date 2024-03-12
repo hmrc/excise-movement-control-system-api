@@ -246,7 +246,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         result.status mustBe BAD_REQUEST
         withClue("return the json response") {
           val responseBody = result.json.as[ErrorResponse]
-          responseBody.dateTime.truncatedTo(ChronoUnit.MINUTES) mustBe Instant.now.truncatedTo(ChronoUnit.MINUTES)
+          responseBody.dateTime.truncatedTo(ChronoUnit.MINUTES) mustBe timeStamp.truncatedTo(ChronoUnit.MINUTES)
           responseBody.message mustBe "ClientId error"
           responseBody.debugMessage mustBe "Request header is missing X-Client-Id"
         }
