@@ -23,7 +23,6 @@ import org.scalatestplus.play.PlaySpec
 import play.api.http.Status._
 import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable, UnprocessableEntity}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse, RimValidationErrorResponse, ValidatorResults}
 import uk.gov.hmrc.http.HttpResponse
 
@@ -69,21 +68,31 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
             "/foo",
             HttpResponse(statusCode, exampleError.toString())
           )
-
           result.left.value mustBe expectedResult
         }
       }
     }
 
-    "cleanup references to the control document in from EIS validation" in {
+    "cleanup references to the control document in from EIS validation" when {
+      "return a BAD_REQUEST" in {
+        val result = eisHttpParser.read(
+          "ANY",
+          "/foo",
+          HttpResponse(BAD_REQUEST, Json.toJson(createRimValidationResponse).toString())
+        )
 
-      val result = eisHttpParser.read(
-        "ANY",
-        "/foo",
-        HttpResponse(BAD_REQUEST, Json.toJson(createRimValidationResponse).toString())
-      )
+        result.left.value mustBe BadRequest(Json.toJson(expectedRimValidationResponse))
+      }
 
-      result.left.value mustBe BadRequest(Json.toJson(expectedRimValidationResponse))
+      "return a UNPROCESSABLE_ENTITY" in {
+        val result = eisHttpParser.read(
+          "ANY",
+          "/foo",
+          HttpResponse(UNPROCESSABLE_ENTITY, Json.toJson(createRimValidationResponse).toString())
+        )
+
+        result.left.value mustBe UnprocessableEntity(Json.toJson(expectedRimValidationResponse))
+      }
     }
 
     "throw if cannot parse json" in {
@@ -120,7 +129,7 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
     )
   }
 
-  private def createRimError(errorCode: BigInt, location: String) = {
+  private def createRimError(errorCode: BigInt, location: String): ValidatorResults = {
     ValidatorResults(
       errorCategory = "business",
       errorType = errorCode,
