@@ -15,8 +15,9 @@
  */
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
+
 import generated.{IE704Type, MessagesOption}
-import play.api.libs.json.Json
+import play.api.libs.json.{JsValue, Json}
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType
@@ -46,14 +47,22 @@ case class IE704Message
 
   override def toXml: NodeSeq =
     scalaxb.toXML[IE704Type](obj, namespace, key, generated.defaultScope)
-  override def toJson = Json.toJson(obj)
+
+  override def toJson: JsValue = Json.toJson(obj)
 
   override def lrnEquals(lrn: String): Boolean = {
-    (for {
+    localReferenceNumber.contains(lrn)
+  }
+
+  private def localReferenceNumber = {
+    for {
       attribute <- obj.Body.GenericRefusalMessage.AttributesValue
       messageLrn <- attribute.LocalReferenceNumber
-    } yield messageLrn).contains(lrn)
+    } yield messageLrn
   }
+
+  override def toString: String = s"Message type: $messageType, message identifier: $messageIdentifier, LRN: $localReferenceNumber, ARC: $administrativeReferenceCode"
+
 }
 
 object IE704Message {

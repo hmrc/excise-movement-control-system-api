@@ -35,10 +35,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class MovementService @Inject()(
-                                 movementRepository: MovementRepository,
-                                 emcsUtils: EmcsUtils,
-                                 dateTimeService: DateTimeService
-                               )(implicit ec: ExecutionContext) extends Logging {
+  movementRepository: MovementRepository,
+  emcsUtils: EmcsUtils,
+  dateTimeService: DateTimeService
+)(implicit ec: ExecutionContext) extends Logging {
 
   def saveNewMovement(movement: Movement): Future[Either[Result, Movement]] = {
 
@@ -73,9 +73,9 @@ class MovementService @Inject()(
   }
 
   def getMovementByErn(
-                        ern: Seq[String],
-                        filter: MovementFilter = MovementFilter.empty
-                      ): Future[Seq[Movement]] = {
+    ern: Seq[String],
+    filter: MovementFilter = MovementFilter.empty
+  ): Future[Seq[Movement]] = {
 
     movementRepository.getMovementByERN(ern).map {
       movements => filter.filterMovement(movements)
@@ -98,10 +98,10 @@ class MovementService @Inject()(
   }
 
   private def transformAndLogAnyError(
-                                       movements: Seq[Option[Movement]],
-                                       ern: String,
-                                       messageType: String
-                                     ): Seq[Movement] = {
+    movements: Seq[Option[Movement]],
+    ern: String,
+    messageType: String
+  ): Seq[Movement] = {
     movements.foldLeft[Seq[Movement]](Seq()) {
       case (acc: Seq[Movement], mv: Option[Movement]) =>
         mv match {
@@ -135,7 +135,7 @@ class MovementService @Inject()(
     (movementWithArc, movementWithLrn) match {
       case (Some(mArc), _) => saveDistinctMessage(mArc, message, messageArc)
       case (None, Some(mLrn)) => saveDistinctMessage(mLrn, message, messageArc)
-      case _ => throw new RuntimeException(s"[MovementService] - Cannot retrieve a movement. Local reference number or administration reference code are not present for ERN: $ern, message: ${message.messageType}")
+      case _ => throw new RuntimeException(s"[MovementService] - Cannot find movement for ERN: $ern, ${message.toString}")
     }
   }
 

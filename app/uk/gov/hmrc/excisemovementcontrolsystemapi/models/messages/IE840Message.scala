@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
 import generated.{IE840Type, MessagesOption}
-import play.api.libs.json.Json
+import play.api.libs.json.{JsValue, Json}
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType
@@ -44,11 +44,15 @@ case class IE840Message
   override def toXml: NodeSeq = {
     scalaxb.toXML[IE840Type](obj, namespace, key, generated.defaultScope)
   }
-  override def toJson = Json.toJson(obj)
+
+  override def toJson: JsValue = Json.toJson(obj)
 
   override def lrnEquals(lrn: String): Boolean = false
 
   override def messageIdentifier: String = obj.Header.MessageIdentifier
+
+  override def toString: String = s"Message type: $messageType, message identifier: $messageIdentifier, ARC: $administrativeReferenceCode"
+
 }
 
 object IE840Message {
