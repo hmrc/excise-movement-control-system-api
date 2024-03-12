@@ -27,7 +27,8 @@ trait WireMockServerSpec {
   def configureEisService: Map[String, Any] = {
     Map(
       "microservice.services.eis.host" -> wireHost,
-      "microservice.services.eis.port" -> wireMock.port()
+      "microservice.services.eis.port" -> wireMock.port(),
+      "auditing.enabled" -> false
     )
   }
 

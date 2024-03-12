@@ -1,0 +1,33 @@
+<ns:IE704 xmlns:ns="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3" xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01">
+  <ns:Header>
+    <urn:MessageSender>NDEA.GB</urn:MessageSender>
+    <urn:MessageRecipient>NDEA.GB</urn:MessageRecipient>
+    <urn:DateOfPreparation>2023-06-13</urn:DateOfPreparation>
+    <urn:TimeOfPreparation>00:18:33</urn:TimeOfPreparation>
+    <urn:MessageIdentifier>GB100000000302229</urn:MessageIdentifier>
+    <!--Optional:-->
+    <urn:CorrelationIdentifier>2416395e-7159-408a-89e7-c688962fbbee</urn:CorrelationIdentifier>
+  </ns:Header>
+  <ns:Body>
+    <ns:GenericRefusalMessage>
+      <!--Optional:-->
+      <ns:Attributes>
+        <!--Optional:-->
+        <ns:AdministrativeReferenceCode>23GB00000000000377163</ns:AdministrativeReferenceCode>
+        <!--Optional:-->
+        <ns:SequenceNumber>1</ns:SequenceNumber>
+        <!--Optional:-->
+        <ns:LocalReferenceNumber>LRNQA20230909022221</ns:LocalReferenceNumber>
+      </ns:Attributes>
+      <!--1 or more repetitions:-->
+      <ns:FunctionalError>
+        <ns:ErrorType>4518</ns:ErrorType>
+        <ns:ErrorReason>token</ns:ErrorReason>
+        <!--Optional:-->
+        <ns:ErrorLocation>token</ns:ErrorLocation>
+        <!--Optional:-->
+        <ns:OriginalAttributeValue>token</ns:OriginalAttributeValue>
+      </ns:FunctionalError>
+    </ns:GenericRefusalMessage>
+  </ns:Body>
+</ns:IE704>

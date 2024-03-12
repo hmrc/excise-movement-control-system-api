@@ -1,0 +1,22 @@
+<urn:IE905
+        xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE905:V3.01"
+        xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01">
+    <urn:Header>
+        <urn1:MessageSender>NDEA.GB</urn1:MessageSender>
+        <urn1:MessageRecipient>NDEA.XI</urn1:MessageRecipient>
+        <urn1:DateOfPreparation>2023-07-02</urn1:DateOfPreparation>
+        <urn1:TimeOfPreparation>21:23:41</urn1:TimeOfPreparation>
+        <urn1:MessageIdentifier>XI00432RR</urn1:MessageIdentifier>
+        <urn1:CorrelationIdentifier>7ab0fc23-1b3c-4c55-8f28-cfab03a6ada7</urn1:CorrelationIdentifier>
+    </urn:Header>
+    <urn:Body>
+        <urn:StatusResponse>
+            <urn:Attributes>
+                <urn:AdministrativeReferenceCode>23XI00000000000056349</urn:AdministrativeReferenceCode>
+                <urn:SequenceNumber>1</urn:SequenceNumber>
+                <urn:Status>X07</urn:Status>
+                <urn:LastReceivedMessageType>IE881</urn:LastReceivedMessageType>
+            </urn:Attributes>
+        </urn:StatusResponse>
+    </urn:Body>
+</urn:IE905>

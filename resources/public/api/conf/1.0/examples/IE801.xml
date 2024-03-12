@@ -1,0 +1,99 @@
+<urn:IE801 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.01"
+            xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01">
+    <urn:Header >
+        <urn1:MessageSender>NDEA.XI</urn1:MessageSender>
+        <urn1:MessageRecipient>NDEA.AT</urn1:MessageRecipient>
+        <urn1:DateOfPreparation>2023-06-22</urn1:DateOfPreparation>
+        <urn1:TimeOfPreparation>12:37:08.755</urn1:TimeOfPreparation>
+        <urn1:MessageIdentifier>XI000002</urn1:MessageIdentifier>
+    </urn:Header>
+    <urn:Body>
+        <urn:EADESADContainer>
+            <urn:ConsigneeTrader language="en">
+                <urn:Traderid>AT00000602078</urn:Traderid>
+                <urn:TraderName>AFOR KALE LTD</urn:TraderName>
+                <urn:StreetName>The Street</urn:StreetName>
+                <urn:Postcode>AT123</urn:Postcode>
+                <urn:City>The City</urn:City>
+            </urn:ConsigneeTrader>
+            <urn:ExciseMovement>
+                <urn:AdministrativeReferenceCode>23XI00000000000000013</urn:AdministrativeReferenceCode>
+                <urn:DateAndTimeOfValidationOfEadEsad>2023-06-22T11:37:10.345739396</urn:DateAndTimeOfValidationOfEadEsad>
+            </urn:ExciseMovement>
+            <urn:ConsignorTrader language="en">
+                <urn:TraderExciseNumber>XIWK000467015</urn:TraderExciseNumber>
+                <urn:TraderName>Clarkys Eagles</urn:TraderName>
+                <urn:StreetName>Happy Street</urn:StreetName>
+                <urn:Postcode>BT1 1BG</urn:Postcode>
+                <urn:City>The City</urn:City>
+            </urn:ConsignorTrader>
+            <urn:PlaceOfDispatchTrader language="en">
+                <urn:ReferenceOfTaxWarehouse>XI00000467014</urn:ReferenceOfTaxWarehouse>
+            </urn:PlaceOfDispatchTrader>
+            <urn:DeliveryPlaceTrader language="en">
+                <urn:Traderid>AT00000602078</urn:Traderid>
+                <urn:TraderName>METEST BOND
+                    &amp;
+                    STTSTGE</urn:TraderName>
+                <urn:StreetName>WHITETEST ROAD METEST CITY ESTATE</urn:StreetName>
+                <urn:Postcode>BN2 4KX</urn:Postcode>
+                <urn:City>STTEST,KENT</urn:City>
+            </urn:DeliveryPlaceTrader>
+            <urn:CompetentAuthorityDispatchOffice>
+                <urn:ReferenceNumber>GB004098</urn:ReferenceNumber>
+            </urn:CompetentAuthorityDispatchOffice>
+            <urn:EadEsad>
+                <urn:LocalReferenceNumber>lrnie8156540856</urn:LocalReferenceNumber>
+                <urn:InvoiceNumber>INVOICE001</urn:InvoiceNumber>
+                <urn:InvoiceDate>2018-04-04</urn:InvoiceDate>
+                <urn:OriginTypeCode>1</urn:OriginTypeCode>
+                <urn:DateOfDispatch>2021-12-02</urn:DateOfDispatch>
+                <urn:TimeOfDispatch>22:37:00</urn:TimeOfDispatch>
+            </urn:EadEsad>
+            <urn:HeaderEadEsad>
+                <urn:SequenceNumber>1</urn:SequenceNumber>
+                <urn:DateAndTimeOfUpdateValidation>2023-06-22T11:37:10.345801029</urn:DateAndTimeOfUpdateValidation>
+                <urn:DestinationTypeCode>1</urn:DestinationTypeCode>
+                <urn:JourneyTime>D01</urn:JourneyTime>
+                <urn:TransportArrangement>1</urn:TransportArrangement>
+            </urn:HeaderEadEsad>
+            <urn:TransportMode>
+                <urn:TransportModeCode>1</urn:TransportModeCode>
+            </urn:TransportMode>
+            <urn:MovementGuarantee>
+                <urn:GuarantorTypeCode>1</urn:GuarantorTypeCode>
+            </urn:MovementGuarantee>
+            <urn:BodyEadEsad>
+                <urn:BodyRecordUniqueReference>1</urn:BodyRecordUniqueReference>
+                <urn:ExciseProductCode>E410</urn:ExciseProductCode>
+                <urn:CnCode>27101231</urn:CnCode>
+                <urn:Quantity>100.000</urn:Quantity>
+                <urn:GrossMass>100.00</urn:GrossMass>
+                <urn:NetMass>90.00</urn:NetMass>
+                <urn:Density>10.00</urn:Density>
+                <urn:Package>
+                    <urn:KindOfPackages>BH</urn:KindOfPackages>
+                    <urn:NumberOfPackages>2</urn:NumberOfPackages>
+                    <urn:ShippingMarks>Subhasis Swain1</urn:ShippingMarks>
+                </urn:Package>
+                <urn:Package>
+                    <urn:KindOfPackages>BH</urn:KindOfPackages>
+                    <urn:NumberOfPackages>2</urn:NumberOfPackages>
+                    <urn:ShippingMarks>Subhasis Swain 2</urn:ShippingMarks>
+                </urn:Package>
+            </urn:BodyEadEsad>
+            <urn:TransportDetails>
+                <urn:TransportUnitCode>1</urn:TransportUnitCode>
+                <urn:IdentityOfTransportUnits>Transformers robots in disguise</urn:IdentityOfTransportUnits>
+            </urn:TransportDetails>
+            <urn:TransportDetails>
+                <urn:TransportUnitCode>2</urn:TransportUnitCode>
+                <urn:IdentityOfTransportUnits>MACHINES</urn:IdentityOfTransportUnits>
+            </urn:TransportDetails>
+            <urn:TransportDetails>
+                <urn:TransportUnitCode>3</urn:TransportUnitCode>
+                <urn:IdentityOfTransportUnits>MORE MACHINES</urn:IdentityOfTransportUnits>
+            </urn:TransportDetails>
+        </urn:EADESADContainer>
+    </urn:Body>
+</urn:IE801>
