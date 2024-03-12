@@ -18,12 +18,15 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
 import com.google.inject.ImplementedBy
 import play.api.Logging
+import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.auth.core.AffinityGroup.Organisation
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{affinityGroup, authorisedEnrolments, credentials, internalId}
 import uk.gov.hmrc.auth.core.retrieve.~
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentKey, EnrolmentRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse => EMCSErrorResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.play.bootstrap.backend.http.ErrorResponse
@@ -37,7 +40,8 @@ class AuthActionImpl @Inject()
 (
   override val authConnector: AuthConnector,
   cc: ControllerComponents,
-  val parser: BodyParsers.Default
+  val parser: BodyParsers.Default,
+  dateTimeService: DateTimeService
 )(implicit val ec: ExecutionContext)
   extends BackendController(cc) with AuthorisedFunctions with AuthAction with Logging {
 
@@ -54,12 +58,24 @@ class AuthActionImpl @Inject()
       case Right(authorisedRequest) =>
         logger.info(s"Authorised request for ${authorisedRequest.erns.mkString(",")}")
         block(authorisedRequest)
+
       case Left(error) if error.statusCode == FORBIDDEN =>
         logger.error(s"Forbidden: ${error.message}")
-        Future.successful(Forbidden(error.message))
+
+        Future.successful(Forbidden(Json.toJson(EMCSErrorResponse(
+          dateTimeService.timestamp(),
+          "Forbidden",
+          error.message
+        ))))
+
       case Left(error) =>
         logger.error(s"Problems with Authorisation: ${error.message}")
-        Future.successful(Unauthorized(error.message))
+
+        Future.successful(Unauthorized(Json.toJson(EMCSErrorResponse(
+          dateTimeService.timestamp(),
+          "Problems with authorisation",
+          error.message
+        ))))
     }
   }
 

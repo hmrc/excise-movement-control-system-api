@@ -17,21 +17,25 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
-import org.mockito.MockitoSugar.{reset, verify}
+import org.mockito.MockitoSugar.{reset, verify, when}
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.{FORBIDDEN, OK}
-import play.api.mvc.Results.Unauthorized
+import play.api.http.Status.OK
+import play.api.libs.json.Json
+import play.api.mvc.Results.{Forbidden, Unauthorized}
 import play.api.mvc.{BodyParsers, Results}
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{GET, await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.AffinityGroup.{Agent, Individual}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.play.bootstrap.tools.Stubs.stubMessagesControllerComponents
 
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
 class AuthActionSpec
@@ -42,12 +46,17 @@ class AuthActionSpec
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
+  private val now = Instant.now
+
   private val parser = mock[BodyParsers.Default]
-  private val authenticator = new AuthActionImpl(authConnector, stubMessagesControllerComponents(), parser)(ec)
+  private val dateTimeService = mock[DateTimeService]
+  private val authenticator = new AuthActionImpl(authConnector, stubMessagesControllerComponents(), parser, dateTimeService)(ec)
 
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(authConnector)
+
+    when(dateTimeService.timestamp()).thenReturn(now)
   }
 
   private def block(authRequest: EnrolmentRequest[_]) =
@@ -86,7 +95,11 @@ class AuthActionSpec
 
         val result = await(authenticator.invokeBlock(FakeRequest(), block))
 
-        result mustBe Unauthorized("Could not retrieve internalId from Auth")
+        result mustBe Unauthorized(Json.toJson(ErrorResponse(
+          now,
+          "Problems with authorisation",
+          "Could not retrieve internalId from Auth"
+        )))
       }
 
       "affinity group is Individual" in {
@@ -94,7 +107,11 @@ class AuthActionSpec
 
         val result = await(authenticator.invokeBlock(FakeRequest(), block))
 
-        result mustBe Unauthorized(s"Invalid affinity group $Individual from Auth")
+        result mustBe Unauthorized(Json.toJson(ErrorResponse(
+          now,
+          "Problems with authorisation",
+          s"Invalid affinity group $Individual from Auth"
+        )))
       }
 
       "affinity group is Agent" in {
@@ -102,7 +119,11 @@ class AuthActionSpec
 
         val result = await(authenticator.invokeBlock(FakeRequest(), block))
 
-        result mustBe Unauthorized(s"Invalid affinity group $Agent from Auth")
+        result mustBe Unauthorized(Json.toJson(ErrorResponse(
+          now,
+          "Problems with authorisation",
+          s"Invalid affinity group $Agent from Auth"
+        )))
       }
 
       "has no affinity group" in {
@@ -110,7 +131,11 @@ class AuthActionSpec
 
         val result = await(authenticator.invokeBlock(FakeRequest(), block))
 
-        result mustBe Unauthorized(s"Could not retrieve affinity group from Auth")
+        result mustBe Unauthorized(Json.toJson(ErrorResponse(
+          now,
+          "Problems with authorisation",
+          "Could not retrieve affinity group from Auth"
+        )))
       }
 
       "has no credential" in {
@@ -119,7 +144,11 @@ class AuthActionSpec
 
         val result = await(authenticator.invokeBlock(FakeRequest(), block))
 
-        result mustBe Unauthorized("Could not retrieve credentials from Auth")
+        result mustBe Unauthorized(Json.toJson(ErrorResponse(
+          now,
+          "Problems with authorisation",
+          "Could not retrieve credentials from Auth"
+        )))
       }
 
 
@@ -128,7 +157,11 @@ class AuthActionSpec
 
         val result = await(authenticator.invokeBlock(FakeRequest(), block))
 
-        result mustBe Unauthorized("Internal server error is error")
+        result mustBe Unauthorized(Json.toJson(ErrorResponse(
+          now,
+          "Problems with authorisation",
+          "Internal server error is error"
+        )))
       }
 
       "general failure" in {
@@ -137,7 +170,11 @@ class AuthActionSpec
 
         val result = await(authenticator.invokeBlock(FakeRequest(GET, "/foo"), block))
 
-        result mustBe Unauthorized("Unauthorised Exception for /foo with error A general auth failure")
+        result mustBe Unauthorized(Json.toJson(ErrorResponse(
+          now,
+          "Problems with authorisation",
+          "Unauthorised Exception for /foo with error A general auth failure"
+        )))
       }
 
       "auth returns Insufficient enrolments" in {
@@ -145,7 +182,11 @@ class AuthActionSpec
 
         val result = await(authenticator.invokeBlock(FakeRequest(GET, "/get"), block))
 
-        result mustBe Unauthorized("Unauthorised Exception for /get with error Insufficient Enrolments")
+        result mustBe Unauthorized(Json.toJson(ErrorResponse(
+          now,
+          "Problems with authorisation",
+          "Unauthorised Exception for /get with error Insufficient Enrolments"
+        )))
       }
     }
 
@@ -154,7 +195,12 @@ class AuthActionSpec
 
       val result = await(authenticator.invokeBlock(FakeRequest(GET, "/get"), block))
 
-      result.header.status mustBe FORBIDDEN
+      result mustBe Forbidden(Json.toJson(ErrorResponse(
+        now,
+        "Forbidden",
+        "Could not find ExciseNumber"
+      )))
+
     }
   }
 }
