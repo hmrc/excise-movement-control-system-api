@@ -39,15 +39,15 @@ case class NrsMetadata(
 
 object NrsMetadata {
 
-  val EmcsCreateMovementNotableEventId = "emcs-create-a-movement-ui"
-  val EmcsChangeDestinationNotableEventId =  "mcs-change-a-destination-api"
+  val EmcsCreateMovementNotableEventId = "emcs-create-a-movement-api"
+  val EmcsChangeDestinationNotableEventId = "emcs-change-a-destination-api"
   val EmcsReportOfReceiptNotableEvent = "emcs-report-a-receipt-api"
   val EmcsExplainADelayNotableEventId = "emcs-explain-a-delay-api"
   val EmcsExplainAShortageNotableEventId = "emcs-explain-a-shortage-api"
   val EmccCancelMovement = "emcs-cancel-a-movement-api"
   val EmcsSubmitAlertOrRejectionNotableEventId = "emcs-submit-alert-or-rejection-api"
 
-  val BusinessId = "emcs-api"
+  val BusinessId = "emcs"
   val SearchKey = "ERN"
 
   def create
