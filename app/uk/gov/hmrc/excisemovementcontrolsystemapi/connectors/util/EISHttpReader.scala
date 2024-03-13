@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util
 
 import play.api.Logging
 import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, SERVICE_UNAVAILABLE, UNPROCESSABLE_ENTITY}
-import play.api.libs.json.Json
+import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable, UnprocessableEntity}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
@@ -53,20 +53,20 @@ class EISHttpReader(
     val messageAsJson = response.json
 
     response.status match {
-      case BAD_REQUEST => extractValidJson(response)
+      case BAD_REQUEST => BadRequest(extractValidJson(response))
       case NOT_FOUND => NotFound(messageAsJson)
       case SERVICE_UNAVAILABLE => ServiceUnavailable(messageAsJson)
-      case UNPROCESSABLE_ENTITY => UnprocessableEntity(messageAsJson)
+      case UNPROCESSABLE_ENTITY => UnprocessableEntity(extractValidJson(response))
       case _ => InternalServerError(messageAsJson)
     }
   }
 
-  private def extractValidJson(response: HttpResponse): Result = {
+  private def extractValidJson(response: HttpResponse): JsValue = {
     Try(jsonAs[RimValidationErrorResponse](response.body)) match {
       case Success(value) =>
         val errors = value.validatorResults.map(o => o.copy(errorLocation = removeControlDocumentReferences(o.errorLocation)))
-        BadRequest(Json.toJson(value.copy(validatorResults = errors)))
-      case _ => BadRequest(response.json)
+        Json.toJson(value.copy(validatorResults = errors))
+      case _ => response.json
     }
   }
 }

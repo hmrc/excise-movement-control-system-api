@@ -294,15 +294,29 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         result.status mustBe BAD_REQUEST
       }
 
-      "rim validation error" in {
+      "rim validation error" when {
+        "error is BAD_REQUEST" in {
+          withAuthorizedTrader(consignorId)
+          stubEISErrorResponse(BAD_REQUEST, rimValidationErrorResponse(messageWithControlDoc))
 
-        withAuthorizedTrader(consignorId)
-        stubEISErrorResponse(BAD_REQUEST, rimValidationErrorResponse(messageWithControlDoc))
+          val response = postRequest(IE815)
 
-        val response = postRequest(IE815)
+          response.status mustBe BAD_REQUEST
+          withClue("must remove control document references in any paths") {
+            clean(response.body) mustBe clean(rimValidationErrorResponse(messageWithoutControlDoc))
+          }
+        }
 
-        withClue("must remove control document references in any paths") {
-          clean(response.body) mustBe clean(rimValidationErrorResponse(messageWithoutControlDoc))
+        "error is UNPROCESSABLE_ENTITY" in {
+          withAuthorizedTrader(consignorId)
+          stubEISErrorResponse(UNPROCESSABLE_ENTITY, rimValidationErrorResponse(messageWithControlDoc))
+
+          val response = postRequest(IE815)
+
+          response.status mustBe UNPROCESSABLE_ENTITY
+          withClue("must remove control document references in any paths") {
+            clean(response.body) mustBe clean(rimValidationErrorResponse(messageWithoutControlDoc))
+          }
         }
       }
 
