@@ -97,7 +97,17 @@ class GetMessagesControllerItSpec extends PlaySpec
       result.status mustBe OK
 
       withClue("return a list of messages as response") {
-        assertResponseContent(result.json.as[Seq[Message]], Seq(message))
+        result.json mustBe Json.parse(
+          s"""
+            |[
+            | {
+            |   "encodedMessage":"${message.encodedMessage}",
+            |   "messageType":"IE801",
+            |   "messageId":"$messageId",
+            |   "createdOn":"${timestamp.toString}"
+            | }
+            |]
+            |""".stripMargin)
       }
 
     }
@@ -283,11 +293,6 @@ class GetMessagesControllerItSpec extends PlaySpec
   private def createEncodeMessage = {
     val encodedMessage = Base64.getEncoder.encodeToString(IE801.toString().getBytes(StandardCharsets.UTF_8))
     Message(encodedMessage, "IE801", messageId, timestamp)
-  }
-
-  private def assertResponseContent(actual: Seq[Message], expected: Seq[Message]) = {
-    actual.head.messageType mustBe expected.head.messageType
-    actual.head.encodedMessage mustBe expected.head.encodedMessage
   }
 
   private def createMovementWithMessages(movementId: String = validUUID, messages: Seq[Message] = Seq.empty):Movement = {

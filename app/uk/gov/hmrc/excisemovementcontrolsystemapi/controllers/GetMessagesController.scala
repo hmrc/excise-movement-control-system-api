@@ -21,7 +21,7 @@ import cats.implicits._
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ValidateAcceptHeaderAction}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MessageResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
@@ -92,7 +92,15 @@ class GetMessagesController @Inject()(
             )))
           } else {
             workItemService.addWorkItemForErn(movement.consignorId, fastMode = false)
-            Ok(Json.toJson(filterMessagesByTime(movement.messages, updatedSince)))
+            Ok(Json.toJson(
+              filterMessagesByTime(movement.messages, updatedSince)
+                .map{ o => MessageResponse(
+                  encodedMessage = o.encodedMessage,
+                  messageType = o.messageType,
+                  messageId = o.messageId,
+                  createdOn = o.createdOn
+                )}
+            ))
           }
         }
 

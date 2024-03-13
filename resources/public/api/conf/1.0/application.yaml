@@ -544,13 +544,13 @@ paths:
           content:
             application/vnd.hmrc.1.0+json:
               example:
-                - hash: 510168662
-                  encodedMessage: PElFODE1PjwhLS0gRXhhbXBsZSBJRTgxNSBtZXNzYWdlIC0tPjwvSUU4MTU+
+                - encodedMessage: PElFODE1PjwhLS0gRXhhbXBsZSBJRTgxNSBtZXNzYWdlIC0tPjwvSUU4MTU+
                   messageType: IE815
+                  messageId: messageId1
                   createdOn: 2023-10-30T15:36:08.985Z
-                - hash: 510168662
-                  encodedMessage: PElFODAxPjwhLS0gRXhhbXBsZSBJRTgwMSBtZXNzYWdlIC0tPjwvSUU4MDE+
+                - encodedMessage: PElFODAxPjwhLS0gRXhhbXBsZSBJRTgwMSBtZXNzYWdlIC0tPjwvSUU4MDE+
                   messageType: IE801
+                  messageId: messageId2
                   createdOn: 2023-10-28T15:36:08.985Z
               schema:
                 type: array
@@ -1252,6 +1252,7 @@ components:
       required:
         - encodedMessage
         - createdOn
+        - messageId
       type: object
       properties:
         encodedMessage:
@@ -1259,6 +1260,9 @@ components:
           format: byte
         createdOn:
           $ref: "#/components/schemas/DateTime"
+        messageId:
+          type: string
+          pattern: '.{1,44}'
       xml:
         name: message
     MessageWithType:
@@ -1270,8 +1274,6 @@ components:
           properties:
             messageType:
               $ref: '#/components/schemas/MessageType'
-            hash:
-              type: string
     PreValidateTraderRequest:
       required:
         - exciseTraderValidationRequest

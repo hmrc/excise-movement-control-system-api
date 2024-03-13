@@ -31,7 +31,7 @@ import play.api.test.Helpers.{await, contentAsJson, contentAsString, defaultAwai
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateAcceptHeaderAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeAuthentication
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MessageResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
@@ -85,26 +85,38 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "return 200" in {
-      val message = Message("message", "IE801", "messageId", messageCreateOn)
+      val message = Message(123, "message", "IE801", "messageId", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
 
       status(result) mustBe OK
-      contentAsJson(result) mustBe Json.toJson(Seq(message))
+      contentAsJson(result) mustBe Json.parse(
+        s"""
+          |[
+          | {
+          |   "encodedMessage":"message",
+          |   "messageType":"IE801",
+          |   "messageId":"messageId",
+          |   "createdOn": "${messageCreateOn.toString}"
+          | }
+          |]""".stripMargin)
     }
 
     "get all the new messages" in {
-      val message = Message("message", "IE801", "messageId1", messageCreateOn)
-      val message2 = Message("message2", "IE801", "messageId2", messageCreateOn)
+      val message = Message(123, "message", "IE801", "messageId1", messageCreateOn)
+      val message2 = Message(345,"message2", "IE801", "messageId2", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message, message2))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
 
       status(result) mustBe OK
-      contentAsJson(result) mustBe Json.toJson(Seq(message, message2))
+      contentAsJson(result) mustBe Json.toJson(Seq(
+        MessageResponse("message", "IE801", "messageId1", messageCreateOn),
+        MessageResponse("message2", "IE801", "messageId2", messageCreateOn)
+      ))
     }
 
     "get all the new messages when there is a time query parameter provided" in {
@@ -118,7 +130,12 @@ class GetMessagesControllerSpec extends PlaySpec
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, Some(messageCreateOn.toString))(createRequest())
 
       status(result) mustBe OK
-      contentAsJson(result) mustBe Json.toJson(Seq(message))
+      contentAsJson(result) mustBe Json.toJson(Seq(MessageResponse(
+        encodedMessage =  "message",
+        messageType = "IE801",
+        messageId =  "messageId1",
+        createdOn = timeInFuture)
+      ))
     }
 
     "get all the new messages including messages with a createdOn time of NOW when there is a time query parameter provided" in {
@@ -134,7 +151,10 @@ class GetMessagesControllerSpec extends PlaySpec
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, Some(timeNowString))(createRequest())
 
       status(result) mustBe OK
-      contentAsJson(result) mustBe Json.toJson(Seq(message, message3))
+      contentAsJson(result) mustBe Json.toJson(Seq(
+        MessageResponse("message", "IE801", "messageId1", timeInFuture),
+        MessageResponse("message3", "IE801", "messageId3", messageCreateOn)
+      ))
     }
 
     "succeed when a valid date format is provided" in {
@@ -146,7 +166,12 @@ class GetMessagesControllerSpec extends PlaySpec
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, Some("2020-11-15T17:02:34.00Z"))(createRequest())
 
       status(result) mustBe OK
-      contentAsJson(result) mustBe Json.toJson(Seq(message))
+      contentAsJson(result) mustBe Json.toJson(Seq(MessageResponse(
+        encodedMessage =  "message",
+        messageType = "IE801",
+        messageId =  "messageId",
+        createdOn = timeInFuture)
+      ))
     }
 
     "fail when an invalid date format is provided" in {
