@@ -51,7 +51,7 @@ class DraftExciseMovementController @Inject()(
   appConfig: AppConfig,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-  extends BackendController(cc) with Logging{
+  extends BackendController(cc) with Logging {
 
   def submit: Action[NodeSeq] = {
 
@@ -81,7 +81,6 @@ class DraftExciseMovementController @Inject()(
     }
 
 
-
   }
 
   private def submitSaveAudit(request: ParsedXmlRequest[_], ern: String, boxId: Option[String], message: IE815Message)(implicit hc: HeaderCarrier): EitherT[Future, Result, Movement] = {
@@ -89,12 +88,7 @@ class DraftExciseMovementController @Inject()(
       submissionMessageService.submit(request, ern).flatMap {
         case Left(result) => auditService.auditMessage(message, "Failed to Submit")
           Future.successful(Left(result))
-        case Right(_) => saveMovement(boxId, message).value.map {
-          case Left(result) => auditService.auditMessage(message, "Failed to Save")
-            Left(result)
-          case Right(movement) => auditService.auditMessage(message)
-            Right(movement)
-        }
+        case Right(_) => saveMovement(boxId, message).value
       }.recover {
         case e =>
           auditService.auditMessage(message, "Failed to Save and Submit (Recovered)")
@@ -118,12 +112,18 @@ class DraftExciseMovementController @Inject()(
   private def saveMovement(
     boxId: Option[String],
     message: IE815Message
-  ): EitherT[Future, Result, Movement] = {
+  )(implicit hc: HeaderCarrier): EitherT[Future, Result, Movement] = {
 
     val newMovement: Movement = createMovementFomMessage(message, boxId)
     workItemService.addWorkItemForErn(newMovement.consignorId, fastMode = true)
 
-    EitherT(movementMessageService.saveNewMovement(newMovement))
+    EitherT(movementMessageService.saveNewMovement(newMovement).map {
+      case Left(result) => auditService.auditMessage(message, "Failed to Save")
+        Left(result)
+      case Right(movement) => auditService.auditMessage(message)
+        Right(movement)
+    })
+
   }
 
   private def createMovementFomMessage(message: IE815Message, boxId: Option[String]): Movement = {

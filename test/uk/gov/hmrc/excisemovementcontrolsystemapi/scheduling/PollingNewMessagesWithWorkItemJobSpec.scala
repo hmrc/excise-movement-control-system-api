@@ -120,6 +120,7 @@ class PollingNewMessagesWithWorkItemJobSpec
       .thenReturn(Future.successful(SuccessPushNotificationResponse("notificationId)")))
 
     when(auditService.auditMessage(any)(any)).thenReturn(EitherT.fromEither(Right(())))
+    when(auditService.auditMessage(any, any)(any)).thenReturn(EitherT.fromEither(Right(())))
 
     when(newMessageService.acknowledgeMessage(any)(any))
       .thenReturn(successful(MessageReceiptSuccessResponse(timestamp, "", 0)))
@@ -468,6 +469,15 @@ class PollingNewMessagesWithWorkItemJobSpec
 
         verify(newMessageService, never()).acknowledgeMessage(any)(any)
         verify(notificationService, times(4)).sendNotification(any, any, any)(any)
+
+        withClue("should audit successful messages") {
+          verify(auditService, times(4)).auditMessage(eqTo(message))(any)
+        }
+
+        withClue("should audit failing message") {
+          verify(auditService, times(1)).auditMessage(eqTo(message), eqTo("Failed to process"))(any)
+        }
+
       }
 
       "update movement throws" in {

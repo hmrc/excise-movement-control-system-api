@@ -59,7 +59,7 @@ class SubmitMessageController @Inject()(
         val result = for {
           validatedMovementId <- validateMovementId(movementId)
           movement <- getMovement(validatedMovementId)
-            authorisedErn <- validateMessage(movement, request.ieMessage, request.erns)
+          authorisedErn <- validateMessage(movement, request.ieMessage, request.erns)
           _ <- sendRequest(request, authorisedErn)
         } yield {
           Accepted
@@ -110,11 +110,6 @@ class SubmitMessageController @Inject()(
           Left(result)
         case Right(response) => auditService.auditMessage(request.ieMessage)
           Right(response)
-      }.recover {
-        e =>
-          auditService.auditMessage(request.ieMessage, "Failed to Submit (Recovered)")
-          logger.logger.error(e.getMessage)
-          Left(InternalServerError("Unexpected error when persisting and forwarding Message"))
       }
     }
   }

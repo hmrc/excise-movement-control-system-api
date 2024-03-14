@@ -138,17 +138,12 @@ class PollingNewMessagesWithWorkItemJob @Inject()
 
   private def process(messages: Seq[IEMessage], exciseNumber: String): Future[Boolean] =
     messages.traverse(message => {
-      saveToDbAndSendNotification(message, exciseNumber).map {
-        success => {
-          if(success) {
-            auditService.auditMessage(message)
-          } else {
-            auditService.auditMessage(message, "Failed to process")
-          }
-          success
-        }
-      }
-  }).map(result => !result.contains(false) && result.nonEmpty)
+      for {
+        isMessageSaved <- saveToDbAndSendNotification(message, exciseNumber)
+        _ = if (isMessageSaved) auditService.auditMessage(message).value
+        _ = if (!isMessageSaved) auditService.auditMessage(message, "Failed to process").value
+      } yield isMessageSaved
+    }).map(result => !result.contains(false) && result.nonEmpty)
 
   private def saveToDbAndSendNotification(
                                             message: IEMessage,
