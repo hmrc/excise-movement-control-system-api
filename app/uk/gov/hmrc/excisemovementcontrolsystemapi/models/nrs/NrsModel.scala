@@ -48,7 +48,7 @@ object NrsMetadata {
   val EmcsSubmitAlertOrRejectionNotableEventId = "emcs-submit-alert-or-rejection-api"
 
   val BusinessId = "emcs"
-  val SearchKey = "ERN"
+  val SearchKey = "ern"
 
   def create
   (
