@@ -91,7 +91,11 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
 
-    applicationBuilder(configureServices).build()
+    applicationBuilder(configureServicesLocally).build()
+  }
+
+  private def configureServicesLocally: Map[String, Any] = {
+    configureServices ++ Map("auditing.enabled" -> false)
   }
 
   override def beforeAll(): Unit = {
@@ -392,6 +396,16 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       "EIS returns bad json" in {
         withAuthorizedTrader(consignorId)
         stubEISErrorResponse(INTERNAL_SERVER_ERROR, """"{"json": "is-bad"}""")
+
+        postRequest(IE815).status mustBe INTERNAL_SERVER_ERROR
+      }
+
+      "Database service throws exception" in {
+        withAuthorizedTrader(consignorId)
+        stubEISSuccessfulRequest
+        setupRepositories
+
+        when(movementRepository.saveMovement(any)).thenThrow(new Exception("Database error"))
 
         postRequest(IE815).status mustBe INTERNAL_SERVER_ERROR
       }

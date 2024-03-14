@@ -89,11 +89,6 @@ class DraftExciseMovementController @Inject()(
         case Left(result) => auditService.auditMessage(message, "Failed to Submit")
           Future.successful(Left(result))
         case Right(_) => saveMovement(boxId, message).value
-      }.recover {
-        case e =>
-          auditService.auditMessage(message, "Failed to Save and Submit (Recovered)")
-          logger.logger.error(e.getMessage)
-          Left(InternalServerError("Unexpected error when persisting and forwarding message"))
       }
     }
   }

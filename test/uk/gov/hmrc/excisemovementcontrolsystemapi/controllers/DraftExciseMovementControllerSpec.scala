@@ -39,7 +39,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MessageIdentifierIsUnauthorised, MessageValidation}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, MovementService, PushNotificationService, SubmissionMessageService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import java.time.Instant
@@ -184,14 +184,6 @@ class DraftExciseMovementControllerSpec
 
     "sends a failure audit when a message submits but doesn't save" in {
       when(movementService.saveNewMovement(any)).thenReturn(Future.successful(Left(BadRequest(""))))
-
-      await(createWithSuccessfulAuth.submit(request))
-
-      verify(auditService).auditMessage(any, any)(any)
-    }
-
-    "sends a failure audit on unexpected error in movement service" in {
-      when(movementService.saveNewMovement(any)).thenThrow(new Exception(""))
 
       await(createWithSuccessfulAuth.submit(request))
 
@@ -384,9 +376,9 @@ class DraftExciseMovementControllerSpec
 
   private def createRequestWithClientId: FakeRequest[Elem] = {
     createRequest(Seq(
-     HeaderNames.CONTENT_TYPE -> "application/xml",
-        "X-Client-Id" -> "clientId"
-      ))
+      HeaderNames.CONTENT_TYPE -> "application/xml",
+      "X-Client-Id" -> "clientId"
+    ))
   }
 
   private def createRequestWithClientBoxId: FakeRequest[Elem] = {
