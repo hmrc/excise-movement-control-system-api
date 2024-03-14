@@ -26,16 +26,16 @@ class NrsEventIdMapperSpec extends PlaySpec {
   val sut = new NrsEventIdMapper()
 
   "mapMessageToEventClient" should {
-    "map IE815 to emcs-create-a-movement-ui" in {
-      sut.mapMessageToEventId(mock[IE815Message]) mustBe "emcs-create-a-movement-ui"
+    "map IE815 to emcs-create-a-movement-api" in {
+      sut.mapMessageToEventId(mock[IE815Message]) mustBe "emcs-create-a-movement-api"
     }
 
     "map IE810 to emcs-cancel-a-movement-api" in {
       sut.mapMessageToEventId(mock[IE810Message]) mustBe "emcs-cancel-a-movement-api"
     }
 
-    "map IE813 to mcs-change-a-destination-api" in {
-      sut.mapMessageToEventId(mock[IE813Message]) mustBe "mcs-change-a-destination-api"
+    "map IE813 to emcs-change-a-destination-api" in {
+      sut.mapMessageToEventId(mock[IE813Message]) mustBe "emcs-change-a-destination-api"
     }
 
     "map IE818 to emcs-report-a-receipt-api" in {

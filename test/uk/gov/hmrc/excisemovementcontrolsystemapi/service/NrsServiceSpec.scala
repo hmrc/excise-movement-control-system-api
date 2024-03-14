@@ -109,15 +109,15 @@ class NrsServiceSpec
 
   private def createExpectedMetadata = {
     NrsMetadata(
-      businessId = "emcs-api",
-      notableEvent = "emcs-create-a-movement-ui",
+      businessId = "EMCS",
+      notableEvent = "emcs-create-a-movement-api",
       payloadContentType = "application/xml",
       payloadSha256Checksum = sha256Hash("<IE815>test</IE815>"),
       userSubmissionTimestamp = timeStamp.toString,
       identityData = testNrsIdentityData,
       userAuthToken = testAuthToken,
       headerData = userHeaderData.toMap,
-      searchKeys = Map("ERN" -> "ern")
+      searchKeys = Map("ern" -> "ern")
     )
   }
 

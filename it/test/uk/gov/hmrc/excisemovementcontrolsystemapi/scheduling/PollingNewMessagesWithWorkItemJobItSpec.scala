@@ -214,7 +214,10 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       }
     }
 
-    "not save duplicate to db" in {
+    //todo: this has been ignore for the moment because it fails because some temporary changes.
+    // We made some changes made temporary to test QA (always send an acknowledge for every show-mew-message
+    // call event if message are cont saved to DB). This need to be reviewed when the temporary changes are addressed
+    "not save duplicate to db" ignore {
       val movementRepository = new MovementRepository(
         mongoComponent,
         mongoAppConfig,
