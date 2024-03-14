@@ -1061,7 +1061,7 @@ trait TestXml {
           <urn:DateAndTimeOfValidationOfExplanationOnShortage>2023-08-15T09:57:19</urn:DateAndTimeOfValidationOfExplanationOnShortage>
         </urn:Attributes>
         <urn:ConsigneeTrader language="en">
-          <urn:Traderid>GBWK240176600</urn:Traderid>
+          <urn:Traderid>GBWK002281023</urn:Traderid>
           <urn:TraderName>CHARLES HASWELL AND PARTNERS LTD</urn:TraderName>
           <urn:StreetName>1</urn:StreetName>
           <urn:Postcode>AA11AA</urn:Postcode>

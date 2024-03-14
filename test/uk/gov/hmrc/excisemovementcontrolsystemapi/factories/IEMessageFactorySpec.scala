@@ -303,7 +303,7 @@ class IEMessageFactorySpec
       val result = sut.createFromXml("IE871", IE871WithConsignee).asInstanceOf[IE871Message]
       result.submitter mustBe Consignee
       result.consignorId mustBe None
-      result.consigneeId mustBe Some("GBWK240176600")
+      result.consigneeId mustBe Some("GBWK002281023")
     }
 
     "return an instance of IE881Message" in {
