@@ -782,12 +782,6 @@ paths:
                     dateTime: '2024-01-17T16:27:41.095827Z'
                     message: Movement Id format error
                     debugMessage: Movement Id should be a valid UUID
-                dateFormat:
-                  summary: Invalid updated since format
-                  value:
-                    dateTime: '2024-01-17T16:27:41.095827Z'
-                    message: Invalid date format provided in the updatedSince query parameter
-                    debugMessage: Date format should be like '2020-11-15T17:02:34.00Z'
 
         '401':
           description: Consignor or Consignee not authorised. Invalid enrolment parameter.
