@@ -143,7 +143,7 @@ class PollingNewMessagesWithWorkItemJob @Inject()
               _ <- auditService.auditMessage(message).value
             } yield saveResult
     })
-      .map(result => result.nonEmpty)
+      .map(result => !result.contains(false) && result.nonEmpty)
   }
 
   private def saveToDbAndSendNotification(

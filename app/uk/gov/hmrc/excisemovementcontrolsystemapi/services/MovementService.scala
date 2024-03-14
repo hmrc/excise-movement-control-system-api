@@ -135,8 +135,7 @@ class MovementService @Inject()(
     (movementWithArc, movementWithLrn) match {
       case (Some(mArc), _) => saveDistinctMessage(mArc, message, messageArc)
       case (None, Some(mLrn)) => saveDistinctMessage(mLrn, message, messageArc)
-      case _ => logger.warn(s"[MovementService] - Cannot find movement for ERN: $ern, ${message.toString}")
-      Future.successful(None)
+      case _ => throw new RuntimeException(s"[MovementService] - Cannot find movement for ERN: $ern, ${message.toString}")
     }
   }
 
