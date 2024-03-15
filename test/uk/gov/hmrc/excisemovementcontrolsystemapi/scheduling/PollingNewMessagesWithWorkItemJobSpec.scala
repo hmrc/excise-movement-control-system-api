@@ -434,8 +434,8 @@ class PollingNewMessagesWithWorkItemJobSpec
     }
 
     "not acknowledge the messages" when {
-// TODO don't ignore
-      "none of the messages have been saved in the db" ignore {
+
+      "none of the messages have been saved in the db" in {
         addOneItemToMockQueue()
         when(newMessageService.getNewMessages(any)(any))
           .thenReturn(Future.successful(Some((newMessageResponse, 5))))
@@ -449,8 +449,7 @@ class PollingNewMessagesWithWorkItemJobSpec
         verify(notificationService, never()).sendNotification(any, any, any)(any)
       }
 
-      // TODO don't ignore
-      "any individual message is not saved to the database" ignore {
+      "any individual message is not saved to the database" in {
         addOneItemToMockQueue()
         when(newMessageService.getNewMessages(any)(any))
           .thenReturn(Future.successful(Some((newMessageResponse, 5))))
