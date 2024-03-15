@@ -39,7 +39,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MessageIdentifierIsUnauthorised, MessageValidation}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, MovementService, PushNotificationService, SubmissionMessageService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import java.time.Instant
@@ -174,10 +174,20 @@ class DraftExciseMovementControllerSpec
       verify(auditService).auditMessage(any)(any)
     }
 
-    "not send an audit event if submit call fails" in {
+    "sends a failure audit when a message isn't submitted" in {
       when(submissionMessageService.submit(any, any)(any)).thenReturn(Future.successful(Left(BadRequest(""))))
 
-      verify(auditService, times(0)).auditMessage(any)(any)
+      await(createWithSuccessfulAuth.submit(request))
+
+      verify(auditService).auditMessage(any, any)(any)
+    }
+
+    "sends a failure audit when a message submits but doesn't save" in {
+      when(movementService.saveNewMovement(any)).thenReturn(Future.successful(Left(BadRequest(""))))
+
+      await(createWithSuccessfulAuth.submit(request))
+
+      verify(auditService).auditMessage(any, any)(any)
     }
 
     "call the add work item routine to create or update the database" in {
@@ -366,9 +376,9 @@ class DraftExciseMovementControllerSpec
 
   private def createRequestWithClientId: FakeRequest[Elem] = {
     createRequest(Seq(
-     HeaderNames.CONTENT_TYPE -> "application/xml",
-        "X-Client-Id" -> "clientId"
-      ))
+      HeaderNames.CONTENT_TYPE -> "application/xml",
+      "X-Client-Id" -> "clientId"
+    ))
   }
 
   private def createRequestWithClientBoxId: FakeRequest[Elem] = {

@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import cats.data.EitherT
+import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction}
@@ -48,7 +49,7 @@ class SubmitMessageController @Inject()(
                                          dateTimeService: DateTimeService,
                                          cc: ControllerComponents
                                        )(implicit ec: ExecutionContext)
-  extends BackendController(cc) {
+  extends BackendController(cc) with Logging {
 
   def submit(movementId: String): Action[NodeSeq] = {
 
@@ -58,7 +59,7 @@ class SubmitMessageController @Inject()(
         val result = for {
           validatedMovementId <- validateMovementId(movementId)
           movement <- getMovement(validatedMovementId)
-            authorisedErn <- validateMessage(movement, request.ieMessage, request.erns)
+          authorisedErn <- validateMessage(movement, request.ieMessage, request.erns)
           _ <- sendRequest(request, authorisedErn)
         } yield {
           Accepted
@@ -103,11 +104,14 @@ class SubmitMessageController @Inject()(
                          (implicit hc: HeaderCarrier): EitherT[Future, Result, EISSubmissionResponse] = {
     workItemService.addWorkItemForErn(authorisedErn, fastMode = true)
 
-    for {
-      result <- EitherT(submissionMessageService.submit(request, authorisedErn))
-      _ <- auditService.auditMessage(request.ieMessage)
-    } yield result
-
+    EitherT {
+      submissionMessageService.submit(request, authorisedErn).map {
+        case Left(result) => auditService.auditMessage(request.ieMessage, "Failed to Submit")
+          Left(result)
+        case Right(response) => auditService.auditMessage(request.ieMessage)
+          Right(response)
+      }
+    }
   }
 
 }

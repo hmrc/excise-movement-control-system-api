@@ -100,10 +100,11 @@ class SubmitMessageControllerSpec
       verify(auditService).auditMessage(any)(any)
     }
 
-    "not send an audit event if submit call fails" in {
+    "sends a failure audit when a message isn't submitted" in {
       when(submissionMessageService.submit(any, any)(any)).thenReturn(Future.successful(Left(BadRequest(""))))
+      await(createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request))
 
-      verify(auditService, times(0)).auditMessage(any)(any)
+      verify(auditService).auditMessage(any,any)(any)
     }
 
     "call the add work item routine to create or update the database" in {

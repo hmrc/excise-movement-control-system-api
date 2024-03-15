@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import cats.data.EitherT
+import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
@@ -29,6 +30,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseM
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -49,9 +51,9 @@ class DraftExciseMovementController @Inject()(
   appConfig: AppConfig,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-  extends BackendController(cc) {
+  extends BackendController(cc) with Logging {
 
-  def submit: Action[NodeSeq] =
+  def submit: Action[NodeSeq] = {
 
 
     (authAction andThen xmlParser).async(parse.xml) {
@@ -62,9 +64,7 @@ class DraftExciseMovementController @Inject()(
           authorisedErn <- validateMessage(ie815Message, request.erns)
           clientId <- retrieveClientIdFromHeader(request)
           boxId <- getBoxId(clientId)
-          _ <- EitherT(submissionMessageService.submit(request, authorisedErn))
-          _ <- auditService.auditMessage(ie815Message)
-          movement <- saveMovement(boxId, ie815Message)
+          movement <- submitSaveAudit(request, authorisedErn, boxId, ie815Message)
         } yield {
           Accepted(Json.toJson(ExciseMovementResponse(
             "Accepted",
@@ -80,6 +80,19 @@ class DraftExciseMovementController @Inject()(
         result.merge
     }
 
+
+  }
+
+  private def submitSaveAudit(request: ParsedXmlRequest[_], ern: String, boxId: Option[String], message: IE815Message)(implicit hc: HeaderCarrier): EitherT[Future, Result, Movement] = {
+    EitherT {
+      submissionMessageService.submit(request, ern).flatMap {
+        case Left(result) => auditService.auditMessage(message, "Failed to Submit")
+          Future.successful(Left(result))
+        case Right(_) => saveMovement(boxId, message).value
+      }
+    }
+  }
+
   private def validateMessage(
     message: IE815Message,
     authErns: Set[String]
@@ -90,15 +103,22 @@ class DraftExciseMovementController @Inject()(
     })
   }
 
+
   private def saveMovement(
     boxId: Option[String],
     message: IE815Message
-  ): EitherT[Future, Result, Movement] = {
+  )(implicit hc: HeaderCarrier): EitherT[Future, Result, Movement] = {
 
     val newMovement: Movement = createMovementFomMessage(message, boxId)
     workItemService.addWorkItemForErn(newMovement.consignorId, fastMode = true)
 
-    EitherT(movementMessageService.saveNewMovement(newMovement))
+    EitherT(movementMessageService.saveNewMovement(newMovement).map {
+      case Left(result) => auditService.auditMessage(message, "Failed to Save")
+        Left(result)
+      case Right(movement) => auditService.auditMessage(message)
+        Right(movement)
+    })
+
   }
 
   private def createMovementFomMessage(message: IE815Message, boxId: Option[String]): Movement = {

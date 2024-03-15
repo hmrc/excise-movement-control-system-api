@@ -107,23 +107,9 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
         "auditing.enabled" -> false
       )
   }
-  protected def appBuilder: GuiceApplicationBuilder = {
-    wireMock.start()
-    WireMock.configureFor(wireHost, wireMock.port())
 
-    GuiceApplicationBuilder()
-      .configure(configureServices)
-      .loadConfig(env => Configuration.load(env, Map("config.resource" -> "application.test.conf")))
-      .overrides(
-        bind[DateTimeService].to(timeService)
-      )
-
-  }
-
-  protected def fakeApplication
-  (
-    movementRepository: MovementRepository
-  ): GuiceApplicationBuilder = {
+  protected def appBuilder(movementRepository: MovementRepository): GuiceApplicationBuilder = {
+    {
       wireMock.start()
       WireMock.configureFor(wireHost, wireMock.port())
 
@@ -132,11 +118,12 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
         .loadConfig(env => Configuration.load(env, Map("config.resource" -> "application.test.conf")))
         .overrides(
           bind[MovementRepository].to(movementRepository),
-          bind[DateTimeService].to(timeService)
+          bind[DateTimeService].to(timeService),
+          bind[ExciseNumberQueueWorkItemRepository].to(repository)
         )
-
     }
 
+  }
 
 
   override def beforeEach(): Unit = {
@@ -174,7 +161,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       movementRepository.saveMovement(cachedMovement2).futureValue
       movementRepository.saveMovement(cachedMovement3).futureValue
 
-      val app = appBuilder.build()
+      val app = appBuilder(movementRepository).build()
       running(app) {
 
         eventually {
@@ -231,7 +218,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       movementRepository.saveMovement(cachedMovement2).futureValue
       movementRepository.saveMovement(cachedMovement3).futureValue
 
-      val app = appBuilder.build()
+      val app = appBuilder(movementRepository).build()
       running(app) {
 
         eventually {
@@ -282,7 +269,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
 
       setUpMovementRepository(movementRepository)
 
-      val app = fakeApplication(movementRepository).build()
+      val app = appBuilder(movementRepository).build()
       running(app) {
 
         eventually {
@@ -311,7 +298,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       movementRepository.saveMovement(cachedMovement2).futureValue
       movementRepository.saveMovement(cachedMovement3).futureValue
 
-      val app = appBuilder.build()
+      val app = appBuilder(movementRepository).build()
       running(app) {
 
         eventually {
@@ -358,7 +345,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
 
       movementRepository.saveMovement(cachedMovement1).futureValue
 
-      val app = appBuilder.build()
+      val app = appBuilder(movementRepository).build()
       running(app) {
 
         val movements = movementRepository.collection.find().toFuture().futureValue
@@ -418,7 +405,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
 
     when(movementRepository.updateMovement(mockitoAny)) thenAnswer {
       (m: Movement) => {
-        val hasMessageWithId = m.consignorId.equals("1") && m.messages.filter(o => o.messageId.equals("messageId-2")).size > 0
+        val hasMessageWithId = m.consignorId.equals("1") && m.messages.exists(o => o.messageId.equals("messageId-2"))
         if (hasMessageWithId) {
           throw new RuntimeException("error saving movement")
         } else
