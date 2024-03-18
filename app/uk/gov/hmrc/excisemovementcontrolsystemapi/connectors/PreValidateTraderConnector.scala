@@ -23,6 +23,7 @@ import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTraderHttpReader
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.PreValidateTraderRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderEISResponse
@@ -54,20 +55,19 @@ class PreValidateTraderConnector @Inject()
       appConfig.preValidateTraderUrl,
       request,
       build(correlationId, createdDateTime, appConfig.preValidateTraderBearerToken)
-    )(PreValidateTraderRequest.format, PreValidateTraderHttpReader(correlationId, ern, createdDateTime), hc, ec)
+    )(PreValidateTraderRequest.format, PreValidateTraderHttpReader(correlationId, ern, createdDateTime, dateTimeService), hc, ec)
       .andThen { case _ => timer.stop() }
       .recover {
         case ex: Throwable =>
 
           logger.warn(EISErrorMessage(createdDateTime, ern, ex.getMessage, correlationId, "PreValidateTrader"), ex)
 
-          val error = EISErrorResponse(
+          val error = ErrorResponse(
             timestamp,
-            "INTERNAL_SERVER_ERROR",
-            "Exception",
-            ex.getMessage,
-            correlationId
+            "Internal Server Error",
+            "Unexpected error occurred while processing PreValidateTrader request"
           )
+
           Left(InternalServerError(Json.toJson(error)))
 
       }

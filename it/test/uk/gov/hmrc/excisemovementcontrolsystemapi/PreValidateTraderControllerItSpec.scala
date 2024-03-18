@@ -30,6 +30,7 @@ import play.api.libs.ws.WSClient
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.InternalError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{ApplicationBuilderSupport, WireMockServerSpec}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderMessageResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderRequest, getPreValidateTraderSuccessEISResponse, getPreValidateTraderSuccessResponse}
 
@@ -104,8 +105,12 @@ class PreValidateTraderControllerItSpec extends PlaySpec
 
       result.status mustBe NOT_FOUND
 
-      withClue("return the EIS error response") {
-        result.body mustBe ""
+      withClue("return the error response") {
+        Json.parse(result.body).as[ErrorResponse] mustBe ErrorResponse(
+          timestamp,
+          "PreValidateTrader error",
+          "Error occurred during PreValidateTrader request"
+        )
       }
     }
 

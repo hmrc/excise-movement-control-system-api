@@ -32,7 +32,7 @@ import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceU
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTraderHttpReader
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderEISResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderErrorResponse, getPreValidateTraderRequest, getPreValidateTraderSuccessResponse}
@@ -136,8 +136,10 @@ class PreValidateTraderConnectorSpec extends PlaySpec with BeforeAndAfterEach wi
       val result = await(submitPreValidateTrader())
 
       result.left.value mustBe InternalServerError(
-        Json.toJson(EISErrorResponse(timestamp, "INTERNAL_SERVER_ERROR",
-          "Exception", "error", emcsCorrelationId)))
+        Json.toJson(ErrorResponse(timestamp,
+          "Internal Server Error",
+          "Unexpected error occurred while processing PreValidateTrader request"
+        )))
     }
 
     "return Not found error" in {

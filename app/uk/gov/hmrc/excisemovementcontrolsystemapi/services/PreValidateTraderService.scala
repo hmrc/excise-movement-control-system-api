@@ -49,15 +49,15 @@ class PreValidateTraderService @Inject()(
 
     val results = eisResponse match {
       case PreValidateTraderEISResponse(Some(x), None, None) =>
-        //Success response from EIS
+        //Success response from EIS has an extra nested level
         (x.validationTimeStamp, x.exciseTraderResponse)
       case PreValidateTraderEISResponse(_, Some(y), Some(z)) =>
-        //Failure response
+        //Failure response does not have that level
         (y, z)
     }
 
     results._2.length match {
-      case 1 => //Only ever expect one in this array
+      case 1 => //Only ever expect one entry in this array
         val responseDetails = results._2.head
         Right(PreValidateTraderMessageResponse(
           results._1,
