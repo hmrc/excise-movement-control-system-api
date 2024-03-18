@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 import org.mockito.MockitoSugar.when
 import org.mongodb.scala.model.Filters
 import org.scalatest.concurrent.IntegrationPatience
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, OptionValues}
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
@@ -42,7 +42,6 @@ class MovementRepositoryItSpec extends PlaySpec
   with IntegrationPatience
   with BeforeAndAfterEach
   with BeforeAndAfterAll
-  with OptionValues
   with GuiceOneAppPerSuite {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
@@ -59,8 +58,7 @@ class MovementRepositoryItSpec extends PlaySpec
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
       .configure("mongodb.uri" -> mongoUri)
-      .overrides(bind[DateTimeService].to(dateTimeService)
-    )
+      .overrides(bind[DateTimeService].to(dateTimeService))
 
   override implicit lazy val app: Application = appBuilder.build()
 
@@ -77,7 +75,7 @@ class MovementRepositoryItSpec extends PlaySpec
   "saveMovement" should {
     "return insert a movement" in {
       val uuid = UUID.randomUUID()
-      val movement = Movement(uuid.toString,Some("boxId"), "123", "345", Some("789"), None, timestamp, Seq.empty)
+      val movement = Movement(uuid.toString, Some("boxId"), "123", "345", Some("789"), None, timestamp, Seq.empty)
       val result = repository.saveMovement(movement).futureValue
 
       val insertedRecord = find(
@@ -127,7 +125,7 @@ class MovementRepositoryItSpec extends PlaySpec
       result mustBe Some(updateMovement.copy(lastUpdated = timestamp))
       val expected = Seq(
         movementLRN1,
-        movementLRN2.copy(administrativeReferenceCode = Some("arc"), lastUpdated =  timestamp, messages = Seq(message))
+        movementLRN2.copy(administrativeReferenceCode = Some("arc"), lastUpdated = timestamp, messages = Seq(message))
       )
       records mustBe expected
     }
@@ -153,14 +151,14 @@ class MovementRepositoryItSpec extends PlaySpec
     "return the matching movement when it is there" in {
       val movementId1 = "49491927-aaa1-4835-b405-dd6e7fa3aaf0"
       val movementId2 = "8b43eb3b-3856-4f0c-b1ab-80355f70f6aa"
-        val movement1 = Movement(movementId1, Some("boxId"), "lrn", "ern1", None, Some("arc1"), Instant.now, Seq.empty)
-        val movement2 = Movement(movementId2, Some("boxId"), "lrn", "ern2", None, Some("arc2"), Instant.now, Seq.empty)
-        insertMovement(movement1)
-        insertMovement(movement2)
+      val movement1 = Movement(movementId1, Some("boxId"), "lrn", "ern1", None, Some("arc1"), Instant.now, Seq.empty)
+      val movement2 = Movement(movementId2, Some("boxId"), "lrn", "ern2", None, Some("arc2"), Instant.now, Seq.empty)
+      insertMovement(movement1)
+      insertMovement(movement2)
 
-        val result = repository.getMovementById(movementId1).futureValue
-        result mustBe Some(movement1)
-      }
+      val result = repository.getMovementById(movementId1).futureValue
+      result mustBe Some(movement1)
+    }
 
     "return None when no movement for given id" in {
       val movementId1 = "49491927-aaa1-4835-b405-dd6e7fa3aaf0"

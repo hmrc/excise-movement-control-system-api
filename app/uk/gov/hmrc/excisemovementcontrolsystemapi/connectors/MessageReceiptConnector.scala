@@ -55,14 +55,14 @@ class MessageReceiptConnector @Inject()
             case Right(eisResponse) => eisResponse
             case Left(error) =>
               logger.error(EISErrorMessage(dateTime.toString, ern, response.body, correlationId, MessageTypes.IE_MESSAGE_RECEIPT.value))
-              MessageReceiptFailResponse(error.status, dateTime, error.body)
+              MessageReceiptFailResponse(error.status, dateTime, error.body, Some(correlationId))
           }
       }
       .andThen(_ => timer.stop())
       .recover {
         case ex: Throwable =>
           logger.error(EISErrorMessage(dateTime.toString, ern, ex.getMessage, correlationId, MessageTypes.IE_MESSAGE_RECEIPT.value), ex)
-          MessageReceiptFailResponse(INTERNAL_SERVER_ERROR, dateTime, s"Exception occurred when Acknowledging messages for ern: $ern")
+          MessageReceiptFailResponse(INTERNAL_SERVER_ERROR, dateTime, s"Exception occurred when Acknowledging messages for ern: $ern", Some(correlationId))
       }
   }
 }

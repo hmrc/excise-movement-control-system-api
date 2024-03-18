@@ -84,7 +84,8 @@ class PreValidateTraderHttpReaderSpec extends PlaySpec with EitherValues {
           val expectedResponse = Status(statusCode)(Json.toJson(ErrorResponse(
             now,
             "PreValidateTrader error",
-            "Error occurred during PreValidateTrader request"
+            "Error occurred during PreValidateTrader request",
+            "123"
           )))
 
           val result = preValidateTraderHttpReader.read(

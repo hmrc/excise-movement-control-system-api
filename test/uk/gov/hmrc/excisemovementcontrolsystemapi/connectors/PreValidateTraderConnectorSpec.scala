@@ -63,7 +63,6 @@ class PreValidateTraderConnectorSpec extends PlaySpec with BeforeAndAfterEach wi
   private val validResponse = getPreValidateTraderSuccessResponse
   private val businessError = getPreValidateTraderErrorResponse
 
-
   private val timestamp = Instant.parse("2023-09-17T09:32:50.345Z")
 
   override def beforeEach(): Unit = {
@@ -138,7 +137,8 @@ class PreValidateTraderConnectorSpec extends PlaySpec with BeforeAndAfterEach wi
       result.left.value mustBe InternalServerError(
         Json.toJson(ErrorResponse(timestamp,
           "Internal Server Error",
-          "Unexpected error occurred while processing PreValidateTrader request"
+          "Unexpected error occurred while processing PreValidateTrader request",
+          emcsCorrelationId
         )))
     }
 

@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, ok, post, urlEqualTo}
 import org.mockito.MockitoSugar.when
-import org.scalatest.{BeforeAndAfterAll, OptionValues}
+import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -42,8 +42,7 @@ class PreValidateTraderControllerItSpec extends PlaySpec
   with GuiceOneServerPerSuite
   with ApplicationBuilderSupport
   with WireMockServerSpec
-  with BeforeAndAfterAll
-  with OptionValues {
+  with BeforeAndAfterAll {
 
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
   private val url = s"http://localhost:$port/traders/pre-validate"
@@ -106,11 +105,10 @@ class PreValidateTraderControllerItSpec extends PlaySpec
       result.status mustBe NOT_FOUND
 
       withClue("return the error response") {
-        Json.parse(result.body).as[ErrorResponse] mustBe ErrorResponse(
-          timestamp,
-          "PreValidateTrader error",
-          "Error occurred during PreValidateTrader request"
-        )
+        val body = Json.parse(result.body).as[ErrorResponse]
+        body.dateTime mustBe timestamp
+        body.message mustBe "PreValidateTrader error"
+        body.debugMessage mustBe "Error occurred during PreValidateTrader request"
       }
     }
 

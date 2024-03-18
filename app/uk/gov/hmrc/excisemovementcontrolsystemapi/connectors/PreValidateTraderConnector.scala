@@ -65,7 +65,8 @@ class PreValidateTraderConnector @Inject()
           val error = ErrorResponse(
             timestamp,
             "Internal Server Error",
-            "Unexpected error occurred while processing PreValidateTrader request"
+            "Unexpected error occurred while processing PreValidateTrader request",
+            correlationId
           )
 
           Left(InternalServerError(Json.toJson(error)))

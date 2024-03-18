@@ -109,7 +109,7 @@ class MessageReceiptConnectorSpec
 
         val result = await(sut.put("123"))
 
-        result mustBe MessageReceiptFailResponse(NOT_FOUND, timestamp, "error")
+        result mustBe MessageReceiptFailResponse(NOT_FOUND, timestamp, "error", Some("12345"))
       }
 
       "can't parse Json" in {
@@ -118,7 +118,7 @@ class MessageReceiptConnectorSpec
 
         val result = await(sut.put("123"))
 
-        result mustBe MessageReceiptFailResponse(INTERNAL_SERVER_ERROR, timestamp, "Exception occurred when Acknowledging messages for ern: 123")
+        result mustBe MessageReceiptFailResponse(INTERNAL_SERVER_ERROR, timestamp, "Exception occurred when Acknowledging messages for ern: 123", Some("12345"))
 
       }
     }

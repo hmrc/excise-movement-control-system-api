@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 import org.mockito.MockitoSugar.{reset, when}
 import org.mongodb.scala.model.Filters
 import org.scalatest.concurrent.IntegrationPatience
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, OptionValues}
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
@@ -42,7 +42,6 @@ class ExciseNumberQueueWorkItemRepositoryItSpec extends PlaySpec
   with IntegrationPatience
   with BeforeAndAfterEach
   with BeforeAndAfterAll
-  with OptionValues
   with GuiceOneAppPerSuite {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global

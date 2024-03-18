@@ -27,15 +27,21 @@ trait GenericErrorResponse {
   val dateTime: Instant
   val message: String
   val debugMessage: String
+  val correlationId: Option[String]
 }
 
 case class ErrorResponse
 (
   override val dateTime: Instant,
   override val message: String,
-  override val debugMessage: String) extends GenericErrorResponse
+  override val debugMessage: String,
+  override val correlationId: Option[String] = None) extends GenericErrorResponse
 
 object ErrorResponse {
+
+  def apply(dateTime: Instant, message: String, debugMessage: String, correlationId: String): ErrorResponse =
+    ErrorResponse(dateTime, message, debugMessage, Some(correlationId))
+
   implicit def format: OFormat[ErrorResponse] = Json.format[ErrorResponse]
 }
 

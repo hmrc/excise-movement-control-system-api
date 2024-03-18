@@ -65,7 +65,8 @@ class PreValidateTraderHttpReader(
     val ourErrorResponse = ErrorResponse(
       dateTimeService.timestamp(),
       "PreValidateTrader error",
-      "Error occurred during PreValidateTrader request"
+      "Error occurred during PreValidateTrader request",
+      correlationId
     )
 
     Status(response.status)(Json.toJson(ourErrorResponse))
