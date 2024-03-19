@@ -34,10 +34,10 @@ import uk.gov.hmrc.auth.core.InternalError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.StringSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{ApplicationBuilderSupport, SubmitMessageTestSupport, WireMockServerSpec}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, Consignor}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Movement}
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
@@ -352,7 +352,12 @@ class SubmitMessageControllerItSpec extends PlaySpec
     result.status mustBe NOT_FOUND
 
     withClue("return the EIS error response") {
-      result.json mustBe Json.toJson(eisErrorResponse)
+      result.json mustBe Json.toJson(ErrorResponse(
+        Instant.parse("2023-12-05T12:05:06Z"),
+        "not_found",
+        "debug NOT_FOUND",
+        "123"
+      ))
     }
   }
 
@@ -376,11 +381,11 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
   "remove control document references in any paths for a BAD_REQUEST" in {
     withAuthorizedTrader(consigneeId)
-    stubEISErrorResponse(BAD_REQUEST, rimValidationErrorResponse(messageWithControlDoc))
+    stubEISErrorResponse(BAD_REQUEST, rimValidationErrorResponse(locationWithControlDoc))
 
     val response = postRequest(movement._id, IE818)
 
-    clean(response.body) mustBe clean(rimValidationErrorResponse(messageWithoutControlDoc))
+    clean(response.body) mustBe clean(validationErrorResponse(locationWithoutControlDoc, timestamp.toString))
 
   }
 
@@ -461,10 +466,10 @@ class SubmitMessageControllerItSpec extends PlaySpec
   }
 
   private def postRequest(
-                           movementId: String,
-                           xml: NodeSeq = IE818,
-                           contentType: String = """application/vnd.hmrc.1.0+xml"""
-                         ) = {
+    movementId: String,
+    xml: NodeSeq = IE818,
+    contentType: String = """application/vnd.hmrc.1.0+xml"""
+  ) = {
     await(wsClient.url(url(movementId))
       .addHttpHeaders(
         HeaderNames.AUTHORIZATION -> "TOKEN",

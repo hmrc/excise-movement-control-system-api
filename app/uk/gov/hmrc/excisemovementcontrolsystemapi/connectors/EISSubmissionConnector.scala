@@ -23,6 +23,7 @@ import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
@@ -42,11 +43,11 @@ class EISSubmissionConnector @Inject()
 )(implicit ec: ExecutionContext) extends EISSubmissionHeaders with Logging {
 
   def submitMessage(
-                     message: IEMessage,
-                     requestXmlAsString: String,
-                     authorisedErn: String,
-                     correlationId: String
-                   )(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
+    message: IEMessage,
+    requestXmlAsString: String,
+    authorisedErn: String,
+    correlationId: String
+  )(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
 
     val timer = metrics.timer("emcs.submission.connector.timer").time()
 
@@ -63,18 +64,17 @@ class EISSubmissionConnector @Inject()
       appConfig.emcsReceiverMessageUrl,
       eisRequest,
       build(correlationId, createdDateTime, appConfig.submissionBearerToken)
-    )(EISSubmissionRequest.format, EISHttpReader(correlationId, authorisedErn, createdDateTime), hc, ec)
+    )(EISSubmissionRequest.format, EISHttpReader(correlationId, authorisedErn, createdDateTime, dateTimeService), hc, ec)
       .andThen { case _ => timer.stop() }
       .recover {
         case ex: Throwable =>
 
           logger.warn(EISErrorMessage(createdDateTime, authorisedErn, ex.getMessage, correlationId, messageType), ex)
 
-          val error = EISErrorResponse(
+          val error = ErrorResponse(
             timestamp,
-            "INTERNAL_SERVER_ERROR",
-            "Exception",
-            ex.getMessage,
+            "Internal server error",
+            "Unexpected error occurred while processing Submission request",
             correlationId
           )
           Left(InternalServerError(Json.toJson(error)))
@@ -93,7 +93,9 @@ class EISSubmissionConnector @Inject()
       </con:MetaData>
       <con:OperationRequest>
         <con:Parameters>
-          <con:Parameter Name="ExciseRegistrationNumber">{ern}</con:Parameter>
+          <con:Parameter Name="ExciseRegistrationNumber">
+            {ern}
+          </con:Parameter>
           <con:Parameter Name="message">
             {scala.xml.PCData(innerXml)}
           </con:Parameter>

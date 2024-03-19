@@ -35,7 +35,8 @@ case class ErrorResponse
   override val dateTime: Instant,
   override val message: String,
   override val debugMessage: String,
-  override val correlationId: Option[String] = None) extends GenericErrorResponse
+  override val correlationId: Option[String] = None,
+  validatorResults: Option[Seq[ValidationResponse]] = None) extends GenericErrorResponse
 
 object ErrorResponse {
 
@@ -44,4 +45,18 @@ object ErrorResponse {
 
   implicit def format: OFormat[ErrorResponse] = Json.format[ErrorResponse]
 }
+
+case class ValidationResponse(
+  errorCategory: String,
+  errorType: BigInt,
+  errorReason: String,
+  errorLocation: String,
+  originalAttributeValue: String
+)
+
+object ValidationResponse {
+  implicit def format: OFormat[ValidationResponse] = Json.format[ValidationResponse]
+}
+
+
 

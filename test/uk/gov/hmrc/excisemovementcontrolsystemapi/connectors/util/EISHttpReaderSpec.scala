@@ -17,13 +17,17 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util
 
 
+import org.mockito.MockitoSugar.when
 import org.scalatest.EitherValues
 import org.scalatest.Inspectors.forAll
+import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.Status._
 import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable, UnprocessableEntity}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse, RimValidationErrorResponse, ValidatorResults}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse, RimValidationErrorResponse, RimValidatorResults}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ValidationResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HttpResponse
 
 import java.time.Instant
@@ -31,9 +35,12 @@ import scala.reflect.runtime.universe.typeOf
 
 class EISHttpReaderSpec extends PlaySpec with EitherValues {
 
-  private val eisHttpParser = EISHttpReader("123", "GB123", "date time")
   private val localDateTime = Instant.parse("2023-09-19T15:57:23.654Z")
-  private val exampleError = Json.toJson(
+  private val dateTimeService = mock[DateTimeService]
+  when(dateTimeService.timestamp()).thenReturn(localDateTime)
+
+  private val eisHttpParser = EISHttpReader("123", "GB123", "date time", dateTimeService)
+  private val exampleEISError = Json.toJson(
     EISErrorResponse(
       localDateTime,
       "BAD_REQUEST",
@@ -41,6 +48,9 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
       "Error details",
       "123"
     ))
+  private val exampleResponseError = Json.toJson(
+    ErrorResponse(localDateTime, "Error", "Error details", Some("123"))
+  )
 
   "read" should {
     "return EISResponse" in {
@@ -56,17 +66,17 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
     }
 
     forAll(Seq(
-      (BAD_REQUEST, BadRequest(exampleError)),
-      (NOT_FOUND, NotFound(exampleError)),
-      (INTERNAL_SERVER_ERROR, InternalServerError(exampleError)),
-      (SERVICE_UNAVAILABLE, ServiceUnavailable(exampleError)),
-      (UNPROCESSABLE_ENTITY, UnprocessableEntity(exampleError)))) { case (statusCode, expectedResult) =>
+      (BAD_REQUEST, BadRequest(exampleResponseError)),
+      (NOT_FOUND, NotFound(exampleResponseError)),
+      (INTERNAL_SERVER_ERROR, InternalServerError(exampleResponseError)),
+      (SERVICE_UNAVAILABLE, ServiceUnavailable(exampleResponseError)),
+      (UNPROCESSABLE_ENTITY, UnprocessableEntity(exampleResponseError)))) { case (statusCode, expectedResult) =>
       s"return $statusCode" when {
         s"$statusCode has returned from HttpResponse" in {
           val result = eisHttpParser.read(
             "ANY",
             "/foo",
-            HttpResponse(statusCode, exampleError.toString())
+            HttpResponse(statusCode, exampleEISError.toString())
           )
           result.left.value mustBe expectedResult
         }
@@ -119,18 +129,30 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
   }
 
   private def expectedRimValidationResponse = {
-    RimValidationErrorResponse(
-      emcsCorrelationId = "correlationId",
-      message = Seq("Validation error(s) occurred"),
-      validatorResults = Seq(
-        createRimError(8080L, "/urn:IE815[1]/urn:DateOfDispatch[1]"),
-        createRimError(8090L, "/urn:IE818[1]/urn:DateOfDispatch[1]"),
-      )
+    ErrorResponse(
+      localDateTime,
+      "Validation error",
+      "Validation error(s) occurred",
+      Some("correlationId"),
+      Some(Seq(
+        createLocalValidationError(8080L, "/urn:IE815[1]/urn:DateOfDispatch[1]"),
+        createLocalValidationError(8090L, "/urn:IE818[1]/urn:DateOfDispatch[1]"),
+      ))
     )
   }
 
-  private def createRimError(errorCode: BigInt, location: String): ValidatorResults = {
-    ValidatorResults(
+  private def createRimError(errorCode: BigInt, location: String): RimValidatorResults = {
+    RimValidatorResults(
+      errorCategory = "business",
+      errorType = errorCode,
+      errorReason = "The Date of Dispatch you entered is incorrect",
+      errorLocation = location,
+      originalAttributeValue = localDateTime.toString
+    )
+  }
+
+  private def createLocalValidationError(errorCode: BigInt, location: String): ValidationResponse = {
+    ValidationResponse(
       errorCategory = "business",
       errorType = errorCode,
       errorReason = "The Date of Dispatch you entered is incorrect",
