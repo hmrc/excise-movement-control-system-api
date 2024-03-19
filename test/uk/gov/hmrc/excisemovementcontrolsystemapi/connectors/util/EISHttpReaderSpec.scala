@@ -123,7 +123,9 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
       message = Seq("Validation error(s) occurred"),
       validatorResults = Seq(
         createRimError(8080L, "/con:Control[1]/con:Parameter[1]/urn:IE815[1]/urn:DateOfDispatch[1]"),
-        createRimError(8090L, "/con:Control[1]/con:Parameter[1]/urn:IE818[1]/urn:DateOfDispatch[1]")
+        createRimError(8090L,
+          "/con:Control[1]/con:Parameter[1]/urn:IE818[1]/urn:AcceptedOrRejectedReportOfReceiptExport[1]/urn:Attributes[1][1]",
+          None)
       )
     )
   }
@@ -136,28 +138,30 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
       Some("correlationId"),
       Some(Seq(
         createLocalValidationError(8080L, "/urn:IE815[1]/urn:DateOfDispatch[1]"),
-        createLocalValidationError(8090L, "/urn:IE818[1]/urn:DateOfDispatch[1]"),
+        createLocalValidationError(8090L,
+          "/urn:IE818[1]/urn:AcceptedOrRejectedReportOfReceiptExport[1]/urn:Attributes[1][1]",
+          None)
       ))
     )
   }
 
-  private def createRimError(errorCode: BigInt, location: String): RimValidatorResults = {
+  private def createRimError(errorCode: BigInt, location: String, origValue: Option[String] = Some(localDateTime.toString)): RimValidatorResults = {
     RimValidatorResults(
-      errorCategory = "business",
-      errorType = errorCode,
-      errorReason = "The Date of Dispatch you entered is incorrect",
-      errorLocation = location,
-      originalAttributeValue = localDateTime.toString
+      errorCategory = Some("business"),
+      errorType = Some(errorCode),
+      errorReason = Some("The Date of Dispatch you entered is incorrect"),
+      errorLocation = Some(location),
+      originalAttributeValue = origValue
     )
   }
 
-  private def createLocalValidationError(errorCode: BigInt, location: String): ValidationResponse = {
+  private def createLocalValidationError(errorCode: BigInt, location: String, origValue: Option[String] = Some(localDateTime.toString)): ValidationResponse = {
     ValidationResponse(
-      errorCategory = "business",
-      errorType = errorCode,
-      errorReason = "The Date of Dispatch you entered is incorrect",
-      errorLocation = location,
-      originalAttributeValue = localDateTime.toString
+      errorCategory = Some("business"),
+      errorType = Some(errorCode),
+      errorReason = Some("The Date of Dispatch you entered is incorrect"),
+      errorLocation = Some(location),
+      originalAttributeValue = origValue
     )
   }
 }

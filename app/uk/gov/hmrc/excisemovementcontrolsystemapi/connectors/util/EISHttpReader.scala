@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util
 
 import play.api.Logging
-import play.api.libs.json.{JsValue, Json, Reads}
+import play.api.libs.json.{Json, Reads}
 import play.api.mvc.Result
 import play.api.mvc.Results.Status
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, EISErrorResponse, EISSubmissionResponse, RimValidationErrorResponse}
@@ -56,13 +56,13 @@ class EISHttpReader(
     val messageAsJson = response.json
 
     (tryAsJson[RimValidationErrorResponse](response), tryAsJson[EISErrorResponse](response)) match {
-      case (Some(x), None) => handleRimValidationResponse(response, messageAsJson, x)
+      case (Some(x), None) => handleRimValidationResponse(response, x)
       case (None, Some(y)) => handleEISErrorResponse(response, y)
     }
 
   }
 
-  private def handleRimValidationResponse(response: HttpResponse, messageAsJson: JsValue, rimError: RimValidationErrorResponse): Result = {
+  private def handleRimValidationResponse(response: HttpResponse, rimError: RimValidationErrorResponse): Result = {
 
     val validationResponse = rimError.validatorResults.map(
       x => ValidationResponse(
@@ -73,7 +73,6 @@ class EISHttpReader(
         x.originalAttributeValue
       )
     )
-
 
     Status(response.status)(Json.toJson(ErrorResponse(
       dateTimeService.timestamp(),

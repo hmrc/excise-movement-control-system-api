@@ -37,9 +37,8 @@ trait ResponseHandler extends Logging {
     }
   }
 
-  def removeControlDocumentReferences(errorMsg: String): String = {
-    val result = errorMsg.replaceAll("/con:[^/]*(?=/)", "")
-    result
+  def removeControlDocumentReferences(errorMsg: Option[String]): Option[String] = {
+    errorMsg.map { x => x.replaceAll("/con:[^/]*(?=/)", "") }
   }
 }
 

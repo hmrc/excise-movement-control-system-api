@@ -47,11 +47,11 @@ object ErrorResponse {
 }
 
 case class ValidationResponse(
-  errorCategory: String,
-  errorType: BigInt,
-  errorReason: String,
-  errorLocation: String,
-  originalAttributeValue: String
+  errorCategory: Option[String],
+  errorType: Option[BigInt],
+  errorReason: Option[String],
+  errorLocation: Option[String],
+  originalAttributeValue: Option[String]
 )
 
 object ValidationResponse {
