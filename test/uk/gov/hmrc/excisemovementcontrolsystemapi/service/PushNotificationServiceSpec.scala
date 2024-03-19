@@ -116,7 +116,17 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
       result mustBe SuccessPushNotificationResponse("notificationId")
 
       val messageUri = s"/movements/id/messages/messageId"
-      val notification = Notification("id", messageUri, "messageId", "consignorId", Some("consigneeId"), "arc", "ern")
+      val notification = Notification("id", messageUri, "messageId", "consignorId", Some("consigneeId"), Some("arc"), "ern")
+      verify(notificationConnector).postNotification("boxId", notification)
+    }
+
+    "send a notification with an empty arc" in {
+      val result = await(sut.sendNotification("ern", movement.copy(administrativeReferenceCode = None), "messageId"))
+
+      result mustBe SuccessPushNotificationResponse("notificationId")
+
+      val messageUri = s"/movements/id/messages/messageId"
+      val notification = Notification("id", messageUri, "messageId", "consignorId", Some("consigneeId"), None, "ern")
       verify(notificationConnector).postNotification("boxId", notification)
     }
 
@@ -140,22 +150,6 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
 
         Json.toJson(result.asInstanceOf[FailedPushNotification]) mustBe
           buildPushNotificationJsonError(NOT_FOUND, "not found")
-      }
-
-      "Administration reference code (ARC) is missing" in {
-        the[RuntimeException] thrownBy
-          await(sut.sendNotification("ern", movement.copy(administrativeReferenceCode = None), "messageId")) must
-          have message "[PushNotificationService] - Could not push notification for message: messageId. Administration Reference code is empty"
-
-        verifyZeroInteractions(notificationConnector)
-      }
-
-      "Administration reference code (ARC) is empty" in {
-        the[RuntimeException] thrownBy
-          await(sut.sendNotification("ern", movement.copy(administrativeReferenceCode = Some("")), "messageId")) must
-          have message "[PushNotificationService] - Could not push notification for message: messageId. Administration Reference code is empty"
-
-        verifyZeroInteractions(notificationConnector)
       }
     }
   }

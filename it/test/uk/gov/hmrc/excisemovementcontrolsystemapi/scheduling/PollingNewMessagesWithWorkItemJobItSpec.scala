@@ -668,7 +668,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       messageId,
       movement.consignorId,
       movement.consigneeId,
-      movement.administrativeReferenceCode.get,
+      movement.administrativeReferenceCode,
       ern
     ))
   }

@@ -91,7 +91,7 @@ case class Notification
   messageId: String,
   consignor: String,
   consignee: Option[String],
-  arc: String,
+  arc: Option[String],
   ern: String
 )
 
