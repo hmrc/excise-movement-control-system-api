@@ -27,7 +27,8 @@ import play.api.libs.json.Json
 import play.api.mvc.Results.BadRequest
 import play.api.test.FakeRequest
 import play.api.test.Helpers.stubControllerComponents
-import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
+import scalaxb.ParserFailure
+import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.{IEMessageFactory, IEMessageFactoryException}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
@@ -59,6 +60,7 @@ class ParseXmlActionSpec
       | <body></body>
       |</IE815>""".stripMargin
 
+  private val scalaxbExceptionMessage: String = "Error while parsing <urn:SubmittedDraftOfEADESAD xmlns:urn=\\\"urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13\\\" xmlns:urn1=\\\"urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13\\\" xmlns:soapenv=\\\"http://www.w3.org/2003/05/soap-envelope\\\" xmlns=\\\"http://www.hmrc.gov.uk/ChRIS/Service/Control\\\" xmlns:xsi=\\\"http://www.w3.org/2001/XMLSchema-instance\\\">\\n        <urn:Attributes>\\n          <urn:SubmissionMessageType>1</urn:SubmissionMessageType>\\n        </urn:Attributes>\\n        <urn:ConsigneeTrader language=\\\"en\\\">\\n          <urn:Traderid>GBWKQOZ8OVLYR</urn:Traderid>\\n          <urn:TraderName>WFlgUjfC</urn:TraderName>\\n          <urn:StreetName>xoL0NsNyDi</urn:StreetName>\\n          <urn:StreetNumber>67</urn:StreetNumber>\\n          <urn:Postcode>A1 1AA</urn:Postcode>\\n          <urn:City>l8WSaHS9</urn:City>\\n        </urn:ConsigneeTrader>\\n        <urn:ConsignorTrader language=\\\"en\\\">\\n          <urn:TraderExciseNumber>GBWKQOZ8OVLYS</urn:TraderExciseNumber>\\n          <urn:TraderName>Company PLC</urn:TraderName>\\n          <urn:StreetName>msfvZUL1Oe</urn:StreetName>\\n          <urn:StreetNumber>25</urn:StreetNumber>\\n          <urn:Postcode>A1 1AA</urn:Postcode>\\n          <urn:City>QDHwPa61</urn:City>\\n        </urn:ConsignorTrader>\\n        <urn:PlaceOfDispatchTrader language=\\\"en\\\">\\n          <urn:ReferenceOfTaxWarehouse>GB00DO459DMNX</urn:ReferenceOfTaxWarehouse>\\n          <urn:TraderName>2z0waekA</urn:TraderName>\\n          <urn:StreetName>MhO1XtDIVr</urn:StreetName>\\n          <urn:StreetNumber>25</urn:StreetNumber>\\n          <urn:Postcode>A1 1AA</urn:Postcode>\\n          <urn:City>zPCc6skm</urn:City>\\n        </urn:PlaceOfDispatchTrader>\\n        <urn:DeliveryPlaceTrader language=\\\"en\\\">\\n          <urn:Traderid>GB00AIP67RAO3</urn:Traderid>\\n          <urn:TraderName>BJpWdv2N</urn:TraderName>\\n          <urn:StreetName>C24vvUqCw6</urn:StreetName>\\n          <urn:StreetNumber>43</urn:StreetNumber>\\n          <urn:Postcode>A1 1AA</urn:Postcode>\\n          <urn:City>A9ZlElxP</urn:City>\\n        </urn:DeliveryPlaceTrader>\\n        <urn:CompetentAuthorityDispatchOffice>\\n          <urn:ReferenceNumber>GB004098</urn:ReferenceNumber>\\n        </urn:CompetentAuthorityDispatchOffice>\\n        <urn:FirstTransporterTrader language=\\\"en\\\">\\n          <urn:VatNumber>123798354</urn:VatNumber>\\n          <urn:TraderName>Mr Delivery place trader 4</urn:TraderName>\\n          <urn:StreetName>Delplace Avenue</urn:StreetName>\\n          <urn:StreetNumber>05</urn:StreetNumber>\\n          <urn:Postcode>FR5 4RN</urn:Postcode>\\n          <urn:City>Delville</urn:City>\\n        </urn:FirstTransporterTrader>\\n        <urn:DocumentCertificate>\\n          <urn:DocumentType>9</urn:DocumentType>\\n          <urn:DocumentReference>DPdQsYktZEJEESpc7b32Ig0U6B34XmHmfZU</urn:DocumentReference>\\n        </urn:DocumentCertificate>\\n        <urn:HeaderEadEsad>\\n          <urn:DestinationTypeCode>1</urn:DestinationTypeCode>\\n          <urn:JourneyTime>D07</urn:JourneyTime>\\n          <urn:TransportArrangement>1</urn:TransportArrangement>\\n        </urn:HeaderEadEsad>\\n        <urn:TransportMode>\\n          <urn:TransportModeCode>3</urn:TransportModeCode>\\n        </urn:TransportMode>\\n        <urn:MovementGuarantee>\\n          <urn:GuarantorTypeCode>1</urn:GuarantorTypeCode>\\n        </urn:MovementGuarantee>\\n        <urn:BodyEadEsad>\\n          <urn:BodyRecordUniqueReference>1</urn:BodyRecordUniqueReference>\\n          <urn:ExciseProductCode>B000</urn:ExciseProductCode>\\n          <urn:CnCode>22030001</urn:CnCode>\\n          <urn:Quantity>2000</urn:Quantity>\\n          <urn:GrossMass>20000</urn:GrossMass>\\n          <urn:NetMass>19999</urn:NetMass>\\n          <urn:AlcoholicStrengthByVolumeInPercentage>0.5</urn:AlcoholicStrengthByVolumeInPercentage>\\n          <urn:FiscalMarkUsedFlag>0</urn:FiscalMarkUsedFlag>\\n          <urn:Package>\\n            <urn:KindOfPackages>BA</urn:KindOfPackages>\\n            <urn:NumberOfPackages>2</urn:NumberOfPackages>\\n          </urn:Package>\\n        </urn:BodyEadEsad>\\n\\n        <urn:TransportDetails>\\n          <urn:TransportUnitCode>1</urn:TransportUnitCode>\\n          <urn:IdentityOfTransportUnits>100</urn:IdentityOfTransportUnits>\\n        </urn:TransportDetails>\\n      </urn:SubmittedDraftOfEADESAD>: parser error \\\"'{urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13}EadEsadDraft' expected but {urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13}TransportDetails found\\\" while parsing /{urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13}IE815/{urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13}Body/{urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13}SubmittedDraftOfEADESAD/{urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13}Attributes{urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13}ConsigneeTrader{urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13}ConsignorTrader{urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13}PlaceOfDispatchTrader{urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13}DeliveryPlaceTrader{urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13}CompetentAuthorityDispatchOffice{urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13}FirstTransporterTrader{urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13}DocumentCertificate{urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13}HeaderEadEsad{urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13}TransportMode{urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13}MovementGuarantee{urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13}BodyEadEsad{urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13}TransportDetails\\n"
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -87,14 +89,40 @@ class ParseXmlActionSpec
         result.left.value mustBe BadRequest(Json.toJson(expectedError))
       }
 
-      "cannot message from xml" in {
-        when(messageFactory.createFromXml(any, any)).thenThrow(new RuntimeException("Error message"))
-        val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(xml.XML.loadString(xmlStr)), Set("ern"), "123")
+      "cannot create message from xml" when {
 
-        val result = parserXmlAction.refine(enrolmentRequest).futureValue
+        "a parser error" in {
+          when(messageFactory.createFromXml(any, any)).thenThrow(new ParserFailure(scalaxbExceptionMessage))
+          val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(xml.XML.loadString(xmlStr)), Set("ern"), "123")
 
-        val expectedError = ErrorResponse(timestamp, "Not valid IE815 message", "Error message")
-        result.left.value mustBe BadRequest(Json.toJson(expectedError))
+          val result = parserXmlAction.refine(enrolmentRequest).futureValue
+
+          val expectedError = ErrorResponse(timestamp, "Not valid IE815 message",
+            "Parser error: \\\"'{urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13}EadEsadDraft' expected but {urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13}TransportDetails found\\\"")
+
+          result.left.value mustBe BadRequest(Json.toJson(expectedError))
+        }
+
+        "IEMessageFactory exception" in {
+          when(messageFactory.createFromXml(any, any)).thenThrow(new IEMessageFactoryException("Error doing message factory things"))
+          val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(xml.XML.loadString(xmlStr)), Set("ern"), "123")
+
+          val result = parserXmlAction.refine(enrolmentRequest).futureValue
+
+          val expectedError = ErrorResponse(timestamp, "Not valid IE815 message", "Error doing message factory things")
+          result.left.value mustBe BadRequest(Json.toJson(expectedError))
+        }
+
+        "some generic exception" in {
+          when(messageFactory.createFromXml(any, any)).thenThrow(new Exception(scalaxbExceptionMessage))
+          val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(xml.XML.loadString(xmlStr)), Set("ern"), "123")
+
+          val result = parserXmlAction.refine(enrolmentRequest).futureValue
+
+          val expectedError = ErrorResponse(timestamp, "Not valid IE815 message", "Error occurred parsing message")
+          result.left.value mustBe BadRequest(Json.toJson(expectedError))
+        }
+
       }
     }
   }

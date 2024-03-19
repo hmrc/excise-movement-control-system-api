@@ -46,16 +46,16 @@ class IEMessageFactorySpec
     "return throw an error" when {
       "cannot handle message type" in {
         when(message.key).thenReturn(Some("Anything"))
-        intercept[RuntimeException] {
+        intercept[IEMessageFactoryException] {
           sut.createIEMessage(message)
-        }.getMessage mustBe s"[IEMessageFactory] - Could not create Message object. Unsupported message: Anything"
+        }.getMessage mustBe s"Could not create Message object. Unsupported message: Anything"
       }
 
       "messageType is empty" in {
         when(message.key).thenReturn(None)
-        intercept[RuntimeException] {
+        intercept[IEMessageFactoryException] {
           sut.createIEMessage(message)
-        }.getMessage mustBe "[IEMessageFactory] - Could not create Message object. Message type is empty"
+        }.getMessage mustBe "Could not create Message object. Message type is empty"
       }
     }
 
@@ -125,9 +125,9 @@ class IEMessageFactorySpec
     "return throw an error" when {
       "cannot handle message type" in {
 
-        the[Exception] thrownBy {
+        the[IEMessageFactoryException] thrownBy {
           sut.createFromXml("Anything", IE801)
-        } must have message s"[IEMessageFactory] - Could not create Message object. Unsupported message: Anything"
+        } must have message s"Could not create Message object. Unsupported message: Anything"
       }
     }
 

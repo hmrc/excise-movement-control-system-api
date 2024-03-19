@@ -20,7 +20,8 @@ import com.google.inject.ImplementedBy
 import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{ActionRefiner, ControllerComponents, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
+import scalaxb.ParserFailure
+import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.{IEMessageFactory, IEMessageFactoryException}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -59,9 +60,20 @@ class ParseXmlActionImpl @Inject()
     val messageType = xmlBody.head.label
     Try(ieMessageFactory.createFromXml(messageType, xmlBody)) match {
       case Success(value) => Future.successful(Right(ParsedXmlRequest(request, value, request.erns, request.internalId)))
-      case Failure(exception) =>
-        logger.error(s"Not valid $messageType message: ${exception.getMessage}", exception)
+
+      case Failure(exception: ParserFailure) =>
+        logger.error(s"[ParseXmlActionImpl] - Not valid $messageType message: ${exception.getMessage}", exception)
+        Future.successful(Left(BadRequest(Json.toJson(handleError(s"Not valid $messageType message", getUsefulPartOfScalaxbMessage(exception.getMessage))))))
+
+      case Failure(exception: IEMessageFactoryException) =>
+        logger.error(s"[ParseXmlActionImpl] - Not valid $messageType message: ${exception.getMessage}", exception)
+        // Happy to return this exception message as we control it
         Future.successful(Left(BadRequest(Json.toJson(handleError(s"Not valid $messageType message", exception.getMessage)))))
+
+      case Failure(exception) =>
+        logger.error(s"[ParseXmlActionImpl] - Not valid $messageType message: ${exception.getMessage}", exception)
+        // Don't return exception message as we don't know what is in it
+        Future.successful(Left(BadRequest(Json.toJson(handleError(s"Not valid $messageType message", "Error occurred parsing message")))))
     }
   }
 
@@ -71,6 +83,17 @@ class ParseXmlActionImpl @Inject()
     debugMessage: String
   ): ErrorResponse = {
     ErrorResponse(dateTimeService.timestamp(), message, debugMessage)
+  }
+
+  private def getUsefulPartOfScalaxbMessage(message: String): String = {
+    val pattern = ": parser error(.+)while parsing".r
+    val matches = pattern.findAllIn(message)
+
+    if (matches.groupCount == 0){
+      message
+    } else {
+      s"Parser error: ${matches.group(1).strip()}"
+    }
   }
 }
 

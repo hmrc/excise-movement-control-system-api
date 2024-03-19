@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
 import com.google.inject.ImplementedBy
 import play.api.Logging
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsResultException, JsValue, Json}
 import play.api.mvc.{ActionRefiner, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ParsedPreValidateTraderRequest, PreValidateTraderRequest}
@@ -45,7 +45,7 @@ class ParseJsonActionImpl @Inject()
       case body: JsValue => parseJson(body, request)
       case _ =>
         logger.error("Not valid Json")
-        Future.successful(Left(BadRequest(Json.toJson(handleError("XML error", "Not valid XML or XML is empty")))))
+        Future.successful(Left(BadRequest(Json.toJson(handleError("Json error", "Not valid Json or Json is empty")))))
     }
   }
 
@@ -55,10 +55,16 @@ class ParseJsonActionImpl @Inject()
                   ): Future[Either[Result, ParsedPreValidateTraderRequest[A]]] = {
 
     Try(jsonBody.as[PreValidateTraderRequest]) match {
-      case Success(value) => Future.successful(Right(preValidateTrader.request.ParsedPreValidateTraderRequest(request, value)))
+      case Success(value) =>
+        Future.successful(Right(preValidateTrader.request.ParsedPreValidateTraderRequest(request, value)))
+
+      case Failure(exception: JsResultException) =>
+        logger.error(s"Not valid Pre Validate Trader message: ${exception.getMessage}", exception)
+        Future.successful(Left(BadRequest(Json.toJson(handleError(s"Not valid PreValidateTrader message", s"Error parsing Json: ${exception.errors.toString()}")))))
+
       case Failure(exception) =>
         logger.error(s"Not valid Pre Validate Trader message: ${exception.getMessage}", exception)
-        Future.successful(Left(BadRequest(Json.toJson(handleError(s"Not valid Pre Validate Trader message", exception.getMessage)))))
+        Future.successful(Left(BadRequest(Json.toJson(handleError(s"Not valid PreValidateTrader message", exception.getMessage)))))
     }
   }
 
