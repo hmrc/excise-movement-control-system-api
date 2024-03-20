@@ -32,8 +32,7 @@ trait MovementTestUtils {
       ern,
       lrn,
       consigneeId,
-      Some(arc),
-      "Accepted"
+      Some(arc)
     )
   }
 
@@ -45,8 +44,7 @@ trait MovementTestUtils {
       movement.consignorId,
       movement.localReferenceNumber,
       movement.consigneeId,
-      movement.administrativeReferenceCode,
-      "Accepted"
+      movement.administrativeReferenceCode
     )
   }
 

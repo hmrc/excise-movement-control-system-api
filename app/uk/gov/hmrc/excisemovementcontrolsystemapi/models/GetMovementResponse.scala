@@ -23,8 +23,7 @@ case class GetMovementResponse(
   consignorId: String,
   localReferenceNumber: String,
   consigneeId: Option[String],
-  administrativeReferenceCode: Option[String],
-  status: String
+  administrativeReferenceCode: Option[String]
 )
 
 object GetMovementResponse {
