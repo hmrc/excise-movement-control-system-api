@@ -115,6 +115,20 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
         )
       } must have message s"Response body could not be read as type ${typeOf[EISSubmissionResponse]}"
     }
+
+    "return a 500 Internal Server Error if EIS has supplied an unexpected error format" in {
+
+      val eisError = Json.parse("{\"status\": 500, \"message\": \"Unexpected error\"}")
+
+      val result = eisHttpParser.read(
+        "ANY",
+        "/foo",
+        HttpResponse(BAD_GATEWAY, eisError.toString())
+      )
+
+      result.left.value mustBe InternalServerError(Json.toJson(ErrorResponse(localDateTime, "Unexpected error", "Error occurred while reading downstream response")))
+
+    }
   }
 
   private def createRimValidationResponse = {

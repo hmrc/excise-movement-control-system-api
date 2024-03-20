@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util
 import play.api.Logging
 import play.api.libs.json.{Json, Reads}
 import play.api.mvc.Result
-import play.api.mvc.Results.Status
+import play.api.mvc.Results.{InternalServerError, Status}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, EISErrorResponse, EISSubmissionResponse, RimValidationErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ValidationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -56,6 +56,8 @@ class EISHttpReader(
     (tryAsJson[RimValidationErrorResponse](response), tryAsJson[EISErrorResponse](response)) match {
       case (Some(x), None) => handleRimValidationResponse(response, x)
       case (None, Some(y)) => handleEISErrorResponse(response, y)
+      case (None, None) =>
+        InternalServerError(Json.toJson(ErrorResponse(dateTimeService.timestamp(), "Unexpected error", "Error occurred while reading downstream response")))
     }
 
   }
