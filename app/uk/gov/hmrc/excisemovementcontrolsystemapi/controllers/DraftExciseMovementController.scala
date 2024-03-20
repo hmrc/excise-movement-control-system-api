@@ -67,7 +67,6 @@ class DraftExciseMovementController @Inject()(
           movement <- submitSaveAudit(request, authorisedErn, boxId, ie815Message)
         } yield {
           Accepted(Json.toJson(ExciseMovementResponse(
-            "Accepted",
             boxId,
             movement._id,
             movement.localReferenceNumber,
