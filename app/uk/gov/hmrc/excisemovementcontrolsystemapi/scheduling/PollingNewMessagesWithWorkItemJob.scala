@@ -153,13 +153,13 @@ class PollingNewMessagesWithWorkItemJob @Inject()
     movementService.updateMovement(message, exciseNumber).flatMap {
       case Nil => successful(false)
       case _: Seq[_] if !appConfig.pushNotificationsEnabled => successful(true)
-      case movements: Seq[_] => sendNotification(exciseNumber, movements, message.messageIdentifier)
+      case movements: Seq[_] => sendNotification(exciseNumber, movements, message.messageIdentifier, message.messageType)
     }
   }
 
-  private def sendNotification(exciseNumber: String, movements: Seq[Movement], messageId: String) = {
+  private def sendNotification(exciseNumber: String, movements: Seq[Movement], messageId: String, messageType: String) = {
         movements.map { movement =>
-          notificationService.sendNotification(exciseNumber, movement, messageId)
+          notificationService.sendNotification(exciseNumber, movement, messageId, messageType)
         }.sequence
           .map {responseSequence => responseSequence.forall(_ => true)}
   }

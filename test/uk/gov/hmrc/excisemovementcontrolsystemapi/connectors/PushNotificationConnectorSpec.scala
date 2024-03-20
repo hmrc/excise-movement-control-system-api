@@ -140,7 +140,7 @@ class PushNotificationConnectorSpec
 
     val messageId = "messageId"
     val ern = "ern123"
-    val notification = Notification("mvId", "/url", messageId, "consignor", Some("consignee"), Some("arc"), ern)
+    val notification = Notification("mvId", "/url", messageId, "IE801", "consignor", Some("consignee"), Some("arc"), ern)
 
     "return a success response" in {
       val result = await(sut.postNotification(boxId, notification))

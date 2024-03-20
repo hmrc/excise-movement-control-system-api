@@ -56,11 +56,12 @@ class PushNotificationServiceImpl @Inject()(
   def sendNotification(
     ern: String,
     movement: Movement,
-    messageId: String
+    messageId: String,
+    messageType: String
   )(implicit hc: HeaderCarrier): Future[NotificationResponse] = {
 
     movement.boxId match {
-      case Some(boxId) => send(boxId, ern, movement, messageId)
+      case Some(boxId) => send(boxId, ern, movement, messageId, messageType)
       case None => Future.successful(NotInUseNotificationResponse())
     }
   }
@@ -69,12 +70,14 @@ class PushNotificationServiceImpl @Inject()(
     boxId: String,
     ern: String,
     movement: Movement,
-    messageId: String
+    messageId: String,
+    messageType: String
   )(implicit hc: HeaderCarrier): Future[NotificationResponse] = {
     val notification = Notification(
       movement._id,
       buildMessageUriAsString(movement._id, messageId),
       messageId,
+      messageType,
       movement.consignorId,
       movement.consigneeId,
       movement.administrativeReferenceCode,
@@ -109,6 +112,7 @@ trait PushNotificationService {
   def sendNotification(
     ern: String,
     movement: Movement,
-    messageId: String
+    messageId: String,
+    messageType: String
   )(implicit hc: HeaderCarrier): Future[NotificationResponse]
 }
