@@ -53,7 +53,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ExciseMovement'
               example:
-                status: "Accepted"
                 boxId: 42c75e22-7bba-44f2-a610-4b4c3b262e3e
                 movementId: b6ba6a73-d723-4c9f-b9b7-99e533fb614f
                 consignorId: "GBWK002281023"
@@ -76,7 +75,6 @@ paths:
                   summary: "Json validation error downstream"
                   value:
                     dateTime: "2021-12-17T09:30:47Z"
-                    status: "BAD_REQUEST"
                     message: "Json validation failed"
                     debugMessage: "user is missing but it is required"
                     emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
@@ -114,7 +112,6 @@ paths:
                 $ref: '#/components/schemas/ExciseMovementError'
               example:
                 dateTime: '2021-12-17T09:31:12Z'
-                status: NOT_FOUND
                 message: Received error response from server
                 debugMessage: 'Connection refused; nested exception is java.net.ConnectException: Connection refused'
                 emcsCorrelationId: b47a371c-01e6-4dc0-97c1-dd524f7035d0
@@ -144,7 +141,6 @@ paths:
                   summary: Downstream internal server error
                   value:
                     dateTime: "2021-12-17T09:30:47Z"
-                    status: "INTERNAL_SERVER_ERROR"
                     message: "Invalid JSON structure"
                     debugMessage: "JSON parse error: Unexpected character"
                     emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
@@ -163,7 +159,6 @@ paths:
                 $ref: '#/components/schemas/ExciseMovementError'
               example:
                 dateTime: '2021-12-17T09:31:12Z'
-                status: SERVICE_UNAVAILABLE
                 message: CIRCUIT_BREAKER - 815_CB is OPEN
                 debugMessage: CircuitBreaker '815_CB' is OPEN and does not permit further calls
                 emcsCorrelationId: 4afb4a1e-33ca-42a5-8117-315db02b7f3c
@@ -215,12 +210,10 @@ paths:
                   consigneeId: "GBWKQOZ8OVLYR"
                   localReferenceNumber: "LRNQA20230909022221"
                   administrativeReferenceCode: "35WE3B5EDSYSZ86STVKH8"
-                  status: "Accepted"
                 - movementId: "612d2527-c207-4ffb-9250-f4ece59a29c5"
                   consignorId: "GBWK002281023"
                   consigneeId: "GBWKQOZ8OVLYQ"
                   localReferenceNumber: "LRNQA20230909022224"
-                  status: "None"
               schema:
                 type: array
                 items:
@@ -287,7 +280,6 @@ paths:
                 consigneeId: "GBWKQOZ8OVLYR"
                 localReferenceNumber: "LRNQA20230909022221"
                 administrativeReferenceCode: "35WE3B5EDSYSZ86STVKH8"
-                status: "Accepted"
               schema:
                 $ref: '#/components/schemas/ExciseMovement'
 
@@ -425,7 +417,6 @@ paths:
                   summary: "Json validation error downstream"
                   value:
                     dateTime: "2021-12-17T09:30:47Z"
-                    status: "BAD_REQUEST"
                     message: "Json validation failed"
                     debugMessage: "user is missing but it is required"
                     emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
@@ -468,7 +459,6 @@ paths:
                   summary: Downstream connection refused
                   value:
                     dateTime: '2021-12-17T09:31:12Z'
-                    status: NOT_FOUND
                     message: Received error response from server
                     debugMessage: 'Connection refused; nested exception is java.net.ConnectException: Connection refused'
                     emcsCorrelationId: b47a371c-01e6-4dc0-97c1-dd524f7035d0
@@ -496,7 +486,6 @@ paths:
                 $ref: '#/components/schemas/ExciseMovementError'
               example:
                 dateTime: "2021-12-17T09:30:47Z"
-                status: "INTERNAL_SERVER_ERROR"
                 message: "Invalid JSON structure"
                 debugMessage: "JSON parse error: Unexpected character"
                 emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
@@ -509,7 +498,6 @@ paths:
                 $ref: '#/components/schemas/ExciseMovementError'
               example:
                 dateTime: '2021-12-17T09:31:12Z'
-                status: SERVICE_UNAVAILABLE
                 message: CIRCUIT_BREAKER - 815_CB is OPEN
                 debugMessage: CircuitBreaker '815_CB' is OPEN and does not permit further calls
                 emcsCorrelationId: 4afb4a1e-33ca-42a5-8117-315db02b7f3c
@@ -949,7 +937,6 @@ paths:
                 $ref: '#/components/schemas/ExciseMovementError'
               example:
                 dateTime: "2021-12-17T09:30:47Z"
-                status: "INTERNAL_SERVER_ERROR"
                 message: "Invalid JSON structure"
                 debugMessage: "JSON parse error: Unexpected character"
                 emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
@@ -1009,22 +996,6 @@ components:
     ExciseReferenceNumber:
       type: string
       pattern: '[A-Z]{2}[a-zA-Z0-9]{11}'
-    MovementStatus:
-      type: string
-      enum:
-        - Accepted
-        - Accepted for export
-        - Cancelled
-        - Delivered
-        - Diverted
-        - e-AD/e-SAD manually closed
-        - Exporting
-        - None
-        - Partially refused
-        - Refused
-        - Rejected
-        - Replaced
-        - Stopped
     DateTime:
       type: string
       format: date-time
@@ -1113,7 +1084,6 @@ components:
         - movementId
         - consignorId
         - localReferenceNumber
-        - status
       properties:
         boxId:
           $ref: '#/components/schemas/BoxId'
@@ -1127,8 +1097,6 @@ components:
           $ref: '#/components/schemas/ConsigneeId'
         administrativeReferenceCode:
           $ref: '#/components/schemas/AdministrativeReferenceCode'
-        status:
-          $ref: '#/components/schemas/MovementStatus'
       xml:
         name: exciseMovement
 
@@ -1141,8 +1109,6 @@ components:
       properties:
         dateTime:
           $ref: '#/components/schemas/DateTime'
-        status:
-          type: string
         message:
           type: string
         debugMessage:
