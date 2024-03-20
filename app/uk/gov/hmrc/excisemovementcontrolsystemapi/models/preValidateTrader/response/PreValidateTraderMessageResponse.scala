@@ -27,10 +27,8 @@ case class PreValidateTraderMessageResponse(
   errorText: Option[String] = None,
   traderType: Option[String] = None,
   validateProductAuthorisationResponse: Option[ValidateProductAuthorisationResponse]
-
 )
 
 object PreValidateTraderMessageResponse {
-
   implicit val format: Format[PreValidateTraderMessageResponse] = Json.format[PreValidateTraderMessageResponse]
 }

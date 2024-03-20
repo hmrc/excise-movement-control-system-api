@@ -64,7 +64,7 @@ class EISSubmissionConnector @Inject()
       appConfig.emcsReceiverMessageUrl,
       eisRequest,
       build(correlationId, createdDateTime, appConfig.submissionBearerToken)
-    )(EISSubmissionRequest.format, EISHttpReader(correlationId, authorisedErn, createdDateTime, dateTimeService), hc, ec)
+    )(EISSubmissionRequest.format, EISHttpReader(correlationId, authorisedErn, createdDateTime, dateTimeService, messageType), hc, ec)
       .andThen { case _ => timer.stop() }
       .recover {
         case ex: Throwable =>

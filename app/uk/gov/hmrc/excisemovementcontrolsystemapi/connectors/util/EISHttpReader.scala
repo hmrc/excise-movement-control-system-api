@@ -21,7 +21,7 @@ import play.api.libs.json.{Json, Reads}
 import play.api.mvc.Result
 import play.api.mvc.Results.Status
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, EISErrorResponse, EISSubmissionResponse, RimValidationErrorResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MessageTypes, ValidationResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ValidationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.{HttpReads, HttpResponse}
 
@@ -32,7 +32,8 @@ class EISHttpReader(
   val correlationId: String,
   val ern: String,
   val createdDateTime: String,
-  val dateTimeService: DateTimeService
+  val dateTimeService: DateTimeService,
+  val messageType: String
 ) extends HttpReads[Either[Result, EISSubmissionResponse]]
   with Logging
   with ResponseHandler {
@@ -50,10 +51,7 @@ class EISHttpReader(
     response: HttpResponse
   ): Result = {
 
-    //TODO this isn't always 815??
-    logger.warn(EISErrorMessage(createdDateTime, ern, response.body, correlationId, MessageTypes.IE815.value))
-
-    val messageAsJson = response.json
+    logger.warn(EISErrorMessage(createdDateTime, ern, response.body, correlationId, messageType))
 
     (tryAsJson[RimValidationErrorResponse](response), tryAsJson[EISErrorResponse](response)) match {
       case (Some(x), None) => handleRimValidationResponse(response, x)
@@ -104,12 +102,13 @@ class EISHttpReader(
 }
 
 object EISHttpReader {
-  def apply(correlationId: String, ern: String, createDateTime: String, dateTimeService: DateTimeService): EISHttpReader = {
+  def apply(correlationId: String, ern: String, createDateTime: String, dateTimeService: DateTimeService, messageType: String): EISHttpReader = {
     new EISHttpReader(
       correlationId: String,
       ern: String,
       createDateTime: String,
-      dateTimeService: DateTimeService
+      dateTimeService: DateTimeService,
+      messageType: String
     )
   }
 }

@@ -18,8 +18,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
 
 import org.mockito.MockitoSugar.when
+import org.scalatest.EitherValues
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json

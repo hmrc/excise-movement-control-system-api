@@ -64,7 +64,7 @@ class AuthActionImpl @Inject()
 
         Future.successful(Forbidden(Json.toJson(EMCSErrorResponse(
           dateTimeService.timestamp(),
-          "Forbidden",
+          "Authorisation error",
           error.message
         ))))
 
@@ -73,7 +73,7 @@ class AuthActionImpl @Inject()
 
         Future.successful(Unauthorized(Json.toJson(EMCSErrorResponse(
           dateTimeService.timestamp(),
-          "Problems with authorisation",
+          "Authorisation error",
           error.message
         ))))
     }

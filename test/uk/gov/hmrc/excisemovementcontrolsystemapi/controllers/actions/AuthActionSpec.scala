@@ -97,7 +97,7 @@ class AuthActionSpec
 
         result mustBe Unauthorized(Json.toJson(ErrorResponse(
           now,
-          "Problems with authorisation",
+          "Authorisation error",
           "Could not retrieve internalId from Auth"
         )))
       }
@@ -109,7 +109,7 @@ class AuthActionSpec
 
         result mustBe Unauthorized(Json.toJson(ErrorResponse(
           now,
-          "Problems with authorisation",
+          "Authorisation error",
           s"Invalid affinity group $Individual from Auth"
         )))
       }
@@ -121,7 +121,7 @@ class AuthActionSpec
 
         result mustBe Unauthorized(Json.toJson(ErrorResponse(
           now,
-          "Problems with authorisation",
+          "Authorisation error",
           s"Invalid affinity group $Agent from Auth"
         )))
       }
@@ -133,7 +133,7 @@ class AuthActionSpec
 
         result mustBe Unauthorized(Json.toJson(ErrorResponse(
           now,
-          "Problems with authorisation",
+          "Authorisation error",
           "Could not retrieve affinity group from Auth"
         )))
       }
@@ -146,7 +146,7 @@ class AuthActionSpec
 
         result mustBe Unauthorized(Json.toJson(ErrorResponse(
           now,
-          "Problems with authorisation",
+          "Authorisation error",
           "Could not retrieve credentials from Auth"
         )))
       }
@@ -159,7 +159,7 @@ class AuthActionSpec
 
         result mustBe Unauthorized(Json.toJson(ErrorResponse(
           now,
-          "Problems with authorisation",
+          "Authorisation error",
           "Internal server error is error"
         )))
       }
@@ -172,7 +172,7 @@ class AuthActionSpec
 
         result mustBe Unauthorized(Json.toJson(ErrorResponse(
           now,
-          "Problems with authorisation",
+          "Authorisation error",
           "Unauthorised Exception for /foo with error A general auth failure"
         )))
       }
@@ -184,7 +184,7 @@ class AuthActionSpec
 
         result mustBe Unauthorized(Json.toJson(ErrorResponse(
           now,
-          "Problems with authorisation",
+          "Authorisation error",
           "Unauthorised Exception for /get with error Insufficient Enrolments"
         )))
       }
@@ -197,7 +197,7 @@ class AuthActionSpec
 
       result mustBe Forbidden(Json.toJson(ErrorResponse(
         now,
-        "Forbidden",
+        "Authorisation error",
         "Could not find ExciseNumber"
       )))
 

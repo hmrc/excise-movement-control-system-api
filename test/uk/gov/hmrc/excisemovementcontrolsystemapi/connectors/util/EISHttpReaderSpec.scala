@@ -26,7 +26,7 @@ import play.api.http.Status._
 import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable, UnprocessableEntity}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse, RimValidationErrorResponse, RimValidatorResults}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ValidationResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MessageTypes, ValidationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HttpResponse
 
@@ -39,7 +39,7 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
   private val dateTimeService = mock[DateTimeService]
   when(dateTimeService.timestamp()).thenReturn(localDateTime)
 
-  private val eisHttpParser = EISHttpReader("123", "GB123", "date time", dateTimeService)
+  private val eisHttpParser = EISHttpReader("123", "GB123", "date time", dateTimeService, MessageTypes.IE815.value)
   private val exampleEISError = Json.toJson(
     EISErrorResponse(
       localDateTime,
