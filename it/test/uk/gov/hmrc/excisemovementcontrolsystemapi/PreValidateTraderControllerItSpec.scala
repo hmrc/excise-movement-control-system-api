@@ -35,7 +35,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.respo
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderRequest, getPreValidateTraderSuccessEISResponse, getPreValidateTraderSuccessResponse}
 
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 
 
 class PreValidateTraderControllerItSpec extends PlaySpec
@@ -63,8 +62,6 @@ class PreValidateTraderControllerItSpec extends PlaySpec
     wireMock.resetAll()
 
     when(dateTimeService.timestamp()).thenReturn(timestamp)
-    when(dateTimeService.timestampToMilliseconds()).thenReturn(timestamp.truncatedTo(ChronoUnit.MILLIS))
-
   }
 
   override def afterAll(): Unit = {

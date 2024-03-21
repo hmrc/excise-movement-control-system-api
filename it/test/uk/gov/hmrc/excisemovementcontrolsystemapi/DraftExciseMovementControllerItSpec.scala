@@ -124,8 +124,6 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     when(workItemRepository.pushNew(any, any, any)).thenReturn(Future.successful(workItem))
     when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
     when(dateTimeService.timestamp()).thenReturn(timeStamp)
-    when(dateTimeService.timestampToMilliseconds()).thenReturn(timeStamp.truncatedTo(ChronoUnit.MILLIS))
-
   }
 
   "Draft Excise Movement" should {

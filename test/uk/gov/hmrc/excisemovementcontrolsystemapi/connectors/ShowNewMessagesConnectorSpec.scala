@@ -28,8 +28,8 @@ import play.api.libs.json.Json
 import play.api.mvc.Results.InternalServerError
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.EISHeaderSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
@@ -39,6 +39,7 @@ import scala.reflect.runtime.universe.typeOf
 
 class ShowNewMessagesConnectorSpec
   extends PlaySpec
+    with EISHeaderSupport
     with BeforeAndAfterEach
     with EitherValues {
 
@@ -69,7 +70,7 @@ class ShowNewMessagesConnectorSpec
     when(httpClient.PUTString[Any](any, any, any)(any, any, any))
       .thenReturn(Future.successful(HttpResponse(200, Json.toJson(response).toString())))
     when(eisUtil.generateCorrelationId).thenReturn("1234")
-    when(dateTimeService.timestampToMilliseconds()).thenReturn(timestamp)
+    when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(appConfig.showNewMessageUrl(any)).thenReturn("/showNewMessage")
     when(appConfig.messagesBearerToken).thenReturn(messagesBearerToken)
     when(metrics.timer(any).time()) thenReturn timerContext
@@ -82,7 +83,7 @@ class ShowNewMessagesConnectorSpec
       verify(httpClient).PUTString[Any](
         eqTo("/showNewMessage"),
         eqTo(""),
-        eqTo(expectedHeader)
+        eqTo(expectedConsumptionHeaders("2023-02-03T05:06:07.000Z", "1234", messagesBearerToken))
       )(any, any, any)
     }
 
@@ -119,16 +120,6 @@ class ShowNewMessagesConnectorSpec
         result.left.value mustBe InternalServerError(s"Response body could not be read as type ${typeOf[EISConsumptionResponse]}")
       }
     }
-  }
-
-  private def expectedHeader: Seq[(String, String)] = {
-    Seq(
-      XForwardedHostName -> MDTPHost,
-      XCorrelationIdName -> "1234",
-      SourceName -> APIPSource,
-      DateTimeName -> timestamp.toString,
-      Authorization -> authorizationValue(messagesBearerToken)
-    )
   }
 }
 

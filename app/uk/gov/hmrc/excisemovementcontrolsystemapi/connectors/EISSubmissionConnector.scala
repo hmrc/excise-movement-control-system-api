@@ -26,6 +26,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
@@ -52,8 +53,8 @@ class EISSubmissionConnector @Inject()
     val timer = metrics.timer("emcs.submission.connector.timer").time()
 
     //todo EMCS-530: add retry
-    val timestamp = dateTimeService.timestampToMilliseconds()
-    val createdDateTime = timestamp.toString
+    val timestamp = dateTimeService.timestamp()
+    val createdDateTime = timestamp.toStringInMillis
     val wrappedXml = wrapXmlInControlDocument(message.messageIdentifier, requestXmlAsString, authorisedErn)
     val messageType = message.messageType
     val encodedMessage = emcsUtils.encode(wrappedXml.toString)

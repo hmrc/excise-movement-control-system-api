@@ -105,7 +105,6 @@ class SubmitMessageControllerItSpec extends PlaySpec
     when(workItemRepository.pushNew(any, any, any)).thenReturn(Future.successful(workItem))
     when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
     when(dateTimeService.timestamp()).thenReturn(timestamp)
-    when(dateTimeService.timestampToMilliseconds()).thenReturn(timestamp.truncatedTo(ChronoUnit.MILLIS))
 
     authorizeNrsWithIdentityData
     stubNrsResponse

@@ -24,6 +24,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISConsumptionHeaders, EISConsumptionResponse, EISErrorMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
@@ -47,7 +48,7 @@ class GetMovementConnector @Inject()
 
     val timer = metrics.timer("emcs.getmovements.timer").time()
     val correlationId = emcsUtils.generateCorrelationId
-    val createDateTime = dateTimeService.timestampToMilliseconds().toString
+    val createDateTime = dateTimeService.timestamp().toStringInMillis
 
     httpClient.GET[HttpResponse](
         appConfig.traderMovementUrl,

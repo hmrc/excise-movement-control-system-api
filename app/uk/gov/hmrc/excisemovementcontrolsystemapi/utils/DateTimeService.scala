@@ -18,19 +18,26 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
 
 import com.google.inject.{ImplementedBy, Singleton}
 
-import java.time.Instant
-import java.time.temporal.ChronoUnit
+import java.time.format.DateTimeFormatter
+import java.time.{Instant, ZoneOffset, ZonedDateTime}
 
 @ImplementedBy(classOf[DateTimeServiceImpl])
 trait DateTimeService {
   def timestamp(): Instant
-
-  def timestampToMilliseconds(): Instant
 }
 
 @Singleton
 class DateTimeServiceImpl extends DateTimeService {
-  override def timestamp(): Instant = Instant.now()
+  override def timestamp(): Instant  = Instant.now()
+}
 
-  override def timestampToMilliseconds(): Instant = timestamp().truncatedTo(ChronoUnit.MILLIS)
+object DateTimeService {
+  implicit class DateTimeFormat(val dateTime: Instant) extends AnyVal {
+
+    implicit def toStringInMillis: String = {
+      ZonedDateTime
+        .ofInstant(dateTime, ZoneOffset.UTC)
+        .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX"))
+    }
+  }
 }

@@ -24,6 +24,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISConsumptionHeaders, EISConsumptionResponse, EISErrorMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
@@ -43,7 +44,7 @@ class ShowNewMessagesConnector @Inject()(
 
     val timer = metrics.timer("emcs.shownewmessage.timer").time()
     val correlationId = emcsUtils.generateCorrelationId
-    val dateTime = dateTimeService.timestampToMilliseconds().toString
+    val dateTime = dateTimeService.timestamp().toStringInMillis
 
     httpClient.PUTString[HttpResponse](
         appConfig.showNewMessageUrl(ern),
