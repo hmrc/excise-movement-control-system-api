@@ -87,12 +87,12 @@ class ParseXmlActionImpl @Inject()
 
   private def getUsefulPartOfScalaxbMessage(message: String): String = {
     val pattern = ": parser error(.+)while parsing".r
-    val matches = pattern.findAllIn(message)
 
-    if (matches.groupCount == 0){
-      message
-    } else {
-      s"Parser error: ${matches.group(1).strip()}"
+    val matches = pattern.findFirstMatchIn(message)
+
+    matches match {
+      case None => message
+      case Some(x) => s"Parser error: ${x.group(1).strip()}"
     }
   }
 }

@@ -91,7 +91,7 @@ class ParseXmlActionSpec
 
       "cannot create message from xml" when {
 
-        "a parser error" in {
+        "a parser error that can be simplified" in {
           when(messageFactory.createFromXml(any, any)).thenThrow(new ParserFailure(scalaxbExceptionMessage))
           val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(xml.XML.loadString(xmlStr)), Set("ern"), "123")
 
@@ -99,6 +99,20 @@ class ParseXmlActionSpec
 
           val expectedError = ErrorResponse(timestamp, "Not valid IE815 message",
             "Parser error: \\\"'{urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13}EadEsadDraft' expected but {urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13}TransportDetails found\\\"")
+
+
+          result.left.value mustBe BadRequest(Json.toJson(expectedError))
+        }
+
+        "a parser error which isn't simplified" in {
+          val parserError = "Error while parsing <urn:DateOfDispatch xmlns:urn=\"urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13\" xmlns:urn1=\"urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13\">lrnGBWKQOZ8OMCWS1</urn:DateOfDispatch>: java.lang.IllegalArgumentException: lrnGBWKQOZ8OMCWS1"
+
+          when(messageFactory.createFromXml(any, any)).thenThrow(new ParserFailure(parserError))
+          val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(xml.XML.loadString(xmlStr)), Set("ern"), "123")
+
+          val result = parserXmlAction.refine(enrolmentRequest).futureValue
+
+          val expectedError = ErrorResponse(timestamp, "Not valid IE815 message", parserError)
 
           result.left.value mustBe BadRequest(Json.toJson(expectedError))
         }
