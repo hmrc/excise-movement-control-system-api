@@ -43,11 +43,11 @@ class EISSubmissionConnector @Inject()
 )(implicit ec: ExecutionContext) extends EISSubmissionHeaders with Logging {
 
   def submitMessage(
-    message: IEMessage,
-    requestXmlAsString: String,
-    authorisedErn: String,
-    correlationId: String
-  )(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
+                    message: IEMessage,
+                    requestXmlAsString: String,
+                    authorisedErn: String,
+                    correlationId: String
+                  )(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
 
     val timer = metrics.timer("emcs.submission.connector.timer").time()
 
@@ -93,9 +93,7 @@ class EISSubmissionConnector @Inject()
       </con:MetaData>
       <con:OperationRequest>
         <con:Parameters>
-          <con:Parameter Name="ExciseRegistrationNumber">
-            {ern}
-          </con:Parameter>
+          <con:Parameter Name="ExciseRegistrationNumber">{ern}</con:Parameter>
           <con:Parameter Name="message">
             {scala.xml.PCData(innerXml)}
           </con:Parameter>
