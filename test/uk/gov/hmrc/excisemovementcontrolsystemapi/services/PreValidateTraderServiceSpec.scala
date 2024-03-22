@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.service
+package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.{reset, when}

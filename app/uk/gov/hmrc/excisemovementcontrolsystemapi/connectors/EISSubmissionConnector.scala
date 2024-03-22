@@ -43,11 +43,11 @@ class EISSubmissionConnector @Inject()
 )(implicit ec: ExecutionContext) extends EISSubmissionHeaders with Logging {
 
   def submitMessage(
-                    message: IEMessage,
-                    requestXmlAsString: String,
-                    authorisedErn: String,
-                    correlationId: String
-                  )(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
+    message: IEMessage,
+    requestXmlAsString: String,
+    authorisedErn: String,
+    correlationId: String
+  )(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
 
     val timer = metrics.timer("emcs.submission.connector.timer").time()
 
