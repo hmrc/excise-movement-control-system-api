@@ -82,8 +82,6 @@ object NotificationResponse {
   }
 }
 
-//todo EMCS-363: Update consignee to be Non Optional as this
-// is not Optional anymore with the schema version 4.1.
 case class Notification
 (
   movementId: String,
