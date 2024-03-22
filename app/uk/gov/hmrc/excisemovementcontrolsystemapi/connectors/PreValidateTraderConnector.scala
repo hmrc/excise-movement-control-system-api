@@ -50,7 +50,7 @@ class PreValidateTraderConnector @Inject()
 
     val correlationId = emcsUtils.generateCorrelationId
     val timestamp = dateTimeService.timestamp()
-    val createdDateTime = timestamp.toStringInMillis
+    val createdDateTime = timestamp.asStringInMilliseconds
 
     httpClient.POST[PreValidateTraderRequest, Either[Result, PreValidateTraderEISResponse]](
       appConfig.preValidateTraderUrl,

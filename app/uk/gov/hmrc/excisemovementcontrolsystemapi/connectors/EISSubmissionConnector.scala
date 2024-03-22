@@ -54,7 +54,7 @@ class EISSubmissionConnector @Inject()
 
     //todo EMCS-530: add retry
     val timestamp = dateTimeService.timestamp()
-    val createdDateTime = timestamp.toStringInMillis
+    val createdDateTime = timestamp.asStringInMilliseconds
     val wrappedXml = wrapXmlInControlDocument(message.messageIdentifier, requestXmlAsString, authorisedErn)
     val messageType = message.messageType
     val encodedMessage = emcsUtils.encode(wrappedXml.toString)

@@ -31,7 +31,7 @@ import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceU
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTraderHttpReader
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.EISHeaderSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.EISHeaderTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderErrorResponse, getPreValidateTraderRequest, getPreValidateTraderSuccessResponse}
@@ -43,7 +43,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class PreValidateTraderConnectorSpec
   extends PlaySpec
-    with EISHeaderSupport
+    with EISHeaderTestSupport
     with BeforeAndAfterEach
     with EitherValues {
 

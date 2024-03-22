@@ -28,7 +28,7 @@ import play.api.http.Status.{INTERNAL_SERVER_ERROR, NOT_FOUND}
 import play.api.libs.json.Json
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.EISHeaderSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.EISHeaderTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptFailResponse, MessageReceiptSuccessResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
@@ -40,7 +40,7 @@ class MessageReceiptConnectorSpec
   extends PlaySpec
     with BeforeAndAfterEach
     with EitherValues
-    with EISHeaderSupport {
+    with EISHeaderTestSupport {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.global
   protected implicit val hc: HeaderCarrier = HeaderCarrier()

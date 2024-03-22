@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 import play.api.http.ContentTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers.authorizationValue
 
-trait EISHeaderSupport {
+trait EISHeaderTestSupport {
 
   def expectedConsumptionHeaders(
     timeStamp: String,

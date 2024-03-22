@@ -27,21 +27,21 @@ class DateTimeServiceSpec extends PlaySpec {
     "return time in milliseconds" when {
       "time is in seconds" in {
         val dateTime = Instant.parse("2023-02-03T05:06:07Z")
-        dateTime.toStringInMillis mustBe "2023-02-03T05:06:07.000Z"
+        dateTime.asStringInMilliseconds mustBe "2023-02-03T05:06:07.000Z"
       }
 
       "time is in deci seconds" in {
         val dateTime = Instant.parse("2023-02-03T05:06:07.1Z")
-        dateTime.toStringInMillis mustBe "2023-02-03T05:06:07.100Z"
+        dateTime.asStringInMilliseconds mustBe "2023-02-03T05:06:07.100Z"
       }
       "time is in centi seconds" in {
         val dateTime = Instant.parse("2023-02-03T05:06:07.12Z")
-        dateTime.toStringInMillis mustBe "2023-02-03T05:06:07.120Z"
+        dateTime.asStringInMilliseconds mustBe "2023-02-03T05:06:07.120Z"
       }
 
       "time is in centi nano seconds" in {
         val dateTime = Instant.parse("2023-02-03T05:06:07.124562Z")
-        dateTime.toStringInMillis mustBe "2023-02-03T05:06:07.124Z"
+        dateTime.asStringInMilliseconds mustBe "2023-02-03T05:06:07.124Z"
       }
     }
   }

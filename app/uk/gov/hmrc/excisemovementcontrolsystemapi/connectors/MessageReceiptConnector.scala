@@ -49,20 +49,20 @@ class MessageReceiptConnector @Inject()
     httpClient.PUTString[HttpResponse](
         appConfig.messageReceiptUrl(ern),
         "",
-        build(correlationId, dateTime.toStringInMillis, appConfig.messagesBearerToken)
+        build(correlationId, dateTime.asStringInMilliseconds, appConfig.messagesBearerToken)
       ).map {
         response =>
           extractIfSuccessful[MessageReceiptSuccessResponse](response) match {
             case Right(eisResponse) => eisResponse
             case Left(error) =>
-              logger.error(EISErrorMessage(dateTime.toStringInMillis, ern, response.body, correlationId, MessageTypes.IE_MESSAGE_RECEIPT.value))
+              logger.error(EISErrorMessage(dateTime.asStringInMilliseconds, ern, response.body, correlationId, MessageTypes.IE_MESSAGE_RECEIPT.value))
               MessageReceiptFailResponse(error.status, dateTime, error.body)
           }
       }
       .andThen(_ => timer.stop())
       .recover {
         case ex: Throwable =>
-          logger.error(EISErrorMessage(dateTime.toStringInMillis, ern, ex.getMessage, correlationId, MessageTypes.IE_MESSAGE_RECEIPT.value), ex)
+          logger.error(EISErrorMessage(dateTime.asStringInMilliseconds, ern, ex.getMessage, correlationId, MessageTypes.IE_MESSAGE_RECEIPT.value), ex)
           MessageReceiptFailResponse(INTERNAL_SERVER_ERROR, dateTime, s"Exception occurred when Acknowledging messages for ern: $ern")
       }
   }

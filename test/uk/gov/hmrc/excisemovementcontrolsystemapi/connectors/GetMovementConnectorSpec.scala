@@ -28,7 +28,7 @@ import play.api.libs.json.Json
 import play.api.mvc.Results.InternalServerError
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.EISHeaderSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.EISHeaderTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
@@ -40,7 +40,7 @@ import scala.reflect.runtime.universe.typeOf
 class GetMovementConnectorSpec extends PlaySpec
   with BeforeAndAfterEach
   with EitherValues
-  with EISHeaderSupport {
+  with EISHeaderTestSupport {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.global
   protected implicit val hc: HeaderCarrier = HeaderCarrier()

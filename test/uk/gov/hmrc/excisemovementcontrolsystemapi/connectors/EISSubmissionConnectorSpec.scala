@@ -31,7 +31,7 @@ import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceU
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{EISHeaderSupport, StringSupport}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{EISHeaderTestSupport, StringSupport}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionRequest, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
@@ -44,7 +44,7 @@ import scala.xml.{Elem, NodeSeq}
 class EISSubmissionConnectorSpec
   extends PlaySpec
     with StringSupport
-    with EISHeaderSupport
+    with EISHeaderTestSupport
     with BeforeAndAfterEach
     with EitherValues {
 
