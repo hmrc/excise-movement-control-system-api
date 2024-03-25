@@ -53,6 +53,42 @@ class PushNotificationServiceImpl @Inject()(
     )
   }
 
+  def sendNotification(
+    ern: String,
+    movement: Movement,
+    messageId: String,
+    messageType: String
+  )(implicit hc: HeaderCarrier): Future[NotificationResponse] = {
+
+    movement.boxId match {
+      case Some(boxId) => send(boxId, ern, movement, messageId, messageType)
+      case None => Future.successful(NotInUseNotificationResponse())
+    }
+  }
+
+  private def send(
+    boxId: String,
+    ern: String,
+    movement: Movement,
+    messageId: String,
+    messageType: String
+  )(implicit hc: HeaderCarrier): Future[NotificationResponse] = {
+    val notification = Notification(
+      movement._id,
+      buildMessageUriAsString(movement._id, messageId),
+      messageId,
+      messageType,
+      movement.consignorId,
+      movement.consigneeId,
+      movement.administrativeReferenceCode,
+      ern)
+
+    notificationConnector.postNotification(boxId, notification)
+  }
+  private def buildMessageUriAsString(movementId: String, messageId: String): String = {
+    routes.GetMessagesController.getMessageForMovement(movementId, messageId).url
+  }
+
   private def validateClientBoxId(boxId: String): Either[Result, SuccessBoxNotificationResponse] = {
     Try(UUID.fromString(boxId)) match {
       case Success(value) => Right(SuccessBoxNotificationResponse(value.toString))
@@ -61,41 +97,6 @@ class PushNotificationServiceImpl @Inject()(
           dateTimeService.timestamp(),
           "Client box id should be a valid UUID")))
         )
-    }
-  }
-
-  def sendNotification(
-    ern: String,
-    movement: Movement,
-    messageId: String
-  )(implicit hc: HeaderCarrier): Future[NotificationResponse] = {
-
-    val notification = Notification(
-      movement._id,
-      buildMessageUriAsString(movement._id, messageId),
-      messageId,
-      movement.consignorId,
-      movement.consigneeId,
-      getArcOrThrowIfEmpty(movement.administrativeReferenceCode, messageId),
-      ern)
-
-    movement.boxId match {
-      case Some(boxId) =>
-        notificationConnector.postNotification(boxId, notification)
-
-      case None =>
-        Future.successful(NotInUseNotificationResponse())
-    }
-  }
-
-  private def buildMessageUriAsString(movementId: String, messageId: String): String = {
-    routes.GetMessagesController.getMessageForMovement(movementId, messageId).url
-  }
-
-  private def getArcOrThrowIfEmpty(arc: Option[String], messageId: String): String = {
-    arc match {
-      case Some(v) if v.trim.nonEmpty => v
-      case _ => throw new RuntimeException(s"[PushNotificationService] - Could not push notification for message: $messageId. Administration Reference code is empty")
     }
   }
 }
@@ -111,6 +112,7 @@ trait PushNotificationService {
   def sendNotification(
     ern: String,
     movement: Movement,
-    messageId: String
+    messageId: String,
+    messageType: String
   )(implicit hc: HeaderCarrier): Future[NotificationResponse]
 }

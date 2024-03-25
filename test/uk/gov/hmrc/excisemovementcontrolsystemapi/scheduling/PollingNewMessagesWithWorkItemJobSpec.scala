@@ -116,7 +116,7 @@ class PollingNewMessagesWithWorkItemJobSpec
       .thenReturn(Future.successful(Seq(Movement(Some("boxId"), "1", "2", Some("3"), Some("4")))))
     when(workItemService.markAs(any, any, any)).thenReturn(Future.successful(true))
     when(workItemService.rescheduleWorkItem(any)).thenReturn(Future.successful(true))
-    when(notificationService.sendNotification(any, any, any)(any))
+    when(notificationService.sendNotification(any, any, any, any)(any))
       .thenReturn(Future.successful(SuccessPushNotificationResponse("notificationId)")))
 
     when(auditService.auditMessage(any)(any)).thenReturn(EitherT.fromEither(Right(())))
@@ -348,9 +348,12 @@ class PollingNewMessagesWithWorkItemJobSpec
 
         val ie801Message = mock[IE801Message]
         when(ie801Message.messageIdentifier).thenReturn("1")
+        when(ie801Message.messageType).thenReturn("IE801")
         val ie813Message = mock[IE813Message]
         when(ie813Message.messageIdentifier).thenReturn("2")
+        when(ie813Message.messageType).thenReturn("IE813")
         when(message.messageIdentifier).thenReturn("3")
+        when(message.messageType).thenReturn("IE704")
         when(newMessageParserService.extractMessages(any))
           .thenReturn(Seq(message, ie801Message, ie813Message))
 
@@ -362,9 +365,9 @@ class PollingNewMessagesWithWorkItemJobSpec
 
         await(job.executeInMutex)
 
-      verify(notificationService, times(2)).sendNotification(eqTo("123"), any[Movement], eqTo("1"))(any)
-      verify(notificationService, times(2)).sendNotification(eqTo("123"), any[Movement], eqTo("2"))(any)
-      verify(notificationService,  times(2)).sendNotification(eqTo("123"), any[Movement], eqTo("3"))(any)
+      verify(notificationService, times(2)).sendNotification(eqTo("123"), any[Movement], eqTo("1"), eqTo("IE801"))(any)
+      verify(notificationService, times(2)).sendNotification(eqTo("123"), any[Movement], eqTo("2"), eqTo("IE813"))(any)
+      verify(notificationService, times(2)).sendNotification(eqTo("123"), any[Movement], eqTo("3"), eqTo("IE704"))(any)
       }
 
     }
@@ -447,7 +450,7 @@ class PollingNewMessagesWithWorkItemJobSpec
         await(job.executeInMutex)
 
         verify(newMessageService, never()).acknowledgeMessage(any)(any)
-        verify(notificationService, never()).sendNotification(any, any, any)(any)
+        verify(notificationService, never()).sendNotification(any, any, any, any)(any)
       }
 
       "any individual message is not saved to the database" in {
@@ -468,7 +471,7 @@ class PollingNewMessagesWithWorkItemJobSpec
         await(job.executeInMutex)
 
         verify(newMessageService, never()).acknowledgeMessage(any)(any)
-        verify(notificationService, times(4)).sendNotification(any, any, any)(any)
+        verify(notificationService, times(4)).sendNotification(any, any, any, any)(any)
 
         withClue("should audit successful messages") {
           verify(auditService, times(4)).auditMessage(eqTo(message))(any)
@@ -491,7 +494,7 @@ class PollingNewMessagesWithWorkItemJobSpec
         await(job.executeInMutex)
 
         verify(newMessageService, never()).acknowledgeMessage(any)(any)
-        verify(notificationService, never()).sendNotification(any, any, any)(any)
+        verify(notificationService, never()).sendNotification(any, any, any, any)(any)
       }
 
       "there are no messages" in {
@@ -505,7 +508,7 @@ class PollingNewMessagesWithWorkItemJobSpec
         await(job.executeInMutex)
 
         verify(newMessageService, never()).acknowledgeMessage(any)(any)
-        verify(notificationService, never()).sendNotification(any, any, any)(any)
+        verify(notificationService, never()).sendNotification(any, any, any, any)(any)
       }
 
     }
@@ -520,7 +523,7 @@ class PollingNewMessagesWithWorkItemJobSpec
         when(movementService.updateMovement(any, any))
           .thenReturn(Future.successful(Seq(Movement(Some("boxId1"), "lrn1", "consignor", Some("consignee")))))
 
-        when(notificationService.sendNotification(any, any, any)(any))
+        when(notificationService.sendNotification(any, any, any, any)(any))
           .thenReturn(Future.successful(FailedPushNotification(BAD_REQUEST, "something went wrong :(")))
 
         await(job.executeInMutex)
@@ -538,7 +541,7 @@ class PollingNewMessagesWithWorkItemJobSpec
         when(movementService.updateMovement(any, any))
           .thenReturn(Future.successful(Seq(Movement(Some("boxId1"), "lrn1", "consignor", Some("consignee")))))
 
-        when(notificationService.sendNotification(any, any, any)(any))
+        when(notificationService.sendNotification(any, any, any, any)(any))
           .thenReturn(
             Future.successful(SuccessPushNotificationResponse("notificationId")),
             Future.successful(SuccessPushNotificationResponse("notificationId")),

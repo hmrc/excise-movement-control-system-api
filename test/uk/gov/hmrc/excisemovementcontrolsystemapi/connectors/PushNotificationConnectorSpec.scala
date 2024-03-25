@@ -26,7 +26,6 @@ import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PushNotificationConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Notification
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.{FailedPushNotification, SuccessBoxNotificationResponse, SuccessPushNotificationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -141,7 +140,7 @@ class PushNotificationConnectorSpec
 
     val messageId = "messageId"
     val ern = "ern123"
-    val notification = Notification("mvId", "/url", messageId, "consignor", Some("consignee"), "arc", ern)
+    val notification = Notification("mvId", "/url", messageId, "IE801", "consignor", Some("consignee"), Some("arc"), ern)
 
     "return a success response" in {
       val result = await(sut.postNotification(boxId, notification))

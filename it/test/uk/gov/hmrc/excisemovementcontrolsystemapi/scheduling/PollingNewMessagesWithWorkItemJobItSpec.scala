@@ -417,21 +417,21 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
   private def assertPushNotificationApiForErn1(expectedMovement: Movement, movementId: String): Unit = {
     val loggerRequests = wireMock.findAll(postRequestedFor(urlEqualTo(s"/box/boxId1/notifications")))
     loggerRequests.size mustBe 3
-    loggerRequests.get(0).getBodyAsString mustBe createJsonNotificationBody("1", movementId, expectedMovement, "messageId-1").toString()
-    loggerRequests.get(1).getBodyAsString mustBe createJsonNotificationBody("1", movementId, expectedMovement, "messageId-2").toString()
-    loggerRequests.get(2).getBodyAsString mustBe createJsonNotificationBody("1", movementId, expectedMovement, "messageId-3").toString()
+    loggerRequests.get(0).getBodyAsString mustBe createJsonNotificationBody("1", movementId, expectedMovement, "messageId-1", "IE801").toString()
+    loggerRequests.get(1).getBodyAsString mustBe createJsonNotificationBody("1", movementId, expectedMovement, "messageId-2", "IE818").toString()
+    loggerRequests.get(2).getBodyAsString mustBe createJsonNotificationBody("1", movementId, expectedMovement, "messageId-3", "IE802").toString()
   }
 
   private def assertPushNotificationApiForErn3(expectedMovement: Movement, movementId: String): Unit = {
     val loggerRequests = wireMock.findAll(postRequestedFor(urlEqualTo(s"/box/boxId2/notifications")))
     loggerRequests.size mustBe 1
-    loggerRequests.get(0).getBodyAsString mustBe createJsonNotificationBody("3", movementId, expectedMovement, "messageId-1").toString()
+    loggerRequests.get(0).getBodyAsString mustBe createJsonNotificationBody("3", movementId, expectedMovement, "messageId-1", "IE801").toString()
   }
 
   private def assertPushNotificationApiForErn4(expectedMovement: Movement, movementId: String): Unit = {
     val loggerRequests = wireMock.findAll(postRequestedFor(urlEqualTo(s"/box/boxId3/notifications")))
     loggerRequests.size mustBe 1
-    loggerRequests.get(0).getBodyAsString mustBe createJsonNotificationBody("4", movementId, expectedMovement, "messageId-4").toString()
+    loggerRequests.get(0).getBodyAsString mustBe createJsonNotificationBody("4", movementId, expectedMovement, "messageId-4", "IE704").toString()
   }
 
   private def assertResults(actual: Movement, expected: Movement) = {
@@ -660,15 +660,17 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
     ern: String,
     movementId: String,
     movement: Movement,
-    messageId: String
+    messageId: String,
+    messageType: String
   ): JsValue = {
     Json.toJson(Notification(
       movementId,
       s"/movements/$movementId/messages/$messageId",
       messageId,
+      messageType,
       movement.consignorId,
       movement.consigneeId,
-      movement.administrativeReferenceCode.get,
+      movement.administrativeReferenceCode,
       ern
     ))
   }

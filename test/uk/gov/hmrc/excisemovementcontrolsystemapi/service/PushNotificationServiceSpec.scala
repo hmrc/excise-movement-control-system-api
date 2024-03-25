@@ -111,19 +111,29 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
 
   "sendNotification" should {
     "send a notification" in {
-      val result = await(sut.sendNotification("ern", movement, "messageId"))
+      val result = await(sut.sendNotification("ern", movement, "messageId", "IE801"))
 
       result mustBe SuccessPushNotificationResponse("notificationId")
 
       val messageUri = s"/movements/id/messages/messageId"
-      val notification = Notification("id", messageUri, "messageId", "consignorId", Some("consigneeId"), "arc", "ern")
+      val notification = Notification("id", messageUri, "messageId", "IE801", "consignorId", Some("consigneeId"), Some("arc"), "ern")
+      verify(notificationConnector).postNotification("boxId", notification)
+    }
+
+    "send a notification with an empty arc" in {
+      val result = await(sut.sendNotification("ern", movement.copy(administrativeReferenceCode = None), "messageId", "IE704"))
+
+      result mustBe SuccessPushNotificationResponse("notificationId")
+
+      val messageUri = s"/movements/id/messages/messageId"
+      val notification = Notification("id", messageUri, "messageId", "IE704", "consignorId", Some("consigneeId"), None, "ern")
       verify(notificationConnector).postNotification("boxId", notification)
     }
 
     "return not in use status" when {
 
       "box Id is not set on the movement" in {
-        val result = await(sut.sendNotification("ern", movement.copy(boxId = None), "messageId"))
+        val result = await(sut.sendNotification("ern", movement.copy(boxId = None), "messageId", "IE801"))
         result mustBe NotInUseNotificationResponse()
         verifyZeroInteractions(notificationConnector)
       }
@@ -136,26 +146,10 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
         when(notificationConnector.postNotification(any, any)(any))
           .thenReturn(Future.successful(FailedPushNotification(NOT_FOUND, "not found")))
 
-        val result = await(sut.sendNotification("ern", movement, "messageId"))
+        val result = await(sut.sendNotification("ern", movement, "messageId", "IE801"))
 
         Json.toJson(result.asInstanceOf[FailedPushNotification]) mustBe
           buildPushNotificationJsonError(NOT_FOUND, "not found")
-      }
-
-      "Administration reference code (ARC) is missing" in {
-        the[RuntimeException] thrownBy
-          await(sut.sendNotification("ern", movement.copy(administrativeReferenceCode = None), "messageId")) must
-          have message "[PushNotificationService] - Could not push notification for message: messageId. Administration Reference code is empty"
-
-        verifyZeroInteractions(notificationConnector)
-      }
-
-      "Administration reference code (ARC) is empty" in {
-        the[RuntimeException] thrownBy
-          await(sut.sendNotification("ern", movement.copy(administrativeReferenceCode = Some("")), "messageId")) must
-          have message "[PushNotificationService] - Could not push notification for message: messageId. Administration Reference code is empty"
-
-        verifyZeroInteractions(notificationConnector)
       }
     }
   }

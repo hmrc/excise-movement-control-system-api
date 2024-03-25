@@ -87,9 +87,10 @@ case class Notification
   movementId: String,
   messageUri: String,
   messageId: String,
+  messageType: String,
   consignor: String,
   consignee: Option[String],
-  arc: String,
+  arc: Option[String],
   ern: String
 )
 
