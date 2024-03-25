@@ -19,23 +19,23 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 import play.api.libs.json.{Json, OFormat}
 
 
-case class ValidatorResults(
-    errorCategory: String,
-    errorType: BigInt,
-    errorReason: String,
-    errorLocation: String,
-    originalAttributeValue: String
+case class RimValidatorResults(
+  errorCategory: Option[String],
+  errorType: Option[BigInt],
+  errorReason: Option[String],
+  errorLocation: Option[String],
+  originalAttributeValue: Option[String]
 )
 
-object ValidatorResults {
-  implicit val format: OFormat[ValidatorResults] = Json.format[ValidatorResults]
+object RimValidatorResults {
+  implicit val format: OFormat[RimValidatorResults] = Json.format[RimValidatorResults]
 }
 
 case class RimValidationErrorResponse
 (
   emcsCorrelationId: String,
   message: Seq[String],
-  validatorResults: Seq[ValidatorResults]
+  validatorResults: Seq[RimValidatorResults]
 )
 
 object RimValidationErrorResponse {

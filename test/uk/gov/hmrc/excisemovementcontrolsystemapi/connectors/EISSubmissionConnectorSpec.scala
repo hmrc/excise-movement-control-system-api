@@ -33,8 +33,9 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.StringSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionRequest, EISSubmissionResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISSubmissionRequest, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
@@ -162,8 +163,9 @@ class EISSubmissionConnectorSpec
       val result = await(submitExciseMovementForIE815)
 
       result.left.value mustBe InternalServerError(
-        Json.toJson(EISErrorResponse(timestamp, "INTERNAL_SERVER_ERROR",
-          "Exception", "error", emcsCorrelationId)))
+        Json.toJson(ErrorResponse(timestamp, "Internal server error",
+          "Unexpected error occurred while processing Submission request"
+          , Some(emcsCorrelationId))))
     }
 
     "return Not found error" in {
@@ -228,10 +230,10 @@ class EISSubmissionConnectorSpec
   }
 
   private def submitExciseMovementWithParams(
-                                              xml: NodeSeq,
-                                              message: IEMessage,
-                                              authErn: String
-                                            ): Future[Either[Result, EISSubmissionResponse]] = {
+    xml: NodeSeq,
+    message: IEMessage,
+    authErn: String
+  ): Future[Either[Result, EISSubmissionResponse]] = {
 
     connector.submitMessage(message, xml.toString(), authErn, emcsCorrelationId)
   }

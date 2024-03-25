@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.models
+package uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.{Format, Json}
 
-case class ExciseMovementResponse(
-  movementId: String,
-  boxId: Option[String],
-  localReferenceNumber: String,
-  consignorId: String,
-  consigneeId: Option[String],
-  administrativeReferenceCode: Option[String]
+case class PreValidateTraderEISResponse(
+  //Success
+  exciseTraderValidationResponse: Option[ExciseTraderValidationResponse] = None,
+  //And error cases
+  validationTimeStamp: Option[String] = None,
+  exciseTraderResponse: Option[Array[ExciseTraderResponse]] = None
 )
 
-object ExciseMovementResponse {
-  implicit val format: OFormat[ExciseMovementResponse] = Json.format[ExciseMovementResponse]
+object PreValidateTraderEISResponse {
+
+  implicit val format: Format[PreValidateTraderEISResponse] = Json.format[PreValidateTraderEISResponse]
 }

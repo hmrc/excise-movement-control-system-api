@@ -17,21 +17,24 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util
 
 import play.api.Logging
-import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, SERVICE_UNAVAILABLE, UNPROCESSABLE_ENTITY}
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{Json, Reads}
 import play.api.mvc.Result
-import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable, UnprocessableEntity}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, EISSubmissionResponse, RimValidationErrorResponse}
+import play.api.mvc.Results.{InternalServerError, Status}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, EISErrorResponse, EISSubmissionResponse, RimValidationErrorResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ValidationResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.{HttpReads, HttpResponse}
 
+import scala.reflect.runtime.universe.TypeTag
 import scala.util.{Success, Try}
 
 class EISHttpReader(
-                     val correlationId: String,
-                     val ern: String,
-                     val createdDateTime: String
-                   ) extends HttpReads[Either[Result, EISSubmissionResponse]]
+  val correlationId: String,
+  val ern: String,
+  val createdDateTime: String,
+  val dateTimeService: DateTimeService,
+  val messageType: String
+) extends HttpReads[Either[Result, EISSubmissionResponse]]
   with Logging
   with ResponseHandler {
 
@@ -48,35 +51,66 @@ class EISHttpReader(
     response: HttpResponse
   ): Result = {
 
-    logger.warn(EISErrorMessage(createdDateTime, ern, response.body, correlationId, MessageTypes.IE815.value))
+    logger.warn(EISErrorMessage(createdDateTime, ern, response.body, correlationId, messageType))
 
-    val messageAsJson = response.json
+    (tryAsJson[RimValidationErrorResponse](response), tryAsJson[EISErrorResponse](response)) match {
+      case (Some(x), None) => handleRimValidationResponse(response, x)
+      case (None, Some(y)) => handleEISErrorResponse(response, y)
+      case (None, None) =>
+        InternalServerError(Json.toJson(ErrorResponse(dateTimeService.timestamp(), "Unexpected error", "Error occurred while reading downstream response")))
+    }
 
-    response.status match {
-      case BAD_REQUEST => BadRequest(extractValidJson(response))
-      case NOT_FOUND => NotFound(messageAsJson)
-      case SERVICE_UNAVAILABLE => ServiceUnavailable(messageAsJson)
-      case UNPROCESSABLE_ENTITY => UnprocessableEntity(extractValidJson(response))
-      case _ => InternalServerError(messageAsJson)
+  }
+
+  private def handleRimValidationResponse(response: HttpResponse, rimError: RimValidationErrorResponse): Result = {
+
+    val validationResponse = rimError.validatorResults.map(
+      x => ValidationResponse(
+        x.errorCategory,
+        x.errorType,
+        x.errorReason,
+        removeControlDocumentReferences(x.errorLocation),
+        x.originalAttributeValue
+      )
+    )
+
+    Status(response.status)(Json.toJson(ErrorResponse(
+      dateTimeService.timestamp(),
+      "Validation error",
+      rimError.message.mkString("\n"),
+      Some(rimError.emcsCorrelationId),
+      Some(validationResponse)
+    )))
+
+  }
+
+  private def handleEISErrorResponse(response: HttpResponse, eisError: EISErrorResponse) = {
+    Status(response.status)(Json.toJson(ErrorResponse(
+      eisError.dateTime,
+      eisError.message,
+      eisError.debugMessage,
+      eisError.emcsCorrelationId
+    )))
+  }
+
+  private def tryAsJson[A](response: HttpResponse)(implicit reads: Reads[A], tt: TypeTag[A]): Option[A] = {
+
+    Try(jsonAs[A](response.body)) match {
+      case Success(value) => Some(value)
+      case _ => None
     }
   }
 
-  private def extractValidJson(response: HttpResponse): JsValue = {
-    Try(jsonAs[RimValidationErrorResponse](response.body)) match {
-      case Success(value) =>
-        val errors = value.validatorResults.map(o => o.copy(errorLocation = removeControlDocumentReferences(o.errorLocation)))
-        Json.toJson(value.copy(validatorResults = errors))
-      case _ => response.json
-    }
-  }
 }
 
 object EISHttpReader {
-  def apply(correlationId: String, ern: String, createDateTime: String): EISHttpReader = {
+  def apply(correlationId: String, ern: String, createDateTime: String, dateTimeService: DateTimeService, messageType: String): EISHttpReader = {
     new EISHttpReader(
       correlationId: String,
       ern: String,
-      createDateTime: String
+      createDateTime: String,
+      dateTimeService: DateTimeService,
+      messageType: String
     )
   }
 }

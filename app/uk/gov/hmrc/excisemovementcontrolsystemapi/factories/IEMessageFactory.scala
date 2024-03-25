@@ -25,7 +25,7 @@ import scala.xml.NodeSeq
 
 case class IEMessageFactory() {
   def createIEMessage(message: DataRecord[MessagesOption]): IEMessage = {
-    val messageType = message.key.getOrElse(throw new RuntimeException("[IEMessageFactory] - Could not create Message object. Message type is empty"))
+    val messageType = message.key.getOrElse(throw new IEMessageFactoryException("Could not create Message object. Message type is empty"))
 
     MessageTypes.withValueOpt(messageType) match {
       case Some(MessageTypes.IE704) => IE704Message(message)
@@ -44,7 +44,7 @@ case class IEMessageFactory() {
       case Some(MessageTypes.IE871) => IE871Message(message)
       case Some(MessageTypes.IE881) => IE881Message(message)
       case Some(MessageTypes.IE905) => IE905Message(message)
-      case _ => throw new RuntimeException(s"[IEMessageFactory] - Could not create Message object. Unsupported message: $messageType")
+      case _ => throw new IEMessageFactoryException(s"Could not create Message object. Unsupported message: $messageType")
     }
   }
 
@@ -67,7 +67,9 @@ case class IEMessageFactory() {
       case Some(MessageTypes.IE871) => IE871Message.createFromXml(xml)
       case Some(MessageTypes.IE881) => IE881Message.createFromXml(xml)
       case Some(MessageTypes.IE905) => IE905Message.createFromXml(xml)
-      case _ => throw new RuntimeException(s"[IEMessageFactory] - Could not create Message object. Unsupported message: $messageType")
+      case _ => throw new IEMessageFactoryException(s"Could not create Message object. Unsupported message: $messageType")
     }
   }
 }
+
+class IEMessageFactoryException(message: String) extends RuntimeException(message)

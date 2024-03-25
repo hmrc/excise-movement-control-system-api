@@ -55,7 +55,6 @@ class DraftExciseMovementController @Inject()(
 
   def submit: Action[NodeSeq] = {
 
-
     (authAction andThen xmlParser).async(parse.xml) {
       implicit request =>
 
@@ -67,11 +66,12 @@ class DraftExciseMovementController @Inject()(
           movement <- submitSaveAudit(request, authorisedErn, boxId, ie815Message)
         } yield {
           Accepted(Json.toJson(ExciseMovementResponse(
-            boxId,
             movement._id,
+            boxId,
             movement.localReferenceNumber,
             movement.consignorId,
-            movement.consigneeId)
+            movement.consigneeId,
+            None)
           ))
 
         }

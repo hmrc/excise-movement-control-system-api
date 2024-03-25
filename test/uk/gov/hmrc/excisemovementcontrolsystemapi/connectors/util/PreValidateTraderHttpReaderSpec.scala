@@ -17,21 +17,33 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util
 
 
+import org.mockito.MockitoSugar.when
 import org.scalatest.EitherValues
 import org.scalatest.Inspectors.forAll
+import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, SERVICE_UNAVAILABLE}
 import play.api.libs.json.Json
-import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderErrorResponse, getPreValidateTraderSuccessResponse}
+import play.api.mvc.Results.Status
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderErrorEISResponse, getPreValidateTraderSuccessEISResponse}
 import uk.gov.hmrc.http.HttpResponse
+
+import java.time.Instant
 
 class PreValidateTraderHttpReaderSpec extends PlaySpec with EitherValues {
 
-  private val validResponse = getPreValidateTraderSuccessResponse
-  private val businessError = getPreValidateTraderErrorResponse
+  private val validResponse = getPreValidateTraderSuccessEISResponse
+  private val businessError = getPreValidateTraderErrorEISResponse
 
-  private val preValidateTraderHttpReader = PreValidateTraderHttpReader("123", "GB123", "date time")
+  private val now = Instant.now
+  private val dateTimeService = mock[DateTimeService]
+
+  when(dateTimeService.timestamp()).thenReturn(now)
+
+  private val preValidateTraderHttpReader = PreValidateTraderHttpReader("123", "GB123", "date time", dateTimeService)
+
   "read" should {
     "return PreValidateTraderResponse when success" in {
 
@@ -62,19 +74,27 @@ class PreValidateTraderHttpReaderSpec extends PlaySpec with EitherValues {
     }
 
     forAll(Seq(
-      (BAD_REQUEST, BadRequest("")),
-      (NOT_FOUND, NotFound("")),
-      (INTERNAL_SERVER_ERROR, InternalServerError("")),
-      (SERVICE_UNAVAILABLE, ServiceUnavailable("")))) { case (statusCode, expectedResult) =>
+      BAD_REQUEST,
+      NOT_FOUND,
+      INTERNAL_SERVER_ERROR,
+      SERVICE_UNAVAILABLE)) { statusCode =>
       s"return $statusCode" when {
         s"$statusCode has returned from HttpResponse" in {
+
+          val expectedResponse = Status(statusCode)(Json.toJson(ErrorResponse(
+            now,
+            "PreValidateTrader error",
+            "Error occurred during PreValidateTrader request",
+            "123"
+          )))
+
           val result = preValidateTraderHttpReader.read(
             "ANY",
             "/foo",
             HttpResponse(statusCode, "")
-          )
+          ).left.value
 
-          result.left.value mustBe expectedResult
+          result mustBe expectedResponse
         }
       }
     }

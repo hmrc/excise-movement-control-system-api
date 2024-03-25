@@ -301,25 +301,25 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       "rim validation error" when {
         "error is BAD_REQUEST" in {
           withAuthorizedTrader(consignorId)
-          stubEISErrorResponse(BAD_REQUEST, rimValidationErrorResponse(messageWithControlDoc))
+          stubEISErrorResponse(BAD_REQUEST, rimValidationErrorResponse(locationWithControlDoc))
 
           val response = postRequest(IE815)
 
           response.status mustBe BAD_REQUEST
           withClue("must remove control document references in any paths") {
-            clean(response.body) mustBe clean(rimValidationErrorResponse(messageWithoutControlDoc))
+            clean(response.body) mustBe clean(validationErrorResponse(locationWithoutControlDoc, timeStamp.toString))
           }
         }
 
         "error is UNPROCESSABLE_ENTITY" in {
           withAuthorizedTrader(consignorId)
-          stubEISErrorResponse(UNPROCESSABLE_ENTITY, rimValidationErrorResponse(messageWithControlDoc))
+          stubEISErrorResponse(UNPROCESSABLE_ENTITY, rimValidationErrorResponse(locationWithControlDoc))
 
           val response = postRequest(IE815)
 
           response.status mustBe UNPROCESSABLE_ENTITY
           withClue("must remove control document references in any paths") {
-            clean(response.body) mustBe clean(rimValidationErrorResponse(messageWithoutControlDoc))
+            clean(response.body) mustBe clean(validationErrorResponse(locationWithoutControlDoc, timeStamp.toString))
           }
         }
       }
@@ -377,7 +377,12 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         result.status mustBe NOT_FOUND
 
         withClue("return the EIS error response") {
-          result.json mustBe Json.toJson(eisErrorResponse)
+          result.json mustBe Json.toJson(Json.toJson(ErrorResponse(
+            Instant.parse("2023-12-05T12:05:06Z"),
+            "not_found",
+            "debug NOT_FOUND",
+            "123"
+          )))
         }
       }
     }

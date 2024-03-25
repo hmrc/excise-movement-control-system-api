@@ -41,7 +41,7 @@ object TestUtils {
     )
   }
 
-  def getPreValidateTraderSuccessResponse: PreValidateTraderResponse = PreValidateTraderResponse(Some(
+  def getPreValidateTraderSuccessEISResponse: PreValidateTraderEISResponse = PreValidateTraderEISResponse(Some(
     ExciseTraderValidationResponse(
       validationTimeStamp = "2021-12-17T09:31:123Z",
       exciseTraderResponse = Array(ExciseTraderResponse(
@@ -55,7 +55,7 @@ object TestUtils {
   )
   )
 
-  def getPreValidateTraderErrorResponse: PreValidateTraderResponse = PreValidateTraderResponse(
+  def getPreValidateTraderErrorEISResponse: PreValidateTraderEISResponse = PreValidateTraderEISResponse(
     validationTimeStamp = Some("2021-12-17T09:31:123Z"),
     exciseTraderResponse = Some(Array(ExciseTraderResponse(
       validTrader = false,
@@ -74,6 +74,35 @@ object TestUtils {
       ))
     )))
   )
+
+  def getPreValidateTraderSuccessResponse: PreValidateTraderMessageResponse = PreValidateTraderMessageResponse(
+    validationTimeStamp = "2021-12-17T09:31:123Z",
+    exciseRegistrationNumber = "GBWK002281023",
+    entityGroup = "UK Record",
+    validTrader = true,
+    traderType = Some("1"),
+    validateProductAuthorisationResponse = Some(ValidateProductAuthorisationResponse(valid = true))
+  )
+
+  def getPreValidateTraderErrorResponse: PreValidateTraderMessageResponse = {
+    PreValidateTraderMessageResponse(
+      validationTimeStamp = "2021-12-17T09:31:123Z",
+      validTrader = false,
+      exciseRegistrationNumber = "GBWK000000000",
+      traderType = None,
+      entityGroup = "UK Record",
+      errorCode = Some("6"),
+      errorText = Some("Not Found"),
+      validateProductAuthorisationResponse = Some(ValidateProductAuthorisationResponse(
+        valid = false,
+        productError = Some(Seq(ProductError(
+          errorCode = "1",
+          errorText = "Unrecognised EPC",
+          exciseProductCode = "S200"
+        )))
+      ))
+    )
+  }
 
   def getPreValidateTraderRequest: PreValidateTraderRequest = PreValidateTraderRequest(
     ExciseTraderValidationRequest(

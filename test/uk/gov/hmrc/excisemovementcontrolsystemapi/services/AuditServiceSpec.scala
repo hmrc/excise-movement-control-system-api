@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.service
+package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.when
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
+import play.api.Logger
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
@@ -35,7 +36,7 @@ class AuditServiceSpec extends PlaySpec with TestXml {
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
 
   class Harness(auditConnector: AuditConnector) extends AuditServiceImpl(auditConnector) {
-    def getLogger() = logger
+    def getLogger(): Logger = logger
   }
 
   "auditMessage" should {

@@ -17,23 +17,26 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util
 
 import play.api.Logging
-import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, SERVICE_UNAVAILABLE}
+import play.api.libs.json.Json
 import play.api.mvc.Result
-import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
+import play.api.mvc.Results.Status
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISErrorMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderEISResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HttpReads.is2xx
 import uk.gov.hmrc.http.{HttpReads, HttpResponse}
 
 class PreValidateTraderHttpReader(
-                                   val correlationId: String,
-                                   val ern: String,
-                                   val createdDateTime: String
-                                 ) extends HttpReads[Either[Result, PreValidateTraderResponse]]
+  val correlationId: String,
+  val ern: String,
+  val createdDateTime: String,
+  val dateTimeService: DateTimeService
+) extends HttpReads[Either[Result, PreValidateTraderEISResponse]]
   with Logging
   with ResponseHandler {
 
-  override def read(method: String, url: String, response: HttpResponse): Either[Result, PreValidateTraderResponse] = {
+  override def read(method: String, url: String, response: HttpResponse): Either[Result, PreValidateTraderEISResponse] = {
 
     val result = extractIfSuccessful(response)
     result match {
@@ -42,12 +45,12 @@ class PreValidateTraderHttpReader(
     }
   }
 
-  def extractIfSuccessful(response: HttpResponse): Either[HttpResponse, PreValidateTraderResponse] =
+  def extractIfSuccessful(response: HttpResponse): Either[HttpResponse, PreValidateTraderEISResponse] =
     if (is2xx(response.status)) Right(extractResponse(response))
     else Left(response)
 
-  private def extractResponse(httpResponse: HttpResponse): PreValidateTraderResponse = {
-    jsonAs[PreValidateTraderResponse](httpResponse.body)
+  private def extractResponse(httpResponse: HttpResponse): PreValidateTraderEISResponse = {
+    jsonAs[PreValidateTraderEISResponse](httpResponse.body)
   }
 
 
@@ -56,26 +59,29 @@ class PreValidateTraderHttpReader(
     response: HttpResponse
   ): Result = {
 
-    logger.warn(EISErrorMessage(createdDateTime, ern, response.body, correlationId, "PreValidateTrader"))
+    logger.warn(EISErrorMessage(createdDateTime, ern, s"status: ${response.status}, body: ${response.body}", correlationId, "PreValidateTrader"))
 
-    //Not expecting bodies to have any payload here
-    response.status match {
-      case BAD_REQUEST =>
-        BadRequest(response.body)
-      case NOT_FOUND => NotFound(response.body)
-      case SERVICE_UNAVAILABLE => ServiceUnavailable(response.body)
-      case _ => InternalServerError(response.body)
-    }
+    //Not expecting EIS response bodies to have any payload here
+    val ourErrorResponse = ErrorResponse(
+      dateTimeService.timestamp(),
+      "PreValidateTrader error",
+      "Error occurred during PreValidateTrader request",
+      correlationId
+    )
+
+    Status(response.status)(Json.toJson(ourErrorResponse))
+
   }
 
 }
 
 object PreValidateTraderHttpReader {
-  def apply(correlationId: String, ern: String, createDateTime: String): PreValidateTraderHttpReader = {
+  def apply(correlationId: String, ern: String, createDateTime: String, dateTimeService: DateTimeService): PreValidateTraderHttpReader = {
     new PreValidateTraderHttpReader(
-      correlationId: String,
-      ern: String,
-      createDateTime: String
+      correlationId,
+      ern,
+      createDateTime,
+      dateTimeService
     )
   }
 }

@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, ok, post, urlEqualTo}
 import org.mockito.MockitoSugar.when
-import org.scalatest.{BeforeAndAfterAll, OptionValues}
+import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -30,8 +30,9 @@ import play.api.libs.ws.WSClient
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.InternalError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{ApplicationBuilderSupport, WireMockServerSpec}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderRequest, getPreValidateTraderSuccessResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderMessageResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderRequest, getPreValidateTraderSuccessEISResponse, getPreValidateTraderSuccessResponse}
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -41,8 +42,7 @@ class PreValidateTraderControllerItSpec extends PlaySpec
   with GuiceOneServerPerSuite
   with ApplicationBuilderSupport
   with WireMockServerSpec
-  with BeforeAndAfterAll
-  with OptionValues {
+  with BeforeAndAfterAll {
 
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
   private val url = s"http://localhost:$port/traders/pre-validate"
@@ -79,15 +79,19 @@ class PreValidateTraderControllerItSpec extends PlaySpec
       stubEISSuccessfulRequest()
 
       val result = postRequest(request)
-      val expectedResult = getPreValidateTraderSuccessResponse.exciseTraderValidationResponse
+      val expectedResult = getPreValidateTraderSuccessResponse
 
       result.status mustBe OK
 
       withClue("return the json response") {
-        val responseBody = Json.parse(result.body).as[PreValidateTraderResponse].exciseTraderValidationResponse
-        responseBody.value.validationTimeStamp mustBe expectedResult.value.validationTimeStamp
-
-        responseBody.value.exciseTraderResponse(0) mustBe expectedResult.value.exciseTraderResponse(0)
+        val responseBody = Json.parse(result.body).as[PreValidateTraderMessageResponse]
+        responseBody.exciseRegistrationNumber mustBe expectedResult.exciseRegistrationNumber
+        responseBody.entityGroup mustBe expectedResult.entityGroup
+        responseBody.validTrader mustBe expectedResult.validTrader
+        responseBody.errorCode mustBe expectedResult.errorCode
+        responseBody.errorText mustBe expectedResult.errorText
+        responseBody.traderType mustBe expectedResult.traderType
+        responseBody.validateProductAuthorisationResponse mustBe expectedResult.validateProductAuthorisationResponse
       }
 
     }
@@ -100,8 +104,11 @@ class PreValidateTraderControllerItSpec extends PlaySpec
 
       result.status mustBe NOT_FOUND
 
-      withClue("return the EIS error response") {
-        result.body mustBe ""
+      withClue("return the error response") {
+        val body = Json.parse(result.body).as[ErrorResponse]
+        body.dateTime mustBe timestamp
+        body.message mustBe "PreValidateTrader error"
+        body.debugMessage mustBe "Error occurred during PreValidateTrader request"
       }
     }
 
@@ -162,7 +169,7 @@ class PreValidateTraderControllerItSpec extends PlaySpec
 
   private def stubEISSuccessfulRequest() = {
 
-    val response = getPreValidateTraderSuccessResponse
+    val response = getPreValidateTraderSuccessEISResponse
     wireMock.stubFor(
       post(eisUrl)
         .willReturn(ok().withBody(Json.toJson(response).toString()))

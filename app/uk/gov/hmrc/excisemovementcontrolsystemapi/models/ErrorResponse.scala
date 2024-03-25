@@ -20,22 +20,40 @@ import play.api.libs.json.{Json, OFormat}
 
 import java.time.Instant
 
-//todo - EMCS-389: this could be refactor to create specific error response
-// for each endpoint, (submission, notification, clientid error, etc
-
 trait GenericErrorResponse {
   val dateTime: Instant
   val message: String
   val debugMessage: String
+  val correlationId: Option[String]
 }
 
 case class ErrorResponse
 (
   override val dateTime: Instant,
   override val message: String,
-  override val debugMessage: String) extends GenericErrorResponse
+  override val debugMessage: String,
+  override val correlationId: Option[String] = None,
+  validatorResults: Option[Seq[ValidationResponse]] = None) extends GenericErrorResponse
 
 object ErrorResponse {
+
+  def apply(dateTime: Instant, message: String, debugMessage: String, correlationId: String): ErrorResponse =
+    ErrorResponse(dateTime, message, debugMessage, Some(correlationId))
+
   implicit def format: OFormat[ErrorResponse] = Json.format[ErrorResponse]
 }
+
+case class ValidationResponse(
+  errorCategory: Option[String],
+  errorType: Option[BigInt],
+  errorReason: Option[String],
+  errorLocation: Option[String],
+  originalAttributeValue: Option[String]
+)
+
+object ValidationResponse {
+  implicit def format: OFormat[ValidationResponse] = Json.format[ValidationResponse]
+}
+
+
 

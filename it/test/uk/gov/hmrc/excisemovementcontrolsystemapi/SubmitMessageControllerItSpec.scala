@@ -37,11 +37,13 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{ApplicationBuilderSu
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, Consignor}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Movement}
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
@@ -63,9 +65,10 @@ class SubmitMessageControllerItSpec extends PlaySpec
   private val eisUrl = "/emcs/digital-submit-new-message/v1"
   private val consignorId = "GBWK240176600"
   private val consigneeId = "GBWK002281023"
+  private val lrn = "LRNQA20230909022221"
 
   //This matches the data from the IE818 test message
-  private val movement = Movement(Some("boxId"), "LRNQA20230909022221", consignorId, Some(consigneeId), Some("23GB00000000000378553"))
+  private val movement = Movement(Some("boxId"), lrn, consignorId, Some(consigneeId), Some("23GB00000000000378553"))
 
   private val timestamp = Instant.now
 
@@ -128,7 +131,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       val result = postRequest(movement._id, IE810)
 
       result.status mustBe ACCEPTED
-      result.body.isEmpty mustBe true
+      assertResponseBody(result)
     }
 
     "return 403 error when submitted by consignee" in {
@@ -158,7 +161,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       val result = postRequest(movementForIE813._id, IE813)
 
       result.status mustBe ACCEPTED
-      result.body.isEmpty mustBe true
+      assertResponseBody(result)
     }
 
     "return 403 error when submitted by consignee" in {
@@ -196,7 +199,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       val result = postRequest(movementForIE818._id, IE818)
 
       result.status mustBe ACCEPTED
-      result.body.isEmpty mustBe true
+      assertResponseBody(result)
     }
 
   }
@@ -225,7 +228,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       val result = postRequest(movementForIE819._id, IE819)
 
       result.status mustBe ACCEPTED
-      result.body.isEmpty mustBe true
+      assertResponseBody(result)
     }
 
   }
@@ -245,7 +248,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       val result = postRequest(movementForIE837._id, IE837WithConsignor)
 
       result.status mustBe ACCEPTED
-      result.body.isEmpty mustBe true
+      assertResponseBody(result)
     }
 
     "return 202 when sent in by the consignee" in {
@@ -258,7 +261,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       val result = postRequest(movementForIE837._id, IE837WithConsignee)
 
       result.status mustBe ACCEPTED
-      result.body.isEmpty mustBe true
+      assertResponseBody(result)
     }
 
     "return 400 when consignor says they are consignee" in {
@@ -300,7 +303,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       val result = postRequest(movementForIE871._id, IE871WithConsignor)
 
       result.status mustBe ACCEPTED
-      result.body.isEmpty mustBe true
+      assertResponseBody(result)
     }
 
     "return 202 when sent in by the consignee" in {
@@ -312,8 +315,8 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
       val result = postRequest(movementForIE871._id, IE871WithConsignee)
 
-      result.status mustBe FORBIDDEN
-      result.body.isEmpty mustBe false
+      result.status mustBe ACCEPTED
+      assertResponseBody(result)
     }
 
     "return 400 when consignor says they are consignee" in {
@@ -349,7 +352,12 @@ class SubmitMessageControllerItSpec extends PlaySpec
     result.status mustBe NOT_FOUND
 
     withClue("return the EIS error response") {
-      result.json mustBe Json.toJson(eisErrorResponse)
+      result.json mustBe Json.toJson(ErrorResponse(
+        Instant.parse("2023-12-05T12:05:06Z"),
+        "not_found",
+        "debug NOT_FOUND",
+        "123"
+      ))
     }
   }
 
@@ -373,11 +381,11 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
   "remove control document references in any paths for a BAD_REQUEST" in {
     withAuthorizedTrader(consigneeId)
-    stubEISErrorResponse(BAD_REQUEST, rimValidationErrorResponse(messageWithControlDoc))
+    stubEISErrorResponse(BAD_REQUEST, rimValidationErrorResponse(locationWithControlDoc))
 
     val response = postRequest(movement._id, IE818)
 
-    clean(response.body) mustBe clean(rimValidationErrorResponse(messageWithoutControlDoc))
+    clean(response.body) mustBe clean(validationErrorResponse(locationWithoutControlDoc, timestamp.toString))
 
   }
 
@@ -458,10 +466,10 @@ class SubmitMessageControllerItSpec extends PlaySpec
   }
 
   private def postRequest(
-                           movementId: String,
-                           xml: NodeSeq = IE818,
-                           contentType: String = """application/vnd.hmrc.1.0+xml"""
-                         ) = {
+    movementId: String,
+    xml: NodeSeq = IE818,
+    contentType: String = """application/vnd.hmrc.1.0+xml"""
+  ) = {
     await(wsClient.url(url(movementId))
       .addHttpHeaders(
         HeaderNames.AUTHORIZATION -> "TOKEN",
@@ -501,6 +509,16 @@ class SubmitMessageControllerItSpec extends PlaySpec
             .withBody(Json.toJson(NonRepudiationSubmissionAccepted("submissionId")).toString())
         )
     )
+  }
+
+  private def assertResponseBody(result: WSResponse) = {
+    val responseBody = Json.parse(result.body).as[ExciseMovementResponse]
+
+    responseBody.boxId mustBe None
+    UUID.fromString(responseBody.movementId).toString must not be empty //mustNot Throw An Exception
+    responseBody.consignorId mustBe consignorId
+    responseBody.localReferenceNumber mustBe lrn
+    responseBody.consigneeId mustBe Some(consigneeId)
   }
 
 }

@@ -21,7 +21,7 @@ import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
@@ -62,7 +62,16 @@ class SubmitMessageController @Inject()(
           authorisedErn <- validateMessage(movement, request.ieMessage, request.erns)
           _ <- sendRequest(request, authorisedErn)
         } yield {
-          Accepted
+          Accepted(Json.toJson(
+            ExciseMovementResponse(
+              movement._id,
+              None,
+              movement.localReferenceNumber,
+              movement.consignorId,
+              movement.consigneeId,
+              movement.administrativeReferenceCode
+            )
+          ))
         }
 
         result.merge
