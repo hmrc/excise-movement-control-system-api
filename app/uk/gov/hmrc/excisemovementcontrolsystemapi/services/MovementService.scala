@@ -91,23 +91,23 @@ class MovementService @Inject()(
           updateMovementForIndividualArc(message, ern, cachedMovements, messageArc)
         }
         .sequence
-        .map((o: Seq[Option[Movement]]) =>
+        .map((o: Seq[Either[String, Movement]]) =>
           transformAndLogAnyError(o, ern, message.messageType)
         )
     }).flatten
   }
 
   private def transformAndLogAnyError(
-    movements: Seq[Option[Movement]],
+    movements: Seq[Either[String, Movement]],
     ern: String,
     messageType: String
   ): Seq[Movement] = {
     movements.foldLeft[Seq[Movement]](Seq()) {
-      case (acc: Seq[Movement], mv: Option[Movement]) =>
+      case (acc: Seq[Movement], mv: Either[String, Movement]) =>
         mv match {
-          case Some(m) => acc :+ m
-          case _ =>
-            logger.warn(s"[MovementService] - Could not update movement with excise number $ern and message: $messageType")
+          case Right(m) => acc :+ m
+          case Left(error) =>
+            logger.warn(s"[MovementService] - Could not update movement with excise number $ern and message: $messageType. Error was $error")
             acc
         }
     }
@@ -128,7 +128,7 @@ class MovementService @Inject()(
     ern: String,
     cachedMovements: Seq[Movement],
     messageArc: Option[String]
-  ): Future[Option[Movement]] = {
+  ): Future[Either[String, Movement]] = {
     val movementWithArc = cachedMovements.find(o => o.administrativeReferenceCode.equals(messageArc))
     val movementWithLrn = cachedMovements.find(m => message.lrnEquals(m.localReferenceNumber))
 
@@ -143,7 +143,7 @@ class MovementService @Inject()(
                                    movement: Movement,
                                    newMessage: IEMessage,
                                    messageArc: Option[String]
-                                 ): Future[Option[Movement]] = {
+                                 ): Future[Either[String,Movement]] = {
 
     val message = Message(
       encodedMessage = emcsUtils.encode(newMessage.toXml.toString),
@@ -154,7 +154,7 @@ class MovementService @Inject()(
 
     //todo EMCS-382: remove hash from message class. Hash can calculate on the go in here
     movement.messages.find(o => o.hash.equals(message.hash)) match {
-      case Some(_) => successful(None)
+      case Some(_) => successful(Left(s"Message has already been saved against movement ${movement._id}"))
       case _ =>
         val newArc = messageArc.orElse(movement.administrativeReferenceCode)
 
@@ -163,7 +163,12 @@ class MovementService @Inject()(
           messages = movement.messages :+ message
         )
 
-        movementRepository.updateMovement(newMovement)
+        val updateResult = movementRepository.updateMovement(newMovement)
+
+        updateResult.map {
+          case Some(x) => Right(x)
+          case None => Left(s"Failed to update movement ${newMovement._id}")
+        }
     }
   }
 
