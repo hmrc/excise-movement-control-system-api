@@ -42,7 +42,6 @@ object NotificationResponse {
 
   case class FailedBoxIdNotificationResponse(dateTime: Instant, debugMessage: String) extends GenericErrorResponse {
     override val message: String = "Box Id error"
-    override val correlationId: Option[String] = None
   }
 
   object FailedBoxIdNotificationResponse {

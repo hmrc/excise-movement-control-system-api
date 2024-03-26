@@ -39,7 +39,7 @@ import uk.gov.hmrc.auth.core.InternalError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{JsonSupport, StringSupport}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{ApplicationBuilderSupport, SubmitMessageTestSupport, WireMockServerSpec}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisErrorResponsePresentation, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionRequest, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Constants
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
@@ -304,7 +304,10 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
           response.status mustBe BAD_REQUEST
           withClue("must remove control document references in any paths") {
-            clean(response.body) mustBe clean(validationErrorResponse(locationWithoutControlDoc, timeStamp.toString))
+            clean(response.body) mustBe clean(validationErrorResponse(
+              locationWithoutControlDoc,
+              "2024-12-12T14:30:23.123Z")
+            )
           }
         }
 
@@ -316,7 +319,9 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
           response.status mustBe UNPROCESSABLE_ENTITY
           withClue("must remove control document references in any paths") {
-            clean(response.body) mustBe clean(validationErrorResponse(locationWithoutControlDoc, timeStamp.toString))
+            clean(response.body) mustBe clean(validationErrorResponse(
+              locationWithoutControlDoc, "2024-12-12T14:30:23.123Z")
+            )
           }
         }
       }
@@ -374,7 +379,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         result.status mustBe NOT_FOUND
 
         withClue("return the EIS error response") {
-          result.json mustBe Json.toJson(Json.toJson(ErrorResponse(
+          result.json mustBe Json.toJson(Json.toJson(EisErrorResponsePresentation(
             Instant.parse("2023-12-05T12:05:06Z"),
             "not_found",
             "debug NOT_FOUND",

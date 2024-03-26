@@ -32,8 +32,8 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTraderHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.EISHeaderTestSupport
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISErrorResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderEISResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderErrorResponse, getPreValidateTraderRequest, getPreValidateTraderSuccessResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
@@ -66,7 +66,7 @@ class PreValidateTraderConnectorSpec
   private val validResponse = getPreValidateTraderSuccessResponse
   private val businessError = getPreValidateTraderErrorResponse
 
-  private val timestamp = Instant.parse("2023-09-17T09:32:50.345Z")
+  private val timestamp = Instant.parse("2023-09-17T09:32:50Z")
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -138,7 +138,7 @@ class PreValidateTraderConnectorSpec
       val result = await(submitPreValidateTrader())
 
       result.left.value mustBe InternalServerError(
-        Json.toJson(ErrorResponse(timestamp,
+        Json.toJson(EisErrorResponsePresentation(timestamp,
           "Internal Server Error",
           "Unexpected error occurred while processing PreValidateTrader request",
           emcsCorrelationId

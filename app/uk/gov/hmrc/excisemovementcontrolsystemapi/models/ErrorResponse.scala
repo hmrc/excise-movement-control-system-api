@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{JsPath, Json, Reads, Writes}
+import play.api.libs.json.{JsPath, Json, OFormat, Reads, Writes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
 
 import java.time.Instant
@@ -26,7 +26,6 @@ trait GenericErrorResponse {
   val dateTime: Instant
   val message: String
   val debugMessage: String
-  val correlationId: Option[String]
 }
 
 case class ErrorResponse
@@ -34,13 +33,9 @@ case class ErrorResponse
   override val dateTime: Instant,
   override val message: String,
   override val debugMessage: String,
-  override val correlationId: Option[String] = None,
-  validatorResults: Option[Seq[ValidationResponse]] = None) extends GenericErrorResponse
+) extends GenericErrorResponse
 
 object ErrorResponse {
-
-  def apply(dateTime: Instant, message: String, debugMessage: String, correlationId: String): ErrorResponse =
-    ErrorResponse(dateTime, message, debugMessage, Some(correlationId))
 
   implicit val format: Reads[ErrorResponse] = Json.reads[ErrorResponse]
 
@@ -48,9 +43,37 @@ object ErrorResponse {
     (JsPath \ "dateTime").write[String] and
       (JsPath \ "message").write[String] and
       (JsPath \ "debugMessage").write[String]
+    )(e => (e.dateTime.asStringInMilliseconds, e.message, e.debugMessage))
 
-    )(e =>
-    (e.dateTime.asStringInMilliseconds, e.message, e.debugMessage))
+}
+
+case class EisErrorResponsePresentation
+(
+  override val dateTime: Instant,
+  override val message: String,
+  override val debugMessage: String,
+  correlationId: String,
+  validatorResults: Option[Seq[ValidationResponse]] = None
+) extends GenericErrorResponse
+
+object EisErrorResponsePresentation {
+
+  implicit val format: Reads[EisErrorResponsePresentation] = Json.reads[EisErrorResponsePresentation]
+
+  implicit val write: Writes[EisErrorResponsePresentation] = (
+    (JsPath \ "dateTime").write[String] and
+      (JsPath \ "message").write[String] and
+      (JsPath \ "debugMessage").write[String] and
+      (JsPath \ "correlationId").write[String] and
+      (JsPath \ "validatorResults").writeNullable[Seq[ValidationResponse]]
+
+
+    )(e => (
+    e.dateTime.asStringInMilliseconds,
+    e.message, e.debugMessage,
+    e.correlationId,
+    e.validatorResults
+  ))
 
 }
 

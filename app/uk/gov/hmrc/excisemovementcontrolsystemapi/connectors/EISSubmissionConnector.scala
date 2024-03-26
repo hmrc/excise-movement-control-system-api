@@ -23,7 +23,7 @@ import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
@@ -72,7 +72,7 @@ class EISSubmissionConnector @Inject()
 
           logger.warn(EISErrorMessage(createdDateTime, authorisedErn, ex.getMessage, correlationId, messageType), ex)
 
-          val error = ErrorResponse(
+          val error = EisErrorResponsePresentation(
             timestamp,
             "Internal server error",
             "Unexpected error occurred while processing Submission request",

@@ -37,8 +37,7 @@ case class MessageReceiptFailResponse
 (
   status: Int,
   dateTime: Instant,
-  debugMessage: String,
-  correlationId: Option[String]
+  debugMessage: String
 ) extends MessageReceiptResponse with GenericErrorResponse {
   override val message = "Message Receipt error"
 }

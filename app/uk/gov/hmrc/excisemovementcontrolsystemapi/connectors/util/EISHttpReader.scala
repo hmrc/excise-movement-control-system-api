@@ -21,7 +21,7 @@ import play.api.libs.json.{Json, Reads}
 import play.api.mvc.Result
 import play.api.mvc.Results.{InternalServerError, Status}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, EISErrorResponse, EISSubmissionResponse, RimValidationErrorResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ValidationResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisErrorResponsePresentation, ValidationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.{HttpReads, HttpResponse}
 
@@ -56,8 +56,13 @@ class EISHttpReader(
     (tryAsJson[RimValidationErrorResponse](response), tryAsJson[EISErrorResponse](response)) match {
       case (Some(x), None) => handleRimValidationResponse(response, x)
       case (None, Some(y)) => handleEISErrorResponse(response, y)
-      case (None, None) =>
-        InternalServerError(Json.toJson(ErrorResponse(dateTimeService.timestamp(), "Unexpected error", "Error occurred while reading downstream response")))
+      case _ =>
+        InternalServerError(Json.toJson(EisErrorResponsePresentation(
+          dateTimeService.timestamp(),
+          "Unexpected error",
+          "Error occurred while reading downstream response",
+          correlationId))
+        )
     }
 
   }
@@ -74,23 +79,18 @@ class EISHttpReader(
       )
     )
 
-    Status(response.status)(Json.toJson(ErrorResponse(
+    Status(response.status)(Json.toJson(EisErrorResponsePresentation(
       dateTimeService.timestamp(),
       "Validation error",
       rimError.message.mkString("\n"),
-      Some(rimError.emcsCorrelationId),
+      rimError.emcsCorrelationId,
       Some(validationResponse)
     )))
 
   }
 
   private def handleEISErrorResponse(response: HttpResponse, eisError: EISErrorResponse) = {
-    Status(response.status)(Json.toJson(ErrorResponse(
-      eisError.dateTime,
-      eisError.message,
-      eisError.debugMessage,
-      eisError.emcsCorrelationId
-    )))
+    Status(response.status)(Json.toJson(eisError.asPresentation))
   }
 
   private def tryAsJson[A](response: HttpResponse)(implicit reads: Reads[A], tt: TypeTag[A]): Option[A] = {

@@ -20,7 +20,7 @@ import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.Status
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISErrorMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderEISResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -62,7 +62,7 @@ class PreValidateTraderHttpReader(
     logger.warn(EISErrorMessage(createdDateTime, ern, s"status: ${response.status}, body: ${response.body}", correlationId, "PreValidateTrader"))
 
     //Not expecting EIS response bodies to have any payload here
-    val ourErrorResponse = ErrorResponse(
+    val ourErrorResponse = EisErrorResponsePresentation(
       dateTimeService.timestamp(),
       "PreValidateTrader error",
       "Error occurred during PreValidateTrader request",
@@ -70,7 +70,6 @@ class PreValidateTraderHttpReader(
     )
 
     Status(response.status)(Json.toJson(ourErrorResponse))
-
   }
 
 }

@@ -37,12 +37,11 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{ApplicationBuilderSu
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, Consignor}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisErrorResponsePresentation, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Movement}
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
@@ -352,8 +351,8 @@ class SubmitMessageControllerItSpec extends PlaySpec
     result.status mustBe NOT_FOUND
 
     withClue("return the EIS error response") {
-      result.json mustBe Json.toJson(ErrorResponse(
-        Instant.parse("2023-12-05T12:05:06Z"),
+      result.json mustBe Json.toJson(EisErrorResponsePresentation(
+        Instant.parse("2024-05-05T16:12:13.123Z"),
         "not_found",
         "debug NOT_FOUND",
         "123"
@@ -385,7 +384,10 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
     val response = postRequest(movement._id, IE818)
 
-    clean(response.body) mustBe clean(validationErrorResponse(locationWithoutControlDoc, timestamp.toString))
+    clean(response.body) mustBe clean(validationErrorResponse(
+      locationWithoutControlDoc,
+      "2024-05-05T16:12:13.123Z")
+    )
 
   }
 

@@ -30,11 +30,12 @@ import play.api.libs.ws.WSClient
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.InternalError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{ApplicationBuilderSupport, WireMockServerSpec}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderMessageResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderRequest, getPreValidateTraderSuccessEISResponse, getPreValidateTraderSuccessResponse}
 
 import java.time.Instant
+import java.util.UUID
 
 
 class PreValidateTraderControllerItSpec extends PlaySpec
@@ -47,7 +48,7 @@ class PreValidateTraderControllerItSpec extends PlaySpec
   private val url = s"http://localhost:$port/traders/pre-validate"
   private val eisUrl = "/emcs/pre-validate-trader/v1"
   private val authErn = "GBWK002281023"
-  private val timestamp = Instant.now
+  private val timestamp = Instant.parse("2024-06-06T12:30:12.12345678Z")
 
   private val request = Json.toJson(getPreValidateTraderRequest)
 
@@ -101,11 +102,13 @@ class PreValidateTraderControllerItSpec extends PlaySpec
 
       result.status mustBe NOT_FOUND
 
+
       withClue("return the error response") {
-        val body = Json.parse(result.body).as[ErrorResponse]
-        body.dateTime mustBe timestamp
+        val body = Json.parse(result.body).as[EisErrorResponsePresentation]
+        body.dateTime mustBe Instant.parse("2024-06-06T12:30:12.123Z")
         body.message mustBe "PreValidateTrader error"
         body.debugMessage mustBe "Error occurred during PreValidateTrader request"
+        UUID.fromString(body.correlationId).toString must not be empty
       }
     }
 

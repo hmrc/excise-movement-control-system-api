@@ -25,7 +25,7 @@ import org.scalatestplus.play.PlaySpec
 import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, SERVICE_UNAVAILABLE}
 import play.api.libs.json.Json
 import play.api.mvc.Results.Status
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderErrorEISResponse, getPreValidateTraderSuccessEISResponse}
 import uk.gov.hmrc.http.HttpResponse
@@ -81,7 +81,7 @@ class PreValidateTraderHttpReaderSpec extends PlaySpec with EitherValues {
       s"return $statusCode" when {
         s"$statusCode has returned from HttpResponse" in {
 
-          val expectedResponse = Status(statusCode)(Json.toJson(ErrorResponse(
+          val expectedResponse = Status(statusCode)(Json.toJson(EisErrorResponsePresentation(
             now,
             "PreValidateTrader error",
             "Error occurred during PreValidateTrader request",

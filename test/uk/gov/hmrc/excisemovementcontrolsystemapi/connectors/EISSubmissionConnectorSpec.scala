@@ -32,7 +32,8 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{EISHeaderTestSupport, StringSupport}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionRequest, EISSubmissionResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISSubmissionRequest, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
@@ -141,8 +142,6 @@ class EISSubmissionConnectorSpec
       submitExciseMovementWithParams(xml, ie815Message, ern)
 
       val eisHttpReader: EISHttpReader = verifyHttpHeader
-
-      eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
       eisHttpReader.ern mustBe ern
     }
 
@@ -161,9 +160,9 @@ class EISSubmissionConnectorSpec
       val result = await(submitExciseMovementForIE815)
 
       result.left.value mustBe InternalServerError(
-        Json.toJson(ErrorResponse(timestamp, "Internal server error",
+        Json.toJson(EisErrorResponsePresentation(timestamp, "Internal server error",
           "Unexpected error occurred while processing Submission request"
-          , Some(emcsCorrelationId))))
+          , emcsCorrelationId)))
     }
 
     "return Not found error" in {
