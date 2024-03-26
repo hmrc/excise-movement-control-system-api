@@ -86,6 +86,9 @@ class MovementService @Inject()(
 
     movementRepository.getAllBy(ern).map(cachedMovements => {
 
+      //TODO temporary logs for QA investigation
+      logger.info(s"Message is ${message.toString}")
+
       message.administrativeReferenceCode
         .map { messageArc =>
           updateMovementForIndividualArc(message, ern, cachedMovements, messageArc)
@@ -131,6 +134,9 @@ class MovementService @Inject()(
   ): Future[Either[String, Movement]] = {
     val movementWithArc = cachedMovements.find(o => o.administrativeReferenceCode.equals(messageArc))
     val movementWithLrn = cachedMovements.find(m => message.lrnEquals(m.localReferenceNumber))
+
+    //TODO temporary logs for QA investigation
+    logger.info(s"Attempting to find relevant movement for message. movementWithArc: ${movementWithArc.toString}, movementWithLrn: ${movementWithLrn.toString}, message: ${message.toString}")
 
     (movementWithArc, movementWithLrn) match {
       case (Some(mArc), _) => saveDistinctMessage(mArc, message, messageArc)
