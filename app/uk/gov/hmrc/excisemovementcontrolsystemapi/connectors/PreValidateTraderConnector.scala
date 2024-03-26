@@ -23,10 +23,11 @@ import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTraderHttpReader
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.PreValidateTraderRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderEISResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
@@ -48,8 +49,8 @@ class PreValidateTraderConnector @Inject()
     val timer = metrics.timer("emcs.prevalidatetrader.connector.timer").time()
 
     val correlationId = emcsUtils.generateCorrelationId
-    val timestamp = dateTimeService.timestampToMilliseconds()
-    val createdDateTime = timestamp.toString
+    val timestamp = dateTimeService.timestamp()
+    val createdDateTime = timestamp.asStringInMilliseconds
 
     httpClient.POST[PreValidateTraderRequest, Either[Result, PreValidateTraderEISResponse]](
       appConfig.preValidateTraderUrl,
@@ -62,7 +63,7 @@ class PreValidateTraderConnector @Inject()
 
           logger.warn(EISErrorMessage(createdDateTime, ern, ex.getMessage, correlationId, "PreValidateTrader"), ex)
 
-          val error = ErrorResponse(
+          val error = EisErrorResponsePresentation(
             timestamp,
             "Internal Server Error",
             "Unexpected error occurred while processing PreValidateTrader request",

@@ -45,7 +45,7 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
   private val notificationConnector = mock[PushNotificationConnector]
   private val dateTimeService = mock[DateTimeService]
   private val appConfig = mock[AppConfig]
-  private val timestamp = Instant.now
+  private val timestamp = Instant.parse("2024-10-01T12:32:32.12345678Z")
   private val sut = new PushNotificationServiceImpl(notificationConnector, dateTimeService)
   private val message = Message("this is a test", "IE801", "messageId", Instant.now)
   private val movement = Movement("id", Some("boxId"), "lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
@@ -156,7 +156,7 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
 
   private def buildBoxIdJsonError(debugMessage: String) = {
     Json.parse(
-      s"""{"dateTime":"$timestamp",
+      s"""{"dateTime":"2024-10-01T12:32:32.123Z",
          |"message":"Box Id error",
          |"debugMessage":"$debugMessage"}""".stripMargin)
   }

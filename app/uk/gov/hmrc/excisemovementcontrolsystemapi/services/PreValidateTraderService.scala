@@ -41,7 +41,7 @@ class PreValidateTraderService @Inject()(
     connector.submitMessage(request.json, request.request.erns.head)
       .map {
         case Right(x) => Right(convertEISToResponseFormat(x)).flatten
-        case Left(y) => Left(y)
+        case Left(error) => Left(error)
       }
   }
 

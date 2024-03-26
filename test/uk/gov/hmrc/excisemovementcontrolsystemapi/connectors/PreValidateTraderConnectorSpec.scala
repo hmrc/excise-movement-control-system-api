@@ -25,15 +25,14 @@ import org.mockito.captor.ArgCaptor
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.{ContentTypes, HeaderNames}
 import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTraderHttpReader
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.EISHeaderTestSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderEISResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderErrorResponse, getPreValidateTraderRequest, getPreValidateTraderSuccessResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
@@ -42,7 +41,11 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
-class PreValidateTraderConnectorSpec extends PlaySpec with BeforeAndAfterEach with EitherValues {
+class PreValidateTraderConnectorSpec
+  extends PlaySpec
+    with EISHeaderTestSupport
+    with BeforeAndAfterEach
+    with EitherValues {
 
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
   protected implicit val ec: ExecutionContext = ExecutionContext.global
@@ -63,7 +66,7 @@ class PreValidateTraderConnectorSpec extends PlaySpec with BeforeAndAfterEach wi
   private val validResponse = getPreValidateTraderSuccessResponse
   private val businessError = getPreValidateTraderErrorResponse
 
-  private val timestamp = Instant.parse("2023-09-17T09:32:50.345Z")
+  private val timestamp = Instant.parse("2023-09-17T09:32:50Z")
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -72,7 +75,7 @@ class PreValidateTraderConnectorSpec extends PlaySpec with BeforeAndAfterEach wi
     when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
       .thenReturn(Future.successful(Right(Right(validResponse))))
 
-    when(dateTimeService.timestampToMilliseconds()).thenReturn(timestamp)
+    when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(emcsUtils.generateCorrelationId).thenReturn(emcsCorrelationId)
     when(appConfig.preValidateTraderUrl).thenReturn("/eis/path")
     when(appConfig.preValidateTraderBearerToken).thenReturn(preValidateTraderBearerToken)
@@ -108,7 +111,7 @@ class PreValidateTraderConnectorSpec extends PlaySpec with BeforeAndAfterEach wi
       verify(mockHttpClient).POST(
         eqTo("/eis/path"),
         eqTo(validRequest),
-        eqTo(expectedHeader)
+        eqTo(expectedSubmissionHeader("2023-09-17T09:32:50.000Z", "1234566", preValidateTraderBearerToken))
       )(any, any, any, any)
     }
 
@@ -135,7 +138,7 @@ class PreValidateTraderConnectorSpec extends PlaySpec with BeforeAndAfterEach wi
       val result = await(submitPreValidateTrader())
 
       result.left.value mustBe InternalServerError(
-        Json.toJson(ErrorResponse(timestamp,
+        Json.toJson(EisErrorResponsePresentation(timestamp,
           "Internal Server Error",
           "Unexpected error occurred while processing PreValidateTrader request",
           emcsCorrelationId
@@ -193,14 +196,4 @@ class PreValidateTraderConnectorSpec extends PlaySpec with BeforeAndAfterEach wi
   private def submitPreValidateTrader(): Future[Either[Result, PreValidateTraderEISResponse]] = {
     connector.submitMessage(validRequest, "ern123")
   }
-
-  private def expectedHeader =
-    Seq(HeaderNames.ACCEPT -> ContentTypes.JSON,
-      HeaderNames.CONTENT_TYPE -> ContentTypes.JSON,
-      DateTimeName -> timestamp.toString,
-      XCorrelationIdName -> "1234566",
-      XForwardedHostName -> MDTPHost,
-      SourceName -> APIPSource,
-      Authorization -> authorizationValue(preValidateTraderBearerToken)
-    )
 }

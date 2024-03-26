@@ -26,7 +26,7 @@ import play.api.http.Status._
 import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable, UnprocessableEntity}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse, RimValidationErrorResponse, RimValidatorResults}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MessageTypes, ValidationResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisErrorResponsePresentation, MessageTypes, ValidationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HttpResponse
 
@@ -35,7 +35,7 @@ import scala.reflect.runtime.universe.typeOf
 
 class EISHttpReaderSpec extends PlaySpec with EitherValues {
 
-  private val localDateTime = Instant.parse("2023-09-19T15:57:23.654Z")
+  private val localDateTime = Instant.parse("2023-09-19T15:57:23.654123456Z")
   private val dateTimeService = mock[DateTimeService]
   when(dateTimeService.timestamp()).thenReturn(localDateTime)
 
@@ -49,7 +49,7 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
       "123"
     ))
   private val exampleResponseError = Json.toJson(
-    ErrorResponse(localDateTime, "Error", "Error details", Some("123"))
+    EisErrorResponsePresentation(localDateTime, "Error", "Error details", "123")
   )
 
   "read" should {
@@ -126,7 +126,18 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
         HttpResponse(BAD_GATEWAY, eisError.toString())
       )
 
-      result.left.value mustBe InternalServerError(Json.toJson(ErrorResponse(localDateTime, "Unexpected error", "Error occurred while reading downstream response")))
+      val error = Json.parse(
+        s"""
+          |{
+          |   "dateTime":"2023-09-19T15:57:23.654Z",
+          |   "message":"Unexpected error",
+          |   "debugMessage":"Error occurred while reading downstream response",
+          |   "correlationId":"123"
+          |}
+          |""".stripMargin)
+
+
+      result.left.value mustBe InternalServerError(error)
 
     }
   }
@@ -145,11 +156,11 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
   }
 
   private def expectedRimValidationResponse = {
-    ErrorResponse(
+    EisErrorResponsePresentation(
       localDateTime,
       "Validation error",
       "Validation error(s) occurred",
-      Some("correlationId"),
+      "correlationId",
       Some(Seq(
         createLocalValidationError(8080L, "/urn:IE815[1]/urn:DateOfDispatch[1]"),
         createLocalValidationError(8090L,

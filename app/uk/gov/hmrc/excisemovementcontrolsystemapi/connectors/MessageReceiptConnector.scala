@@ -23,6 +23,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISConsumptionHeaders, EISErrorMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptFailResponse, MessageReceiptResponse, MessageReceiptSuccessResponse, MessageTypes}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
@@ -42,27 +43,27 @@ class MessageReceiptConnector @Inject()
   def put(ern: String)(implicit hc: HeaderCarrier): Future[MessageReceiptResponse] = {
 
     val timer = metrics.timer("emcs.messagereceipt.timer").time()
-    val dateTime = dateTimeService.timestampToMilliseconds()
+    val dateTime = dateTimeService.timestamp()
     val correlationId = eisUtils.generateCorrelationId
 
     httpClient.PUTString[HttpResponse](
         appConfig.messageReceiptUrl(ern),
         "",
-        build(correlationId, dateTime.toString, appConfig.messagesBearerToken)
+        build(correlationId, dateTime.asStringInMilliseconds, appConfig.messagesBearerToken)
       ).map {
         response =>
           extractIfSuccessful[MessageReceiptSuccessResponse](response) match {
             case Right(eisResponse) => eisResponse
             case Left(error) =>
-              logger.error(EISErrorMessage(dateTime.toString, ern, response.body, correlationId, MessageTypes.IE_MESSAGE_RECEIPT.value))
-              MessageReceiptFailResponse(error.status, dateTime, error.body, Some(correlationId))
+              logger.error(EISErrorMessage(dateTime.asStringInMilliseconds, ern, response.body, correlationId, MessageTypes.IE_MESSAGE_RECEIPT.value))
+              MessageReceiptFailResponse(error.status, dateTime, error.body)
           }
       }
       .andThen(_ => timer.stop())
       .recover {
         case ex: Throwable =>
-          logger.error(EISErrorMessage(dateTime.toString, ern, ex.getMessage, correlationId, MessageTypes.IE_MESSAGE_RECEIPT.value), ex)
-          MessageReceiptFailResponse(INTERNAL_SERVER_ERROR, dateTime, s"Exception occurred when Acknowledging messages for ern: $ern", Some(correlationId))
+          logger.error(EISErrorMessage(dateTime.asStringInMilliseconds, ern, ex.getMessage, correlationId, MessageTypes.IE_MESSAGE_RECEIPT.value), ex)
+          MessageReceiptFailResponse(INTERNAL_SERVER_ERROR, dateTime, s"Exception occurred when Acknowledging messages for ern: $ern")
       }
   }
 }

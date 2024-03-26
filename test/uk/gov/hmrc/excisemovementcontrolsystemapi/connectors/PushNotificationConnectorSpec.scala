@@ -45,7 +45,7 @@ class PushNotificationConnectorSpec
   private val httpClient = mock[HttpClient]
   private val appConfig = mock[AppConfig]
   private val dateTimeService = mock[DateTimeService]
-  private val timestamp = Instant.now
+  private val timestamp = Instant.parse("2024-09-09T18:30:01.12345678Z")
   private val boxId = "1c5b9365-18a6-55a5-99c9-83a091ac7f26"
 
   private val sut = new PushNotificationConnector(httpClient, appConfig, dateTimeService)
@@ -185,7 +185,7 @@ class PushNotificationConnectorSpec
 
   private def buildBoxIdJsonError(debugMessage: String) = {
     Json.parse(
-      s"""{"dateTime":"$timestamp",
+      s"""{"dateTime":"2024-09-09T18:30:01.123Z",
          |"message":"Box Id error",
          |"debugMessage":"$debugMessage"}""".stripMargin)
   }

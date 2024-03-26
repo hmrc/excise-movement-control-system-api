@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2024 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,11 +33,11 @@ import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeXmlParsers}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IE818Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MessageIdentifierIsUnauthorised, MessageValidation}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -68,7 +68,7 @@ class DraftExciseMovementControllerSpec
   private val auditService = mock[AuditService]
   private val appConfig = mock[AppConfig]
   private val consignorId = "456"
-  private val timestamp = Instant.now
+  private val timestamp = Instant.parse("2024-05-06T15:30:15.12345612Z")
   private val defaultBoxId = "boxId"
   private val clientBoxId = "clientBoxId"
 
@@ -216,22 +216,18 @@ class DraftExciseMovementControllerSpec
         val result = createWithWrongMessageType.submit(request)
 
         status(result) mustBe BAD_REQUEST
-        contentAsJson(result) mustBe Json.toJson(ErrorResponse(
-          timestamp,
+        contentAsJson(result) mustBe expectedJsonResponse(
           "Invalid message type",
-          "Message type IE818 cannot be sent to the draft excise movement endpoint"
-        ))
+          "Message type IE818 cannot be sent to the draft excise movement endpoint")
 
       }
 
       "not authorised to send message" in {
         case object TestMessageIdentifierIsUnauthorised extends MessageIdentifierIsUnauthorised(MessageValidation.consignor)
 
-        val expectedError = ErrorResponse(
-          timestamp,
+        val expectedError =expectedJsonResponse(
           "Message cannot be sent",
-          "The Consignor is not authorised to submit this message for the movement"
-        )
+          "The Consignor is not authorised to submit this message for the movement")
 
         when(messageValidation.validateDraftMovement(any, any)).thenReturn(Left(TestMessageIdentifierIsUnauthorised))
         when(messageValidation.convertErrorToResponse(eqTo(TestMessageIdentifierIsUnauthorised), eqTo(timestamp))).thenReturn(Forbidden(Json.toJson(expectedError)))
@@ -239,7 +235,7 @@ class DraftExciseMovementControllerSpec
         val result = createWithSuccessfulAuth.submit(request)
 
         status(result) mustBe FORBIDDEN
-        contentAsJson(result) mustBe Json.toJson(expectedError)
+        contentAsJson(result) mustBe expectedError
 
       }
 
@@ -299,13 +295,23 @@ class DraftExciseMovementControllerSpec
         val result = createWithWrongMessageType.submit(request)
 
         status(result) mustBe BAD_REQUEST
-        contentAsJson(result) mustBe Json.toJson(ErrorResponse(
-          timestamp,
+        contentAsJson(result) mustBe expectedJsonResponse(
           "Invalid message type",
           "Message type IE818 cannot be sent to the draft excise movement endpoint"
-        ))
+        )
       }
     }
+  }
+
+  private def expectedJsonResponse(message: String, debugMessage: String) = {
+    Json.parse(
+      s"""
+        |{
+        |   "dateTime":"2024-05-06T15:30:15.123Z",
+        |   "message":"$message",
+        |   "debugMessage": "$debugMessage"
+        |}
+        |""".stripMargin)
   }
 
   private def createWithWrongMessageType = {

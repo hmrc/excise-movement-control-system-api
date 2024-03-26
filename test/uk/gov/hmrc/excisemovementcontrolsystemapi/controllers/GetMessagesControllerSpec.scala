@@ -24,14 +24,14 @@ import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
-import play.api.http.Status.{BAD_REQUEST, FORBIDDEN, NOT_ACCEPTABLE, NOT_FOUND, OK}
+import play.api.http.Status._
 import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.{AnyContent, Result}
 import play.api.test.Helpers.{await, contentAsJson, contentAsString, defaultAwaitTimeout, status, stubControllerComponents}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateAcceptHeaderAction
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeAuthentication
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MessageResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, ErrorResponseSupport}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
@@ -45,6 +45,7 @@ import scala.xml.Elem
 
 class GetMessagesControllerSpec extends PlaySpec
   with FakeAuthentication
+  with ErrorResponseSupport
   with BeforeAndAfterEach {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
@@ -61,7 +62,7 @@ class GetMessagesControllerSpec extends PlaySpec
   private val MovementIdFormatError = Json.parse(
     """
       |{
-      | "dateTime":"2020-01-01T01:01:01.123456Z",
+      | "dateTime":"2020-01-01T01:01:01.123Z",
       | "message":"Movement Id format error",
       | "debugMessage":"The movement ID should be a valid UUID"
       | }""".stripMargin)
@@ -184,8 +185,10 @@ class GetMessagesControllerSpec extends PlaySpec
 
       status(result) mustBe BAD_REQUEST
 
-      contentAsJson(result) mustBe Json.toJson(
-        ErrorResponse(timeStamp, "Invalid date format provided in the updatedSince query parameter", "Date format should be like '2020-11-15T17:02:34.00Z'")
+      contentAsJson(result) mustBe expectedJsonErrorResponse(
+        "2020-01-01T01:01:01.123Z",
+        "Invalid date format provided in the updatedSince query parameter",
+        "Date format should be like '2020-11-15T17:02:34.00Z'"
       )
     }
 
@@ -216,9 +219,10 @@ class GetMessagesControllerSpec extends PlaySpec
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
 
       status(result) mustBe NOT_FOUND
-      contentAsJson(result) mustBe Json.toJson(
-        ErrorResponse(timeStamp, "Movement not found",
-          s"Movement $validUUID could not be found")
+      contentAsJson(result) mustBe expectedJsonErrorResponse(
+        "2020-01-01T01:01:01.123Z",
+        "Movement not found",
+          s"Movement $validUUID could not be found"
       )
     }
 
@@ -230,9 +234,10 @@ class GetMessagesControllerSpec extends PlaySpec
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
 
       status(result) mustBe NOT_FOUND
-      contentAsJson(result) mustBe Json.toJson(
-        ErrorResponse(timeStamp, "Invalid MovementID supplied for ERN",
-          s"Movement $validUUID is not found within the data for ERNs testErn")
+      contentAsJson(result) mustBe expectedJsonErrorResponse(
+        "2020-01-01T01:01:01.123Z",
+        "Invalid MovementID supplied for ERN",
+          s"Movement $validUUID is not found within the data for ERNs testErn"
       )
     }
 
@@ -321,10 +326,10 @@ class GetMessagesControllerSpec extends PlaySpec
         )(createRequest())
 
         status(result) mustBe NOT_FOUND
-        contentAsJson(result) mustBe Json.toJson(ErrorResponse(
-          timeStamp,
+        contentAsJson(result) mustBe expectedJsonErrorResponse(
+          "2020-01-01T01:01:01.123Z",
           "Movement not found",
-          s"Movement $validUUID could not be found")
+          s"Movement $validUUID could not be found"
         )
       }
 
@@ -339,10 +344,10 @@ class GetMessagesControllerSpec extends PlaySpec
         )(createRequest())
 
         status(result) mustBe NOT_FOUND
-        contentAsJson(result) mustBe Json.toJson(ErrorResponse(
-          timeStamp,
+        contentAsJson(result) mustBe expectedJsonErrorResponse(
+          "2020-01-01T01:01:01.123Z",
           "No message found for the MovementID provided",
-          s"MessageId $messageId was not found in the database")
+          s"MessageId $messageId was not found in the database"
         )
       }
     }

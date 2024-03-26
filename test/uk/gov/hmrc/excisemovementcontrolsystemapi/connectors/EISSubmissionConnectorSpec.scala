@@ -25,16 +25,14 @@ import org.mockito.captor.ArgCaptor
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.{ContentTypes, HeaderNames}
 import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable, UnprocessableEntity}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.StringSupport
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{EISHeaderTestSupport, StringSupport}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISSubmissionRequest, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
@@ -47,6 +45,7 @@ import scala.xml.{Elem, NodeSeq}
 class EISSubmissionConnectorSpec
   extends PlaySpec
     with StringSupport
+    with EISHeaderTestSupport
     with BeforeAndAfterEach
     with EitherValues {
 
@@ -86,7 +85,7 @@ class EISSubmissionConnectorSpec
   private val submissionBearerToken = "submissionBearerToken"
 
   private val ern = "123"
-  private val timestamp = Instant.parse("2023-09-17T09:32:50.345Z")
+  private val timestamp = Instant.parse("2023-09-17T09:32:50.345456Z")
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -94,7 +93,7 @@ class EISSubmissionConnectorSpec
 
     when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "Success", emcsCorrelationId))))
-    when(dateTimeService.timestampToMilliseconds()).thenReturn(timestamp)
+    when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(appConfig.emcsReceiverMessageUrl).thenReturn("/eis/path")
     when(appConfig.submissionBearerToken).thenReturn(submissionBearerToken)
     when(metrics.timer(any).time()) thenReturn timerContext
@@ -126,7 +125,7 @@ class EISSubmissionConnectorSpec
       verify(mockHttpClient).POST(
         eqTo("/eis/path"),
         eqTo(expectedRequest),
-        eqTo(expectedHeader)
+        eqTo(expectedSubmissionHeader("2023-09-17T09:32:50.345Z", emcsCorrelationId, submissionBearerToken))
       )(any, any, any, any)
     }
 
@@ -143,8 +142,6 @@ class EISSubmissionConnectorSpec
       submitExciseMovementWithParams(xml, ie815Message, ern)
 
       val eisHttpReader: EISHttpReader = verifyHttpHeader
-
-      eisHttpReader.isInstanceOf[EISHttpReader] mustBe true
       eisHttpReader.ern mustBe ern
     }
 
@@ -163,9 +160,9 @@ class EISSubmissionConnectorSpec
       val result = await(submitExciseMovementForIE815)
 
       result.left.value mustBe InternalServerError(
-        Json.toJson(ErrorResponse(timestamp, "Internal server error",
+        Json.toJson(EisErrorResponsePresentation(timestamp, "Internal server error",
           "Unexpected error occurred while processing Submission request"
-          , Some(emcsCorrelationId))))
+          , emcsCorrelationId)))
     }
 
     "return Not found error" in {
@@ -237,14 +234,4 @@ class EISSubmissionConnectorSpec
 
     connector.submitMessage(message, xml.toString(), authErn, emcsCorrelationId)
   }
-
-  private def expectedHeader =
-    Seq(HeaderNames.ACCEPT -> ContentTypes.JSON,
-      HeaderNames.CONTENT_TYPE -> ContentTypes.JSON,
-      DateTimeName -> timestamp.toString,
-      XCorrelationIdName -> emcsCorrelationId,
-      XForwardedHostName -> MDTPHost,
-      SourceName -> APIPSource,
-      Authorization -> authorizationValue(submissionBearerToken)
-    )
 }

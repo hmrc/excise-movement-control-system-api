@@ -28,7 +28,7 @@ import play.api.http.Status.{INTERNAL_SERVER_ERROR, NOT_FOUND}
 import play.api.libs.json.Json
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.EISHeaderTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptFailResponse, MessageReceiptSuccessResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
@@ -39,7 +39,8 @@ import scala.concurrent.ExecutionContext
 class MessageReceiptConnectorSpec
   extends PlaySpec
     with BeforeAndAfterEach
-    with EitherValues {
+    with EitherValues
+    with EISHeaderTestSupport {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.global
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -52,7 +53,7 @@ class MessageReceiptConnectorSpec
   private val dateTimeService = mock[DateTimeService]
   private val sut = new MessageReceiptConnector(httpClient, appConfig, emcsUtil, metrics, dateTimeService)
 
-  private val timestamp = Instant.parse("2023-01-02T03:04:05.986Z")
+  private val timestamp = Instant.parse("2023-01-02T03:04:05.986456Z")
   private val response = MessageReceiptSuccessResponse(timestamp, "123", 10)
 
   private val messagesBearerToken = "messagesBearerToken"
@@ -63,7 +64,7 @@ class MessageReceiptConnectorSpec
 
     when(httpClient.PUTString[Any](any, any, any)(any, any, any))
       .thenReturn(Future.successful(HttpResponse(200, Json.toJson(response).toString())))
-    when(dateTimeService.timestampToMilliseconds()).thenReturn(timestamp)
+    when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(emcsUtil.generateCorrelationId).thenReturn("12345")
     when(appConfig.messageReceiptUrl(any)).thenReturn("/messageReceipt")
     when(appConfig.messagesBearerToken).thenReturn(messagesBearerToken)
@@ -80,17 +81,11 @@ class MessageReceiptConnectorSpec
     "should sent a request with the right parameters" in {
       await(sut.put("123"))
 
-      val expectedHeaders = Seq(
-        XForwardedHostName -> MDTPHost,
-        XCorrelationIdName -> "12345",
-        SourceName -> APIPSource,
-        DateTimeName -> timestamp.toString,
-        Authorization -> authorizationValue(messagesBearerToken)
-      )
+
       verify(httpClient).PUTString[Any](
         eqTo("/messageReceipt"),
         eqTo(""),
-        eqTo(expectedHeaders)
+        eqTo(expectedConsumptionHeaders("2023-01-02T03:04:05.986Z", "12345", messagesBearerToken))
       )(any, any, any)
     }
 
@@ -109,7 +104,7 @@ class MessageReceiptConnectorSpec
 
         val result = await(sut.put("123"))
 
-        result mustBe MessageReceiptFailResponse(NOT_FOUND, timestamp, "error", Some("12345"))
+        result mustBe MessageReceiptFailResponse(NOT_FOUND, timestamp, "error")
       }
 
       "can't parse Json" in {
@@ -118,7 +113,7 @@ class MessageReceiptConnectorSpec
 
         val result = await(sut.put("123"))
 
-        result mustBe MessageReceiptFailResponse(INTERNAL_SERVER_ERROR, timestamp, "Exception occurred when Acknowledging messages for ern: 123", Some("12345"))
+        result mustBe MessageReceiptFailResponse(INTERNAL_SERVER_ERROR, timestamp, "Exception occurred when Acknowledging messages for ern: 123")
 
       }
     }

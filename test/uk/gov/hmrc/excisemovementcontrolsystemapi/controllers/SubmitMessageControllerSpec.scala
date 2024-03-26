@@ -29,8 +29,7 @@ import play.api.mvc.Results.{BadRequest, Forbidden, NotFound}
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeXmlParsers}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeXmlParsers, ErrorResponseSupport}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation._
@@ -47,7 +46,8 @@ class SubmitMessageControllerSpec
     with FakeAuthentication
     with FakeXmlParsers
     with BeforeAndAfterEach
-    with TestXml {
+    with TestXml
+    with ErrorResponseSupport {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val cc = stubControllerComponents()
@@ -62,7 +62,7 @@ class SubmitMessageControllerSpec
 
   private val consignorId = "testErn"
   private val movement = Movement(Some("boxId"), "LRNQA20230909022221", consignorId, Some("GBWK002281023"), Some("23GB00000000000377161"))
-  private val timestamp = Instant.now
+  private val timestamp = Instant.parse("2024-06-12T14:13:15.1234567Z")
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -146,11 +146,11 @@ class SubmitMessageControllerSpec
 
         "movement id is invalid" in {
 
-          val expectedError = Json.toJson(ErrorResponse(
-            timestamp,
+          val expectedError = expectedJsonErrorResponse(
+            "2024-06-12T14:13:15.123Z",
             "Movement Id format error",
             "The movement ID should be a valid UUID"
-          ))
+          )
 
           when(movementValidation.validateMovementId(any)).thenReturn(Left(MovementIdFormatInvalid()))
           when(movementValidation.convertErrorToResponse(eqTo(MovementIdFormatInvalid()), eqTo(timestamp))).thenReturn(BadRequest(expectedError))
@@ -166,11 +166,11 @@ class SubmitMessageControllerSpec
 
         "movement does not exist in database" in {
 
-          val expectedError = Json.toJson(ErrorResponse(
-            timestamp,
+          val expectedError = expectedJsonErrorResponse(
+            "2024-06-12T14:13:15.123Z",
             "Movement not found",
             "Movement 49491927-aaa1-4835-b405-dd6e7fa3aaf0 could not be found"
-          ))
+          )
 
           val movementId = "49491927-aaa1-4835-b405-dd6e7fa3aaf0"
           when(movementValidation.validateMovementId(any)).thenReturn(Right(movementId))
@@ -194,11 +194,11 @@ class SubmitMessageControllerSpec
 
           case object TestMessageDoesNotMatchMovement extends MessageDoesNotMatchMovement("Consignor")
 
-          val expectedError = Json.toJson(ErrorResponse(
-            timestamp,
+          val expectedError = expectedJsonErrorResponse(
+            "2024-06-12T14:13:15.123Z",
             "Message does not match movement",
             "The Consignor in the message does not match the Consignor in the movement"
-          ))
+          )
 
           when(messageValidation.validateSubmittedMessage(any, any, any)).thenReturn(Left(TestMessageDoesNotMatchMovement))
           when(messageValidation.convertErrorToResponse(eqTo(TestMessageDoesNotMatchMovement), eqTo(timestamp))).thenReturn(BadRequest(Json.toJson(expectedError)))
@@ -218,11 +218,11 @@ class SubmitMessageControllerSpec
 
           case object TestMessageIdentifierIsUnauthorised extends MessageIdentifierIsUnauthorised(MessageValidation.consignor)
 
-          val expectedError = Json.toJson(ErrorResponse(
-            timestamp,
+          val expectedError = expectedJsonErrorResponse(
+            "2024-06-12T14:13:15.123Z",
             "Message cannot be sent",
             "The Consignor is not authorised to submit this message for the movement"
-          ))
+          )
 
           when(messageValidation.validateSubmittedMessage(any, any, any)).thenReturn(Left(TestMessageIdentifierIsUnauthorised))
           when(messageValidation.convertErrorToResponse(eqTo(TestMessageIdentifierIsUnauthorised), eqTo(timestamp))).thenReturn(Forbidden(Json.toJson(expectedError)))

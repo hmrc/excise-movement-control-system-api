@@ -28,8 +28,8 @@ import play.api.libs.json.Json
 import play.api.mvc.Results.InternalServerError
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.EISHeaderTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
@@ -39,7 +39,8 @@ import scala.reflect.runtime.universe.typeOf
 
 class GetMovementConnectorSpec extends PlaySpec
   with BeforeAndAfterEach
-  with EitherValues {
+  with EitherValues
+  with EISHeaderTestSupport {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.global
   protected implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -50,7 +51,7 @@ class GetMovementConnectorSpec extends PlaySpec
   private val emcsUtil = mock[EmcsUtils]
   private val dateTimeService = mock[DateTimeService]
   private val sut = new GetMovementConnector(httpClient, appConfig, emcsUtil, metrics, dateTimeService)
-  private val timestamp = Instant.parse("2023-02-03T05:06:07.312Z")
+  private val timestamp = Instant.parse("2023-02-03T05:06:07.312456Z")
   private val response = EISConsumptionResponse(
     timestamp,
     "ern",
@@ -71,7 +72,7 @@ class GetMovementConnectorSpec extends PlaySpec
     when(appConfig.traderMovementUrl).thenReturn("/trader-movement-url")
     when(appConfig.movementBearerToken).thenReturn(movementBearerToken)
     when(emcsUtil.generateCorrelationId).thenReturn("1234")
-    when(dateTimeService.timestampToMilliseconds()).thenReturn(timestamp)
+    when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(metrics.timer(any).time()) thenReturn timerContext
   }
 
@@ -88,7 +89,7 @@ class GetMovementConnectorSpec extends PlaySpec
       verify(httpClient).GET(
         eqTo("/trader-movement-url"),
         eqTo(Seq("exciseregistrationnumber" -> "ern", "arc" -> "arc")),
-        eqTo(expectedHeader)
+        eqTo(expectedConsumptionHeaders("2023-02-03T05:06:07.312Z", "1234", movementBearerToken))
       )(any, any, any)
     }
 
@@ -119,15 +120,5 @@ class GetMovementConnectorSpec extends PlaySpec
       verify(metrics.timer(eqTo("emcs.getmovements.timer"))).time()
       verify(timerContext).stop()
     }
-  }
-
-  private def expectedHeader: Seq[(String, String)] = {
-    Seq(
-      XForwardedHostName -> MDTPHost,
-      XCorrelationIdName -> "1234",
-      SourceName -> APIPSource,
-      DateTimeName -> timestamp.toString,
-      Authorization -> authorizationValue(movementBearerToken)
-    )
   }
 }

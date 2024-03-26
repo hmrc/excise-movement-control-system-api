@@ -70,9 +70,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
 
   private lazy val timeService = mock[DateTimeService]
   private val timestamp = Instant.now
-  private val timestampToMillis = timestamp.truncatedTo(ChronoUnit.MILLIS)
   when(timeService.timestamp()).thenReturn(timestamp)
-  when(timeService.timestampToMilliseconds()).thenReturn(timestampToMillis)
 
   private val expectedMessage = Seq(
     createMessage(SchedulingTestData.ie801, MessageTypes.IE801.value),

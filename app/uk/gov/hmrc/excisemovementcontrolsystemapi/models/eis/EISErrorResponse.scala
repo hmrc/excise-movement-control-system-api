@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
 import play.api.libs.json.{Json, OFormat}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 
 import java.time.Instant
 
@@ -24,9 +25,23 @@ case class EISErrorResponse(dateTime: Instant,
                             status: String,
                             message: String,
                             debugMessage: String,
-                            emcsCorrelationId: String
-                           )
+                            emcsCorrelationId: String) {
+
+}
 
 object EISErrorResponse {
-  implicit def format: OFormat[EISErrorResponse] = Json.format[EISErrorResponse]
+  implicit val format: OFormat[EISErrorResponse] = Json.format[EISErrorResponse]
+
+  implicit class Presentation(val errorResponse: EISErrorResponse) extends AnyVal {
+
+    implicit def asPresentation: EisErrorResponsePresentation = {
+      EisErrorResponsePresentation(
+        errorResponse.dateTime,
+        errorResponse.message,
+        errorResponse.debugMessage,
+        errorResponse.emcsCorrelationId
+      )
+    }
+
+  }
 }

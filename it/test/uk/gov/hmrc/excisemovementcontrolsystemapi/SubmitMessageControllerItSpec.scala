@@ -32,17 +32,16 @@ import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.InternalError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.StringSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, StringSupport}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{ApplicationBuilderSupport, SubmitMessageTestSupport, WireMockServerSpec}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, Consignor}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisErrorResponsePresentation, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Movement}
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
@@ -55,6 +54,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
   with WireMockServerSpec
   with SubmitMessageTestSupport
   with StringSupport
+  with ErrorResponseSupport
   with BeforeAndAfterAll
   with BeforeAndAfterEach {
 
@@ -70,7 +70,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
   //This matches the data from the IE818 test message
   private val movement = Movement(Some("boxId"), lrn, consignorId, Some(consigneeId), Some("23GB00000000000378553"))
 
-  private val timestamp = Instant.now
+  private val timestamp = Instant.parse("2024-05-05T16:12:13.12345678Z")
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
@@ -105,7 +105,6 @@ class SubmitMessageControllerItSpec extends PlaySpec
     when(workItemRepository.pushNew(any, any, any)).thenReturn(Future.successful(workItem))
     when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
     when(dateTimeService.timestamp()).thenReturn(timestamp)
-    when(dateTimeService.timestampToMilliseconds()).thenReturn(timestamp.truncatedTo(ChronoUnit.MILLIS))
 
     authorizeNrsWithIdentityData
     stubNrsResponse
@@ -352,8 +351,8 @@ class SubmitMessageControllerItSpec extends PlaySpec
     result.status mustBe NOT_FOUND
 
     withClue("return the EIS error response") {
-      result.json mustBe Json.toJson(ErrorResponse(
-        Instant.parse("2023-12-05T12:05:06Z"),
+      result.json mustBe Json.toJson(EisErrorResponsePresentation(
+        Instant.parse("2024-05-05T16:12:13.123Z"),
         "not_found",
         "debug NOT_FOUND",
         "123"
@@ -385,7 +384,10 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
     val response = postRequest(movement._id, IE818)
 
-    clean(response.body) mustBe clean(validationErrorResponse(locationWithoutControlDoc, timestamp.toString))
+    clean(response.body) mustBe clean(validationErrorResponse(
+      locationWithoutControlDoc,
+      "2024-05-05T16:12:13.123Z")
+    )
 
   }
 
@@ -455,14 +457,20 @@ class SubmitMessageControllerItSpec extends PlaySpec
     verify(postRequestedFor(urlEqualTo("/submission")))
   }
 
-  private def createEISErrorResponseBodyAsJson(message: String): JsValue = {
-    Json.toJson(EISErrorResponse(
-      Instant.parse("2023-12-05T12:05:06Z"),
-      message.toUpperCase,
-      message.toLowerCase,
-      s"debug $message",
-      "123"
-    ))
+  private def createEISErrorResponseBodyAsJson(
+    message: String,
+    dateTime: String = timestamp.toString
+  ): JsValue = {
+    Json.parse(
+      s"""
+        |{
+        |   "dateTime":"$dateTime",
+        |   "status": "${message.toUpperCase()}",
+        |   "message":"${message.toLowerCase()}",
+        |   "debugMessage":"debug $message",
+        |   "emcsCorrelationId":"123"
+        |}
+        |""".stripMargin)
   }
 
   private def postRequest(
