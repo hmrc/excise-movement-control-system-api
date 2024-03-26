@@ -16,7 +16,9 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.functional.syntax._
+import play.api.libs.json.{JsPath, Json, Reads, Writes}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
 
 import java.time.Instant
 
@@ -28,5 +30,17 @@ case class MessageResponse(
 )
 
 object MessageResponse {
-  implicit val format: OFormat[MessageResponse] = Json.format[MessageResponse]
+  implicit val format: Reads[MessageResponse] = Json.reads[MessageResponse]
+
+  implicit val write: Writes[MessageResponse] = (
+      (JsPath \ "encodedMessage").write[String] and
+      (JsPath \ "messageType").write[String] and
+      (JsPath \ "messageId").write[String] and
+        (JsPath \ "createdOn").write[String]
+    )(e => (
+    e.encodedMessage,
+    e.messageType,
+    e.messageId,
+    e.createdOn.asStringInMilliseconds,
+  ))
 }
