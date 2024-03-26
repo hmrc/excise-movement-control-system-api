@@ -25,20 +25,20 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
 import play.api.http.Status._
-import play.api.libs.json.{JsArray, Json}
+import play.api.libs.json.{JsArray, JsValue, Json}
 import play.api.mvc.{AnyContent, Result}
 import play.api.test.Helpers.{await, contentAsJson, contentAsString, defaultAwaitTimeout, status, stubControllerComponents}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateAcceptHeaderAction
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, ErrorResponseSupport}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 
 import java.nio.charset.StandardCharsets
-import java.time.Instant
+import java.time.format.DateTimeFormatter
+import java.time.{Instant, ZoneOffset, ZonedDateTime}
 import java.util.{Base64, UUID}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
@@ -72,13 +72,11 @@ class GetMessagesControllerSpec extends PlaySpec
     reset(movementService, dateTimeService, workItemService)
 
     when(dateTimeService.timestamp()).thenReturn(timeStamp)
-
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
   }
 
   "getMessagesForMovement" should {
     "respond with BAD_REQUEST when the MovementID is an invalid UUID" in {
-
       val result = createWithSuccessfulAuth.getMessagesForMovement("invalidUUID", None)(createRequest())
 
       status(result) mustBe BAD_REQUEST
@@ -93,16 +91,12 @@ class GetMessagesControllerSpec extends PlaySpec
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
 
       status(result) mustBe OK
-      contentAsJson(result) mustBe Json.parse(
-        s"""
-          |[
-          | {
-          |   "encodedMessage":"message",
-          |   "messageType":"IE801",
-          |   "messageId":"messageId",
-          |   "createdOn": "${messageCreateOn.toString}"
-          | }
-          |]""".stripMargin)
+      contentAsJson(result) mustBe JsArray(Seq(expectedMessageResponseAsJson(
+        "message",
+        "IE801",
+        "messageId",
+        messageCreateOn
+      )))
     }
 
     "get all the new messages" in {
@@ -114,10 +108,12 @@ class GetMessagesControllerSpec extends PlaySpec
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
 
       status(result) mustBe OK
-      contentAsJson(result) mustBe Json.toJson(Seq(
-        MessageResponse("message", "IE801", "messageId1", messageCreateOn),
-        MessageResponse("message2", "IE801", "messageId2", messageCreateOn)
-      ))
+
+      val expectedJson = Seq(
+        expectedMessageResponseAsJson("message", "IE801", "messageId1", messageCreateOn),
+        expectedMessageResponseAsJson("message2", "IE801", "messageId2", messageCreateOn)
+      )
+      contentAsJson(result) mustBe JsArray(expectedJson)
     }
 
     "get all the new messages when there is a time query parameter provided" in {
@@ -131,12 +127,13 @@ class GetMessagesControllerSpec extends PlaySpec
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, Some(messageCreateOn.toString))(createRequest())
 
       status(result) mustBe OK
-      contentAsJson(result) mustBe Json.toJson(Seq(MessageResponse(
-        encodedMessage =  "message",
-        messageType = "IE801",
-        messageId =  "messageId1",
-        createdOn = timeInFuture)
-      ))
+
+      val jsonResponse = expectedMessageResponseAsJson(
+        "message",
+        "IE801",
+        "messageId1",
+        timeInFuture)
+      contentAsJson(result) mustBe JsArray(Seq(jsonResponse))
     }
 
     "get all the new messages including messages with a createdOn time of NOW when there is a time query parameter provided" in {
@@ -152,10 +149,12 @@ class GetMessagesControllerSpec extends PlaySpec
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, Some(timeNowString))(createRequest())
 
       status(result) mustBe OK
-      contentAsJson(result) mustBe Json.toJson(Seq(
-        MessageResponse("message", "IE801", "messageId1", timeInFuture),
-        MessageResponse("message3", "IE801", "messageId3", messageCreateOn)
-      ))
+
+      val expectedJson = Seq(
+        expectedMessageResponseAsJson("message", "IE801", "messageId1", timeInFuture),
+        expectedMessageResponseAsJson("message3", "IE801", "messageId3", messageCreateOn)
+      )
+      contentAsJson(result) mustBe JsArray(expectedJson)
     }
 
     "succeed when a valid date format is provided" in {
@@ -167,12 +166,14 @@ class GetMessagesControllerSpec extends PlaySpec
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, Some("2020-11-15T17:02:34.00Z"))(createRequest())
 
       status(result) mustBe OK
-      contentAsJson(result) mustBe Json.toJson(Seq(MessageResponse(
-        encodedMessage =  "message",
-        messageType = "IE801",
-        messageId =  "messageId",
-        createdOn = timeInFuture)
-      ))
+
+      val expectedJson = expectedMessageResponseAsJson(
+        "message",
+        "IE801",
+        "messageId",
+        timeInFuture
+      )
+      contentAsJson(result) mustBe JsArray(Seq(expectedJson))
     }
 
     "fail when an invalid date format is provided" in {
@@ -406,5 +407,30 @@ class GetMessagesControllerSpec extends PlaySpec
       .withHeaders(FakeHeaders(Seq(
         HeaderNames.ACCEPT -> acceptHeader
       )))
+  }
+
+  private def formatToValidDateTime(dateTime: Instant): String = {
+    ZonedDateTime
+      .ofInstant(dateTime, ZoneOffset.UTC)
+      .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX"))
+
+
+  }
+
+  private def expectedMessageResponseAsJson(
+    encodedMessage: String,
+    messageType: String,
+    messageId: String,
+    dateTime: Instant
+  ): JsValue = {
+    Json.parse(
+      s"""
+         |{
+         |   "encodedMessage":"$encodedMessage",
+         |   "messageType":"$messageType",
+         |   "messageId":"$messageId",
+         |   "createdOn": "${formatToValidDateTime(dateTime)}"
+         | }
+         |""".stripMargin)
   }
 }

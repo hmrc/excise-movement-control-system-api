@@ -106,7 +106,7 @@ class GetMessagesControllerItSpec extends PlaySpec
             |   "encodedMessage":"${message.encodedMessage}",
             |   "messageType":"IE801",
             |   "messageId":"$messageId",
-            |   "createdOn":"${timestamp.toString}"
+            |   "createdOn":"2024-10-05T12:12:12.123Z"
             | }
             |]
             |""".stripMargin)
