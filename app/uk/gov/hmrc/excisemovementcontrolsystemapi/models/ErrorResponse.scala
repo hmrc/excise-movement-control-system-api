@@ -28,8 +28,7 @@ trait GenericErrorResponse {
   val debugMessage: String
 }
 
-case class ErrorResponse
-(
+case class ErrorResponse(
   override val dateTime: Instant,
   override val message: String,
   override val debugMessage: String,

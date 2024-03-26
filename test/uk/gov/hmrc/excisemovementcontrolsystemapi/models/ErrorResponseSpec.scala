@@ -18,25 +18,38 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.ErrorResponseSupport
 
 import java.time.Instant
 
-class ErrorResponseSpec extends PlaySpec {
+class ErrorResponseSpec extends PlaySpec with ErrorResponseSupport {
 
   "ErrorResponse toJson" should {
-    "display dateTime in milliseconds format" in {
+    "display dateTime in milliseconds format when writing to Json" in {
 
       val dateTime = Instant.parse("2024-12-05T12:30:15.15632145Z")
+      val error = ErrorResponse(dateTime, "any message", "any debug message")
 
-      Json.toJson(ErrorResponse(dateTime, "any message", "any debug message")) mustBe
-        Json.parse(
-          s"""
-             |{
-             |   "dateTime":"2024-12-05T12:30:15.156Z",
-             |   "message":"any message",
-             |   "debugMessage": "any debug message"
-             |}
-             |""".stripMargin)
+      Json.toJson(error) mustBe expectedJsonErrorResponse(
+        "2024-12-05T12:30:15.156Z",
+        "any message",
+        "any debug message"
+      )
+    }
+  }
+
+  "EisErrorResponsePresentation" should {
+    "display dateTime in milliseconds format when writing to Json" in {
+
+      val dateTime = Instant.parse("2024-12-05T12:30:15.15632145Z")
+      val error = EisErrorResponsePresentation(dateTime, "any message", "any debug message", "correlationId")
+
+      Json.toJson(error) mustBe expectedEisErrorResponsePresentation(
+        "2024-12-05T12:30:15.156Z",
+        "any message",
+        "any debug message",
+        "correlationId"
+      )
     }
   }
 

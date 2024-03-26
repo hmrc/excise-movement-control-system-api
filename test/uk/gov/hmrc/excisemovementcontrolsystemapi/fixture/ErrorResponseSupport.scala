@@ -16,10 +16,14 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
-import play.api.libs.json.Json
+import play.api.libs.json.{JsValue, Json}
 
-trait JsonSupport {
-  def expectedJsonErrorResponse(dateTime: String, message: String, debugMessage: String) = {
+trait ErrorResponseSupport {
+  def expectedJsonErrorResponse(
+    dateTime: String,
+    message: String,
+    debugMessage: String
+  ): JsValue = {
     Json.parse(
       s"""
          |{
@@ -28,6 +32,23 @@ trait JsonSupport {
          |   "debugMessage": "$debugMessage"
          |}
          |""".stripMargin)
+  }
+
+  def expectedEisErrorResponsePresentation(
+    dateTime: String,
+    message: String,
+    debugMessage: String,
+    correlationId: String
+  ): JsValue = {
+      Json.parse(
+        s"""
+           |{
+           |   "dateTime":"$dateTime",
+           |   "message":"$message",
+           |   "debugMessage":"$debugMessage",
+           |   "correlationId":"$correlationId"
+           |}
+           |""".stripMargin)
   }
 
 }

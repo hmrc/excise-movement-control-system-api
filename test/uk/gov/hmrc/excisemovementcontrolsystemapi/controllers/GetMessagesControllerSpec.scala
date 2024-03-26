@@ -30,7 +30,7 @@ import play.api.mvc.{AnyContent, Result}
 import play.api.test.Helpers.{await, contentAsJson, contentAsString, defaultAwaitTimeout, status, stubControllerComponents}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateAcceptHeaderAction
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, JsonSupport}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, ErrorResponseSupport}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
@@ -45,7 +45,7 @@ import scala.xml.Elem
 
 class GetMessagesControllerSpec extends PlaySpec
   with FakeAuthentication
-  with JsonSupport
+  with ErrorResponseSupport
   with BeforeAndAfterEach {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global

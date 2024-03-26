@@ -30,7 +30,7 @@ import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.InternalError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{NewMessagesXml, TestXml}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.JsonSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.ErrorResponseSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{ApplicationBuilderSupport, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
@@ -46,7 +46,7 @@ class GetMessagesControllerItSpec extends PlaySpec
   with TestXml
   with NewMessagesXml
   with WireMockServerSpec
-  with JsonSupport
+  with ErrorResponseSupport
   with BeforeAndAfterAll
   with BeforeAndAfterEach {
 
