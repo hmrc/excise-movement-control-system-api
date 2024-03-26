@@ -37,17 +37,16 @@ import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.InternalError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.StringSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{JsonSupport, StringSupport}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{ApplicationBuilderSupport, SubmitMessageTestSupport, WireMockServerSpec}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionRequest, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Constants
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Movement}
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 import java.util.{Base64, UUID}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -61,6 +60,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   with WireMockServerSpec
   with SubmitMessageTestSupport
   with StringSupport
+  with JsonSupport
   with Eventually
   with IntegrationPatience
   with BeforeAndAfterAll
@@ -73,7 +73,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
   private val consigneeId = "GBWKQOZ8OVLYR"
   private val defaultBoxId = "testBoxId"
   private val clientBoxId = UUID.randomUUID().toString
-  private val timeStamp = Instant.now
+  private val timeStamp = Instant.parse("2024-12-12T14:30:23.12345678Z")
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
@@ -224,11 +224,12 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
         result.status mustBe BAD_REQUEST
         withClue("return the json response") {
-          val expectedJson =
-            s"""{"dateTime":"$timeStamp",
-               |"message":"Box Id error",
-               |"debugMessage":"Missing or incorrect query parameter"}""".stripMargin
-          Json.parse(result.body) mustBe Json.parse(expectedJson)
+
+          Json.parse(result.body) mustBe expectedJsonErrorResponse(
+            "2024-12-12T14:30:23.123Z",
+            "Box Id error",
+            "Missing or incorrect query parameter"
+          )
         }
 
         withClue("should not submit to NRS") {
@@ -247,10 +248,10 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
         result.status mustBe BAD_REQUEST
         withClue("return the json response") {
-          val responseBody = result.json.as[ErrorResponse]
-          responseBody.dateTime.truncatedTo(ChronoUnit.MINUTES) mustBe timeStamp.truncatedTo(ChronoUnit.MINUTES)
-          responseBody.message mustBe "ClientId error"
-          responseBody.debugMessage mustBe "Request header is missing X-Client-Id"
+          result.json  mustBe expectedJsonErrorResponse(
+            "2024-12-12T14:30:23.123Z",
+            "ClientId error",
+            "Request header is missing X-Client-Id")
         }
       }
 
@@ -269,12 +270,10 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         val result = postRequest(IE818)
 
         result.status mustBe BAD_REQUEST
-        val expectedJson =
-          s"""{"dateTime":"$timeStamp",
-             |"message":"Invalid message type",
-             |"debugMessage":"Message type IE818 cannot be sent to the draft excise movement endpoint"}""".stripMargin
-
-        Json.parse(result.body) mustBe Json.parse(expectedJson)
+        Json.parse(result.body) mustBe expectedJsonErrorResponse(
+          "2024-12-12T14:30:23.123Z",
+          "Invalid message type",
+          "Message type IE818 cannot be sent to the draft excise movement endpoint")
       }
 
       "xml cannot be parsed" in {

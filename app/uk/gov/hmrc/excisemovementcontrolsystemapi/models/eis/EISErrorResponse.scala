@@ -16,7 +16,9 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.functional.syntax._
+import play.api.libs.json.{JsPath, Json, Reads, Writes}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
 
 import java.time.Instant
 
@@ -28,5 +30,14 @@ case class EISErrorResponse(dateTime: Instant,
                            )
 
 object EISErrorResponse {
-  implicit def format: OFormat[EISErrorResponse] = Json.format[EISErrorResponse]
+  implicit val format: Reads[EISErrorResponse] = Json.reads[EISErrorResponse]
+
+  implicit val write: Writes[EISErrorResponse] = (
+    (JsPath \ "dateTime").write[String] and
+      (JsPath \ "status").write[String] and
+      (JsPath \ "message").write[String] and
+      (JsPath \ "debugMessage").write[String] and
+      (JsPath \ "emcsCorrelationId").write[String]
+
+    )(e => (e.dateTime.asStringInMilliseconds, e.status, e.message, e.debugMessage, e.emcsCorrelationId))
 }

@@ -30,6 +30,7 @@ import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.InternalError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{NewMessagesXml, TestXml}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.JsonSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{ApplicationBuilderSupport, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
@@ -45,6 +46,7 @@ class GetMessagesControllerItSpec extends PlaySpec
   with TestXml
   with NewMessagesXml
   with WireMockServerSpec
+  with JsonSupport
   with BeforeAndAfterAll
   with BeforeAndAfterEach {
 
@@ -56,7 +58,7 @@ class GetMessagesControllerItSpec extends PlaySpec
   private val messageId = UUID.randomUUID().toString
   private val url = s"http://localhost:$port/movements/$validUUID/messages"
   private val messageUrl = s"http://localhost:$port/movements/$validUUID/messages/$messageId"
-  private val timestamp = Instant.now()
+  private val timestamp = Instant.parse("2024-10-05T12:12:12.12345678Z")
 
 
   override lazy val app: Application = {
@@ -221,11 +223,11 @@ class GetMessagesControllerItSpec extends PlaySpec
       val result = getRequest(invalidUrl)
 
       result.status mustBe BAD_REQUEST
-      result.json mustBe Json.toJson(ErrorResponse(
-        timestamp,
+      result.json mustBe expectedJsonErrorResponse(
+        "2024-10-05T12:12:12.123Z",
         "Movement Id format error",
         "The movement ID should be a valid UUID"
-      ))
+      )
     }
   }
 
@@ -272,10 +274,11 @@ class GetMessagesControllerItSpec extends PlaySpec
     val result = getRequest(messageUrl, "application/json")
 
     result.status mustBe NOT_ACCEPTABLE
-    result.json mustBe Json.toJson(ErrorResponse(
-      timestamp,
+    result.json mustBe expectedJsonErrorResponse(
+      "2024-10-05T12:12:12.123Z",
       "Invalid Accept header",
-      "The accept header is missing or invalid"))
+      "The accept header is missing or invalid"
+    )
   }
 
   private def getRequest(

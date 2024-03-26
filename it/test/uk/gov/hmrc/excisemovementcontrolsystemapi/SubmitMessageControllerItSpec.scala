@@ -32,9 +32,9 @@ import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.InternalError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.StringSupport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{JsonSupport, StringSupport}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{ApplicationBuilderSupport, SubmitMessageTestSupport, WireMockServerSpec}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, Consignor}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
@@ -55,6 +55,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
   with WireMockServerSpec
   with SubmitMessageTestSupport
   with StringSupport
+  with JsonSupport
   with BeforeAndAfterAll
   with BeforeAndAfterEach {
 
@@ -70,7 +71,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
   //This matches the data from the IE818 test message
   private val movement = Movement(Some("boxId"), lrn, consignorId, Some(consigneeId), Some("23GB00000000000378553"))
 
-  private val timestamp = Instant.now
+  private val timestamp = Instant.parse("2024-05-05T16:12:13.12345678Z")
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
@@ -454,14 +455,20 @@ class SubmitMessageControllerItSpec extends PlaySpec
     verify(postRequestedFor(urlEqualTo("/submission")))
   }
 
-  private def createEISErrorResponseBodyAsJson(message: String): JsValue = {
-    Json.toJson(EISErrorResponse(
-      Instant.parse("2023-12-05T12:05:06Z"),
-      message.toUpperCase,
-      message.toLowerCase,
-      s"debug $message",
-      "123"
-    ))
+  private def createEISErrorResponseBodyAsJson(
+    message: String,
+    dateTime: String = timestamp.toString
+  ): JsValue = {
+    Json.parse(
+      s"""
+        |{
+        |   "dateTime":"$dateTime",
+        |   "status": "${message.toUpperCase()}",
+        |   "message":"${message.toLowerCase()}",
+        |   "debugMessage":"debug $message",
+        |   "emcsCorrelationId":"123"
+        |}
+        |""".stripMargin)
   }
 
   private def postRequest(

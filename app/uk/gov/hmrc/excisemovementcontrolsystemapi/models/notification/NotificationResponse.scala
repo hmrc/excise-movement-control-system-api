@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification
 
 import play.api.libs.json._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.GenericErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
 
 import java.time.Instant
 
@@ -54,10 +55,10 @@ object NotificationResponse {
       import play.api.libs.functional.syntax._
 
       (
-        (__ \ "dateTime").write[Instant] and
+        (__ \ "dateTime").write[String] and
           (__ \ "message").write[String] and
           (__ \ "debugMessage").write[String]
-        ) (r => (r.dateTime, r.message, r.debugMessage))
+        ) (r => (r.dateTime.asStringInMilliseconds, r.message, r.debugMessage))
     }
   }
 

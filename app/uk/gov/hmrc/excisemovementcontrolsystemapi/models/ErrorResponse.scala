@@ -16,7 +16,9 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.functional.syntax._
+import play.api.libs.json.{JsPath, Json, Reads, Writes}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
 
 import java.time.Instant
 
@@ -40,7 +42,16 @@ object ErrorResponse {
   def apply(dateTime: Instant, message: String, debugMessage: String, correlationId: String): ErrorResponse =
     ErrorResponse(dateTime, message, debugMessage, Some(correlationId))
 
-  implicit def format: OFormat[ErrorResponse] = Json.format[ErrorResponse]
+  implicit val format: Reads[ErrorResponse] = Json.reads[ErrorResponse]
+
+  implicit val write: Writes[ErrorResponse] = (
+    (JsPath \ "dateTime").write[String] and
+      (JsPath \ "message").write[String] and
+      (JsPath \ "debugMessage").write[String]
+
+    )(e =>
+    (e.dateTime.asStringInMilliseconds, e.message, e.debugMessage))
+
 }
 
 case class ValidationResponse(

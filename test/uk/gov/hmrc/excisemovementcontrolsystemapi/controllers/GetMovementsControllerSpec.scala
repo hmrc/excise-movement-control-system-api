@@ -28,8 +28,7 @@ import play.api.mvc.Results.BadRequest
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilterBuilder
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnParameterAction, MovementTestUtils}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnParameterAction, JsonSupport, MovementTestUtils}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MovementIdFormatInvalid, MovementIdValidation}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
@@ -43,6 +42,7 @@ class GetMovementsControllerSpec
     with FakeAuthentication
     with FakeValidateErnParameterAction
     with MovementTestUtils
+    with JsonSupport
     with BeforeAndAfterEach {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
@@ -144,10 +144,11 @@ class GetMovementsControllerSpec
         val result = controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some("invalid date"))(fakeRequest)
 
         status(result) mustBe BAD_REQUEST
-        contentAsJson(result) mustBe Json.toJson(
-          ErrorResponse(timestamp, "Invalid date format provided in the updatedSince query parameter", "Date format should be like '2020-11-15T17:02:34.00Z'")
+        contentAsJson(result) mustBe expectedJsonErrorResponse(
+          "2020-01-01T01:01:01.123Z",
+          "Invalid date format provided in the updatedSince query parameter",
+          "Date format should be like '2020-11-15T17:02:34.00Z'"
         )
-
       }
 
       "filtering by ERN and ERN filter is not in the authorised list" in {
@@ -207,21 +208,17 @@ class GetMovementsControllerSpec
 
     "return Not Found error" when {
       "movement not found in database" in {
-
-        val expectedError = Json.toJson(
-          ErrorResponse(timestamp, "Movement not found",
-            s"Movement $uuid could not be found")
-        )
-
         when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))
         when(movementService.getMovementById(any)).thenReturn(Future.successful(None))
-
 
         val result = controller.getMovement(uuid)(fakeRequest)
 
         status(result) mustBe NOT_FOUND
-        contentAsJson(result) mustBe expectedError
-
+        contentAsJson(result) mustBe expectedJsonErrorResponse(
+          "2020-01-01T01:01:01.123Z",
+          "Movement not found",
+          s"Movement $uuid could not be found"
+        )
       }
 
       "movement in database is for different ERNs" in {
@@ -233,8 +230,10 @@ class GetMovementsControllerSpec
 
         status(result) mustBe NOT_FOUND
 
-        contentAsJson(result) mustBe Json.toJson(
-          ErrorResponse(timestamp, "Movement not found", s"Movement $uuid is not found within the data for ERNs testErn")
+        contentAsJson(result) mustBe expectedJsonErrorResponse(
+          "2020-01-01T01:01:01.123Z",
+          "Movement not found",
+          s"Movement $uuid is not found within the data for ERNs testErn"
         )
       }
     }
@@ -242,9 +241,10 @@ class GetMovementsControllerSpec
     "return Bad Request error" when {
       "supplied movement Id is not in correct format" in {
 
-        val expectedError = Json.toJson(
-          ErrorResponse(timestamp, "Movement Id format error",
-            s"Movement Id should be a valid UUID")
+        val expectedError = expectedJsonErrorResponse(
+            "2020-01-01T01:01:01.123Z",
+            "Movement Id format error",
+            s"Movement Id should be a valid UUID"
         )
 
         when(movementIdValidator.validateMovementId(any))
