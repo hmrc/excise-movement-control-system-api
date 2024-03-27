@@ -342,8 +342,10 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
     val movementARC456 = Movement(Some("boxId"), "123", consignorId, None, Some("456"), testDateTime, Seq.empty)
     val movementARC89 = Movement(Some("boxId"), "345", consignorId, None, Some("89"), testDateTime, Seq.empty)
     val movementARC890 = Movement(Some("boxId"), "345", "12", None, Some("890"), testDateTime, Seq.empty)
+    val movementNoArcLrn456 = Movement(Some("boxId"), "456", consignorId, None, None, testDateTime, Seq.empty)
+    val movementNoArcLrn789 = Movement(Some("boxId"), "789", consignorId, None, None, testDateTime, Seq.empty)
 
-    val cachedMovements = Seq(movementARC456, movementARC89, movementARC890)
+    val cachedMovements = Seq(movementARC456, movementARC89, movementARC890, movementNoArcLrn456, movementNoArcLrn789)
     val encodeMessage = Base64.getEncoder.encodeToString("<IE818>test</IE818>".getBytes(StandardCharsets.UTF_8))
     val expectedMessage = Message(encodeMessage, MessageTypes.IE818.value, messageIdForNewMessage, testDateTime)
 
@@ -456,6 +458,22 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       verify(mockMovementRepository).updateMovement(eqTo(updateMovement2))
       verify(mockMovementRepository).updateMovement(eqTo(updateMovement3))
     }
+
+    "movement updated matching on LRN when message ARC is empty" in {
+      val updateMovement1 = movementNoArcLrn456.copy(messages = Seq(expectedMessage))
+      val updateMovement2 = movementNoArcLrn789.copy(messages = Seq(expectedMessage))
+      setUpForUpdateMovement(newMessage, Seq(None), Some("789"), "<IE818>test</IE818>", cachedMovements, messageIdForNewMessage)
+      when(mockMovementRepository.updateMovement(eqTo(updateMovement1)))
+        .thenReturn(Future.successful(Some(updateMovement1)))
+      when(mockMovementRepository.updateMovement(eqTo(updateMovement2)))
+        .thenReturn(Future.successful(Some(updateMovement2)))
+      val result = await(movementService.updateMovement(newMessage, consignorId))
+
+      result mustBe Seq(updateMovement2)
+      verify(mockMovementRepository, times(0)).updateMovement(eqTo(updateMovement1))
+      verify(mockMovementRepository).updateMovement(eqTo(updateMovement2))
+    }
+
 
     "throw an error" when {
       "message has both ARC and LRN missing" in {
