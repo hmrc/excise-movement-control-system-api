@@ -1,5 +1,5 @@
-<urn:IE829 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE829:V3.01" 
-           xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01">
+<urn:IE829 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE829:V3.13"
+           xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
     <urn:Header>
         <urn1:MessageSender>NDEA.XI</urn1:MessageSender>
         <urn1:MessageRecipient>NDEA.AT</urn1:MessageRecipient>
@@ -24,20 +24,22 @@
             <urn:ExciseMovementEad>
                 <urn:AdministrativeReferenceCode>23XI00000000000056339</urn:AdministrativeReferenceCode>
                 <urn:SequenceNumber>1</urn:SequenceNumber>
+                <urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>1</urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>
             </urn:ExciseMovementEad>
             <urn:ExciseMovementEad>
                 <urn:AdministrativeReferenceCode>23XI00000000000056340</urn:AdministrativeReferenceCode>
                 <urn:SequenceNumber>1</urn:SequenceNumber>
+                <urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>1</urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>
             </urn:ExciseMovementEad>
             <urn:ExportPlaceCustomsOffice>
                 <urn:ReferenceNumber>AT633734</urn:ReferenceNumber>
             </urn:ExportPlaceCustomsOffice>
-            <urn:ExportAcceptance>
+            <urn:ExportDeclarationAcceptanceRelease>
                 <urn:ReferenceNumberOfSenderCustomsOffice>AT324234</urn:ReferenceNumberOfSenderCustomsOffice>
                 <urn:IdentificationOfSenderCustomsOfficer>84884</urn:IdentificationOfSenderCustomsOfficer>
                 <urn:DateOfAcceptance>2023-06-26</urn:DateOfAcceptance>
                 <urn:DocumentReferenceNumber>123123vmnfhsdf3AT</urn:DocumentReferenceNumber>
-            </urn:ExportAcceptance>
+            </urn:ExportDeclarationAcceptanceRelease>
         </urn:NotificationOfAcceptedExport>
     </urn:Body>
 </urn:IE829>

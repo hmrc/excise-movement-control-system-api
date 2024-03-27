@@ -1,5 +1,5 @@
-<urn:IE839 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.01"
-            xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01">
+<urn:IE839 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.13"
+            xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
     <urn:Header>
         <urn1:MessageSender>NDEA.XI</urn1:MessageSender>
         <urn1:MessageRecipient>NDEA.FR</urn1:MessageRecipient>
@@ -24,19 +24,34 @@
             <urn:ExportPlaceCustomsOffice>
                 <urn:ReferenceNumber>FR883393</urn:ReferenceNumber>
             </urn:ExportPlaceCustomsOffice>
-            <urn:ExportCrossCheckingDiagnoses>
-                <urn:LocalReferenceNumber>lrnie8155755329</urn:LocalReferenceNumber>
-                <urn:DocumentReferenceNumber>123</urn:DocumentReferenceNumber>
-                <urn:Diagnosis>
-                    <urn:AdministrativeReferenceCode>23XI00000000000056341</urn:AdministrativeReferenceCode>
-                    <urn:BodyRecordUniqueReference>1</urn:BodyRecordUniqueReference>
-                    <urn:DiagnosisCode>5</urn:DiagnosisCode>
-                </urn:Diagnosis>
-            </urn:ExportCrossCheckingDiagnoses>
             <urn:Rejection>
                 <urn:RejectionDateAndTime>2023-06-22T02:02:49</urn:RejectionDateAndTime>
                 <urn:RejectionReasonCode>4</urn:RejectionReasonCode>
             </urn:Rejection>
+            <urn:ExportDeclarationInformation>
+                <urn:LocalReferenceNumber>lrnie8155755329</urn:LocalReferenceNumber>
+                <urn:DocumentReferenceNumber>123</urn:DocumentReferenceNumber>
+                <urn:NegativeCrosscheckValidationResults>
+                    <urn:UbrCrosscheckResult>
+                        <urn:AdministrativeReferenceCode>23XI00000000000056341</urn:AdministrativeReferenceCode>
+                        <urn:BodyRecordUniqueReference>1</urn:BodyRecordUniqueReference>
+                        <urn:DiagnosisCode>4</urn:DiagnosisCode>
+                        <urn:ValidationResult>1</urn:ValidationResult>
+                        <urn:RejectionReason>token</urn:RejectionReason>
+                        <urn:CombinedNomenclatureCodeCrosscheckResult>
+                            <urn:ValidationResult>1</urn:ValidationResult>
+                            <urn:RejectionReason>token</urn:RejectionReason>
+                        </urn:CombinedNomenclatureCodeCrosscheckResult>
+                        <urn:NetMassCrosscheckResult>
+                            <urn:ValidationResult>1</urn:ValidationResult>
+                            <urn:RejectionReason>token</urn:RejectionReason>
+                        </urn:NetMassCrosscheckResult>
+                    </urn:UbrCrosscheckResult>
+                </urn:NegativeCrosscheckValidationResults>
+                <urn:NNonDes>
+                    <urn:DocumentReferenceNumber>token</urn:DocumentReferenceNumber>
+                </urn:NNonDes>
+            </urn:ExportDeclarationInformation>
             <urn:CEadVal>
                 <urn:AdministrativeReferenceCode>23XI00000000000056341</urn:AdministrativeReferenceCode>
                 <urn:SequenceNumber>1</urn:SequenceNumber>

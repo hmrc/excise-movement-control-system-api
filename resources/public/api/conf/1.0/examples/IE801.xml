@@ -1,5 +1,5 @@
-<urn:IE801 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.01"
-            xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01">
+<urn:IE801 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.13"
+            xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
     <urn:Header >
         <urn1:MessageSender>NDEA.XI</urn1:MessageSender>
         <urn1:MessageRecipient>NDEA.AT</urn1:MessageRecipient>
@@ -32,9 +32,7 @@
             </urn:PlaceOfDispatchTrader>
             <urn:DeliveryPlaceTrader language="en">
                 <urn:Traderid>AT00000602078</urn:Traderid>
-                <urn:TraderName>METEST BOND
-                    &amp;
-                    STTSTGE</urn:TraderName>
+                <urn:TraderName>METEST BONDSTTSTGE</urn:TraderName>
                 <urn:StreetName>WHITETEST ROAD METEST CITY ESTATE</urn:StreetName>
                 <urn:Postcode>BN2 4KX</urn:Postcode>
                 <urn:City>STTEST,KENT</urn:City>
