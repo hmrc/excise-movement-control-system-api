@@ -132,7 +132,7 @@ class MovementService @Inject()(
     cachedMovements: Seq[Movement],
     messageArc: Option[String]
   ): Future[Either[String, Movement]] = {
-    val movementWithArc = cachedMovements.find(o => o.administrativeReferenceCode.equals(messageArc))
+    val movementWithArc = cachedMovements.find(o => o.administrativeReferenceCode.exists(arc => messageArc.contains(arc)))
     val movementWithLrn = cachedMovements.find(m => message.lrnEquals(m.localReferenceNumber))
 
     //TODO temporary logs for QA investigation
