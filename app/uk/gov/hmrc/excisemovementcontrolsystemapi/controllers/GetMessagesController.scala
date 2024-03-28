@@ -52,7 +52,7 @@ class GetMessagesController @Inject()(
       validateAcceptHeaderAction andThen
       authAction
       ).async(parse.default) {
-      implicit request =>
+      implicit _ =>
 
         //todo EMCS-529: do we need to validate messageId here? This is the messageIdentifier
         // of the message abd according to the xsd this is not a UUID and can be
