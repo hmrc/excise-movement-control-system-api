@@ -55,7 +55,7 @@ class NrsConnector @Inject()
             logger.info(s"[NrsConnector] - Non repudiation submission accepted with nrSubmissionId: ${submissionId.nrSubmissionId}")
             submissionId
           case _ =>
-            logger.warn(s"[NrsConnector] - Error when submitting to Non repudiation system (NRS) with status: ${response.status}, correlationId: $correlationId")
+            logger.warn(s"[NrsConnector] - Error when submitting to Non repudiation system (NRS) with status: ${response.status}, body: ${response.body}, correlationId: $correlationId")
             NonRepudiationSubmissionFailed(response.status, response.body)
         }
       }

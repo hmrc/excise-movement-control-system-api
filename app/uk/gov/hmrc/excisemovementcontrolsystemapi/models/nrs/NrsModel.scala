@@ -47,7 +47,7 @@ object NrsMetadata {
   val EmccCancelMovement = "emcs-cancel-a-movement-api"
   val EmcsSubmitAlertOrRejectionNotableEventId = "emcs-submit-alert-or-rejection-api"
 
-  val BusinessId = "EMCS"
+  val BusinessId = "emcs"
   val SearchKey = "ern"
 
   def create
