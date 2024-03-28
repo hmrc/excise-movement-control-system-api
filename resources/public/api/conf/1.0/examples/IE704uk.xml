@@ -1,4 +1,4 @@
-<ns:IE704 xmlns:ns="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3" xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.01">
+<ns:IE704 xmlns:ns="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3" xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
   <ns:Header>
     <urn:MessageSender>NDEA.GB</urn:MessageSender>
     <urn:MessageRecipient>NDEA.GB</urn:MessageRecipient>
