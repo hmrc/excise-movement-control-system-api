@@ -163,7 +163,6 @@ class PollingNewMessagesWithWorkItemJob @Inject()
         }.sequence
           .map {responseSequence => responseSequence.forall(_ => true)}
   }
-
 }
 
 object PollingNewMessagesWithWorkItemJob {

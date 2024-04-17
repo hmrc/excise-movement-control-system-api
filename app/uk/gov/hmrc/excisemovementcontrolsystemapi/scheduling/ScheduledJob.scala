@@ -24,13 +24,9 @@ trait ScheduledJob {
 
   def execute(implicit ec: ExecutionContext): Future[Result]
 
-  def isRunning: Future[Boolean]
-
   case class Result(message: String)
 
   val enabled: Boolean
-
-  def configKey: String = name
 
   def initialDelay: FiniteDuration
 

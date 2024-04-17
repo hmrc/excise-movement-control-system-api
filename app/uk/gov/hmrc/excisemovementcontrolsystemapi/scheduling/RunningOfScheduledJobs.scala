@@ -37,9 +37,7 @@ trait RunningOfScheduledJobs extends Logging {
 
   val applicationLifecycle: ApplicationLifecycle
 
-  private[scheduling] var cancellables: Seq[Cancellable] = Seq.empty
-
-  cancellables = scheduledJobs.map { job =>
+  private val cancellables = scheduledJobs.map { job =>
     scheduler.scheduleWithFixedDelay(job.initialDelay, job.intervalBetweenJobRunning)(new Runnable() {
       def run(): Unit = {
         val stopWatch = new StopWatch
@@ -61,16 +59,7 @@ trait RunningOfScheduledJobs extends Logging {
   applicationLifecycle.addStopHook(() => {
     logger.info(s"Cancelling all scheduled jobs.")
     cancellables.foreach(_.cancel())
-    scheduledJobs.foreach { job =>
-      logger.info(s"Checking if job ${job.configKey} is running")
-      while (Await.result(job.isRunning, 5.seconds)) {
-        logger.warn(s"Waiting for job ${job.configKey} to finish")
-        Thread.sleep(1000)
-      }
-      logger.warn(s"Job ${job.configKey} is finished")
-    }
-
-    Future.successful(())
+    Future.unit
   })
 }
 

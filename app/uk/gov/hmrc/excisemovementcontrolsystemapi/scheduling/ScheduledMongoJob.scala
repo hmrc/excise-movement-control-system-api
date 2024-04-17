@@ -21,13 +21,13 @@ import uk.gov.hmrc.mongo.lock.LockService
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait ScheduledMongoJob extends ExclusiveScheduledJob with ScheduledJobState with Logging {
+trait ScheduledMongoJob extends ScheduledJob with ScheduledJobState with Logging {
 
   val lockKeeper: LockService
 
   def runJob(implicit ec: ExecutionContext): Future[RunningOfJobSuccessful]
 
-  override def executeInMutex(implicit ec: ExecutionContext): Future[Result] = {
+  override def execute(implicit ec: ExecutionContext): Future[Result] = {
     lockKeeper withLock {
       runJob
     } map {
@@ -39,6 +39,5 @@ trait ScheduledMongoJob extends ExclusiveScheduledJob with ScheduledJobState wit
         failure.asResult
     }
   }
-
 }
 
