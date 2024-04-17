@@ -37,7 +37,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumber
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, TestUtils}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.lock.{Lock, MongoLockRepository}
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
@@ -58,7 +57,6 @@ class PollingNewMessagesWithWorkItemJobSpec
   private val newMessageService = mock[GetNewMessageService]
   private val movementService = mock[MovementService]
   private val newMessageParserService = mock[NewMessageParserService]
-  private val lockRepository = mock[MongoLockRepository]
   private val workItemService = mock[WorkItemService]
   private val dateTimeService = mock[DateTimeService]
   private val message = mock[IEMessage]
@@ -77,7 +75,6 @@ class PollingNewMessagesWithWorkItemJobSpec
   private val auditService = mock[AuditService]
 
   private val job = new PollingNewMessagesWithWorkItemJob(
-    lockRepository,
     newMessageService,
     workItemService,
     movementService,
@@ -95,14 +92,11 @@ class PollingNewMessagesWithWorkItemJobSpec
       appConfig,
       newMessageService,
       newMessageParserService,
-      lockRepository,
       workItemService,
       notificationService,
       auditService
     )
 
-    when(lockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(Lock("id", "owner", Instant.now, Instant.now))))
-    when(lockRepository.releaseLock(any, any)).thenReturn(successful(()))
     when(dateTimeService.timestamp()).thenReturn(timestamp)
 
     when(appConfig.maxFailureRetryAttempts).thenReturn(3)
@@ -140,20 +134,6 @@ class PollingNewMessagesWithWorkItemJobSpec
       job.initialDelay mustBe initialDelay
     }
 
-    "acquire a mongo lock" in {
-      when(workItemService.pullOutstanding(any, any)).thenReturn(Future.successful(None))
-      when(newMessageService.getNewMessages(any)(any))
-        .thenReturn(Future.successful(Some((newMessageResponse, 5))))
-
-      await(job.execute)
-
-      verify(lockRepository).takeLock(eqTo("PollingNewMessageWithWorkItem"), any, any)
-
-      withClue("release the mongo lock") {
-        verify(lockRepository).releaseLock(eqTo("PollingNewMessageWithWorkItem"), any)
-      }
-    }
-
     "should reschedule workItem when successfully run" in {
       val workItem = createWorkItem()
       addOneItemToMockQueue(workItem)
@@ -176,20 +156,14 @@ class PollingNewMessagesWithWorkItemJobSpec
       verify(workItemService).markAs(eqTo(workItem.id), eqTo(ToDo), eqTo(Some(workItem.availableAt)))
     }
 
-    "catch any exception Mongo throws and error" in {
+    "fail when the work item service fails" in {
       val workItem = createWorkItem()
       addOneItemToMockQueue(workItem)
       when(workItemService.pullOutstanding(any, any)).thenReturn(
         Future.failed(new RuntimeException("error"))
       )
 
-      val result = await(job.execute)
-
-      result.message mustBe
-        """The execution of scheduled job polling-new-messages failed with error 'error'.
-          |The next execution of the job will do retry."""
-          .stripMargin
-          .replace('\n', ' ')
+      await(job.execute.failed)
     }
 
     "retry failing EIS and mark a workItem as Failed" in {

@@ -26,20 +26,18 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.PollingNewMessagesW
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus
 
 import java.time.Instant
 import javax.inject.Inject
 import scala.concurrent.Future.successful
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.DurationConverters.ScalaDurationOps
 import scala.util.control.NonFatal
 
 class PollingNewMessagesWithWorkItemJob @Inject()
 (
-  mongoLockRepository: MongoLockRepository,
   newMessageService: GetNewMessageService,
   workItemService: WorkItemService,
   movementService: MovementService,
@@ -48,7 +46,7 @@ class PollingNewMessagesWithWorkItemJob @Inject()
   auditService: AuditService,
   appConfig: AppConfig,
   dateTimeService: DateTimeService
-)(implicit ec: ExecutionContext) extends ScheduledMongoJob
+)(implicit ec: ExecutionContext) extends ScheduledJob
   with Logging {
 
   override val enabled: Boolean = true
@@ -60,17 +58,16 @@ class PollingNewMessagesWithWorkItemJob @Inject()
   override def initialDelay: FiniteDuration = appConfig.initialDelay
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
-  lazy override val lockKeeper: LockService = LockService(mongoLockRepository, lockId = "PollingNewMessageWithWorkItem", ttl = 1.hour)
 
-  override def runJob(implicit ec: ExecutionContext): Future[RunningOfJobSuccessful] = {
+  override def execute(implicit ec: ExecutionContext): Future[Result] = {
     val now = dateTimeService.timestamp()
     process(now.minus(appConfig.failureRetryAfter.toJava), now, appConfig.maxFailureRetryAttempts)
   }
 
-  private def process(failedBefore: Instant, availableBefore: Instant, maximumRetries: Int): Future[RunningOfJobSuccessful] = {
+  private def process(failedBefore: Instant, availableBefore: Instant, maximumRetries: Int): Future[Result] = {
     workItemService.pullOutstanding(failedBefore, availableBefore)
       .flatMap {
-        case None => Future.successful(RunningOfJobSuccessful)
+        case None => Future.successful(Result(s"$name Job ran successfully."))
         case Some(wi) =>
 
           val ern = wi.item.exciseNumber
@@ -95,11 +92,6 @@ class PollingNewMessagesWithWorkItemJob @Inject()
               workItemService.rescheduleWorkItemForceSlow(wi)
           }
             .flatMap(_ => process(failedBefore, availableBefore, maximumRetries))
-      }
-      .recoverWith {
-        case NonFatal(e) =>
-          logger.error("[PollingNewMessageWithWorkItemJob] - Failed to collect and process the movement", e)
-          Future.failed(RunningOfJobFailed(name, e))
       }
   }
 
@@ -166,6 +158,7 @@ class PollingNewMessagesWithWorkItemJob @Inject()
 }
 
 object PollingNewMessagesWithWorkItemJob {
+
   private sealed trait NewMessageResult
 
   private case object Processed extends NewMessageResult
