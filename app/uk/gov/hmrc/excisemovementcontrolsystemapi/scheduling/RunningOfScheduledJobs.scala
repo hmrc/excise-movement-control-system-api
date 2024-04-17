@@ -16,14 +16,13 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
-import dispatch.Future
 import org.apache.commons.lang3.time.StopWatch
 import org.apache.pekko.actor.{Cancellable, Scheduler}
 import play.api.inject.ApplicationLifecycle
 import play.api.{Application, Logging}
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 trait RunningOfScheduledJobs extends Logging {

@@ -17,7 +17,6 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import com.codahale.metrics.{MetricRegistry, Timer}
-import dispatch.Future
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.mockito.MockitoSugar.{reset, verify, when}
@@ -34,7 +33,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUt
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
 import java.time.Instant
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 class MessageReceiptConnectorSpec
   extends PlaySpec

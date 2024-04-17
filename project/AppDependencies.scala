@@ -10,10 +10,7 @@ object AppDependencies {
   val compile: Seq[ModuleID] = Seq(
     "uk.gov.hmrc"             %% "bootstrap-backend-play-30"  % bootstrapVersion,
     "uk.gov.hmrc.mongo"       %% "hmrc-mongo-work-item-repo-play-30" % mongoVersion,
-    // required for scalaxb
-    "org.scala-lang.modules"  %% "scala-parser-combinators"   % "1.1.2",
     "javax.xml.bind"          % "jaxb-api"                    % "2.3.1",
-    "org.dispatchhttp"        %% "dispatch-core"              % dispatchVersion,
     "com.beachape"            %% "enumeratum-play-json"       % "1.8.0",
     "org.typelevel"           %% "cats-core"                  % "2.10.0"
 
