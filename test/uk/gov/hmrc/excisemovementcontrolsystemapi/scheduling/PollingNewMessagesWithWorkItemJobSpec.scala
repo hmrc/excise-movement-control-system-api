@@ -37,7 +37,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumber
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, TestUtils}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.lock.{Lock, MongoLockRepository}
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
@@ -58,7 +57,6 @@ class PollingNewMessagesWithWorkItemJobSpec
   private val newMessageService = mock[GetNewMessageService]
   private val movementService = mock[MovementService]
   private val newMessageParserService = mock[NewMessageParserService]
-  private val lockRepository = mock[MongoLockRepository]
   private val workItemService = mock[WorkItemService]
   private val dateTimeService = mock[DateTimeService]
   private val message = mock[IEMessage]
@@ -77,7 +75,6 @@ class PollingNewMessagesWithWorkItemJobSpec
   private val auditService = mock[AuditService]
 
   private val job = new PollingNewMessagesWithWorkItemJob(
-    lockRepository,
     newMessageService,
     workItemService,
     movementService,
@@ -95,14 +92,11 @@ class PollingNewMessagesWithWorkItemJobSpec
       appConfig,
       newMessageService,
       newMessageParserService,
-      lockRepository,
       workItemService,
       notificationService,
       auditService
     )
 
-    when(lockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(Lock("id", "owner", Instant.now, Instant.now))))
-    when(lockRepository.releaseLock(any, any)).thenReturn(successful(()))
     when(dateTimeService.timestamp()).thenReturn(timestamp)
 
     when(appConfig.maxFailureRetryAttempts).thenReturn(3)
@@ -140,27 +134,13 @@ class PollingNewMessagesWithWorkItemJobSpec
       job.initialDelay mustBe initialDelay
     }
 
-    "acquire a mongo lock" in {
-      when(workItemService.pullOutstanding(any, any)).thenReturn(Future.successful(None))
-      when(newMessageService.getNewMessages(any)(any))
-        .thenReturn(Future.successful(Some((newMessageResponse, 5))))
-
-      await(job.executeInMutex)
-
-      verify(lockRepository).takeLock(eqTo("PollingNewMessageWithWorkItem"), any, any)
-
-      withClue("release the mongo lock") {
-        verify(lockRepository).releaseLock(eqTo("PollingNewMessageWithWorkItem"), any)
-      }
-    }
-
     "should reschedule workItem when successfully run" in {
       val workItem = createWorkItem()
       addOneItemToMockQueue(workItem)
       when(newMessageService.getNewMessages(any)(any))
         .thenReturn(Future.successful(Some((newMessageResponse, 10))))
 
-      await(job.executeInMutex)
+      await(job.execute)
 
       verify(workItemService).rescheduleWorkItem(eqTo(workItem))
     }
@@ -171,25 +151,19 @@ class PollingNewMessagesWithWorkItemJobSpec
       when(newMessageService.getNewMessages(any)(any))
         .thenReturn(Future.successful(Some((newMessageResponse, 17))))
 
-      await(job.executeInMutex)
+      await(job.execute)
 
       verify(workItemService).markAs(eqTo(workItem.id), eqTo(ToDo), eqTo(Some(workItem.availableAt)))
     }
 
-    "catch any exception Mongo throws and error" in {
+    "fail when the work item service fails" in {
       val workItem = createWorkItem()
       addOneItemToMockQueue(workItem)
       when(workItemService.pullOutstanding(any, any)).thenReturn(
         Future.failed(new RuntimeException("error"))
       )
 
-      val result = await(job.executeInMutex)
-
-      result.message mustBe
-        """The execution of scheduled job polling-new-messages failed with error 'error'.
-          |The next execution of the job will do retry."""
-          .stripMargin
-          .replace('\n', ' ')
+      await(job.execute.failed)
     }
 
     "retry failing EIS and mark a workItem as Failed" in {
@@ -199,7 +173,7 @@ class PollingNewMessagesWithWorkItemJobSpec
       when(newMessageService.getNewMessages(any)(any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
-      await(job.executeInMutex)
+      await(job.execute)
 
       verify(workItemService).markAs(
         eqTo(workItem.id),
@@ -218,7 +192,7 @@ class PollingNewMessagesWithWorkItemJobSpec
       when(newMessageService.getNewMessages(any)(any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
-      val result = await(job.executeInMutex)
+      val result = await(job.execute)
 
       verify(workItemService).rescheduleWorkItemForceSlow(eqTo(workItem))
       result.message mustBe "polling-new-messages Job ran successfully."
@@ -229,7 +203,7 @@ class PollingNewMessagesWithWorkItemJobSpec
       when(newMessageService.getNewMessages(any)(any))
         .thenReturn(Future.successful(Some((newMessageResponse, 5))))
 
-      await(job.executeInMutex)
+      await(job.execute)
 
       verify(newMessageParserService).extractMessages(eqTo("any message"))
     }
@@ -239,7 +213,7 @@ class PollingNewMessagesWithWorkItemJobSpec
       when(newMessageService.getNewMessages(any)(any))
         .thenReturn(Future.successful(Some((newMessageResponse, 5))))
 
-      val result = await(job.executeInMutex)
+      val result = await(job.execute)
 
       result.message mustBe "polling-new-messages Job ran successfully."
       val captor = ArgCaptor[String]
@@ -257,7 +231,7 @@ class PollingNewMessagesWithWorkItemJobSpec
     "not process any Work Items if no Work Items exist" in {
       when(workItemService.pullOutstanding(any, any)).thenReturn(Future.successful(None))
 
-      val result = await(job.executeInMutex)
+      val result = await(job.execute)
 
       result.message mustBe "polling-new-messages Job ran successfully."
       verifyZeroInteractions(newMessageService)
@@ -270,7 +244,7 @@ class PollingNewMessagesWithWorkItemJobSpec
           .thenReturn(Future.successful(Some((newMessageResponseEmpty, 0))))
         when(newMessageParserService.extractMessages(any)).thenReturn(Seq.empty)
 
-        val result = await(job.executeInMutex)
+        val result = await(job.execute)
 
         result.message mustBe "polling-new-messages Job ran successfully."
         verifyZeroInteractions(movementService)
@@ -282,7 +256,7 @@ class PollingNewMessagesWithWorkItemJobSpec
         when(newMessageService.getNewMessages(any)(any))
           .thenReturn(Future.successful(None))
 
-        val result = await(job.executeInMutex)
+        val result = await(job.execute)
 
         result.message mustBe "polling-new-messages Job ran successfully."
         verifyZeroInteractions(movementService)
@@ -294,7 +268,7 @@ class PollingNewMessagesWithWorkItemJobSpec
         when(newMessageService.getNewMessages(any)(any))
           .thenReturn(Future.failed(new RuntimeException("error")))
 
-        val result = await(job.executeInMutex)
+        val result = await(job.execute)
 
         result.message mustBe "polling-new-messages Job ran successfully."
         verify(movementService, never()).updateMovement(any, any)
@@ -312,7 +286,7 @@ class PollingNewMessagesWithWorkItemJobSpec
       when(newMessageParserService.extractMessages(any))
         .thenReturn(Seq(message, ie815Message, ie813Message))
 
-      await(job.executeInMutex)
+      await(job.execute)
 
       val inOrder = VerifyInOrder(Seq(movementService))
 
@@ -331,7 +305,7 @@ class PollingNewMessagesWithWorkItemJobSpec
       when(newMessageParserService.extractMessages(any))
         .thenReturn(Seq(message, ie815Message, ie813Message))
 
-      await(job.executeInMutex)
+      await(job.execute)
 
       verify(auditService).auditMessage(eqTo(message))(any)
       verify(auditService).auditMessage(eqTo(ie815Message))(any)
@@ -363,7 +337,7 @@ class PollingNewMessagesWithWorkItemJobSpec
             Movement(Some("id2"), "boxId1", "consignor", Some("consignee"))
           )))
 
-        await(job.executeInMutex)
+        await(job.execute)
 
       verify(notificationService, times(2)).sendNotification(eqTo("123"), any[Movement], eqTo("1"), eqTo("IE801"))(any)
       verify(notificationService, times(2)).sendNotification(eqTo("123"), any[Movement], eqTo("2"), eqTo("IE813"))(any)
@@ -390,7 +364,7 @@ class PollingNewMessagesWithWorkItemJobSpec
         when(movementService.updateMovement(any, any))
           .thenReturn(Future.successful(Seq(Movement(Some("id1"), "boxId1", "consignor", Some("consignee")))))
 
-        await(job.executeInMutex)
+        await(job.execute)
 
         verifyZeroInteractions(notificationService)
 
@@ -411,7 +385,7 @@ class PollingNewMessagesWithWorkItemJobSpec
         when(movementService.updateMovement(any, any))
           .thenReturn(Future.successful(Seq.empty))
 
-        await(job.executeInMutex)
+        await(job.execute)
 
         verifyZeroInteractions(notificationService)
       }
@@ -428,7 +402,7 @@ class PollingNewMessagesWithWorkItemJobSpec
         .thenReturn(
           Future.successful(Seq(movement)))
 
-      await(job.executeInMutex)
+      await(job.execute)
 
       val order1 = VerifyInOrder(Seq(movementService, newMessageService))
 
@@ -447,7 +421,7 @@ class PollingNewMessagesWithWorkItemJobSpec
         when(movementService.updateMovement(any, any))
           .thenReturn(Future.successful(Seq.empty))
 
-        await(job.executeInMutex)
+        await(job.execute)
 
         verify(newMessageService, never()).acknowledgeMessage(any)(any)
         verify(notificationService, never()).sendNotification(any, any, any, any)(any)
@@ -468,7 +442,7 @@ class PollingNewMessagesWithWorkItemJobSpec
             Future.successful(Seq(Movement(Some("boxId4"), "lrn4", "consignor", Some("consignee")))),
           )
 
-        await(job.executeInMutex)
+        await(job.execute)
 
         verify(newMessageService, never()).acknowledgeMessage(any)(any)
         verify(notificationService, times(4)).sendNotification(any, any, any, any)(any)
@@ -491,7 +465,7 @@ class PollingNewMessagesWithWorkItemJobSpec
         when(movementService.updateMovement(any, any))
           .thenReturn(Future.failed(new RuntimeException("error")))
 
-        await(job.executeInMutex)
+        await(job.execute)
 
         verify(newMessageService, never()).acknowledgeMessage(any)(any)
         verify(notificationService, never()).sendNotification(any, any, any, any)(any)
@@ -505,7 +479,7 @@ class PollingNewMessagesWithWorkItemJobSpec
         when(newMessageParserService.extractMessages(any))
           .thenReturn(Seq.empty)
 
-        await(job.executeInMutex)
+        await(job.execute)
 
         verify(newMessageService, never()).acknowledgeMessage(any)(any)
         verify(notificationService, never()).sendNotification(any, any, any, any)(any)
@@ -526,7 +500,7 @@ class PollingNewMessagesWithWorkItemJobSpec
         when(notificationService.sendNotification(any, any, any, any)(any))
           .thenReturn(Future.successful(FailedPushNotification(BAD_REQUEST, "something went wrong :(")))
 
-        await(job.executeInMutex)
+        await(job.execute)
 
         verify(newMessageService).acknowledgeMessage(any)(any)
       }
@@ -549,7 +523,7 @@ class PollingNewMessagesWithWorkItemJobSpec
             Future.successful(SuccessPushNotificationResponse("notificationId")),
             Future.successful(SuccessPushNotificationResponse("notificationId"))
           )
-        await(job.executeInMutex)
+        await(job.execute)
 
         verify(newMessageService).acknowledgeMessage(any)(any)
       }
