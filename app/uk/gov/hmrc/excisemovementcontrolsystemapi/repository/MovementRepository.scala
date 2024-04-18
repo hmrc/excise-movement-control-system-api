@@ -20,7 +20,6 @@ import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Filters.{and, equal, in, or}
 import org.mongodb.scala.model._
 import play.api.Logging
-import play.api.libs.json.Json
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository.mongoIndexes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
@@ -43,7 +42,7 @@ class MovementRepository @Inject()
   PlayMongoRepository[Movement](
     collectionName = "movements",
     mongoComponent = mongo,
-    domainFormat = Json.format[Movement],
+    domainFormat = Movement.format,
     indexes = mongoIndexes(appConfig.movementTTL),
     replaceIndexes = true
   ) with Logging {

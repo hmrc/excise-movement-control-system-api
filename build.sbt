@@ -15,7 +15,7 @@ lazy val microservice = Project("excise-movement-control-system-api", file("."))
     // suppress warnings in generated routes files
     scalacOptions += "-Wconf:src=routes/.*:s,src=src_managed/.*:s",
       // scalaxb
-    Compile / scalaxb / scalaxbDispatchVersion := AppDependencies.dispatchVersion,
+    Compile / scalaxb / scalaxbGenerateDispatchClient := false,
     Compile / scalaxb / scalaxbPackageName := "generated",
   )
   .settings(
