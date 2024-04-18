@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model
 
-import play.api.libs.json.{Format, Json, OFormat}
+import play.api.libs.json.{Format, Json, OFormat, OWrites, Reads}
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 import java.time.Instant
@@ -42,8 +42,19 @@ case class Message(
                   )
 
 object Movement {
-  implicit val instantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
-  implicit val format: OFormat[Movement] = Json.format[Movement]
+
+  private val oldFormat: OFormat[Movement] = Json.format[Movement]
+
+  private val newFormat: OFormat[Movement] = {
+    // do not remove, this is used by the macro expansion of `Json.format`
+    implicit val instantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
+    Json.format[Movement]
+  }
+
+  private val reads: Reads[Movement] = newFormat orElse oldFormat
+  private val writes: OWrites[Movement] = newFormat
+
+  implicit val format: OFormat[Movement] = OFormat(reads, writes)
 
   def apply(boxId: Option[String],
             localReferenceNumber: String,
