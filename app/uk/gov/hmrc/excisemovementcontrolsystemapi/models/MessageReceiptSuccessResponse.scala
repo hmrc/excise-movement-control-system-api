@@ -19,6 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 import play.api.libs.json.{Json, OFormat}
 
 import java.time.Instant
+import scala.util.Try
 
 sealed trait MessageReceiptResponse
 
@@ -30,7 +31,27 @@ case class MessageReceiptSuccessResponse
 ) extends MessageReceiptResponse
 
 object MessageReceiptSuccessResponse {
-  implicit val format: OFormat[MessageReceiptSuccessResponse] = Json.format[MessageReceiptSuccessResponse]
+
+  implicit lazy val format: OFormat[MessageReceiptSuccessResponse] = {
+
+    import play.api.libs.functional.syntax._
+    import play.api.libs.json._
+
+    val readNumber: Reads[Int] =
+      Reads.IntReads orElse Reads.StringReads.flatMap { string =>
+        Try(string.toInt).map(Reads.pure(_)).getOrElse(Reads.failed("invalid number"))
+      }
+
+    lazy val writes: OWrites[MessageReceiptSuccessResponse] = Json.writes[MessageReceiptSuccessResponse]
+
+    lazy val reads: Reads[MessageReceiptSuccessResponse] = (
+      (__ \ "dateTime").read[Instant] and
+      (__ \ "exciseRegistrationNumber").read[String] and
+      (__ \ "recordsAffected").read(readNumber)
+    )(MessageReceiptSuccessResponse.apply _)
+
+    OFormat(reads, writes)
+  }
 }
 
 case class MessageReceiptFailResponse
