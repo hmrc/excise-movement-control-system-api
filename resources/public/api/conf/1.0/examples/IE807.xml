@@ -1,0 +1,32 @@
+<urn:IE807 xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
+            xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE807:V3.13">
+    <urn:Header>
+        <urn1:MessageSender>NDEA.GB</urn1:MessageSender>
+        <urn1:MessageRecipient>NDEA.XI</urn1:MessageRecipient>
+        <urn1:DateOfPreparation>2023-06-27</urn1:DateOfPreparation>
+        <urn1:TimeOfPreparation>00:18:33</urn1:TimeOfPreparation>
+        <urn1:MessageIdentifier>GB0023121</urn1:MessageIdentifier>
+        <urn1:CorrelationIdentifier>6de24ff423abcb344bbcbcbcbc3423</urn1:CorrelationIdentifier>
+    </urn:Header>
+    <urn:Body>
+        <urn:InterruptionOfMovement>
+            <urn:Attributes>
+                <urn:AdministrativeReferenceCode>23XI00000000000000331</urn:AdministrativeReferenceCode>
+                <urn:ComplementaryInformation language="to">Customs aren't happy :(</urn:ComplementaryInformation>
+                <urn:DateAndTimeOfIssuance>2023-06-27T00:18:13</urn:DateAndTimeOfIssuance>
+                <urn:ReasonForInterruptionCode>1</urn:ReasonForInterruptionCode>
+                <urn:ReferenceNumberOfExciseOffice>AB737333</urn:ReferenceNumberOfExciseOffice>
+                <urn:ExciseOfficerIdentification>GB3939939393</urn:ExciseOfficerIdentification>
+            </urn:Attributes>
+            <urn:ReferenceControlReport>
+                <urn:ControlReportReference>GBAA2C3F4244ADB9</urn:ControlReportReference>
+            </urn:ReferenceControlReport>
+            <urn:ReferenceControlReport>
+                <urn:ControlReportReference>GBAA2C3F4244ADB8</urn:ControlReportReference>
+            </urn:ReferenceControlReport>
+            <urn:ReferenceEventReport>
+                <urn:EventReportNumber>GBAA2C3F4244ADB3</urn:EventReportNumber>
+            </urn:ReferenceEventReport>
+        </urn:InterruptionOfMovement>
+    </urn:Body>
+</urn:IE807>
