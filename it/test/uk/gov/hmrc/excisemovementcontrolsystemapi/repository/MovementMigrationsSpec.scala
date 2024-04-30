@@ -16,9 +16,8 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
-import org.bson.BsonType
 import org.mongodb.scala.MongoCollection
-import org.mongodb.scala.model.{Aggregates, Field, Filters}
+import org.mongodb.scala.model.Filters
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.freespec.AnyFreeSpec
@@ -30,12 +29,12 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsObject, Json, OFormat}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.{Codecs, CollectionFactory}
+import uk.gov.hmrc.mongo.play.json.CollectionFactory
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 
-import java.time.{Instant, LocalDateTime, ZoneOffset}
 import java.time.temporal.ChronoUnit
+import java.time.{Instant, LocalDateTime, ZoneOffset}
 import java.util.UUID
 
 class MovementMigrationsSpec
@@ -69,7 +68,7 @@ class MovementMigrationsSpec
     collection.insertOne(Json.toJsObject(movement)(oldFormat)).toFuture().futureValue
     collection.insertOne(Json.toJsObject(newFormatMovement)).toFuture().futureValue
 
-    val oldFormatResult = collection.find(Filters.eq("_id", movement._id)).headOption.futureValue.value
+    val oldFormatResult = collection.find(Filters.eq("_id", movement._id)).headOption().futureValue.value
     val oldFormatLastUpdated = (oldFormatResult \ "lastUpdated").as[Instant]
     oldFormatLastUpdated mustEqual movement.lastUpdated
 
