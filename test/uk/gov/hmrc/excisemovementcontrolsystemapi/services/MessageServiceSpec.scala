@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-import generated.NewMessagesDataResponse
 import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.Mockito
@@ -30,10 +29,9 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageReceiptConnector, ShowNewMessagesConnector}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.NewMessagesXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE704Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
@@ -41,22 +39,19 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.Instant
 import scala.concurrent.Future
-import scala.xml.Elem
 
 class MessageServiceSpec extends PlaySpec
   with ScalaFutures
   with IntegrationPatience
   with GuiceOneAppPerSuite
-  with NewMessagesXml
+  with TestXml
   with BeforeAndAfterEach {
 
   private val movementRepository = mock[MovementRepository]
   private val ernRetrievalRepository = mock[ErnRetrievalRepository]
-  private val showNewMessagesConnector = mock[ShowNewMessagesConnector]
-  private val messageReceiptConnector = mock[MessageReceiptConnector]
+  private val messageConnector = mock[MessageConnector]
   private val dateTimeService = mock[DateTimeService]
   private val messageService = app.injector.instanceOf[MessageService]
-  private val ieMessageFactory = app.injector.instanceOf[IEMessageFactory]
   private val utils = new EmcsUtils
   private val now = Instant.now
   private implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -65,8 +60,7 @@ class MessageServiceSpec extends PlaySpec
     .overrides(
       bind[MovementRepository].toInstance(movementRepository),
       bind[ErnRetrievalRepository].toInstance(ernRetrievalRepository),
-      bind[ShowNewMessagesConnector].toInstance(showNewMessagesConnector),
-      bind[MessageReceiptConnector].toInstance(messageReceiptConnector),
+      bind[MessageConnector].toInstance(messageConnector),
       bind[DateTimeService].toInstance(dateTimeService),
     ).build()
 
@@ -75,25 +69,10 @@ class MessageServiceSpec extends PlaySpec
     Mockito.reset[Any](
       movementRepository,
       ernRetrievalRepository,
-      showNewMessagesConnector,
-      messageReceiptConnector,
+      messageConnector,
       dateTimeService
     )
   }
-
-  private def noNewMessagesResponse(ern: String) =
-    eisResponse(ern, emptyNewMessageDataXml)
-
-  private def someNewMessagesResponse(ern: String) =
-    eisResponse(ern, newMessageXmlWithIE704)
-
-  private def eisResponse(ern: String, xml: Elem) =
-    EISConsumptionResponse(
-      now,
-      ern,
-      utils.encode(xml.toString())
-    )
-
 
   "updateMessages" when {
     "there is a movement but we have never retrieved anything" when {
@@ -106,62 +85,60 @@ class MessageServiceSpec extends PlaySpec
           when(movementRepository.updateMovement(any)).thenReturn(Future.successful(Some(movement)))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
-          when(showNewMessagesConnector.get(any)(any)).thenReturn(Future.successful(Right(noNewMessagesResponse(ern))))
+          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(Seq.empty))
 
           messageService.updateMessages(ern).futureValue
 
-          verify(showNewMessagesConnector).get(eqTo(ern))(any)
+          verify(messageConnector).getNewMessages(eqTo(ern))(any)
           verify(movementRepository, never()).getAllBy(any)
           verify(movementRepository, never()).updateMovement(any)
           verify(ernRetrievalRepository).save(eqTo(ern))
         }
       }
       "we try to retrieve messages and there are some" should {
-        "add messages to the movement" in {
+        "add messages to only the movement with the right LRN" in {
           val ern = "testErn"
-          val movement = Movement(None, "token", "Consignor", None)
-          val eisResponse = someNewMessagesResponse(ern)
-          val decodedMessage = utils.decode(eisResponse.message)
-          val newMessageDataResponse = scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
-          val IE704Message = ieMessageFactory.createIEMessage(newMessageDataResponse.Messages.messagesoption.head)
-          val expectedMovement = movement.copy(messages = Seq(Message(utils.encode(IE704Message.toXml.toString()), "IE704", "messageId-4", eisResponse.dateTime)))
+          val lrnMovement = Movement(None, "lrnie8158976912", "Consignor", None)
+          val notLrnMovement = Movement(None, "notTheLrn", "consignor", None)
+          val messages = Seq(IE704Message.createFromXml(IE704NoArc))
+          val expectedMovement = lrnMovement.copy(messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", now)))
+          val unexpectedMovement = notLrnMovement.copy(messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", now)))
 
           when(dateTimeService.timestamp()).thenReturn(now)
-          when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
+          when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(lrnMovement, notLrnMovement)))
           when(movementRepository.updateMovement(any)).thenReturn(Future.successful(Some(expectedMovement)))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
-          when(showNewMessagesConnector.get(any)(any)).thenReturn(Future.successful(Right(eisResponse)))
+          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(messages))
 
           messageService.updateMessages(ern).futureValue
 
-          verify(showNewMessagesConnector).get(eqTo(ern))(any)
+          verify(messageConnector).getNewMessages(eqTo(ern))(any)
           verify(movementRepository).getAllBy(eqTo(ern))
+          verify(movementRepository, never).updateMovement(eqTo(unexpectedMovement))
           verify(movementRepository).updateMovement(eqTo(expectedMovement))
           verify(ernRetrievalRepository).save(eqTo(ern))
         }
-        "add messages to only the movement with the right LRN" in {
+        "add messages to only the movement with the right ARC" in {
           val ern = "testErn"
-          val movement1 = Movement(None, "token", "Consignor", None)
-          val movement2 = Movement(None, "lrn2", "consignor", None)
-          val eisResponse = someNewMessagesResponse(ern)
-          val decodedMessage = utils.decode(eisResponse.message)
-          val newMessageDataResponse = scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
-          val IE704Message = ieMessageFactory.createIEMessage(newMessageDataResponse.Messages.messagesoption.head)
-          val expectedMovement = movement1.copy(messages = Seq(Message(utils.encode(IE704Message.toXml.toString()), "IE704", "messageId-4", eisResponse.dateTime)))
+          val arcMovement = Movement(None, "notTheLrn", "Consignor", None, administrativeReferenceCode = Some("23XI00000000000000012"))
+          val notArcMovement = Movement(None, "notTheLrn", "consignor", None)
+          val messages = Seq(IE704Message.createFromXml(IE704))
+          val expectedMovement = arcMovement.copy(messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", now)))
+          val unexpectedMovement = notArcMovement.copy(messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", now)))
 
           when(dateTimeService.timestamp()).thenReturn(now)
-          when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement1, movement2)))
+          when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(arcMovement, notArcMovement)))
           when(movementRepository.updateMovement(any)).thenReturn(Future.successful(Some(expectedMovement)))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
-          when(showNewMessagesConnector.get(any)(any)).thenReturn(Future.successful(Right(eisResponse)))
+          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(messages))
 
           messageService.updateMessages(ern).futureValue
 
-          verify(showNewMessagesConnector).get(eqTo(ern))(any)
+          verify(messageConnector).getNewMessages(eqTo(ern))(any)
           verify(movementRepository).getAllBy(eqTo(ern))
-          verify(movementRepository, never).updateMovement(movement2.copy(messages = Seq(Message(utils.encode(IE704Message.toXml.toString()), "IE704", "messageId-4", eisResponse.dateTime))))
+          verify(movementRepository, never).updateMovement(eqTo(unexpectedMovement))
           verify(movementRepository).updateMovement(eqTo(expectedMovement))
           verify(ernRetrievalRepository).save(eqTo(ern))
         }

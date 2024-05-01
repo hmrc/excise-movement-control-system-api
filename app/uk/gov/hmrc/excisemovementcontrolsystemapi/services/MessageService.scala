@@ -18,10 +18,9 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import cats.syntax.all._
 import org.apache.pekko.Done
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageReceiptConnector, ShowNewMessagesConnector}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -34,18 +33,15 @@ class MessageService @Inject
 (
   movementRepository: MovementRepository,
   ernRetrievalRepository: ErnRetrievalRepository,
-  showNewMessagesConnector: ShowNewMessagesConnector,
-  messageReceiptConnector: MessageReceiptConnector,
-  newMessageParserService: NewMessageParserService,
+  messageConnector: MessageConnector,
   dateTimeService: DateTimeService,
   emcsUtils: EmcsUtils
-)(implicit executionContext: ExecutionContext){
+)(implicit executionContext: ExecutionContext) {
 
   def updateMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] = {
     for {
       _ <- ernRetrievalRepository.getLastRetrieved(ern)
-      response <- getNewMessages(ern)
-      messages <- convertMessageResponse(response)
+      messages <- messageConnector.getNewMessages(ern)
       _ <- updateMovements(ern, messages)
       _ <- ernRetrievalRepository.save(ern)
     } yield Done
@@ -55,12 +51,13 @@ class MessageService @Inject
     if (messages.nonEmpty) {
       movementRepository.getAllBy(ern).map { movements =>
         messages.groupBy { message =>
-          movements.find(movement => message.lrnEquals(movement.localReferenceNumber))
-        }.toSeq.traverse { case (maybeMovement, messages) =>
-          maybeMovement.map { movement =>
-            val updatedMovement = movement.copy(messages = messages.map(m => convertMessage(m)))
-            movementRepository.updateMovement(updatedMovement)
-          }.getOrElse(???)
+          (movements.find(movement => message.lrnEquals(movement.localReferenceNumber)),
+            movements.find(movement => movement.administrativeReferenceCode.exists(arc => message.administrativeReferenceCode.flatten.contains(arc))))
+        }.toSeq.traverse {
+          case ((Some(maybeLrn), _), messages) =>
+            updateMovement(maybeLrn, messages)
+          case ((_, Some(maybeArc)), messages) =>
+            updateMovement(maybeArc, messages)
         }
       }
     }.as(Done) else {
@@ -68,15 +65,9 @@ class MessageService @Inject
     }
   }
 
-  private def getNewMessages(ern: String)(implicit hc: HeaderCarrier): Future[EISConsumptionResponse] = {
-    showNewMessagesConnector.get(ern).flatMap {
-      case Right(response) => Future.successful(response)
-      case Left(_) => Future.failed(new RuntimeException("error getting new messages"))
-    }
-  }
-
-  private def convertMessageResponse(response: EISConsumptionResponse): Future[Seq[IEMessage]] = {
-    Future.successful(newMessageParserService.extractMessages(response.message))
+  private def updateMovement(movement: Movement, messages: Seq[IEMessage]) = {
+    val updatedMovement = movement.copy(messages = messages.map(convertMessage))
+    movementRepository.updateMovement(updatedMovement)
   }
 
   private def convertMessage(input: IEMessage): Message = {
