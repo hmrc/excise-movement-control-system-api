@@ -64,6 +64,7 @@ class MovementRepository @Inject()
       .map(_ => true)
   }
 
+  //TODO can this ever return None??
   def updateMovement(movement: Movement): Future[Option[Movement]] = {
 
     val updatedMovement = movement.copy(lastUpdated = timeService.timestamp())

@@ -16,33 +16,124 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-import org.scalatest.concurrent.ScalaFutures
+import org.apache.pekko.Done
+import org.mockito.ArgumentMatchersSugar.{any, eqTo}
+import org.mockito.Mockito
+import org.mockito.Mockito.never
+import org.mockito.MockitoSugar.{verify, when}
+import org.scalatest.BeforeAndAfterEach
+import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
+import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.Application
+import play.api.inject.bind
+import play.api.inject.guice.GuiceApplicationBuilder
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageReceiptConnector, ShowNewMessagesConnector}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.NewMessagesXml
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
+import uk.gov.hmrc.http.HeaderCarrier
 
-class MessageServiceSpec extends PlaySpec with ScalaFutures {
+import java.time.Instant
+import scala.concurrent.Future
+import scala.xml.Elem
+
+class MessageServiceSpec extends PlaySpec
+  with ScalaFutures
+  with IntegrationPatience
+  with GuiceOneAppPerSuite
+  with NewMessagesXml
+  with BeforeAndAfterEach {
+
+  private val movementRepository = mock[MovementRepository]
+  private val ernRetrievalRepository = mock[ErnRetrievalRepository]
+  private val showNewMessagesConnector = mock[ShowNewMessagesConnector]
+  private val messageReceiptConnector = mock[MessageReceiptConnector]
+  private val dateTimeService = mock[DateTimeService]
+  private val messageService = app.injector.instanceOf[MessageService]
+  private val utils = new EmcsUtils
+  private val now = Instant.now
+  private implicit val hc: HeaderCarrier = HeaderCarrier()
+
+  override def fakeApplication(): Application = GuiceApplicationBuilder()
+    .overrides(
+      bind[MovementRepository].toInstance(movementRepository),
+      bind[ErnRetrievalRepository].toInstance(ernRetrievalRepository),
+      bind[ShowNewMessagesConnector].toInstance(showNewMessagesConnector),
+      bind[MessageReceiptConnector].toInstance(messageReceiptConnector),
+      bind[DateTimeService].toInstance(dateTimeService),
+    ).build()
+
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    Mockito.reset[Any](
+      movementRepository,
+      ernRetrievalRepository,
+      showNewMessagesConnector,
+      messageReceiptConnector,
+      dateTimeService
+    )
+  }
+
+  private def noNewMessagesResponse(ern: String) =
+    eisResponse(ern, emptyNewMessageDataXml)
+
+  private def someNewMessagesResponse(ern: String) =
+    eisResponse(ern, newMessageXmlWithIE704)
+
+  private def eisResponse(ern: String, xml: Elem) =
+    EISConsumptionResponse(
+      now,
+      ern,
+      utils.encode(xml.toString())
+    )
+
 
   "updateMessages" when {
     "there is a movement but we have never retrieved anything" when {
       "we try to retrieve messages but there are none" should {
-        "return Done" in {
-          val service = new MessageService
+        "update last retrieval time for ern" in {
+          val ern = "testErn"
+          val movement = Movement(None, "LRN", "Consignor", None)
+          when(dateTimeService.timestamp()).thenReturn(now)
+          when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
+          when(movementRepository.updateMovement(any)).thenReturn(Future.successful(Some(movement)))
+          when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+          when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+          when(showNewMessagesConnector.get(any)(any)).thenReturn(Future.successful(Right(noNewMessagesResponse(ern))))
 
-          service.updateMessages("testErn").futureValue
-          // look in db, find most recent submitted date
-          // look in new collection, last retrieved date for this ern
-          // there won't be one.
-          // call the connector to get messages for this ern
-          // record the lastRetrieved date
-          // make sure call happens etc
+          messageService.updateMessages(ern).futureValue
+
+          verify(showNewMessagesConnector).get(eqTo(ern))(any)
+          verify(movementRepository, never()).getAllBy(any)
+          verify(movementRepository, never()).updateMovement(any)
+          verify(ernRetrievalRepository).save(eqTo(ern))
+        }
+      }
+      "we try to retrieve messages and there are some" should {
+        "add messages to the movement" in {
+          val ern = "testErn"
+          val movement = Movement(None, "token", "Consignor", None)
+          val eisResponse = someNewMessagesResponse(ern)
+          val expectedMovement = movement.copy(messages = Seq(Message(eisResponse.message, "IE704", "messageId-4", eisResponse.dateTime)))
+          when(dateTimeService.timestamp()).thenReturn(now)
+          when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
+          when(movementRepository.updateMovement(any)).thenReturn(Future.successful(Some(expectedMovement)))
+          when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+          when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+          when(showNewMessagesConnector.get(any)(any)).thenReturn(Future.successful(Right(eisResponse)))
+
+          messageService.updateMessages(ern).futureValue
+
+          verify(showNewMessagesConnector).get(eqTo(ern))(any)
+          verify(movementRepository).getAllBy(eqTo(ern))
+          verify(movementRepository).updateMovement(eqTo(expectedMovement))
+          verify(ernRetrievalRepository).save(eqTo(ern))
         }
       }
     }
-    "there is a new movement since we last retrieved messages" should {
-      "go and get messages" in {
-//        MessagesService.updateMessages()
-
-      }
-    }
   }
-
 }
