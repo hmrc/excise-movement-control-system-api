@@ -16,17 +16,25 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.config
 
-import com.google.inject.AbstractModule
+import play.api.inject.Binding
+import play.api.{Configuration, Environment}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMigration
 
 import java.time.Clock
 
-class Module extends AbstractModule {
+class Module extends play.api.inject.Module {
 
-  override def configure(): Unit = {
-    bind(classOf[AppConfig]).asEagerSingleton()
-    bind(classOf[JobScheduler]).asEagerSingleton()
-    bind(classOf[Clock]).toInstance(Clock.systemUTC())
-    bind(classOf[MovementMigration]).asEagerSingleton()
-  }
+  override def bindings(environment: Environment, configuration: Configuration): collection.Seq[Binding[_]] =
+    Seq(
+      bind[AppConfig].toSelf.eagerly(),
+      bind[JobScheduler].toSelf.eagerly(),
+      bind[Clock].toInstance(Clock.systemUTC())
+    ) ++ migrationBindings(configuration)
+
+  private def migrationBindings(configuration: Configuration): Seq[Binding[_]] =
+    if (configuration.get[Boolean]("migrations-enabled")) {
+      Seq(bind[MovementMigration].toSelf.eagerly())
+    } else {
+      Seq.empty
+    }
 }
