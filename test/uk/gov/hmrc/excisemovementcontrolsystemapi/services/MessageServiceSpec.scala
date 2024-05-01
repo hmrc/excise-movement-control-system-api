@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
+import generated.NewMessagesDataResponse
 import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.Mockito
@@ -31,6 +32,7 @@ import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageReceiptConnector, ShowNewMessagesConnector}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.NewMessagesXml
+import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
@@ -54,6 +56,7 @@ class MessageServiceSpec extends PlaySpec
   private val messageReceiptConnector = mock[MessageReceiptConnector]
   private val dateTimeService = mock[DateTimeService]
   private val messageService = app.injector.instanceOf[MessageService]
+  private val ieMessageFactory = app.injector.instanceOf[IEMessageFactory]
   private val utils = new EmcsUtils
   private val now = Instant.now
   private implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -118,7 +121,11 @@ class MessageServiceSpec extends PlaySpec
           val ern = "testErn"
           val movement = Movement(None, "token", "Consignor", None)
           val eisResponse = someNewMessagesResponse(ern)
-          val expectedMovement = movement.copy(messages = Seq(Message(eisResponse.message, "IE704", "messageId-4", eisResponse.dateTime)))
+          val decodedMessage = utils.decode(eisResponse.message)
+          val newMessageDataResponse = scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
+          val IE704Message = ieMessageFactory.createIEMessage(newMessageDataResponse.Messages.messagesoption.head)
+          val expectedMovement = movement.copy(messages = Seq(Message(utils.encode(IE704Message.toXml.toString()), "IE704", "messageId-4", eisResponse.dateTime)))
+
           when(dateTimeService.timestamp()).thenReturn(now)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
           when(movementRepository.updateMovement(any)).thenReturn(Future.successful(Some(expectedMovement)))
