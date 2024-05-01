@@ -56,7 +56,7 @@ class ErnRetrievalRepository @Inject()
       Filters.eq("ern", ern),
       ErnRetrieval(ern, timeService.timestamp()),
       ReplaceOptions().upsert(true)
-    ).toFuture().map(_ => done())
+    ).toFuture().map(_ => Done)
   }
 }
 
