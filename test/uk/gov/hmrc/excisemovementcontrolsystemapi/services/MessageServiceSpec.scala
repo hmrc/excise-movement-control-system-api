@@ -140,6 +140,31 @@ class MessageServiceSpec extends PlaySpec
           verify(movementRepository).updateMovement(eqTo(expectedMovement))
           verify(ernRetrievalRepository).save(eqTo(ern))
         }
+        "add messages to only the movement with the right LRN" in {
+          val ern = "testErn"
+          val movement1 = Movement(None, "token", "Consignor", None)
+          val movement2 = Movement(None, "lrn2", "consignor", None)
+          val eisResponse = someNewMessagesResponse(ern)
+          val decodedMessage = utils.decode(eisResponse.message)
+          val newMessageDataResponse = scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
+          val IE704Message = ieMessageFactory.createIEMessage(newMessageDataResponse.Messages.messagesoption.head)
+          val expectedMovement = movement1.copy(messages = Seq(Message(utils.encode(IE704Message.toXml.toString()), "IE704", "messageId-4", eisResponse.dateTime)))
+
+          when(dateTimeService.timestamp()).thenReturn(now)
+          when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement1, movement2)))
+          when(movementRepository.updateMovement(any)).thenReturn(Future.successful(Some(expectedMovement)))
+          when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+          when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+          when(showNewMessagesConnector.get(any)(any)).thenReturn(Future.successful(Right(eisResponse)))
+
+          messageService.updateMessages(ern).futureValue
+
+          verify(showNewMessagesConnector).get(eqTo(ern))(any)
+          verify(movementRepository).getAllBy(eqTo(ern))
+          verify(movementRepository, never).updateMovement(movement2.copy(messages = Seq(Message(utils.encode(IE704Message.toXml.toString()), "IE704", "messageId-4", eisResponse.dateTime))))
+          verify(movementRepository).updateMovement(eqTo(expectedMovement))
+          verify(ernRetrievalRepository).save(eqTo(ern))
+        }
       }
     }
   }

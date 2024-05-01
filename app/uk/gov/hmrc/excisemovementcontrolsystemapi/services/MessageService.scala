@@ -53,10 +53,14 @@ class MessageService @Inject
 
   private def updateMovements(ern: String, messages: Seq[IEMessage]): Future[Done] = {
     if (messages.nonEmpty) {
-      movementRepository.getAllBy(ern).flatMap { movements =>
-        movements.traverse { movement =>
-          val updatedMovement = movement.copy(messages = messages.map(m => convertMessage(m)))
-          movementRepository.updateMovement(updatedMovement)
+      movementRepository.getAllBy(ern).map { movements =>
+        messages.groupBy { message =>
+          movements.find(movement => message.lrnEquals(movement.localReferenceNumber))
+        }.toSeq.traverse { case (maybeMovement, messages) =>
+          maybeMovement.map { movement =>
+            val updatedMovement = movement.copy(messages = messages.map(m => convertMessage(m)))
+            movementRepository.updateMovement(updatedMovement)
+          }.getOrElse(???)
         }
       }
     }.as(Done) else {
