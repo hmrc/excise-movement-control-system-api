@@ -16,17 +16,97 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
+import cats.implicits.toFunctorOps
+import generated.NewMessagesDataResponse
 import org.apache.pekko.Done
+import play.api.Configuration
+import play.api.http.Status.OK
+import play.api.libs.json.{Json, Reads}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.Service
+import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptSuccessResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService._
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
+import uk.gov.hmrc.http.client.HttpClientV2
 
+import java.nio.charset.StandardCharsets
+import java.util.Base64
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 
 @Singleton
-class MessageConnector @Inject() () {
+class MessageConnector @Inject() (
+                                   configuration: Configuration,
+                                   httpClient: HttpClientV2,
+                                   emcsUtils: EmcsUtils,
+                                   messageFactory: IEMessageFactory,
+                                   dateTimeService: DateTimeService
+                                 )(implicit ec: ExecutionContext) {
 
-  def getNewMessages(ern: String)(implicit hc: HeaderCarrier): Future[Seq[IEMessage]] = ???
+  private val service: Service = configuration.get[Service]("microservice.services.eis")
+  private val bearerToken: String = configuration.get[String]("microservice.services.eis.messages-bearer-token")
 
-  def acknowledgeMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] = ???
+  def getNewMessages(ern: String)(implicit hc: HeaderCarrier): Future[Seq[IEMessage]] = {
+
+    val correlationId = emcsUtils.generateCorrelationId
+    val timestamp = dateTimeService.timestamp().asStringInMilliseconds
+
+    httpClient.put(url"${service.baseUrl}/emcs/messages/v1/show-new-messages?exciseregistrationnumber=$ern")
+      .setHeader("X-Forwarded-Host" -> "MDTP")
+      .setHeader("X-Correlation-Id" -> correlationId)
+      .setHeader("Source" -> "APIP")
+      .setHeader("DateTime" -> timestamp)
+      .setHeader("Authorization" -> s"Bearer $bearerToken")
+      .execute[HttpResponse]
+      .flatMap { response =>
+        if (response.status == OK) Future.fromTry {
+          for {
+            response <- parseJson[EISConsumptionResponse](response.body)
+            messages <- getMessages(response)
+          } yield messages
+        } else {
+          Future.failed(new RuntimeException("Invalid status returned"))
+        }
+      }
+  }
+
+  def acknowledgeMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] = {
+
+    val correlationId = emcsUtils.generateCorrelationId
+    val timestamp = dateTimeService.timestamp().asStringInMilliseconds
+
+    httpClient.put(url"${service.baseUrl}/emcs/messages/v1/message-receipt?exciseregistrationnumber=$ern")
+      .setHeader("X-Forwarded-Host" -> "MDTP")
+      .setHeader("X-Correlation-Id" -> correlationId)
+      .setHeader("Source" -> "APIP")
+      .setHeader("DateTime" -> timestamp)
+      .setHeader("Authorization" -> s"Bearer $bearerToken")
+      .execute[HttpResponse]
+      .flatMap { response =>
+        if (response.status == OK) Future.fromTry {
+          parseJson[MessageReceiptSuccessResponse](response.body).as(Done)
+        } else {
+          Future.failed(new RuntimeException("Invalid status returned"))
+        }
+      }
+  }
+
+  private def parseJson[A](string: String)(implicit reads: Reads[A]): Try[A] =
+    for {
+      json     <- Try(Json.parse(string))
+      response <- Try(json.as[A])
+    } yield response
+
+  private def getMessages(response: EISConsumptionResponse): Try[Seq[IEMessage]] = Try {
+    val decodedMessage: String = base64Decode(response.message)
+    val xmlResponse = scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
+    xmlResponse.Messages.messagesoption.map(messageFactory.createIEMessage)
+  }
+
+  private def base64Decode(string: String): String =
+    new String(Base64.getDecoder.decode(string), StandardCharsets.UTF_8)
 }
