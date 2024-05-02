@@ -32,6 +32,7 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
+@deprecated
 class ShowNewMessagesConnector @Inject()(
                                           httpClient: HttpClient,
                                           appConfig: AppConfig,
