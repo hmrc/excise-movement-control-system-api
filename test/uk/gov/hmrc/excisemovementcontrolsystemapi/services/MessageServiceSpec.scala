@@ -38,6 +38,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUt
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.Instant
+import java.util.UUID
 import scala.concurrent.Future
 
 class MessageServiceSpec extends PlaySpec
@@ -54,7 +55,14 @@ class MessageServiceSpec extends PlaySpec
   private val messageService = app.injector.instanceOf[MessageService]
   private val utils = new EmcsUtils
   private val now = Instant.now
+  private val newId = UUID.randomUUID().toString
   private implicit val hc: HeaderCarrier = HeaderCarrier()
+
+  case object TestMovementCreator extends MovementCreator {
+    override def create(boxId: Option[String], localReferenceNumber: String, consignorId: String, consigneeId: Option[String], administrativeReferenceCode: Option[String], lastUpdated: Instant, messages: Seq[Message]): Movement = {
+      Movement(newId, boxId, localReferenceNumber, consignorId, consigneeId, administrativeReferenceCode, now, messages)
+    }
+  }
 
   override def fakeApplication(): Application = GuiceApplicationBuilder()
     .overrides(
@@ -62,6 +70,7 @@ class MessageServiceSpec extends PlaySpec
       bind[ErnRetrievalRepository].toInstance(ernRetrievalRepository),
       bind[MessageConnector].toInstance(messageConnector),
       bind[DateTimeService].toInstance(dateTimeService),
+      bind[MovementCreator].toInstance(TestMovementCreator),
     ).build()
 
   override def beforeEach(): Unit = {
@@ -140,6 +149,60 @@ class MessageServiceSpec extends PlaySpec
           verify(movementRepository).getAllBy(eqTo(ern))
           verify(movementRepository, never).updateMovement(eqTo(unexpectedMovement))
           verify(movementRepository).updateMovement(eqTo(expectedMovement))
+          verify(ernRetrievalRepository).save(eqTo(ern))
+        }
+      }
+    }
+    "there is a movement that already has messages" when {
+      "we try to retrieve new messages and there are some" should {
+        "add the new messages to the movement" in {
+          val ern = "testErn"
+          val movement = Movement(None, "lrnie8158976912", "Consignor", None, messages = Seq(Message(utils.encode(IE801.toString()), "IE801", "token", now)))
+          val messages = Seq(IE704Message.createFromXml(IE704NoArc))
+          val expectedMovement = movement.copy(messages = movement.messages ++ Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", now)))
+
+          when(dateTimeService.timestamp()).thenReturn(now)
+          when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
+          when(movementRepository.updateMovement(any)).thenReturn(Future.successful(Some(expectedMovement)))
+          when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+          when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(messages))
+
+          messageService.updateMessages(ern).futureValue
+
+          verify(messageConnector).getNewMessages(eqTo(ern))(any)
+          verify(movementRepository).getAllBy(eqTo(ern))
+          verify(movementRepository).updateMovement(eqTo(expectedMovement))
+          verify(ernRetrievalRepository).save(eqTo(ern))
+        }
+      }
+    }
+    "there is a no movement" when {
+      "we try to retrieve new messages for an ERN and there are some" should {
+        "a new movement should be created from an IE704 message" in {
+          val ern = "testErn"
+          val messages = Seq(IE704Message.createFromXml(IE704NoArc))
+          val expectedMovement = TestMovementCreator.create(
+            None,
+            "lrnie8158976912",
+            "testErn",
+            None,
+            None,
+            messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", now))
+          )
+
+          when(dateTimeService.timestamp()).thenReturn(now)
+          when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
+          when(movementRepository.saveMovement(any)).thenReturn(Future.successful(true))
+          when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+          when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(messages))
+
+          messageService.updateMessages(ern).futureValue
+
+          verify(messageConnector).getNewMessages(eqTo(ern))(any)
+          verify(movementRepository).getAllBy(eqTo(ern))
+          verify(movementRepository).saveMovement(eqTo(expectedMovement))
           verify(ernRetrievalRepository).save(eqTo(ern))
         }
       }

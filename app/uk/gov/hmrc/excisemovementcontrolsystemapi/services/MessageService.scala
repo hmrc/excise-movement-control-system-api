@@ -19,14 +19,27 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 import cats.syntax.all._
 import org.apache.pekko.Done
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE704Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HeaderCarrier
 
+import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
+
+trait MovementCreator {
+  def create(
+    boxId: Option[String],
+    localReferenceNumber: String,
+    consignorId: String,
+    consigneeId: Option[String],
+    administrativeReferenceCode: Option[String] = None,
+    lastUpdated: Instant = Instant.now,
+    messages: Seq[Message] = Seq.empty
+  ): Movement
+}
 
 @Singleton
 class MessageService @Inject
@@ -35,7 +48,8 @@ class MessageService @Inject
   ernRetrievalRepository: ErnRetrievalRepository,
   messageConnector: MessageConnector,
   dateTimeService: DateTimeService,
-  emcsUtils: EmcsUtils
+  emcsUtils: EmcsUtils,
+  movementCreator: MovementCreator = Movement.apply
 )(implicit executionContext: ExecutionContext) {
 
   def updateMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] = {
@@ -51,13 +65,18 @@ class MessageService @Inject
     if (messages.nonEmpty) {
       movementRepository.getAllBy(ern).map { movements =>
         messages.groupBy { message =>
-          (movements.find(movement => message.lrnEquals(movement.localReferenceNumber)),
-            movements.find(movement => movement.administrativeReferenceCode.exists(arc => message.administrativeReferenceCode.flatten.contains(arc))))
-        }.toSeq.traverse {
-          case ((Some(maybeLrn), _), messages) =>
-            updateMovement(maybeLrn, messages)
-          case ((_, Some(maybeArc)), messages) =>
-            updateMovement(maybeArc, messages)
+          lazy val arcMovement = findByArc(movements, message)
+          lazy val lrnMovement = findByLrn(movements, message)
+          arcMovement orElse lrnMovement
+        }.toSeq.traverse { case (maybeMovement, messages) =>
+          maybeMovement.map { m =>
+            val updatedMovement = m.copy(messages = m.messages ++ messages.map(convertMessage))
+            movementRepository.updateMovement(updatedMovement)
+          }.getOrElse {
+            messages.traverse {
+              case ie704: IE704Message => createMovementFromIE704(ern, ie704)
+            }
+          }
         }
       }
     }.as(Done) else {
@@ -65,9 +84,28 @@ class MessageService @Inject
     }
   }
 
-  private def updateMovement(movement: Movement, messages: Seq[IEMessage]) = {
-    val updatedMovement = movement.copy(messages = messages.map(convertMessage))
-    movementRepository.updateMovement(updatedMovement)
+  private def createMovementFromIE704(consignor: String, message: IE704Message): Future[Option[Movement]] = {
+    val movement = movementCreator.create(
+      None,
+      message.localReferenceNumber.get,
+      consignor,
+      None,
+      administrativeReferenceCode = message.administrativeReferenceCode.head,
+      messages = Seq(convertMessage(message))
+    )
+    movementRepository.saveMovement(movement).as(Option(movement))
+  }
+
+  private def findByArc(movements: Seq[Movement], message: IEMessage): Option[Movement] = {
+    movements.find(movement =>
+      movement.administrativeReferenceCode.exists(arc =>
+        message.administrativeReferenceCode.flatten.contains(arc)
+      )
+    )
+  }
+
+  private def findByLrn(movements: Seq[Movement], message: IEMessage): Option[Movement] = {
+    movements.find(movement => message.lrnEquals(movement.localReferenceNumber))
   }
 
   private def convertMessage(input: IEMessage): Message = {
