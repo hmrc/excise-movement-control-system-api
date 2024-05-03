@@ -32,7 +32,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessageGeneratorFactory}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE704Message, IE801Message}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE704Message, IE801Message, IE802Message, IE829Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
@@ -90,7 +90,7 @@ class MessageServiceSpec extends PlaySpec
           val movement = Movement(None, "LRN", "Consignor", None)
           when(dateTimeService.timestamp()).thenReturn(now)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
-          when(movementRepository.updateMovement(any)).thenReturn(Future.successful(Some(movement)))
+          when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(Seq.empty))
@@ -99,7 +99,7 @@ class MessageServiceSpec extends PlaySpec
 
           verify(messageConnector).getNewMessages(eqTo(ern))(any)
           verify(movementRepository, never()).getAllBy(any)
-          verify(movementRepository, never()).updateMovement(any)
+          verify(movementRepository, never()).save(any)
           verify(ernRetrievalRepository).save(eqTo(ern))
         }
       }
@@ -116,7 +116,7 @@ class MessageServiceSpec extends PlaySpec
 
           when(dateTimeService.timestamp()).thenReturn(now)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(lrnMovement, notLrnMovement)))
-          when(movementRepository.updateMovement(any)).thenReturn(Future.successful(Some(expectedMovement)))
+          when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(messages))
@@ -125,8 +125,8 @@ class MessageServiceSpec extends PlaySpec
 
           verify(messageConnector).getNewMessages(eqTo(ern))(any)
           verify(movementRepository).getAllBy(eqTo(ern))
-          verify(movementRepository, never).updateMovement(eqTo(unexpectedMovement))
-          verify(movementRepository).updateMovement(eqTo(expectedMovement))
+          verify(movementRepository, never).save(eqTo(unexpectedMovement))
+          verify(movementRepository).save(eqTo(expectedMovement))
           verify(ernRetrievalRepository).save(eqTo(ern))
         }
         "add messages to only the movement with the right ARC" in {
@@ -141,7 +141,7 @@ class MessageServiceSpec extends PlaySpec
 
           when(dateTimeService.timestamp()).thenReturn(now)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(arcMovement, notArcMovement)))
-          when(movementRepository.updateMovement(any)).thenReturn(Future.successful(Some(expectedMovement)))
+          when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(messages))
@@ -150,8 +150,8 @@ class MessageServiceSpec extends PlaySpec
 
           verify(messageConnector).getNewMessages(eqTo(ern))(any)
           verify(movementRepository).getAllBy(eqTo(ern))
-          verify(movementRepository, never).updateMovement(eqTo(unexpectedMovement))
-          verify(movementRepository).updateMovement(eqTo(expectedMovement))
+          verify(movementRepository, never).save(eqTo(unexpectedMovement))
+          verify(movementRepository).save(eqTo(expectedMovement))
           verify(ernRetrievalRepository).save(eqTo(ern))
         }
       }
@@ -169,7 +169,7 @@ class MessageServiceSpec extends PlaySpec
 
           when(dateTimeService.timestamp()).thenReturn(now)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
-          when(movementRepository.updateMovement(any)).thenReturn(Future.successful(Some(expectedMovement)))
+          when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(messages))
@@ -178,7 +178,7 @@ class MessageServiceSpec extends PlaySpec
 
           verify(messageConnector).getNewMessages(eqTo(ern))(any)
           verify(movementRepository).getAllBy(eqTo(ern))
-          verify(movementRepository).updateMovement(eqTo(expectedMovement))
+          verify(movementRepository).save(eqTo(expectedMovement))
           verify(ernRetrievalRepository).save(eqTo(ern))
         }
       }
@@ -200,7 +200,7 @@ class MessageServiceSpec extends PlaySpec
 
           when(dateTimeService.timestamp()).thenReturn(now)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
-          when(movementRepository.saveMovement(any)).thenReturn(Future.successful(true))
+          when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(messages))
@@ -209,7 +209,7 @@ class MessageServiceSpec extends PlaySpec
 
           verify(messageConnector).getNewMessages(eqTo(ern))(any)
           verify(movementRepository).getAllBy(eqTo(ern))
-          verify(movementRepository).saveMovement(eqTo(expectedMovement))
+          verify(movementRepository).save(eqTo(expectedMovement))
           verify(ernRetrievalRepository).save(eqTo(ern))
         }
         "a new movement should be created from an IE801 message" in {
@@ -227,7 +227,7 @@ class MessageServiceSpec extends PlaySpec
 
           when(dateTimeService.timestamp()).thenReturn(now)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
-          when(movementRepository.saveMovement(any)).thenReturn(Future.successful(true))
+          when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(messages))
@@ -236,10 +236,89 @@ class MessageServiceSpec extends PlaySpec
 
           verify(messageConnector).getNewMessages(eqTo(ern))(any)
           verify(movementRepository).getAllBy(eqTo(ern))
-          verify(movementRepository).saveMovement(eqTo(expectedMovement))
+          verify(movementRepository).save(eqTo(expectedMovement))
+          verify(ernRetrievalRepository).save(eqTo(ern))
+        }
+        "a single new movement should be created when there are multiple messages for the same ern" in {
+          val ern = "testErn"
+          val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
+          val ie802 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE802, "GB0002", administrativeReferenceCode = Some("23XI00000000000000012")))
+          val messages = Seq(IE801Message.createFromXml(ie801), IE802Message.createFromXml(ie802))
+          val expectedMovement = create(
+            None,
+            "lrnie8158976912",
+            "testErn",
+            Some("testConsignee"),
+            Some("23XI00000000000000012"),
+            messages = Seq(
+              Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", now),
+              Message(utils.encode(messages(1).toXml.toString()), "IE802", "GB0002", now))
+          )
+
+          when(dateTimeService.timestamp()).thenReturn(now)
+          when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
+          when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+          when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+          when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(messages))
+
+          messageService.updateMessages(ern).futureValue
+
+          verify(messageConnector).getNewMessages(eqTo(ern))(any)
+          verify(movementRepository).getAllBy(eqTo(ern))
+          verify(movementRepository).save(eqTo(expectedMovement))
           verify(ernRetrievalRepository).save(eqTo(ern))
         }
       }
     }
   }
+
+//  "groupMessagesByArc" should {
+//    "group messages by Arc" in {
+//
+//      val ern = "testErn"
+//      val arc1 = "23XI00000000000000012"
+//      val arc2 = "23XI00000000000000013"
+//      val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some(arc1), Some("lrnie8158976912")))
+//      val ie802 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE802, "GB0002", administrativeReferenceCode = Some(arc1)))
+//      val ie801a = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some(arc2), Some("lrnie8158976912")))
+//      val messages = Seq(IE801Message.createFromXml(ie801), IE802Message.createFromXml(ie802), IE801Message.createFromXml(ie801a))
+//
+//      val result = messageService.groupMessagesByArc(messages)
+//
+//      result mustBe Map(
+//        arc1 -> Seq(IE801Message.createFromXml(ie801), IE802Message.createFromXml(ie802)),
+//        arc2 -> Seq(IE801Message.createFromXml(ie801a))
+//      )
+//    }
+//    "group lots of messages by lots of arcs" in {
+//      val ern = "testErn"
+//      val arc1 = "23XI00000000000000012"
+//      val arc2 = "23XI00000000000000013"
+//
+//      val IE829arc1 = "23XI00000000000056339"
+//      val IE829arc2 = "23XI00000000000056340"
+//
+//      val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some(arc1), Some("lrnie8158976912")))
+//      val ie802 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE802, "GB0002", administrativeReferenceCode = Some(arc1)))
+//      val ie801a = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some(arc2), Some("lrnie8158976912")))
+//      val ie829 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE829,"GB0004",Some("testConsignee")))
+//      val messages = Seq(
+//        IE801Message.createFromXml(ie801),
+//        IE802Message.createFromXml(ie802),
+//        IE801Message.createFromXml(ie801a),
+//        IE829Message.createFromXml(ie829))
+//
+//      val result = messageService.groupMessagesByArc(messages)
+//
+//      result mustBe Map(
+//        arc1 -> Seq(IE801Message.createFromXml(ie801), IE802Message.createFromXml(ie802)),
+//        arc2 -> Seq(IE801Message.createFromXml(ie801a)),
+//        IE829arc1 -> Seq(IE829Message.createFromXml(ie829)),
+//        IE829arc2 -> Seq(IE829Message.createFromXml(ie829))
+//      )
+//    }
+//  }
 }
+
+

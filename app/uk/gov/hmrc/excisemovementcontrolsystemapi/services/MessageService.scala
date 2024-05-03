@@ -62,31 +62,94 @@ class MessageService @Inject
   }
 
   private def updateMovements(ern: String, messages: Seq[IEMessage]): Future[Done] = {
+
     if (messages.nonEmpty) {
       movementRepository.getAllBy(ern).map { movements =>
-        messages.groupBy { message =>
-          lazy val arcMovement = findByArc(movements, message)
-          lazy val lrnMovement = findByLrn(movements, message)
-          arcMovement orElse lrnMovement
-        }.toSeq.traverse { case (maybeMovement, messages) =>
-          maybeMovement.map { m =>
-            val updatedMovement = m.copy(messages = m.messages ++ messages.map(convertMessage))
-            movementRepository.updateMovement(updatedMovement)
-          }.getOrElse {
-            messages.traverse {
-              case ie704: IE704Message => createMovementFromIE704(ern, ie704)
-              case ie801: IE801Message => createMovementFromIE801(ern, ie801)
-            }
-          }
-        }
-      }
-    }.as(Done) else {
+
+        messages.foldLeft(Seq.empty[Movement]) { (updatedMovements, message) =>
+
+          val movement = findByArc(updatedMovements, message) orElse
+            findByLrn(updatedMovements, message) orElse
+            findByArc(movements, message) orElse
+            findByLrn(movements, message)
+
+          (
+            movement.map { movement =>
+              movement.copy(messages = movement.messages :+ convertMessage(message))
+            }.getOrElse {
+              message match {
+                case ie704: IE704Message => createMovementFromIE704(ern, ie704)
+                case ie801: IE801Message => createMovementFromIE801(ern, ie801)
+                case _ => ???
+              }
+            } +: updatedMovements
+            ).distinctBy(_._id)
+        }.traverse(movement => movementRepository.save(movement))
+      }.as(Done)
+    } else {
       Future.successful(Done)
     }
   }
 
-  private def createMovementFromIE704(consignor: String, message: IE704Message): Future[Option[Movement]] = {
-    val movement = movementCreator.create(
+//
+//    if (messages.nonEmpty) {
+//      movementRepository.getAllBy(ern).map { movements =>
+//        messages.groupBy { message =>
+//          lazy val arcMovement = findByArc(movements, message)
+//          lazy val lrnMovement = findByLrn(movements, message)
+//          arcMovement orElse lrnMovement
+//        }.toSeq.traverse { case (maybeMovement, messages) =>
+//          ifThereIsAMovement(maybeMovement).getOrElse {
+////            ifThereIsNoMovement(messages)
+//                      ???
+//          }
+//        }
+//      }
+//    }.as(Done) else {
+//      Future.successful(Done)
+//    }
+
+
+//    def ifThereIsAMovement(maybeMovement: Option[Movement]) = {
+//      maybeMovement.map { m =>
+//        val updatedMovement = m.copy(messages = m.messages ++ messages.map(convertMessage))
+//        movementRepository.updateMovement(updatedMovement)
+//      }
+//    }
+
+//    def ifThereIsNoMovement(messages: Seq[IEMessage]) = {
+//      // here group by arc or lrn here again
+//      //      messages.groupBy(_.administrativeReferenceCode) ??? how? arc is a Seq[Option]
+//
+//      messages.traverse {
+//        case ie704: IE704Message => createMovementFromIE704(ern, ie704)
+//        case ie801: IE801Message => createMovementFromIE801(ern, ie801)
+//      }
+//    }
+//  }
+
+//  def groupMessagesByArc(messages: Seq[IEMessage]): Map[String, Seq[IEMessage]] = {
+//
+//    // arc is a seq opt because some message types can have multiple arcs
+//    // this is because they send some messages by batch- same ERN but different arcs
+//
+//    // Seq[IEMessage] => Seq[IEMessage that has only 1 Option of arc in not a seq]
+//
+//    val thing2 = messages.groupBy(_.administrativeReferenceCode.flatten.head)
+//
+//    // oh you just do this it's simple..
+//
+//    println(thing2)
+//    //
+////    HashMap(
+////      List(23XI00000000000000013) -> List(Message type: IE801, message identifier: GB00001, LRN: Some(lrnie8158976912), ARC: List(Some(23XI00000000000000013))),
+////    List(23XI00000000000000012) -> List(Message type: IE801, message identifier: GB00001, LRN: Some(lrnie8158976912), ARC: List(Some(23XI00000000000000012)), Message type: IE802, message identifier: GB0002, ARC: List(Some(23XI00000000000000012))))
+////
+//    thing2
+//  }
+
+  private def createMovementFromIE704(consignor: String, message: IE704Message): Movement = {
+    movementCreator.create(
       None,
       message.localReferenceNumber.get,
       consignor,
@@ -94,11 +157,10 @@ class MessageService @Inject
       administrativeReferenceCode = message.administrativeReferenceCode.head,
       messages = Seq(convertMessage(message))
     )
-    movementRepository.saveMovement(movement).as(Option(movement))
   }
 
-  private def createMovementFromIE801(consignor: String, message: IE801Message): Future[Option[Movement]] = {
-    val movement = movementCreator.create(
+  private def createMovementFromIE801(consignor: String, message: IE801Message): Movement = {
+    movementCreator.create(
       None,
       message.localReferenceNumber.get,
       consignor,
@@ -106,7 +168,6 @@ class MessageService @Inject
       administrativeReferenceCode = message.administrativeReferenceCode.head,
       messages = Seq(convertMessage(message))
     )
-    movementRepository.saveMovement(movement).as(Option(movement))
   }
 
   private def findByArc(movements: Seq[Movement], message: IEMessage): Option[Movement] = {
