@@ -30,8 +30,9 @@ import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE704Message
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessageGeneratorFactory}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE704Message, IE801Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
@@ -45,8 +46,8 @@ class MessageServiceSpec extends PlaySpec
   with ScalaFutures
   with IntegrationPatience
   with GuiceOneAppPerSuite
-  with TestXml
-  with BeforeAndAfterEach {
+  with BeforeAndAfterEach
+  with MovementCreator {
 
   private val movementRepository = mock[MovementRepository]
   private val ernRetrievalRepository = mock[ErnRetrievalRepository]
@@ -58,10 +59,8 @@ class MessageServiceSpec extends PlaySpec
   private val newId = UUID.randomUUID().toString
   private implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  case object TestMovementCreator extends MovementCreator {
-    override def create(boxId: Option[String], localReferenceNumber: String, consignorId: String, consigneeId: Option[String], administrativeReferenceCode: Option[String], lastUpdated: Instant, messages: Seq[Message]): Movement = {
-      Movement(newId, boxId, localReferenceNumber, consignorId, consigneeId, administrativeReferenceCode, now, messages)
-    }
+  override def create(boxId: Option[String], localReferenceNumber: String, consignorId: String, consigneeId: Option[String], administrativeReferenceCode: Option[String], lastUpdated: Instant, messages: Seq[Message]): Movement = {
+    Movement(newId, boxId, localReferenceNumber, consignorId, consigneeId, administrativeReferenceCode, now, messages)
   }
 
   override def fakeApplication(): Application = GuiceApplicationBuilder()
@@ -70,7 +69,7 @@ class MessageServiceSpec extends PlaySpec
       bind[ErnRetrievalRepository].toInstance(ernRetrievalRepository),
       bind[MessageConnector].toInstance(messageConnector),
       bind[DateTimeService].toInstance(dateTimeService),
-      bind[MovementCreator].toInstance(TestMovementCreator),
+      bind[MovementCreator].toInstance(this),
     ).build()
 
   override def beforeEach(): Unit = {
@@ -107,11 +106,13 @@ class MessageServiceSpec extends PlaySpec
       "we try to retrieve messages and there are some" should {
         "add messages to only the movement with the right LRN" in {
           val ern = "testErn"
-          val lrnMovement = Movement(None, "lrnie8158976912", "Consignor", None)
-          val notLrnMovement = Movement(None, "notTheLrn", "consignor", None)
-          val messages = Seq(IE704Message.createFromXml(IE704NoArc))
-          val expectedMovement = lrnMovement.copy(messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", now)))
-          val unexpectedMovement = notLrnMovement.copy(messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", now)))
+          val lrnMovement = Movement(None, "lrnie8158976912", ern, None)
+          val notLrnMovement = Movement(None, "notTheLrn", ern, None)
+          val ie704 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some("lrnie8158976912")))
+          val messages = Seq(IE704Message.createFromXml(ie704))
+          val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", now))
+          val expectedMovement = lrnMovement.copy(messages = expectedMessages)
+          val unexpectedMovement = notLrnMovement.copy(messages = expectedMessages)
 
           when(dateTimeService.timestamp()).thenReturn(now)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(lrnMovement, notLrnMovement)))
@@ -130,11 +131,13 @@ class MessageServiceSpec extends PlaySpec
         }
         "add messages to only the movement with the right ARC" in {
           val ern = "testErn"
-          val arcMovement = Movement(None, "notTheLrn", "Consignor", None, administrativeReferenceCode = Some("23XI00000000000000012"))
-          val notArcMovement = Movement(None, "notTheLrn", "consignor", None)
-          val messages = Seq(IE704Message.createFromXml(IE704))
-          val expectedMovement = arcMovement.copy(messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", now)))
-          val unexpectedMovement = notArcMovement.copy(messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", now)))
+          val arcMovement = Movement(None, "notTheLrn", ern, None, administrativeReferenceCode = Some("23XI00000000000000012"))
+          val notArcMovement = Movement(None, "notTheLrn", ern, None)
+          val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
+          val messages = Seq(IE801Message.createFromXml(ie801))
+          val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", now))
+          val expectedMovement = arcMovement.copy(messages = expectedMessages)
+          val unexpectedMovement = notArcMovement.copy(messages = expectedMessages)
 
           when(dateTimeService.timestamp()).thenReturn(now)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(arcMovement, notArcMovement)))
@@ -157,9 +160,12 @@ class MessageServiceSpec extends PlaySpec
       "we try to retrieve new messages and there are some" should {
         "add the new messages to the movement" in {
           val ern = "testErn"
-          val movement = Movement(None, "lrnie8158976912", "Consignor", None, messages = Seq(Message(utils.encode(IE801.toString()), "IE801", "token", now)))
-          val messages = Seq(IE704Message.createFromXml(IE704NoArc))
-          val expectedMovement = movement.copy(messages = movement.messages ++ Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", now)))
+          val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
+          val ie704 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some("lrnie8158976912")))
+          val movement = Movement(None, "lrnie8158976912", ern, Some("testConsignee"), Some("23XI00000000000000012"), messages = Seq(Message(utils.encode(ie801.toString()), "IE801", "GB00001", now)))
+          val messages = Seq(IE704Message.createFromXml(ie704))
+          val expectedMessages = movement.messages ++ Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", now))
+          val expectedMovement = movement.copy(messages = expectedMessages)
 
           when(dateTimeService.timestamp()).thenReturn(now)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
@@ -181,14 +187,42 @@ class MessageServiceSpec extends PlaySpec
       "we try to retrieve new messages for an ERN and there are some" should {
         "a new movement should be created from an IE704 message" in {
           val ern = "testErn"
-          val messages = Seq(IE704Message.createFromXml(IE704NoArc))
-          val expectedMovement = TestMovementCreator.create(
+          val ie704 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some("lrnie8158976912")))
+          val messages = Seq(IE704Message.createFromXml(ie704))
+          val expectedMovement = create(
             None,
             "lrnie8158976912",
             "testErn",
             None,
             None,
             messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", now))
+          )
+
+          when(dateTimeService.timestamp()).thenReturn(now)
+          when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
+          when(movementRepository.saveMovement(any)).thenReturn(Future.successful(true))
+          when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+          when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(messages))
+
+          messageService.updateMessages(ern).futureValue
+
+          verify(messageConnector).getNewMessages(eqTo(ern))(any)
+          verify(movementRepository).getAllBy(eqTo(ern))
+          verify(movementRepository).saveMovement(eqTo(expectedMovement))
+          verify(ernRetrievalRepository).save(eqTo(ern))
+        }
+        "a new movement should be created from an IE801 message" in {
+          val ern = "testErn"
+          val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
+          val messages = Seq(IE801Message.createFromXml(ie801))
+          val expectedMovement = create(
+            None,
+            "lrnie8158976912",
+            "testErn",
+            Some("testConsignee"),
+            Some("23XI00000000000000012"),
+            messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", now))
           )
 
           when(dateTimeService.timestamp()).thenReturn(now)

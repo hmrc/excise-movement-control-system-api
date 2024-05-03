@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 import cats.syntax.all._
 import org.apache.pekko.Done
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE704Message, IEMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE704Message, IE801Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
@@ -75,6 +75,7 @@ class MessageService @Inject
           }.getOrElse {
             messages.traverse {
               case ie704: IE704Message => createMovementFromIE704(ern, ie704)
+              case ie801: IE801Message => createMovementFromIE801(ern, ie801)
             }
           }
         }
@@ -90,6 +91,18 @@ class MessageService @Inject
       message.localReferenceNumber.get,
       consignor,
       None,
+      administrativeReferenceCode = message.administrativeReferenceCode.head,
+      messages = Seq(convertMessage(message))
+    )
+    movementRepository.saveMovement(movement).as(Option(movement))
+  }
+
+  private def createMovementFromIE801(consignor: String, message: IE801Message): Future[Option[Movement]] = {
+    val movement = movementCreator.create(
+      None,
+      message.localReferenceNumber.get,
+      consignor,
+      message.consigneeId,
       administrativeReferenceCode = message.administrativeReferenceCode.head,
       messages = Seq(convertMessage(message))
     )
