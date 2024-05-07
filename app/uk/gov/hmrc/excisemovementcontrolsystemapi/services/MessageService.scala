@@ -19,13 +19,12 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 import cats.syntax.all._
 import org.apache.pekko.Done
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE704Message, IE801Message, IEMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE704Message, IE801Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HeaderCarrier
 
-import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -42,13 +41,31 @@ class MessageService @Inject
 
   def updateMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] = {
     for {
-      _ <- ernRetrievalRepository.getLastRetrieved(ern)
-      messages <- messageConnector.getNewMessages(ern)
-      _ <- updateMovements(ern, messages.messages)
+      _ <- ernRetrievalRepository.getLastRetrieved(ern) // TODO throttle
+      _ <- processNewMessages(ern)
       _ <- ernRetrievalRepository.save(ern)
-      _ <- if (messages.messages.nonEmpty) messageConnector.acknowledgeMessages(ern) else Future.unit
     } yield Done
   }
+
+  private def processNewMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] =
+    for {
+      response <- messageConnector.getNewMessages(ern)
+      _        <- updateMovements(ern, response.messages)
+      _        <- acknowledgeAndContinue(response, ern)
+    } yield Done
+
+  private def acknowledgeAndContinue(response: GetMessagesResponse, ern: String)(implicit hc: HeaderCarrier): Future[Done] =
+    if (response.messageCount == 0) {
+      Future.successful(Done)
+    } else {
+      messageConnector.acknowledgeMessages(ern).flatMap { _ =>
+        if (response.messageCount > response.messages.size) {
+          processNewMessages(ern)
+        } else {
+          Future.successful(Done)
+        }
+      }
+    }
 
   private def updateMovements(ern: String, messages: Seq[IEMessage]): Future[Done] = {
 
