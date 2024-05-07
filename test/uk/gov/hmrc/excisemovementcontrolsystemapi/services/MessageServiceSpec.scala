@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
-import org.mockito.{ArgumentCaptor, Mockito}
+import org.mockito.Mockito
 import org.mockito.Mockito.never
 import org.mockito.MockitoSugar.{times, verify, when}
 import org.mockito.captor.ArgCaptor
@@ -47,22 +47,20 @@ class MessageServiceSpec extends PlaySpec
   with ScalaFutures
   with IntegrationPatience
   with GuiceOneAppPerSuite
-  with BeforeAndAfterEach
-  with MovementCreator {
+  with BeforeAndAfterEach {
 
   private val movementRepository = mock[MovementRepository]
   private val ernRetrievalRepository = mock[ErnRetrievalRepository]
   private val messageConnector = mock[MessageConnector]
   private val dateTimeService = mock[DateTimeService]
-  private val messageService = app.injector.instanceOf[MessageService]
+  private val correlationIdService = mock[CorrelationIdService]
+
+  private lazy val messageService = app.injector.instanceOf[MessageService]
+
   private val utils = new EmcsUtils
   private val now = Instant.now
   private val newId = UUID.randomUUID().toString
   private implicit val hc: HeaderCarrier = HeaderCarrier()
-
-  override def create(boxId: Option[String], localReferenceNumber: String, consignorId: String, consigneeId: Option[String], administrativeReferenceCode: Option[String], lastUpdated: Instant, messages: Seq[Message]): Movement = {
-    Movement(newId, boxId, localReferenceNumber, consignorId, consigneeId, administrativeReferenceCode, now, messages)
-  }
 
   override def fakeApplication(): Application = GuiceApplicationBuilder()
     .overrides(
@@ -70,7 +68,7 @@ class MessageServiceSpec extends PlaySpec
       bind[ErnRetrievalRepository].toInstance(ernRetrievalRepository),
       bind[MessageConnector].toInstance(messageConnector),
       bind[DateTimeService].toInstance(dateTimeService),
-      bind[MovementCreator].toInstance(this),
+      bind[CorrelationIdService].toInstance(correlationIdService)
     ).build()
 
   override def beforeEach(): Unit = {
@@ -236,15 +234,18 @@ class MessageServiceSpec extends PlaySpec
           val ern = "testErn"
           val ie704 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some("lrnie8158976912")))
           val messages = Seq(IE704Message.createFromXml(ie704))
-          val expectedMovement = create(
+          val expectedMovement = Movement(
+            newId,
             None,
             "lrnie8158976912",
             "testErn",
             None,
             None,
+            now,
             messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", now))
           )
 
+          when(correlationIdService.generateCorrelationId()).thenReturn(newId)
           when(dateTimeService.timestamp()).thenReturn(now)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
@@ -265,15 +266,18 @@ class MessageServiceSpec extends PlaySpec
           val ern = "testErn"
           val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
           val messages = Seq(IE801Message.createFromXml(ie801))
-          val expectedMovement = create(
+          val expectedMovement = Movement(
+            newId,
             None,
             "lrnie8158976912",
             "testErn",
             Some("testConsignee"),
             Some("23XI00000000000000012"),
+            now,
             messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", now))
           )
 
+          when(correlationIdService.generateCorrelationId()).thenReturn(newId)
           when(dateTimeService.timestamp()).thenReturn(now)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
@@ -296,17 +300,20 @@ class MessageServiceSpec extends PlaySpec
           val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
           val ie802 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE802, "GB0002", administrativeReferenceCode = Some("23XI00000000000000012")))
           val messages = Seq(IE801Message.createFromXml(ie801), IE802Message.createFromXml(ie802))
-          val expectedMovement = create(
+          val expectedMovement = Movement(
+            newId,
             None,
             "lrnie8158976912",
             "testErn",
             Some("testConsignee"),
             Some("23XI00000000000000012"),
+            now,
             messages = Seq(
               Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", now),
               Message(utils.encode(messages(1).toXml.toString()), "IE802", "GB0002", now))
           )
 
+          when(correlationIdService.generateCorrelationId()).thenReturn(newId)
           when(dateTimeService.timestamp()).thenReturn(now)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))

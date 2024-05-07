@@ -27,8 +27,9 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresent
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.PreValidateTraderRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderEISResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.CorrelationIdService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import javax.inject.Inject
@@ -37,7 +38,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class PreValidateTraderConnector @Inject()
 (
   httpClient: HttpClient,
-  emcsUtils: EmcsUtils,
+  correlationIdService: CorrelationIdService,
   appConfig: AppConfig,
   metrics: MetricRegistry,
   dateTimeService: DateTimeService
@@ -48,7 +49,7 @@ class PreValidateTraderConnector @Inject()
 
     val timer = metrics.timer("emcs.prevalidatetrader.connector.timer").time()
 
-    val correlationId = emcsUtils.generateCorrelationId
+    val correlationId = correlationIdService.generateCorrelationId
     val timestamp = dateTimeService.timestamp()
     val createdDateTime = timestamp.asStringInMilliseconds
 

@@ -29,18 +29,6 @@ import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
-trait MovementCreator {
-  def create(
-    boxId: Option[String],
-    localReferenceNumber: String,
-    consignorId: String,
-    consigneeId: Option[String],
-    administrativeReferenceCode: Option[String] = None,
-    lastUpdated: Instant = Instant.now,
-    messages: Seq[Message] = Seq.empty
-  ): Movement
-}
-
 @Singleton
 class MessageService @Inject
 (
@@ -48,8 +36,8 @@ class MessageService @Inject
   ernRetrievalRepository: ErnRetrievalRepository,
   messageConnector: MessageConnector,
   dateTimeService: DateTimeService,
+  correlationIdService: CorrelationIdService,
   emcsUtils: EmcsUtils,
-  movementCreator: MovementCreator = Movement.apply
 )(implicit executionContext: ExecutionContext) {
 
   def updateMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] = {
@@ -97,23 +85,27 @@ class MessageService @Inject
   }
 
   private def createMovementFromIE704(consignor: String, message: IE704Message): Movement = {
-    movementCreator.create(
+    Movement(
+      correlationIdService.generateCorrelationId(),
       None,
-      message.localReferenceNumber.get,
+      message.localReferenceNumber.get, // TODO remove .get
       consignor,
       None,
-      administrativeReferenceCode = message.administrativeReferenceCode.head,
+      administrativeReferenceCode = message.administrativeReferenceCode.head, // TODO remove .head
+      dateTimeService.timestamp(),
       messages = Seq(convertMessage(message))
     )
   }
 
   private def createMovementFromIE801(consignor: String, message: IE801Message): Movement = {
-    movementCreator.create(
+    Movement(
+      correlationIdService.generateCorrelationId(),
       None,
-      message.localReferenceNumber.get,
+      message.localReferenceNumber.get, // TODO remove .get
       consignor,
       message.consigneeId,
-      administrativeReferenceCode = message.administrativeReferenceCode.head,
+      administrativeReferenceCode = message.administrativeReferenceCode.head, // TODO remove .head
+      dateTimeService.timestamp(),
       messages = Seq(convertMessage(message))
     )
   }

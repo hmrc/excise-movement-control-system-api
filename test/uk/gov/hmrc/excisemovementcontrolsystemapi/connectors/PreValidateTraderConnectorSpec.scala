@@ -34,8 +34,9 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTra
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.EISHeaderTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderEISResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.CorrelationIdService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderErrorResponse, getPreValidateTraderRequest, getPreValidateTraderSuccessResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import java.time.Instant
@@ -51,13 +52,13 @@ class PreValidateTraderConnectorSpec
   protected implicit val ec: ExecutionContext = ExecutionContext.global
 
   private val mockHttpClient = mock[HttpClient]
-  private val emcsUtils = mock[EmcsUtils]
+  private val correlationIdService = mock[CorrelationIdService]
   private val dateTimeService = mock[DateTimeService]
   private val appConfig = mock[AppConfig]
 
   private val metrics = mock[MetricRegistry](RETURNS_DEEP_STUBS)
 
-  private val connector = new PreValidateTraderConnector(mockHttpClient, emcsUtils, appConfig, metrics, dateTimeService)
+  private val connector = new PreValidateTraderConnector(mockHttpClient, correlationIdService, appConfig, metrics, dateTimeService)
   private val emcsCorrelationId = "1234566"
   private val timerContext = mock[Timer.Context]
   private val preValidateTraderBearerToken = "preValidateTraderBearerToken"
@@ -76,7 +77,7 @@ class PreValidateTraderConnectorSpec
       .thenReturn(Future.successful(Right(Right(validResponse))))
 
     when(dateTimeService.timestamp()).thenReturn(timestamp)
-    when(emcsUtils.generateCorrelationId).thenReturn(emcsCorrelationId)
+    when(correlationIdService.generateCorrelationId).thenReturn(emcsCorrelationId)
     when(appConfig.preValidateTraderUrl).thenReturn("/eis/path")
     when(appConfig.preValidateTraderBearerToken).thenReturn(preValidateTraderBearerToken)
     when(metrics.timer(any).time()) thenReturn timerContext

@@ -32,8 +32,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NonRepudiationSubmissionAccepted, NonRepudiationSubmissionFailed}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{NrsService, SubmissionMessageServiceImpl}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -49,8 +47,8 @@ class SubmissionMessageServiceSpec
 
   private val connector = mock[EISSubmissionConnector]
   private val nrsService = mock[NrsService]
-  private val emcsUtils = mock[EmcsUtils]
-  private val sut = new SubmissionMessageServiceImpl(connector, nrsService, emcsUtils)
+  private val correlationIdService = mock[CorrelationIdService]
+  private val sut = new SubmissionMessageServiceImpl(connector, nrsService, correlationIdService)
 
   private val message = mock[IE815Message]
   private val xmlBody = "<IE815>test</IE815>"
@@ -69,7 +67,7 @@ class SubmissionMessageServiceSpec
     reset(connector, nrsService)
 
     when(message.consignorId).thenReturn("1234")
-    when(emcsUtils.generateCorrelationId).thenReturn("correlationId")
+    when(correlationIdService.generateCorrelationId).thenReturn("correlationId")
     when(connector.submitMessage(any, any, any, any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "IE815", "correlationId"))))
     when(nrsService.submitNrs(any, any, any)(any))
