@@ -24,8 +24,9 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISConsumptionHeaders, EISConsumptionResponse, EISErrorMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.CorrelationIdService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
@@ -36,7 +37,7 @@ class GetMovementConnector @Inject()
 (
   httpClient: HttpClient,
   appConfig: AppConfig,
-  emcsUtils: EmcsUtils,
+  correlationIdService: CorrelationIdService,
   metrics: MetricRegistry,
   dateTimeService: DateTimeService
 )(implicit val ec: ExecutionContext) extends EISConsumptionHeaders with ResponseHandler with Logging {
@@ -47,7 +48,7 @@ class GetMovementConnector @Inject()
          )(implicit hc: HeaderCarrier): Future[Either[Result, EISConsumptionResponse]] = {
 
     val timer = metrics.timer("emcs.getmovements.timer").time()
-    val correlationId = emcsUtils.generateCorrelationId
+    val correlationId = correlationIdService.generateCorrelationId
     val createDateTime = dateTimeService.timestamp().asStringInMilliseconds
 
     httpClient.GET[HttpResponse](

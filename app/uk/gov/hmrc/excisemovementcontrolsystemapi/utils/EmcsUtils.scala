@@ -20,11 +20,9 @@ import java.lang.String.format
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest.getInstance
-import java.util.{Base64, UUID}
+import java.util.Base64
 
 class EmcsUtils {
-
-  def generateCorrelationId: String = UUID.randomUUID().toString
 
   def encode(str: String): String = {
     Base64.getEncoder.encodeToString(str.getBytes(StandardCharsets.UTF_8))

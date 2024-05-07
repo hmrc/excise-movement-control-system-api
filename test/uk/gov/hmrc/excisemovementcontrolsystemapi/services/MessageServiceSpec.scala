@@ -20,7 +20,8 @@ import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.Mockito
 import org.mockito.Mockito.never
-import org.mockito.MockitoSugar.{verify, when}
+import org.mockito.MockitoSugar.{times, verify, when}
+import org.mockito.captor.ArgCaptor
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatestplus.mockito.MockitoSugar.mock
@@ -46,22 +47,20 @@ class MessageServiceSpec extends PlaySpec
   with ScalaFutures
   with IntegrationPatience
   with GuiceOneAppPerSuite
-  with BeforeAndAfterEach
-  with MovementCreator {
+  with BeforeAndAfterEach {
 
   private val movementRepository = mock[MovementRepository]
   private val ernRetrievalRepository = mock[ErnRetrievalRepository]
   private val messageConnector = mock[MessageConnector]
   private val dateTimeService = mock[DateTimeService]
-  private val messageService = app.injector.instanceOf[MessageService]
+  private val correlationIdService = mock[CorrelationIdService]
+
+  private lazy val messageService = app.injector.instanceOf[MessageService]
+
   private val utils = new EmcsUtils
   private val now = Instant.now
   private val newId = UUID.randomUUID().toString
   private implicit val hc: HeaderCarrier = HeaderCarrier()
-
-  override def create(boxId: Option[String], localReferenceNumber: String, consignorId: String, consigneeId: Option[String], administrativeReferenceCode: Option[String], lastUpdated: Instant, messages: Seq[Message]): Movement = {
-    Movement(newId, boxId, localReferenceNumber, consignorId, consigneeId, administrativeReferenceCode, now, messages)
-  }
 
   override def fakeApplication(): Application = GuiceApplicationBuilder()
     .overrides(
@@ -69,7 +68,7 @@ class MessageServiceSpec extends PlaySpec
       bind[ErnRetrievalRepository].toInstance(ernRetrievalRepository),
       bind[MessageConnector].toInstance(messageConnector),
       bind[DateTimeService].toInstance(dateTimeService),
-      bind[MovementCreator].toInstance(this),
+      bind[CorrelationIdService].toInstance(correlationIdService)
     ).build()
 
   override def beforeEach(): Unit = {
@@ -101,6 +100,7 @@ class MessageServiceSpec extends PlaySpec
           verify(movementRepository, never()).getAllBy(any)
           verify(movementRepository, never()).save(any)
           verify(ernRetrievalRepository).save(eqTo(ern))
+          verify(messageConnector, never()).acknowledgeMessages(any)(any)
         }
       }
       "we try to retrieve messages and there are some" should {
@@ -120,6 +120,7 @@ class MessageServiceSpec extends PlaySpec
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(messages))
+          when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
           messageService.updateMessages(ern).futureValue
 
@@ -128,6 +129,7 @@ class MessageServiceSpec extends PlaySpec
           verify(movementRepository, never).save(eqTo(unexpectedMovement))
           verify(movementRepository).save(eqTo(expectedMovement))
           verify(ernRetrievalRepository).save(eqTo(ern))
+          verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
         }
         "add messages to only the movement with the right ARC" in {
           val ern = "testErn"
@@ -145,6 +147,7 @@ class MessageServiceSpec extends PlaySpec
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(messages))
+          when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
           messageService.updateMessages(ern).futureValue
 
@@ -153,6 +156,7 @@ class MessageServiceSpec extends PlaySpec
           verify(movementRepository, never).save(eqTo(unexpectedMovement))
           verify(movementRepository).save(eqTo(expectedMovement))
           verify(ernRetrievalRepository).save(eqTo(ern))
+          verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
         }
       }
     }
@@ -173,6 +177,7 @@ class MessageServiceSpec extends PlaySpec
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(messages))
+          when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
           messageService.updateMessages(ern).futureValue
 
@@ -180,6 +185,7 @@ class MessageServiceSpec extends PlaySpec
           verify(movementRepository).getAllBy(eqTo(ern))
           verify(movementRepository).save(eqTo(expectedMovement))
           verify(ernRetrievalRepository).save(eqTo(ern))
+          verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
         }
       }
     }
@@ -196,7 +202,7 @@ class MessageServiceSpec extends PlaySpec
         val movement2 = Movement(None, "???", "???", None, Some(arc2), now, Seq.empty)
         val message = IE829Message.createFromXml(ie829)
 
-        val expectedMessage = Seq(Message(utils.encode(message.toXml.toString()), "IE704", "XI000001", now))
+        val expectedMessage = Seq(Message(utils.encode(message.toXml.toString()), "IE829", "XI000001", now))
         val expectedMovement1 = movement1.copy(messages = expectedMessage)
         val expectedMovement2 = movement2.copy(messages = expectedMessage)
 
@@ -206,14 +212,20 @@ class MessageServiceSpec extends PlaySpec
         when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
         when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
         when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(Seq(message)))
+        when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
         messageService.updateMessages(ern).futureValue
 
+        val movementCaptor = ArgCaptor[Movement]
+
         verify(messageConnector).getNewMessages(eqTo(ern))(any)
         verify(movementRepository).getAllBy(eqTo(ern))
-        verify(movementRepository).save(eqTo(expectedMovement1))
-        verify(movementRepository).save(eqTo(expectedMovement2))
+        verify(movementRepository, times(2)).save(movementCaptor)
         verify(ernRetrievalRepository).save(eqTo(ern))
+        verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
+
+        movementCaptor.values.head mustBe expectedMovement1
+        movementCaptor.values(1) mustBe expectedMovement2
       }
     }
     "there is a no movement" when {
@@ -222,21 +234,25 @@ class MessageServiceSpec extends PlaySpec
           val ern = "testErn"
           val ie704 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some("lrnie8158976912")))
           val messages = Seq(IE704Message.createFromXml(ie704))
-          val expectedMovement = create(
+          val expectedMovement = Movement(
+            newId,
             None,
             "lrnie8158976912",
             "testErn",
             None,
             None,
+            now,
             messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", now))
           )
 
+          when(correlationIdService.generateCorrelationId()).thenReturn(newId)
           when(dateTimeService.timestamp()).thenReturn(now)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(messages))
+          when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
           messageService.updateMessages(ern).futureValue
 
@@ -244,26 +260,31 @@ class MessageServiceSpec extends PlaySpec
           verify(movementRepository).getAllBy(eqTo(ern))
           verify(movementRepository).save(eqTo(expectedMovement))
           verify(ernRetrievalRepository).save(eqTo(ern))
+          verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
         }
         "a new movement should be created from an IE801 message" in {
           val ern = "testErn"
           val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
           val messages = Seq(IE801Message.createFromXml(ie801))
-          val expectedMovement = create(
+          val expectedMovement = Movement(
+            newId,
             None,
             "lrnie8158976912",
             "testErn",
             Some("testConsignee"),
             Some("23XI00000000000000012"),
+            now,
             messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", now))
           )
 
+          when(correlationIdService.generateCorrelationId()).thenReturn(newId)
           when(dateTimeService.timestamp()).thenReturn(now)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(messages))
+          when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
           messageService.updateMessages(ern).futureValue
 
@@ -271,29 +292,35 @@ class MessageServiceSpec extends PlaySpec
           verify(movementRepository).getAllBy(eqTo(ern))
           verify(movementRepository).save(eqTo(expectedMovement))
           verify(ernRetrievalRepository).save(eqTo(ern))
+          verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
         }
+
         "a single new movement should be created when there are multiple messages for the same ern" in {
           val ern = "testErn"
           val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
           val ie802 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE802, "GB0002", administrativeReferenceCode = Some("23XI00000000000000012")))
           val messages = Seq(IE801Message.createFromXml(ie801), IE802Message.createFromXml(ie802))
-          val expectedMovement = create(
+          val expectedMovement = Movement(
+            newId,
             None,
             "lrnie8158976912",
             "testErn",
             Some("testConsignee"),
             Some("23XI00000000000000012"),
+            now,
             messages = Seq(
               Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", now),
               Message(utils.encode(messages(1).toXml.toString()), "IE802", "GB0002", now))
           )
 
+          when(correlationIdService.generateCorrelationId()).thenReturn(newId)
           when(dateTimeService.timestamp()).thenReturn(now)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(messages))
+          when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
           messageService.updateMessages(ern).futureValue
 
@@ -304,6 +331,9 @@ class MessageServiceSpec extends PlaySpec
         }
       }
     }
+
+    // TODO what about 829 where one movement is found and another isn't?
+    // TODO updating messages must be idempotent
   }
 }
 

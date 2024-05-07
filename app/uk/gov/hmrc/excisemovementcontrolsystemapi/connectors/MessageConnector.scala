@@ -27,10 +27,11 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptSuccessResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.CorrelationIdService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService._
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
 import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
 
 import java.nio.charset.StandardCharsets
 import java.util.Base64
@@ -42,7 +43,7 @@ import scala.util.Try
 class MessageConnector @Inject() (
                                    configuration: Configuration,
                                    httpClient: HttpClientV2,
-                                   emcsUtils: EmcsUtils,
+                                   correlationIdService: CorrelationIdService,
                                    messageFactory: IEMessageFactory,
                                    dateTimeService: DateTimeService
                                  )(implicit ec: ExecutionContext) {
@@ -52,7 +53,7 @@ class MessageConnector @Inject() (
 
   def getNewMessages(ern: String)(implicit hc: HeaderCarrier): Future[Seq[IEMessage]] = {
 
-    val correlationId = emcsUtils.generateCorrelationId
+    val correlationId = correlationIdService.generateCorrelationId
     val timestamp = dateTimeService.timestamp().asStringInMilliseconds
 
     httpClient.put(url"${service.baseUrl}/emcs/messages/v1/show-new-messages?exciseregistrationnumber=$ern")
@@ -76,7 +77,7 @@ class MessageConnector @Inject() (
 
   def acknowledgeMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] = {
 
-    val correlationId = emcsUtils.generateCorrelationId
+    val correlationId = correlationIdService.generateCorrelationId
     val timestamp = dateTimeService.timestamp().asStringInMilliseconds
 
     httpClient.put(url"${service.baseUrl}/emcs/messages/v1/message-receipt?exciseregistrationnumber=$ern")

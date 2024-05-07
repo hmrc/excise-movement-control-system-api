@@ -32,9 +32,9 @@ import scala.util.Success
 
 
 class SubmissionMessageServiceImpl @Inject()(
-  connector: EISSubmissionConnector,
-  nrsService: NrsService,
-  emcsUtils: EmcsUtils,
+                                              connector: EISSubmissionConnector,
+                                              nrsService: NrsService,
+                                              correlationIdService: CorrelationIdService,
 ) (implicit val ec: ExecutionContext) extends SubmissionMessageService with Logging {
 
 
@@ -43,7 +43,7 @@ class SubmissionMessageServiceImpl @Inject()(
               authorisedErn: String
             )(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
 
-    val correlationId = emcsUtils.generateCorrelationId
+    val correlationId = correlationIdService.generateCorrelationId
 
     for {
       submitMessageResponse <- connector.submitMessage(request.ieMessage, request.body.toString, authorisedErn, correlationId)
