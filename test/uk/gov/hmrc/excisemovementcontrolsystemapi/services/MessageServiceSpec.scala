@@ -183,6 +183,39 @@ class MessageServiceSpec extends PlaySpec
         }
       }
     }
+    "there are multiple movements for one message (an 829)" should {
+      "update all relevant movements with the message" in {
+        // 829 doesn't have consignor in it - can't make a movement from this
+        // movements created here won't get push notifications
+
+        val ern = "testErn"
+        val ie829 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE829, "XI000001", consigneeErn = Some("testConsignee")))
+        val arc1 = "23XI00000000000056339"
+        val arc2 = "23XI00000000000056340"
+        val movement1 = Movement(None, "???", "???", None, Some(arc1), now, Seq.empty)
+        val movement2 = Movement(None, "???", "???", None, Some(arc2), now, Seq.empty)
+        val message = IE829Message.createFromXml(ie829)
+
+        val expectedMessage = Seq(Message(utils.encode(message.toXml.toString()), "IE704", "XI000001", now))
+        val expectedMovement1 = movement1.copy(messages = expectedMessage)
+        val expectedMovement2 = movement2.copy(messages = expectedMessage)
+
+        when(dateTimeService.timestamp()).thenReturn(now)
+        when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement1, movement2)))
+        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+        when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+        when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(Seq(message)))
+
+        messageService.updateMessages(ern).futureValue
+
+        verify(messageConnector).getNewMessages(eqTo(ern))(any)
+        verify(movementRepository).getAllBy(eqTo(ern))
+        verify(movementRepository).save(eqTo(expectedMovement1))
+        verify(movementRepository).save(eqTo(expectedMovement2))
+        verify(ernRetrievalRepository).save(eqTo(ern))
+      }
+    }
     "there is a no movement" when {
       "we try to retrieve new messages for an ERN and there are some" should {
         "a new movement should be created from an IE704 message" in {
@@ -272,53 +305,6 @@ class MessageServiceSpec extends PlaySpec
       }
     }
   }
-
-//  "groupMessagesByArc" should {
-//    "group messages by Arc" in {
-//
-//      val ern = "testErn"
-//      val arc1 = "23XI00000000000000012"
-//      val arc2 = "23XI00000000000000013"
-//      val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some(arc1), Some("lrnie8158976912")))
-//      val ie802 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE802, "GB0002", administrativeReferenceCode = Some(arc1)))
-//      val ie801a = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some(arc2), Some("lrnie8158976912")))
-//      val messages = Seq(IE801Message.createFromXml(ie801), IE802Message.createFromXml(ie802), IE801Message.createFromXml(ie801a))
-//
-//      val result = messageService.groupMessagesByArc(messages)
-//
-//      result mustBe Map(
-//        arc1 -> Seq(IE801Message.createFromXml(ie801), IE802Message.createFromXml(ie802)),
-//        arc2 -> Seq(IE801Message.createFromXml(ie801a))
-//      )
-//    }
-//    "group lots of messages by lots of arcs" in {
-//      val ern = "testErn"
-//      val arc1 = "23XI00000000000000012"
-//      val arc2 = "23XI00000000000000013"
-//
-//      val IE829arc1 = "23XI00000000000056339"
-//      val IE829arc2 = "23XI00000000000056340"
-//
-//      val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some(arc1), Some("lrnie8158976912")))
-//      val ie802 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE802, "GB0002", administrativeReferenceCode = Some(arc1)))
-//      val ie801a = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some(arc2), Some("lrnie8158976912")))
-//      val ie829 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE829,"GB0004",Some("testConsignee")))
-//      val messages = Seq(
-//        IE801Message.createFromXml(ie801),
-//        IE802Message.createFromXml(ie802),
-//        IE801Message.createFromXml(ie801a),
-//        IE829Message.createFromXml(ie829))
-//
-//      val result = messageService.groupMessagesByArc(messages)
-//
-//      result mustBe Map(
-//        arc1 -> Seq(IE801Message.createFromXml(ie801), IE802Message.createFromXml(ie802)),
-//        arc2 -> Seq(IE801Message.createFromXml(ie801a)),
-//        IE829arc1 -> Seq(IE829Message.createFromXml(ie829)),
-//        IE829arc2 -> Seq(IE829Message.createFromXml(ie829))
-//      )
-//    }
-//  }
 }
 
 
