@@ -26,7 +26,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.Service
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptSuccessResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.CorrelationIdService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService._
@@ -51,7 +51,7 @@ class MessageConnector @Inject() (
   private val service: Service = configuration.get[Service]("microservice.services.eis")
   private val bearerToken: String = configuration.get[String]("microservice.services.eis.messages-bearer-token")
 
-  def getNewMessages(ern: String)(implicit hc: HeaderCarrier): Future[Seq[IEMessage]] = {
+  def getNewMessages(ern: String)(implicit hc: HeaderCarrier): Future[GetMessagesResponse] = {
 
     val correlationId = correlationIdService.generateCorrelationId
     val timestamp = dateTimeService.timestamp().asStringInMilliseconds
@@ -68,7 +68,8 @@ class MessageConnector @Inject() (
           for {
             response <- parseJson[EISConsumptionResponse](response.body)
             messages <- getMessages(response)
-          } yield messages
+            count <- countOfMessagesAvailable(response.message)
+          } yield GetMessagesResponse(messages, count)
         } else {
           Future.failed(new RuntimeException("Invalid status returned"))
         }
@@ -106,6 +107,11 @@ class MessageConnector @Inject() (
     val decodedMessage: String = base64Decode(response.message)
     val xmlResponse = scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
     xmlResponse.Messages.messagesoption.map(messageFactory.createIEMessage)
+  }
+
+  def countOfMessagesAvailable(encodedMessage: String): Try[Int] = Try {
+    val newMessage = scala.xml.XML.loadString(base64Decode(encodedMessage))
+    (newMessage \ "CountOfMessagesAvailable").text.toInt
   }
 
   private def base64Decode(string: String): String =

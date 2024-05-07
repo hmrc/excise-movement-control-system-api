@@ -44,9 +44,9 @@ class MessageService @Inject
     for {
       _ <- ernRetrievalRepository.getLastRetrieved(ern)
       messages <- messageConnector.getNewMessages(ern)
-      _ <- updateMovements(ern, messages)
+      _ <- updateMovements(ern, messages.messages)
       _ <- ernRetrievalRepository.save(ern)
-      _ <- if (messages.nonEmpty) messageConnector.acknowledgeMessages(ern) else Future.unit
+      _ <- if (messages.messages.nonEmpty) messageConnector.acknowledgeMessages(ern) else Future.unit
     } yield Done
   }
 

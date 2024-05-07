@@ -33,7 +33,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessageGeneratorFactory}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE704Message, IE801Message, IE802Message, IE829Message}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE704Message, IE801Message, IE802Message, IE829Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
@@ -92,7 +92,7 @@ class MessageServiceSpec extends PlaySpec
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
-          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(Seq.empty))
+          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(Seq.empty, 0)))
 
           messageService.updateMessages(ern).futureValue
 
@@ -119,7 +119,7 @@ class MessageServiceSpec extends PlaySpec
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
-          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(messages))
+          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 0)))
           when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
           messageService.updateMessages(ern).futureValue
@@ -146,7 +146,7 @@ class MessageServiceSpec extends PlaySpec
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
-          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(messages))
+          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 0)))
           when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
           messageService.updateMessages(ern).futureValue
@@ -176,7 +176,7 @@ class MessageServiceSpec extends PlaySpec
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
-          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(messages))
+          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 0)))
           when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
           messageService.updateMessages(ern).futureValue
@@ -211,7 +211,7 @@ class MessageServiceSpec extends PlaySpec
         when(movementRepository.save(any)).thenReturn(Future.successful(Done))
         when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
         when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
-        when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(Seq(message)))
+        when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(Seq(message), 0)))
         when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
         messageService.updateMessages(ern).futureValue
@@ -251,7 +251,7 @@ class MessageServiceSpec extends PlaySpec
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
-          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(messages))
+          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 0)))
           when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
           messageService.updateMessages(ern).futureValue
@@ -283,7 +283,7 @@ class MessageServiceSpec extends PlaySpec
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
-          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(messages))
+          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 0)))
           when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
           messageService.updateMessages(ern).futureValue
@@ -319,7 +319,7 @@ class MessageServiceSpec extends PlaySpec
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
-          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(messages))
+          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 0)))
           when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
           messageService.updateMessages(ern).futureValue
