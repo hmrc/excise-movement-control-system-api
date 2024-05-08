@@ -198,7 +198,7 @@ class IEMessageFactorySpec
     "return an instance of IE813Message" in {
       val result = sut.createFromXml("IE813", IE813).asInstanceOf[IE813Message]
       result.consignorId mustBe None
-      result.consigneeId mustBe None
+      result.consigneeId mustBe Some("GBWK240176600")
       result.administrativeReferenceCode mustBe Seq(Some("23GB00000000000378126"))
       result.messageIdentifier mustBe "GB100000000302715"
       result.messageType mustBe MessageTypes.IE813.value

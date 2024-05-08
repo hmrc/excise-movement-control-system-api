@@ -33,7 +33,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessageGeneratorFactory}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE704Message, IE801Message, IE802Message, IE829Message}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE704Message, IE801Message, IE802Message, IE813Message, IE829Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
@@ -139,7 +139,7 @@ class MessageServiceSpec extends PlaySpec
           }
           "add messages to only the movement with the right ARC" in {
             val ern = "testErn"
-            val arcMovement = Movement(None, "notTheLrn", ern, None, administrativeReferenceCode = Some("23XI00000000000000012"))
+            val arcMovement = Movement(None, "notTheLrn", ern, Some("testConsignee"), administrativeReferenceCode = Some("23XI00000000000000012"))
             val notArcMovement = Movement(None, "notTheLrn", ern, None)
             val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
             val messages = Seq(IE801Message.createFromXml(ie801))
@@ -343,7 +343,7 @@ class MessageServiceSpec extends PlaySpec
         "must retrieve all messages" in {
 
           val ern = "testErn"
-          val lrnMovement = Movement(None, "lrnie8158976912", ern, None)
+          val lrnMovement = Movement(None, "lrnie8158976912", ern, Some("testConsignee"))
 
           val ie704 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some("lrnie8158976912")))
           val firstMessage = IE704Message.createFromXml(ie704)
@@ -472,7 +472,25 @@ class MessageServiceSpec extends PlaySpec
         verify(movementRepository).save(expectedMovement)
       }
       "we get an 813, it should change the consignee" in {
-        fail
+        val ern = "testErn"
+        val movement = Movement(newId, None, "lrnie8158976912", ern, Some("Consignee"), Some("23XI00000000000000012"), now, Seq.empty)
+        val ie813 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE813, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
+        val messages = Seq(IE813Message.createFromXml(ie813))
+        val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE813", "GB00001", now))
+        val expectedMovement = movement.copy(messages = expectedMessages, consigneeId = Some("testConsignee"))
+
+        when(correlationIdService.generateCorrelationId()).thenReturn(newId)
+        when(dateTimeService.timestamp()).thenReturn(now)
+        when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
+        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+        when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+        when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+        when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+
+        messageService.updateMessages(ern).futureValue
+
+        verify(movementRepository).save(expectedMovement)
       }
     }
     "the existing movement doesn't have a consignee" when {
@@ -498,7 +516,25 @@ class MessageServiceSpec extends PlaySpec
         verify(movementRepository).save(expectedMovement)
       }
       "we get an 813, it should set the consignee" in {
-        fail
+        val ern = "testErn"
+        val movement = Movement(newId, None, "lrnie8158976912", ern, None, Some("23XI00000000000000012"), now, Seq.empty)
+        val ie813 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE813, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
+        val messages = Seq(IE813Message.createFromXml(ie813))
+        val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE813", "GB00001", now))
+        val expectedMovement = movement.copy(messages = expectedMessages, consigneeId = Some("testConsignee"))
+
+        when(correlationIdService.generateCorrelationId()).thenReturn(newId)
+        when(dateTimeService.timestamp()).thenReturn(now)
+        when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
+        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+        when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+        when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+        when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+
+        messageService.updateMessages(ern).futureValue
+
+        verify(movementRepository).save(expectedMovement)
       }
     }
 

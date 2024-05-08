@@ -20,7 +20,7 @@ import cats.syntax.all._
 import org.apache.pekko.Done
 import play.api.Configuration
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE704Message, IE801Message, IEMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE704Message, IE801Message, IE813Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
@@ -61,6 +61,7 @@ class MessageService @Inject
 
   private def shouldProcessNewMessages(maybeLastRetrieved: Option[Instant]): Boolean = {
     val cutoffTime = dateTimeService.timestamp().minus(throttleCutoff.length, throttleCutoff.unit.toChronoUnit)
+    //noinspection MapGetOrElseBoolean
     maybeLastRetrieved.map(_.isBefore(cutoffTime)).getOrElse(true)
   }
 
@@ -101,7 +102,13 @@ class MessageService @Inject
           (
             if (matchedMovements.nonEmpty) {
               matchedMovements.map { movement =>
-                movement.copy(messages = movement.messages :+ convertMessage(message))
+                val consignee = message match {
+                  case ie801: IE801Message => movement.consigneeId orElse ie801.consigneeId
+                  case ie813: IE813Message => ie813.consigneeId orElse movement.consigneeId
+                  case _ => movement.consigneeId
+                }
+                movement.copy(messages = movement.messages :+ convertMessage(message),
+                  consigneeId = consignee)
                 // sometimes want to do more than this. depending on which message.
               }
             } else {
