@@ -44,6 +44,8 @@ class MessageService @Inject
   emcsUtils: EmcsUtils,
 )(implicit executionContext: ExecutionContext) {
 
+  private val throttleCutoff: FiniteDuration = configuration.get[FiniteDuration]("microservice.services.eis.throttle-cutoff")
+
   def updateMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] = {
     ernRetrievalRepository.getLastRetrieved(ern).flatMap { maybeLastRetrieved =>
       if (shouldProcessNewMessages(maybeLastRetrieved)) {
@@ -58,10 +60,8 @@ class MessageService @Inject
   }
 
   private def shouldProcessNewMessages(maybeLastRetrieved: Option[Instant]): Boolean = {
-    val throttleCutoff: FiniteDuration = Duration.create(configuration.get[String]("microservice.services.eis.throttle-cutoff")).asInstanceOf[FiniteDuration]
     val cutoffTime = dateTimeService.timestamp().minus(throttleCutoff.length, throttleCutoff.unit.toChronoUnit)
-    val lastRetrieved = maybeLastRetrieved.getOrElse(cutoffTime.minus(1, ChronoUnit.SECONDS))
-    lastRetrieved.isBefore(cutoffTime)
+    maybeLastRetrieved.map(_.isBefore(cutoffTime)).getOrElse(true)
   }
 
   private def processNewMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] =

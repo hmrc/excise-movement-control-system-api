@@ -426,7 +426,7 @@ class MessageServiceSpec extends PlaySpec
 
           messageService.updateMessages(ern).futureValue
 
-          verify(messageConnector, never).getNewMessages(eqTo(ern))(any)
+          verify(messageConnector, never).getNewMessages(any)(any)
         }
       }
     }
@@ -444,7 +444,7 @@ class MessageServiceSpec extends PlaySpec
 
           messageService.updateMessages(ern).futureValue
 
-          verify(messageConnector, never).getNewMessages(eqTo(ern))(any)
+          verify(messageConnector, never).getNewMessages(any)(any)
         }
       }
     }
