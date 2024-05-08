@@ -26,6 +26,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ErnRetrieval
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.play.http.logging.Mdc
 
 import java.time.Instant
 import java.util.concurrent.TimeUnit
@@ -46,12 +47,13 @@ class ErnRetrievalRepository @Inject()
     replaceIndexes = true
   ) with Logging {
 
-  def getLastRetrieved(ern: String): Future[Option[Instant]] =
+  def getLastRetrieved(ern: String): Future[Option[Instant]] = Mdc.preservingMdc {
     collection.find(Filters.eq("ern", ern))
       .headOption()
       .map(r => r.map(_.lastRetrieved))
+  }
 
-  def save(ern: String): Future[Done] = {
+  def save(ern: String): Future[Done] = Mdc.preservingMdc {
     collection.replaceOne(
       Filters.eq("ern", ern),
       ErnRetrieval(ern, timeService.timestamp()),
