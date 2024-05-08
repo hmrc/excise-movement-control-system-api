@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
+import cats.implicits.toFunctorOps
 import org.apache.pekko.Done
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Filters.{and, equal, in, or}
@@ -65,7 +66,12 @@ class MovementRepository @Inject()
       .map(_ => true)
   }
 
-  def save(movement: Movement): Future[Done] = ???
+  def save(movement: Movement): Future[Done] =
+    collection.findOneAndReplace(
+      filter = byId(movement._id),
+      replacement = movement,
+      FindOneAndReplaceOptions().upsert(true)
+    ).toFuture().as(Done)
 
   //TODO can this ever return None??
   def updateMovement(movement: Movement): Future[Option[Movement]] = {

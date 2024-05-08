@@ -142,6 +142,42 @@ class MovementRepositoryItSpec extends PlaySpec
     }
   }
 
+  "save" should {
+
+    "insert a movement if one does not exist" in {
+
+      val movement = Movement(UUID.randomUUID().toString, Some("boxId"), "123", "345", Some("789"), None, timestamp, Seq.empty)
+      repository.save(movement).futureValue
+
+      val records = find(Filters.empty).futureValue
+      records must contain only movement
+    }
+
+    "update a movement if one already exists" in {
+
+      val movement = Movement(UUID.randomUUID().toString, Some("boxId"), "123", "345", Some("789"), None, timestamp, Seq.empty)
+      repository.save(movement).futureValue
+
+      val updatedMovement = movement.copy(consigneeId = Some("678"))
+      repository.save(updatedMovement).futureValue
+
+      val records = find(Filters.empty).futureValue
+      records must contain only updatedMovement
+    }
+
+    "fail to insert a new movement if it has the same consignorId/lrn as another movement" in {
+
+      val movement = Movement(UUID.randomUUID().toString, Some("boxId"), "123", "345", Some("789"), None, timestamp, Seq.empty)
+      repository.save(movement).futureValue
+
+      val newMovement = movement.copy(_id = UUID.randomUUID().toString)
+      repository.save(newMovement).failed.futureValue
+
+      val records = find(Filters.empty).futureValue
+      records must contain only movement
+    }
+  }
+
   "getMovementById" should {
     "return the matching movement when it is there" in {
       val movementId1 = "49491927-aaa1-4835-b405-dd6e7fa3aaf0"
