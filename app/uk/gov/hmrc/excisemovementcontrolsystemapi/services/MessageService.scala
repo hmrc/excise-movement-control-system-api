@@ -107,8 +107,14 @@ class MessageService @Inject
                   case ie813: IE813Message => ie813.consigneeId orElse movement.consigneeId
                   case _ => movement.consigneeId
                 }
+                val arc = message match {
+                  case ie801: IE801Message => movement.administrativeReferenceCode orElse ie801.administrativeReferenceCode.flatten.headOption
+                  case _ => movement.administrativeReferenceCode
+                }
                 movement.copy(messages = movement.messages :+ convertMessage(message),
-                  consigneeId = consignee)
+                  consigneeId = consignee,
+                  administrativeReferenceCode = arc
+                )
                 // sometimes want to do more than this. depending on which message.
               }
             } else {

@@ -359,7 +359,7 @@ class MessageServiceSpec extends PlaySpec
 
           val firstExpectedMovement = lrnMovement.copy(messages = Seq(firstExpectedMessage))
           val secondExpectedMovement = lrnMovement.copy(messages = Seq(firstExpectedMessage, secondExpectedMessage))
-          val thirdExpectedMovement = lrnMovement.copy(messages = Seq(firstExpectedMessage, secondExpectedMessage, thirdExpectedMessage))
+          val thirdExpectedMovement = lrnMovement.copy(messages = Seq(firstExpectedMessage, secondExpectedMessage, thirdExpectedMessage), administrativeReferenceCode = Some("23XI00000000000000012"))
 
           when(dateTimeService.timestamp()).thenReturn(now)
 
@@ -456,7 +456,7 @@ class MessageServiceSpec extends PlaySpec
         val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
         val messages = Seq(IE801Message.createFromXml(ie801))
         val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", now))
-        val expectedMovement = movement.copy(messages = expectedMessages)
+        val expectedMovement = movement.copy(messages = expectedMessages, administrativeReferenceCode = Some("23XI00000000000000012"))
 
         when(correlationIdService.generateCorrelationId()).thenReturn(newId)
         when(dateTimeService.timestamp()).thenReturn(now)
@@ -500,7 +500,7 @@ class MessageServiceSpec extends PlaySpec
         val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
         val messages = Seq(IE801Message.createFromXml(ie801))
         val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", now))
-        val expectedMovement = movement.copy(messages = expectedMessages, consigneeId = Some("testConsignee"))
+        val expectedMovement = movement.copy(messages = expectedMessages, consigneeId = Some("testConsignee"), administrativeReferenceCode = Some("23XI00000000000000012"))
 
         when(correlationIdService.generateCorrelationId()).thenReturn(newId)
         when(dateTimeService.timestamp()).thenReturn(now)
@@ -537,6 +537,53 @@ class MessageServiceSpec extends PlaySpec
         verify(movementRepository).save(expectedMovement)
       }
     }
+    "the existing movement doesn't have an ARC" when {
+      "we get a 801, it should set the ARC" in {
+        val ern = "testErn"
+        val movement = Movement(newId, None, "lrnie8158976912", ern, Some("testConsignee"), None, now, Seq.empty)
+        val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
+        val messages = Seq(IE801Message.createFromXml(ie801))
+        val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", now))
+        val expectedMovement = movement.copy(messages = expectedMessages, administrativeReferenceCode = Some("23XI00000000000000012"))
+
+        when(correlationIdService.generateCorrelationId()).thenReturn(newId)
+        when(dateTimeService.timestamp()).thenReturn(now)
+        when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
+        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+        when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+        when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+        when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+
+        messageService.updateMessages(ern).futureValue
+
+        verify(movementRepository).save(expectedMovement)
+      }
+    }
+    // TODO the following commented out test is an odd situation as the arc shouldn't be different for the same LRN and ERN
+//    "the existing movement has an ARC" when {
+//      "we get a 801 with a different ARC, it should not update the ARC on the movement" in {
+//        val ern = "testErn"
+//        val movement = Movement(newId, None, "lrnie8158976912", ern, Some("testConsignee"), Some("23XI00000000000000012"), now, Seq.empty)
+//        val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000013"), Some("lrnie8158976912")))
+//        val messages = Seq(IE801Message.createFromXml(ie801))
+//        val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", now))
+//        val expectedMovement = movement.copy(messages = expectedMessages)
+//
+//        when(correlationIdService.generateCorrelationId()).thenReturn(newId)
+//        when(dateTimeService.timestamp()).thenReturn(now)
+//        when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
+//        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+//        when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+//        when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+//        when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+//        when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+//
+//        messageService.updateMessages(ern).futureValue
+//
+//        verify(movementRepository).save(expectedMovement)
+//      }
+//    }
 
     // TODO what about 829 where one movement is found and another isn't?
     // TODO updating messages must be idempotent
