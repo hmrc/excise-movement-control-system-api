@@ -158,10 +158,10 @@ class MessageServiceSpec extends PlaySpec
             messageService.updateMessages(ern).futureValue
 
             verify(messageConnector).getNewMessages(eqTo(ern))(any)
-            verify(movementRepository).getAllBy(eqTo(ern))
-            verify(movementRepository, never).save(eqTo(unexpectedMovement))
-            verify(movementRepository).save(eqTo(expectedMovement))
-            verify(ernRetrievalRepository).save(eqTo(ern))
+            verify(movementRepository).getAllBy(ern)
+            verify(movementRepository, never).save(unexpectedMovement)
+            verify(movementRepository).save(expectedMovement)
+            verify(ernRetrievalRepository).save(ern)
             verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
           }
         }
@@ -234,7 +234,7 @@ class MessageServiceSpec extends PlaySpec
           movementCaptor.values(1) mustBe expectedMovement2
         }
       }
-      "there is a no movement" when {
+      "there is no movement" when {
         "we try to retrieve new messages for an ERN and there are some" should {
           "a new movement should be created from an IE704 message" in {
             val ern = "testErn"
@@ -446,6 +446,59 @@ class MessageServiceSpec extends PlaySpec
 
           verify(messageConnector, never).getNewMessages(any)(any)
         }
+      }
+    }
+
+    "the existing movement has a consignee" when {
+      "we get a 801, it should not change the consignee" in {
+        val ern = "testErn"
+        val movement = Movement(newId, None, "lrnie8158976912", ern, Some("Consignee"),None, now, Seq.empty)
+        val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
+        val messages = Seq(IE801Message.createFromXml(ie801))
+        val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", now))
+        val expectedMovement = movement.copy(messages = expectedMessages)
+
+        when(correlationIdService.generateCorrelationId()).thenReturn(newId)
+        when(dateTimeService.timestamp()).thenReturn(now)
+        when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
+        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+        when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+        when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+        when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+
+        messageService.updateMessages(ern).futureValue
+
+        verify(movementRepository).save(expectedMovement)
+      }
+      "we get an 813, it should change the consignee" in {
+        fail
+      }
+    }
+    "the existing movement doesn't have a consignee" when {
+      "we get a 801, it should set the consignee" in {
+        val ern = "testErn"
+        val movement = Movement(newId, None, "lrnie8158976912", ern, None, None, now, Seq.empty)
+        val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
+        val messages = Seq(IE801Message.createFromXml(ie801))
+        val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", now))
+        val expectedMovement = movement.copy(messages = expectedMessages, consigneeId = Some("testConsignee"))
+
+        when(correlationIdService.generateCorrelationId()).thenReturn(newId)
+        when(dateTimeService.timestamp()).thenReturn(now)
+        when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
+        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+        when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+        when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+        when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+
+        messageService.updateMessages(ern).futureValue
+
+        verify(movementRepository).save(expectedMovement)
+      }
+      "we get an 813, it should set the consignee" in {
+        fail
       }
     }
 

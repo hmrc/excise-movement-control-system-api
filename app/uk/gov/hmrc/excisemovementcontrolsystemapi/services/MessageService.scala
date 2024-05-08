@@ -102,6 +102,7 @@ class MessageService @Inject
             if (matchedMovements.nonEmpty) {
               matchedMovements.map { movement =>
                 movement.copy(messages = movement.messages :+ convertMessage(message))
+                // sometimes want to do more than this. depending on which message.
               }
             } else {
               message match {
