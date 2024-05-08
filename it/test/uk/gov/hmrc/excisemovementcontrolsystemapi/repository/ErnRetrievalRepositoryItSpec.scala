@@ -18,9 +18,11 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import org.mockito.MockitoSugar.when
 import org.mongodb.scala.model.Filters
+import org.scalactic.source.Position
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import org.slf4j.MDC
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ErnRetrieval
@@ -31,6 +33,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import scala.concurrent.{ExecutionContext, Future}
 
 
 class ErnRetrievalRepositoryItSpec extends PlaySpec
@@ -68,6 +71,8 @@ class ErnRetrievalRepositoryItSpec extends PlaySpec
 
       find(Filters.eq("ern", "testErn")).futureValue.head mustBe ErnRetrieval("testErn", updatedInstant)
     }
+
+    mustPreserveMdc(repository.save("testErn"))
   }
 
   "getLastRetrieved" should {
@@ -86,5 +91,19 @@ class ErnRetrievalRepositoryItSpec extends PlaySpec
 
       actualLastRetrieved mustBe Some(lastRetrieved)
     }
+
+    mustPreserveMdc(repository.getLastRetrieved("testErn"))
   }
+
+  private def mustPreserveMdc[A](f: => Future[A])(implicit pos: Position): Unit =
+    "must preserve MDC" in {
+
+      val ec = app.injector.instanceOf[ExecutionContext]
+
+      MDC.put("test", "foo")
+
+      f.map { _ =>
+        MDC.get("test") mustEqual "foo"
+      }(ec).futureValue
+    }
 }

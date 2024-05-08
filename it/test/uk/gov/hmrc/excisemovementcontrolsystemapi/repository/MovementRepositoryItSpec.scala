@@ -18,11 +18,13 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import org.mockito.MockitoSugar.when
 import org.mongodb.scala.model.Filters
+import org.scalactic.source.Position
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import org.slf4j.MDC
 import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -35,7 +37,7 @@ import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, DefaultPlayMongoRepo
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 class MovementRepositoryItSpec extends PlaySpec
   with CleanMongoCollectionSupport
@@ -69,9 +71,11 @@ class MovementRepositoryItSpec extends PlaySpec
   }
 
   "saveMovement" should {
+
+    val uuid = UUID.randomUUID()
+    val movement = Movement(uuid.toString, Some("boxId"), "123", "345", Some("789"), None, timestamp, Seq.empty)
+
     "return insert a movement" in {
-      val uuid = UUID.randomUUID()
-      val movement = Movement(uuid.toString, Some("boxId"), "123", "345", Some("789"), None, timestamp, Seq.empty)
       val result = repository.saveMovement(movement).futureValue
 
       val insertedRecord = find(
@@ -86,6 +90,8 @@ class MovementRepositoryItSpec extends PlaySpec
       result mustBe true
       insertedRecord mustBe movement
     }
+
+    mustPreserveMdc(repository.saveMovement(movement))
   }
 
   "updateMovement" should {
@@ -140,6 +146,45 @@ class MovementRepositoryItSpec extends PlaySpec
       result mustBe None
       records mustBe Seq(movementLRN1, movementLRN2)
     }
+
+    mustPreserveMdc(repository.updateMovement(Movement(Some("boxId"), "4", "897", Some("321"), Some("arc"), Instant.now, Seq.empty)))
+  }
+
+  "save" should {
+
+    val movement = Movement(UUID.randomUUID().toString, Some("boxId"), "123", "345", Some("789"), None, timestamp, Seq.empty)
+
+    "insert a movement if one does not exist" in {
+
+      repository.save(movement).futureValue
+
+      val records = find(Filters.empty).futureValue
+      records must contain only movement
+    }
+
+    "update a movement if one already exists" in {
+
+      repository.save(movement).futureValue
+
+      val updatedMovement = movement.copy(consigneeId = Some("678"))
+      repository.save(updatedMovement).futureValue
+
+      val records = find(Filters.empty).futureValue
+      records must contain only updatedMovement
+    }
+
+    "fail to insert a new movement if it has the same consignorId/lrn as another movement" in {
+
+      repository.save(movement).futureValue
+
+      val newMovement = movement.copy(_id = UUID.randomUUID().toString)
+      repository.save(newMovement).failed.futureValue
+
+      val records = find(Filters.empty).futureValue
+      records must contain only movement
+    }
+
+    mustPreserveMdc(repository.save(movement))
   }
 
   "getMovementById" should {
@@ -164,6 +209,8 @@ class MovementRepositoryItSpec extends PlaySpec
 
       result mustBe None
     }
+
+    mustPreserveMdc(repository.getMovementById("someId"))
   }
 
   "getMovementByLRNAndERNIn" should {
@@ -215,6 +262,8 @@ class MovementRepositoryItSpec extends PlaySpec
 
       result mustBe Seq.empty
     }
+
+    mustPreserveMdc(repository.getMovementByLRNAndERNIn("someLrn", List("some ern")))
   }
 
   "getMovementByErn" should {
@@ -265,7 +314,7 @@ class MovementRepositoryItSpec extends PlaySpec
       result mustBe Seq.empty
     }
 
-
+    mustPreserveMdc(repository.getMovementByERN(Seq("some ern")))
   }
 
   "getAll" should {
@@ -307,9 +356,23 @@ class MovementRepositoryItSpec extends PlaySpec
 
       result mustBe Seq.empty
     }
+
+    mustPreserveMdc(repository.getAllBy("ern"))
   }
 
   private def insertMovement(movement: Movement) = {
     insert(movement).futureValue
   }
+
+  private def mustPreserveMdc[A](f: => Future[A])(implicit pos: Position): Unit =
+    "must preserve MDC" in {
+
+      val ec = app.injector.instanceOf[ExecutionContext]
+
+      MDC.put("test", "foo")
+
+      f.map { _ =>
+        MDC.get("test") mustEqual "foo"
+      }(ec).futureValue
+    }
 }

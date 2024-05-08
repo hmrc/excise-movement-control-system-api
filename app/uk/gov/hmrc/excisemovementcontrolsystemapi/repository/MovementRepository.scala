@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
+import cats.implicits.toFunctorOps
 import org.apache.pekko.Done
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Filters.{and, equal, in, or}
@@ -27,6 +28,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.play.http.logging.Mdc
 
 import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Singleton}
@@ -59,16 +61,21 @@ class MovementRepository @Inject()
   }
 
 
-  def saveMovement(movement: Movement): Future[Boolean] = {
+  def saveMovement(movement: Movement): Future[Boolean] = Mdc.preservingMdc {
     collection.insertOne(movement.copy(lastUpdated = timeService.timestamp()))
       .toFuture()
       .map(_ => true)
   }
 
-  def save(movement: Movement): Future[Done] = ???
+  def save(movement: Movement): Future[Done] = Mdc.preservingMdc {
+    collection.findOneAndReplace(
+      filter = byId(movement._id),
+      replacement = movement,
+      FindOneAndReplaceOptions().upsert(true)
+    ).toFuture().as(Done)
+  }
 
-  //TODO can this ever return None??
-  def updateMovement(movement: Movement): Future[Option[Movement]] = {
+  def updateMovement(movement: Movement): Future[Option[Movement]] = Mdc.preservingMdc {
 
     val updatedMovement = movement.copy(lastUpdated = timeService.timestamp())
 
@@ -79,17 +86,17 @@ class MovementRepository @Inject()
     ).headOption()
   }
 
-  def getMovementById(id: String): Future[Option[Movement]] = {
+  def getMovementById(id: String): Future[Option[Movement]] = Mdc.preservingMdc {
     collection.find(byId(id)).headOption()
   }
 
-  def getMovementByLRNAndERNIn(lrn: String, erns: List[String]): Future[Seq[Movement]] = {
+  def getMovementByLRNAndERNIn(lrn: String, erns: List[String]): Future[Seq[Movement]] = Mdc.preservingMdc {
     //TODO EMCS-527 -  case where returns more than one (e.g. consignee has the same LRN for two different consignors)
     // IN this case would this be the same movement? So we are ok to get the head?
     collection.find(byLrnAndErns(lrn, erns)).toFuture()
   }
 
-  def getMovementByERN(ern: Seq[String]): Future[Seq[Movement]] = {
+  def getMovementByERN(ern: Seq[String]): Future[Seq[Movement]] = Mdc.preservingMdc {
     collection
       .find(or(
         in("consignorId", ern: _*),
@@ -98,7 +105,7 @@ class MovementRepository @Inject()
       .toFuture()
   }
 
-  def getAllBy(ern: String): Future[Seq[Movement]] = {
+  def getAllBy(ern: String): Future[Seq[Movement]] = Mdc.preservingMdc {
     getMovementByERN(Seq(ern))
   }
 }
