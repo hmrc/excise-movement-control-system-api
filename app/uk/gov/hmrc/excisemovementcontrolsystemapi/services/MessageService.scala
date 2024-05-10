@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import cats.syntax.all._
 import org.apache.pekko.Done
-import play.api.Configuration
+import play.api.{Configuration, Logging}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
@@ -41,7 +41,8 @@ class MessageService @Inject
   dateTimeService: DateTimeService,
   correlationIdService: CorrelationIdService,
   emcsUtils: EmcsUtils,
-)(implicit executionContext: ExecutionContext) {
+  auditService: AuditService,
+)(implicit executionContext: ExecutionContext) extends Logging {
 
   private val throttleCutoff: FiniteDuration = configuration.get[FiniteDuration]("microservice.services.eis.throttle-cutoff")
 
@@ -84,7 +85,7 @@ class MessageService @Inject
       }
     }
 
-  private def updateMovements(ern: String, messages: Seq[IEMessage]): Future[Done] = {
+  private def updateMovements(ern: String, messages: Seq[IEMessage])(implicit hc: HeaderCarrier): Future[Done] = {
     if (messages.nonEmpty) {
       movementRepository.getAllBy(ern).flatMap { movements =>
         messages.foldLeft(Seq.empty[Movement]) { (updatedMovements, message) =>
@@ -96,15 +97,16 @@ class MessageService @Inject
     }
   }
 
-  private def updateOrCreateMovements(ern: String, movements: Seq[Movement], updatedMovements: Seq[Movement], message: IEMessage): Seq[Movement] = {
+  private def updateOrCreateMovements(ern: String, movements: Seq[Movement], updatedMovements: Seq[Movement], message: IEMessage)(implicit hc: HeaderCarrier): Seq[Movement] = {
     val matchedMovements: Seq[Movement] = findMovementsForMessage(movements, updatedMovements, message)
 
-    (if (matchedMovements.nonEmpty) matchedMovements.map {
-        updateMovement(_, message)
+    (
+      if (matchedMovements.nonEmpty) matchedMovements.map { movement =>
+        Some(updateMovement(movement, message))
       } else {
         createMovement(ern, message)
-      } +: updatedMovements
-      ).distinctBy(_._id)
+      } +: updatedMovements.map(Some(_))
+    ).flatten.distinctBy(_._id)
   }
 
   private def updateMovement(movement: Movement, message: IEMessage): Movement = {
@@ -114,7 +116,7 @@ class MessageService @Inject
     )
   }
 
-  private def getUpdatedMessages(movement: Movement, message: IEMessage) = {
+  private def getUpdatedMessages(movement: Movement, message: IEMessage): Seq[Message] = {
     (movement.messages :+ convertMessage(message)).distinctBy(_.messageId)
   }
 
@@ -140,11 +142,15 @@ class MessageService @Inject
     }
   }
 
-  private def createMovement(ern: String, message: IEMessage): Movement = {
+  private def createMovement(ern: String, message: IEMessage)(implicit hc: HeaderCarrier): Option[Movement] = {
     message match {
-      case ie704: IE704Message => createMovementFromIE704(ern, ie704)
-      case ie801: IE801Message => createMovementFromIE801(ern, ie801)
-      case _ => ???
+      case ie704: IE704Message => Some(createMovementFromIE704(ern, ie704))
+      case ie801: IE801Message => Some(createMovementFromIE801(ern, ie801))
+      case ieMessage: IEMessage =>
+        val errorMessage = s"An ${ieMessage.messageType} message has been retrieved with no movement, unable to create movement"
+        auditService.auditMessage(ieMessage, errorMessage)
+        logger.error(errorMessage)
+        None
     }
   }
 

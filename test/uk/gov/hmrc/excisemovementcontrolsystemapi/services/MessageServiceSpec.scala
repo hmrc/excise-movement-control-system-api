@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
+import cats.data.EitherT
 import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.Mockito
@@ -33,7 +34,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessageGeneratorFactory}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE704Message, IE801Message, IE802Message, IE813Message, IE829Message}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
@@ -42,6 +43,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class MessageServiceSpec extends PlaySpec
@@ -55,6 +57,7 @@ class MessageServiceSpec extends PlaySpec
   private val messageConnector = mock[MessageConnector]
   private val dateTimeService = mock[DateTimeService]
   private val correlationIdService = mock[CorrelationIdService]
+  private val auditService = mock[AuditService]
 
   private lazy val messageService = app.injector.instanceOf[MessageService]
 
@@ -69,7 +72,8 @@ class MessageServiceSpec extends PlaySpec
       bind[ErnRetrievalRepository].toInstance(ernRetrievalRepository),
       bind[MessageConnector].toInstance(messageConnector),
       bind[DateTimeService].toInstance(dateTimeService),
-      bind[CorrelationIdService].toInstance(correlationIdService)
+      bind[CorrelationIdService].toInstance(correlationIdService),
+      bind[AuditService].toInstance(auditService),
     )
     .configure(
       "microservice.services.eis.throttle-cutoff" -> "5 minutes"
@@ -299,6 +303,27 @@ class MessageServiceSpec extends PlaySpec
             verify(movementRepository).save(eqTo(expectedMovement))
             verify(ernRetrievalRepository).save(eqTo(ern))
             verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
+          }
+          "a message is audited with failure if its not an IE801 or IE704" in {
+            val ern = "testErn"
+            val ie818 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE818, "GB00001", Some("testConsignee"), Some("23XI00000000000000012")))
+            val messages = Seq(IE818Message.createFromXml(ie818))
+
+            when(correlationIdService.generateCorrelationId()).thenReturn(newId)
+            when(auditService.auditMessage(any, any)(any)).thenReturn(EitherT.pure(()))
+            when(dateTimeService.timestamp()).thenReturn(now)
+            when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
+            when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+            when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+            when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+            when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+            when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+
+            messageService.updateMessages(ern).futureValue
+
+            verify(messageConnector).getNewMessages(eqTo(ern))(any)
+            verify(movementRepository).getAllBy(eqTo(ern))
+            verify(auditService).auditMessage(messages.head, s"An IE818 message has been retrieved with no movement, unable to create movement")
           }
 
           "a single new movement should be created when there are multiple messages for the same ern" in {
