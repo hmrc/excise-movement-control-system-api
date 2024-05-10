@@ -108,10 +108,14 @@ class MessageService @Inject
   }
 
   private def updateMovement(movement: Movement, message: IEMessage): Movement = {
-    movement.copy(messages = movement.messages :+ convertMessage(message),
+    movement.copy(messages = getUpdatedMessages(movement, message),
       administrativeReferenceCode = getArc(movement, message),
       consigneeId = getConsignee(movement, message)
     )
+  }
+
+  private def getUpdatedMessages(movement: Movement, message: IEMessage) = {
+    (movement.messages :+ convertMessage(message)).distinctBy(_.messageId)
   }
 
   private def findMovementsForMessage(movements: Seq[Movement], updatedMovements: Seq[Movement], message: IEMessage): Seq[Movement] = {
