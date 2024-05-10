@@ -20,16 +20,15 @@ import cats.syntax.all._
 import org.apache.pekko.Done
 import play.api.Configuration
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE704Message, IE801Message, IE813Message, IEMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.duration.{Duration, FiniteDuration}
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -68,8 +67,8 @@ class MessageService @Inject
   private def processNewMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] =
     for {
       response <- messageConnector.getNewMessages(ern)
-      _        <- updateMovements(ern, response.messages)
-      _        <- acknowledgeAndContinue(response, ern)
+      _ <- updateMovements(ern, response.messages)
+      _ <- acknowledgeAndContinue(response, ern)
     } yield Done
 
   private def acknowledgeAndContinue(response: GetMessagesResponse, ern: String)(implicit hc: HeaderCarrier): Future[Done] =
@@ -86,49 +85,62 @@ class MessageService @Inject
     }
 
   private def updateMovements(ern: String, messages: Seq[IEMessage]): Future[Done] = {
-
     if (messages.nonEmpty) {
       movementRepository.getAllBy(ern).map { movements =>
-
         messages.foldLeft(Seq.empty[Movement]) { (updatedMovements, message) =>
-
-          val matchedMovements: Seq[Movement] = {
-            findByArc(updatedMovements, message) orElse
-            findByLrn(updatedMovements, message) orElse
-            findByArc(movements, message) orElse
-            findByLrn(movements, message)
-          }.getOrElse(Seq.empty)
-
-          (
-            if (matchedMovements.nonEmpty) {
-              matchedMovements.map { movement =>
-                val consignee = message match {
-                  case ie801: IE801Message => movement.consigneeId orElse ie801.consigneeId
-                  case ie813: IE813Message => ie813.consigneeId orElse movement.consigneeId
-                  case _ => movement.consigneeId
-                }
-                val arc = message match {
-                  case ie801: IE801Message => movement.administrativeReferenceCode orElse ie801.administrativeReferenceCode.flatten.headOption
-                  case _ => movement.administrativeReferenceCode
-                }
-                movement.copy(messages = movement.messages :+ convertMessage(message),
-                  consigneeId = consignee,
-                  administrativeReferenceCode = arc
-                )
-                // sometimes want to do more than this. depending on which message.
-              }
-            } else {
-              message match {
-                case ie704: IE704Message => createMovementFromIE704(ern, ie704)
-                case ie801: IE801Message => createMovementFromIE801(ern, ie801)
-                case _ => ???
-              }
-            } +: updatedMovements
-          ).distinctBy(_._id)
-        }.traverse(movement => movementRepository.save(movement))
+          updateOrCreateMovements(ern, movements, updatedMovements, message)
+        }.traverse(movementRepository.save)
       }.as(Done)
     } else {
       Future.successful(Done)
+    }
+  }
+
+  private def updateOrCreateMovements(ern: String, movements: Seq[Movement], updatedMovements: Seq[Movement], message: IEMessage): Seq[Movement] = {
+    val matchedMovements: Seq[Movement] = findMovementsForMessage(movements, updatedMovements, message)
+
+    (if (matchedMovements.nonEmpty) matchedMovements.map {
+        updateMovement(_, message)
+      } else {
+        createMovement(ern, message)
+      } +: updatedMovements
+      ).distinctBy(_._id)
+  }
+
+  private def updateMovement(movement: Movement, message: IEMessage): Movement = {
+    movement.copy(messages = movement.messages :+ convertMessage(message),
+      administrativeReferenceCode = getArc(movement, message),
+      consigneeId = getConsignee(movement, message)
+    )
+  }
+
+  private def findMovementsForMessage(movements: Seq[Movement], updatedMovements: Seq[Movement], message: IEMessage): Seq[Movement] = {
+    findByArc(updatedMovements, message) orElse
+      findByLrn(updatedMovements, message) orElse
+      findByArc(movements, message) orElse
+      findByLrn(movements, message)
+  }.getOrElse(Seq.empty)
+
+  private def getConsignee(movement: Movement, message: IEMessage): Option[String] = {
+    message match {
+      case ie801: IE801Message => movement.consigneeId orElse ie801.consigneeId
+      case ie813: IE813Message => ie813.consigneeId orElse movement.consigneeId
+      case _ => movement.consigneeId
+    }
+  }
+
+  private def getArc(movement: Movement, message: IEMessage): Option[String] = {
+    message match {
+      case ie801: IE801Message => movement.administrativeReferenceCode orElse ie801.administrativeReferenceCode.flatten.headOption
+      case _ => movement.administrativeReferenceCode
+    }
+  }
+
+  private def createMovement(ern: String, message: IEMessage): Movement = {
+    message match {
+      case ie704: IE704Message => createMovementFromIE704(ern, ie704)
+      case ie801: IE801Message => createMovementFromIE801(ern, ie801)
+      case _ => ???
     }
   }
 
