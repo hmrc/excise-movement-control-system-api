@@ -19,8 +19,7 @@ object AppDependencies {
   val test: Seq[ModuleID] = Seq(
     "uk.gov.hmrc"             %% "bootstrap-test-play-30"     % bootstrapVersion,
     "uk.gov.hmrc.mongo"       %% "hmrc-mongo-test-play-30"    % mongoVersion,
-    "org.scalatestplus"       %% "scalatestplus-mockito"      % "1.0.0-M2",
-    "org.mockito"             %% "mockito-scala"              % "1.17.12"
+    "org.mockito"             %% "mockito-scala"              % "1.17.31"
   ).map(_ % "test")
 
   val overrides: Seq[ModuleID] = Seq(

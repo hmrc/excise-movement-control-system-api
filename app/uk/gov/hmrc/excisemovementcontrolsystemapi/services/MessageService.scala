@@ -86,7 +86,7 @@ class MessageService @Inject
 
   private def updateMovements(ern: String, messages: Seq[IEMessage]): Future[Done] = {
     if (messages.nonEmpty) {
-      movementRepository.getAllBy(ern).map { movements =>
+      movementRepository.getAllBy(ern).flatMap { movements =>
         messages.foldLeft(Seq.empty[Movement]) { (updatedMovements, message) =>
           updateOrCreateMovements(ern, movements, updatedMovements, message)
         }.traverse(movementRepository.save)
