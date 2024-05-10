@@ -19,6 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.http.Fault
 import generated.NewMessagesDataResponse
+import org.mockito.ArgumentMatchersSugar.eqTo
 import org.mockito.{Mockito, MockitoSugar}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
@@ -34,7 +35,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.NewMessagesXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptSuccessResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.CorrelationIdService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, CorrelationIdService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.WireMockSupport
@@ -62,6 +63,7 @@ class MessageConnectorSpec
 
   private val correlationIdService = mock[CorrelationIdService]
   private val mockDateTimeService = mock[DateTimeService]
+  private val auditService = mock[AuditService]
   private val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX")
 
   override lazy val app: Application = {
@@ -72,7 +74,8 @@ class MessageConnectorSpec
       )
       .overrides(
         bind[CorrelationIdService].toInstance(correlationIdService),
-        bind[DateTimeService].toInstance(mockDateTimeService)
+        bind[DateTimeService].toInstance(mockDateTimeService),
+        bind[AuditService].toInstance(auditService)
       )
       .build()
   }
@@ -96,7 +99,7 @@ class MessageConnectorSpec
         message = base64Encode(emptyNewMessageDataXml.toString)
       )
 
-      when(correlationIdService.generateCorrelationId).thenReturn(correlationId)
+      when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
       wireMockServer.stubFor(
@@ -130,7 +133,7 @@ class MessageConnectorSpec
         message = base64Encode(newMessageXmlWithIE704.toString)
       )
 
-      when(correlationIdService.generateCorrelationId).thenReturn(correlationId)
+      when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
       wireMockServer.stubFor(
@@ -148,9 +151,39 @@ class MessageConnectorSpec
       result.messageCount mustBe 1
     }
 
+    "must audit each message received from the server" in {
+
+      val newMessagesDataResponse = scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(newMessageWith818And802.toString))
+      val ie818Message = messageFactory.createIEMessage(newMessagesDataResponse.Messages.messagesoption.head)
+      val ie802Message = messageFactory.createIEMessage(newMessagesDataResponse.Messages.messagesoption(1))
+
+      val response = EISConsumptionResponse(
+        dateTime = timestamp,
+        exciseRegistrationNumber = ern,
+        message = base64Encode(newMessageWith818And802.toString)
+      )
+
+      when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
+      when(mockDateTimeService.timestamp()).thenReturn(timestamp)
+
+      wireMockServer.stubFor(
+        put(urlEqualTo(url))
+          .willReturn(
+            aResponse()
+              .withStatus(OK)
+              .withBody(Json.stringify(Json.toJson(response)))
+          )
+      )
+
+      connector.getNewMessages(ern)(hc).futureValue
+
+      verify(auditService).auditMessage(ie818Message)(hc)
+      verify(auditService).auditMessage(ie802Message)(hc)
+    }
+
     "must fail when the server responds with an unexpected status" in {
 
-      when(correlationIdService.generateCorrelationId).thenReturn(correlationId)
+      when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
       wireMockServer.stubFor(
@@ -166,7 +199,7 @@ class MessageConnectorSpec
 
     "must fail when the server responds with a non-json body" in {
 
-      when(correlationIdService.generateCorrelationId).thenReturn(correlationId)
+      when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
       wireMockServer.stubFor(
@@ -183,7 +216,7 @@ class MessageConnectorSpec
 
     "must fail when the server responds with an invalid json body" in {
 
-      when(correlationIdService.generateCorrelationId).thenReturn(correlationId)
+      when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
       wireMockServer.stubFor(
@@ -200,7 +233,7 @@ class MessageConnectorSpec
 
     "must fail when the connection fails" in {
 
-      when(correlationIdService.generateCorrelationId).thenReturn(correlationId)
+      when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
       wireMockServer.stubFor(
@@ -231,7 +264,7 @@ class MessageConnectorSpec
         recordsAffected = 1
       )
 
-      when(correlationIdService.generateCorrelationId).thenReturn(correlationId)
+      when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
       wireMockServer.stubFor(
@@ -253,7 +286,7 @@ class MessageConnectorSpec
 
     "must fail when the server responds with an unexpected status" in {
 
-      when(correlationIdService.generateCorrelationId).thenReturn(correlationId)
+      when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
       wireMockServer.stubFor(
@@ -269,7 +302,7 @@ class MessageConnectorSpec
 
     "must fail when the server responds with a non-json body" in {
 
-      when(correlationIdService.generateCorrelationId).thenReturn(correlationId)
+      when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
       wireMockServer.stubFor(
@@ -286,7 +319,7 @@ class MessageConnectorSpec
 
     "must fail when the server responds with an invalid json body" in {
 
-      when(correlationIdService.generateCorrelationId).thenReturn(correlationId)
+      when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
       wireMockServer.stubFor(
@@ -303,7 +336,7 @@ class MessageConnectorSpec
 
     "must fail when the connection fails" in {
 
-      when(correlationIdService.generateCorrelationId).thenReturn(correlationId)
+      when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
       wireMockServer.stubFor(

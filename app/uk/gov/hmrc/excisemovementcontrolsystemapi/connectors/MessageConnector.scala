@@ -27,7 +27,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptSuccessResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IEMessage}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.CorrelationIdService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, CorrelationIdService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService._
 import uk.gov.hmrc.http.client.HttpClientV2
@@ -45,7 +45,8 @@ class MessageConnector @Inject() (
                                    httpClient: HttpClientV2,
                                    correlationIdService: CorrelationIdService,
                                    messageFactory: IEMessageFactory,
-                                   dateTimeService: DateTimeService
+                                   dateTimeService: DateTimeService,
+                                   auditService: AuditService
                                  )(implicit ec: ExecutionContext) {
 
   private val service: Service = configuration.get[Service]("microservice.services.eis")
@@ -53,7 +54,7 @@ class MessageConnector @Inject() (
 
   def getNewMessages(ern: String)(implicit hc: HeaderCarrier): Future[GetMessagesResponse] = {
 
-    val correlationId = correlationIdService.generateCorrelationId
+    val correlationId = correlationIdService.generateCorrelationId()
     val timestamp = dateTimeService.timestamp().asStringInMilliseconds
 
     httpClient.put(url"${service.baseUrl}/emcs/messages/v1/show-new-messages?exciseregistrationnumber=$ern")
@@ -78,7 +79,7 @@ class MessageConnector @Inject() (
 
   def acknowledgeMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] = {
 
-    val correlationId = correlationIdService.generateCorrelationId
+    val correlationId = correlationIdService.generateCorrelationId()
     val timestamp = dateTimeService.timestamp().asStringInMilliseconds
 
     httpClient.put(url"${service.baseUrl}/emcs/messages/v1/message-receipt?exciseregistrationnumber=$ern")
@@ -103,10 +104,12 @@ class MessageConnector @Inject() (
       response <- Try(json.as[A])
     } yield response
 
-  private def getMessages(response: EISConsumptionResponse): Try[Seq[IEMessage]] = Try {
+  private def getMessages(response: EISConsumptionResponse)(implicit headerCarrier: HeaderCarrier): Try[Seq[IEMessage]] = Try {
     val decodedMessage: String = base64Decode(response.message)
     val xmlResponse = scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
-    xmlResponse.Messages.messagesoption.map(messageFactory.createIEMessage)
+    xmlResponse.Messages.messagesoption.map(messageFactory.createIEMessage).tapEach {
+      auditService.auditMessage(_)(headerCarrier)
+    }
   }
 
   def countOfMessagesAvailable(encodedMessage: String): Try[Int] = Try {
