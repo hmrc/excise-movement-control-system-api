@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
 import cats.syntax.all._
+import org.apache.pekko.Done
 import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
@@ -59,15 +60,15 @@ class PollingNewMessagesWithWorkItemJob @Inject()
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  override def execute(implicit ec: ExecutionContext): Future[Result] = {
+  override def execute(implicit ec: ExecutionContext): Future[Done] = {
     val now = dateTimeService.timestamp()
     process(now.minus(appConfig.failureRetryAfter.toJava), now, appConfig.maxFailureRetryAttempts)
   }
 
-  private def process(failedBefore: Instant, availableBefore: Instant, maximumRetries: Int): Future[Result] = {
+  private def process(failedBefore: Instant, availableBefore: Instant, maximumRetries: Int): Future[Done] = {
     workItemService.pullOutstanding(failedBefore, availableBefore)
       .flatMap {
-        case None => Future.successful(Result(s"$name Job ran successfully."))
+        case None => Future.successful(Done)
         case Some(wi) =>
 
           val ern = wi.item.exciseNumber

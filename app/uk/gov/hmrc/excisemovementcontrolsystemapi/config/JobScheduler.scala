@@ -53,8 +53,8 @@ class JobScheduler @Inject() (
         val duration = Duration.between(startTime, clock.instant())
         timers(job).update(duration)
         result match {
-          case Success(job.Result(message)) =>
-            logger.info(s"Completed job ${job.name} in ${duration.toSeconds}s: $message")
+          case Success(_) =>
+            logger.info(s"Completed job ${job.name} in ${duration.toSeconds}s")
           case Failure(throwable) =>
             logger.error(s"Exception running job ${job.name} after ${duration.toSeconds}s", throwable)
         }

@@ -192,10 +192,9 @@ class PollingNewMessagesWithWorkItemJobSpec
       when(newMessageService.getNewMessages(any)(any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
-      val result = await(job.execute)
+      await(job.execute)
 
       verify(workItemService).rescheduleWorkItemForceSlow(eqTo(workItem))
-      result.message mustBe "polling-new-messages Job ran successfully."
     }
 
     "parse the messages" in {
@@ -213,9 +212,8 @@ class PollingNewMessagesWithWorkItemJobSpec
       when(newMessageService.getNewMessages(any)(any))
         .thenReturn(Future.successful(Some((newMessageResponse, 5))))
 
-      val result = await(job.execute)
+      await(job.execute)
 
-      result.message mustBe "polling-new-messages Job ran successfully."
       val captor = ArgCaptor[String]
       verify(newMessageService, times(2)).getNewMessages(captor.capture)(any)
 
@@ -231,9 +229,8 @@ class PollingNewMessagesWithWorkItemJobSpec
     "not process any Work Items if no Work Items exist" in {
       when(workItemService.pullOutstanding(any, any)).thenReturn(Future.successful(None))
 
-      val result = await(job.execute)
+      await(job.execute)
 
-      result.message mustBe "polling-new-messages Job ran successfully."
       verifyZeroInteractions(newMessageService)
     }
 
@@ -244,9 +241,8 @@ class PollingNewMessagesWithWorkItemJobSpec
           .thenReturn(Future.successful(Some((newMessageResponseEmpty, 0))))
         when(newMessageParserService.extractMessages(any)).thenReturn(Seq.empty)
 
-        val result = await(job.execute)
+        await(job.execute)
 
-        result.message mustBe "polling-new-messages Job ran successfully."
         verifyZeroInteractions(movementService)
         verifyZeroInteractions(notificationService)
       }
@@ -256,9 +252,8 @@ class PollingNewMessagesWithWorkItemJobSpec
         when(newMessageService.getNewMessages(any)(any))
           .thenReturn(Future.successful(None))
 
-        val result = await(job.execute)
+        await(job.execute)
 
-        result.message mustBe "polling-new-messages Job ran successfully."
         verifyZeroInteractions(movementService)
         verifyZeroInteractions(notificationService)
       }
@@ -268,9 +263,8 @@ class PollingNewMessagesWithWorkItemJobSpec
         when(newMessageService.getNewMessages(any)(any))
           .thenReturn(Future.failed(new RuntimeException("error")))
 
-        val result = await(job.execute)
+        await(job.execute)
 
-        result.message mustBe "polling-new-messages Job ran successfully."
         verify(movementService, never()).updateMovement(any, any)
         verifyZeroInteractions(notificationService)
       }
