@@ -40,7 +40,8 @@ import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import scala.concurrent.Future
+import scala.concurrent.{Future, Promise}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class MessageServiceItSpec
   extends AnyFreeSpec
@@ -51,6 +52,10 @@ class MessageServiceItSpec
     with BeforeAndAfterEach
     with BeforeAndAfterAll
     with MockitoSugar {
+
+  // For some reason not all indexes are applied when running these tests
+  // but we have tests for checking these indexes in the individual repository specs
+  override val checkIndexedQueries: Boolean = false
 
   private val mockMessageConnector = mock[MessageConnector]
   private val mockDateTimeService = mock[DateTimeService]
@@ -121,6 +126,38 @@ class MessageServiceItSpec
       val result2 = repository.getMovementByLRNAndERNIn(lrn, List(ern)).futureValue
 
       result1 mustEqual result2
+
+      // For this test, it's important that these are two calls that retrieve messages
+      // We don't want the second call being throttled, so this check is added to make sure we're
+      // testing the right behaviour
+      verify(mockMessageConnector, times(2)).getNewMessages(any)(any)
+    }
+
+    "must only allow a single call at a time" ignore {
+
+      val hc = HeaderCarrier()
+      val ern = "testErn"
+      val lrn = "lrnie8158976912"
+
+      val ie704 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some(lrn)))
+      val messages = Seq(IE704Message.createFromXml(ie704))
+
+      val promise = Promise[Done]
+
+      when(mockDateTimeService.timestamp()).thenReturn(now)
+      when(mockCorrelationIdService.generateCorrelationId()).thenReturn(newId)
+
+      when(mockMessageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+      when(mockMessageConnector.acknowledgeMessages(any)(any)).thenReturn(Future(promise.future).flatten)
+
+      val future = service.updateMessages(ern)(hc)
+      val future2 = service.updateMessages(ern)(hc)
+
+      promise.success(Done)
+      future.futureValue
+      future2.futureValue
+
+      verify(mockMessageConnector, times(1)).getNewMessages(any)(any)
     }
   }
 }
