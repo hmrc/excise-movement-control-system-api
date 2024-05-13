@@ -108,7 +108,7 @@ class MessageServiceItSpec
         None,
         None,
         now,
-        messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", now))
+        messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", ern, now))
       )
 
       when(mockDateTimeService.timestamp()).thenReturn(

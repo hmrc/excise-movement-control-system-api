@@ -102,22 +102,22 @@ class MessageService @Inject
 
     (
       if (matchedMovements.nonEmpty) matchedMovements.map { movement =>
-        Some(updateMovement(movement, message))
+        Some(updateMovement(ern, movement, message))
       } else {
         createMovement(ern, message)
       } +: updatedMovements.map(Some(_))
     ).flatten.distinctBy(_._id)
   }
 
-  private def updateMovement(movement: Movement, message: IEMessage): Movement = {
-    movement.copy(messages = getUpdatedMessages(movement, message),
+  private def updateMovement(recipient: String, movement: Movement, message: IEMessage): Movement = {
+    movement.copy(messages = getUpdatedMessages(recipient, movement, message),
       administrativeReferenceCode = getArc(movement, message),
       consigneeId = getConsignee(movement, message)
     )
   }
 
-  private def getUpdatedMessages(movement: Movement, message: IEMessage): Seq[Message] = {
-    (movement.messages :+ convertMessage(message)).distinctBy(_.messageId)
+  private def getUpdatedMessages(recipient: String, movement: Movement, message: IEMessage): Seq[Message] = {
+    (movement.messages :+ convertMessage(recipient, message)).distinctBy(_.messageId)
   }
 
   private def findMovementsForMessage(movements: Seq[Movement], updatedMovements: Seq[Movement], message: IEMessage): Seq[Movement] = {
@@ -163,7 +163,7 @@ class MessageService @Inject
       None,
       administrativeReferenceCode = message.administrativeReferenceCode.head, // TODO remove .head
       dateTimeService.timestamp(),
-      messages = Seq(convertMessage(message))
+      messages = Seq(convertMessage(consignor, message))
     )
   }
 
@@ -176,7 +176,7 @@ class MessageService @Inject
       message.consigneeId,
       administrativeReferenceCode = message.administrativeReferenceCode.head, // TODO remove .head
       dateTimeService.timestamp(),
-      messages = Seq(convertMessage(message))
+      messages = Seq(convertMessage(consignor, message))
     )
   }
 
@@ -193,11 +193,12 @@ class MessageService @Inject
     movements.find(movement => message.lrnEquals(movement.localReferenceNumber))
       .map(Seq(_))
 
-  private def convertMessage(input: IEMessage): Message = {
+  private def convertMessage(recipient: String, input: IEMessage): Message = {
     Message(
       encodedMessage = emcsUtils.encode(input.toXml.toString),
       messageType = input.messageType,
       messageId = input.messageIdentifier,
+      recipient = recipient,
       createdOn = dateTimeService.timestamp()
     )
   }
