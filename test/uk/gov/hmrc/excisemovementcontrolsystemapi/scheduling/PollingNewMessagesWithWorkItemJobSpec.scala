@@ -125,7 +125,7 @@ class PollingNewMessagesWithWorkItemJobSpec
     "have interval defined" in {
       val interval = Duration.create(5, SECONDS)
       when(appConfig.interval).thenReturn(interval)
-      job.intervalBetweenJobRunning mustBe interval
+      job.interval mustBe interval
     }
 
     "have initial delay defined" in {

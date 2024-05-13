@@ -60,7 +60,7 @@ class PollingNewMessagesJobSpec extends PlaySpec
         pollingNewMessagesJob.initialDelay mustBe FiniteDuration(2, "minutes")
       }
       "use interval from configuration" in {
-        pollingNewMessagesJob.intervalBetweenJobRunning mustBe FiniteDuration(1, "minute")
+        pollingNewMessagesJob.interval mustBe FiniteDuration(1, "minute")
       }
     }
   }

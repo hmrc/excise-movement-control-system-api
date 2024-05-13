@@ -36,5 +36,5 @@ class PollingNewMessagesJob @Inject
 
   override def initialDelay: FiniteDuration = configuration.get[FiniteDuration]("scheduler.pollingNewMessagesJob.initialDelay")
 
-  override def intervalBetweenJobRunning: FiniteDuration = configuration.get[FiniteDuration]("scheduler.pollingNewMessagesJob.interval")
+  override def interval: FiniteDuration = configuration.get[FiniteDuration]("scheduler.pollingNewMessagesJob.interval")
 }

@@ -54,7 +54,7 @@ class PollingNewMessagesWithWorkItemJob @Inject()
 
   override def name: String = "polling-new-messages"
 
-  override def intervalBetweenJobRunning: FiniteDuration = appConfig.interval
+  override def interval: FiniteDuration = appConfig.interval
 
   override def initialDelay: FiniteDuration = appConfig.initialDelay
 
