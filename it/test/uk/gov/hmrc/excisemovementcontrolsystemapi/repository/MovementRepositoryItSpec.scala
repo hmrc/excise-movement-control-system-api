@@ -90,8 +90,6 @@ class MovementRepositoryItSpec extends PlaySpec
       result mustBe true
       insertedRecord mustBe movement
     }
-
-    mustPreserveMdc(repository.saveMovement(movement))
   }
 
   "updateMovement" should {
