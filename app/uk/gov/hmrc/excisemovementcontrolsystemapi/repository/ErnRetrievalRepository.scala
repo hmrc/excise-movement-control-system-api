@@ -17,8 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import org.apache.pekko.Done
-import org.apache.pekko.Done.done
-import org.mongodb.scala.model.{Filters, IndexModel, IndexOptions, Indexes, ReplaceOptions}
+import org.mongodb.scala.model._
 import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnRetrievalRepository.mongoIndexes
@@ -48,9 +47,11 @@ class ErnRetrievalRepository @Inject()
   ) with Logging {
 
   def getLastRetrieved(ern: String): Future[Option[Instant]] = Mdc.preservingMdc {
-    collection.find(Filters.eq("ern", ern))
-      .headOption()
-      .map(r => r.map(_.lastRetrieved))
+    collection.findOneAndReplace(
+      Filters.eq("ern", ern),
+      ErnRetrieval(ern, timeService.timestamp()),
+      FindOneAndReplaceOptions().upsert(true)
+    ).headOption().map(_.map(_.lastRetrieved))
   }
 
   def save(ern: String): Future[Done] = Mdc.preservingMdc {

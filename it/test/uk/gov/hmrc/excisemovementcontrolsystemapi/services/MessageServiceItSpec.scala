@@ -19,6 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.{Mockito, MockitoSugar}
+import org.mongodb.scala.model.{Filters, Updates}
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -31,7 +32,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessageGeneratorFactory}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes.IE704
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE704Message}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -73,6 +74,9 @@ class MessageServiceItSpec
   override protected lazy val repository: MovementRepository =
     app.injector.instanceOf[MovementRepository]
 
+  private lazy val ernRetrievalRepository: ErnRetrievalRepository =
+    app.injector.instanceOf[ErnRetrievalRepository]
+
   private lazy val service = app.injector.instanceOf[MessageService]
 
   override def fakeApplication(): Application =
@@ -107,7 +111,9 @@ class MessageServiceItSpec
         messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", now))
       )
 
-      when(mockDateTimeService.timestamp()).thenReturn(now)
+      when(mockDateTimeService.timestamp()).thenReturn(
+        now
+      )
       when(mockCorrelationIdService.generateCorrelationId()).thenReturn(newId)
 
       when(mockMessageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
@@ -122,6 +128,12 @@ class MessageServiceItSpec
 
       result1 must contain only expectedMovement
 
+      // Reset the lastRetrieved time so that a second run will not be throttled
+      ernRetrievalRepository.collection.findOneAndUpdate(
+        Filters.eq("ern", ern),
+        Updates.set("lastRetrieved", now.minus(10, ChronoUnit.MINUTES))
+      ).toFuture().futureValue
+
       service.updateMessages(ern)(hc).futureValue
       val result2 = repository.getMovementByLRNAndERNIn(lrn, List(ern)).futureValue
 
@@ -133,7 +145,7 @@ class MessageServiceItSpec
       verify(mockMessageConnector, times(2)).getNewMessages(any)(any)
     }
 
-    "must only allow a single call at a time" ignore {
+    "must only allow a single call at a time" in {
 
       val hc = HeaderCarrier()
       val ern = "testErn"

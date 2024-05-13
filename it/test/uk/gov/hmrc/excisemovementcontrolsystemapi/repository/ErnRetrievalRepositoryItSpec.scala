@@ -65,7 +65,7 @@ class ErnRetrievalRepositoryItSpec extends PlaySpec
       val updatedInstant = Instant.now.truncatedTo(ChronoUnit.MILLIS)
       when(mockTimeService.timestamp()).thenReturn(updatedInstant)
 
-      insert(ErnRetrieval("testErn", originalInstant))
+      insert(ErnRetrieval("testErn", originalInstant)).futureValue
 
       repository.save("testErn").futureValue
 
@@ -76,20 +76,31 @@ class ErnRetrievalRepositoryItSpec extends PlaySpec
   }
 
   "getLastRetrieved" should {
-    "return none when ern does not exist" in {
+
+    "return none and update the lastRetrieved time when ern does not exist" in {
+
+      val instant = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+      when(mockTimeService.timestamp()).thenReturn(instant)
+
       val lastRetrieved = repository.getLastRetrieved("testErn").futureValue
 
       lastRetrieved mustBe None
+
+      find(Filters.eq("ern", "testErn")).futureValue.head mustBe ErnRetrieval("testErn", instant)
     }
 
-    "return the lastRetrieved for an ern that exists" in {
-      val lastRetrieved = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+    "return the lastRetrieved and update the lastRetrieved time for an ern that exists" in {
 
+      val instant = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+      when(mockTimeService.timestamp()).thenReturn(instant)
+
+      val lastRetrieved = instant.minus(5, ChronoUnit.MINUTES)
       insert(ErnRetrieval("testErn", lastRetrieved)).futureValue
 
       val actualLastRetrieved = repository.getLastRetrieved("testErn").futureValue
-
       actualLastRetrieved mustBe Some(lastRetrieved)
+
+      find(Filters.eq("ern", "testErn")).futureValue.head mustBe ErnRetrieval("testErn", instant)
     }
 
     mustPreserveMdc(repository.getLastRetrieved("testErn"))
