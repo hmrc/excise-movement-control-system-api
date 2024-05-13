@@ -167,8 +167,8 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
   "getMovementByLRNAndERNIn with valid LRN and ERN combination" should {
     "return  a movement" in {
-      val message1 = Message("123456", "IE801", "messageId1", testDateTime)
-      val message2 = Message("ABCDE", "IE815", "messageId2", testDateTime)
+      val message1 = Message("123456", "IE801", "messageId1", "ern", testDateTime)
+      val message2 = Message("ABCDE", "IE815", "messageId2", "ern", testDateTime)
       val movement = Movement(Some("boxId"), lrn, consignorId, Some(consigneeId), None, Instant.now(), Seq(message1, message2))
       when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
         .thenReturn(Future.successful(Seq(movement)))
@@ -334,8 +334,8 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
   "updateMovement" should {
 
     val messageIdForNewMessage = "messageId3"
-    val cachedMessage1 = Message("<IE801>test</IE801>", MessageTypes.IE801.value, "messageId1", testDateTime)
-    val cachedMessage2 = Message("<IE802>test</IE802>", MessageTypes.IE802.value, "messageId2", testDateTime)
+    val cachedMessage1 = Message("<IE801>test</IE801>", MessageTypes.IE801.value, "messageId1", "ern", testDateTime)
+    val cachedMessage2 = Message("<IE802>test</IE802>", MessageTypes.IE802.value, "messageId2", "ern", testDateTime)
 
     val movementARC456 = Movement(Some("boxId"), "123", consignorId, None, Some("456"), testDateTime, Seq.empty)
     val movementARC89 = Movement(Some("boxId"), "345", consignorId, None, Some("89"), testDateTime, Seq.empty)
@@ -345,7 +345,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
     val cachedMovements = Seq(movementARC456, movementARC89, movementARC890, movementNoArcLrn456, movementNoArcLrn789)
     val encodeMessage = Base64.getEncoder.encodeToString("<IE818>test</IE818>".getBytes(StandardCharsets.UTF_8))
-    val expectedMessage = Message(encodeMessage, MessageTypes.IE818.value, messageIdForNewMessage, testDateTime)
+    val expectedMessage = Message(encodeMessage, MessageTypes.IE818.value, messageIdForNewMessage, consignorId, testDateTime)
 
     "save movement" when {
       "message contains Administration Reference Code (ARC)" in {
@@ -508,7 +508,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
     }
 
     "save to DB when message has different content but the same message type" in {
-      val cachedMessage: Message = createMessage("<foo>different content</foo>", MessageTypes.IE801.value, messageIdForNewMessage)
+      val cachedMessage: Message = createMessage("<foo>different content</foo>", MessageTypes.IE801.value, messageIdForNewMessage, consignorId)
       val movementWithMessagesAlready = Movement(Some("boxId"), lrn, consignorId, None, None, testDateTime, Seq(cachedMessage, cachedMessage1))
 
       setUpForUpdateMovement(newMessage, Seq(None), Some("123"), "<foo>test</foo>", cachedMovements, messageIdForNewMessage)
@@ -516,7 +516,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
       await(movementService.updateMovement(newMessage, consignorId))
 
-      val expectedNewMessage = createMessage("<foo>test</foo>", MessageTypes.IE818.value, messageIdForNewMessage)
+      val expectedNewMessage = createMessage("<foo>test</foo>", MessageTypes.IE818.value, messageIdForNewMessage, consignorId)
       val expectedMovement = movementWithMessagesAlready.copy(messages = Seq(cachedMessage, cachedMessage1, expectedNewMessage))
       verify(mockMovementRepository).updateMovement(eqTo(expectedMovement))
     }
@@ -553,8 +553,8 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       .thenReturn(Future.successful(updatedMovement))
   }
 
-  private def createMessage(xml: String, messageType: String, messageIdForNewMessage: String) = {
+  private def createMessage(xml: String, messageType: String, messageIdForNewMessage: String, recipient: String = "ern") = {
     val encodeMessage = Base64.getEncoder.encodeToString(xml.getBytes(StandardCharsets.UTF_8))
-    Message(encodeMessage, messageType, messageIdForNewMessage, testDateTime)
+    Message(encodeMessage, messageType, messageIdForNewMessage, recipient, testDateTime)
   }
 }

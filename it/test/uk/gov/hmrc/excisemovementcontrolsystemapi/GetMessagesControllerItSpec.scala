@@ -126,7 +126,7 @@ class GetMessagesControllerItSpec extends PlaySpec
 
     "return 404 when movement is not valid for ERN" in {
       withAuthorizedTrader(consignorId)
-      val message = Message("encodedMessage", "IE801", "messageId", timestamp)
+      val message = Message("encodedMessage", "IE801", "messageId", "ern", timestamp)
       when(movementRepository.getMovementById(any))
         .thenReturn(Future.successful(Some(Movement(validUUID, Some("boxId"), "lrn", "consignor", None, None, Instant.now, Seq(message)))))
 
@@ -191,7 +191,7 @@ class GetMessagesControllerItSpec extends PlaySpec
       withAuthorizedTrader(consignorId)
 
       val encodedMessage = Base64.getEncoder.encodeToString(IE801.toString().getBytes(StandardCharsets.UTF_8))
-      val message = Message(encodedMessage, "IE801", "messageId", timestamp)
+      val message = Message(encodedMessage, "IE801", "messageId", "ern", timestamp)
       when(movementRepository.getMovementById(any))
         .thenReturn(Future.successful(Some(createMovementWithMessages(messages = Seq(message)))))
 
@@ -255,7 +255,7 @@ class GetMessagesControllerItSpec extends PlaySpec
 
   "Get one message return a 500 if message is not XML" in {
     withAuthorizedTrader(consignorId)
-    val message = Message("encodedMessage", "IE801", messageId, timestamp)
+    val message = Message("encodedMessage", "IE801", messageId, "ern", timestamp)
     when(movementRepository.getMovementById(any))
       .thenReturn(Future.successful(Some(createMovementWithMessages(messages = Seq(message)))))
 
@@ -295,7 +295,7 @@ class GetMessagesControllerItSpec extends PlaySpec
 
   private def createEncodeMessage = {
     val encodedMessage = Base64.getEncoder.encodeToString(IE801.toString().getBytes(StandardCharsets.UTF_8))
-    Message(encodedMessage, "IE801", messageId, timestamp)
+    Message(encodedMessage, "IE801", messageId, "ern", timestamp)
   }
 
   private def createMovementWithMessages(movementId: String = validUUID, messages: Seq[Message] = Seq.empty):Movement = {
