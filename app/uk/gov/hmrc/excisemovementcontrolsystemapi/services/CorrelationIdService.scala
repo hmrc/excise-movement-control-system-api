@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2024 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
+package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-import org.apache.pekko.Done
+import java.util.UUID
+import javax.inject.{Inject, Singleton}
 
-import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ExecutionContext, Future}
+@Singleton
+class CorrelationIdService @Inject() {
 
-trait ScheduledJob {
-  def name: String
-
-  def execute(implicit ec: ExecutionContext): Future[Done]
-
-  val enabled: Boolean
-
-  def initialDelay: FiniteDuration
-
-  def interval: FiniteDuration
-
-  override def toString = s"$name after $initialDelay every $interval"
+  def generateCorrelationId(): String = UUID.randomUUID().toString
 }

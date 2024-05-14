@@ -387,8 +387,8 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
   }
 
   private def setUpMovementRepository(movementRepository: MovementRepository) = {
-    val message1 = Message(123, "encodedMessage","IE801", "messageId")
-    val message2 = Message(123, "encodedMessage","IE802", "messageId-2")
+    val message1 = Message(123, "encodedMessage","IE801", "messageId", "ern")
+    val message2 = Message(123, "encodedMessage","IE802", "messageId-2", "ern")
 
     when(movementRepository.getAllBy(eqTo("1")))
       .thenReturn(
@@ -650,6 +650,7 @@ class PollingNewMessagesWithWorkItemJobItSpec extends PlaySpec
       Base64.getEncoder.encodeToString(xml.getBytes(StandardCharsets.UTF_8)),
       messageType,
       "messageId",
+      "ern",
       timestamp
     )
   }

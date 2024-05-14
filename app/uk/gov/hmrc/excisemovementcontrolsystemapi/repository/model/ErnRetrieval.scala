@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2024 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +14,17 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
+package uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model
 
-import org.apache.pekko.Done
+import play.api.libs.json.{Format, Json, OFormat}
+import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
-import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ExecutionContext, Future}
+import java.time.Instant
 
-trait ScheduledJob {
-  def name: String
+case class ErnRetrieval(ern: String, lastRetrieved: Instant)
 
-  def execute(implicit ec: ExecutionContext): Future[Done]
+object ErnRetrieval {
+  implicit val instantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
 
-  val enabled: Boolean
-
-  def initialDelay: FiniteDuration
-
-  def interval: FiniteDuration
-
-  override def toString = s"$name after $initialDelay every $interval"
+  implicit lazy val format: OFormat[ErnRetrieval] = Json.format
 }

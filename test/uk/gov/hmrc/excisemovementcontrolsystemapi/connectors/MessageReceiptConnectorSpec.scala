@@ -29,7 +29,8 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.EISHeaderTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{MessageReceiptFailResponse, MessageReceiptSuccessResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.CorrelationIdService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
 import java.time.Instant
@@ -48,9 +49,9 @@ class MessageReceiptConnectorSpec
   private val httpClient = mock[HttpClient]
   private val appConfig = mock[AppConfig]
   private val metrics = mock[MetricRegistry](RETURNS_DEEP_STUBS)
-  private val emcsUtil = mock[EmcsUtils]
+  private val correlationIdService = mock[CorrelationIdService]
   private val dateTimeService = mock[DateTimeService]
-  private val sut = new MessageReceiptConnector(httpClient, appConfig, emcsUtil, metrics, dateTimeService)
+  private val sut = new MessageReceiptConnector(httpClient, appConfig, correlationIdService, metrics, dateTimeService)
 
   private val timestamp = Instant.parse("2023-01-02T03:04:05.986456Z")
   private val response = MessageReceiptSuccessResponse(timestamp, "123", 10)
@@ -64,7 +65,7 @@ class MessageReceiptConnectorSpec
     when(httpClient.PUTString[Any](any, any, any)(any, any, any))
       .thenReturn(Future.successful(HttpResponse(200, Json.toJson(response).toString())))
     when(dateTimeService.timestamp()).thenReturn(timestamp)
-    when(emcsUtil.generateCorrelationId).thenReturn("12345")
+    when(correlationIdService.generateCorrelationId()).thenReturn("12345")
     when(appConfig.messageReceiptUrl(any)).thenReturn("/messageReceipt")
     when(appConfig.messagesBearerToken).thenReturn(messagesBearerToken)
     when(metrics.timer(any).time()) thenReturn timerContext

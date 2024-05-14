@@ -84,7 +84,7 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "return 200" in {
-      val message = Message(123, "message", "IE801", "messageId", messageCreateOn)
+      val message = Message(123, "message", "IE801", "messageId", "ern", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
@@ -100,8 +100,8 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "get all the new messages" in {
-      val message = Message(123, "message", "IE801", "messageId1", messageCreateOn)
-      val message2 = Message(345,"message2", "IE801", "messageId2", messageCreateOn)
+      val message = Message(123, "message", "IE801", "messageId1", "ern", messageCreateOn)
+      val message2 = Message(345,"message2", "IE801", "messageId2", "ern", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message, message2))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
@@ -119,8 +119,8 @@ class GetMessagesControllerSpec extends PlaySpec
     "get all the new messages when there is a time query parameter provided" in {
       val timeInFuture = Instant.now.plusSeconds(1000)
       val timeInPast = Instant.now.minusSeconds(1000)
-      val message = Message("message", "IE801", "messageId1", timeInFuture)
-      val message2 = Message("message2", "IE801", "messageId2", timeInPast)
+      val message = Message("message", "IE801", "messageId1", "ern", timeInFuture)
+      val message2 = Message("message2", "IE801", "messageId2", "ern", timeInPast)
       val movement = createMovementWithMessages(Seq(message, message2))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
@@ -140,9 +140,9 @@ class GetMessagesControllerSpec extends PlaySpec
       val timeNowString = messageCreateOn.toString
       val timeInFuture = Instant.now.plusSeconds(1000)
       val timeInPast = Instant.now.minusSeconds(1000)
-      val message = Message("message", "IE801", "messageId1", timeInFuture)
-      val message2 = Message("message2", "IE801", "messageId2", timeInPast)
-      val message3 = Message("message3", "IE801", "messageId3", messageCreateOn)
+      val message = Message("message", "IE801", "messageId1", "ern", timeInFuture)
+      val message2 = Message("message2", "IE801", "messageId2", "ern", timeInPast)
+      val message3 = Message("message3", "IE801", "messageId3", "ern", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message, message2, message3))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
@@ -159,7 +159,7 @@ class GetMessagesControllerSpec extends PlaySpec
 
     "succeed when a valid date format is provided" in {
       val timeInFuture = Instant.now.plusSeconds(1000)
-      val message = Message("message", "IE801", "messageId", timeInFuture)
+      val message = Message("message", "IE801", "messageId", "ern", timeInFuture)
       val movement = createMovementWithMessages(Seq(message))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
@@ -178,7 +178,7 @@ class GetMessagesControllerSpec extends PlaySpec
 
     "fail when an invalid date format is provided" in {
       val timeInFuture = Instant.now.plusSeconds(1000)
-      val message = Message("message", "IE801", "messageId", timeInFuture)
+      val message = Message("message", "IE801", "messageId", "ern", timeInFuture)
       val movement = createMovementWithMessages(Seq(message))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
@@ -194,7 +194,7 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "create a Work Item if there is not one for the ERN already" in {
-      val message = Message("message", "IE801", "messageId", messageCreateOn)
+      val message = Message("message", "IE801", "messageId", "ern", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
@@ -228,7 +228,7 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "return NOT_FOUND when movement is for a different ern " in {
-      val message = Message("message", "IE801", "messageId", Instant.now)
+      val message = Message("message", "IE801", "messageId", "ern", Instant.now)
       val movement = Movement(validUUID, Some("boxId"), "lrn", "consignor", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
@@ -243,7 +243,7 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "catch Future failure from Work Item service and log it but still process submission" in {
-      val message = Message("message", "IE801", "messageId", messageCreateOn)
+      val message = Message("message", "IE801", "messageId", "ern", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
       when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.failed(new MongoException("Oh no!")))
@@ -268,7 +268,7 @@ class GetMessagesControllerSpec extends PlaySpec
     val encodeMessage = Base64.getEncoder.encodeToString(messageXml.getBytes(StandardCharsets.UTF_8))
 
     val messageId = UUID.randomUUID().toString
-    val message = Message(encodeMessage, "IE801", messageId, timeStamp)
+    val message = Message(encodeMessage, "IE801", messageId, "ern", timeStamp)
     val movementWithMessage = createMovementWithMessages(Seq(message))
 
     "return 200" in {
@@ -281,7 +281,7 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "return the message as xml for that movement and messageId" in {
-      val message1 = Message("encodeMessage", "IE803", UUID.randomUUID().toString, timeStamp)
+      val message1 = Message("encodeMessage", "IE803", UUID.randomUUID().toString, "ern", timeStamp)
       val movement = movementWithMessage.copy(messages = Seq(message, message1))
       when(movementService.getMovementById(any))
         .thenReturn(Future.successful(Some(movement)))

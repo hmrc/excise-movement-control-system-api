@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2024 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,22 +15,26 @@
  */
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
-
 import org.apache.pekko.Done
+import play.api.Configuration
 
-import scala.concurrent.duration.FiniteDuration
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.FiniteDuration
 
-trait ScheduledJob {
-  def name: String
+@Singleton
+class PollingNewMessagesJob @Inject
+(
+  configuration: Configuration,
+) extends ScheduledJob {
 
-  def execute(implicit ec: ExecutionContext): Future[Done]
+  override def name: String = "polling-new-messages-job"
 
-  val enabled: Boolean
+  override def execute(implicit ec: ExecutionContext): Future[Done] = ???
 
-  def initialDelay: FiniteDuration
+  override val enabled: Boolean = true
 
-  def interval: FiniteDuration
+  override def initialDelay: FiniteDuration = configuration.get[FiniteDuration]("scheduler.pollingNewMessagesJob.initialDelay")
 
-  override def toString = s"$name after $initialDelay every $interval"
+  override def interval: FiniteDuration = configuration.get[FiniteDuration]("scheduler.pollingNewMessagesJob.interval")
 }

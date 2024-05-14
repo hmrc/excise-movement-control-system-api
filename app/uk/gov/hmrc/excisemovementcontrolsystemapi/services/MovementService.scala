@@ -139,13 +139,14 @@ class MovementService @Inject()(
     logger.info(s"Attempting to find relevant movement for message. movementWithArc: ${movementWithArc.toString}, movementWithLrn: ${movementWithLrn.toString}, message: ${message.toString}")
 
     (movementWithArc, movementWithLrn) match {
-      case (Some(mArc), _) => saveDistinctMessage(mArc, message, messageArc)
-      case (None, Some(mLrn)) => saveDistinctMessage(mLrn, message, messageArc)
+      case (Some(mArc), _) => saveDistinctMessage(ern, mArc, message, messageArc)
+      case (None, Some(mLrn)) => saveDistinctMessage(ern, mLrn, message, messageArc)
       case _ => throw new RuntimeException(s"[MovementService] - Cannot find movement for ERN: $ern, ${message.toString}")
     }
   }
 
   private def saveDistinctMessage(
+                                   recipient: String,
                                    movement: Movement,
                                    newMessage: IEMessage,
                                    messageArc: Option[String]
@@ -155,6 +156,7 @@ class MovementService @Inject()(
       encodedMessage = emcsUtils.encode(newMessage.toXml.toString),
       messageType = newMessage.messageType,
       messageId = newMessage.messageIdentifier,
+      recipient = recipient,
       createdOn = dateTimeService.timestamp()
     )
 

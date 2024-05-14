@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2024 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +14,6 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
+package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
-import org.apache.pekko.Done
-
-import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ExecutionContext, Future}
-
-trait ScheduledJob {
-  def name: String
-
-  def execute(implicit ec: ExecutionContext): Future[Done]
-
-  val enabled: Boolean
-
-  def initialDelay: FiniteDuration
-
-  def interval: FiniteDuration
-
-  override def toString = s"$name after $initialDelay every $interval"
-}
+final case class GetMessagesResponse(messages: Seq[IEMessage], messageCount: Int)

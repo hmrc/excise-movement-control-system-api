@@ -46,15 +46,15 @@ class JobScheduler @Inject() (
   }.toMap
 
   private val cancellables = scheduledJobs.map { job =>
-    actorSystem.scheduler.scheduleWithFixedDelay(job.initialDelay, job.intervalBetweenJobRunning) { () =>
+    actorSystem.scheduler.scheduleWithFixedDelay(job.initialDelay, job.interval) { () =>
       val startTime = clock.instant()
       logger.info(s"Executing job ${job.name}")
       job.execute.onComplete { result =>
         val duration = Duration.between(startTime, clock.instant())
         timers(job).update(duration)
         result match {
-          case Success(job.Result(message)) =>
-            logger.info(s"Completed job ${job.name} in ${duration.toSeconds}s: $message")
+          case Success(_) =>
+            logger.info(s"Completed job ${job.name} in ${duration.toSeconds}s")
           case Failure(throwable) =>
             logger.error(s"Exception running job ${job.name} after ${duration.toSeconds}s", throwable)
         }

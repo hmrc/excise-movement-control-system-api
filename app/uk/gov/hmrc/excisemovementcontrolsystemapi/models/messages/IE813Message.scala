@@ -36,7 +36,7 @@ case class IE813Message
 
   def consignorId: Option[String] = None
 
-  override def consigneeId: Option[String] = None
+  override def consigneeId: Option[String] = obj.Body.ChangeOfDestination.DestinationChanged.NewConsigneeTrader.flatMap(_.Traderid)
 
   override def administrativeReferenceCode: Seq[Option[String]] =
     Seq(Some(obj.Body.ChangeOfDestination.UpdateEadEsad.AdministrativeReferenceCode))

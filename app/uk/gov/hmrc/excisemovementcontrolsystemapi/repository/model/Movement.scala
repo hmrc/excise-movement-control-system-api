@@ -38,6 +38,7 @@ case class Message(
                     encodedMessage: String,
                     messageType: String,
                     messageId: String,
+                    recipient: String,
                     createdOn: Instant = Instant.now
                   )
 
@@ -72,9 +73,10 @@ object Message {
              encodedMessage: String,
              messageType: String,
              messageId: String,
+             recipient: String,
              createdOn: Instant): Message = {
 
-    Message(encodedMessage.hashCode(), encodedMessage, messageType, messageId, createdOn)
+    Message(encodedMessage.hashCode(), encodedMessage, messageType, messageId, recipient, createdOn)
   }
 
   implicit val format: OFormat[Message] = Json.format[Message]

@@ -27,7 +27,7 @@ import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsObject, Json, OFormat}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.CollectionFactory
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
@@ -37,7 +37,7 @@ import java.time.temporal.ChronoUnit
 import java.time.{Instant, LocalDateTime, ZoneOffset}
 import java.util.UUID
 
-class MovementMigrationsSpec
+class MessageRecipientMigrationSpec
   extends AnyFreeSpec
     with Matchers
     with GuiceOneAppPerSuite
@@ -56,28 +56,39 @@ class MovementMigrationsSpec
 
   private lazy val collection: MongoCollection[JsObject] =
     CollectionFactory.collection(mongoComponent.database, collectionName, implicitly)
-  private lazy val migration: MovementMigration = app.injector.instanceOf[MovementMigration]
+  private lazy val migration: MessageRecipientMigration = app.injector.instanceOf[MessageRecipientMigration]
 
-  private val oldFormat: OFormat[Movement] = Json.format[Movement]
   private val timestamp = LocalDateTime.of(2024, 4, 3, 12, 30, 45, 123123).toInstant(ZoneOffset.UTC)
-  private val movement = Movement(UUID.randomUUID().toString, Some("boxId"), "123", "345", Some("789"), None, timestamp, Seq.empty)
-  private val newFormatMovement = Movement(UUID.randomUUID().toString, Some("boxId"), "124", "345", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq.empty)
 
-  "Must migrate old format movements to the new format" in {
+  private val message1 = Message("encodedMessage", "type", "messageId", "consignorId", timestamp)
+  private val message2 = Message("encodedMessage2", "type2", "messageId2", "consignorId", timestamp)
+  private val movement = Movement(UUID.randomUUID().toString, Some("boxId"), "123", "consignorId", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message1, message2))
 
-    collection.insertOne(Json.toJsObject(movement)(oldFormat)).toFuture().futureValue
-    collection.insertOne(Json.toJsObject(newFormatMovement)).toFuture().futureValue
+  private val message3 = Message("encodedMessage", "type", "messageId", "anotherRecipient", timestamp)
+  private val movement2 = Movement(UUID.randomUUID().toString, Some("boxId"), "124", "consignorId", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message3))
 
-    val oldFormatResult = collection.find(Filters.eq("_id", movement._id)).headOption().futureValue.value
-    val oldFormatLastUpdated = (oldFormatResult \ "lastUpdated").as[Instant]
-    oldFormatLastUpdated mustEqual movement.lastUpdated
+  "must add the recipient field to any messages which don't have one" in {
+
+    import play.api.libs.json._
+
+    val transformer = (__ \ "messages").json.update {
+      Reads.of[JsArray].map { arr =>
+        JsArray {
+          arr.value.map { jsValue =>
+            jsValue.transform((__ \ "recipient").json.prune).get
+          }
+        }
+      }
+    }
+
+    val movementWithoutRecipient = Json.toJson(movement).transform(transformer).get
+
+    collection.insertOne(movementWithoutRecipient).toFuture().futureValue
+    repository.collection.insertOne(movement2).toFuture().futureValue
 
     migration.migrate().futureValue
 
-    val newFormatResult = collection.find(Filters.eq("_id", movement._id)).headOption().futureValue.value
-    val newFormatLastUpdated = (newFormatResult \ "lastUpdated").as(MongoJavatimeFormats.instantReads)
-    newFormatLastUpdated mustEqual movement.lastUpdated.truncatedTo(ChronoUnit.MILLIS)
-
-    collection.find(Filters.eq("_id", newFormatMovement._id)).headOption().futureValue.value.as[Movement] mustEqual newFormatMovement
+    repository.collection.find(Filters.eq("_id", movement._id)).headOption().futureValue.value mustEqual movement
+    repository.collection.find(Filters.eq("_id", movement2._id)).headOption().futureValue.value mustEqual movement2
   }
 }

@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.config
 
 import play.api.inject.Binding
 import play.api.{Configuration, Environment}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMigration
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MessageRecipientMigration, MovementMigration}
 
 import java.time.Clock
 
@@ -33,7 +33,10 @@ class Module extends play.api.inject.Module {
 
   private def migrationBindings(configuration: Configuration): Seq[Binding[_]] =
     if (configuration.get[Boolean]("migrations-enabled")) {
-      Seq(bind[MovementMigration].toSelf.eagerly())
+      Seq(
+        bind[MovementMigration].toSelf.eagerly(),
+        bind[MessageRecipientMigration].toSelf.eagerly()
+      )
     } else {
       Seq.empty
     }
