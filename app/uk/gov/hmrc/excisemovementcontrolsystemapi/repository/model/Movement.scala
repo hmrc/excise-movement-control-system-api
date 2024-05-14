@@ -79,5 +79,8 @@ object Message {
     Message(encodedMessage.hashCode(), encodedMessage, messageType, messageId, recipient, createdOn)
   }
 
-  implicit val format: OFormat[Message] = Json.format[Message]
+  implicit val format: OFormat[Message] = {
+    implicit val instantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
+    Json.format[Message]
+  }
 }

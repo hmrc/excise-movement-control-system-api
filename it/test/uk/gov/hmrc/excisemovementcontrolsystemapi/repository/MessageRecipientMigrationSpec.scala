@@ -26,15 +26,14 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.json.{JsObject, Json, OFormat}
+import play.api.libs.json.JsObject
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.CollectionFactory
-import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 
 import java.time.temporal.ChronoUnit
-import java.time.{Instant, LocalDateTime, ZoneOffset}
+import java.time.{LocalDateTime, ZoneOffset}
 import java.util.UUID
 
 class MessageRecipientMigrationSpec
@@ -58,7 +57,7 @@ class MessageRecipientMigrationSpec
     CollectionFactory.collection(mongoComponent.database, collectionName, implicitly)
   private lazy val migration: MessageRecipientMigration = app.injector.instanceOf[MessageRecipientMigration]
 
-  private val timestamp = LocalDateTime.of(2024, 4, 3, 12, 30, 45, 123123).toInstant(ZoneOffset.UTC)
+  private val timestamp = LocalDateTime.of(2024, 4, 3, 12, 30, 45, 123123).toInstant(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS)
 
   private val message1 = Message("encodedMessage", "type", "messageId", "consignorId", timestamp)
   private val message2 = Message("encodedMessage2", "type2", "messageId2", "consignorId", timestamp)
