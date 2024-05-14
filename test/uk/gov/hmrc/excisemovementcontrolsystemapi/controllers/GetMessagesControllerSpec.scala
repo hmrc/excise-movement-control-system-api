@@ -83,9 +83,25 @@ class GetMessagesControllerSpec extends PlaySpec
       contentAsJson(result) mustBe MovementIdFormatError
     }
 
-    "return 200 when consignor or consignee are valid" in {
+    "return 200 when consignor is valid" in {
       val message = Message(123, "message", "IE801", "messageId", "ern", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message))
+      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
+
+      val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
+
+      status(result) mustBe OK
+      contentAsJson(result) mustBe JsArray(Seq(expectedMessageResponseAsJson(
+        "message",
+        "IE801",
+        "messageId",
+        messageCreateOn
+      )))
+    }
+
+    "return 200 when consignee is valid" in {
+      val message = Message(123, "message", "IE801", "messageId", "ern", messageCreateOn)
+      val movement = Movement(validUUID, Some("boxId"), "lrn", "consignor", Some("testErn"), Some("arc"), Instant.now, Seq(message))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
