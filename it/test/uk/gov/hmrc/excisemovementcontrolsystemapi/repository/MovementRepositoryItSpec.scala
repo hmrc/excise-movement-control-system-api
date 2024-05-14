@@ -34,7 +34,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Mov
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, DefaultPlayMongoRepositorySupport}
 
-import java.time.Instant
+import java.time.{Instant, LocalDateTime, ZoneOffset}
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
@@ -356,6 +356,37 @@ class MovementRepositoryItSpec extends PlaySpec
     }
 
     mustPreserveMdc(repository.getAllBy("ern"))
+  }
+
+  "getErnsAndLastReceived" should {
+
+    "return a map of all of the ERNs that have received messages along with the latest time we received a message for them" in {
+
+      val message1 = Message("encodedMessage", "type", "messageId", "recipient1", timestamp.minus(1, ChronoUnit.DAYS))
+      val message2 = Message("encodedMessage", "type2", "messageId2", "recipient2", timestamp)
+      val movement = Movement(UUID.randomUUID().toString, None, "123", "consignorId", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message1, message2))
+
+      val message3 = Message("encodedMessage", "type", "messageId3", "recipient3", timestamp)
+      val message4 = Message("encodedMessage", "type", "messageId4", "recipient1", timestamp)
+      val movement2 = Movement(UUID.randomUUID().toString, None, "124", "consignorId", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message3, message4))
+
+      repository.collection.insertMany(Seq(movement, movement2)).toFuture().futureValue
+
+      val expected = Map(
+        "recipient1"  -> timestamp,
+        "recipient2" -> timestamp,
+        "recipient3" -> timestamp
+      )
+
+      repository.getErnsAndLastReceived().futureValue mustEqual expected
+    }
+
+    "must return an empty map when there are no movements" in {
+
+      repository.getErnsAndLastReceived().futureValue mustEqual Map.empty
+    }
+
+    mustPreserveMdc(repository.getErnsAndLastReceived())
   }
 
   private def insertMovement(movement: Movement) = {

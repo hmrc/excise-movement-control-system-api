@@ -22,14 +22,17 @@ import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Filters.{and, equal, in, or}
 import org.mongodb.scala.model._
 import play.api.Logging
+import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository.mongoIndexes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository.{ErnAndLastReceived, mongoIndexes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
+import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 import uk.gov.hmrc.play.http.logging.Mdc
 
+import java.time.Instant
 import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.Duration
@@ -47,6 +50,9 @@ class MovementRepository @Inject()
     mongoComponent = mongo,
     domainFormat = Movement.format,
     indexes = mongoIndexes(appConfig.movementTTL),
+    extraCodecs = Seq(
+      Codecs.playFormatCodec(MovementMessageRepository.ErnAndLastReceived.format)
+    ),
     replaceIndexes = true
   ) with Logging {
 
@@ -108,6 +114,17 @@ class MovementRepository @Inject()
   def getAllBy(ern: String): Future[Seq[Movement]] = Mdc.preservingMdc {
     getMovementByERN(Seq(ern))
   }
+
+  def getErnsAndLastReceived(): Future[Map[String, Instant]] = Mdc.preservingMdc {
+    collection.aggregate[ErnAndLastReceived](Seq(
+      Aggregates.unwind("$messages"),
+      Aggregates.group("$messages.recipient", Accumulators.max("lastReceived", "$messages.createdOn"))
+    )).toFuture().map {
+      _.map { field =>
+        field._id -> field.lastReceived
+      }.toMap
+    }
+  }
 }
 
 
@@ -147,5 +164,11 @@ object MovementMessageRepository {
       IndexOptions().name(indexName)
         .background(true)
     )
+  }
+
+  final case class ErnAndLastReceived(_id: String, lastReceived: Instant)
+
+  object ErnAndLastReceived extends MongoJavatimeFormats.Implicits {
+    implicit lazy val format: OFormat[ErnAndLastReceived] = Json.format
   }
 }
