@@ -83,9 +83,25 @@ class GetMessagesControllerSpec extends PlaySpec
       contentAsJson(result) mustBe MovementIdFormatError
     }
 
-    "return 200" in {
+    "return 200 when consignor or consignee are valid" in {
       val message = Message(123, "message", "IE801", "messageId", "ern", messageCreateOn)
       val movement = createMovementWithMessages(Seq(message))
+      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
+
+      val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
+
+      status(result) mustBe OK
+      contentAsJson(result) mustBe JsArray(Seq(expectedMessageResponseAsJson(
+        "message",
+        "IE801",
+        "messageId",
+        messageCreateOn
+      )))
+    }
+
+    "return 200 when message recipient is valid" in {
+      val message = Message(123, "message", "IE801", "messageId", "testErn", messageCreateOn)
+      val movement = Movement(validUUID, Some("boxId"), "lrn", "consignor", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
@@ -227,14 +243,14 @@ class GetMessagesControllerSpec extends PlaySpec
       )
     }
 
-    "return NOT_FOUND when movement is for a different ern " in {
+    "return FORBIDDEN when movement is for a different ern " in {
       val message = Message("message", "IE801", "messageId", "ern", Instant.now)
       val movement = Movement(validUUID, Some("boxId"), "lrn", "consignor", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
 
-      status(result) mustBe NOT_FOUND
+      status(result) mustBe FORBIDDEN
       contentAsJson(result) mustBe expectedJsonErrorResponse(
         "2020-01-01T01:01:01.123Z",
         "Invalid MovementID supplied for ERN",

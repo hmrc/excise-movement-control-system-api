@@ -85,7 +85,7 @@ class GetMessagesController @Inject()(
         } yield {
 
           if (getErnsForMovement(movement).intersect(request.erns).isEmpty) {
-            NotFound(Json.toJson(ErrorResponse(
+            Forbidden(Json.toJson(ErrorResponse(
               dateTimeService.timestamp(),
               "Invalid MovementID supplied for ERN",
               s"Movement $validatedMovementId is not found within the data for ERNs ${request.erns.mkString("/")}"
@@ -152,7 +152,8 @@ class GetMessagesController @Inject()(
   }
 
   private def getErnsForMovement(movement: Movement): Set[String] = {
-    Set(Some(movement.consignorId), movement.consigneeId).flatten
+    val messageRecipients = movement.messages.map(_.recipient)
+    Set(Some(movement.consignorId), movement.consigneeId, messageRecipients).flatten
   }
 
 }
