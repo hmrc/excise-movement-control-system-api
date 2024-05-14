@@ -124,7 +124,7 @@ class GetMessagesControllerItSpec extends PlaySpec
       result.status mustBe NOT_FOUND
     }
 
-    "return 404 when movement is not valid for ERN" in {
+    "return 403 when movement is not valid for ERN" in {
       withAuthorizedTrader(consignorId)
       val message = Message("encodedMessage", "IE801", "messageId", "ern", timestamp)
       when(movementRepository.getMovementById(any))
@@ -132,7 +132,7 @@ class GetMessagesControllerItSpec extends PlaySpec
 
       val result = getRequest()
 
-      result.status mustBe NOT_FOUND
+      result.status mustBe FORBIDDEN
     }
 
     "return 500 when mongo db fails to fetch details" in {
