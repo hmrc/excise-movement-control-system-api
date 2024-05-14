@@ -48,7 +48,7 @@ class GetMovementConnector @Inject()
          )(implicit hc: HeaderCarrier): Future[Either[Result, EISConsumptionResponse]] = {
 
     val timer = metrics.timer("emcs.getmovements.timer").time()
-    val correlationId = correlationIdService.generateCorrelationId
+    val correlationId = correlationIdService.generateCorrelationId()
     val createDateTime = dateTimeService.timestamp().asStringInMilliseconds
 
     httpClient.GET[HttpResponse](

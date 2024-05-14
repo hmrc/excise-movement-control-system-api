@@ -45,7 +45,7 @@ class ShowNewMessagesConnector @Inject()(
   def get(ern: String)(implicit hc: HeaderCarrier): Future[Either[Result, EISConsumptionResponse]] = {
 
     val timer = metrics.timer("emcs.shownewmessage.timer").time()
-    val correlationId = correlationIdService.generateCorrelationId
+    val correlationId = correlationIdService.generateCorrelationId()
     val dateTime = dateTimeService.timestamp().asStringInMilliseconds
 
     httpClient.PUTString[HttpResponse](

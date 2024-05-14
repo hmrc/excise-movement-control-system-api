@@ -23,7 +23,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmission
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.Inject
@@ -43,7 +42,7 @@ class SubmissionMessageServiceImpl @Inject()(
               authorisedErn: String
             )(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
 
-    val correlationId = correlationIdService.generateCorrelationId
+    val correlationId = correlationIdService.generateCorrelationId()
 
     for {
       submitMessageResponse <- connector.submitMessage(request.ieMessage, request.body.toString, authorisedErn, correlationId)

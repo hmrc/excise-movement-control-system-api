@@ -65,7 +65,7 @@ class MessageReceiptConnectorSpec
     when(httpClient.PUTString[Any](any, any, any)(any, any, any))
       .thenReturn(Future.successful(HttpResponse(200, Json.toJson(response).toString())))
     when(dateTimeService.timestamp()).thenReturn(timestamp)
-    when(correlationIdService.generateCorrelationId).thenReturn("12345")
+    when(correlationIdService.generateCorrelationId()).thenReturn("12345")
     when(appConfig.messageReceiptUrl(any)).thenReturn("/messageReceipt")
     when(appConfig.messagesBearerToken).thenReturn(messagesBearerToken)
     when(metrics.timer(any).time()) thenReturn timerContext

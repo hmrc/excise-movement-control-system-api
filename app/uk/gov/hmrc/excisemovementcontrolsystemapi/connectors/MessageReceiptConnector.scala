@@ -46,7 +46,7 @@ class MessageReceiptConnector @Inject()
 
     val timer = metrics.timer("emcs.messagereceipt.timer").time()
     val dateTime = dateTimeService.timestamp()
-    val correlationId = correlationIdService.generateCorrelationId
+    val correlationId = correlationIdService.generateCorrelationId()
 
     httpClient.PUTString[HttpResponse](
         appConfig.messageReceiptUrl(ern),

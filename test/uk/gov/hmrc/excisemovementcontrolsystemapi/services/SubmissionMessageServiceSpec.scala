@@ -67,7 +67,7 @@ class SubmissionMessageServiceSpec
     reset(connector, nrsService)
 
     when(message.consignorId).thenReturn("1234")
-    when(correlationIdService.generateCorrelationId).thenReturn("correlationId")
+    when(correlationIdService.generateCorrelationId()).thenReturn("correlationId")
     when(connector.submitMessage(any, any, any, any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "IE815", "correlationId"))))
     when(nrsService.submitNrs(any, any, any)(any))

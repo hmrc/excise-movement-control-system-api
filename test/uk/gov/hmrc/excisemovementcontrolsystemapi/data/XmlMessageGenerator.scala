@@ -17,10 +17,10 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.data
 
 import play.api.libs.json.{Json, OFormat}
-
-import scala.xml.{Elem, NodeSeq}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes._
+
+import scala.xml.NodeSeq
 
 trait XmlMessageGenerator {
   def generate(ern: String, params: MessageParams): NodeSeq
@@ -44,6 +44,7 @@ object XmlMessageGeneratorFactory extends XmlMessageGenerator {
       case IE871 => IE871XmlMessageGenerator.generate(ern, params)
       case IE881 => IE881XmlMessageGenerator.generate(ern, params)
       case IE905 => IE905XmlMessageGenerator.generate(ern, params)
+      case _ => NodeSeq.Empty
     }
   }
 }
@@ -89,12 +90,6 @@ private case object IE704XmlMessageGenerator extends XmlMessageGenerator {
         </ie704:GenericRefusalMessage>
       </ie704:Body>
     </ie704:IE704>
-  }
-
-  private def maybeArc(params: MessageParams): NodeSeq = {
-    params.administrativeReferenceCode.map { arc =>
-      <ie704:AdministrativeReferenceCode>{arc}</ie704:AdministrativeReferenceCode>
-    }.getOrElse(NodeSeq.Empty)
   }
 }
 

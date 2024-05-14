@@ -77,7 +77,7 @@ class PreValidateTraderConnectorSpec
       .thenReturn(Future.successful(Right(Right(validResponse))))
 
     when(dateTimeService.timestamp()).thenReturn(timestamp)
-    when(correlationIdService.generateCorrelationId).thenReturn(emcsCorrelationId)
+    when(correlationIdService.generateCorrelationId()).thenReturn(emcsCorrelationId)
     when(appConfig.preValidateTraderUrl).thenReturn("/eis/path")
     when(appConfig.preValidateTraderBearerToken).thenReturn(preValidateTraderBearerToken)
     when(metrics.timer(any).time()) thenReturn timerContext

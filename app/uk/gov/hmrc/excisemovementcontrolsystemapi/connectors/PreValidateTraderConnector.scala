@@ -49,7 +49,7 @@ class PreValidateTraderConnector @Inject()
 
     val timer = metrics.timer("emcs.prevalidatetrader.connector.timer").time()
 
-    val correlationId = correlationIdService.generateCorrelationId
+    val correlationId = correlationIdService.generateCorrelationId()
     val timestamp = dateTimeService.timestamp()
     val createdDateTime = timestamp.asStringInMilliseconds
 

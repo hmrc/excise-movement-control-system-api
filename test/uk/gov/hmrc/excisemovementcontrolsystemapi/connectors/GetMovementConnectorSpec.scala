@@ -71,7 +71,7 @@ class GetMovementConnectorSpec extends PlaySpec
       .thenReturn(Future.successful(HttpResponse(200, Json.toJson(response).toString())))
     when(appConfig.traderMovementUrl).thenReturn("/trader-movement-url")
     when(appConfig.movementBearerToken).thenReturn(movementBearerToken)
-    when(correlationIdService.generateCorrelationId).thenReturn("1234")
+    when(correlationIdService.generateCorrelationId()).thenReturn("1234")
     when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(metrics.timer(any).time()) thenReturn timerContext
   }

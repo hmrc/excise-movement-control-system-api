@@ -69,7 +69,7 @@ class ShowNewMessagesConnectorSpec
 
     when(httpClient.PUTString[Any](any, any, any)(any, any, any))
       .thenReturn(Future.successful(HttpResponse(200, Json.toJson(response).toString())))
-    when(correlationIdService.generateCorrelationId).thenReturn("1234")
+    when(correlationIdService.generateCorrelationId()).thenReturn("1234")
     when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(appConfig.showNewMessageUrl(any)).thenReturn("/showNewMessage")
     when(appConfig.messagesBearerToken).thenReturn(messagesBearerToken)
