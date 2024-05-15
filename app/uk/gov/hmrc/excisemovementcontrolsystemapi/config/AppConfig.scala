@@ -75,6 +75,9 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   lazy val ernRetrievalTTL: Duration = config.getOptional[String]("mongodb.ernRetrieval.TTL")
     .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
 
+  lazy val boxIdTTL: Duration = config.getOptional[String]("mongodb.boxId.TTL")
+    .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
+
   lazy val workItemTTL: Duration = config.getOptional[String]("mongodb.workItem.TTL")
     .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
 
