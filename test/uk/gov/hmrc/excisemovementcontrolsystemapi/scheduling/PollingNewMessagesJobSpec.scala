@@ -16,6 +16,11 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
+import org.apache.pekko.Done
+import org.mockito.ArgumentMatchersSugar.{any, eqTo}
+import org.mockito.Mockito
+import org.mockito.Mockito.never
+import org.mockito.MockitoSugar.{verify, when}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatestplus.mockito.MockitoSugar.mock
@@ -24,8 +29,14 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnSubmissionRepository, MovementRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 
 class PollingNewMessagesJobSpec extends PlaySpec
@@ -35,18 +46,36 @@ class PollingNewMessagesJobSpec extends PlaySpec
   with BeforeAndAfterEach {
 
   private val movementRepository = mock[MovementRepository]
-  private val ernRetrievalRepository = mock[ErnRetrievalRepository]
+  private val ernSubmissionRepository = mock[ErnSubmissionRepository]
+  private val messageService = mock[MessageService]
+  private val timeService = mock[DateTimeService]
+  private val now = Instant.now
   private lazy val pollingNewMessagesJob = app.injector.instanceOf[PollingNewMessagesJob]
 
   override def fakeApplication(): Application = GuiceApplicationBuilder()
     .overrides(
       bind[MovementRepository].toInstance(movementRepository),
-      bind[ErnRetrievalRepository].toInstance(ernRetrievalRepository),
+      bind[ErnSubmissionRepository].toInstance(ernSubmissionRepository),
+      bind[MessageService].toInstance(messageService),
+      bind[DateTimeService].toInstance(timeService),
     )
     .configure(
       "scheduler.pollingNewMessagesJob.initialDelay" -> "2 minutes",
-      "scheduler.pollingNewMessagesJob.interval" -> "1 minute"
+      "scheduler.pollingNewMessagesJob.interval" -> "1 minute",
+      "scheduler.pollingNewMessagesJob.fastPollingInterval" -> "5 minutes",
+      "scheduler.pollingNewMessagesJob.fastPollingCutoff" -> "15 minutes",
+      "scheduler.pollingNewMessagesJob.slowPollingInterval" -> "30 minutes",
     ).build()
+
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    Mockito.reset[Any](
+      movementRepository,
+      ernSubmissionRepository,
+      messageService,
+      timeService
+    )
+  }
 
   "polling new messages job" when {
     "initialised" should {
@@ -61,6 +90,150 @@ class PollingNewMessagesJobSpec extends PlaySpec
       }
       "use interval from configuration" in {
         pollingNewMessagesJob.interval mustBe FiniteDuration(1, "minute")
+      }
+    }
+  }
+
+  "executing" when {
+    "last submitted for an ern is sooner than the fast polling interval" should {
+      "not update messages for that ern" in {
+        // last received is outside of the fast polling interval
+        val ernsAndLastReceived = Map("testErn" -> now.minus(6, ChronoUnit.MINUTES))
+        // last submitted is inside the fast polling interval
+        val ernsAndLastSubmitted = Map("testErn" -> now.minus(2, ChronoUnit.MINUTES))
+        when(timeService.timestamp()).thenReturn(now)
+        when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
+        when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
+        when(messageService.updateMessages(any)(any)).thenReturn(Future.successful(Done))
+
+        pollingNewMessagesJob.execute.futureValue
+
+        verify(messageService, never()).updateMessages(any)(any)
+      }
+    }
+    "last received for an ern is sooner than the fast polling interval" should {
+      "not update messages for that ern" in {
+        // last received is inside of the fast polling interval
+        val ernsAndLastReceived = Map("testErn" -> now.minus(2, ChronoUnit.MINUTES))
+        // last submitted is outside the fast polling interval
+        val ernsAndLastSubmitted = Map("testErn" -> now.minus(6, ChronoUnit.MINUTES))
+        when(timeService.timestamp()).thenReturn(now)
+        when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
+        when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
+        when(messageService.updateMessages(any)(any)).thenReturn(Future.successful(Done))
+
+        pollingNewMessagesJob.execute.futureValue
+
+        verify(messageService, never()).updateMessages(any)(any)
+      }
+    }
+    "last activity for an ern is later than the fast polling interval" should {
+      "update messages for that ern" in {
+        // last received is outside of the fast polling interval
+        val ernsAndLastReceived = Map("testErn" -> now.minus(6, ChronoUnit.MINUTES))
+        // last submitted is outside the fast polling interval
+        val ernsAndLastSubmitted = Map("testErn" -> now.minus(7, ChronoUnit.MINUTES))
+        when(timeService.timestamp()).thenReturn(now)
+        when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
+        when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
+        when(messageService.updateMessages(any)(any)).thenReturn(Future.successful(Done))
+
+        pollingNewMessagesJob.execute.futureValue
+
+        verify(messageService).updateMessages(eqTo("testErn"))(any)
+      }
+    }
+    "last activity for an ern is later than the fast polling cutoff" should {
+      "not update messages for that ern" in {
+        // last received is outside of the fast polling cutoff
+        val ernsAndLastReceived = Map("testErn" -> now.minus(17, ChronoUnit.MINUTES))
+        // last submitted is outside the fast polling cutoff
+        val ernsAndLastSubmitted = Map("testErn" -> now.minus(16, ChronoUnit.MINUTES))
+        when(timeService.timestamp()).thenReturn(now)
+        when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
+        when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
+        when(messageService.updateMessages(any)(any)).thenReturn(Future.successful(Done))
+
+        pollingNewMessagesJob.execute.futureValue
+
+        verify(messageService, never()).updateMessages(any)(any)
+      }
+    }
+    "last activity for an ern is later than the slow polling interval" should {
+      "update messages for that ern" in {
+        // last received is outside of the slow polling interval
+        val ernsAndLastReceived = Map("testErn" -> now.minus(32, ChronoUnit.MINUTES))
+        // last submitted is outside the slow polling interval
+        val ernsAndLastSubmitted = Map("testErn" -> now.minus(31, ChronoUnit.MINUTES))
+        when(timeService.timestamp()).thenReturn(now)
+        when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
+        when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
+        when(messageService.updateMessages(any)(any)).thenReturn(Future.successful(Done))
+
+        pollingNewMessagesJob.execute.futureValue
+
+        verify(messageService).updateMessages(eqTo("testErn"))(any)
+      }
+    }
+    "last received and last submitted have different ern keys" should {
+      "the merged erns are all updated" in {
+        // last received is outside of the fast polling interval
+        val ernsAndLastReceived = Map("testErn" -> now.minus(6, ChronoUnit.MINUTES))
+        // last submitted is outside the fast polling interval
+        val ernsAndLastSubmitted = Map("testErn2" -> now.minus(7, ChronoUnit.MINUTES))
+        when(timeService.timestamp()).thenReturn(now)
+        when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
+        when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
+        when(messageService.updateMessages(any)(any)).thenReturn(Future.successful(Done))
+
+        pollingNewMessagesJob.execute.futureValue
+
+        verify(messageService).updateMessages(eqTo("testErn"))(any)
+        verify(messageService).updateMessages(eqTo("testErn2"))(any)
+      }
+    }
+    "if an ern only has a last submitted" should {
+      "update messages for that ern" in {
+        // last submitted is outside the fast polling interval
+        val ernsAndLastSubmitted = Map("testErn" -> now.minus(7, ChronoUnit.MINUTES))
+        when(timeService.timestamp()).thenReturn(now)
+        when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(Map.empty))
+        when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
+        when(messageService.updateMessages(any)(any)).thenReturn(Future.successful(Done))
+
+        pollingNewMessagesJob.execute.futureValue
+
+        verify(messageService).updateMessages(eqTo("testErn"))(any)
+      }
+    }
+    "if an ern only has a last received" should {
+      "update messages for that ern" in {
+        // last received is outside of the fast polling interval
+        val ernsAndLastReceived = Map("testErn" -> now.minus(6, ChronoUnit.MINUTES))
+        when(timeService.timestamp()).thenReturn(now)
+        when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
+        when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(Map.empty))
+        when(messageService.updateMessages(any)(any)).thenReturn(Future.successful(Done))
+
+        pollingNewMessagesJob.execute.futureValue
+
+        verify(messageService).updateMessages(eqTo("testErn"))(any)
+      }
+    }
+    "updateMessages fails" should {
+      "fail the job" in {
+        // last received is outside of the fast polling interval
+        val ernsAndLastReceived = Map("testErn" -> now.minus(6, ChronoUnit.MINUTES))
+        // last submitted is outside the fast polling interval
+        val ernsAndLastSubmitted = Map("testErn" -> now.minus(7, ChronoUnit.MINUTES))
+        when(timeService.timestamp()).thenReturn(now)
+        when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
+        when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
+        when(messageService.updateMessages(any)(any)).thenReturn(Future.failed(new RuntimeException("error")))
+
+        val result = pollingNewMessagesJob.execute.failed.futureValue
+
+        result.getMessage mustBe "error"
       }
     }
   }
