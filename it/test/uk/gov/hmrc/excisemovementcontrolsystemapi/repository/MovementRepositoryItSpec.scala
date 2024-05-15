@@ -378,15 +378,15 @@ class MovementRepositoryItSpec extends PlaySpec
         "recipient3" -> timestamp
       )
 
-      repository.getErnsAndLastReceived().futureValue mustEqual expected
+      repository.getErnsAndLastReceived.futureValue mustEqual expected
     }
 
     "must return an empty map when there are no movements" in {
 
-      repository.getErnsAndLastReceived().futureValue mustEqual Map.empty
+      repository.getErnsAndLastReceived.futureValue mustEqual Map.empty
     }
 
-    mustPreserveMdc(repository.getErnsAndLastReceived())
+    mustPreserveMdc(repository.getErnsAndLastReceived)
   }
 
   private def insertMovement(movement: Movement) = {

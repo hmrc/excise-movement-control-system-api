@@ -115,7 +115,7 @@ class MovementRepository @Inject()
     getMovementByERN(Seq(ern))
   }
 
-  def getErnsAndLastReceived(): Future[Map[String, Instant]] = Mdc.preservingMdc {
+  def getErnsAndLastReceived: Future[Map[String, Instant]] = Mdc.preservingMdc {
     collection.aggregate[ErnAndLastReceived](Seq(
       Aggregates.unwind("$messages"),
       Aggregates.group("$messages.recipient", Accumulators.max("lastReceived", "$messages.createdOn"))
