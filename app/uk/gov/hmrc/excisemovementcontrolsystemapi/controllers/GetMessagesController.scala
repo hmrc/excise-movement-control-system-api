@@ -87,7 +87,7 @@ class GetMessagesController @Inject()(
           if (getErnsForMovement(movement).intersect(request.erns).isEmpty) {
             Forbidden(Json.toJson(ErrorResponse(
               dateTimeService.timestamp(),
-              "Forbidden",
+              s"Forbidden for MovementID: $movementId",
               s"Invalid MovementID: $movementId supplied for ERN"
             )))
           } else {
