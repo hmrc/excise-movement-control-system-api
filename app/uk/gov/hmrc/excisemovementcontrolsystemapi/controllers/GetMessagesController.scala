@@ -87,8 +87,8 @@ class GetMessagesController @Inject()(
           if (getErnsForMovement(movement).intersect(request.erns).isEmpty) {
             Forbidden(Json.toJson(ErrorResponse(
               dateTimeService.timestamp(),
-              "Invalid MovementID supplied for ERN",
-              s"Movement $validatedMovementId is not found within the data for ERNs ${request.erns.mkString("/")}"
+              "Forbidden",
+              s"Invalid MovementID: $movementId supplied for ERN"
             )))
           } else {
             workItemService.addWorkItemForErn(movement.consignorId, fastMode = false)
