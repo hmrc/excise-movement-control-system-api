@@ -269,8 +269,8 @@ class GetMessagesControllerSpec extends PlaySpec
       status(result) mustBe FORBIDDEN
       contentAsJson(result) mustBe expectedJsonErrorResponse(
         "2020-01-01T01:01:01.123Z",
-        s"Forbidden for MovementID: $validUUID",
-        s"Invalid MovementID: $validUUID supplied for ERN"
+        "Forbidden",
+        "Invalid MovementID supplied for ERN"
       )
     }
 
