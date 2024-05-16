@@ -24,7 +24,7 @@ import java.util.UUID
 
 case class Movement(
                      _id: String,
-                     boxId: Option[String],
+                     boxId: Option[String], // TODO remove
                      localReferenceNumber: String,
                      consignorId: String,
                      consigneeId: Option[String],
@@ -39,7 +39,8 @@ case class Message(
                     messageType: String,
                     messageId: String,
                     recipient: String,
-                    createdOn: Instant = Instant.now
+                    boxesToNotify: Set[String],
+                    createdOn: Instant
                   )
 
 object Movement {
@@ -74,9 +75,10 @@ object Message {
              messageType: String,
              messageId: String,
              recipient: String,
+             boxesToNotify: Set[String],
              createdOn: Instant): Message = {
 
-    Message(encodedMessage.hashCode(), encodedMessage, messageType, messageId, recipient, createdOn)
+    Message(encodedMessage.hashCode(), encodedMessage, messageType, messageId, recipient, boxesToNotify, createdOn)
   }
 
   implicit val format: OFormat[Message] = {

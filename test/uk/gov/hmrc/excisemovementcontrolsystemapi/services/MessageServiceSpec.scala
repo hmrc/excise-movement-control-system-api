@@ -120,7 +120,7 @@ class MessageServiceSpec extends PlaySpec
             val notLrnMovement = Movement(None, "notTheLrn", ern, None)
             val ie704 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some("lrnie8158976912")))
             val messages = Seq(IE704Message.createFromXml(ie704))
-            val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", ern, now))
+            val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", ern, Set.empty, now)) // TODO add relevant box ids
             val expectedMovement = lrnMovement.copy(messages = expectedMessages)
             val unexpectedMovement = notLrnMovement.copy(messages = expectedMessages)
 
@@ -147,7 +147,7 @@ class MessageServiceSpec extends PlaySpec
             val notArcMovement = Movement(None, "notTheLrn", ern, None)
             val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
             val messages = Seq(IE801Message.createFromXml(ie801))
-            val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, now))
+            val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, Set.empty, now)) // TODO add relevant box ids
             val expectedMovement = arcMovement.copy(messages = expectedMessages)
             val unexpectedMovement = notArcMovement.copy(messages = expectedMessages)
 
@@ -176,9 +176,9 @@ class MessageServiceSpec extends PlaySpec
             val ern = "testErn"
             val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
             val ie704 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some("lrnie8158976912")))
-            val movement = Movement(None, "lrnie8158976912", ern, Some("testConsignee"), Some("23XI00000000000000012"), messages = Seq(Message(utils.encode(ie801.toString()), "IE801", "GB00001", ern, now)))
+            val movement = Movement(None, "lrnie8158976912", ern, Some("testConsignee"), Some("23XI00000000000000012"), messages = Seq(Message(utils.encode(ie801.toString()), "IE801", "GB00001", ern, Set.empty, now)))
             val messages = Seq(IE704Message.createFromXml(ie704))
-            val expectedMessages = movement.messages ++ Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", ern, now))
+            val expectedMessages = movement.messages ++ Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", ern, Set.empty, now))
             val expectedMovement = movement.copy(messages = expectedMessages)
 
             when(dateTimeService.timestamp()).thenReturn(now)
@@ -212,7 +212,7 @@ class MessageServiceSpec extends PlaySpec
           val movement2 = Movement(None, "???", "???", None, Some(arc2), now, Seq.empty)
           val message = IE829Message.createFromXml(ie829)
 
-          val expectedMessage = Seq(Message(utils.encode(message.toXml.toString()), "IE829", "XI000001", ern, now))
+          val expectedMessage = Seq(Message(utils.encode(message.toXml.toString()), "IE829", "XI000001", ern, Set.empty, now))
           val expectedMovement1 = movement1.copy(messages = expectedMessage)
           val expectedMovement2 = movement2.copy(messages = expectedMessage)
 
@@ -252,7 +252,7 @@ class MessageServiceSpec extends PlaySpec
               None,
               None,
               now,
-              messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", ern, now))
+              messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", ern, Set.empty, now))
             )
 
             when(correlationIdService.generateCorrelationId()).thenReturn(newId)
@@ -284,7 +284,7 @@ class MessageServiceSpec extends PlaySpec
               Some("testConsignee"),
               Some("23XI00000000000000012"),
               now,
-              messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, now))
+              messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, Set.empty, now))
             )
 
             when(correlationIdService.generateCorrelationId()).thenReturn(newId)
@@ -340,8 +340,8 @@ class MessageServiceSpec extends PlaySpec
               Some("23XI00000000000000012"),
               now,
               messages = Seq(
-                Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, now),
-                Message(utils.encode(messages(1).toXml.toString()), "IE802", "GB0002", ern, now))
+                Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, Set.empty, now),
+                Message(utils.encode(messages(1).toXml.toString()), "IE802", "GB0002", ern, Set.empty, now))
             )
 
             when(correlationIdService.generateCorrelationId()).thenReturn(newId)
@@ -372,15 +372,15 @@ class MessageServiceSpec extends PlaySpec
 
           val ie704 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some("lrnie8158976912")))
           val firstMessage = IE704Message.createFromXml(ie704)
-          val firstExpectedMessage = Message(utils.encode(firstMessage.toXml.toString()), "IE704", "XI000001", ern, now)
+          val firstExpectedMessage = Message(utils.encode(firstMessage.toXml.toString()), "IE704", "XI000001", ern, Set.empty, now)
 
           val ie7042 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000002", localReferenceNumber = Some("lrnie8158976912")))
           val secondMessage = IE704Message.createFromXml(ie7042)
-          val secondExpectedMessage = Message(utils.encode(secondMessage.toXml.toString()), "IE704", "XI000002", ern, now)
+          val secondExpectedMessage = Message(utils.encode(secondMessage.toXml.toString()), "IE704", "XI000002", ern, Set.empty, now)
 
           val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
           val thirdMessage = IE801Message.createFromXml(ie801)
-          val thirdExpectedMessage = Message(utils.encode(thirdMessage.toXml.toString()), "IE801", "GB00001", ern, now)
+          val thirdExpectedMessage = Message(utils.encode(thirdMessage.toXml.toString()), "IE801", "GB00001", ern, Set.empty, now)
 
           val firstExpectedMovement = lrnMovement.copy(messages = Seq(firstExpectedMessage))
           val secondExpectedMovement = lrnMovement.copy(messages = Seq(firstExpectedMessage, secondExpectedMessage))
@@ -480,7 +480,7 @@ class MessageServiceSpec extends PlaySpec
         val movement = Movement(newId, None, "lrnie8158976912", ern, Some("Consignee"),None, now, Seq.empty)
         val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
         val messages = Seq(IE801Message.createFromXml(ie801))
-        val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, now))
+        val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, Set.empty, now))
         val expectedMovement = movement.copy(messages = expectedMessages, administrativeReferenceCode = Some("23XI00000000000000012"))
 
         when(correlationIdService.generateCorrelationId()).thenReturn(newId)
@@ -501,7 +501,7 @@ class MessageServiceSpec extends PlaySpec
         val movement = Movement(newId, None, "lrnie8158976912", ern, Some("Consignee"), Some("23XI00000000000000012"), now, Seq.empty)
         val ie813 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE813, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
         val messages = Seq(IE813Message.createFromXml(ie813))
-        val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE813", "GB00001", ern, now))
+        val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE813", "GB00001", ern, Set.empty, now))
         val expectedMovement = movement.copy(messages = expectedMessages, consigneeId = Some("testConsignee"))
 
         when(correlationIdService.generateCorrelationId()).thenReturn(newId)
@@ -524,7 +524,7 @@ class MessageServiceSpec extends PlaySpec
         val movement = Movement(newId, None, "lrnie8158976912", ern, None, None, now, Seq.empty)
         val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
         val messages = Seq(IE801Message.createFromXml(ie801))
-        val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, now))
+        val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, Set.empty, now))
         val expectedMovement = movement.copy(messages = expectedMessages, consigneeId = Some("testConsignee"), administrativeReferenceCode = Some("23XI00000000000000012"))
 
         when(correlationIdService.generateCorrelationId()).thenReturn(newId)
@@ -545,7 +545,7 @@ class MessageServiceSpec extends PlaySpec
         val movement = Movement(newId, None, "lrnie8158976912", ern, None, Some("23XI00000000000000012"), now, Seq.empty)
         val ie813 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE813, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
         val messages = Seq(IE813Message.createFromXml(ie813))
-        val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE813", "GB00001", ern, now))
+        val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE813", "GB00001", ern, Set.empty, now))
         val expectedMovement = movement.copy(messages = expectedMessages, consigneeId = Some("testConsignee"))
 
         when(correlationIdService.generateCorrelationId()).thenReturn(newId)
@@ -568,7 +568,7 @@ class MessageServiceSpec extends PlaySpec
         val movement = Movement(newId, None, "lrnie8158976912", ern, Some("testConsignee"), None, now, Seq.empty)
         val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
         val messages = Seq(IE801Message.createFromXml(ie801))
-        val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, now))
+        val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, Set.empty, now))
         val expectedMovement = movement.copy(messages = expectedMessages, administrativeReferenceCode = Some("23XI00000000000000012"))
 
         when(correlationIdService.generateCorrelationId()).thenReturn(newId)
@@ -592,7 +592,7 @@ class MessageServiceSpec extends PlaySpec
           val movement = Movement(newId, None, "lrnie8158976912", ern, Some("testConsignee"), None, now, Seq.empty)
           val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
           val messages = Seq(IE801Message.createFromXml(ie801), IE801Message.createFromXml(ie801))
-          val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, now))
+          val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, Set.empty, now))
           val expectedMovement = movement.copy(messages = expectedMessages, administrativeReferenceCode = Some("23XI00000000000000012"))
 
           when(correlationIdService.generateCorrelationId()).thenReturn(newId)
@@ -616,7 +616,7 @@ class MessageServiceSpec extends PlaySpec
           val ern = "testErn"
           val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
           val messages = Seq(IE801Message.createFromXml(ie801))
-          val existingMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, now))
+          val existingMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, Set.empty, now))
           val movement = Movement(newId, None, "lrnie8158976912", ern, Some("testConsignee"), Some("23XI00000000000000012"), now, existingMessages)
 
           when(correlationIdService.generateCorrelationId()).thenReturn(newId)

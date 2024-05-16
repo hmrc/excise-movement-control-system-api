@@ -157,6 +157,7 @@ class MovementService @Inject()(
       messageType = newMessage.messageType,
       messageId = newMessage.messageIdentifier,
       recipient = recipient,
+      boxesToNotify = Set.empty,
       createdOn = dateTimeService.timestamp()
     )
 

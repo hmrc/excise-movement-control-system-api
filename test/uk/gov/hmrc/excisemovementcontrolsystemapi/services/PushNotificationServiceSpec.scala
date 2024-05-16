@@ -47,7 +47,7 @@ class PushNotificationServiceSpec extends PlaySpec with EitherValues with Before
   private val appConfig = mock[AppConfig]
   private val timestamp = Instant.parse("2024-10-01T12:32:32.12345678Z")
   private val sut = new PushNotificationServiceImpl(notificationConnector, dateTimeService)
-  private val message = Message("this is a test", "IE801", "messageId", "ern", Instant.now)
+  private val message = Message("this is a test", "IE801", "messageId", "ern", Set.empty, Instant.now)
   private val movement = Movement("id", Some("boxId"), "lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
   private val boxId = "1c5b9365-18a6-55a5-99c9-83a091ac7f26"
 

@@ -199,6 +199,7 @@ class MessageService @Inject
       messageType = input.messageType,
       messageId = input.messageIdentifier,
       recipient = recipient,
+      boxesToNotify = Set.empty, // TODO add boxes which should be notified about this message
       createdOn = dateTimeService.timestamp()
     )
   }

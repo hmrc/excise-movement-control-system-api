@@ -59,11 +59,11 @@ class MessageRecipientMigrationSpec
 
   private val timestamp = LocalDateTime.of(2024, 4, 3, 12, 30, 45, 123123).toInstant(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS)
 
-  private val message1 = Message("encodedMessage", "type", "messageId", "consignorId", timestamp)
-  private val message2 = Message("encodedMessage2", "type2", "messageId2", "consignorId", timestamp)
+  private val message1 = Message("encodedMessage", "type", "messageId", "consignorId", Set.empty, timestamp)
+  private val message2 = Message("encodedMessage2", "type2", "messageId2", "consignorId", Set.empty, timestamp)
   private val movement = Movement(UUID.randomUUID().toString, Some("boxId"), "123", "consignorId", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message1, message2))
 
-  private val message3 = Message("encodedMessage", "type", "messageId", "anotherRecipient", timestamp)
+  private val message3 = Message("encodedMessage", "type", "messageId", "anotherRecipient", Set.empty, timestamp)
   private val movement2 = Movement(UUID.randomUUID().toString, Some("boxId"), "124", "consignorId", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message3))
 
   "must add the recipient field to any messages which don't have one" in {
