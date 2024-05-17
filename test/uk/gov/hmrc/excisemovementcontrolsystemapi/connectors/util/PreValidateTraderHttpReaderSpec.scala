@@ -45,7 +45,7 @@ class PreValidateTraderHttpReaderSpec extends PlaySpec with EitherValues {
   private val preValidateTraderHttpReader = PreValidateTraderHttpReader("123", "GB123", "date time", dateTimeService)
 
   "read" should {
-    "return PreValidateTraderResponse when success" in {
+    "return PreValidateTraderEISResponse when success" in {
 
       val result = preValidateTraderHttpReader.read(
         "ANY",
@@ -53,9 +53,9 @@ class PreValidateTraderHttpReaderSpec extends PlaySpec with EitherValues {
         HttpResponse(200, Json.toJson(validResponse).toString())
       )
 
-      val responseObject = result.toOption.value.exciseTraderValidationResponse.value
-      responseObject.validationTimeStamp mustBe validResponse.exciseTraderValidationResponse.value.validationTimeStamp
-      responseObject.exciseTraderResponse(0) mustBe validResponse.exciseTraderValidationResponse.value.exciseTraderResponse(0)
+      val responseObject = result.toOption.value.exciseTraderValidationResponse
+      responseObject.validationTimeStamp mustBe validResponse.exciseTraderValidationResponse.validationTimeStamp
+      responseObject.exciseTraderResponse(0) mustBe validResponse.exciseTraderValidationResponse.exciseTraderResponse(0)
 
     }
 
@@ -69,8 +69,8 @@ class PreValidateTraderHttpReaderSpec extends PlaySpec with EitherValues {
 
       val responseObject = result.toOption.value
 
-      responseObject.validationTimeStamp mustBe businessError.validationTimeStamp
-      responseObject.exciseTraderResponse.value(0) mustBe businessError.exciseTraderResponse.value(0)
+      responseObject.exciseTraderValidationResponse.validationTimeStamp mustBe businessError.exciseTraderValidationResponse.validationTimeStamp
+      responseObject.exciseTraderValidationResponse.exciseTraderResponse(0) mustBe businessError.exciseTraderValidationResponse.exciseTraderResponse(0)
     }
 
     forAll(Seq(

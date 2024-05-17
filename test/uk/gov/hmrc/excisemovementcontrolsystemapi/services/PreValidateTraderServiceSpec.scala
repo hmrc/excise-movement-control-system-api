@@ -29,7 +29,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PreValidateTraderCo
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.ParsedPreValidateTraderRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{ExciseTraderResponse, PreValidateTraderEISResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{ExciseTraderResponse, ExciseTraderValidationResponse, PreValidateTraderEISResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PreValidateTraderService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils._
@@ -57,25 +57,29 @@ class PreValidateTraderServiceSpec extends PlaySpec with BeforeAndAfterEach with
   )
 
   private val getBadlyFormattedEISResponse = PreValidateTraderEISResponse(
-    validationTimeStamp = Some("2021-12-17T09:31:123Z"),
-    exciseTraderResponse = Some(Array(ExciseTraderResponse(
-      validTrader = false,
-      exciseRegistrationNumber = "GBWK000000000",
-      traderType = None,
-      entityGroup = "UK Record",
-      errorCode = Some("6"),
-      errorText = Some("Not Found"),
-      validateProductAuthorisationResponse = None
-    ),
-      ExciseTraderResponse(
-        validTrader = false,
-        exciseRegistrationNumber = "GBWK000000000",
-        traderType = None,
-        entityGroup = "UK Record",
-        errorCode = Some("6"),
-        errorText = Some("Not Found"),
-        validateProductAuthorisationResponse = None
-      )))
+    ExciseTraderValidationResponse(
+      validationTimeStamp = "2021-12-17T09:31:123Z",
+      exciseTraderResponse = Array(
+        ExciseTraderResponse(
+          validTrader = false,
+          exciseRegistrationNumber = "GBWK000000000",
+          traderType = None,
+          entityGroup = "UK Record",
+          errorCode = Some("6"),
+          errorText = Some("Not Found"),
+          validateProductAuthorisationResponse = None
+        ),
+        ExciseTraderResponse(
+          validTrader = false,
+          exciseRegistrationNumber = "GBWK000000000",
+          traderType = None,
+          entityGroup = "UK Record",
+          errorCode = Some("6"),
+          errorText = Some("Not Found"),
+          validateProductAuthorisationResponse = None
+        )
+      )
+    )
   )
 
 
