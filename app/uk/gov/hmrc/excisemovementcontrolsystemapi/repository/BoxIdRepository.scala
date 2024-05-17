@@ -38,15 +38,15 @@ class BoxIdRepository @Inject()
 (mongo: MongoComponent,
  configuration: Configuration,
  timeService: DateTimeService)(implicit ec: ExecutionContext) extends PlayMongoRepository[BoxIdRecord](
-  collectionName = "boxidretrievals",
+  collectionName = "boxids",
   mongoComponent = mongo,
   domainFormat = BoxIdRecord.format,
   indexes = mongoIndexes(configuration.get[Duration]("mongodb.boxId.TTL")),
   replaceIndexes = true
 ) with Logging {
 
-  def getBoxIdRecord(ern: String): Future[Seq[BoxIdRecord]] = Mdc.preservingMdc {
-    collection.find(Filters.eq("ern", ern)).toFuture()
+  def getBoxIds(ern: String): Future[Seq[String]] = Mdc.preservingMdc {
+    collection.find(Filters.eq("ern", ern)).map(_.boxId).toFuture()
   }
 
   def save(ern: String, boxId: String): Future[Done] = Mdc.preservingMdc {
@@ -76,7 +76,6 @@ object BoxIdRepository {
           Indexes.ascending("boxId")
         ),
         IndexOptions().name("ern_boxId_index")
-          .background(true)
           .unique(true)
       )
     )

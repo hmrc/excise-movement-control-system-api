@@ -113,7 +113,7 @@ class BoxIdRepositoryItSpec extends PlaySpec
 
     }
 
-    mustPreserveMdc(repository.getBoxIdRecord("testErn"))
+    mustPreserveMdc(repository.save("testErn", "testBoxId"))
 
   }
 
@@ -127,14 +127,14 @@ class BoxIdRepositoryItSpec extends PlaySpec
       insert(record1).futureValue
       insert(record2).futureValue
 
-      repository.getBoxIdRecord("testErn").futureValue must contain theSameElementsAs Seq(record1, record2)
+      repository.getBoxIds("testErn").futureValue must contain theSameElementsAs Seq("testBoxId", "differentBoxId")
     }
 
     "return and empty sequence if there are no records for the ERN" in {
-      repository.getBoxIdRecord("testErn").futureValue mustBe Seq.empty
+      repository.getBoxIds("testErn").futureValue mustBe Seq.empty
 
     }
-    mustPreserveMdc(repository.getBoxIdRecord("testErn"))
+    mustPreserveMdc(repository.getBoxIds("testErn"))
 
   }
 
