@@ -30,13 +30,16 @@ import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository.MessageNotification
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, DefaultPlayMongoRepositorySupport}
+import uk.gov.hmrc.play.bootstrap.dispatchers.MDCPropagatingExecutorService
 
-import java.time.{Instant, LocalDateTime, ZoneOffset}
+import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
+import java.util.concurrent.Executors
 import scala.concurrent.{ExecutionContext, Future}
 
 class MovementRepositoryItSpec extends PlaySpec
@@ -99,7 +102,7 @@ class MovementRepositoryItSpec extends PlaySpec
       insertMovement(movementLRN1)
       insertMovement(movementLRN2)
 
-      val message = Message("any, message", MessageTypes.IE801.value, "messageId", "ern", timestamp)
+      val message = Message("any, message", MessageTypes.IE801.value, "messageId", "ern", Set.empty, timestamp)
       val updatedMovement = movementLRN2.copy(administrativeReferenceCode = Some("arc"), messages = Seq(message))
       val result = repository.updateMovement(updatedMovement).futureValue
 
@@ -116,7 +119,7 @@ class MovementRepositoryItSpec extends PlaySpec
       insertMovement(movementLRN1)
       insertMovement(movementLRN2)
 
-      val message = Message("any, message", MessageTypes.IE801.value, "messageId", "ern", timestamp)
+      val message = Message("any, message", MessageTypes.IE801.value, "messageId", "ern", Set.empty, timestamp)
       val updateMovement = movementLRN2.copy(administrativeReferenceCode = Some("arc"), messages = Seq(message))
       val result = repository.updateMovement(updateMovement).futureValue
 
@@ -136,7 +139,7 @@ class MovementRepositoryItSpec extends PlaySpec
       insertMovement(movementLRN1)
       insertMovement(movementLRN2)
 
-      val message = Message("any, message", MessageTypes.IE801.value, "messageId", "ern", timestamp)
+      val message = Message("any, message", MessageTypes.IE801.value, "messageId", "ern", Set.empty, timestamp)
       val result = repository.updateMovement(Movement(Some("boxId"), "4", "897", Some("321"), Some("arc"), Instant.now, Seq(message))).futureValue
 
       val records = findAll().futureValue
@@ -156,7 +159,7 @@ class MovementRepositoryItSpec extends PlaySpec
 
       repository.save(movement).futureValue
 
-      val records = find(Filters.empty).futureValue
+      val records = find(Filters.empty()).futureValue
       records must contain only movement
     }
 
@@ -167,7 +170,7 @@ class MovementRepositoryItSpec extends PlaySpec
       val updatedMovement = movement.copy(consigneeId = Some("678"))
       repository.save(updatedMovement).futureValue
 
-      val records = find(Filters.empty).futureValue
+      val records = find(Filters.empty()).futureValue
       records must contain only updatedMovement
     }
 
@@ -178,7 +181,7 @@ class MovementRepositoryItSpec extends PlaySpec
       val newMovement = movement.copy(_id = UUID.randomUUID().toString)
       repository.save(newMovement).failed.futureValue
 
-      val records = find(Filters.empty).futureValue
+      val records = find(Filters.empty()).futureValue
       records must contain only movement
     }
 
@@ -362,12 +365,12 @@ class MovementRepositoryItSpec extends PlaySpec
 
     "return a map of all of the ERNs that have received messages along with the latest time we received a message for them" in {
 
-      val message1 = Message("encodedMessage", "type", "messageId", "recipient1", timestamp.minus(1, ChronoUnit.DAYS))
-      val message2 = Message("encodedMessage", "type2", "messageId2", "recipient2", timestamp)
+      val message1 = Message("encodedMessage", "type", "messageId", "recipient1", Set.empty, timestamp.minus(1, ChronoUnit.DAYS))
+      val message2 = Message("encodedMessage", "type2", "messageId2", "recipient2", Set.empty, timestamp)
       val movement = Movement(UUID.randomUUID().toString, None, "123", "consignorId", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message1, message2))
 
-      val message3 = Message("encodedMessage", "type", "messageId3", "recipient3", timestamp)
-      val message4 = Message("encodedMessage", "type", "messageId4", "recipient1", timestamp)
+      val message3 = Message("encodedMessage", "type", "messageId3", "recipient3", Set.empty, timestamp)
+      val message4 = Message("encodedMessage", "type", "messageId4", "recipient1", Set.empty, timestamp)
       val movement2 = Movement(UUID.randomUUID().toString, None, "124", "consignorId", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message3, message4))
 
       repository.collection.insertMany(Seq(movement, movement2)).toFuture().futureValue
@@ -389,6 +392,91 @@ class MovementRepositoryItSpec extends PlaySpec
     mustPreserveMdc(repository.getErnsAndLastReceived)
   }
 
+  "getMessageNotifications" should {
+
+    "return a list of MessageNotifications" in {
+
+      val message1 = Message("encodedMessage", "type", "messageId", "recipient1", Set.empty, timestamp.minus(1, ChronoUnit.DAYS))
+      val message2 = Message("encodedMessage", "type2", "messageId2", "recipient2", Set("boxId1"), timestamp)
+      val movement = Movement(UUID.randomUUID().toString, None, "123", "consignorId", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message1, message2))
+
+      val message3 = Message("encodedMessage", "type", "messageId3", "recipient3", Set("boxId1", "boxId2"), timestamp)
+      val message4 = Message("encodedMessage", "type", "messageId4", "recipient1", Set.empty, timestamp)
+      val movement2 = Movement(UUID.randomUUID().toString, None, "124", "consignorId", None, Some("arc"), timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message3, message4))
+
+      val message5 = Message("encodedMessage", "type", "messageId4", "recipient1", Set.empty, timestamp)
+      val movement3 = Movement(UUID.randomUUID().toString, None, "125", "consignorId", None, Some("arc"), timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message5))
+
+      val movement4 = Movement(UUID.randomUUID().toString, None, "126", "consignorId", None, Some("arc"), timestamp.truncatedTo(ChronoUnit.MILLIS), Seq.empty)
+
+      repository.collection.insertMany(Seq(movement, movement2, movement3, movement4)).toFuture().futureValue
+
+      val expected = List(
+        MessageNotification(movementId = movement._id, messageId = "messageId2", messageType = "type2", consignor = "consignorId", consignee = Some("789"), arc = None, recipient = "recipient2", boxId = "boxId1"),
+        MessageNotification(movementId = movement2._id, messageId = "messageId3", messageType = "type", consignor = "consignorId", consignee = None, arc = Some("arc"), recipient = "recipient3", boxId = "boxId1"),
+        MessageNotification(movementId = movement2._id, messageId = "messageId3", messageType = "type", consignor = "consignorId", consignee = None, arc = Some("arc"), recipient = "recipient3", boxId = "boxId2")
+      )
+
+      val result = repository.getPendingMessageNotifications().futureValue
+
+      result must contain theSameElementsAs expected
+    }
+
+    mustPreserveMdc(repository.getPendingMessageNotifications())
+  }
+
+  "confirmNotification" should {
+
+    "update the relevant message to remove the relevant boxId from the list of boxesToNotify" in {
+
+      val message1 = Message("encodedMessage", "type", "messageId", "recipient1", Set("boxId1", "boxId2"), timestamp.minus(1, ChronoUnit.DAYS))
+      val message2 = Message("encodedMessage", "type2", "messageId2", "recipient2", Set("boxId1", "boxId2"), timestamp)
+      val movement = Movement(UUID.randomUUID().toString, None, "123", "consignorId", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message1, message2))
+
+      val message3 = Message("encodedMessage", "type", "messageId", "recipient3", Set("boxId1", "boxId2"), timestamp)
+      val message4 = Message("encodedMessage", "type", "messageId4", "recipient1", Set("boxId1", "boxId2"), timestamp)
+      val movement2 = Movement(UUID.randomUUID().toString, None, "124", "consignorId", None, Some("arc"), timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message3, message4))
+
+      repository.collection.insertMany(Seq(movement, movement2)).toFuture().futureValue
+
+      val updatedMessage = message1.copy(boxesToNotify = Set("boxId2"))
+      val updatedMovement = movement.copy(messages = Seq(updatedMessage, message2))
+      val expectedMovements = Seq(updatedMovement, movement2)
+
+      repository.confirmNotification(movement._id, message1.messageId, "boxId1").futureValue
+
+      repository.collection.find().toFuture().futureValue must contain theSameElementsAs expectedMovements
+    }
+
+    "must not fail if there is no matching movement" in {
+      repository.confirmNotification("movementId", "messageId", "boxId").futureValue
+    }
+
+    "must not fail if there is no matching message" in {
+
+      val message1 = Message("encodedMessage", "type", "messageId", "recipient1", Set("boxId1", "boxId2"), timestamp.minus(1, ChronoUnit.DAYS))
+      val message2 = Message("encodedMessage", "type2", "messageId2", "recipient2", Set("boxId1", "boxId2"), timestamp)
+      val movement = Movement(UUID.randomUUID().toString, None, "123", "consignorId", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message1, message2))
+
+      repository.collection.insertOne(movement)
+
+      repository.confirmNotification(movement._id, "foo", "boxId").futureValue
+    }
+
+    "must not fail if there is no matching boxId" in {
+
+      val message1 = Message("encodedMessage", "type", "messageId", "recipient1", Set("boxId1", "boxId2"), timestamp.minus(1, ChronoUnit.DAYS))
+      val message2 = Message("encodedMessage", "type2", "messageId2", "recipient2", Set("boxId1", "boxId2"), timestamp)
+      val movement = Movement(UUID.randomUUID().toString, None, "123", "consignorId", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message1, message2))
+
+      repository.collection.insertOne(movement)
+
+      repository.confirmNotification(movement._id, message1.messageId, "bar").futureValue
+    }
+
+    mustPreserveMdc(repository.confirmNotification("movementId", "messageId", "boxId"))
+  }
+
   private def insertMovement(movement: Movement) = {
     insert(movement).futureValue
   }
@@ -396,12 +484,13 @@ class MovementRepositoryItSpec extends PlaySpec
   private def mustPreserveMdc[A](f: => Future[A])(implicit pos: Position): Unit =
     "must preserve MDC" in {
 
-      val ec = app.injector.instanceOf[ExecutionContext]
+      implicit lazy val ec: ExecutionContext =
+        ExecutionContext.fromExecutor(new MDCPropagatingExecutorService(Executors.newFixedThreadPool(2)))
 
       MDC.put("test", "foo")
 
       f.map { _ =>
         MDC.get("test") mustEqual "foo"
-      }(ec).futureValue
+      }.futureValue
     }
 }

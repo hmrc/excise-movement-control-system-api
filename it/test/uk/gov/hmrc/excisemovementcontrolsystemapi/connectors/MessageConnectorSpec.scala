@@ -19,7 +19,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.http.Fault
 import generated.NewMessagesDataResponse
-import org.mockito.ArgumentMatchersSugar.eqTo
 import org.mockito.{Mockito, MockitoSugar}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}

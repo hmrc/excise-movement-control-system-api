@@ -32,8 +32,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessageGeneratorFactory}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes.IE704
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE704Message}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoComponent
@@ -41,8 +41,8 @@ import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import scala.concurrent.{Future, Promise}
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{Future, Promise}
 
 class MessageServiceItSpec
   extends AnyFreeSpec
@@ -108,7 +108,7 @@ class MessageServiceItSpec
         None,
         None,
         now,
-        messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", ern, now))
+        messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", ern, Set.empty, now))
       )
 
       when(mockDateTimeService.timestamp()).thenReturn(
@@ -154,7 +154,7 @@ class MessageServiceItSpec
       val ie704 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some(lrn)))
       val messages = Seq(IE704Message.createFromXml(ie704))
 
-      val promise = Promise[Done]
+      val promise = Promise[Done]()
 
       when(mockDateTimeService.timestamp()).thenReturn(now)
       when(mockCorrelationIdService.generateCorrelationId()).thenReturn(newId)

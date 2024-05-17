@@ -18,16 +18,17 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import cats.implicits.toFunctorOps
 import org.apache.pekko.Done
-import org.mongodb.scala.bson.conversions.Bson
+import org.bson.conversions.Bson
 import org.mongodb.scala.model.Filters.{and, equal, in, or}
 import org.mongodb.scala.model._
 import play.api.Logging
 import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository.{ErnAndLastReceived, mongoIndexes}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository.{ErnAndLastReceived, MessageNotification, mongoIndexes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.play.json.Codecs.JsonOps
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 import uk.gov.hmrc.play.http.logging.Mdc
@@ -37,6 +38,7 @@ import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters.SeqHasAsJava
 
 @Singleton
 class MovementRepository @Inject()
@@ -51,7 +53,8 @@ class MovementRepository @Inject()
     domainFormat = Movement.format,
     indexes = mongoIndexes(appConfig.movementTTL),
     extraCodecs = Seq(
-      Codecs.playFormatCodec(MovementMessageRepository.ErnAndLastReceived.format)
+      Codecs.playFormatCodec(MovementMessageRepository.ErnAndLastReceived.format),
+      Codecs.playFormatCodec(MovementMessageRepository.MessageNotification.format)
     ),
     replaceIndexes = true
   ) with Logging {
@@ -125,8 +128,37 @@ class MovementRepository @Inject()
       }.toMap
     }
   }
-}
 
+  def getPendingMessageNotifications(): Future[Seq[MessageNotification]] = Mdc.preservingMdc {
+    collection.aggregate[MessageNotification](Seq(
+      // This match is to do an initial filter which filters out all movements that have no
+      // messages which need to notify.
+      // `Filters.gt("boxesToNotify", "")` is the best way I've found to do this filter which
+      // also uses the index on the "boxesToNotify" field
+      Aggregates.`match`(Filters.elemMatch("messages", Filters.gt("boxesToNotify", ""))),
+      Aggregates.unwind("$messages"),
+      Aggregates.unwind("$messages.boxesToNotify"),
+      Aggregates.replaceRoot(Json.obj(
+        "movementId" -> "$_id",
+        "messageId" -> "$messages.messageId",
+        "messageType" -> "$messages.messageType",
+        "consignor" -> "$consignorId",
+        "consignee" -> "$consigneeId",
+        "arc" -> "$administrativeReferenceCode",
+        "recipient" -> "$messages.recipient",
+        "boxId" -> "$messages.boxesToNotify"
+      ).toDocument())
+    )).toFuture()
+  }
+
+  def confirmNotification(movementId: String, messageId: String, boxId: String): Future[Done] = Mdc.preservingMdc {
+    collection.updateOne(
+      Filters.eq("_id", movementId),
+      Updates.pull("messages.$[m].boxesToNotify", boxId),
+      UpdateOptions().arrayFilters(List(Filters.eq("m.messageId", messageId)).asJava)
+    ).toFuture().as(Done)
+  }
+}
 
 object MovementMessageRepository {
   def mongoIndexes(ttl: Duration): Seq[IndexModel] =
@@ -148,7 +180,12 @@ object MovementMessageRepository {
       ),
       createIndexWithBackground("administrativeReferenceCode", "arc_index"),
       createIndex("consignorId", "consignorId_ttl_idx"),
-      createIndex("consigneeId", "consigneeId_ttl_idx")
+      createIndex("consigneeId", "consigneeId_ttl_idx"),
+      IndexModel(
+        Indexes.ascending("messages.boxesToNotify"),
+        IndexOptions()
+          .name("boxesToNotify_idx")
+      )
     )
 
   def createIndex(fieldName: String, indexName: String): IndexModel = {
@@ -170,5 +207,20 @@ object MovementMessageRepository {
 
   object ErnAndLastReceived extends MongoJavatimeFormats.Implicits {
     implicit lazy val format: OFormat[ErnAndLastReceived] = Json.format
+  }
+
+  final case class MessageNotification(
+                                        movementId: String,
+                                        messageId: String,
+                                        messageType: String,
+                                        consignor: String,
+                                        consignee: Option[String],
+                                        arc: Option[String],
+                                        recipient: String,
+                                        boxId: String
+                                      )
+
+  object MessageNotification {
+    implicit lazy val format: OFormat[MessageNotification] = Json.format
   }
 }
