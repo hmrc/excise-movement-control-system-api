@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import cats.implicits.toFunctorOps
 import org.apache.pekko.Done
-import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
+import org.mongodb.scala.model.{Filters, IndexModel, IndexOptions, Indexes, ReplaceOptions}
 import play.api.{Configuration, Logging}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.BoxIdRecord
@@ -47,8 +47,14 @@ class BoxIdRepository @Inject()
   def getBoxIdRecord(ern: String): Future[Seq[BoxIdRecord]] = ???
 
   def save(ern: String, boxId: String): Future[Done] = {
-    collection.insertOne(BoxIdRecord(ern, boxId, timeService.timestamp())
-    ).toFuture().as(Done)
+    collection.replaceOne(
+      Filters.and(
+        Filters.eq("ern", ern),
+        Filters.eq("boxId", boxId)
+      ),
+      BoxIdRecord(ern, boxId, timeService.timestamp()),
+      ReplaceOptions().upsert(true)
+    ).toFuture().map(_ => Done)
   }
 }
 

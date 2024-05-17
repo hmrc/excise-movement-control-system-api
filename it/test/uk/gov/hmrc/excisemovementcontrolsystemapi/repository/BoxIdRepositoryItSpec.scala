@@ -76,6 +76,39 @@ class BoxIdRepositoryItSpec extends PlaySpec
       find(Filters.eq("ern", "testErn")).futureValue.head mustBe BoxIdRecord("testErn", "testBoxId", fixedInstant)
 
     }
+
+    "update the lastUpdated when there is one there already" in {
+      val fixedInstant = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+      val fixedInstantInThePast = fixedInstant.minusSeconds(60)
+      when(mockTimeService.timestamp()).thenReturn(fixedInstant)
+
+      insert(BoxIdRecord("testErn", "testBoxId", fixedInstantInThePast)).futureValue
+
+      repository.save("testErn", "testBoxId").futureValue
+
+      find(Filters.eq("ern", "testErn")).futureValue.head mustBe BoxIdRecord("testErn", "testBoxId", fixedInstant)
+    }
+
+    "not change records with the same ern but a different boxId" in {
+      val fixedInstant = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+      val fixedInstantInThePast = fixedInstant.minusSeconds(60)
+      when(mockTimeService.timestamp()).thenReturn(fixedInstant)
+
+      insert(BoxIdRecord("testErn", "testBoxId", fixedInstantInThePast)).futureValue
+      insert(BoxIdRecord("testErn", "differentBoxId", fixedInstantInThePast)).futureValue
+
+      repository.save("testErn", "testBoxId").futureValue
+
+      find(Filters.and(
+        Filters.eq("ern", "testErn"),
+        Filters.eq("boxId", "testBoxId")
+      )).futureValue.head mustBe BoxIdRecord("testErn", "testBoxId", fixedInstant)
+      find(Filters.and(
+        Filters.eq("ern", "testErn"),
+        Filters.eq("boxId", "differentBoxId")
+      )).futureValue.head mustBe BoxIdRecord("testErn", "differentBoxId", fixedInstantInThePast)
+
+    }
   }
 
 }
