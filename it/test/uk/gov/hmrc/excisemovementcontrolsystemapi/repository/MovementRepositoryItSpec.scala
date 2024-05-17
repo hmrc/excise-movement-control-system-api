@@ -30,13 +30,16 @@ import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository.MessageNotification
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, DefaultPlayMongoRepositorySupport}
+import uk.gov.hmrc.play.bootstrap.dispatchers.MDCPropagatingExecutorService
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
+import java.util.concurrent.Executors
 import scala.concurrent.{ExecutionContext, Future}
 
 class MovementRepositoryItSpec extends PlaySpec
@@ -389,6 +392,39 @@ class MovementRepositoryItSpec extends PlaySpec
     mustPreserveMdc(repository.getErnsAndLastReceived)
   }
 
+  "getMessageNotifications" should {
+
+    "return a list of MessageNotifications" in {
+
+      val message1 = Message("encodedMessage", "type", "messageId", "recipient1", Set.empty, timestamp.minus(1, ChronoUnit.DAYS))
+      val message2 = Message("encodedMessage", "type2", "messageId2", "recipient2", Set("boxId1"), timestamp)
+      val movement = Movement(UUID.randomUUID().toString, None, "123", "consignorId", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message1, message2))
+
+      val message3 = Message("encodedMessage", "type", "messageId3", "recipient3", Set("boxId1", "boxId2"), timestamp)
+      val message4 = Message("encodedMessage", "type", "messageId4", "recipient1", Set.empty, timestamp)
+      val movement2 = Movement(UUID.randomUUID().toString, None, "124", "consignorId", None, Some("arc"), timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message3, message4))
+
+      val message5 = Message("encodedMessage", "type", "messageId4", "recipient1", Set.empty, timestamp)
+      val movement3 = Movement(UUID.randomUUID().toString, None, "125", "consignorId", None, Some("arc"), timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message5))
+
+      val movement4 = Movement(UUID.randomUUID().toString, None, "126", "consignorId", None, Some("arc"), timestamp.truncatedTo(ChronoUnit.MILLIS), Seq.empty)
+
+      repository.collection.insertMany(Seq(movement, movement2, movement3, movement4)).toFuture().futureValue
+
+      val expected = List(
+        MessageNotification(movementId = movement._id, messageId = "messageId2", messageType = "type2", consignor = "consignorId", consignee = Some("789"), arc = None, recipient = "recipient2", boxId = "boxId1"),
+        MessageNotification(movementId = movement2._id, messageId = "messageId3", messageType = "type", consignor = "consignorId", consignee = None, arc = Some("arc"), recipient = "recipient3", boxId = "boxId1"),
+        MessageNotification(movementId = movement2._id, messageId = "messageId3", messageType = "type", consignor = "consignorId", consignee = None, arc = Some("arc"), recipient = "recipient3", boxId = "boxId2")
+      )
+
+      val result = repository.getPendingMessageNotifications().futureValue
+
+      result must contain theSameElementsAs expected
+    }
+
+    mustPreserveMdc(repository.getPendingMessageNotifications())
+  }
+
   private def insertMovement(movement: Movement) = {
     insert(movement).futureValue
   }
@@ -396,12 +432,13 @@ class MovementRepositoryItSpec extends PlaySpec
   private def mustPreserveMdc[A](f: => Future[A])(implicit pos: Position): Unit =
     "must preserve MDC" in {
 
-      val ec = app.injector.instanceOf[ExecutionContext]
+      implicit lazy val ec: ExecutionContext =
+        ExecutionContext.fromExecutor(new MDCPropagatingExecutorService(Executors.newFixedThreadPool(2)))
 
       MDC.put("test", "foo")
 
       f.map { _ =>
         MDC.get("test") mustEqual "foo"
-      }(ec).futureValue
+      }.futureValue
     }
 }
