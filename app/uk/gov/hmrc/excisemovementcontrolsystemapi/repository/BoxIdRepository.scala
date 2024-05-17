@@ -26,6 +26,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.BoxIdRepository.mon
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.play.http.logging.Mdc
 
 import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Singleton}
@@ -44,9 +45,11 @@ class BoxIdRepository @Inject()
   replaceIndexes = true
 ) with Logging {
 
-  def getBoxIdRecord(ern: String): Future[Seq[BoxIdRecord]] = ???
+  def getBoxIdRecord(ern: String): Future[Seq[BoxIdRecord]] = Mdc.preservingMdc {
+    collection.find(Filters.eq("ern", ern)).toFuture()
+  }
 
-  def save(ern: String, boxId: String): Future[Done] = {
+  def save(ern: String, boxId: String): Future[Done] = Mdc.preservingMdc {
     collection.replaceOne(
       Filters.and(
         Filters.eq("ern", ern),

@@ -18,9 +18,11 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import org.mockito.MockitoSugar.when
 import org.mongodb.scala.model.{Filters, Indexes}
+import org.scalactic.source.Position
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import org.slf4j.MDC
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.BoxIdRecord
@@ -32,6 +34,7 @@ import play.api.inject.bind
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
+import scala.concurrent.{ExecutionContext, Future}
 
 class BoxIdRepositoryItSpec extends PlaySpec
   with DefaultPlayMongoRepositorySupport[BoxIdRecord]
@@ -109,6 +112,42 @@ class BoxIdRepositoryItSpec extends PlaySpec
       )).futureValue.head mustBe BoxIdRecord("testErn", "differentBoxId", fixedInstantInThePast)
 
     }
+
+    mustPreserveMdc(repository.getBoxIdRecord("testErn"))
+
   }
+
+
+  "getBoxIdsForErn" should {
+    "return a list of the BoxIds that the given ern has" in {
+      val fixedInstant = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+
+      val record1 = BoxIdRecord("testErn", "testBoxId", fixedInstant)
+      val record2 = BoxIdRecord("testErn", "differentBoxId", fixedInstant)
+      insert(record1).futureValue
+      insert(record2).futureValue
+
+      repository.getBoxIdRecord("testErn").futureValue must contain theSameElementsAs Seq(record1, record2)
+    }
+
+    "return and empty sequence if there are no records for the ERN" in {
+      repository.getBoxIdRecord("testErn").futureValue mustBe Seq.empty
+
+    }
+    mustPreserveMdc(repository.getBoxIdRecord("testErn"))
+
+  }
+
+  private def mustPreserveMdc[A](f: => Future[A])(implicit pos: Position): Unit =
+    "must preserve MDC" in {
+
+      val ec = app.injector.instanceOf[ExecutionContext]
+
+      MDC.put("test", "foo")
+
+      f.map { _ =>
+        MDC.get("test") mustEqual "foo"
+      }(ec).futureValue
+    }
 
 }
