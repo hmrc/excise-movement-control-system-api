@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import org.mockito.MockitoSugar.when
-import org.mongodb.scala.model.Filters
+import org.mongodb.scala.model.{Filters, Indexes}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
@@ -31,6 +31,7 @@ import play.api.inject.bind
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.TimeUnit
 
 class BoxIdRepositoryItSpec extends PlaySpec
   with DefaultPlayMongoRepositorySupport[BoxIdRecord]
@@ -42,9 +43,28 @@ class BoxIdRepositoryItSpec extends PlaySpec
     .overrides(
       bind[MongoComponent].toInstance(mongoComponent),
       bind[DateTimeService].toInstance(mockTimeService)
+    )
+    .configure(
+      "mongodb.boxId.TTL" -> "5 minutes"
     ).build()
 
   override protected lazy val repository: BoxIdRepository = app.injector.instanceOf[BoxIdRepository]
+
+  "initialise" should {
+    "setup the lastUpdated index" in {
+      val lastUpdatedIdx = repository.indexes.find(_.getOptions.getName == "lastUpdated_ttl_index").value
+      lastUpdatedIdx.getOptions.getExpireAfter(TimeUnit.MINUTES) mustBe 5
+      lastUpdatedIdx.getKeys mustEqual Indexes.ascending("lastUpdated")
+    }
+    "setup the ern_boxId_index" in {
+      val ern = repository.indexes.find(_.getOptions.getName == "ern_boxId_index").value
+      ern.getOptions.isUnique mustBe true
+      ern.getKeys mustEqual Indexes.compoundIndex(
+        Indexes.ascending("ern"),
+        Indexes.ascending("boxId")
+      )
+    }
+  }
 
   "save" should {
     "save when there isn't one there already" in {

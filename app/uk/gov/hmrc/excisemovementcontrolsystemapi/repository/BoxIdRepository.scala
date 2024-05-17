@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 import cats.implicits.toFunctorOps
 import org.apache.pekko.Done
 import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
-import play.api.Logging
+import play.api.{Configuration, Logging}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.BoxIdRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.BoxIdRepository.mongoIndexes
@@ -35,12 +35,12 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class BoxIdRepository @Inject()
 (mongo: MongoComponent,
- appConfig: AppConfig,
+ configuration: Configuration,
  timeService: DateTimeService)(implicit ec: ExecutionContext) extends PlayMongoRepository[BoxIdRecord](
   collectionName = "boxidretrievals",
   mongoComponent = mongo,
   domainFormat = BoxIdRecord.format,
-  indexes = mongoIndexes(appConfig.boxIdTTL),
+  indexes = mongoIndexes(configuration.get[Duration]("mongodb.boxId.TTL")),
   replaceIndexes = true
 ) with Logging {
 
@@ -58,7 +58,7 @@ object BoxIdRepository {
       IndexModel(
         Indexes.ascending("lastUpdated"),
         IndexOptions()
-          .name("lastUpdated_ttl_idx")
+          .name("lastUpdated_ttl_index")
           .expireAfter(ttl.toSeconds, TimeUnit.SECONDS)
       ),
       IndexModel(
