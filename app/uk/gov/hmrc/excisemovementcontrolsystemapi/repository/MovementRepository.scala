@@ -38,6 +38,7 @@ import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters.SeqHasAsJava
 
 @Singleton
 class MovementRepository @Inject()
@@ -128,7 +129,6 @@ class MovementRepository @Inject()
     }
   }
 
-
   def getPendingMessageNotifications(): Future[Seq[MessageNotification]] = Mdc.preservingMdc {
     collection.aggregate[MessageNotification](Seq(
       // This match is to do an initial filter which filters out all movements that have no
@@ -149,6 +149,14 @@ class MovementRepository @Inject()
         "boxId" -> "$messages.boxesToNotify"
       ).toDocument())
     )).toFuture()
+  }
+
+  def confirmNotification(movementId: String, messageId: String, boxId: String): Future[Done] = Mdc.preservingMdc {
+    collection.updateOne(
+      Filters.eq("_id", movementId),
+      Updates.pull("messages.$[m].boxesToNotify", boxId),
+      UpdateOptions().arrayFilters(List(Filters.eq("m.messageId", messageId)).asJava)
+    ).toFuture().as(Done)
   }
 }
 

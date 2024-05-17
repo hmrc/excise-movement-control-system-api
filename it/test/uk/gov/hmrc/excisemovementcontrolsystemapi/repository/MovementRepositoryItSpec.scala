@@ -425,6 +425,58 @@ class MovementRepositoryItSpec extends PlaySpec
     mustPreserveMdc(repository.getPendingMessageNotifications())
   }
 
+  "confirmNotification" should {
+
+    "update the relevant message to remove the relevant boxId from the list of boxesToNotify" in {
+
+      val message1 = Message("encodedMessage", "type", "messageId", "recipient1", Set("boxId1", "boxId2"), timestamp.minus(1, ChronoUnit.DAYS))
+      val message2 = Message("encodedMessage", "type2", "messageId2", "recipient2", Set("boxId1", "boxId2"), timestamp)
+      val movement = Movement(UUID.randomUUID().toString, None, "123", "consignorId", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message1, message2))
+
+      val message3 = Message("encodedMessage", "type", "messageId", "recipient3", Set("boxId1", "boxId2"), timestamp)
+      val message4 = Message("encodedMessage", "type", "messageId4", "recipient1", Set("boxId1", "boxId2"), timestamp)
+      val movement2 = Movement(UUID.randomUUID().toString, None, "124", "consignorId", None, Some("arc"), timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message3, message4))
+
+      repository.collection.insertMany(Seq(movement, movement2)).toFuture().futureValue
+
+      val updatedMessage = message1.copy(boxesToNotify = Set("boxId2"))
+      val updatedMovement = movement.copy(messages = Seq(updatedMessage, message2))
+      val expectedMovements = Seq(updatedMovement, movement2)
+
+      repository.confirmNotification(movement._id, message1.messageId, "boxId1").futureValue
+
+      repository.collection.find().toFuture().futureValue must contain theSameElementsAs expectedMovements
+    }
+
+    "must not fail if there is no matching movement" in {
+      repository.confirmNotification("movementId", "messageId", "boxId").futureValue
+    }
+
+    "must not fail if there is no matching message" in {
+
+      val message1 = Message("encodedMessage", "type", "messageId", "recipient1", Set("boxId1", "boxId2"), timestamp.minus(1, ChronoUnit.DAYS))
+      val message2 = Message("encodedMessage", "type2", "messageId2", "recipient2", Set("boxId1", "boxId2"), timestamp)
+      val movement = Movement(UUID.randomUUID().toString, None, "123", "consignorId", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message1, message2))
+
+      repository.collection.insertOne(movement)
+
+      repository.confirmNotification(movement._id, "foo", "boxId").futureValue
+    }
+
+    "must not fail if there is no matching boxId" in {
+
+      val message1 = Message("encodedMessage", "type", "messageId", "recipient1", Set("boxId1", "boxId2"), timestamp.minus(1, ChronoUnit.DAYS))
+      val message2 = Message("encodedMessage", "type2", "messageId2", "recipient2", Set("boxId1", "boxId2"), timestamp)
+      val movement = Movement(UUID.randomUUID().toString, None, "123", "consignorId", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message1, message2))
+
+      repository.collection.insertOne(movement)
+
+      repository.confirmNotification(movement._id, message1.messageId, "bar").futureValue
+    }
+
+    mustPreserveMdc(repository.confirmNotification("movementId", "messageId", "boxId"))
+  }
+
   private def insertMovement(movement: Movement) = {
     insert(movement).futureValue
   }
