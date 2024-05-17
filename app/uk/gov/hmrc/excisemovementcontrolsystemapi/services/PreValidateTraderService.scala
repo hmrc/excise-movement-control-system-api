@@ -46,40 +46,31 @@ class PreValidateTraderService @Inject()(
   }
 
   private def convertEISToResponseFormat(eisResponse: PreValidateTraderEISResponse): Either[Result, PreValidateTraderMessageResponse] = {
+    val exciseTraderValidationResponse = eisResponse.exciseTraderValidationResponse
+    // EIS returns an array of size one all the time so if that's not the case we need to log an error
+    if (exciseTraderValidationResponse.exciseTraderResponse.length == 1) {
+      val exciseTraderResponse = exciseTraderValidationResponse.exciseTraderResponse.head
+      Right(
+        PreValidateTraderMessageResponse(
+          exciseTraderValidationResponse.validationTimeStamp,
+          exciseTraderResponse.exciseRegistrationNumber,
+          exciseTraderResponse.entityGroup,
+          exciseTraderResponse.validTrader,
+          exciseTraderResponse.errorCode,
+          exciseTraderResponse.errorText,
+          exciseTraderResponse.traderType,
+          exciseTraderResponse.validateProductAuthorisationResponse
+        )
+      )
+    } else {
+      logger.warn(s"[PreValidateTraderService] - PreValidateTrader response from EIS did not match expected format." +
+        s" Response: $eisResponse")
 
-    val results = eisResponse match {
-      case PreValidateTraderEISResponse(Some(x), None, None) =>
-        //Success response from EIS has an extra nested level
-        (x.validationTimeStamp, x.exciseTraderResponse)
-      case PreValidateTraderEISResponse(_, Some(y), Some(z)) =>
-        //Failure response does not have that level
-        (y, z)
-    }
-
-    results._2.length match {
-      case 1 => //Only ever expect one entry in this array
-        val responseDetails = results._2.head
-        Right(PreValidateTraderMessageResponse(
-          results._1,
-          responseDetails.exciseRegistrationNumber,
-          responseDetails.entityGroup,
-          responseDetails.validTrader,
-          responseDetails.errorCode,
-          responseDetails.errorText,
-          responseDetails.traderType,
-          responseDetails.validateProductAuthorisationResponse
-        ))
-      case _ =>
-        logger.warn(s"[PreValidateTraderService] - PreValidateTrader response from EIS did not match expected format." +
-          s" Response: $eisResponse")
-
-        Left(InternalServerError(Json.toJson(ErrorResponse(
-          dateTimeService.timestamp(),
-          "PreValidateTrader Error",
-          "Failed to parse preValidateTrader response"
-        ))))
-
+      Left(InternalServerError(Json.toJson(ErrorResponse(
+        dateTimeService.timestamp(),
+        "PreValidateTrader Error",
+        "Failed to parse preValidateTrader response"
+      ))))
     }
   }
-
 }
