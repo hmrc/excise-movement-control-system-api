@@ -52,7 +52,7 @@ class PreValidateTraderService @Inject()(
       val exciseTraderResponse = exciseTraderValidationResponse.exciseTraderResponse.head
       Right(
         PreValidateTraderMessageResponse(
-          exciseTraderValidationResponse.validationTimeStamp,
+          exciseTraderValidationResponse.validationTimestamp,
           exciseTraderResponse.exciseRegistrationNumber,
           exciseTraderResponse.entityGroup,
           exciseTraderResponse.validTrader,
