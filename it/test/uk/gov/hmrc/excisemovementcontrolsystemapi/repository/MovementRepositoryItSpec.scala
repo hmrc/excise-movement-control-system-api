@@ -417,12 +417,12 @@ class MovementRepositoryItSpec extends PlaySpec
         MessageNotification(movementId = movement2._id, messageId = "messageId3", messageType = "type", consignor = "consignorId", consignee = None, arc = Some("arc"), recipient = "recipient3", boxId = "boxId2")
       )
 
-      val result = repository.getPendingMessageNotifications().futureValue
+      val result = repository.getPendingMessageNotifications.futureValue
 
       result must contain theSameElementsAs expected
     }
 
-    mustPreserveMdc(repository.getPendingMessageNotifications())
+    mustPreserveMdc(repository.getPendingMessageNotifications)
   }
 
   "confirmNotification" should {

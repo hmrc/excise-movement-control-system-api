@@ -129,7 +129,7 @@ class MovementRepository @Inject()
     }
   }
 
-  def getPendingMessageNotifications(): Future[Seq[MessageNotification]] = Mdc.preservingMdc {
+  def getPendingMessageNotifications: Future[Seq[MessageNotification]] = Mdc.preservingMdc {
     collection.aggregate[MessageNotification](Seq(
       // This match is to do an initial filter which filters out all movements that have no
       // messages which need to notify.
