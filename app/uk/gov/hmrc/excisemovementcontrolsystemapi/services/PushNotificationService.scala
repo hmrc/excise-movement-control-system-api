@@ -16,7 +16,9 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
+import cats.implicits.toFunctorOps
 import com.google.inject.ImplementedBy
+import org.apache.pekko.Done
 import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.Result
@@ -99,6 +101,30 @@ class PushNotificationServiceImpl @Inject()(
         )
     }
   }
+
+  override def sendNotification(
+    boxId: String,
+    recipientErn: String,
+    movementId: String,
+    messageId: String,
+    messageType: String,
+    consignor: String,
+    consignee: Option[String],
+    arc: Option[String]
+  )(implicit hc: HeaderCarrier): Future[Done] = {
+    val notification = Notification(
+      movementId,
+      buildMessageUriAsString(movementId, messageId),
+      messageId,
+      messageType,
+      consignor,
+      consignee,
+      arc,
+      recipientErn)
+
+    // TODO remove the need to convert this to a done in the connector, just return done
+    notificationConnector.postNotification(boxId, notification).as(Done)
+  }
 }
 
 @ImplementedBy(classOf[PushNotificationServiceImpl])
@@ -109,10 +135,22 @@ trait PushNotificationService {
     boxId: Option[String] = None
   )(implicit hc: HeaderCarrier): Future[Either[Result, String]]
 
+  @deprecated
   def sendNotification(
     ern: String,
     movement: Movement,
     messageId: String,
     messageType: String
   )(implicit hc: HeaderCarrier): Future[NotificationResponse]
+
+  def sendNotification(
+    boxId: String,
+    recipientErn: String,
+    movementId: String,
+    messageId: String,
+    messageType: String,
+    consignor: String,
+    consignee: Option[String],
+    arc: Option[String]
+  )(implicit hc: HeaderCarrier): Future[Done]
 }
