@@ -45,8 +45,8 @@ class BoxIdRepository @Inject()
   replaceIndexes = true
 ) with Logging {
 
-  def getBoxIds(ern: String): Future[Seq[String]] = Mdc.preservingMdc {
-    collection.find(Filters.eq("ern", ern)).map(_.boxId).toFuture()
+  def getBoxIds(ern: String): Future[Set[String]] = Mdc.preservingMdc {
+    collection.find(Filters.eq("ern", ern)).map(_.boxId).toFuture().map(_.toSet)
   }
 
   def save(ern: String, boxId: String): Future[Done] = Mdc.preservingMdc {
