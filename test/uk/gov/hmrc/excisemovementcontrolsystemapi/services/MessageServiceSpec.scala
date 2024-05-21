@@ -106,7 +106,6 @@ class MessageServiceSpec extends PlaySpec
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
-            when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
             when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
             when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(Seq.empty, 0)))
 
@@ -115,7 +114,6 @@ class MessageServiceSpec extends PlaySpec
             verify(messageConnector).getNewMessages(eqTo(ern))(any)
             verify(movementRepository, never()).getAllBy(any)
             verify(movementRepository, never()).save(any)
-            verify(ernRetrievalRepository).save(eqTo(ern))
             verify(messageConnector, never()).acknowledgeMessages(any)(any)
           }
         }
@@ -134,7 +132,6 @@ class MessageServiceSpec extends PlaySpec
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(lrnMovement, notLrnMovement)))
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
-            when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
             when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
             when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
@@ -145,7 +142,6 @@ class MessageServiceSpec extends PlaySpec
             verify(movementRepository).getAllBy(ern)
             verify(movementRepository, never).save(unexpectedMovement)
             verify(movementRepository).save(expectedMovement)
-            verify(ernRetrievalRepository).save(ern)
             verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
           }
           "add messages to only the movement with the right ARC" in {
@@ -162,7 +158,6 @@ class MessageServiceSpec extends PlaySpec
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(arcMovement, notArcMovement)))
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
-            when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
             when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
             when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
@@ -173,7 +168,6 @@ class MessageServiceSpec extends PlaySpec
             verify(movementRepository).getAllBy(ern)
             verify(movementRepository, never).save(unexpectedMovement)
             verify(movementRepository).save(expectedMovement)
-            verify(ernRetrievalRepository).save(ern)
             verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
           }
           "add the boxIds to notify to saved messages" in {
@@ -191,7 +185,6 @@ class MessageServiceSpec extends PlaySpec
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(arcMovement, notArcMovement)))
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
-            when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
             when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(boxIds))
             when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
@@ -202,7 +195,6 @@ class MessageServiceSpec extends PlaySpec
             verify(movementRepository).getAllBy(ern)
             verify(movementRepository, never).save(unexpectedMovement)
             verify(movementRepository).save(expectedMovement)
-            verify(ernRetrievalRepository).save(ern)
             verify(boxIdRepository).getBoxIds(ern)
             verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
           }
@@ -223,7 +215,6 @@ class MessageServiceSpec extends PlaySpec
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
-            when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
             when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
             when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
@@ -233,7 +224,6 @@ class MessageServiceSpec extends PlaySpec
             verify(messageConnector).getNewMessages(eqTo(ern))(any)
             verify(movementRepository).getAllBy(eqTo(ern))
             verify(movementRepository).save(eqTo(expectedMovement))
-            verify(ernRetrievalRepository).save(eqTo(ern))
             verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
           }
         }
@@ -259,7 +249,6 @@ class MessageServiceSpec extends PlaySpec
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement1, movement2)))
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
-          when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
           when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(Seq(message), 1)))
           when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
@@ -271,7 +260,6 @@ class MessageServiceSpec extends PlaySpec
           verify(messageConnector).getNewMessages(eqTo(ern))(any)
           verify(movementRepository).getAllBy(eqTo(ern))
           verify(movementRepository, times(2)).save(movementCaptor)
-          verify(ernRetrievalRepository).save(eqTo(ern))
           verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
 
           movementCaptor.values.head mustBe expectedMovement1
@@ -300,7 +288,6 @@ class MessageServiceSpec extends PlaySpec
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
-            when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
             when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
             when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
@@ -310,7 +297,6 @@ class MessageServiceSpec extends PlaySpec
             verify(messageConnector).getNewMessages(eqTo(ern))(any)
             verify(movementRepository).getAllBy(eqTo(ern))
             verify(movementRepository).save(eqTo(expectedMovement))
-            verify(ernRetrievalRepository).save(eqTo(ern))
             verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
           }
           "a new movement should be created from an IE801 message" in {
@@ -333,7 +319,6 @@ class MessageServiceSpec extends PlaySpec
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
-            when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
             when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
             when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
@@ -343,7 +328,6 @@ class MessageServiceSpec extends PlaySpec
             verify(messageConnector).getNewMessages(eqTo(ern))(any)
             verify(movementRepository).getAllBy(eqTo(ern))
             verify(movementRepository).save(eqTo(expectedMovement))
-            verify(ernRetrievalRepository).save(eqTo(ern))
             verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
           }
           "a message is audited with failure if its not an IE801 or IE704" in {
@@ -357,7 +341,6 @@ class MessageServiceSpec extends PlaySpec
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
-            when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
             when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
             when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
@@ -392,7 +375,6 @@ class MessageServiceSpec extends PlaySpec
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
-            when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
             when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
             when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 0)))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
@@ -402,7 +384,6 @@ class MessageServiceSpec extends PlaySpec
             verify(messageConnector).getNewMessages(eqTo(ern))(any)
             verify(movementRepository).getAllBy(eqTo(ern))
             verify(movementRepository).save(eqTo(expectedMovement))
-            verify(ernRetrievalRepository).save(eqTo(ern))
           }
         }
       }
@@ -441,7 +422,6 @@ class MessageServiceSpec extends PlaySpec
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
 
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
-          when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
           when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(
             Future.successful(GetMessagesResponse(Seq(firstMessage), 3)),
@@ -457,7 +437,6 @@ class MessageServiceSpec extends PlaySpec
           verify(messageConnector, times(3)).getNewMessages(eqTo(ern))(any)
           verify(movementRepository, times(3)).getAllBy(eqTo(ern))
           verify(movementRepository, times(3)).save(movementCaptor)
-          verify(ernRetrievalRepository).save(eqTo(ern))
           verify(messageConnector, times(3)).acknowledgeMessages(eqTo(ern))(any)
 
           movementCaptor.values.head mustEqual firstExpectedMovement
@@ -474,7 +453,6 @@ class MessageServiceSpec extends PlaySpec
         when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
         when(movementRepository.save(any)).thenReturn(Future.successful(Done))
         when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(Some(now.minus(6, ChronoUnit.MINUTES))))
-        when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
         when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
         when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(Seq.empty, 0)))
 
@@ -492,7 +470,6 @@ class MessageServiceSpec extends PlaySpec
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(Some(now.minus(5, ChronoUnit.MINUTES))))
-          when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
           when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(Seq.empty, 0)))
 
@@ -511,7 +488,6 @@ class MessageServiceSpec extends PlaySpec
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(Some(now.minus(4, ChronoUnit.MINUTES))))
-          when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
           when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(Seq.empty, 0)))
 
@@ -536,7 +512,6 @@ class MessageServiceSpec extends PlaySpec
         when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
         when(movementRepository.save(any)).thenReturn(Future.successful(Done))
         when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
-        when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
         when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
         when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
         when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
@@ -558,7 +533,6 @@ class MessageServiceSpec extends PlaySpec
         when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
         when(movementRepository.save(any)).thenReturn(Future.successful(Done))
         when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
-        when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
         when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
         when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
         when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
@@ -582,7 +556,6 @@ class MessageServiceSpec extends PlaySpec
         when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
         when(movementRepository.save(any)).thenReturn(Future.successful(Done))
         when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
-        when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
         when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
         when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
         when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
@@ -604,7 +577,6 @@ class MessageServiceSpec extends PlaySpec
         when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
         when(movementRepository.save(any)).thenReturn(Future.successful(Done))
         when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
-        when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
         when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
         when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
         when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
@@ -628,7 +600,6 @@ class MessageServiceSpec extends PlaySpec
         when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
         when(movementRepository.save(any)).thenReturn(Future.successful(Done))
         when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
-        when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
         when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
         when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
         when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
@@ -653,7 +624,6 @@ class MessageServiceSpec extends PlaySpec
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
-          when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
           when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
           when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
@@ -678,7 +648,6 @@ class MessageServiceSpec extends PlaySpec
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
-          when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
           when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
           when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))

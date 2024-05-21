@@ -16,11 +16,9 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
-import cats.implicits.toFunctorOps
 import org.apache.pekko.Done
 import org.mongodb.scala.model.{Filters, IndexModel, IndexOptions, Indexes, ReplaceOptions}
 import play.api.{Configuration, Logging}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.BoxIdRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.BoxIdRepository.mongoIndexes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService

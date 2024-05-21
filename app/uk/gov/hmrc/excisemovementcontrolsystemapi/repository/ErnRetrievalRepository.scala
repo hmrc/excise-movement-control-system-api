@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
-import org.apache.pekko.Done
 import org.mongodb.scala.model._
 import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
@@ -52,14 +51,6 @@ class ErnRetrievalRepository @Inject()
       ErnRetrieval(ern, timeService.timestamp()),
       FindOneAndReplaceOptions().upsert(true)
     ).headOption().map(_.map(_.lastRetrieved))
-  }
-
-  def save(ern: String): Future[Done] = Mdc.preservingMdc {
-    collection.replaceOne(
-      Filters.eq("ern", ern),
-      ErnRetrieval(ern, timeService.timestamp()),
-      ReplaceOptions().upsert(true)
-    ).toFuture().map(_ => Done)
   }
 }
 

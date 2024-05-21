@@ -53,7 +53,6 @@ class MessageService @Inject
         for {
           boxIds <- getBoxIds(ern)
           _ <- processNewMessages(ern, boxIds)
-          _ <- ernRetrievalRepository.save(ern)
         } yield Done
       } else {
         Future.successful(Done)
