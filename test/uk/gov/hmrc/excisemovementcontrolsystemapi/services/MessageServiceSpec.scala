@@ -19,9 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 import cats.data.EitherT
 import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
-import org.mockito.Mockito
-import org.mockito.Mockito.never
-import org.mockito.MockitoSugar.{times, verify, when}
+import org.mockito.MockitoSugar.{never, reset, times, verify, when}
 import org.mockito.captor.ArgCaptor
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
@@ -83,7 +81,7 @@ class MessageServiceSpec extends PlaySpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    Mockito.reset[Any](
+    reset(
       movementRepository,
       ernRetrievalRepository,
       boxIdRepository,
@@ -112,9 +110,9 @@ class MessageServiceSpec extends PlaySpec
             messageService.updateMessages(ern).futureValue
 
             verify(messageConnector).getNewMessages(eqTo(ern))(any)
-            verify(movementRepository, never()).getAllBy(any)
-            verify(movementRepository, never()).save(any)
-            verify(messageConnector, never()).acknowledgeMessages(any)(any)
+            verify(movementRepository, never).getAllBy(any)
+            verify(movementRepository, never).save(any)
+            verify(messageConnector, never).acknowledgeMessages(any)(any)
           }
         }
         "we try to retrieve messages and there are some" should {

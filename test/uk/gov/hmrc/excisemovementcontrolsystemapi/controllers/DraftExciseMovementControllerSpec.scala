@@ -38,6 +38,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IE818Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MessageIdentifierIsUnauthorised, MessageValidation}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.BoxIdRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -61,6 +62,7 @@ class DraftExciseMovementControllerSpec
   private val cc = stubControllerComponents()
   private val request = createRequestWithClientId
   private val mockIeMessage = mock[IE815Message]
+  private val boxIdRepository = mock[BoxIdRepository]
   private val workItemService = mock[WorkItemService]
   private val notificationService = mock[PushNotificationService]
   private val messageValidation = mock[MessageValidation]
@@ -74,7 +76,7 @@ class DraftExciseMovementControllerSpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(submissionMessageService, movementService, workItemService, submissionMessageService, notificationService, auditService)
+    reset(submissionMessageService, movementService, workItemService, submissionMessageService, notificationService, auditService, boxIdRepository)
 
     when(submissionMessageService.submit(any, any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
@@ -155,7 +157,7 @@ class DraftExciseMovementControllerSpec
 
     "pass the Client Box id to notification service when is present" in {
       when(movementService.saveNewMovement(any))
-        .thenReturn(Future.successful(Right(Movement(Some(defaultBoxId), "123", "456", Some("789"), None, Instant.now))))
+        .thenReturn(Future.successful(Right(Movement(Some(defaultBoxId), "123", consignorId, Some("789"), None, Instant.now))))
 
       val result = createWithSuccessfulAuth.submit(createRequestWithClientBoxId)
 
@@ -197,6 +199,15 @@ class DraftExciseMovementControllerSpec
       await(createWithSuccessfulAuth.submit(request))
 
       verify(workItemService).addWorkItemForErn(consignorId, fastMode = true)
+    }
+
+    "adds the boxId to the BoxIdRepository for consignor" in {
+      when(movementService.saveNewMovement(any))
+        .thenReturn(Future.successful(Right(Movement(Some(defaultBoxId), "lrn", consignorId, None))))
+
+      await(createWithSuccessfulAuth.submit(request))
+
+      verify(boxIdRepository).save(consignorId, defaultBoxId)
     }
 
     "return ACCEPTED if failing to add workItem " in {
@@ -330,6 +341,7 @@ class DraftExciseMovementControllerSpec
       messageValidation,
       dateTimeService,
       auditService,
+      boxIdRepository,
       appConfig,
       cc
     )
@@ -346,6 +358,7 @@ class DraftExciseMovementControllerSpec
       messageValidation,
       dateTimeService,
       auditService,
+      boxIdRepository,
       appConfig,
       cc
     )
@@ -361,6 +374,7 @@ class DraftExciseMovementControllerSpec
       messageValidation,
       dateTimeService,
       auditService,
+      boxIdRepository,
       appConfig,
       cc
     )
@@ -376,6 +390,7 @@ class DraftExciseMovementControllerSpec
       messageValidation,
       dateTimeService,
       auditService,
+      boxIdRepository,
       appConfig,
       cc
     )

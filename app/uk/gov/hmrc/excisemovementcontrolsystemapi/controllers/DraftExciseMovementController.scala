@@ -27,6 +27,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Constants
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.BoxIdRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -48,6 +49,7 @@ class DraftExciseMovementController @Inject()(
   messageValidator: MessageValidation,
   dateTimeService: DateTimeService,
   auditService: AuditService,
+  boxIdRepository: BoxIdRepository,
   appConfig: AppConfig,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
@@ -109,6 +111,7 @@ class DraftExciseMovementController @Inject()(
   )(implicit hc: HeaderCarrier): EitherT[Future, Result, Movement] = {
 
     val newMovement: Movement = createMovementFomMessage(message, boxId)
+    boxId.map(boxIdRepository.save(newMovement.consignorId, _))
     workItemService.addWorkItemForErn(newMovement.consignorId, fastMode = true)
 
     EitherT(movementMessageService.saveNewMovement(newMovement).map {
