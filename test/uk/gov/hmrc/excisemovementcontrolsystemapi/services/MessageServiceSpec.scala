@@ -36,7 +36,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessag
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -54,6 +54,7 @@ class MessageServiceSpec extends PlaySpec
 
   private val movementRepository = mock[MovementRepository]
   private val ernRetrievalRepository = mock[ErnRetrievalRepository]
+  private val boxIdRepository = mock[BoxIdRepository]
   private val messageConnector = mock[MessageConnector]
   private val dateTimeService = mock[DateTimeService]
   private val correlationIdService = mock[CorrelationIdService]
@@ -70,6 +71,7 @@ class MessageServiceSpec extends PlaySpec
     .overrides(
       bind[MovementRepository].toInstance(movementRepository),
       bind[ErnRetrievalRepository].toInstance(ernRetrievalRepository),
+      bind[BoxIdRepository].toInstance(boxIdRepository),
       bind[MessageConnector].toInstance(messageConnector),
       bind[DateTimeService].toInstance(dateTimeService),
       bind[CorrelationIdService].toInstance(correlationIdService),
@@ -84,8 +86,11 @@ class MessageServiceSpec extends PlaySpec
     Mockito.reset[Any](
       movementRepository,
       ernRetrievalRepository,
+      boxIdRepository,
       messageConnector,
-      dateTimeService
+      dateTimeService,
+      correlationIdService,
+      auditService
     )
   }
 
@@ -102,6 +107,7 @@ class MessageServiceSpec extends PlaySpec
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
             when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
             when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(Seq.empty, 0)))
 
             messageService.updateMessages(ern).futureValue
@@ -120,7 +126,7 @@ class MessageServiceSpec extends PlaySpec
             val notLrnMovement = Movement(None, "notTheLrn", ern, None)
             val ie704 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some("lrnie8158976912")))
             val messages = Seq(IE704Message.createFromXml(ie704))
-            val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", ern, Set.empty, now)) // TODO add relevant box ids
+            val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE704", "XI000001", ern, Set.empty, now))
             val expectedMovement = lrnMovement.copy(messages = expectedMessages)
             val unexpectedMovement = notLrnMovement.copy(messages = expectedMessages)
 
@@ -129,33 +135,7 @@ class MessageServiceSpec extends PlaySpec
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
             when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
-            when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
-            when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
-
-            messageService.updateMessages(ern).futureValue
-
-            verify(messageConnector).getNewMessages(eqTo(ern))(any)
-            verify(movementRepository).getAllBy(eqTo(ern))
-            verify(movementRepository, never).save(eqTo(unexpectedMovement))
-            verify(movementRepository).save(eqTo(expectedMovement))
-            verify(ernRetrievalRepository).save(eqTo(ern))
-            verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
-          }
-          "add messages to only the movement with the right ARC" in {
-            val ern = "testErn"
-            val arcMovement = Movement(None, "notTheLrn", ern, Some("testConsignee"), administrativeReferenceCode = Some("23XI00000000000000012"))
-            val notArcMovement = Movement(None, "notTheLrn", ern, None)
-            val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
-            val messages = Seq(IE801Message.createFromXml(ie801))
-            val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, Set.empty, now)) // TODO add relevant box ids
-            val expectedMovement = arcMovement.copy(messages = expectedMessages)
-            val unexpectedMovement = notArcMovement.copy(messages = expectedMessages)
-
-            when(dateTimeService.timestamp()).thenReturn(now)
-            when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(arcMovement, notArcMovement)))
-            when(movementRepository.save(any)).thenReturn(Future.successful(Done))
-            when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
-            when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
             when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
@@ -166,6 +146,64 @@ class MessageServiceSpec extends PlaySpec
             verify(movementRepository, never).save(unexpectedMovement)
             verify(movementRepository).save(expectedMovement)
             verify(ernRetrievalRepository).save(ern)
+            verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
+          }
+          "add messages to only the movement with the right ARC" in {
+            val ern = "testErn"
+            val arcMovement = Movement(None, "notTheLrn", ern, Some("testConsignee"), administrativeReferenceCode = Some("23XI00000000000000012"))
+            val notArcMovement = Movement(None, "notTheLrn", ern, None)
+            val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
+            val messages = Seq(IE801Message.createFromXml(ie801))
+            val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, Set.empty, now))
+            val expectedMovement = arcMovement.copy(messages = expectedMessages)
+            val unexpectedMovement = notArcMovement.copy(messages = expectedMessages)
+
+            when(dateTimeService.timestamp()).thenReturn(now)
+            when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(arcMovement, notArcMovement)))
+            when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+            when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+            when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+            when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+            when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+
+            messageService.updateMessages(ern).futureValue
+
+            verify(messageConnector).getNewMessages(eqTo(ern))(any)
+            verify(movementRepository).getAllBy(ern)
+            verify(movementRepository, never).save(unexpectedMovement)
+            verify(movementRepository).save(expectedMovement)
+            verify(ernRetrievalRepository).save(ern)
+            verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
+          }
+          "add the boxIds to notify to saved messages" in {
+            val ern = "testErn"
+            val boxIds = Set("box1", "box2")
+            val arcMovement = Movement(None, "notTheLrn", ern, Some("testConsignee"), administrativeReferenceCode = Some("23XI00000000000000012"))
+            val notArcMovement = Movement(None, "notTheLrn", ern, None)
+            val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912")))
+            val messages = Seq(IE801Message.createFromXml(ie801))
+            val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, boxIds, now))
+            val expectedMovement = arcMovement.copy(messages = expectedMessages)
+            val unexpectedMovement = notArcMovement.copy(messages = expectedMessages)
+
+            when(dateTimeService.timestamp()).thenReturn(now)
+            when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(arcMovement, notArcMovement)))
+            when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+            when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+            when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(boxIds))
+            when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+            when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+
+            messageService.updateMessages(ern).futureValue
+
+            verify(messageConnector).getNewMessages(eqTo(ern))(any)
+            verify(movementRepository).getAllBy(ern)
+            verify(movementRepository, never).save(unexpectedMovement)
+            verify(movementRepository).save(expectedMovement)
+            verify(ernRetrievalRepository).save(ern)
+            verify(boxIdRepository).getBoxIds(ern)
             verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
           }
         }
@@ -186,6 +224,7 @@ class MessageServiceSpec extends PlaySpec
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
             when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
             when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
@@ -221,6 +260,7 @@ class MessageServiceSpec extends PlaySpec
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+          when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(Seq(message), 1)))
           when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
@@ -261,6 +301,7 @@ class MessageServiceSpec extends PlaySpec
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
             when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
             when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
@@ -293,6 +334,7 @@ class MessageServiceSpec extends PlaySpec
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
             when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
             when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
@@ -316,6 +358,7 @@ class MessageServiceSpec extends PlaySpec
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
             when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
             when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
@@ -350,6 +393,7 @@ class MessageServiceSpec extends PlaySpec
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
             when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
             when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 0)))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
@@ -398,6 +442,7 @@ class MessageServiceSpec extends PlaySpec
 
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+          when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(
             Future.successful(GetMessagesResponse(Seq(firstMessage), 3)),
             Future.successful(GetMessagesResponse(Seq(secondMessage), 2)),
@@ -430,6 +475,7 @@ class MessageServiceSpec extends PlaySpec
         when(movementRepository.save(any)).thenReturn(Future.successful(Done))
         when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(Some(now.minus(6, ChronoUnit.MINUTES))))
         when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+        when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
         when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(Seq.empty, 0)))
 
         messageService.updateMessages(ern).futureValue
@@ -447,6 +493,7 @@ class MessageServiceSpec extends PlaySpec
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(Some(now.minus(5, ChronoUnit.MINUTES))))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+          when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(Seq.empty, 0)))
 
           messageService.updateMessages(ern).futureValue
@@ -465,6 +512,7 @@ class MessageServiceSpec extends PlaySpec
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(Some(now.minus(4, ChronoUnit.MINUTES))))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+          when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(Seq.empty, 0)))
 
           messageService.updateMessages(ern).futureValue
@@ -489,6 +537,7 @@ class MessageServiceSpec extends PlaySpec
         when(movementRepository.save(any)).thenReturn(Future.successful(Done))
         when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
         when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+        when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
         when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
         when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
@@ -510,6 +559,7 @@ class MessageServiceSpec extends PlaySpec
         when(movementRepository.save(any)).thenReturn(Future.successful(Done))
         when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
         when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+        when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
         when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
         when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
@@ -533,6 +583,7 @@ class MessageServiceSpec extends PlaySpec
         when(movementRepository.save(any)).thenReturn(Future.successful(Done))
         when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
         when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+        when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
         when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
         when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
@@ -554,6 +605,7 @@ class MessageServiceSpec extends PlaySpec
         when(movementRepository.save(any)).thenReturn(Future.successful(Done))
         when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
         when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+        when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
         when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
         when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
@@ -577,6 +629,7 @@ class MessageServiceSpec extends PlaySpec
         when(movementRepository.save(any)).thenReturn(Future.successful(Done))
         when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
         when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+        when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
         when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
         when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
@@ -601,6 +654,7 @@ class MessageServiceSpec extends PlaySpec
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+          when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
           when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
@@ -625,6 +679,7 @@ class MessageServiceSpec extends PlaySpec
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
+          when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
           when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
@@ -634,33 +689,7 @@ class MessageServiceSpec extends PlaySpec
         }
       }
     }
-    // TODO the following commented out test is an odd situation as the arc shouldn't be different for the same LRN and ERN
-//    "the existing movement has an ARC" when {
-//      "we get a 801 with a different ARC, it should not update the ARC on the movement" in {
-//        val ern = "testErn"
-//        val movement = Movement(newId, None, "lrnie8158976912", ern, Some("testConsignee"), Some("23XI00000000000000012"), now, Seq.empty)
-//        val ie801 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000013"), Some("lrnie8158976912")))
-//        val messages = Seq(IE801Message.createFromXml(ie801))
-//        val expectedMessages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", now))
-//        val expectedMovement = movement.copy(messages = expectedMessages)
-//
-//        when(correlationIdService.generateCorrelationId()).thenReturn(newId)
-//        when(dateTimeService.timestamp()).thenReturn(now)
-//        when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
-//        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
-//        when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
-//        when(ernRetrievalRepository.save(any)).thenReturn(Future.successful(Done))
-//        when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
-//        when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
-//
-//        messageService.updateMessages(ern).futureValue
-//
-//        verify(movementRepository).save(expectedMovement)
-//      }
-//    }
-
     // TODO what about 829 where one movement is found and another isn't?
-    // TODO updating messages must be idempotent
   }
 }
 
