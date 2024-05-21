@@ -43,7 +43,7 @@ object TestUtils {
 
   def getPreValidateTraderSuccessEISResponse: PreValidateTraderEISResponse = PreValidateTraderEISResponse(
     ExciseTraderValidationResponse(
-      validationTimeStamp = "2021-12-17T09:31:123Z",
+      validationTimestamp = "2021-12-17T09:31:123Z",
       exciseTraderResponse = Array(
         ExciseTraderResponse(
           exciseRegistrationNumber = "GBWK002281023",
@@ -60,7 +60,7 @@ object TestUtils {
 
   def getPreValidateTraderErrorEISResponse: PreValidateTraderEISResponse = PreValidateTraderEISResponse(
     ExciseTraderValidationResponse(
-      validationTimeStamp = "2021-12-17T09:31:123Z",
+      validationTimestamp = "2021-12-17T09:31:123Z",
       exciseTraderResponse = Array(
         ExciseTraderResponse(
           validTrader = false,

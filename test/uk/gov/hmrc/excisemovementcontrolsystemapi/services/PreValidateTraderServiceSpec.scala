@@ -58,7 +58,7 @@ class PreValidateTraderServiceSpec extends PlaySpec with BeforeAndAfterEach with
 
   private val getBadlyFormattedEISResponse = PreValidateTraderEISResponse(
     ExciseTraderValidationResponse(
-      validationTimeStamp = "2021-12-17T09:31:123Z",
+      validationTimestamp = "2021-12-17T09:31:123Z",
       exciseTraderResponse = Array(
         ExciseTraderResponse(
           validTrader = false,

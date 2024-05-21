@@ -54,7 +54,7 @@ class PreValidateTraderHttpReaderSpec extends PlaySpec with EitherValues {
       )
 
       val responseObject = result.toOption.value.exciseTraderValidationResponse
-      responseObject.validationTimeStamp mustBe validResponse.exciseTraderValidationResponse.validationTimeStamp
+      responseObject.validationTimestamp mustBe validResponse.exciseTraderValidationResponse.validationTimestamp
       responseObject.exciseTraderResponse(0) mustBe validResponse.exciseTraderValidationResponse.exciseTraderResponse(0)
 
     }
@@ -69,7 +69,7 @@ class PreValidateTraderHttpReaderSpec extends PlaySpec with EitherValues {
 
       val responseObject = result.toOption.value
 
-      responseObject.exciseTraderValidationResponse.validationTimeStamp mustBe businessError.exciseTraderValidationResponse.validationTimeStamp
+      responseObject.exciseTraderValidationResponse.validationTimestamp mustBe businessError.exciseTraderValidationResponse.validationTimestamp
       responseObject.exciseTraderValidationResponse.exciseTraderResponse(0) mustBe businessError.exciseTraderValidationResponse.exciseTraderResponse(0)
     }
 
