@@ -30,7 +30,7 @@ import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository.MessageNotification
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository.MessageNotification
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, DefaultPlayMongoRepositorySupport}
