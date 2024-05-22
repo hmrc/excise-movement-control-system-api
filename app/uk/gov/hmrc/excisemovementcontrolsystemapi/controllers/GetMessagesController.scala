@@ -25,7 +25,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MessageService, MovementService, WorkItemService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -39,6 +39,7 @@ class GetMessagesController @Inject()(
   authAction: AuthAction,
   validateAcceptHeaderAction: ValidateAcceptHeaderAction,
   movementService: MovementService,
+  messageService: MessageService,
   workItemService: WorkItemService,
   movementIdValidator: MovementIdValidation,
   cc: ControllerComponents,
@@ -52,7 +53,7 @@ class GetMessagesController @Inject()(
       validateAcceptHeaderAction andThen
       authAction
       ).async(parse.default) {
-      implicit _ =>
+        implicit _ =>
 
         //todo EMCS-529: do we need to validate messageId here? This is the messageIdentifier
         // of the message abd according to the xsd this is not a UUID and can be
@@ -81,6 +82,7 @@ class GetMessagesController @Inject()(
         val result: EitherT[Future, Result, Result] = for {
           validatedMovementId <- validateMovementId(movementId)
           updatedSince <- validateUpdatedSince(updatedSince)
+          _ <- EitherT.right(messageService.updateAllMessages(request.erns))
           movement <- getMovement(validatedMovementId)
         } yield {
 

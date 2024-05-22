@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
+import org.apache.pekko.Done
 import org.apache.pekko.actor.ActorSystem
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, verify, when}
@@ -33,7 +34,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateAc
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MessageService, MovementService, WorkItemService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 
 import java.nio.charset.StandardCharsets
@@ -57,6 +58,7 @@ class GetMessagesControllerSpec extends PlaySpec
   private val dateTimeService = mock[DateTimeService]
   private val timeStamp = Instant.parse("2020-01-01T01:01:01.123456Z")
   private val workItemService = mock[WorkItemService]
+  private val messageService = mock[MessageService]
   private val messageCreateOn = Instant.now()
 
   private val MovementIdFormatError = Json.parse(
@@ -69,10 +71,11 @@ class GetMessagesControllerSpec extends PlaySpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(movementService, dateTimeService, workItemService)
+    reset(movementService, dateTimeService, workItemService, messageService)
 
     when(dateTimeService.timestamp()).thenReturn(timeStamp)
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
+    when(messageService.updateAllMessages(any)(any)).thenReturn(Future.successful(Done))
   }
 
   "getMessagesForMovement" should {
@@ -97,6 +100,26 @@ class GetMessagesControllerSpec extends PlaySpec
         "messageId",
         messageCreateOn
       )))
+    }
+
+    "updates messages for all ERNs in token" in {
+      val message = Message(123, "message", "IE801", "messageId", "ern", Set.empty, messageCreateOn)
+      val movement = createMovementWithMessages(Seq(message))
+      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
+      val controller = new GetMessagesController(
+        FakeSuccessAuthenticationMultiErn(Set(ern, "otherErn")),
+        new ValidateAcceptHeaderAction(dateTimeService),
+        movementService,
+        messageService,
+        workItemService,
+        new MovementIdValidation,
+        cc,
+        new EmcsUtils,
+        dateTimeService
+      )
+      await(controller.getMessagesForMovement(validUUID, None)(createRequest()))
+
+      verify(messageService).updateAllMessages(eqTo(Set(ern, "otherErn")))(any)
     }
 
     "return 200 when consignee is valid" in {
@@ -413,6 +436,7 @@ class GetMessagesControllerSpec extends PlaySpec
       FakeSuccessAuthentication,
       new ValidateAcceptHeaderAction(dateTimeService),
       movementService,
+      messageService,
       workItemService,
       new MovementIdValidation,
       cc,
@@ -425,6 +449,7 @@ class GetMessagesControllerSpec extends PlaySpec
       FakeFailingAuthentication,
       new ValidateAcceptHeaderAction(dateTimeService),
       movementService,
+      messageService,
       workItemService,
       new MovementIdValidation,
       cc,
