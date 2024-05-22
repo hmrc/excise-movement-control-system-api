@@ -39,6 +39,17 @@ trait FakeAuthentication {
     override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global
   }
 
+  case class FakeSuccessAuthenticationMultiErn(erns: Set[String]) extends AuthAction {
+
+    override def parser: BodyParser[AnyContent] = stubBodyParser()
+
+    override def invokeBlock[A](request: Request[A], block: EnrolmentRequest[A] => Future[Result]): Future[Result] = {
+      block(EnrolmentRequest(request, erns, "testInternalId"))
+    }
+
+    override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global
+  }
+
   object FakeFailingAuthentication extends AuthAction {
 
     override def parser: BodyParser[AnyContent] = stubBodyParser()

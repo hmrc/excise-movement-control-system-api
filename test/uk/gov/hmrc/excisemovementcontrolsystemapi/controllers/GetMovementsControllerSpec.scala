@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
+import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, verify, when}
 import org.mongodb.scala.MongoException
@@ -28,10 +29,10 @@ import play.api.mvc.Results.BadRequest
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilterBuilder
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeValidateErnParameterAction, ErrorResponseSupport, MovementTestUtils}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication, FakeValidateErnParameterAction, MovementTestUtils}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MovementIdFormatInvalid, MovementIdValidation}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MessageService, MovementService, WorkItemService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import java.time.Instant
@@ -50,6 +51,7 @@ class GetMovementsControllerSpec
   private val movementService = mock[MovementService]
   private val workItemService = mock[WorkItemService]
   private val dateTimeService = mock[DateTimeService]
+  private val messageService = mock[MessageService]
   private val movementIdValidator = mock[MovementIdValidation]
 
   private val controller = new GetMovementsController(
@@ -59,6 +61,7 @@ class GetMovementsControllerSpec
     movementService,
     workItemService,
     dateTimeService,
+    messageService,
     movementIdValidator
   )
 
@@ -67,7 +70,7 @@ class GetMovementsControllerSpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(movementService, workItemService)
+    reset(movementService, workItemService, messageService)
 
     when(movementService.getMovementByErn(any, any))
       .thenReturn(Future.successful(Seq(Movement("cfdb20c7-d0b0-4b8b-a071-737d68dede5e", Some("boxId"), "lrn", ern, Some("consigneeId"), Some("arc"), Instant.now(), Seq.empty))))
@@ -75,6 +78,8 @@ class GetMovementsControllerSpec
     when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
 
     when(dateTimeService.timestamp()).thenReturn(timestamp)
+
+    when(messageService.updateAllMessages(any)(any)).thenReturn(Future.successful(Done))
 
   }
 
@@ -90,6 +95,38 @@ class GetMovementsControllerSpec
       await(controller.getMovements(None, None, None, None)(FakeRequest("GET", "/foo")))
 
       verify(movementService).getMovementByErn(eqTo(Seq(ern)), any)
+    }
+
+    "updates messages for all authorised ERNs if ERN filter not supplied" in {
+      val controller = new GetMovementsController(
+        FakeSuccessAuthenticationMultiErn(Set(ern, "otherErn")),
+        FakeValidateErnParameterSuccessAction,
+        cc,
+        movementService,
+        workItemService,
+        dateTimeService,
+        messageService,
+        movementIdValidator
+      )
+      await(controller.getMovements(None, None, None, None)(fakeRequest))
+
+      verify(messageService).updateAllMessages(eqTo(Set(ern, "otherErn")))(any)
+    }
+
+    "only updates messages filtered ERN if filter supplied" in {
+      val controller = new GetMovementsController(
+        FakeSuccessAuthenticationMultiErn(Set(ern, "otherErn")),
+        FakeValidateErnParameterSuccessAction,
+        cc,
+        movementService,
+        workItemService,
+        dateTimeService,
+        messageService,
+        movementIdValidator
+      )
+      await(controller.getMovements(Some("otherErn"), None, None, None)(fakeRequest))
+
+      verify(messageService).updateAllMessages(eqTo(Set("otherErn")))(any)
     }
 
     "return multiple movement" in {
@@ -206,6 +243,26 @@ class GetMovementsControllerSpec
 
     }
 
+    "updates messages for all authorised ERNs if ERN filter not supplied" in {
+      val controller = new GetMovementsController(
+        FakeSuccessAuthenticationMultiErn(Set(ern, "otherErn")),
+        FakeValidateErnParameterSuccessAction,
+        cc,
+        movementService,
+        workItemService,
+        dateTimeService,
+        messageService,
+        movementIdValidator
+      )
+
+      when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))
+      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
+
+      await(controller.getMovement(uuid)(fakeRequest))
+
+      verify(messageService).updateAllMessages(eqTo(Set(ern, "otherErn")))(any)
+    }
+
     "return Not Found error" when {
       "movement not found in database" in {
         when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))
@@ -304,6 +361,7 @@ class GetMovementsControllerSpec
       movementService,
       workItemService,
       dateTimeService,
+      messageService,
       movementIdValidator
     )
 
@@ -315,6 +373,7 @@ class GetMovementsControllerSpec
       movementService,
       workItemService,
       dateTimeService,
+      messageService,
       movementIdValidator
     )
 }
