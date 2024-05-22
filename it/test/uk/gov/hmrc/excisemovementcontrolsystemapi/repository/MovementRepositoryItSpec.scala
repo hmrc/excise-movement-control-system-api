@@ -28,18 +28,16 @@ import org.slf4j.MDC
 import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository.MessageNotification
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, DefaultPlayMongoRepositorySupport}
-import uk.gov.hmrc.play.bootstrap.dispatchers.MDCPropagatingExecutorService
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
-import java.util.concurrent.Executors
 import scala.concurrent.{ExecutionContext, Future}
 
 class MovementRepositoryItSpec extends PlaySpec
@@ -50,23 +48,16 @@ class MovementRepositoryItSpec extends PlaySpec
   with BeforeAndAfterAll
   with GuiceOneAppPerSuite {
 
-  protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  private val appConfig = app.injector.instanceOf[AppConfig]
   private lazy val dateTimeService = mock[DateTimeService]
   private lazy val timestamp = Instant.now.truncatedTo(ChronoUnit.MILLIS)
 
-  protected override val repository = new MovementRepository(
-    mongoComponent,
-    appConfig,
-    dateTimeService
-  )
+  override def fakeApplication(): Application = GuiceApplicationBuilder()
+    .overrides(
+      bind[MongoComponent].toInstance(mongoComponent),
+      bind[DateTimeService].toInstance(dateTimeService)
+    ).build()
 
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure("mongodb.uri" -> mongoUri)
-      .overrides(bind[DateTimeService].to(dateTimeService))
-
-  override implicit lazy val app: Application = appBuilder.build()
+  override protected lazy val repository: MovementRepository = app.injector.instanceOf[MovementRepository]
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -484,13 +475,12 @@ class MovementRepositoryItSpec extends PlaySpec
   private def mustPreserveMdc[A](f: => Future[A])(implicit pos: Position): Unit =
     "must preserve MDC" in {
 
-      implicit lazy val ec: ExecutionContext =
-        ExecutionContext.fromExecutor(new MDCPropagatingExecutorService(Executors.newFixedThreadPool(2)))
+      val ec = app.injector.instanceOf[ExecutionContext]
 
       MDC.put("test", "foo")
 
       f.map { _ =>
         MDC.get("test") mustEqual "foo"
-      }.futureValue
+      }(ec).futureValue
     }
 }
