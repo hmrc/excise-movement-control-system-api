@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
+import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, verify, verifyZeroInteractions, when}
 import org.scalatest.concurrent.ScalaFutures
@@ -32,6 +33,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NonRepudiationSubmissionAccepted, NonRepudiationSubmissionFailed}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnSubmissionRepository
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -48,7 +50,8 @@ class SubmissionMessageServiceSpec
   private val connector = mock[EISSubmissionConnector]
   private val nrsService = mock[NrsService]
   private val correlationIdService = mock[CorrelationIdService]
-  private val sut = new SubmissionMessageServiceImpl(connector, nrsService, correlationIdService)
+  private val ernSubmissionRepository = mock[ErnSubmissionRepository]
+  private val sut = new SubmissionMessageServiceImpl(connector, nrsService, correlationIdService, ernSubmissionRepository)
 
   private val message = mock[IE815Message]
   private val xmlBody = "<IE815>test</IE815>"
@@ -64,7 +67,7 @@ class SubmissionMessageServiceSpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(connector, nrsService)
+    reset(connector, nrsService, ernSubmissionRepository)
 
     when(message.consignorId).thenReturn("1234")
     when(correlationIdService.generateCorrelationId()).thenReturn("correlationId")
@@ -72,6 +75,7 @@ class SubmissionMessageServiceSpec
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "IE815", "correlationId"))))
     when(nrsService.submitNrs(any, any, any)(any))
       .thenReturn(Future.successful(NonRepudiationSubmissionAccepted("submissionId")))
+    when(ernSubmissionRepository.save(any)).thenReturn(Future.successful(Done))
   }
 
   "submit" should {
@@ -87,6 +91,10 @@ class SubmissionMessageServiceSpec
 
       withClue("send to NRS when submitMessage is successful") {
         verify(nrsService).submitNrs(eqTo(request), eqTo(ern), eqTo("correlationId"))(any)
+      }
+
+      withClue("update the last submitted time for the ern") {
+        verify(ernSubmissionRepository).save(ern)
       }
     }
 
@@ -106,6 +114,10 @@ class SubmissionMessageServiceSpec
 
       withClue("not send to NRS") {
         verifyZeroInteractions(nrsService)
+      }
+
+      withClue("not update last submitted time for ern") {
+        verifyZeroInteractions(ernSubmissionRepository)
       }
     }
 
