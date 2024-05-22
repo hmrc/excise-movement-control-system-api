@@ -1302,7 +1302,9 @@ components:
         entityGroup:
           $ref: '#/components/schemas/EntityGroup'
         validateProductAuthorisationRequest:
-          $ref: '#/components/schemas/ValidateProductAuthorisationRequest'
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidateProductAuthorisationRequest'
     EntityGroup:
       type: string
       enum: [ 'UK Record', 'EU Trader', 'EU Warehouse', 'EU Temporary Authorisation' ]
