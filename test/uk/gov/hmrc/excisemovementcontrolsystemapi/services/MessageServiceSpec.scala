@@ -658,6 +658,78 @@ class MessageServiceSpec extends PlaySpec
     }
     // TODO what about 829 where one movement is found and another isn't?
   }
+  "update all messages" when {
+    "all erns are successful" should {
+      "process all erns" in {
+        val ern1NewMessages = Seq(IE704Message.createFromXml(XmlMessageGeneratorFactory.generate("ern1", MessageParams(IE704, "messageId1", localReferenceNumber = Some("lrn1")))))
+        val ern1Movement = Movement(
+          None,
+          "lrn1",
+          "ern1",
+          None,
+          messages = Seq(Message(utils.encode(ern1NewMessages.head.toXml.toString()), "IE704", "messageId1", "ern1", Set.empty, now))
+        )
+        val ern2NewMessages = Seq(IE704Message.createFromXml(XmlMessageGeneratorFactory.generate("ern2", MessageParams(IE704, "messageId2", localReferenceNumber = Some("lrn2")))))
+        val ern2Movement = Movement(
+          None,
+          "lrn2",
+          "ern2",
+          None,
+          messages = Seq(Message(utils.encode(ern2NewMessages.head.toXml.toString()), "IE704", "messageId2", "ern2", Set.empty, now))
+        )
+
+        when(dateTimeService.timestamp()).thenReturn(now)
+        when(movementRepository.getAllBy(eqTo("ern1"))).thenReturn(Future.successful(Seq(ern1Movement)))
+        when(movementRepository.getAllBy(eqTo("ern2"))).thenReturn(Future.successful(Seq(ern2Movement)))
+        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+        when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+        when(messageConnector.getNewMessages(eqTo("ern1"))(any)).thenReturn(Future.successful(GetMessagesResponse(ern1NewMessages, 1)))
+        when(messageConnector.getNewMessages(eqTo("ern2"))(any)).thenReturn(Future.successful(GetMessagesResponse(ern2NewMessages, 1)))
+        when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+
+        messageService.updateAllMessages(Set("ern1", "ern2")).futureValue
+
+        verify(movementRepository).save(ern1Movement)
+        verify(movementRepository).save(ern2Movement)
+      }
+    }
+    "an ern fails" should {
+      "continue with further erns and not fail the future" in {
+        val ern1NewMessages = Seq(IE704Message.createFromXml(XmlMessageGeneratorFactory.generate("ern1", MessageParams(IE704, "messageId1", localReferenceNumber = Some("lrn1")))))
+        val ern1Movement = Movement(
+          None,
+          "lrn1",
+          "ern1",
+          None,
+          messages = Seq(Message(utils.encode(ern1NewMessages.head.toXml.toString()), "IE704", "messageId1", "ern1", Set.empty, now))
+        )
+        val ern2NewMessages = Seq(IE704Message.createFromXml(XmlMessageGeneratorFactory.generate("ern2", MessageParams(IE704, "messageId2", localReferenceNumber = Some("lrn2")))))
+        val ern2Movement = Movement(
+          None,
+          "lrn2",
+          "ern2",
+          None,
+          messages = Seq(Message(utils.encode(ern2NewMessages.head.toXml.toString()), "IE704", "messageId2", "ern2", Set.empty, now))
+        )
+
+        when(dateTimeService.timestamp()).thenReturn(now)
+        when(movementRepository.getAllBy(eqTo("ern1"))).thenReturn(Future.successful(Seq(ern1Movement)))
+        when(movementRepository.getAllBy(eqTo("ern2"))).thenReturn(Future.successful(Seq(ern2Movement)))
+        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+        when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+        when(messageConnector.getNewMessages(eqTo("ern1"))(any)).thenReturn(Future.failed(new RuntimeException("Error!")))
+        when(messageConnector.getNewMessages(eqTo("ern2"))(any)).thenReturn(Future.successful(GetMessagesResponse(ern2NewMessages, 1)))
+        when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+
+        messageService.updateAllMessages(Set("ern1", "ern2")).futureValue
+
+        verify(movementRepository, never).save(ern1Movement)
+        verify(movementRepository).save(ern2Movement)
+      }
+    }
+  }
 }
 
 

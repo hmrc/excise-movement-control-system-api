@@ -30,6 +30,7 @@ import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 
 @Singleton
 class MessageService @Inject
@@ -46,6 +47,15 @@ class MessageService @Inject
 )(implicit executionContext: ExecutionContext) extends Logging {
 
   private val throttleCutoff: FiniteDuration = configuration.get[FiniteDuration]("microservice.services.eis.throttle-cutoff")
+
+  def updateAllMessages(erns: Set[String])(implicit hc: HeaderCarrier): Future[Done] = {
+    erns.toSeq.traverse { ern =>
+      updateMessages(ern).recover { case NonFatal(error) =>
+        logger.warn(s"[MessageService]: Failed to update messages for ERN: $ern", error)
+        Done
+      }
+    }.as(Done)
+  }
 
   def updateMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] = {
     ernRetrievalRepository.getLastRetrieved(ern).flatMap { maybeLastRetrieved =>
