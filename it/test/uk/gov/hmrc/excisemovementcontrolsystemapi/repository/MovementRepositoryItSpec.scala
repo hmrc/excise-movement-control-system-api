@@ -30,7 +30,7 @@ import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository.MessageNotification
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository.MessageNotification
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, DefaultPlayMongoRepositorySupport}
@@ -417,12 +417,12 @@ class MovementRepositoryItSpec extends PlaySpec
         MessageNotification(movementId = movement2._id, messageId = "messageId3", messageType = "type", consignor = "consignorId", consignee = None, arc = Some("arc"), recipient = "recipient3", boxId = "boxId2")
       )
 
-      val result = repository.getPendingMessageNotifications().futureValue
+      val result = repository.getPendingMessageNotifications.futureValue
 
       result must contain theSameElementsAs expected
     }
 
-    mustPreserveMdc(repository.getPendingMessageNotifications())
+    mustPreserveMdc(repository.getPendingMessageNotifications)
   }
 
   "confirmNotification" should {

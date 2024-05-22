@@ -22,7 +22,7 @@ import play.api.{Configuration, Logging}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -37,6 +37,7 @@ class MessageService @Inject
   configuration: Configuration,
   movementRepository: MovementRepository,
   ernRetrievalRepository: ErnRetrievalRepository,
+  boxIdRepository: BoxIdRepository,
   messageConnector: MessageConnector,
   dateTimeService: DateTimeService,
   correlationIdService: CorrelationIdService,
@@ -50,8 +51,8 @@ class MessageService @Inject
     ernRetrievalRepository.getLastRetrieved(ern).flatMap { maybeLastRetrieved =>
       if (shouldProcessNewMessages(maybeLastRetrieved)) {
         for {
-          _ <- processNewMessages(ern)
-          _ <- ernRetrievalRepository.save(ern)
+          boxIds <- getBoxIds(ern)
+          _ <- processNewMessages(ern, boxIds)
         } yield Done
       } else {
         Future.successful(Done)
@@ -65,31 +66,35 @@ class MessageService @Inject
     maybeLastRetrieved.map(_.isBefore(cutoffTime)).getOrElse(true)
   }
 
-  private def processNewMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] =
+  private def getBoxIds(ern: String): Future[Set[String]] = {
+    boxIdRepository.getBoxIds(ern)
+  }
+
+  private def processNewMessages(ern: String, boxIds: Set[String])(implicit hc: HeaderCarrier): Future[Done] =
     for {
       response <- messageConnector.getNewMessages(ern)
-      _ <- updateMovements(ern, response.messages)
-      _ <- acknowledgeAndContinue(response, ern)
+      _ <- updateMovements(ern, response.messages, boxIds)
+      _ <- acknowledgeAndContinue(response, ern, boxIds)
     } yield Done
 
-  private def acknowledgeAndContinue(response: GetMessagesResponse, ern: String)(implicit hc: HeaderCarrier): Future[Done] =
+  private def acknowledgeAndContinue(response: GetMessagesResponse, ern: String, boxIds: Set[String])(implicit hc: HeaderCarrier): Future[Done] =
     if (response.messageCount == 0) {
       Future.successful(Done)
     } else {
       messageConnector.acknowledgeMessages(ern).flatMap { _ =>
         if (response.messageCount > response.messages.size) {
-          processNewMessages(ern)
+          processNewMessages(ern, boxIds)
         } else {
           Future.successful(Done)
         }
       }
     }
 
-  private def updateMovements(ern: String, messages: Seq[IEMessage])(implicit hc: HeaderCarrier): Future[Done] = {
+  private def updateMovements(ern: String, messages: Seq[IEMessage], boxIds: Set[String])(implicit hc: HeaderCarrier): Future[Done] = {
     if (messages.nonEmpty) {
       movementRepository.getAllBy(ern).flatMap { movements =>
         messages.foldLeft(Seq.empty[Movement]) { (updatedMovements, message) =>
-          updateOrCreateMovements(ern, movements, updatedMovements, message)
+          updateOrCreateMovements(ern, movements, updatedMovements, message, boxIds)
         }.traverse(movementRepository.save)
       }.as(Done)
     } else {
@@ -97,27 +102,33 @@ class MessageService @Inject
     }
   }
 
-  private def updateOrCreateMovements(ern: String, movements: Seq[Movement], updatedMovements: Seq[Movement], message: IEMessage)(implicit hc: HeaderCarrier): Seq[Movement] = {
+  private def updateOrCreateMovements(
+    ern: String,
+    movements: Seq[Movement],
+    updatedMovements: Seq[Movement],
+    message: IEMessage,
+    boxIds: Set[String]
+  )(implicit hc: HeaderCarrier): Seq[Movement] = {
     val matchedMovements: Seq[Movement] = findMovementsForMessage(movements, updatedMovements, message)
 
     (
       if (matchedMovements.nonEmpty) matchedMovements.map { movement =>
-        Some(updateMovement(ern, movement, message))
+        Some(updateMovement(ern, movement, message, boxIds))
       } else {
-        createMovement(ern, message)
+        createMovement(ern, message, boxIds)
       } +: updatedMovements.map(Some(_))
     ).flatten.distinctBy(_._id)
   }
 
-  private def updateMovement(recipient: String, movement: Movement, message: IEMessage): Movement = {
-    movement.copy(messages = getUpdatedMessages(recipient, movement, message),
+  private def updateMovement(recipient: String, movement: Movement, message: IEMessage, boxIds: Set[String]): Movement = {
+    movement.copy(messages = getUpdatedMessages(recipient, movement, message, boxIds),
       administrativeReferenceCode = getArc(movement, message),
       consigneeId = getConsignee(movement, message)
     )
   }
 
-  private def getUpdatedMessages(recipient: String, movement: Movement, message: IEMessage): Seq[Message] = {
-    (movement.messages :+ convertMessage(recipient, message)).distinctBy(_.messageId)
+  private def getUpdatedMessages(recipient: String, movement: Movement, message: IEMessage, boxIds: Set[String]): Seq[Message] = {
+    (movement.messages :+ convertMessage(recipient, message, boxIds)).distinctBy(_.messageId)
   }
 
   private def findMovementsForMessage(movements: Seq[Movement], updatedMovements: Seq[Movement], message: IEMessage): Seq[Movement] = {
@@ -142,10 +153,10 @@ class MessageService @Inject
     }
   }
 
-  private def createMovement(ern: String, message: IEMessage)(implicit hc: HeaderCarrier): Option[Movement] = {
+  private def createMovement(ern: String, message: IEMessage, boxIds: Set[String])(implicit hc: HeaderCarrier): Option[Movement] = {
     message match {
-      case ie704: IE704Message => Some(createMovementFromIE704(ern, ie704))
-      case ie801: IE801Message => Some(createMovementFromIE801(ern, ie801))
+      case ie704: IE704Message => Some(createMovementFromIE704(ern, ie704, boxIds))
+      case ie801: IE801Message => Some(createMovementFromIE801(ern, ie801, boxIds))
       case ieMessage: IEMessage =>
         val errorMessage = s"An ${ieMessage.messageType} message has been retrieved with no movement, unable to create movement"
         auditService.auditMessage(ieMessage, errorMessage)
@@ -154,7 +165,7 @@ class MessageService @Inject
     }
   }
 
-  private def createMovementFromIE704(consignor: String, message: IE704Message): Movement = {
+  private def createMovementFromIE704(consignor: String, message: IE704Message, boxIds: Set[String]): Movement = {
     Movement(
       correlationIdService.generateCorrelationId(),
       None,
@@ -163,11 +174,11 @@ class MessageService @Inject
       None,
       administrativeReferenceCode = message.administrativeReferenceCode.head, // TODO remove .head
       dateTimeService.timestamp(),
-      messages = Seq(convertMessage(consignor, message))
+      messages = Seq(convertMessage(consignor, message, boxIds))
     )
   }
 
-  private def createMovementFromIE801(consignor: String, message: IE801Message): Movement = {
+  private def createMovementFromIE801(consignor: String, message: IE801Message, boxIds: Set[String]): Movement = {
     Movement(
       correlationIdService.generateCorrelationId(),
       None,
@@ -176,7 +187,7 @@ class MessageService @Inject
       message.consigneeId,
       administrativeReferenceCode = message.administrativeReferenceCode.head, // TODO remove .head
       dateTimeService.timestamp(),
-      messages = Seq(convertMessage(consignor, message))
+      messages = Seq(convertMessage(consignor, message, boxIds))
     )
   }
 
@@ -193,13 +204,13 @@ class MessageService @Inject
     movements.find(movement => message.lrnEquals(movement.localReferenceNumber))
       .map(Seq(_))
 
-  private def convertMessage(recipient: String, input: IEMessage): Message = {
+  private def convertMessage(recipient: String, input: IEMessage, boxIds: Set[String]): Message = {
     Message(
       encodedMessage = emcsUtils.encode(input.toXml.toString),
       messageType = input.messageType,
       messageId = input.messageIdentifier,
       recipient = recipient,
-      boxesToNotify = Set.empty, // TODO add boxes which should be notified about this message
+      boxesToNotify = boxIds,
       createdOn = dateTimeService.timestamp()
     )
   }

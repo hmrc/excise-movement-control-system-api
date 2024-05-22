@@ -24,7 +24,7 @@ import org.mongodb.scala.model._
 import play.api.Logging
 import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementMessageRepository.{ErnAndLastReceived, MessageNotification, mongoIndexes}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository.{ErnAndLastReceived, MessageNotification, mongoIndexes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.MongoComponent
@@ -53,8 +53,8 @@ class MovementRepository @Inject()
     domainFormat = Movement.format,
     indexes = mongoIndexes(appConfig.movementTTL),
     extraCodecs = Seq(
-      Codecs.playFormatCodec(MovementMessageRepository.ErnAndLastReceived.format),
-      Codecs.playFormatCodec(MovementMessageRepository.MessageNotification.format)
+      Codecs.playFormatCodec(ErnAndLastReceived.format),
+      Codecs.playFormatCodec(MessageNotification.format)
     ),
     replaceIndexes = true
   ) with Logging {
@@ -129,7 +129,7 @@ class MovementRepository @Inject()
     }
   }
 
-  def getPendingMessageNotifications(): Future[Seq[MessageNotification]] = Mdc.preservingMdc {
+  def getPendingMessageNotifications: Future[Seq[MessageNotification]] = Mdc.preservingMdc {
     collection.aggregate[MessageNotification](Seq(
       // This match is to do an initial filter which filters out all movements that have no
       // messages which need to notify.
@@ -160,7 +160,7 @@ class MovementRepository @Inject()
   }
 }
 
-object MovementMessageRepository {
+object MovementRepository {
   def mongoIndexes(ttl: Duration): Seq[IndexModel] =
     Seq(
       IndexModel(

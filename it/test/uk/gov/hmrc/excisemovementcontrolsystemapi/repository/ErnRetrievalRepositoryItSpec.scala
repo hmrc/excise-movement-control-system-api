@@ -50,31 +50,6 @@ class ErnRetrievalRepositoryItSpec extends PlaySpec
 
   override protected lazy val repository: ErnRetrievalRepository = app.injector.instanceOf[ErnRetrievalRepository]
 
-  "save" should {
-    "save when there isn't one there already" in {
-      val fixedInstant = Instant.now.truncatedTo(ChronoUnit.MILLIS)
-      when(mockTimeService.timestamp()).thenReturn(fixedInstant)
-
-      repository.save("testErn").futureValue
-
-      find(Filters.eq("ern", "testErn")).futureValue.head mustBe ErnRetrieval("testErn", fixedInstant)
-    }
-
-    "update the lastRetrieved when there is one there already" in {
-      val originalInstant = Instant.now.truncatedTo(ChronoUnit.MILLIS).minusSeconds(60)
-      val updatedInstant = Instant.now.truncatedTo(ChronoUnit.MILLIS)
-      when(mockTimeService.timestamp()).thenReturn(updatedInstant)
-
-      insert(ErnRetrieval("testErn", originalInstant)).futureValue
-
-      repository.save("testErn").futureValue
-
-      find(Filters.eq("ern", "testErn")).futureValue.head mustBe ErnRetrieval("testErn", updatedInstant)
-    }
-
-    mustPreserveMdc(repository.save("testErn"))
-  }
-
   "getLastRetrieved" should {
 
     "return none and update the lastRetrieved time when ern does not exist" in {
