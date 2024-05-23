@@ -385,9 +385,7 @@ class MessageServiceSpec extends PlaySpec
           }
         }
       }
-
-      "there are multiple batches of messages" when {
-
+      "there are multiple batches of messages for the same movement" should {
         "must retrieve all messages" in {
 
           val ern = "testErn"
@@ -440,6 +438,48 @@ class MessageServiceSpec extends PlaySpec
           movementCaptor.values.head mustEqual firstExpectedMovement
           movementCaptor.values(1) mustEqual secondExpectedMovement
           movementCaptor.values(2) mustEqual thirdExpectedMovement
+        }
+      }
+      "there are multiple messages for different movements" should {
+        "must update all movements" in {
+          val ern = "testErn"
+          val movement1 = Movement(None, "lrn1", ern, Some("testConsignee"))
+          val ie801_1 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "message1", Some("testConsignee"), Some("arc1"), Some("lrn1")))
+          val movement2 = Movement(None, "lrn2", ern, Some("testConsignee"))
+          val ie801_2 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "message2", Some("testConsignee"), Some("arc2"), Some("lrn2")))
+          val movement3 = Movement(None, "lrn3", ern, Some("testConsignee"))
+          val ie801_3 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE801, "message3", Some("testConsignee"), Some("arc3"), Some("lrn3")))
+          val messages = Seq(
+            IE801Message.createFromXml(ie801_1),
+            IE801Message.createFromXml(ie801_2),
+            IE801Message.createFromXml(ie801_3)
+          )
+          val expectedMovement1 = movement1.copy(
+            administrativeReferenceCode = Some("arc1"),
+            messages = Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "message1", ern, Set.empty, now))
+          )
+          val expectedMovement2 = movement2.copy(
+            administrativeReferenceCode = Some("arc2"),
+            messages = Seq(Message(utils.encode(messages(1).toXml.toString()), "IE801", "message2", ern, Set.empty, now))
+          )
+          val expectedMovement3 = movement3.copy(
+            administrativeReferenceCode = Some("arc3"),
+            messages = Seq(Message(utils.encode(messages(2).toXml.toString()), "IE801", "message3", ern, Set.empty, now))
+          )
+
+          when(dateTimeService.timestamp()).thenReturn(now)
+          when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement1, movement2, movement3)))
+          when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+          when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+          when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 3)))
+          when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+
+          messageService.updateMessages(ern).futureValue
+
+          verify(movementRepository).save(expectedMovement1)
+          verify(movementRepository).save(expectedMovement2)
+          verify(movementRepository).save(expectedMovement3)
         }
       }
     }
@@ -495,7 +535,6 @@ class MessageServiceSpec extends PlaySpec
         }
       }
     }
-
     "the existing movement has a consignee" when {
       "we get a 801, it should not change the consignee" in {
         val ern = "testErn"
@@ -623,7 +662,7 @@ class MessageServiceSpec extends PlaySpec
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
           when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
-          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+          when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 2)))
           when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
           messageService.updateMessages(ern).futureValue
