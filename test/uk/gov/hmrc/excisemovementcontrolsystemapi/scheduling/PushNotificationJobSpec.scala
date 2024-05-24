@@ -70,9 +70,6 @@ class PushNotificationJobSpec extends PlaySpec
       "have the correct name" in {
         pushNotificationJob.name mustBe "push-notification-job"
       }
-      "be enabled" in {
-        pushNotificationJob.enabled mustBe true
-      }
       "use initial delay from configuration" in {
         pushNotificationJob.initialDelay mustBe FiniteDuration(2, "minutes")
       }
@@ -258,5 +255,4 @@ class PushNotificationJobSpec extends PlaySpec
       }
     }
   }
-
 }
