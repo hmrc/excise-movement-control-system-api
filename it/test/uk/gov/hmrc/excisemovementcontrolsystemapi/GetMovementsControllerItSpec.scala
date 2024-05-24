@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi
 
-import org.mockito.ArgumentMatchersSugar.eqTo
+import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, when}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.play.PlaySpec
@@ -63,6 +63,7 @@ class GetMovementsControllerItSpec extends PlaySpec
     reset(dateTimeService)
 
     when(dateTimeService.timestamp()).thenReturn(Instant.now)
+    when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
   }
 
   "Get Movements" should {

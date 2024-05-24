@@ -72,6 +72,7 @@ class GetMessagesControllerItSpec extends PlaySpec
     super.beforeAll()
     reset(movementRepository, dateTimeService, authConnector)
     when(dateTimeService.timestamp()).thenReturn(timestamp)
+    when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
   }
 
   override def beforeAll(): Unit = {
