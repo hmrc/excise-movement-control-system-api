@@ -21,11 +21,11 @@ import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -41,7 +41,6 @@ class SubmitMessageController @Inject()(
                                          authAction: AuthAction,
                                          xmlParser: ParseXmlAction,
                                          submissionMessageService: SubmissionMessageService,
-                                         workItemService: WorkItemService,
                                          movementService: MovementService,
                                          auditService: AuditService,
                                          messageValidator: MessageValidation,
@@ -111,8 +110,6 @@ class SubmitMessageController @Inject()(
 
   private def sendRequest(request: ParsedXmlRequest[_], authorisedErn: String)
                          (implicit hc: HeaderCarrier): EitherT[Future, Result, EISSubmissionResponse] = {
-    workItemService.addWorkItemForErn(authorisedErn, fastMode = true)
-
     EitherT {
       submissionMessageService.submit(request, authorisedErn).map {
         case Left(result) => auditService.auditMessage(request.ieMessage, "Failed to Submit")

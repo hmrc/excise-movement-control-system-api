@@ -19,7 +19,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 import cats.data.EitherT
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, verify, when}
-import org.mongodb.scala.MongoException
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
@@ -29,7 +28,7 @@ import play.api.mvc.Results.{BadRequest, Forbidden, NotFound}
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeXmlParsers, ErrorResponseSupport}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation._
@@ -54,7 +53,6 @@ class SubmitMessageControllerSpec
   private val request = createRequest(IE818)
   private val submissionMessageService = mock[SubmissionMessageService]
   private val movementService = mock[MovementService]
-  private val workItemService = mock[WorkItemService]
   private val messageValidation = mock[MessageValidation]
   private val movementValidation = mock[MovementIdValidation]
   private val dateTimeService = mock[DateTimeService]
@@ -66,11 +64,10 @@ class SubmitMessageControllerSpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(submissionMessageService, workItemService, movementService, movementValidation, auditService)
+    reset(submissionMessageService, movementService, movementValidation, auditService)
 
     when(submissionMessageService.submit(any, any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
-    when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
 
     when(movementValidation.validateMovementId(any)).thenReturn(Right(movement._id))
     when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
@@ -105,14 +102,6 @@ class SubmitMessageControllerSpec
       await(createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request))
 
       verify(auditService).auditMessage(any,any)(any)
-    }
-
-    "call the add work item routine to create or update the database" in {
-
-      await(createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request))
-
-      verify(workItemService).addWorkItemForErn(consignorId, fastMode = true)
-
     }
 
     "return an error when EIS errors" in {
@@ -238,17 +227,6 @@ class SubmitMessageControllerSpec
 
     }
 
-    "catch Future failure from Work Item service and log it but still process submission" in {
-
-      when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.failed(new MongoException("Oh no!")))
-
-      val result = createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request)
-
-      status(result) mustBe ACCEPTED
-
-      verify(submissionMessageService).submit(any, any)(any)
-    }
-
   }
 
   private def createWithSuccessfulAuth =
@@ -256,7 +234,6 @@ class SubmitMessageControllerSpec
       FakeSuccessAuthentication,
       FakeSuccessXMLParser(mock[IEMessage]),
       submissionMessageService,
-      workItemService,
       movementService,
       auditService,
       messageValidation,
@@ -276,7 +253,6 @@ class SubmitMessageControllerSpec
       FakeFailingAuthentication,
       FakeSuccessXMLParser(mock[IEMessage]),
       submissionMessageService,
-      workItemService,
       movementService,
       auditService,
       messageValidation,
@@ -290,7 +266,6 @@ class SubmitMessageControllerSpec
       FakeSuccessAuthentication,
       FakeFailureXMLParser,
       submissionMessageService,
-      workItemService,
       movementService,
       auditService,
       messageValidation,

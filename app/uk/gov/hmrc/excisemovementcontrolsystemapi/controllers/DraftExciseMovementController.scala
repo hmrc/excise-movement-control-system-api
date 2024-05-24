@@ -43,7 +43,6 @@ class DraftExciseMovementController @Inject()(
   authAction: AuthAction,
   xmlParser: ParseXmlAction,
   movementMessageService: MovementService,
-  workItemService: WorkItemService,
   submissionMessageService: SubmissionMessageService,
   notificationService: PushNotificationService,
   messageValidator: MessageValidation,
@@ -112,7 +111,6 @@ class DraftExciseMovementController @Inject()(
 
     val newMovement: Movement = createMovementFomMessage(message, boxId)
     boxId.map(boxIdRepository.save(newMovement.consignorId, _))
-    workItemService.addWorkItemForErn(newMovement.consignorId, fastMode = true)
 
     EitherT(movementMessageService.saveNewMovement(newMovement).map {
       case Left(result) => auditService.auditMessage(message, "Failed to Save")

@@ -18,8 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock._
-import org.bson.types.ObjectId
-import org.mockito.ArgumentMatchersSugar.{any, eqTo}
+import org.mockito.ArgumentMatchersSugar.eqTo
 import org.mockito.MockitoSugar.{reset, when}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatestplus.play.PlaySpec
@@ -38,8 +37,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionRespon
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, Consignor}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisErrorResponsePresentation, ExciseMovementResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Movement}
-import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
 import java.time.Instant
 import java.util.UUID
@@ -74,16 +72,6 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
-  private val workItem: WorkItem[ExciseNumberWorkItem] = WorkItem(
-    id = new ObjectId(),
-    receivedAt = Instant.now,
-    updatedAt = Instant.now,
-    availableAt = Instant.now,
-    status = ProcessingStatus.ToDo,
-    failureCount = 0,
-    item = ExciseNumberWorkItem("ern", 3)
-  )
-
   override lazy val app: Application = {
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
@@ -97,13 +85,11 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(authConnector, movementRepository, dateTimeService, workItemRepository)
+    reset(authConnector, movementRepository, dateTimeService)
 
     when(movementRepository.getMovementById(eqTo(movement._id)))
       .thenReturn(Future.successful(Some(movement)))
 
-    when(workItemRepository.pushNew(any, any, any)).thenReturn(Future.successful(workItem))
-    when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
     when(dateTimeService.timestamp()).thenReturn(timestamp)
 
     authorizeNrsWithIdentityData

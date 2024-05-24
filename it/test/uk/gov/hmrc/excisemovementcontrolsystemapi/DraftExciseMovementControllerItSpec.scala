@@ -21,7 +21,6 @@ import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.extension.Parameters
 import com.github.tomakehurst.wiremock.http.Request
 import com.github.tomakehurst.wiremock.matching.{MatchResult, RequestMatcherExtension}
-import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.{verify, when, reset => mockitoSugerReset}
 import org.mockito.captor.ArgCaptor
@@ -39,12 +38,11 @@ import uk.gov.hmrc.auth.core.InternalError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, StringSupport}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{ApplicationBuilderSupport, SubmitMessageTestSupport, WireMockServerSpec}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisErrorResponsePresentation, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionRequest, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Constants
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ExciseNumberWorkItem, Movement}
-import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisErrorResponsePresentation, ExciseMovementResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
 import java.time.Instant
 import java.util.{Base64, UUID}
@@ -77,16 +75,6 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
-  private val workItem: WorkItem[ExciseNumberWorkItem] = WorkItem(
-    id = new ObjectId(),
-    receivedAt = Instant.now,
-    updatedAt = Instant.now,
-    availableAt = Instant.now,
-    status = ProcessingStatus.ToDo,
-    failureCount = 0,
-    item = ExciseNumberWorkItem("ern", 3)
-  )
-
   override lazy val app: Application = {
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
@@ -113,16 +101,13 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     mockitoSugerReset(
       dateTimeService,
       movementRepository,
-      authConnector,
-      workItemRepository
+      authConnector
     )
 
     wireMock.resetAll()
     stubNrsResponse
     authorizeNrsWithIdentityData
     stubGetBoxIdSuccessRequest
-    when(workItemRepository.pushNew(any, any, any)).thenReturn(Future.successful(workItem))
-    when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
     when(dateTimeService.timestamp()).thenReturn(timeStamp)
   }
 

@@ -19,7 +19,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, verify, when}
-import org.mongodb.scala.MongoException
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
@@ -32,7 +31,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilterBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication, FakeValidateErnParameterAction, MovementTestUtils}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MovementIdFormatInvalid, MovementIdValidation}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MessageService, MovementService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MessageService, MovementService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import java.time.Instant
@@ -49,7 +48,6 @@ class GetMovementsControllerSpec
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   private val cc = stubControllerComponents()
   private val movementService = mock[MovementService]
-  private val workItemService = mock[WorkItemService]
   private val dateTimeService = mock[DateTimeService]
   private val messageService = mock[MessageService]
   private val movementIdValidator = mock[MovementIdValidation]
@@ -59,7 +57,6 @@ class GetMovementsControllerSpec
     FakeValidateErnParameterSuccessAction,
     cc,
     movementService,
-    workItemService,
     dateTimeService,
     messageService,
     movementIdValidator
@@ -70,12 +67,10 @@ class GetMovementsControllerSpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(movementService, workItemService, messageService)
+    reset(movementService, messageService)
 
     when(movementService.getMovementByErn(any, any))
       .thenReturn(Future.successful(Seq(Movement("cfdb20c7-d0b0-4b8b-a071-737d68dede5e", Some("boxId"), "lrn", ern, Some("consigneeId"), Some("arc"), Instant.now(), Seq.empty))))
-
-    when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
 
     when(dateTimeService.timestamp()).thenReturn(timestamp)
 
@@ -103,7 +98,6 @@ class GetMovementsControllerSpec
         FakeValidateErnParameterSuccessAction,
         cc,
         movementService,
-        workItemService,
         dateTimeService,
         messageService,
         movementIdValidator
@@ -119,7 +113,6 @@ class GetMovementsControllerSpec
         FakeValidateErnParameterSuccessAction,
         cc,
         movementService,
-        workItemService,
         dateTimeService,
         messageService,
         movementIdValidator
@@ -202,27 +195,6 @@ class GetMovementsControllerSpec
         status(result) mustBe FORBIDDEN
       }
     }
-
-
-    "create a Work Item if there is not one for the ERN already" in {
-
-      await(controller.getMovements(None, None, None, None)(fakeRequest))
-
-      verify(workItemService).addWorkItemForErn(eqTo("testErn"), eqTo(false))
-
-    }
-
-    "catch Future failure from Work Item service and log it but still process submission" in {
-
-      when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.failed(new MongoException("Oh no!")))
-
-      val result = controller.getMovements(None, None, None, None)(fakeRequest)
-
-      status(result) mustBe OK
-
-      verify(movementService).getMovementByErn(any, any)
-    }
-
   }
 
   "Get movement controller" should {
@@ -249,7 +221,6 @@ class GetMovementsControllerSpec
         FakeValidateErnParameterSuccessAction,
         cc,
         movementService,
-        workItemService,
         dateTimeService,
         messageService,
         movementIdValidator
@@ -326,30 +297,6 @@ class GetMovementsControllerSpec
       }
     }
 
-    "create a Work Item if there is not one for the ERN already" in {
-
-      when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))
-      when(movementService.getMovementById(eqTo(uuid))).thenReturn(Future(Some(movement)))
-
-      await(controller.getMovement(uuid)(fakeRequest))
-
-      verify(workItemService).addWorkItemForErn(eqTo("testErn"), eqTo(false))
-
-    }
-
-    "catch Future failure from Work Item service and log it but still process submission" in {
-
-      when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))
-      when(movementService.getMovementById(eqTo(uuid))).thenReturn(Future(Some(movement)))
-
-      when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.failed(new MongoException("Oh no!")))
-
-      val result = controller.getMovement(uuid)(fakeRequest)
-
-      status(result) mustBe OK
-
-    }
-
   }
 
 
@@ -359,7 +306,6 @@ class GetMovementsControllerSpec
       FakeValidateErnParameterFailureAction,
       cc,
       movementService,
-      workItemService,
       dateTimeService,
       messageService,
       movementIdValidator
@@ -371,7 +317,6 @@ class GetMovementsControllerSpec
       FakeValidateErnParameterSuccessAction,
       cc,
       movementService,
-      workItemService,
       dateTimeService,
       messageService,
       movementIdValidator

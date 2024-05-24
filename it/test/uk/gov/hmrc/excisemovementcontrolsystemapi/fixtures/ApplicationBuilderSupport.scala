@@ -22,7 +22,7 @@ import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ExciseNumberQueueWorkItemRepository, MovementRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.lock.LockRepository
 
@@ -40,7 +40,6 @@ trait ApplicationBuilderSupport extends RepositoryTestStub with AuthTestSupport{
       .overrides(
         bind[AuthConnector].to(authConnector),
         bind[MovementRepository].to(movementRepository),
-        bind[ExciseNumberQueueWorkItemRepository].to(workItemRepository),
         bind[DateTimeService].to(dateTimeService),
         bind[LockRepository].to(lockRepository)
       )

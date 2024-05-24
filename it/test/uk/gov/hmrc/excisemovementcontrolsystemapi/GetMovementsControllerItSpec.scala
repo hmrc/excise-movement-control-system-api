@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi
 
-import org.mockito.ArgumentMatchersSugar.{any, eqTo}
+import org.mockito.ArgumentMatchersSugar.eqTo
 import org.mockito.MockitoSugar.{reset, when}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.play.PlaySpec
@@ -60,9 +60,8 @@ class GetMovementsControllerItSpec extends PlaySpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(workItemRepository, dateTimeService)
+    reset(dateTimeService)
 
-    when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
     when(dateTimeService.timestamp()).thenReturn(Instant.now)
   }
 

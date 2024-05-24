@@ -20,7 +20,6 @@ import org.apache.pekko.Done
 import org.apache.pekko.actor.ActorSystem
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, verify, when}
-import org.mongodb.scala.MongoException
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
@@ -34,7 +33,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateAc
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MessageService, MovementService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MessageService, MovementService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 
 import java.nio.charset.StandardCharsets
@@ -57,7 +56,6 @@ class GetMessagesControllerSpec extends PlaySpec
   private val validUUID = "cfdb20c7-d0b0-4b8b-a071-737d68dede5e"
   private val dateTimeService = mock[DateTimeService]
   private val timeStamp = Instant.parse("2020-01-01T01:01:01.123456Z")
-  private val workItemService = mock[WorkItemService]
   private val messageService = mock[MessageService]
   private val messageCreateOn = Instant.now()
 
@@ -71,10 +69,9 @@ class GetMessagesControllerSpec extends PlaySpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(movementService, dateTimeService, workItemService, messageService)
+    reset(movementService, dateTimeService, messageService)
 
     when(dateTimeService.timestamp()).thenReturn(timeStamp)
-    when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
     when(messageService.updateAllMessages(any)(any)).thenReturn(Future.successful(Done))
   }
 
@@ -111,7 +108,6 @@ class GetMessagesControllerSpec extends PlaySpec
         new ValidateAcceptHeaderAction(dateTimeService),
         movementService,
         messageService,
-        workItemService,
         new MovementIdValidation,
         cc,
         new EmcsUtils,
@@ -248,17 +244,6 @@ class GetMessagesControllerSpec extends PlaySpec
       )
     }
 
-    "create a Work Item if there is not one for the ERN already" in {
-      val message = Message("message", "IE801", "messageId", "ern", Set.empty, messageCreateOn)
-      val movement = createMovementWithMessages(Seq(message))
-      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
-
-      await(createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest()))
-
-      verify(workItemService).addWorkItemForErn(eqTo("testErn"), eqTo(false))
-
-    }
-
     "return an empty array when no messages" in {
       val movement = createMovementWithMessages(Seq.empty)
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
@@ -296,18 +281,6 @@ class GetMessagesControllerSpec extends PlaySpec
         "Invalid MovementID supplied for ERN"
       )
     }
-
-    "catch Future failure from Work Item service and log it but still process submission" in {
-      val message = Message("message", "IE801", "messageId", "ern", Set.empty, messageCreateOn)
-      val movement = createMovementWithMessages(Seq(message))
-      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
-      when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.failed(new MongoException("Oh no!")))
-
-      val result = createWithSuccessfulAuth.getMessagesForMovement(validUUID, None)(createRequest())
-
-      status(result) mustBe OK
-    }
-
   }
 
   "getMessageForMovement" should {
@@ -437,7 +410,6 @@ class GetMessagesControllerSpec extends PlaySpec
       new ValidateAcceptHeaderAction(dateTimeService),
       movementService,
       messageService,
-      workItemService,
       new MovementIdValidation,
       cc,
       new EmcsUtils,
@@ -450,7 +422,6 @@ class GetMessagesControllerSpec extends PlaySpec
       new ValidateAcceptHeaderAction(dateTimeService),
       movementService,
       messageService,
-      workItemService,
       new MovementIdValidation,
       cc,
       new EmcsUtils,
