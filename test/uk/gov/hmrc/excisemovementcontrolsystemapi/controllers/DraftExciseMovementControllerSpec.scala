@@ -21,7 +21,6 @@ import cats.data.EitherT
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, times, verify, verifyZeroInteractions, when}
 import org.mockito.captor.ArgCaptor
-import org.mongodb.scala.MongoException
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
@@ -63,7 +62,6 @@ class DraftExciseMovementControllerSpec
   private val request = createRequestWithClientId
   private val mockIeMessage = mock[IE815Message]
   private val boxIdRepository = mock[BoxIdRepository]
-  private val workItemService = mock[WorkItemService]
   private val notificationService = mock[PushNotificationService]
   private val messageValidation = mock[MessageValidation]
   private val dateTimeService = mock[DateTimeService]
@@ -76,11 +74,10 @@ class DraftExciseMovementControllerSpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(submissionMessageService, movementService, workItemService, submissionMessageService, notificationService, auditService, boxIdRepository)
+    reset(submissionMessageService, movementService, submissionMessageService, notificationService, auditService, boxIdRepository)
 
     when(submissionMessageService.submit(any, any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
-    when(workItemService.addWorkItemForErn(any, any)).thenReturn(Future.successful(true))
     when(notificationService.getBoxId(any, any)(any))
       .thenReturn(Future.successful(Right(defaultBoxId)))
 
@@ -192,15 +189,6 @@ class DraftExciseMovementControllerSpec
       verify(auditService).auditMessage(any, any)(any)
     }
 
-    "call the add work item routine to create or update the database" in {
-      when(movementService.saveNewMovement(any))
-        .thenReturn(Future.successful(Right(Movement(Some(defaultBoxId), "lrn", ern, None))))
-
-      await(createWithSuccessfulAuth.submit(request))
-
-      verify(workItemService).addWorkItemForErn(consignorId, fastMode = true)
-    }
-
     "adds the boxId to the BoxIdRepository for consignor" in {
       when(movementService.saveNewMovement(any))
         .thenReturn(Future.successful(Right(Movement(Some(defaultBoxId), "lrn", consignorId, None))))
@@ -208,17 +196,6 @@ class DraftExciseMovementControllerSpec
       await(createWithSuccessfulAuth.submit(request))
 
       verify(boxIdRepository).save(consignorId, defaultBoxId)
-    }
-
-    "return ACCEPTED if failing to add workItem " in {
-      when(movementService.saveNewMovement(any))
-        .thenReturn(Future.successful(Right(Movement(Some(defaultBoxId), "lrn", ern, None))))
-      when(workItemService.addWorkItemForErn(any, any))
-        .thenReturn(Future.failed(new MongoException("Oh no!")))
-
-      val result = createWithSuccessfulAuth.submit(request)
-
-      status(result) mustBe ACCEPTED
     }
 
     "return an error" when {
@@ -335,7 +312,6 @@ class DraftExciseMovementControllerSpec
       FakeSuccessAuthentication,
       FakeSuccessXMLParser(mockIe818Message),
       movementService,
-      workItemService,
       submissionMessageService,
       notificationService,
       messageValidation,
@@ -352,7 +328,6 @@ class DraftExciseMovementControllerSpec
       FakeFailingAuthentication,
       FakeSuccessXMLParser(mockIeMessage),
       movementService,
-      workItemService,
       submissionMessageService,
       notificationService,
       messageValidation,
@@ -368,7 +343,6 @@ class DraftExciseMovementControllerSpec
       FakeSuccessAuthentication,
       FakeFailureXMLParser,
       movementService,
-      workItemService,
       submissionMessageService,
       notificationService,
       messageValidation,
@@ -384,7 +358,6 @@ class DraftExciseMovementControllerSpec
       FakeSuccessAuthentication,
       FakeSuccessXMLParser(mockIeMessage),
       movementService,
-      workItemService,
       submissionMessageService,
       notificationService,
       messageValidation,

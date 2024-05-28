@@ -74,7 +74,7 @@ class PushNotificationJob @Inject
     movementRepository.confirmNotification(notification.movementId, notification.messageId, notification.boxId)
   }
 
-  override val enabled: Boolean = true
+  override val enabled: Boolean = configuration.get[Boolean]("featureFlags.pushNotificationsEnabled")
   override def initialDelay: FiniteDuration = configuration.get[FiniteDuration]("scheduler.pushNotificationJob.initialDelay")
   override def interval: FiniteDuration = configuration.get[FiniteDuration]("scheduler.pushNotificationJob.interval")
   implicit val hc: HeaderCarrier = HeaderCarrier()

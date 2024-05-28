@@ -30,6 +30,7 @@ import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 
 @Singleton
 class MessageService @Inject
@@ -46,6 +47,15 @@ class MessageService @Inject
 )(implicit executionContext: ExecutionContext) extends Logging {
 
   private val throttleCutoff: FiniteDuration = configuration.get[FiniteDuration]("microservice.services.eis.throttle-cutoff")
+
+  def updateAllMessages(erns: Set[String])(implicit hc: HeaderCarrier): Future[Done] = {
+    erns.toSeq.traverse { ern =>
+      updateMessages(ern).recover { case NonFatal(error) =>
+        logger.warn(s"[MessageService]: Failed to update messages for ERN: $ern", error)
+        Done
+      }
+    }.as(Done)
+  }
 
   def updateMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] = {
     ernRetrievalRepository.getLastRetrieved(ern).flatMap { maybeLastRetrieved =>
@@ -94,8 +104,8 @@ class MessageService @Inject
     if (messages.nonEmpty) {
       movementRepository.getAllBy(ern).flatMap { movements =>
         messages.foldLeft(Seq.empty[Movement]) { (updatedMovements, message) =>
-          updateOrCreateMovements(ern, movements, updatedMovements, message, boxIds)
-        }.traverse(movementRepository.save)
+          updatedMovements ++ updateOrCreateMovements(ern, movements, updatedMovements, message, boxIds)
+        }.distinct.traverse(movementRepository.save)
       }.as(Done)
     } else {
       Future.successful(Done)
@@ -110,7 +120,6 @@ class MessageService @Inject
     boxIds: Set[String]
   )(implicit hc: HeaderCarrier): Seq[Movement] = {
     val matchedMovements: Seq[Movement] = findMovementsForMessage(movements, updatedMovements, message)
-
     (
       if (matchedMovements.nonEmpty) matchedMovements.map { movement =>
         Some(updateMovement(ern, movement, message, boxIds))
@@ -121,14 +130,18 @@ class MessageService @Inject
   }
 
   private def updateMovement(recipient: String, movement: Movement, message: IEMessage, boxIds: Set[String]): Movement = {
-    movement.copy(messages = getUpdatedMessages(recipient, movement, message, boxIds),
-      administrativeReferenceCode = getArc(movement, message),
-      consigneeId = getConsignee(movement, message)
-    )
+    if (movement.messages.exists(m => m.messageId == message.messageIdentifier)) {
+      movement
+    } else {
+      movement.copy(messages = getUpdatedMessages(recipient, movement, message, boxIds),
+        administrativeReferenceCode = getArc(movement, message),
+        consigneeId = getConsignee(movement, message)
+      )
+    }
   }
 
   private def getUpdatedMessages(recipient: String, movement: Movement, message: IEMessage, boxIds: Set[String]): Seq[Message] = {
-    (movement.messages :+ convertMessage(recipient, message, boxIds)).distinctBy(_.messageId)
+    movement.messages :+ convertMessage(recipient, message, boxIds)
   }
 
   private def findMovementsForMessage(movements: Seq[Movement], updatedMovements: Seq[Movement], message: IEMessage): Seq[Movement] = {

@@ -20,7 +20,7 @@ import com.codahale.metrics.Timer
 import org.apache.pekko.actor.ActorSystem
 import play.api.Logging
 import play.api.inject.ApplicationLifecycle
-import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.{PollingNewMessagesWithWorkItemJob, ScheduledJob}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.{PollingNewMessagesJob, PushNotificationJob, ScheduledJob}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.{Clock, Duration}
@@ -30,7 +30,8 @@ import scala.util.{Failure, Success}
 
 @Singleton
 class JobScheduler @Inject() (
-                               pollingNewMessageWorkItemJob: PollingNewMessagesWithWorkItemJob,
+                               pollingNewMessagesJob: PollingNewMessagesJob,
+                               pushNotificationJob: PushNotificationJob,
                                applicationLifecycle: ApplicationLifecycle,
                                actorSystem: ActorSystem,
                                metrics: Metrics,
@@ -38,7 +39,8 @@ class JobScheduler @Inject() (
                              )(implicit val ec: ExecutionContext) extends Logging {
 
   private val scheduledJobs: Seq[ScheduledJob] = Seq(
-    pollingNewMessageWorkItemJob
+    pollingNewMessagesJob,
+    pushNotificationJob
   ).filter(_.enabled)
 
   private val timers: Map[ScheduledJob, Timer] = scheduledJobs.map { job =>

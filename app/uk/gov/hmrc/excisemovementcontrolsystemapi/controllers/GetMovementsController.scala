@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import cats.data.{EitherT, OptionT}
+import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ValidateErnParameterAction}
@@ -24,7 +25,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilterBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MovementService, WorkItemService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MessageService, MovementService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -38,16 +39,16 @@ class GetMovementsController @Inject()(
   validateErnParameterAction: ValidateErnParameterAction,
   cc: ControllerComponents,
   movementService: MovementService,
-  workItemService: WorkItemService,
   dateTimeService: DateTimeService,
+  messageService: MessageService,
   movementIdValidator: MovementIdValidation
 )(implicit ec: ExecutionContext)
-  extends BackendController(cc) {
+  extends BackendController(cc) with Logging {
 
   def getMovements(ern: Option[String], lrn: Option[String], arc: Option[String], updatedSince: Option[String]): Action[AnyContent] = {
     (authAction andThen validateErnParameterAction(ern)).async(parse.default) {
       implicit request =>
-        workItemService.addWorkItemForErn(ern.getOrElse(request.erns.head), fastMode = false)
+        messageService.updateAllMessages(ern.fold(request.erns)(Set(_)))
 
         Try(updatedSince.map(Instant.parse(_))).map { updatedSinceTime =>
           val filter = MovementFilterBuilder().withErn(ern).withLrn(lrn).withArc(arc).withUpdatedSince(updatedSinceTime).build()
@@ -69,12 +70,11 @@ class GetMovementsController @Inject()(
 
         val result = for {
           validatedMovementId <- validateMovementId(movementId)
+          _ <- EitherT.right(messageService.updateAllMessages(request.erns))
           movement <- getMovementFromDb(validatedMovementId)
         } yield {
           val authorisedErns = request.erns
           val movementErns = getErnsForMovement(movement)
-
-          workItemService.addWorkItemForErn(movementErns.head, fastMode = false)
 
           if (authorisedErns.intersect(movementErns).isEmpty) {
             NotFound(Json.toJson(ErrorResponse(

@@ -23,6 +23,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmission
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnSubmissionRepository
 import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.Inject
@@ -34,6 +35,7 @@ class SubmissionMessageServiceImpl @Inject()(
                                               connector: EISSubmissionConnector,
                                               nrsService: NrsService,
                                               correlationIdService: CorrelationIdService,
+                                              ernSubmissionRepository: ErnSubmissionRepository
 ) (implicit val ec: ExecutionContext) extends SubmissionMessageService with Logging {
 
 
@@ -47,6 +49,7 @@ class SubmissionMessageServiceImpl @Inject()(
     for {
       submitMessageResponse <- connector.submitMessage(request.ieMessage, request.body.toString, authorisedErn, correlationId)
       isSuccess = submitMessageResponse.isRight
+      _ = if (isSuccess) ernSubmissionRepository.save(authorisedErn)
       _ = if (isSuccess) sendToNrs(request, authorisedErn, correlationId)
     } yield submitMessageResponse
   }

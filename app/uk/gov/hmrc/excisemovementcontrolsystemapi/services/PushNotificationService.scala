@@ -26,9 +26,8 @@ import play.api.mvc.Results.BadRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PushNotificationConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.routes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Notification
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.{Notification, NotificationResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -55,38 +54,6 @@ class PushNotificationServiceImpl @Inject()(
     )
   }
 
-  def sendNotification(
-    ern: String,
-    movement: Movement,
-    messageId: String,
-    messageType: String
-  )(implicit hc: HeaderCarrier): Future[NotificationResponse] = {
-
-    movement.boxId match {
-      case Some(boxId) => send(boxId, ern, movement, messageId, messageType)
-      case None => Future.successful(NotInUseNotificationResponse())
-    }
-  }
-
-  private def send(
-    boxId: String,
-    ern: String,
-    movement: Movement,
-    messageId: String,
-    messageType: String
-  )(implicit hc: HeaderCarrier): Future[NotificationResponse] = {
-    val notification = Notification(
-      movement._id,
-      buildMessageUriAsString(movement._id, messageId),
-      messageId,
-      messageType,
-      movement.consignorId,
-      movement.consigneeId,
-      movement.administrativeReferenceCode,
-      ern)
-
-    notificationConnector.postNotification(boxId, notification)
-  }
   private def buildMessageUriAsString(movementId: String, messageId: String): String = {
     routes.GetMessagesController.getMessageForMovement(movementId, messageId).url
   }
@@ -134,14 +101,6 @@ trait PushNotificationService {
     clientId: String,
     boxId: Option[String] = None
   )(implicit hc: HeaderCarrier): Future[Either[Result, String]]
-
-  @deprecated
-  def sendNotification(
-    ern: String,
-    movement: Movement,
-    messageId: String,
-    messageType: String
-  )(implicit hc: HeaderCarrier): Future[NotificationResponse]
 
   def sendNotification(
     boxId: String,

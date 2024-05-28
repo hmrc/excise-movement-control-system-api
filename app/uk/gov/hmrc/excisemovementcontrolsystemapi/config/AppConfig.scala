@@ -75,9 +75,6 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   lazy val ernRetrievalTTL: Duration = config.getOptional[String]("mongodb.ernRetrieval.TTL")
     .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
 
-  lazy val boxIdTTL: Duration = config.getOptional[String]("mongodb.boxId.TTL")
-    .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
-
   lazy val workItemTTL: Duration = config.getOptional[String]("mongodb.workItem.TTL")
     .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
 
@@ -85,14 +82,6 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
 
   def emcsReceiverMessageUrl: String = s"$eisHost/emcs/digital-submit-new-message/v1"
   def submissionBearerToken: String = servicesConfig.getConfString("eis.submission-bearer-token", "dummySubmissionBearerToken")
-
-  @deprecated
-  def showNewMessageUrl(ern: String): String = s"$eisHost/emcs/messages/v1/show-new-messages?exciseregistrationnumber=$ern"
-  @deprecated
-  def messageReceiptUrl(ern: String): String =
-    s"$eisHost/emcs/messages/v1/message-receipt?exciseregistrationnumber=$ern"
-  @deprecated
-  def messagesBearerToken: String = servicesConfig.getConfString("eis.messages-bearer-token", "dummyMessagesBearerToken")
 
   def traderMovementUrl: String = s"$eisHost/emcs/movements/v1/trader-movement"
   def movementBearerToken: String = servicesConfig.getConfString("eis.movement-bearer-token", "dummyMovementBearerToken")

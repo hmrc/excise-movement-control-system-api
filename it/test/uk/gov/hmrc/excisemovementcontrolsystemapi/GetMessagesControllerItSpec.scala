@@ -72,6 +72,7 @@ class GetMessagesControllerItSpec extends PlaySpec
     super.beforeAll()
     reset(movementRepository, dateTimeService, authConnector)
     when(dateTimeService.timestamp()).thenReturn(timestamp)
+    when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
   }
 
   override def beforeAll(): Unit = {
@@ -92,7 +93,6 @@ class GetMessagesControllerItSpec extends PlaySpec
       val movement = Movement(validUUID, Some("boxId"), "lrn", consignorId, None, None, Instant.now, Seq(message))
       when(movementRepository.getMovementById(any))
         .thenReturn(Future.successful(Some(movement)))
-      when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
 
       val result = getRequest()
 

@@ -60,10 +60,10 @@ class GetMovementsControllerItSpec extends PlaySpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(workItemRepository, dateTimeService)
+    reset(dateTimeService)
 
-    when(workItemRepository.getWorkItemForErn(any)).thenReturn(Future.successful(None))
     when(dateTimeService.timestamp()).thenReturn(Instant.now)
+    when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
   }
 
   "Get Movements" should {
