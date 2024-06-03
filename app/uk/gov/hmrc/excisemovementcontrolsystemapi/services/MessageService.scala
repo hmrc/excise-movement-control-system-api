@@ -103,15 +103,11 @@ class MessageService @Inject
   private def updateMovements(ern: String, messages: Seq[IEMessage], boxIds: Set[String])(implicit hc: HeaderCarrier): Future[Done] = {
     if (messages.nonEmpty) {
       movementRepository.getAllBy(ern).flatMap { movements =>
-        println("***??? messages in update movements: " + messages.length)
-        val whatsthis = messages.foldLeft(Seq.empty[Movement]) { (updatedMovements, message) =>
+        messages.foldLeft(Seq.empty[Movement]) { (updatedMovements, message) =>
           (updateOrCreateMovements(ern, movements, updatedMovements, message, boxIds) ++ updatedMovements)
             .distinctBy(movement => (movement.localReferenceNumber, movement.consignorId, movement.administrativeReferenceCode))
         }
-        whatsthis.foreach(x => println(x._id))
-        whatsthis.foreach(x => println(x.messages.map(_.messageId)))
-        println("***???***??? WHATS THIS " + whatsthis.length)
-        whatsthis.traverse(movementRepository.save)
+        .traverse(movementRepository.save)
       }.as(Done)
     } else {
       Future.successful(Done)
@@ -132,7 +128,7 @@ class MessageService @Inject
       } else {
         createMovement(ern, message, boxIds)
       } +: updatedMovements.map(Some(_))
-    ).flatten.distinctBy(_._id)
+    ).flatten
   }
 
   private def updateMovement(recipient: String, movement: Movement, message: IEMessage, boxIds: Set[String]): Movement = {
