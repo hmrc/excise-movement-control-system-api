@@ -795,20 +795,25 @@ class MessageServiceSpec extends PlaySpec
 
         messageService.updateAllMessages(Set("ern1")).futureValue
 
-        val expectedMovement = Movement(
-          None,
-          "lrn1",
-          "ern1",
-          Some("AT00000602078"), //not sure where this is coming from yet?
-          Some("arc"), //or this??
+        val expectedMovement = ern1Movement.copy(
+          consignorId = "AT00000602078",
+          administrativeReferenceCode = Some("arc"),
           messages = Seq(
-          Message(utils.encode(message1.toXml.toString()), "IE801", "XI0000021a", "ern1", Set.empty, now),
-          Message(utils.encode(message2.toXml.toString()), "IE819", "X00008a", "ern1", Set.empty, now),
-          Message(utils.encode(message3.toXml.toString()), "IE807", "XI0000021b", "ern1", Set.empty, now),
-          Message(utils.encode(message4.toXml.toString()), "IE840", "X00008b", "ern1", Set.empty, now),
-        ))
+            Message(utils.encode(message1.toXml.toString()), "IE801", "XI0000021a", "ern1", Set.empty, now),
+            Message(utils.encode(message2.toXml.toString()), "IE819", "X00008a", "ern1", Set.empty, now),
+            Message(utils.encode(message3.toXml.toString()), "IE807", "XI0000021b", "ern1", Set.empty, now),
+            Message(utils.encode(message4.toXml.toString()), "IE840", "X00008b", "ern1", Set.empty, now),
+          )
+        )
 
-        verify(movementRepository, times(1)).save(expectedMovement)
+        val captor = ArgCaptor[Movement]
+        verify(movementRepository, times(1)).save(captor.capture)
+        captor.value.messages.foreach(x=> println("^^^" + x.messageId))
+        expectedMovement.messages.foreach(x=> println("&&&" + x.messageId))
+
+        captor.value mustEqual expectedMovement
+
+//        verify(movementRepository, times(1)).save(expectedMovement)
       }
     }
   }
