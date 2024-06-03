@@ -261,6 +261,19 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       result mustBe Seq(expectedMovement2)
     }
 
+    "return only the movements that correspond to the filter traderType equals consignor" in {
+      val expectedMovement1 = Movement(Some("boxId"), "lrn1", "test-consignorId", None, Some("arc1"))
+      val expectedMovement2 = Movement(Some("boxId"), "lrn1", consignorId, None, Some("arc2"))
+
+      when(mockMovementRepository.getMovementByERN(Seq(consignorId)))
+        .thenReturn(Future.successful(Seq(expectedMovement1, expectedMovement2)))
+
+      val filter = MovementFilterBuilder().withTraderType(Some("consignor"), Seq(consignorId)).build()
+      val result = await(movementService.getMovementByErn(Seq(consignorId), filter))
+
+      result mustBe Seq(expectedMovement2)
+    }
+
     "return only the movements that correspond to the filter LRN and ern" in {
       val expectedMovement1 = Movement(Some("boxId"), "lrn1", consignorId, None, Some("arc1"))
       val expectedMovement2 = Movement(Some("boxId"), lrnToFilterBy, consignorId, None, Some("arc1"))

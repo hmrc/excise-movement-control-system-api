@@ -28,7 +28,7 @@ import play.api.mvc.Results.BadRequest
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilterBuilder
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication, FakeValidateErnParameterAction, MovementTestUtils}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication, FakeValidateErnParameterAction, FakeValidateTraderTypeAction, FakeValidateUpdatedSinceAction, MovementTestUtils}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MovementIdFormatInvalid, MovementIdValidation}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MessageService, MovementService}
@@ -41,6 +41,8 @@ class GetMovementsControllerSpec
   extends PlaySpec
     with FakeAuthentication
     with FakeValidateErnParameterAction
+    with FakeValidateTraderTypeAction
+    with FakeValidateUpdatedSinceAction
     with MovementTestUtils
     with ErrorResponseSupport
     with BeforeAndAfterEach {
@@ -55,6 +57,8 @@ class GetMovementsControllerSpec
   private val controller = new GetMovementsController(
     FakeSuccessAuthentication,
     FakeValidateErnParameterSuccessAction,
+    FakeValidateUpdatedSinceSuccessAction,
+    FakeValidateTraderTypeSuccessAction,
     cc,
     movementService,
     dateTimeService,
@@ -80,14 +84,14 @@ class GetMovementsControllerSpec
 
   "getMovements" should {
     "return 200 when successful" in {
-      val result = controller.getMovements(None, None, None, None)(fakeRequest)
+      val result = controller.getMovements(None, None, None, None, None)(fakeRequest)
 
       status(result) mustBe OK
       contentAsJson(result) mustBe Json.toJson(Seq(createMovementResponse(ern, "lrn", "arc", Some("consigneeId"))))
     }
 
     "get all movement for an ERN" in {
-      await(controller.getMovements(None, None, None, None)(FakeRequest("GET", "/foo")))
+      await(controller.getMovements(None, None, None, None, None)(FakeRequest("GET", "/foo")))
 
       verify(movementService).getMovementByErn(eqTo(Seq(ern)), any)
     }
@@ -96,13 +100,15 @@ class GetMovementsControllerSpec
       val controller = new GetMovementsController(
         FakeSuccessAuthenticationMultiErn(Set(ern, "otherErn")),
         FakeValidateErnParameterSuccessAction,
+        FakeValidateUpdatedSinceSuccessAction,
+        FakeValidateTraderTypeSuccessAction,
         cc,
         movementService,
         dateTimeService,
         messageService,
         movementIdValidator
       )
-      await(controller.getMovements(None, None, None, None)(fakeRequest))
+      await(controller.getMovements(None, None, None, None, None)(fakeRequest))
 
       verify(messageService).updateAllMessages(eqTo(Set(ern, "otherErn")))(any)
     }
@@ -111,13 +117,15 @@ class GetMovementsControllerSpec
       val controller = new GetMovementsController(
         FakeSuccessAuthenticationMultiErn(Set(ern, "otherErn")),
         FakeValidateErnParameterSuccessAction,
+        FakeValidateUpdatedSinceSuccessAction,
+        FakeValidateTraderTypeSuccessAction,
         cc,
         movementService,
         dateTimeService,
         messageService,
         movementIdValidator
       )
-      await(controller.getMovements(Some("otherErn"), None, None, None)(fakeRequest))
+      await(controller.getMovements(Some("otherErn"), None, None, None, None)(fakeRequest))
 
       verify(messageService).updateAllMessages(eqTo(Set("otherErn")))(any)
     }
@@ -146,7 +154,7 @@ class GetMovementsControllerSpec
       when(movementService.getMovementByErn(any, any))
         .thenReturn(Future.successful(Seq(movement1, movement2)))
 
-      val result = controller.getMovements(None, None, None, None)(fakeRequest)
+      val result = controller.getMovements(None, None, None, None, None)(fakeRequest)
 
       status(result) mustBe OK
       contentAsJson(result) mustBe Json.toJson(Seq(
@@ -157,13 +165,14 @@ class GetMovementsControllerSpec
 
     "use a filter" in {
       val timestampNow = Instant.now()
-      await(controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString))(fakeRequest))
+      await(controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString), Some("consignor"))(fakeRequest))
 
       val filter = MovementFilterBuilder()
         .withErn(Some(ern))
         .withLrn(Some("lrn"))
         .withArc(Some("arc"))
-        .withUpdatedSince(Some(timestampNow)).build()
+        .withUpdatedSince(Some(timestampNow))
+        .withTraderType(Some("consignor"), Seq(ern)).build()
       verify(movementService).getMovementByErn(any, eqTo(filter))
 
     }
@@ -171,7 +180,7 @@ class GetMovementsControllerSpec
     "return a bad request" when {
       "the updatedSince time is provided in an invalid format" in {
 
-        val result = controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some("invalid date"))(fakeRequest)
+        val result = createWithUpdateSinceActionFailure.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(Instant.now().toString), None)(fakeRequest)
 
         status(result) mustBe BAD_REQUEST
         contentAsJson(result) mustBe expectedJsonErrorResponse(
@@ -180,9 +189,12 @@ class GetMovementsControllerSpec
           "Date format should be like '2020-11-15T17:02:34.00Z'"
         )
       }
-
+      "wrong traderType is passed in" in {
+        val result = createWithTraderTypeActionFailure.getMovements(Some(ern), Some("lrn"), Some("arc"), None, Some("wrongTraderType"))(fakeRequest)
+        status(result) mustBe BAD_REQUEST
+      }
       "filtering by ERN and ERN filter is not in the authorised list" in {
-        val result = createControllerWithErnParameterError.getMovements(Some("ERNValue"), None, None, None)(fakeRequest)
+        val result = createControllerWithErnParameterError.getMovements(Some("ERNValue"), None, None, None, None)(fakeRequest)
 
         status(result) mustBe BAD_REQUEST
       }
@@ -190,7 +202,7 @@ class GetMovementsControllerSpec
 
     "return authentication error" when {
       "authentication fails" in {
-        val result = createWithAuthActionFailure.getMovements(None, None, None, None)(fakeRequest)
+        val result = createWithAuthActionFailure.getMovements(None, None, None, None, None)(fakeRequest)
 
         status(result) mustBe FORBIDDEN
       }
@@ -219,6 +231,8 @@ class GetMovementsControllerSpec
       val controller = new GetMovementsController(
         FakeSuccessAuthenticationMultiErn(Set(ern, "otherErn")),
         FakeValidateErnParameterSuccessAction,
+        FakeValidateUpdatedSinceSuccessAction,
+        FakeValidateTraderTypeSuccessAction,
         cc,
         movementService,
         dateTimeService,
@@ -304,6 +318,8 @@ class GetMovementsControllerSpec
     new GetMovementsController(
       FakeSuccessAuthentication,
       FakeValidateErnParameterFailureAction,
+      FakeValidateUpdatedSinceSuccessAction,
+      FakeValidateTraderTypeSuccessAction,
       cc,
       movementService,
       dateTimeService,
@@ -315,10 +331,39 @@ class GetMovementsControllerSpec
     new GetMovementsController(
       FakeFailingAuthentication,
       FakeValidateErnParameterSuccessAction,
+      FakeValidateUpdatedSinceSuccessAction,
+      FakeValidateTraderTypeSuccessAction,
       cc,
       movementService,
       dateTimeService,
       messageService,
       movementIdValidator
     )
+
+  private val createWithUpdateSinceActionFailure =
+    new GetMovementsController(
+      FakeSuccessAuthentication,
+      FakeValidateErnParameterSuccessAction,
+      FakeValidateUpdatedSinceFailureAction,
+      FakeValidateTraderTypeSuccessAction,
+      cc,
+      movementService,
+      dateTimeService,
+      messageService,
+      movementIdValidator
+    )
+
+  private val createWithTraderTypeActionFailure =
+    new GetMovementsController(
+      FakeSuccessAuthentication,
+      FakeValidateErnParameterSuccessAction,
+      FakeValidateUpdatedSinceFailureAction,
+      FakeValidateTraderTypeSuccessAction,
+      cc,
+      movementService,
+      dateTimeService,
+      messageService,
+      movementIdValidator
+    )
+
 }

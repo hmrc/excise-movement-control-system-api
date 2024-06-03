@@ -55,6 +55,30 @@ case class FilterUpdatedSince(updatedSince: Option[Instant] = None) extends Filt
   }
 }
 
+case class FilterTraderType(traderType: Option[String], ern:Seq[String]) extends Filter {
+  def filter(movements: Seq[Movement]): Seq[Movement] = {
+   if (traderType.contains("consignor")){
+     if(ern.nonEmpty){
+       movements.filter(o => ern.contains(o.consignorId))
+     }else {
+       movements
+     }
+   } else if(traderType.contains("consignee")) {
+     if(ern.nonEmpty){
+       movements.filter(o => if (o.consigneeId.nonEmpty) {
+         ern.contains(o.consigneeId.get)
+       }else {
+         false
+       })
+     }else {
+       movements
+     }
+   } else {
+     movements
+   }
+  }
+}
+
 object FilterNothing extends Filter {
   def filter(movements: Seq[Movement]): Seq[Movement] = {
     movements
@@ -90,6 +114,9 @@ case class MovementFilterBuilder(private val filters: Seq[Filter]) {
     add(FilterUpdatedSince(updatedSince))
   }
 
+  def withTraderType( traderType: Option[String] = None, ern:Seq[String]): MovementFilterBuilder = {
+    add(FilterTraderType(traderType, ern))
+  }
   def build(): MovementFilter = {
     if (filters.isEmpty) {
       MovementFilter(Seq(FilterNothing))

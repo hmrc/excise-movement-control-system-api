@@ -73,7 +73,7 @@ class GetMessagesController @Inject()(
     }
   }
 
-  def getMessagesForMovement(movementId: String, updatedSince: Option[String]): Action[AnyContent] = {
+  def getMessagesForMovement(movementId: String, updatedSince: Option[String], traderType: Option[String]): Action[AnyContent] = {
 
     authAction.async(parse.default) {
       implicit request: EnrolmentRequest[AnyContent] => {
@@ -81,6 +81,7 @@ class GetMessagesController @Inject()(
         val result: EitherT[Future, Result, Result] = for {
           validatedMovementId <- validateMovementId(movementId)
           updatedSince <- validateUpdatedSince(updatedSince)
+          traderType <- validateTraderType(traderType)
           _ <- EitherT.right(messageService.updateAllMessages(request.erns))
           movement <- getMovement(validatedMovementId)
         } yield {
@@ -93,13 +94,7 @@ class GetMessagesController @Inject()(
             )))
           } else {
             Ok(Json.toJson(
-              filterMessagesByTime(movement.messages, updatedSince)
-                .map{ o => MessageResponse(
-                  encodedMessage = o.encodedMessage,
-                  messageType = o.messageType,
-                  messageId = o.messageId,
-                  createdOn = o.createdOn
-                )}
+              filterMessages(movement, updatedSince, traderType)
             ))
           }
         }
@@ -110,6 +105,20 @@ class GetMessagesController @Inject()(
     }
   }
 
+  private def filterMessages(movement: Movement, updatedSince: Option[Instant], traderType: Option[String]) = {
+    val filteredByTraderType = filterMovementByTraderType(movement, traderType)
+    filterMessagesByTime(filteredByTraderType, updatedSince).map {
+      filteredMessage =>
+        MessageResponse(
+          encodedMessage = filteredMessage.encodedMessage,
+          messageType = filteredMessage.messageType,
+          messageId = filteredMessage.messageId,
+          createdOn = filteredMessage.createdOn
+        )
+    }
+
+
+  }
   private def messageNotFoundError(messageId: String) = {
     NotFound(Json.toJson(ErrorResponse(
       dateTimeService.timestamp(),
@@ -133,8 +142,40 @@ class GetMessagesController @Inject()(
       ))
     ))
 
+  private def filterMovementByTraderType(movement: Movement, traderType: Option[String]): Seq[Message] = {
+     traderType.fold[Seq[Message]](movement.messages)(trader =>
+       if(trader.equalsIgnoreCase("consignor")){
+         movement.messages.filter(o => o.recipient.equals(movement.consignorId))
+       }else{
+         movement.messages.filter(o => movement.consigneeId.contains(o.recipient))
+       }
+     )
+  }
+
+  private def validateTraderType(traderType: Option[String]): EitherT[Future, Result, Option[String]] =
+    EitherT{
+      Future.successful(
+        traderType match {
+          case None => Right(None)
+          case Some(value) =>
+            if(value.equalsIgnoreCase("consignor") || value.equalsIgnoreCase("consignee")){
+              Right(traderType)
+            }else {
+              Left{
+                BadRequest(Json.toJson(ErrorResponse(
+                  dateTimeService.timestamp(),
+                  "Invalid traderType passed in",
+                  "traderType should be consignor or consignee")
+                ))
+              }
+          }
+        }
+      )
+    }
+
+
   private def getMovement(id: String): EitherT[Future, Result, Movement] = {
-    OptionT(movementService.getMovementById(id)).toRightF(
+ OptionT(movementService.getMovementById(id)).toRightF(
       Future.successful(NotFound(
         Json.toJson(ErrorResponse(
           dateTimeService.timestamp(),
