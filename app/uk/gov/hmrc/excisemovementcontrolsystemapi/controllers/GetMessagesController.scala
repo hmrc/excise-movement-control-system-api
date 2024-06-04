@@ -106,7 +106,7 @@ class GetMessagesController @Inject()(
   }
 
   private def filterMessages(movement: Movement, updatedSince: Option[Instant], traderType: Option[String]) = {
-    val filteredByTraderType = filterMovementByTraderType(movement, traderType)
+    val filteredByTraderType = filterMessagesByTraderType(movement, traderType)
     filterMessagesByTime(filteredByTraderType, updatedSince).map {
       filteredMessage =>
         MessageResponse(
@@ -142,7 +142,7 @@ class GetMessagesController @Inject()(
       ))
     ))
 
-  private def filterMovementByTraderType(movement: Movement, traderType: Option[String]): Seq[Message] = {
+  private def filterMessagesByTraderType(movement: Movement, traderType: Option[String]): Seq[Message] = {
      traderType.fold[Seq[Message]](movement.messages)(trader =>
        if(trader.equalsIgnoreCase("consignor")){
          movement.messages.filter(o => o.recipient.equals(movement.consignorId))

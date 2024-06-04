@@ -231,7 +231,7 @@ class SubmitMessageControllerSpec
 
   private def createWithSuccessfulAuth =
     new SubmitMessageController(
-      FakeSuccessAuthentication,
+      FakeSuccessAuthentication(Set(ern)),
       FakeSuccessXMLParser(mock[IEMessage]),
       submissionMessageService,
       movementService,
@@ -263,7 +263,7 @@ class SubmitMessageControllerSpec
 
   private def createWithFailingXmlParserAction =
     new SubmitMessageController(
-      FakeSuccessAuthentication,
+      FakeSuccessAuthentication(Set(ern)),
       FakeFailureXMLParser,
       submissionMessageService,
       movementService,

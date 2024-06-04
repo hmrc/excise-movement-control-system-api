@@ -309,7 +309,7 @@ class DraftExciseMovementControllerSpec
     when(mockIe818Message.messageType).thenReturn(MessageTypes.IE818.value)
 
     new DraftExciseMovementController(
-      FakeSuccessAuthentication,
+      FakeSuccessAuthentication(Set(ern)),
       FakeSuccessXMLParser(mockIe818Message),
       movementService,
       submissionMessageService,
@@ -340,7 +340,7 @@ class DraftExciseMovementControllerSpec
 
   private def createWithFailingXmlParserAction =
     new DraftExciseMovementController(
-      FakeSuccessAuthentication,
+      FakeSuccessAuthentication(Set(ern)),
       FakeFailureXMLParser,
       movementService,
       submissionMessageService,
@@ -355,7 +355,7 @@ class DraftExciseMovementControllerSpec
 
   private def createWithSuccessfulAuth =
     new DraftExciseMovementController(
-      FakeSuccessAuthentication,
+      FakeSuccessAuthentication(Set(ern)),
       FakeSuccessXMLParser(mockIeMessage),
       movementService,
       submissionMessageService,

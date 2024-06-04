@@ -55,7 +55,7 @@ class GetMovementsControllerSpec
   private val movementIdValidator = mock[MovementIdValidation]
 
   private val controller = new GetMovementsController(
-    FakeSuccessAuthentication,
+    FakeSuccessAuthentication(Set(ern)),
     FakeValidateErnParameterSuccessAction,
     FakeValidateUpdatedSinceSuccessAction,
     FakeValidateTraderTypeSuccessAction,
@@ -163,18 +163,34 @@ class GetMovementsControllerSpec
       ))
     }
 
-    "use a filter" in {
-      val timestampNow = Instant.now()
-      await(controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString), Some("consignor"))(fakeRequest))
+    "use a filter" when {
+      "traderType is consignor" in {
+        val timestampNow = Instant.now()
+        await(controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString), Some("consignor"))(fakeRequest))
 
-      val filter = MovementFilterBuilder()
-        .withErn(Some(ern))
-        .withLrn(Some("lrn"))
-        .withArc(Some("arc"))
-        .withUpdatedSince(Some(timestampNow))
-        .withTraderType(Some("consignor"), Seq(ern)).build()
-      verify(movementService).getMovementByErn(any, eqTo(filter))
+        val filter = MovementFilterBuilder()
+          .withErn(Some(ern))
+          .withLrn(Some("lrn"))
+          .withArc(Some("arc"))
+          .withUpdatedSince(Some(timestampNow))
+          .withTraderType(Some("consignor"), Seq(ern)).build()
+        verify(movementService).getMovementByErn(any, eqTo(filter))
 
+      }
+
+      "traderType is consignee" in {
+        val timestampNow = Instant.now()
+        await(controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString), Some("consignee"))(fakeRequest))
+
+        val filter = MovementFilterBuilder()
+          .withErn(Some(ern))
+          .withLrn(Some("lrn"))
+          .withArc(Some("arc"))
+          .withUpdatedSince(Some(timestampNow))
+          .withTraderType(Some("consignee"), Seq(ern)).build()
+        verify(movementService).getMovementByErn(any, eqTo(filter))
+
+      }
     }
 
     "return a bad request" when {
@@ -316,7 +332,7 @@ class GetMovementsControllerSpec
 
   private def createControllerWithErnParameterError =
     new GetMovementsController(
-      FakeSuccessAuthentication,
+      FakeSuccessAuthentication(Set(ern)),
       FakeValidateErnParameterFailureAction,
       FakeValidateUpdatedSinceSuccessAction,
       FakeValidateTraderTypeSuccessAction,
@@ -342,7 +358,7 @@ class GetMovementsControllerSpec
 
   private val createWithUpdateSinceActionFailure =
     new GetMovementsController(
-      FakeSuccessAuthentication,
+      FakeSuccessAuthentication(Set(ern)),
       FakeValidateErnParameterSuccessAction,
       FakeValidateUpdatedSinceFailureAction,
       FakeValidateTraderTypeSuccessAction,
@@ -355,7 +371,7 @@ class GetMovementsControllerSpec
 
   private val createWithTraderTypeActionFailure =
     new GetMovementsController(
-      FakeSuccessAuthentication,
+      FakeSuccessAuthentication(Set(ern)),
       FakeValidateErnParameterSuccessAction,
       FakeValidateUpdatedSinceFailureAction,
       FakeValidateTraderTypeSuccessAction,

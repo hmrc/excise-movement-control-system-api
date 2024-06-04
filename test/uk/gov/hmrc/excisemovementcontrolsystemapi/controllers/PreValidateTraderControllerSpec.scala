@@ -117,7 +117,7 @@ class PreValidateTraderControllerSpec
 
   private def createWithFailingJsonParserAction =
     new PreValidateTraderController(
-      FakeSuccessAuthentication,
+      FakeSuccessAuthentication(Set(ern)),
       FakeFailureJsonParser,
       service,
       cc
@@ -125,7 +125,7 @@ class PreValidateTraderControllerSpec
 
   private def createWithSuccessfulAuth =
     new PreValidateTraderController(
-      FakeSuccessAuthentication,
+      FakeSuccessAuthentication(Set(ern)),
       FakeSuccessJsonParser,
       service,
       cc

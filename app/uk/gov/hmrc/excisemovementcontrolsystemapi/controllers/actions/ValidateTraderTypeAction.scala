@@ -61,6 +61,6 @@ class ValidateTraderTypeActionImpl @Inject()
 
 @ImplementedBy(classOf[ValidateTraderTypeActionImpl])
 trait ValidateTraderTypeAction {
-  def apply(updatedSince: Option[String]): ActionFilter[EnrolmentRequest]
+  def apply(traderType: Option[String]): ActionFilter[EnrolmentRequest]
 
 }
