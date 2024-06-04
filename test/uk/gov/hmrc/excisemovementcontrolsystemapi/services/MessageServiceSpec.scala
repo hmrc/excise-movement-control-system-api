@@ -793,7 +793,7 @@ class MessageServiceSpec extends PlaySpec
         when(messageConnector.getNewMessages(eqTo("ern1"))(any)).thenReturn(Future.successful(GetMessagesResponse(ern1NewMessages, 1)))
         when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
-        messageService.updateAllMessages(Set("ern1")).futureValue
+        messageService.updateMessages("ern1").futureValue
 
         val expectedMovement = ern1Movement.copy(
           consigneeId = Some("AT00000602078"),
@@ -836,7 +836,7 @@ class MessageServiceSpec extends PlaySpec
         when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
         when(correlationIdService.generateCorrelationId()).thenReturn(newId)
 
-        messageService.updateAllMessages(Set("ern1")).futureValue
+        messageService.updateMessages("ern1").futureValue
 
         val expectedMovement1 = ern1Movement.copy(
           consigneeId = Some("AT00000602078"),
