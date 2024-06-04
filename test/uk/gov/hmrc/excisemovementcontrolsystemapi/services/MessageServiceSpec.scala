@@ -768,6 +768,107 @@ class MessageServiceSpec extends PlaySpec
         verify(movementRepository).save(ern2Movement)
       }
     }
+
+    "there are many messages" should {
+      "update them if they all correspond to one movement" in {
+        val message1 = IE801Message.createFromXml(XmlMessageGeneratorFactory.generate("ern1", MessageParams(IE801, "XI0000021a", Some("AT00000602078"), Some("arc"), Some("lrn1"))))
+        val message2 = IE819Message.createFromXml(XmlMessageGeneratorFactory.generate("ern1", MessageParams(IE819, "X00008a", Some("token"), Some("arc"))))
+        val message3 = IE807Message.createFromXml(XmlMessageGeneratorFactory.generate("ern1", MessageParams(IE807, "XI0000021b", Some("AT00000602078"), Some("arc"), Some("lrn1"))))
+        val message4 = IE840Message.createFromXml(XmlMessageGeneratorFactory.generate("ern1", MessageParams(IE840, "X00008b", Some("token"), Some("arc"))))
+
+        val ern1NewMessages = Seq(message1, message2, message3, message4)
+        val ern1Movement = Movement(
+          None,
+          "lrn1",
+          "ern1",
+          None,
+          messages = Seq.empty
+        )
+
+        when(dateTimeService.timestamp()).thenReturn(now)
+        when(movementRepository.getAllBy(eqTo("ern1"))).thenReturn(Future.successful(Seq(ern1Movement)))
+        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+        when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+        when(messageConnector.getNewMessages(eqTo("ern1"))(any)).thenReturn(Future.successful(GetMessagesResponse(ern1NewMessages, 1)))
+        when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+
+        messageService.updateMessages("ern1").futureValue
+
+        val expectedMovement = ern1Movement.copy(
+          consigneeId = Some("AT00000602078"),
+          administrativeReferenceCode = Some("arc"),
+          messages = Seq(
+            Message(utils.encode(message1.toXml.toString()), "IE801", "XI0000021a", "ern1", Set.empty, now),
+            Message(utils.encode(message2.toXml.toString()), "IE819", "X00008a", "ern1", Set.empty, now),
+            Message(utils.encode(message3.toXml.toString()), "IE807", "XI0000021b", "ern1", Set.empty, now),
+            Message(utils.encode(message4.toXml.toString()), "IE840", "X00008b", "ern1", Set.empty, now),
+          )
+        )
+
+        val captor = ArgCaptor[Movement]
+        verify(movementRepository, times(1)).save(captor.capture)
+
+        captor.value mustEqual expectedMovement
+      }
+      "update them if they correspond to more than one movement, and create a movement if needed" in {
+        val message1 = IE801Message.createFromXml(XmlMessageGeneratorFactory.generate("ern1", MessageParams(IE801, "XI0000021a", Some("AT00000602078"), Some("arc"), Some("lrn1"))))
+        val message2 = IE819Message.createFromXml(XmlMessageGeneratorFactory.generate("ern1", MessageParams(IE819, "X00008a", Some("token"), Some("arc"))))
+        val message3 = IE807Message.createFromXml(XmlMessageGeneratorFactory.generate("ern1", MessageParams(IE807, "XI0000021b", Some("AT00000602078"), Some("arc"), Some("lrn1"))))
+        val message4 = IE840Message.createFromXml(XmlMessageGeneratorFactory.generate("ern1", MessageParams(IE840, "X00008b", Some("token"), Some("arc"))))
+        val message5 = IE801Message.createFromXml(XmlMessageGeneratorFactory.generate("ern1", MessageParams(IE801, "XI0000099", Some("AT00000602078"), Some("arc2"), Some("lrn2"))))
+
+        val ern1NewMessages = Seq(message1, message2, message3, message4, message5)
+        val ern1Movement = Movement(
+          None,
+          "lrn1",
+          "ern1",
+          None,
+          messages = Seq.empty
+        )
+
+        when(dateTimeService.timestamp()).thenReturn(now)
+        when(movementRepository.getAllBy(eqTo("ern1"))).thenReturn(Future.successful(Seq(ern1Movement)))
+        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+        when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+        when(messageConnector.getNewMessages(eqTo("ern1"))(any)).thenReturn(Future.successful(GetMessagesResponse(ern1NewMessages, 1)))
+        when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+        when(correlationIdService.generateCorrelationId()).thenReturn(newId)
+
+        messageService.updateMessages("ern1").futureValue
+
+        val expectedMovement1 = ern1Movement.copy(
+          consigneeId = Some("AT00000602078"),
+          administrativeReferenceCode = Some("arc"),
+          messages = Seq(
+            Message(utils.encode(message1.toXml.toString()), "IE801", "XI0000021a", "ern1", Set.empty, now),
+            Message(utils.encode(message2.toXml.toString()), "IE819", "X00008a", "ern1", Set.empty, now),
+            Message(utils.encode(message3.toXml.toString()), "IE807", "XI0000021b", "ern1", Set.empty, now),
+            Message(utils.encode(message4.toXml.toString()), "IE840", "X00008b", "ern1", Set.empty, now),
+          )
+        )
+        val expectedMovement2 = Movement(
+          newId,
+          None,
+          "lrn2",
+          "ern1",
+          Some("AT00000602078"),
+          Some("arc2"),
+          now,
+          Seq(
+            Message(utils.encode(message5.toXml.toString()), "IE801", "XI0000099", "ern1", Set.empty, now)
+          )
+        )
+
+        val movementCaptor = ArgCaptor[Movement]
+        verify(movementRepository, times(2)).save(movementCaptor.capture)
+
+        movementCaptor.values(0) mustBe expectedMovement2
+        movementCaptor.values(1) mustBe expectedMovement1
+
+      }
+    }
   }
 }
 
