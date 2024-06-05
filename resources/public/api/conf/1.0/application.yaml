@@ -221,7 +221,7 @@ paths:
           description: Filter excise movements by trader type (consignor or consignee)
           required: false
           schema:
-            type: string
+            $ref: "#/components/schemas/QueryTraderType"
       responses:
         '200':
           description: Successful operation. If there are no movements for any of your excise reference numbers (ERNs) in your bearer token or because of the filters, this will return an empty list.
@@ -590,7 +590,7 @@ paths:
           description: Filter excise movements by trader type (consignor or consignee)
           required: false
           schema:
-            type: string
+            $ref: "#/components/schemas/QueryTraderType"
       responses:
         '200':
           description: Successful operation
@@ -1152,6 +1152,12 @@ components:
         5 = Temporary Registered Consignee<br />
         6 = Temporary Registered Authorisation<br />
         7 = Other
+    QueryTraderType:
+      type: string
+      description: The type of trader (consignor or consignee)
+      enum:
+        - consignor
+        - consignee
     ExciseProductCode:
       type: string
       description: The excise product category code
