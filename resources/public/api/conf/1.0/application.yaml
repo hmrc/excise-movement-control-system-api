@@ -216,6 +216,12 @@ paths:
           required: false
           schema:
             $ref: "#/components/schemas/DateTime"
+        - name: traderType
+          in: query
+          description: Filter excise movements by trader type (consignor or consignee)
+          required: false
+          schema:
+            type: string
       responses:
         '200':
           description: Successful operation. If there are no movements for any of your excise reference numbers (ERNs) in your bearer token or because of the filters, this will return an empty list.
@@ -579,6 +585,12 @@ paths:
           required: false
           schema:
             $ref: "#/components/schemas/DateTime"
+        - name: traderType
+          in: query
+          description: Filter excise movements by trader type (consignor or consignee)
+          required: false
+          schema:
+            type: string
       responses:
         '200':
           description: Successful operation
