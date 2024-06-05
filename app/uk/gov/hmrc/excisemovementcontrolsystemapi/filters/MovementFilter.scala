@@ -57,25 +57,15 @@ case class FilterUpdatedSince(updatedSince: Option[Instant] = None) extends Filt
 
 case class FilterTraderType(traderType: Option[String], ern:Seq[String]) extends Filter {
   def filter(movements: Seq[Movement]): Seq[Movement] = {
-   if (traderType.contains("consignor")){
-     if(ern.nonEmpty){
-       movements.filter(o => ern.contains(o.consignorId))
-     }else {
-       movements
-     }
-   } else if(traderType.contains("consignee")) {
-     if(ern.nonEmpty){
-       movements.filter(o => if (o.consigneeId.nonEmpty) {
-         ern.contains(o.consigneeId.get)
-       }else {
-         false
-       })
-     }else {
-       movements
-     }
-   } else {
-     movements
-   }
+    traderType.fold[Seq[Movement]](movements) { trader =>
+      if (trader.equalsIgnoreCase("consignor")) {
+        movements.filter(m => ern.contains(m.consignorId))
+      } else if (trader.equalsIgnoreCase("consignee")) {
+        movements.filter(m => m.consigneeId.exists(ern.contains(_)))
+      } else {
+        movements
+      }
+    }
   }
 }
 
