@@ -106,13 +106,19 @@ class MessageService @Inject() (
     hc: HeaderCarrier
   ): Future[Done] =
     if (messages.nonEmpty) {
-      movementRepository.getAllBy(ern).flatMap { movements =>
-        messages.foldLeft(Seq.empty[Movement]) { (updatedMovements, message) =>
-          (updateOrCreateMovements(ern, movements, updatedMovements, message, boxIds) ++ updatedMovements)
-            .distinctBy(movement => (movement.localReferenceNumber, movement.consignorId, movement.administrativeReferenceCode))
+      movementRepository
+        .getAllBy(ern)
+        .flatMap { movements =>
+          messages
+            .foldLeft(Seq.empty[Movement]) { (updatedMovements, message) =>
+              (updateOrCreateMovements(ern, movements, updatedMovements, message, boxIds) ++ updatedMovements)
+                .distinctBy(movement =>
+                  (movement.localReferenceNumber, movement.consignorId, movement.administrativeReferenceCode)
+                )
+            }
+            .traverse(movementRepository.save)
         }
-        .traverse(movementRepository.save)
-      }.as(Done)
+        .as(Done)
     } else {
       Future.successful(Done)
     }
