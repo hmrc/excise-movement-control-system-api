@@ -27,7 +27,7 @@ trait XmlMessageGenerator {
 }
 
 object XmlMessageGeneratorFactory extends XmlMessageGenerator {
-  override def generate(ern: String, params: MessageParams): NodeSeq = {
+  override def generate(ern: String, params: MessageParams): NodeSeq =
     params.messageType match {
       case IE704 => IE704XmlMessageGenerator.generate(ern, params)
       case IE801 => IE801XmlMessageGenerator.generate(ern, params)
@@ -44,27 +44,26 @@ object XmlMessageGeneratorFactory extends XmlMessageGenerator {
       case IE871 => IE871XmlMessageGenerator.generate(ern, params)
       case IE881 => IE881XmlMessageGenerator.generate(ern, params)
       case IE905 => IE905XmlMessageGenerator.generate(ern, params)
-      case _ => NodeSeq.Empty
+      case _     => NodeSeq.Empty
     }
-  }
 }
 
 final case class MessageParams(
-                                messageType: MessageTypes,
-                                messageIdentifier: String,
-                                consigneeErn: Option[String] = None,
-                                administrativeReferenceCode: Option[String] = None,
-                                localReferenceNumber: Option[String] = None,
-                                sequenceNumber: Int = 1,
-                                awaitingAcknowledgement: Option[Boolean]= None
-                              )
+  messageType: MessageTypes,
+  messageIdentifier: String,
+  consigneeErn: Option[String] = None,
+  administrativeReferenceCode: Option[String] = None,
+  localReferenceNumber: Option[String] = None,
+  sequenceNumber: Int = 1,
+  awaitingAcknowledgement: Option[Boolean] = None
+)
 
 object MessageParams {
   implicit val format: OFormat[MessageParams] = Json.format[MessageParams]
 }
 
 private case object IE704XmlMessageGenerator extends XmlMessageGenerator {
-  override def generate(ern: String, params: MessageParams): NodeSeq = {
+  override def generate(ern: String, params: MessageParams): NodeSeq =
     <ie704:IE704 xmlns:tms="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                  xmlns:ie704="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3">
       <ie704:Header>
@@ -78,8 +77,16 @@ private case object IE704XmlMessageGenerator extends XmlMessageGenerator {
       <ie704:Body>
         <ie704:GenericRefusalMessage>
           <ie704:Attributes>
-            {if (params.administrativeReferenceCode.isDefined) <ie704:AdministrativeReferenceCode>{params.administrativeReferenceCode.get}</ie704:AdministrativeReferenceCode> }
-            {if (params.localReferenceNumber.isDefined) <ie704:LocalReferenceNumber>{params.localReferenceNumber.get}</ie704:LocalReferenceNumber> }
+            {
+      if (params.administrativeReferenceCode.isDefined) <ie704:AdministrativeReferenceCode>{
+        params.administrativeReferenceCode.get
+      }</ie704:AdministrativeReferenceCode>
+    }
+            {
+      if (params.localReferenceNumber.isDefined) <ie704:LocalReferenceNumber>{
+        params.localReferenceNumber.get
+      }</ie704:LocalReferenceNumber>
+    }
           </ie704:Attributes>
           <ie704:FunctionalError>
             <ie704:ErrorType>4401</ie704:ErrorType>
@@ -90,11 +97,10 @@ private case object IE704XmlMessageGenerator extends XmlMessageGenerator {
         </ie704:GenericRefusalMessage>
       </ie704:Body>
     </ie704:IE704>
-  }
 }
 
 private case object IE801XmlMessageGenerator extends XmlMessageGenerator {
-  override def generate(ern: String, params: MessageParams): NodeSeq = {
+  override def generate(ern: String, params: MessageParams): NodeSeq =
     <ie801:IE801 xmlns:tms="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                  xmlns:ie801="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.13">
       <ie801:Header>
@@ -192,11 +198,10 @@ private case object IE801XmlMessageGenerator extends XmlMessageGenerator {
         </ie801:EADESADContainer>
       </ie801:Body>
     </ie801:IE801>
-  }
 }
 
 private case object IE802XmlMessageGenerator extends XmlMessageGenerator {
-  override def generate(ern: String, params: MessageParams): NodeSeq = {
+  override def generate(ern: String, params: MessageParams): NodeSeq =
     <ie802:IE802 xmlns:tms="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                  xmlns:ie802="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE802:V3.13">
       <ie802:Header>
@@ -222,11 +227,10 @@ private case object IE802XmlMessageGenerator extends XmlMessageGenerator {
         </ie802:ReminderMessageForExciseMovement>
       </ie802:Body>
     </ie802:IE802>
-  }
 }
 
 private case object IE803XmlMessageGenerator extends XmlMessageGenerator {
-  override def generate(ern: String, params: MessageParams): NodeSeq = {
+  override def generate(ern: String, params: MessageParams): NodeSeq =
     <ie803:IE803 xmlns:tms="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                  xmlns:ie803="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE803:V3.13">
       <ie803:Header>
@@ -248,11 +252,10 @@ private case object IE803XmlMessageGenerator extends XmlMessageGenerator {
         </ie803:NotificationOfDivertedEADESAD>
       </ie803:Body>
     </ie803:IE803>
-  }
 }
 
 private case object IE807XmlMessageGenerator extends XmlMessageGenerator {
-  override def generate(ern: String, params: MessageParams): NodeSeq = {
+  override def generate(ern: String, params: MessageParams): NodeSeq =
     <ie807:IE807 xmlns:tms="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                  xmlns:ie807="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE807:V3.13">
       <ie807:Header>
@@ -285,11 +288,10 @@ private case object IE807XmlMessageGenerator extends XmlMessageGenerator {
         </ie807:InterruptionOfMovement>
       </ie807:Body>
     </ie807:IE807>
-  }
 }
 
 private case object IE810XmlMessageGenerator extends XmlMessageGenerator {
-  override def generate(ern: String, params: MessageParams): NodeSeq = {
+  override def generate(ern: String, params: MessageParams): NodeSeq =
     <ie810:IE810 xmlns:tms="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                  xmlns:ie810="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE810:V3.13">
       <ie810:Header>
@@ -315,11 +317,10 @@ private case object IE810XmlMessageGenerator extends XmlMessageGenerator {
         </ie810:CancellationOfEAD>
       </ie810:Body>
     </ie810:IE810>
-  }
 }
 
 private case object IE813XmlMessageGenerator extends XmlMessageGenerator {
-  override def generate(ern: String, params: MessageParams): NodeSeq = {
+  override def generate(ern: String, params: MessageParams): NodeSeq =
     <ie813:IE813 xmlns:tms="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                  xmlns:ie813="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE813:V3.13">
       <ie813:Header>
@@ -406,11 +407,10 @@ private case object IE813XmlMessageGenerator extends XmlMessageGenerator {
         </ie813:ChangeOfDestination>
       </ie813:Body>
     </ie813:IE813>
-  }
 }
 
 private case object IE818XmlMessageGenerator extends XmlMessageGenerator {
-  override def generate(ern: String, params: MessageParams): NodeSeq = {
+  override def generate(ern: String, params: MessageParams): NodeSeq =
     <ie818:IE818 xmlns:tms="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                  xmlns:ie818="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE818:V3.13">
       <ie818:Header>
@@ -469,11 +469,10 @@ private case object IE818XmlMessageGenerator extends XmlMessageGenerator {
         </ie818:AcceptedOrRejectedReportOfReceiptExport>
       </ie818:Body>
     </ie818:IE818>
-  }
 }
 
 private case object IE819XmlMessageGenerator extends XmlMessageGenerator {
-  override def generate(ern: String, params: MessageParams): NodeSeq = {
+  override def generate(ern: String, params: MessageParams): NodeSeq =
     <ie819:IE819 xmlns:tms="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                  xmlns:ie819="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE819:V3.13">
       <ie819:Header>
@@ -516,11 +515,10 @@ private case object IE819XmlMessageGenerator extends XmlMessageGenerator {
         </ie819:AlertOrRejectionOfEADESAD>
       </ie819:Body>
     </ie819:IE819>
-  }
 }
 
 private case object IE829XmlMessageGenerator extends XmlMessageGenerator {
-  override def generate(ern: String, params: MessageParams): NodeSeq = {
+  override def generate(ern: String, params: MessageParams): NodeSeq =
     <ie829:IE829 xmlns:tms="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                  xmlns:ie829="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE829:V3.13">
       <ie829:Header>
@@ -566,11 +564,10 @@ private case object IE829XmlMessageGenerator extends XmlMessageGenerator {
         </ie829:NotificationOfAcceptedExport>
       </ie829:Body>
     </ie829:IE829>
-  }
 }
 
 private case object IE839XmlMessageGenerator extends XmlMessageGenerator {
-  override def generate(ern: String, params: MessageParams): NodeSeq = {
+  override def generate(ern: String, params: MessageParams): NodeSeq =
     <ie839:IE839 xmlns:tms="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                  xmlns:ie839="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.13">
       <ie839:Header>
@@ -623,7 +620,6 @@ private case object IE839XmlMessageGenerator extends XmlMessageGenerator {
         </ie839:RefusalByCustoms>
       </ie839:Body>
     </ie839:IE839>
-  }
 }
 
 private case object IE840XmlMessageGenerator extends XmlMessageGenerator {
@@ -756,7 +752,7 @@ private case object IE840XmlMessageGenerator extends XmlMessageGenerator {
 }
 
 private case object IE871XmlMessageGenerator extends XmlMessageGenerator {
-  override def generate(ern: String, params: MessageParams): NodeSeq = {
+  override def generate(ern: String, params: MessageParams): NodeSeq =
     <ie871:IE871 xmlns:tms="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                  xmlns:ie871="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE871:V3.13">
       <ie871:Header>
@@ -807,11 +803,10 @@ private case object IE871XmlMessageGenerator extends XmlMessageGenerator {
         </ie871:ExplanationOnReasonForShortage>
       </ie871:Body>
     </ie871:IE871>
-  }
 }
 
 private case object IE881XmlMessageGenerator extends XmlMessageGenerator {
-  override def generate(ern: String, params: MessageParams): NodeSeq = {
+  override def generate(ern: String, params: MessageParams): NodeSeq =
     <ie881:IE881 xmlns:tms="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                  xmlns:ie881="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE881:V3.13">
       <ie881:Header>
@@ -857,11 +852,10 @@ private case object IE881XmlMessageGenerator extends XmlMessageGenerator {
         </ie881:ManualClosureResponse>
       </ie881:Body>
     </ie881:IE881>
-  }
 }
 
 private case object IE905XmlMessageGenerator extends XmlMessageGenerator {
-  override def generate(ern: String, params: MessageParams): NodeSeq = {
+  override def generate(ern: String, params: MessageParams): NodeSeq =
     <ie905:IE905 xmlns:tms="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                  xmlns:ie905="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE905:V3.13">
       <ie905:Header>
@@ -883,7 +877,4 @@ private case object IE905XmlMessageGenerator extends XmlMessageGenerator {
         </ie905:StatusResponse>
       </ie905:Body>
     </ie905:IE905>
-  }
 }
-
-

@@ -20,7 +20,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE810Message,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NrsMetadata
 
 class NrsEventIdMapper {
-  def mapMessageToEventId(message: IEMessage): String = {
+  def mapMessageToEventId(message: IEMessage): String =
     message match {
       case _: IE815Message => NrsMetadata.EmcsCreateMovementNotableEventId
       case _: IE810Message => NrsMetadata.EmccCancelMovement
@@ -29,8 +29,7 @@ class NrsEventIdMapper {
       case _: IE819Message => NrsMetadata.EmcsSubmitAlertOrRejectionNotableEventId
       case _: IE837Message => NrsMetadata.EmcsExplainADelayNotableEventId
       case _: IE871Message => NrsMetadata.EmcsExplainAShortageNotableEventId
-      case _ => throw new RuntimeException(s"[NrsEventClientMapper] - Unsupported message: ${message.messageType}")
+      case _               => throw new RuntimeException(s"[NrsEventClientMapper] - Unsupported message: ${message.messageType}")
     }
-  }
 
 }

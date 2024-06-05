@@ -18,19 +18,18 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
 import play.api.http.HeaderNames
 
-
 trait Headers {
   def build(correlationId: String, createdDateTime: String, bearerToken: String): Seq[(String, String)]
 }
 
 object Headers {
-  val APIPSource: String = "APIP"
-  val MDTPHost: String = "MDTP"
-  val SourceName: String = "Source"
+  val APIPSource: String         = "APIP"
+  val MDTPHost: String           = "MDTP"
+  val SourceName: String         = "Source"
   val XCorrelationIdName: String = "X-Correlation-Id"
-  val DateTimeName: String = "DateTime"
+  val DateTimeName: String       = "DateTime"
   val XForwardedHostName: String = HeaderNames.X_FORWARDED_HOST
-  val Authorization: String = HeaderNames.AUTHORIZATION
+  val Authorization: String      = HeaderNames.AUTHORIZATION
 
   def authorizationValue(bearerToken: String) = s"Bearer $bearerToken"
 }

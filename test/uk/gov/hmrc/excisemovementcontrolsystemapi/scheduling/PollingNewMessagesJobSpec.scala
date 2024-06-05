@@ -39,17 +39,18 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 
-class PollingNewMessagesJobSpec extends PlaySpec
-  with ScalaFutures
-  with IntegrationPatience
-  with GuiceOneAppPerSuite
-  with BeforeAndAfterEach {
+class PollingNewMessagesJobSpec
+    extends PlaySpec
+    with ScalaFutures
+    with IntegrationPatience
+    with GuiceOneAppPerSuite
+    with BeforeAndAfterEach {
 
-  private val movementRepository = mock[MovementRepository]
-  private val ernSubmissionRepository = mock[ErnSubmissionRepository]
-  private val messageService = mock[MessageService]
-  private val timeService = mock[DateTimeService]
-  private val now = Instant.now
+  private val movementRepository         = mock[MovementRepository]
+  private val ernSubmissionRepository    = mock[ErnSubmissionRepository]
+  private val messageService             = mock[MessageService]
+  private val timeService                = mock[DateTimeService]
+  private val now                        = Instant.now
   private lazy val pollingNewMessagesJob = app.injector.instanceOf[PollingNewMessagesJob]
 
   override def fakeApplication(): Application = GuiceApplicationBuilder()
@@ -57,15 +58,16 @@ class PollingNewMessagesJobSpec extends PlaySpec
       bind[MovementRepository].toInstance(movementRepository),
       bind[ErnSubmissionRepository].toInstance(ernSubmissionRepository),
       bind[MessageService].toInstance(messageService),
-      bind[DateTimeService].toInstance(timeService),
+      bind[DateTimeService].toInstance(timeService)
     )
     .configure(
-      "scheduler.pollingNewMessagesJob.initialDelay" -> "2 minutes",
-      "scheduler.pollingNewMessagesJob.interval" -> "1 minute",
+      "scheduler.pollingNewMessagesJob.initialDelay"        -> "2 minutes",
+      "scheduler.pollingNewMessagesJob.interval"            -> "1 minute",
       "scheduler.pollingNewMessagesJob.fastPollingInterval" -> "5 minutes",
-      "scheduler.pollingNewMessagesJob.fastPollingCutoff" -> "15 minutes",
-      "scheduler.pollingNewMessagesJob.slowPollingInterval" -> "30 minutes",
-    ).build()
+      "scheduler.pollingNewMessagesJob.fastPollingCutoff"   -> "15 minutes",
+      "scheduler.pollingNewMessagesJob.slowPollingInterval" -> "30 minutes"
+    )
+    .build()
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -98,7 +100,7 @@ class PollingNewMessagesJobSpec extends PlaySpec
     "last submitted for an ern is sooner than the fast polling interval" should {
       "not update messages for that ern" in {
         // last received is outside of the fast polling interval
-        val ernsAndLastReceived = Map("testErn" -> now.minus(6, ChronoUnit.MINUTES))
+        val ernsAndLastReceived  = Map("testErn" -> now.minus(6, ChronoUnit.MINUTES))
         // last submitted is inside the fast polling interval
         val ernsAndLastSubmitted = Map("testErn" -> now.minus(2, ChronoUnit.MINUTES))
         when(timeService.timestamp()).thenReturn(now)
@@ -111,10 +113,10 @@ class PollingNewMessagesJobSpec extends PlaySpec
         verify(messageService, never()).updateMessages(any)(any)
       }
     }
-    "last received for an ern is sooner than the fast polling interval" should {
+    "last received for an ern is sooner than the fast polling interval"  should {
       "not update messages for that ern" in {
         // last received is inside of the fast polling interval
-        val ernsAndLastReceived = Map("testErn" -> now.minus(2, ChronoUnit.MINUTES))
+        val ernsAndLastReceived  = Map("testErn" -> now.minus(2, ChronoUnit.MINUTES))
         // last submitted is outside the fast polling interval
         val ernsAndLastSubmitted = Map("testErn" -> now.minus(6, ChronoUnit.MINUTES))
         when(timeService.timestamp()).thenReturn(now)
@@ -127,10 +129,10 @@ class PollingNewMessagesJobSpec extends PlaySpec
         verify(messageService, never()).updateMessages(any)(any)
       }
     }
-    "last activity for an ern is later than the fast polling interval" should {
+    "last activity for an ern is later than the fast polling interval"   should {
       "update messages for that ern" in {
         // last received is outside of the fast polling interval
-        val ernsAndLastReceived = Map("testErn" -> now.minus(6, ChronoUnit.MINUTES))
+        val ernsAndLastReceived  = Map("testErn" -> now.minus(6, ChronoUnit.MINUTES))
         // last submitted is outside the fast polling interval
         val ernsAndLastSubmitted = Map("testErn" -> now.minus(7, ChronoUnit.MINUTES))
         when(timeService.timestamp()).thenReturn(now)
@@ -143,10 +145,10 @@ class PollingNewMessagesJobSpec extends PlaySpec
         verify(messageService).updateMessages(eqTo("testErn"))(any)
       }
     }
-    "last activity for an ern is later than the fast polling cutoff" should {
+    "last activity for an ern is later than the fast polling cutoff"     should {
       "not update messages for that ern" in {
         // last received is outside of the fast polling cutoff
-        val ernsAndLastReceived = Map("testErn" -> now.minus(17, ChronoUnit.MINUTES))
+        val ernsAndLastReceived  = Map("testErn" -> now.minus(17, ChronoUnit.MINUTES))
         // last submitted is outside the fast polling cutoff
         val ernsAndLastSubmitted = Map("testErn" -> now.minus(16, ChronoUnit.MINUTES))
         when(timeService.timestamp()).thenReturn(now)
@@ -159,10 +161,10 @@ class PollingNewMessagesJobSpec extends PlaySpec
         verify(messageService, never()).updateMessages(any)(any)
       }
     }
-    "last activity for an ern is later than the slow polling interval" should {
+    "last activity for an ern is later than the slow polling interval"   should {
       "update messages for that ern" in {
         // last received is outside of the slow polling interval
-        val ernsAndLastReceived = Map("testErn" -> now.minus(32, ChronoUnit.MINUTES))
+        val ernsAndLastReceived  = Map("testErn" -> now.minus(32, ChronoUnit.MINUTES))
         // last submitted is outside the slow polling interval
         val ernsAndLastSubmitted = Map("testErn" -> now.minus(31, ChronoUnit.MINUTES))
         when(timeService.timestamp()).thenReturn(now)
@@ -175,10 +177,10 @@ class PollingNewMessagesJobSpec extends PlaySpec
         verify(messageService).updateMessages(eqTo("testErn"))(any)
       }
     }
-    "last received and last submitted have different ern keys" should {
+    "last received and last submitted have different ern keys"           should {
       "the merged erns are all updated" in {
         // last received is outside of the fast polling interval
-        val ernsAndLastReceived = Map("testErn" -> now.minus(6, ChronoUnit.MINUTES))
+        val ernsAndLastReceived  = Map("testErn" -> now.minus(6, ChronoUnit.MINUTES))
         // last submitted is outside the fast polling interval
         val ernsAndLastSubmitted = Map("testErn2" -> now.minus(7, ChronoUnit.MINUTES))
         when(timeService.timestamp()).thenReturn(now)
@@ -192,7 +194,7 @@ class PollingNewMessagesJobSpec extends PlaySpec
         verify(messageService).updateMessages(eqTo("testErn2"))(any)
       }
     }
-    "if an ern only has a last submitted" should {
+    "if an ern only has a last submitted"                                should {
       "update messages for that ern" in {
         // last submitted is outside the fast polling interval
         val ernsAndLastSubmitted = Map("testErn" -> now.minus(7, ChronoUnit.MINUTES))
@@ -206,7 +208,7 @@ class PollingNewMessagesJobSpec extends PlaySpec
         verify(messageService).updateMessages(eqTo("testErn"))(any)
       }
     }
-    "if an ern only has a last received" should {
+    "if an ern only has a last received"                                 should {
       "update messages for that ern" in {
         // last received is outside of the fast polling interval
         val ernsAndLastReceived = Map("testErn" -> now.minus(6, ChronoUnit.MINUTES))
@@ -220,10 +222,10 @@ class PollingNewMessagesJobSpec extends PlaySpec
         verify(messageService).updateMessages(eqTo("testErn"))(any)
       }
     }
-    "updateMessages fails" should {
+    "updateMessages fails"                                               should {
       "fail the job" in {
         // last received is outside of the fast polling interval
-        val ernsAndLastReceived = Map("testErn" -> now.minus(6, ChronoUnit.MINUTES))
+        val ernsAndLastReceived  = Map("testErn" -> now.minus(6, ChronoUnit.MINUTES))
         // last submitted is outside the fast polling interval
         val ernsAndLastSubmitted = Map("testErn" -> now.minus(7, ChronoUnit.MINUTES))
         when(timeService.timestamp()).thenReturn(now)

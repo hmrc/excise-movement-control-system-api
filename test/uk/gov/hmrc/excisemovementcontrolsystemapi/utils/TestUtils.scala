@@ -27,9 +27,15 @@ import java.time.Instant
 
 object TestUtils {
 
-  def createWorkItem(ern: String, fastPollRetries: Int = 0, availableAt: Instant,
-                     receivedAt: Instant, updatedAt: Instant, status: ProcessingStatus = ToDo,
-                     failureCount: Int = 0): WorkItem[ExciseNumberWorkItem] = {
+  def createWorkItem(
+    ern: String,
+    fastPollRetries: Int = 0,
+    availableAt: Instant,
+    receivedAt: Instant,
+    updatedAt: Instant,
+    status: ProcessingStatus = ToDo,
+    failureCount: Int = 0
+  ): WorkItem[ExciseNumberWorkItem] =
     WorkItem(
       id = new ObjectId(),
       receivedAt = receivedAt,
@@ -39,7 +45,6 @@ object TestUtils {
       failureCount = failureCount,
       item = ExciseNumberWorkItem(ern, fastPollRetries)
     )
-  }
 
   def getPreValidateTraderSuccessEISResponse: PreValidateTraderEISResponse = PreValidateTraderEISResponse(
     ExciseTraderValidationResponse(
@@ -97,7 +102,7 @@ object TestUtils {
     validateProductAuthorisationResponse = Some(ValidateProductAuthorisationResponse(valid = true))
   )
 
-  def getPreValidateTraderErrorResponse: PreValidateTraderMessageResponse = {
+  def getPreValidateTraderErrorResponse: PreValidateTraderMessageResponse =
     PreValidateTraderMessageResponse(
       validationTimeStamp = "2021-12-17T09:31:123Z",
       validTrader = false,
@@ -106,16 +111,21 @@ object TestUtils {
       entityGroup = "UK Record",
       errorCode = Some("6"),
       errorText = Some("Not Found"),
-      validateProductAuthorisationResponse = Some(ValidateProductAuthorisationResponse(
-        valid = false,
-        productError = Some(Seq(ProductError(
-          errorCode = "1",
-          errorText = "Unrecognised EPC",
-          exciseProductCode = "S200"
-        )))
-      ))
+      validateProductAuthorisationResponse = Some(
+        ValidateProductAuthorisationResponse(
+          valid = false,
+          productError = Some(
+            Seq(
+              ProductError(
+                errorCode = "1",
+                errorText = "Unrecognised EPC",
+                exciseProductCode = "S200"
+              )
+            )
+          )
+        )
+      )
     )
-  }
 
   def getPreValidateTraderRequest: PreValidateTraderRequest = PreValidateTraderRequest(
     ExciseTraderValidationRequest(

@@ -32,20 +32,25 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class PreValidateTraderService @Inject()(
+class PreValidateTraderService @Inject() (
   connector: PreValidateTraderConnector,
   dateTimeService: DateTimeService
-)(implicit ec: ExecutionContext) extends Logging {
+)(implicit ec: ExecutionContext)
+    extends Logging {
 
-  def submitMessage[A](request: ParsedPreValidateTraderRequest[A])(implicit hc: HeaderCarrier): Future[Either[Result, PreValidateTraderMessageResponse]] = {
-    connector.submitMessage(request.json, request.request.erns.head)
+  def submitMessage[A](
+    request: ParsedPreValidateTraderRequest[A]
+  )(implicit hc: HeaderCarrier): Future[Either[Result, PreValidateTraderMessageResponse]] =
+    connector
+      .submitMessage(request.json, request.request.erns.head)
       .map {
-        case Right(x) => Right(convertEISToResponseFormat(x)).flatten
+        case Right(x)    => Right(convertEISToResponseFormat(x)).flatten
         case Left(error) => Left(error)
       }
-  }
 
-  private def convertEISToResponseFormat(eisResponse: PreValidateTraderEISResponse): Either[Result, PreValidateTraderMessageResponse] = {
+  private def convertEISToResponseFormat(
+    eisResponse: PreValidateTraderEISResponse
+  ): Either[Result, PreValidateTraderMessageResponse] = {
     val exciseTraderValidationResponse = eisResponse.exciseTraderValidationResponse
     // EIS returns an array of size one all the time so if that's not the case we need to log an error
     if (exciseTraderValidationResponse.exciseTraderResponse.length == 1) {
@@ -63,14 +68,22 @@ class PreValidateTraderService @Inject()(
         )
       )
     } else {
-      logger.warn(s"[PreValidateTraderService] - PreValidateTrader response from EIS did not match expected format." +
-        s" Response: $eisResponse")
+      logger.warn(
+        s"[PreValidateTraderService] - PreValidateTrader response from EIS did not match expected format." +
+          s" Response: $eisResponse"
+      )
 
-      Left(InternalServerError(Json.toJson(ErrorResponse(
-        dateTimeService.timestamp(),
-        "PreValidateTrader Error",
-        "Failed to parse preValidateTrader response"
-      ))))
+      Left(
+        InternalServerError(
+          Json.toJson(
+            ErrorResponse(
+              dateTimeService.timestamp(),
+              "PreValidateTrader Error",
+              "Failed to parse preValidateTrader response"
+            )
+          )
+        )
+      )
     }
   }
 }

@@ -20,6 +20,6 @@ import play.api.mvc.WrappedRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 
 case class ParsedPreValidateTraderRequest[A](
-                                              request: EnrolmentRequest[A],
-                                              json: PreValidateTraderRequest
-                                            ) extends WrappedRequest[A](request)
+  request: EnrolmentRequest[A],
+  json: PreValidateTraderRequest
+) extends WrappedRequest[A](request)

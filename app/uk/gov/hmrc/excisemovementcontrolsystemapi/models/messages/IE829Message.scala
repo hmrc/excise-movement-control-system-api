@@ -26,27 +26,24 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFor
 
 import scala.xml.NodeSeq
 
-
-case class IE829Message
-(
+case class IE829Message(
   private val obj: IE829Type,
   private val key: Option[String],
   private val namespace: Option[String],
   auditType: AuditType
-) extends IEMessage with GeneratedJsonWriters {
+) extends IEMessage
+    with GeneratedJsonWriters {
 
   override def consigneeId: Option[String] =
     obj.Body.NotificationOfAcceptedExport.ConsigneeTrader.Traderid
 
-  override def administrativeReferenceCode: Seq[Option[String]] = {
+  override def administrativeReferenceCode: Seq[Option[String]] =
     obj.Body.NotificationOfAcceptedExport.ExciseMovementEad.map(x => Some(x.AdministrativeReferenceCode))
-  }
 
   override def messageType: String = MessageTypes.IE829.value
 
-  override def toXml: NodeSeq = {
+  override def toXml: NodeSeq =
     scalaxb.toXML[IE829Type](obj, namespace, key, generated.defaultScope)
-  }
 
   override def toJson: JsValue = Json.toJson(obj)
 
@@ -54,14 +51,14 @@ case class IE829Message
 
   override def messageIdentifier: String = obj.Header.MessageIdentifier
 
-  override def toString: String = s"Message type: $messageType, message identifier: $messageIdentifier, ARCs: $administrativeReferenceCode"
+  override def toString: String =
+    s"Message type: $messageType, message identifier: $messageIdentifier, ARCs: $administrativeReferenceCode"
 
 }
 
 object IE829Message {
-  def apply(message: DataRecord[MessagesOption]): IE829Message = {
+  def apply(message: DataRecord[MessagesOption]): IE829Message =
     IE829Message(message.as[IE829Type], message.key, message.namespace, NotificationOfAcceptedExport)
-  }
 
   def createFromXml(xml: NodeSeq): IE829Message = {
     val ie829: IE829Type = scalaxb.fromXML[IE829Type](xml)

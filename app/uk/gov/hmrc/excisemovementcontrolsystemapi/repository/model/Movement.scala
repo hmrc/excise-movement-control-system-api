@@ -23,25 +23,25 @@ import java.time.Instant
 import java.util.UUID
 
 case class Movement(
-                     _id: String,
-                     boxId: Option[String], // TODO remove
-                     localReferenceNumber: String,
-                     consignorId: String,
-                     consigneeId: Option[String],
-                     administrativeReferenceCode: Option[String],
-                     lastUpdated: Instant,
-                     messages: Seq[Message]
-                   )
+  _id: String,
+  boxId: Option[String], // TODO remove
+  localReferenceNumber: String,
+  consignorId: String,
+  consigneeId: Option[String],
+  administrativeReferenceCode: Option[String],
+  lastUpdated: Instant,
+  messages: Seq[Message]
+)
 
 case class Message(
-                    hash: Int,
-                    encodedMessage: String,
-                    messageType: String,
-                    messageId: String,
-                    recipient: String,
-                    boxesToNotify: Set[String],
-                    createdOn: Instant
-                  )
+  hash: Int,
+  encodedMessage: String,
+  messageType: String,
+  messageId: String,
+  recipient: String,
+  boxesToNotify: Set[String],
+  createdOn: Instant
+)
 
 object Movement {
 
@@ -53,33 +53,42 @@ object Movement {
     Json.format[Movement]
   }
 
-  private val reads: Reads[Movement] = newFormat orElse oldFormat
+  private val reads: Reads[Movement]    = newFormat orElse oldFormat
   private val writes: OWrites[Movement] = newFormat
 
   implicit val format: OFormat[Movement] = OFormat(reads, writes)
 
-  def apply(boxId: Option[String],
-            localReferenceNumber: String,
-            consignorId: String,
-            consigneeId: Option[String],
-            administrativeReferenceCode: Option[String] = None,
-            lastUpdated: Instant = Instant.now,
-            messages: Seq[Message] = Seq.empty): Movement =
-    Movement(UUID.randomUUID().toString, boxId, localReferenceNumber, consignorId, consigneeId,
-      administrativeReferenceCode, lastUpdated, messages)
+  def apply(
+    boxId: Option[String],
+    localReferenceNumber: String,
+    consignorId: String,
+    consigneeId: Option[String],
+    administrativeReferenceCode: Option[String] = None,
+    lastUpdated: Instant = Instant.now,
+    messages: Seq[Message] = Seq.empty
+  ): Movement =
+    Movement(
+      UUID.randomUUID().toString,
+      boxId,
+      localReferenceNumber,
+      consignorId,
+      consigneeId,
+      administrativeReferenceCode,
+      lastUpdated,
+      messages
+    )
 }
 
 object Message {
   def apply(
-             encodedMessage: String,
-             messageType: String,
-             messageId: String,
-             recipient: String,
-             boxesToNotify: Set[String],
-             createdOn: Instant): Message = {
-
+    encodedMessage: String,
+    messageType: String,
+    messageId: String,
+    recipient: String,
+    boxesToNotify: Set[String],
+    createdOn: Instant
+  ): Message =
     Message(encodedMessage.hashCode(), encodedMessage, messageType, messageId, recipient, boxesToNotify, createdOn)
-  }
 
   implicit val format: OFormat[Message] = {
     implicit val instantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat

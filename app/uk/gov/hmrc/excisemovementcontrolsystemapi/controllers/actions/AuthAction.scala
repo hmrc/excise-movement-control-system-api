@@ -35,15 +35,16 @@ import uk.gov.hmrc.play.http.HeaderCarrierConverter
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-
-class AuthActionImpl @Inject()
-(
+class AuthActionImpl @Inject() (
   override val authConnector: AuthConnector,
   cc: ControllerComponents,
   val parser: BodyParsers.Default,
   dateTimeService: DateTimeService
 )(implicit val ec: ExecutionContext)
-  extends BackendController(cc) with AuthorisedFunctions with AuthAction with Logging {
+    extends BackendController(cc)
+    with AuthorisedFunctions
+    with AuthAction
+    with Logging {
 
   private val fetch = authorisedEnrolments and affinityGroup and credentials and internalId
 
@@ -52,7 +53,7 @@ class AuthActionImpl @Inject()
   override def invokeBlock[A](request: Request[A], block: EnrolmentRequest[A] => Future[Result]): Future[Result] = {
 
     implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
-    implicit val req: Request[A] = request
+    implicit val req: Request[A]   = request
 
     authorise.flatMap {
       case Right(authorisedRequest) =>
@@ -62,45 +63,59 @@ class AuthActionImpl @Inject()
       case Left(error) if error.statusCode == FORBIDDEN =>
         logger.error(s"Forbidden: ${error.message}")
 
-        Future.successful(Forbidden(Json.toJson(EMCSErrorResponse(
-          dateTimeService.timestamp(),
-          "Authorisation error",
-          error.message
-        ))))
+        Future.successful(
+          Forbidden(
+            Json.toJson(
+              EMCSErrorResponse(
+                dateTimeService.timestamp(),
+                "Authorisation error",
+                error.message
+              )
+            )
+          )
+        )
 
       case Left(error) =>
         logger.error(s"Problems with Authorisation: ${error.message}")
 
-        Future.successful(Unauthorized(Json.toJson(EMCSErrorResponse(
-          dateTimeService.timestamp(),
-          "Authorisation error",
-          error.message
-        ))))
+        Future.successful(
+          Unauthorized(
+            Json.toJson(
+              EMCSErrorResponse(
+                dateTimeService.timestamp(),
+                "Authorisation error",
+                error.message
+              )
+            )
+          )
+        )
     }
   }
 
-  def authorise[A](implicit hc: HeaderCarrier, request: Request[A]): Future[Either[ErrorResponse, EnrolmentRequest[A]]] = {
+  def authorise[A](implicit
+    hc: HeaderCarrier,
+    request: Request[A]
+  ): Future[Either[ErrorResponse, EnrolmentRequest[A]]] =
     authorised(Enrolment(EnrolmentKey.EMCS_ENROLMENT))
       .retrieve(fetch) {
         case authorisedEnrolments ~ Some(Organisation) ~ Some(credentials) ~ Some(internalId) =>
           Future.successful(checkErns(authorisedEnrolments, internalId))
-        case _ ~ None ~ _ ~ _ => handleAuthError("Could not retrieve affinity group from Auth")
-        case _ ~ Some(affinityGroup) ~ _ ~ _ if affinityGroup != Organisation =>
+        case _ ~ None ~ _ ~ _                                                                 => handleAuthError("Could not retrieve affinity group from Auth")
+        case _ ~ Some(affinityGroup) ~ _ ~ _ if affinityGroup != Organisation                 =>
           handleAuthError(s"Invalid affinity group $affinityGroup from Auth")
-        case _ ~ _ ~ None ~ _ => handleAuthError("Could not retrieve credentials from Auth")
-        case _ ~ _ ~ _ ~ None => handleAuthError("Could not retrieve internalId from Auth")
-        case _ => handleAuthError("Invalid enrolment parameter from Auth")
-      }.recover {
-      case error: AuthorisationException =>
-        handleException(UNAUTHORIZED, s"Unauthorised Exception for ${request.uri} with error ${error.reason}")
-      case ex: Throwable =>
-        handleException(INTERNAL_SERVER_ERROR, s"Internal server error is ${ex.getMessage}")
-    }
-  }
+        case _ ~ _ ~ None ~ _                                                                 => handleAuthError("Could not retrieve credentials from Auth")
+        case _ ~ _ ~ _ ~ None                                                                 => handleAuthError("Could not retrieve internalId from Auth")
+        case _                                                                                => handleAuthError("Invalid enrolment parameter from Auth")
+      }
+      .recover {
+        case error: AuthorisationException =>
+          handleException(UNAUTHORIZED, s"Unauthorised Exception for ${request.uri} with error ${error.reason}")
+        case ex: Throwable                 =>
+          handleException(INTERNAL_SERVER_ERROR, s"Internal server error is ${ex.getMessage}")
+      }
 
-  private def handleAuthError[A](message: String): Future[Left[ErrorResponse, Nothing]] = {
+  private def handleAuthError[A](message: String): Future[Left[ErrorResponse, Nothing]] =
     Future.successful(Left(ErrorResponse(UNAUTHORIZED, message)))
-  }
 
   private def handleException(status: Int, msg: String): Left[ErrorResponse, Nothing] = {
     logger.error(msg)
@@ -117,13 +132,12 @@ class AuthActionImpl @Inject()
     if (erns.isEmpty) {
       logger.error(s"Could not find ${EnrolmentKey.ERN}")
       Left(ErrorResponse(FORBIDDEN, s"Could not find ${EnrolmentKey.ERN}"))
-    }
-    else {
+    } else {
       Right(EnrolmentRequest(request, erns, internalId))
     }
   }
 
-  private def getAllErnsForEmcsEnrolment[A](enrolments: Enrolments): Set[String] = {
+  private def getAllErnsForEmcsEnrolment[A](enrolments: Enrolments): Set[String] =
     enrolments
       .getEnrolment(EnrolmentKey.EMCS_ENROLMENT)
       .fold[Seq[EnrolmentIdentifier]](Seq.empty)(e =>
@@ -131,10 +145,7 @@ class AuthActionImpl @Inject()
       )
       .map(_.value)
       .toSet
-  }
 }
 
 @ImplementedBy(classOf[AuthActionImpl])
 trait AuthAction extends ActionBuilder[EnrolmentRequest, AnyContent] with ActionFunction[Request, EnrolmentRequest]
-
-

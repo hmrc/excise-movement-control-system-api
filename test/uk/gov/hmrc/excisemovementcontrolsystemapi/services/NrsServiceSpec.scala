@@ -41,21 +41,16 @@ import java.time.Instant
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
-class NrsServiceSpec
-  extends PlaySpec
-    with ScalaFutures
-    with NrsTestData
-    with EitherValues
-    with BeforeAndAfterEach {
+class NrsServiceSpec extends PlaySpec with ScalaFutures with NrsTestData with EitherValues with BeforeAndAfterEach {
 
-  implicit val ec: ExecutionContext = ExecutionContext.global
-  implicit val hc: HeaderCarrier = HeaderCarrier(authorization = Some(Authorization(testAuthToken)))
-  private val nrsConnector = mock[NrsConnector]
-  private val dateTimeService = mock[DateTimeService]
+  implicit val ec: ExecutionContext        = ExecutionContext.global
+  implicit val hc: HeaderCarrier           = HeaderCarrier(authorization = Some(Authorization(testAuthToken)))
+  private val nrsConnector                 = mock[NrsConnector]
+  private val dateTimeService              = mock[DateTimeService]
   private val authConnector: AuthConnector = mock[AuthConnector]
-  private val timeStamp = Instant.now()
-  private val userHeaderData = Seq("header" -> "test")
-  private val service = new NrsService(
+  private val timeStamp                    = Instant.now()
+  private val userHeaderData               = Seq("header" -> "test")
+  private val service                      = new NrsService(
     authConnector,
     nrsConnector,
     dateTimeService,
@@ -72,8 +67,8 @@ class NrsServiceSpec
     when(dateTimeService.timestamp()).thenReturn(timeStamp)
     when(authConnector.authorise[NonRepudiationIdentityRetrievals](any, any)(any, any)) thenReturn
       Future.successful(testAuthRetrievals)
-    when(nrsConnector.sendToNrs(any, any)(any)).
-      thenReturn(Future.successful(NonRepudiationSubmissionAccepted("submissionId")))
+    when(nrsConnector.sendToNrs(any, any)(any))
+      .thenReturn(Future.successful(NonRepudiationSubmissionAccepted("submissionId")))
     when(message.consignorId).thenReturn("ern")
   }
 
@@ -86,15 +81,15 @@ class NrsServiceSpec
       submitNrs(hc)
 
       val encodePayload = Base64.getEncoder.encodeToString("<IE815>test</IE815>".getBytes(StandardCharsets.UTF_8))
-      val nrsPayload = NrsPayload(encodePayload, createExpectedMetadata)
+      val nrsPayload    = NrsPayload(encodePayload, createExpectedMetadata)
 
       verify(nrsConnector).sendToNrs(eqTo(nrsPayload), eqTo("correlationId"))(eqTo(hc))
     }
 
     "return an error" when {
       "NRS submit request fails" in {
-        when(nrsConnector.sendToNrs(any, any)(any)).
-          thenReturn(Future.successful(NonRepudiationSubmissionFailed(INTERNAL_SERVER_ERROR, "any reason")))
+        when(nrsConnector.sendToNrs(any, any)(any))
+          .thenReturn(Future.successful(NonRepudiationSubmissionFailed(INTERNAL_SERVER_ERROR, "any reason")))
 
         submitNrs(hc) mustBe NonRepudiationSubmissionFailed(INTERNAL_SERVER_ERROR, "any reason")
       }
@@ -107,7 +102,7 @@ class NrsServiceSpec
     }
   }
 
-  private def createExpectedMetadata = {
+  private def createExpectedMetadata =
     NrsMetadata(
       businessId = "emcs",
       notableEvent = "emcs-create-a-movement-api",
@@ -119,7 +114,6 @@ class NrsServiceSpec
       headerData = userHeaderData.toMap,
       searchKeys = Map("ern" -> "ern")
     )
-  }
 
   private def submitNrs(hc: HeaderCarrier): NonRepudiationSubmission = {
 

@@ -26,19 +26,19 @@ import scala.util.{Failure, Success, Try}
 
 trait ResponseHandler extends Logging {
 
-  def extractIfSuccessful[T](response: HttpResponse)(implicit reads: Reads[T], tt: TypeTag[T]): Either[HttpResponse, T] =
+  def extractIfSuccessful[T](
+    response: HttpResponse
+  )(implicit reads: Reads[T], tt: TypeTag[T]): Either[HttpResponse, T] =
     if (is2xx(response.status)) Right(jsonAs[T](response.body))
     else Left(response)
 
-  def jsonAs[T](body: String)(implicit reads: Reads[T], tt: TypeTag[T]): T = {
+  def jsonAs[T](body: String)(implicit reads: Reads[T], tt: TypeTag[T]): T =
     Try(Json.parse(body).as[T]) match {
-      case Success(obj) => obj
-      case Failure(exception) => throw new RuntimeException(s"Response body could not be read as type ${typeOf[T]}", exception)
+      case Success(obj)       => obj
+      case Failure(exception) =>
+        throw new RuntimeException(s"Response body could not be read as type ${typeOf[T]}", exception)
     }
-  }
 
-  def removeControlDocumentReferences(errorMsg: Option[String]): Option[String] = {
-    errorMsg.map { x => x.replaceAll("/con:[^/]*(?=/)", "") }
-  }
+  def removeControlDocumentReferences(errorMsg: Option[String]): Option[String] =
+    errorMsg.map(x => x.replaceAll("/con:[^/]*(?=/)", ""))
 }
-

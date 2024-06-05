@@ -24,15 +24,19 @@ import java.util.Base64
 
 class EmcsUtils {
 
-  def encode(str: String): String = {
+  def encode(str: String): String =
     Base64.getEncoder.encodeToString(str.getBytes(StandardCharsets.UTF_8))
-  }
 
-  def decode(str: String): String = {
+  def decode(str: String): String =
     Base64.getDecoder.decode(str).map(_.toChar).mkString
-  }
 
   def sha256Hash(text: String): String =
-    format("%064x", new BigInteger(1, getInstance("SHA-256")
-      .digest(text.getBytes("UTF-8"))))
+    format(
+      "%064x",
+      new BigInteger(
+        1,
+        getInstance("SHA-256")
+          .digest(text.getBytes("UTF-8"))
+      )
+    )
 }

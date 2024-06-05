@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
 
-
 import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.{reset, when}
@@ -35,22 +34,22 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-class RetryingSpec extends PlaySpec with ScalaFutures with BeforeAndAfterEach{
+class RetryingSpec extends PlaySpec with ScalaFutures with BeforeAndAfterEach {
 
-  private val mockFutures =  mock[Futures]
-  private val delays = List.fill(3)(0.millis)
+  private val mockFutures  = mock[Futures]
+  private val delays       = List.fill(3)(0.millis)
   private var numOfRetried = 0
 
-  class RetryingObj @Inject() extends Retrying{
+  class RetryingObj @Inject() extends Retrying {
     override implicit val ec: ExecutionContext = ExecutionContext.global
-    override implicit val futures: Futures = mockFutures
+    override implicit val futures: Futures     = mockFutures
   }
 
   private val retrying = new RetryingObj
 
   private val retryCondition: Try[HttpResponse] => Boolean = {
-    case Success(value)  => Status.isClientError(value.status) || Status.isServerError(value.status)
-    case Failure(_) => true
+    case Success(value) => Status.isClientError(value.status) || Status.isServerError(value.status)
+    case Failure(_)     => true
 
   }
 
@@ -65,9 +64,8 @@ class RetryingSpec extends PlaySpec with ScalaFutures with BeforeAndAfterEach{
   "retry" should {
     "process a block and return 200 with no retry" in {
 
-      def block: Future[HttpResponse] = {
-          Future.successful(HttpResponse(200, "Success"))
-      }
+      def block: Future[HttpResponse] =
+        Future.successful(HttpResponse(200, "Success"))
 
       val result = retrying.retry(delays, retryCondition, "/url")(block).futureValue
 
@@ -77,9 +75,8 @@ class RetryingSpec extends PlaySpec with ScalaFutures with BeforeAndAfterEach{
 
     "retry 3 times" when {
       "always return a non 2xx status code" in {
-        def block: Future[HttpResponse] = {
+        def block: Future[HttpResponse] =
           Future.successful(HttpResponse(BAD_REQUEST, "failure"))
-        }
 
         val result = await(retrying.retry(delays, retryCondition, "/url")(block))
 
@@ -88,11 +85,11 @@ class RetryingSpec extends PlaySpec with ScalaFutures with BeforeAndAfterEach{
 
       "an exception occur continuously" in {
         def block: Future[HttpResponse] = {
-            numOfRetried += 1
-            Future.failed(new RuntimeException("error"))
+          numOfRetried += 1
+          Future.failed(new RuntimeException("error"))
         }
 
-        the [RuntimeException] thrownBy {
+        the[RuntimeException] thrownBy {
           await(retrying.retry(delays, retryCondition, "/url")(block))
         } must have message "error"
 
@@ -105,8 +102,8 @@ class RetryingSpec extends PlaySpec with ScalaFutures with BeforeAndAfterEach{
         def block: Future[HttpResponse] = {
           numOfRetried += 1
           numOfRetried match {
-              case 1 => Future.successful(HttpResponse(BAD_REQUEST, "failure"))
-              case 2 => Future.successful(HttpResponse(OK, "Success"))
+            case 1 => Future.successful(HttpResponse(BAD_REQUEST, "failure"))
+            case 2 => Future.successful(HttpResponse(OK, "Success"))
           }
         }
 

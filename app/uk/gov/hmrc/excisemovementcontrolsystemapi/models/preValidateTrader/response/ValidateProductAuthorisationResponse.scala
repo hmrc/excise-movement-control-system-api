@@ -19,9 +19,9 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.resp
 import play.api.libs.json.{Format, Json}
 
 case class ValidateProductAuthorisationResponse(
-                                                 valid: Boolean,
-                                                 productError: Option[Seq[ProductError]] = None
-                                               )
+  valid: Boolean,
+  productError: Option[Seq[ProductError]] = None
+)
 
 object ValidateProductAuthorisationResponse {
   implicit val format: Format[ValidateProductAuthorisationResponse] = Json.format[ValidateProductAuthorisationResponse]

@@ -31,13 +31,12 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import java.time.Instant
 import scala.concurrent.ExecutionContext
 
-
 class ValidateAcceptHeaderActionSpec extends PlaySpec {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.global
 
   private val dateTimeService = mock[DateTimeService]
-  private val timestamp = Instant.now
+  private val timestamp       = Instant.now
   when(dateTimeService.timestamp()).thenReturn(timestamp)
 
   private val sut = new ValidateAcceptHeaderAction(dateTimeService)
@@ -48,7 +47,7 @@ class ValidateAcceptHeaderActionSpec extends PlaySpec {
       "Accept header is xml with version 1.0" in {
 
         val request = createRequestWithAcceptHeader("application/vnd.hmrc.1.0+xml")
-        val result = await(sut.filter(request))
+        val result  = await(sut.filter(request))
 
         result mustBe None
       }
@@ -84,25 +83,23 @@ class ValidateAcceptHeaderActionSpec extends PlaySpec {
 
       "accept header is the wrong version" in {
         val request = createRequestWithAcceptHeader("application/vnd.hmrc.3.0+xml")
-        val result = await(sut.filter(request))
+        val result  = await(sut.filter(request))
 
         result mustBe expectedError
       }
     }
   }
 
-  private def expectedError: Option[Result] = {
-    Some(NotAcceptable(Json.toJson(
-      ErrorResponse(
-        timestamp,
-        "Invalid Accept header",
-        "The accept header is missing or invalid"))))
-  }
+  private def expectedError: Option[Result] =
+    Some(
+      NotAcceptable(
+        Json.toJson(ErrorResponse(timestamp, "Invalid Accept header", "The accept header is missing or invalid"))
+      )
+    )
 
-  private def createRequestWithAcceptHeader(header: String): FakeRequest[AnyContent] = {
+  private def createRequestWithAcceptHeader(header: String): FakeRequest[AnyContent] =
     FakeRequest()
       .withHeaders(
         FakeHeaders(Seq(HeaderNames.ACCEPT -> header))
       )
-  }
 }

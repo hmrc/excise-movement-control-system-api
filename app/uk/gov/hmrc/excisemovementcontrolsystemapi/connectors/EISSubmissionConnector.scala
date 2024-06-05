@@ -34,14 +34,15 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
-class EISSubmissionConnector @Inject()
-(
+class EISSubmissionConnector @Inject() (
   httpClient: HttpClient,
   emcsUtils: EmcsUtils,
   appConfig: AppConfig,
   metrics: MetricRegistry,
   dateTimeService: DateTimeService
-)(implicit ec: ExecutionContext) extends EISSubmissionHeaders with Logging {
+)(implicit ec: ExecutionContext)
+    extends EISSubmissionHeaders
+    with Logging {
 
   def submitMessage(
     message: IEMessage,
@@ -53,36 +54,40 @@ class EISSubmissionConnector @Inject()
     val timer = metrics.timer("emcs.submission.connector.timer").time()
 
     //todo EMCS-530: add retry
-    val timestamp = dateTimeService.timestamp()
+    val timestamp       = dateTimeService.timestamp()
     val createdDateTime = timestamp.asStringInMilliseconds
-    val wrappedXml = wrapXmlInControlDocument(message.messageIdentifier, requestXmlAsString, authorisedErn)
-    val messageType = message.messageType
-    val encodedMessage = emcsUtils.encode(wrappedXml.toString)
+    val wrappedXml      = wrapXmlInControlDocument(message.messageIdentifier, requestXmlAsString, authorisedErn)
+    val messageType     = message.messageType
+    val encodedMessage  = emcsUtils.encode(wrappedXml.toString)
 
     val eisRequest = EISSubmissionRequest(authorisedErn, messageType, encodedMessage)
 
-    httpClient.POST[EISSubmissionRequest, Either[Result, EISSubmissionResponse]](
-      appConfig.emcsReceiverMessageUrl,
-      eisRequest,
-      build(correlationId, createdDateTime, appConfig.submissionBearerToken)
-    )(EISSubmissionRequest.format, EISHttpReader(correlationId, authorisedErn, createdDateTime, dateTimeService, messageType), hc, ec)
+    httpClient
+      .POST[EISSubmissionRequest, Either[Result, EISSubmissionResponse]](
+        appConfig.emcsReceiverMessageUrl,
+        eisRequest,
+        build(correlationId, createdDateTime, appConfig.submissionBearerToken)
+      )(
+        EISSubmissionRequest.format,
+        EISHttpReader(correlationId, authorisedErn, createdDateTime, dateTimeService, messageType),
+        hc,
+        ec
+      )
       .andThen { case _ => timer.stop() }
-      .recover {
-        case ex: Throwable =>
+      .recover { case ex: Throwable =>
+        logger.warn(EISErrorMessage(createdDateTime, authorisedErn, ex.getMessage, correlationId, messageType), ex)
 
-          logger.warn(EISErrorMessage(createdDateTime, authorisedErn, ex.getMessage, correlationId, messageType), ex)
-
-          val error = EisErrorResponsePresentation(
-            timestamp,
-            "Internal server error",
-            "Unexpected error occurred while processing Submission request",
-            correlationId
-          )
-          Left(InternalServerError(Json.toJson(error)))
+        val error = EisErrorResponsePresentation(
+          timestamp,
+          "Internal server error",
+          "Unexpected error occurred while processing Submission request",
+          correlationId
+        )
+        Left(InternalServerError(Json.toJson(error)))
       }
   }
 
-  private def wrapXmlInControlDocument(messageIdentifier: String, innerXml: String, ern: String): NodeSeq = {
+  private def wrapXmlInControlDocument(messageIdentifier: String, innerXml: String, ern: String): NodeSeq =
     <con:Control xmlns:con="http://www.govtalk.gov.uk/taxation/InternationalTrade/Common/ControlDocument">
       <con:MetaData>
         <con:MessageId>
@@ -104,5 +109,4 @@ class EISSubmissionConnector @Inject()
         </con:ReturnData>
       </con:OperationRequest>
     </con:Control>
-  }
 }

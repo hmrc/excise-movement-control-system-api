@@ -26,7 +26,7 @@ trait MovementTestUtils {
     lrn: String,
     arc: String,
     consigneeId: Option[String]
-  ): ExciseMovementResponse = {
+  ): ExciseMovementResponse =
     ExciseMovementResponse(
       "cfdb20c7-d0b0-4b8b-a071-737d68dede5e",
       None,
@@ -35,11 +35,10 @@ trait MovementTestUtils {
       consigneeId,
       Some(arc)
     )
-  }
 
   def createMovementResponseFromMovement(
     movement: Movement
-  ): ExciseMovementResponse = {
+  ): ExciseMovementResponse =
     ExciseMovementResponse(
       movement._id,
       None,
@@ -48,6 +47,5 @@ trait MovementTestUtils {
       movement.consigneeId,
       movement.administrativeReferenceCode
     )
-  }
 
 }

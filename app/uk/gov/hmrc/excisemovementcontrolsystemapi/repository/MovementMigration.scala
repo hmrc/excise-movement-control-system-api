@@ -39,9 +39,14 @@ class MovementMigration @Inject() (mongoComponent: MongoComponent)(implicit ec: 
 
     logger.info("Starting movement format migration")
 
-    val result = collection.updateMany(Filters.`type`("lastUpdated", BsonType.STRING), Seq(
-      Aggregates.set(Field("lastUpdated", Json.obj("$toDate" -> "$lastUpdated")))
-    )).toFuture()
+    val result = collection
+      .updateMany(
+        Filters.`type`("lastUpdated", BsonType.STRING),
+        Seq(
+          Aggregates.set(Field("lastUpdated", Json.obj("$toDate" -> "$lastUpdated")))
+        )
+      )
+      .toFuture()
 
     result.onComplete {
       case Success(_) =>

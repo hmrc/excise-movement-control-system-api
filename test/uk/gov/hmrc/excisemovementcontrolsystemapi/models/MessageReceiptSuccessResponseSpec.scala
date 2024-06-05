@@ -33,9 +33,9 @@ class MessageReceiptSuccessResponseSpec extends AnyFreeSpec with Matchers {
   "must read recordsAffected from a number" in {
 
     val json = Json.obj(
-      "dateTime" -> expected.dateTime,
+      "dateTime"                 -> expected.dateTime,
       "exciseRegistrationNumber" -> "someern",
-      "recordsAffected" -> 1337
+      "recordsAffected"          -> 1337
     )
 
     val result = json.validate[MessageReceiptSuccessResponse]
@@ -47,9 +47,9 @@ class MessageReceiptSuccessResponseSpec extends AnyFreeSpec with Matchers {
   "must read recordsAffected from a string" in {
 
     val json = Json.obj(
-      "dateTime" -> expected.dateTime,
+      "dateTime"                 -> expected.dateTime,
       "exciseRegistrationNumber" -> "someern",
-      "recordsAffected" -> "1337"
+      "recordsAffected"          -> "1337"
     )
 
     val result = json.validate[MessageReceiptSuccessResponse]
@@ -61,9 +61,9 @@ class MessageReceiptSuccessResponseSpec extends AnyFreeSpec with Matchers {
   "must fail to read recordsAffected from an invalid string" in {
 
     val json = Json.obj(
-      "dateTime" -> expected.dateTime,
+      "dateTime"                 -> expected.dateTime,
       "exciseRegistrationNumber" -> "someern",
-      "recordsAffected" -> "foobar"
+      "recordsAffected"          -> "foobar"
     )
 
     val result = json.validate[MessageReceiptSuccessResponse]

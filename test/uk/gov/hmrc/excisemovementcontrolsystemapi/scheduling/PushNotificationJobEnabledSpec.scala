@@ -26,20 +26,20 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PushNotificationServi
 
 class PushNotificationJobEnabledSpec extends MixedPlaySpec {
 
-  private val movementRepository = mock[MovementRepository]
+  private val movementRepository      = mock[MovementRepository]
   private val pushNotificationService = mock[PushNotificationService]
 
   "push notifications job" when {
-    def setupApp(pushNotificationsEnabled: Boolean): Application = {
+    def setupApp(pushNotificationsEnabled: Boolean): Application =
       GuiceApplicationBuilder()
         .overrides(
           bind[MovementRepository].toInstance(movementRepository),
-          bind[PushNotificationService].toInstance(pushNotificationService),
+          bind[PushNotificationService].toInstance(pushNotificationService)
         )
         .configure(
-          "featureFlags.pushNotificationsEnabled" -> pushNotificationsEnabled,
-        ).build()
-    }
+          "featureFlags.pushNotificationsEnabled" -> pushNotificationsEnabled
+        )
+        .build()
 
     "initialised" should {
       "be enabled if push notifications is enabled" in new App(setupApp(pushNotificationsEnabled = true)) {

@@ -41,58 +41,61 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.SeqHasAsJava
 
 @Singleton
-class MovementRepository @Inject()
-(
+class MovementRepository @Inject() (
   mongo: MongoComponent,
   appConfig: AppConfig,
   timeService: DateTimeService
-)(implicit ec: ExecutionContext) extends
-  PlayMongoRepository[Movement](
-    collectionName = "movements",
-    mongoComponent = mongo,
-    domainFormat = Movement.format,
-    indexes = mongoIndexes(appConfig.movementTTL),
-    extraCodecs = Seq(
-      Codecs.playFormatCodec(ErnAndLastReceived.format),
-      Codecs.playFormatCodec(MessageNotification.format)
-    ),
-    replaceIndexes = true
-  ) with Logging {
+)(implicit ec: ExecutionContext)
+    extends PlayMongoRepository[Movement](
+      collectionName = "movements",
+      mongoComponent = mongo,
+      domainFormat = Movement.format,
+      indexes = mongoIndexes(appConfig.movementTTL),
+      extraCodecs = Seq(
+        Codecs.playFormatCodec(ErnAndLastReceived.format),
+        Codecs.playFormatCodec(MessageNotification.format)
+      ),
+      replaceIndexes = true
+    )
+    with Logging {
 
   private def byId(id: String): Bson = Filters.equal("_id", id)
 
-  private def byLrnAndErns(localReferenceNumber: String, erns: List[String]): Bson = {
+  private def byLrnAndErns(localReferenceNumber: String, erns: List[String]): Bson =
     and(
       equal("localReferenceNumber", localReferenceNumber),
-      or(in("consignorId", erns: _*),
-        in("consigneeId", erns: _*))
+      or(in("consignorId", erns: _*), in("consigneeId", erns: _*))
     )
-  }
-
 
   def saveMovement(movement: Movement): Future[Boolean] = Mdc.preservingMdc {
-    collection.insertOne(movement.copy(lastUpdated = timeService.timestamp()))
+    collection
+      .insertOne(movement.copy(lastUpdated = timeService.timestamp()))
       .toFuture()
       .map(_ => true)
   }
 
   def save(movement: Movement): Future[Done] = Mdc.preservingMdc {
-    collection.findOneAndReplace(
-      filter = byId(movement._id),
-      replacement = movement,
-      FindOneAndReplaceOptions().upsert(true)
-    ).toFuture().as(Done)
+    collection
+      .findOneAndReplace(
+        filter = byId(movement._id),
+        replacement = movement,
+        FindOneAndReplaceOptions().upsert(true)
+      )
+      .toFuture()
+      .as(Done)
   }
 
   def updateMovement(movement: Movement): Future[Option[Movement]] = Mdc.preservingMdc {
 
     val updatedMovement = movement.copy(lastUpdated = timeService.timestamp())
 
-    collection.findOneAndReplace(
-      filter = byId(updatedMovement._id),
-      replacement = updatedMovement,
-      new FindOneAndReplaceOptions().returnDocument(ReturnDocument.AFTER)
-    ).headOption()
+    collection
+      .findOneAndReplace(
+        filter = byId(updatedMovement._id),
+        replacement = updatedMovement,
+        new FindOneAndReplaceOptions().returnDocument(ReturnDocument.AFTER)
+      )
+      .headOption()
   }
 
   def getMovementById(id: String): Future[Option[Movement]] = Mdc.preservingMdc {
@@ -107,10 +110,12 @@ class MovementRepository @Inject()
 
   def getMovementByERN(ern: Seq[String]): Future[Seq[Movement]] = Mdc.preservingMdc {
     collection
-      .find(or(
-        in("consignorId", ern: _*),
-        in("consigneeId", ern: _*)
-      ))
+      .find(
+        or(
+          in("consignorId", ern: _*),
+          in("consigneeId", ern: _*)
+        )
+      )
       .toFuture()
   }
 
@@ -119,44 +124,60 @@ class MovementRepository @Inject()
   }
 
   def getErnsAndLastReceived: Future[Map[String, Instant]] = Mdc.preservingMdc {
-    collection.aggregate[ErnAndLastReceived](Seq(
-      Aggregates.unwind("$messages"),
-      Aggregates.group("$messages.recipient", Accumulators.max("lastReceived", "$messages.createdOn"))
-    )).toFuture().map {
-      _.map { field =>
-        field._id -> field.lastReceived
-      }.toMap
-    }
+    collection
+      .aggregate[ErnAndLastReceived](
+        Seq(
+          Aggregates.unwind("$messages"),
+          Aggregates.group("$messages.recipient", Accumulators.max("lastReceived", "$messages.createdOn"))
+        )
+      )
+      .toFuture()
+      .map {
+        _.map { field =>
+          field._id -> field.lastReceived
+        }.toMap
+      }
   }
 
   def getPendingMessageNotifications: Future[Seq[MessageNotification]] = Mdc.preservingMdc {
-    collection.aggregate[MessageNotification](Seq(
-      // This match is to do an initial filter which filters out all movements that have no
-      // messages which need to notify.
-      // `Filters.gt("boxesToNotify", "")` is the best way I've found to do this filter which
-      // also uses the index on the "boxesToNotify" field
-      Aggregates.`match`(Filters.elemMatch("messages", Filters.gt("boxesToNotify", ""))),
-      Aggregates.unwind("$messages"),
-      Aggregates.unwind("$messages.boxesToNotify"),
-      Aggregates.replaceRoot(Json.obj(
-        "movementId" -> "$_id",
-        "messageId" -> "$messages.messageId",
-        "messageType" -> "$messages.messageType",
-        "consignor" -> "$consignorId",
-        "consignee" -> "$consigneeId",
-        "arc" -> "$administrativeReferenceCode",
-        "recipient" -> "$messages.recipient",
-        "boxId" -> "$messages.boxesToNotify"
-      ).toDocument())
-    )).toFuture()
+    collection
+      .aggregate[MessageNotification](
+        Seq(
+          // This match is to do an initial filter which filters out all movements that have no
+          // messages which need to notify.
+          // `Filters.gt("boxesToNotify", "")` is the best way I've found to do this filter which
+          // also uses the index on the "boxesToNotify" field
+          Aggregates.`match`(Filters.elemMatch("messages", Filters.gt("boxesToNotify", ""))),
+          Aggregates.unwind("$messages"),
+          Aggregates.unwind("$messages.boxesToNotify"),
+          Aggregates.replaceRoot(
+            Json
+              .obj(
+                "movementId"  -> "$_id",
+                "messageId"   -> "$messages.messageId",
+                "messageType" -> "$messages.messageType",
+                "consignor"   -> "$consignorId",
+                "consignee"   -> "$consigneeId",
+                "arc"         -> "$administrativeReferenceCode",
+                "recipient"   -> "$messages.recipient",
+                "boxId"       -> "$messages.boxesToNotify"
+              )
+              .toDocument()
+          )
+        )
+      )
+      .toFuture()
   }
 
   def confirmNotification(movementId: String, messageId: String, boxId: String): Future[Done] = Mdc.preservingMdc {
-    collection.updateOne(
-      Filters.eq("_id", movementId),
-      Updates.pull("messages.$[m].boxesToNotify", boxId),
-      UpdateOptions().arrayFilters(List(Filters.eq("m.messageId", messageId)).asJava)
-    ).toFuture().as(Done)
+    collection
+      .updateOne(
+        Filters.eq("_id", movementId),
+        Updates.pull("messages.$[m].boxesToNotify", boxId),
+        UpdateOptions().arrayFilters(List(Filters.eq("m.messageId", messageId)).asJava)
+      )
+      .toFuture()
+      .as(Done)
   }
 }
 
@@ -174,7 +195,8 @@ object MovementRepository {
           Indexes.ascending("localReferenceNumber"),
           Indexes.ascending("consignorId")
         ),
-        IndexOptions().name("lrn_consignor_index")
+        IndexOptions()
+          .name("lrn_consignor_index")
           .background(true)
           .unique(true)
       ),
@@ -188,20 +210,19 @@ object MovementRepository {
       )
     )
 
-  def createIndex(fieldName: String, indexName: String): IndexModel = {
+  def createIndex(fieldName: String, indexName: String): IndexModel =
     IndexModel(
       Indexes.ascending(fieldName),
       IndexOptions().name(indexName)
     )
-  }
 
-  def createIndexWithBackground(fieldName: String, indexName: String): IndexModel = {
+  def createIndexWithBackground(fieldName: String, indexName: String): IndexModel =
     IndexModel(
       Indexes.ascending(fieldName),
-      IndexOptions().name(indexName)
+      IndexOptions()
+        .name(indexName)
         .background(true)
     )
-  }
 
   final case class ErnAndLastReceived(_id: String, lastReceived: Instant)
 
@@ -210,15 +231,15 @@ object MovementRepository {
   }
 
   final case class MessageNotification(
-                                        movementId: String,
-                                        messageId: String,
-                                        messageType: String,
-                                        consignor: String,
-                                        consignee: Option[String],
-                                        arc: Option[String],
-                                        recipient: String,
-                                        boxId: String
-                                      )
+    movementId: String,
+    messageId: String,
+    messageType: String,
+    consignor: String,
+    consignee: Option[String],
+    arc: Option[String],
+    recipient: String,
+    boxId: String
+  )
 
   object MessageNotification {
     implicit lazy val format: OFormat[MessageNotification] = Json.format

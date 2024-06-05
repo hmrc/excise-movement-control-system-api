@@ -28,16 +28,15 @@ trait DateTimeService {
 
 @Singleton
 class DateTimeServiceImpl extends DateTimeService {
-  override def timestamp(): Instant  = Instant.now()
+  override def timestamp(): Instant = Instant.now()
 }
 
 object DateTimeService {
   implicit class DateTimeFormat(val dateTime: Instant) extends AnyVal {
 
-    implicit def asStringInMilliseconds: String = {
+    implicit def asStringInMilliseconds: String =
       ZonedDateTime
         .ofInstant(dateTime, ZoneOffset.UTC)
         .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX"))
-    }
   }
 }

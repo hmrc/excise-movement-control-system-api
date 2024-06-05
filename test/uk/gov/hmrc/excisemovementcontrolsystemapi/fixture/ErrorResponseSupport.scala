@@ -23,25 +23,22 @@ trait ErrorResponseSupport {
     dateTime: String,
     message: String,
     debugMessage: String
-  ): JsValue = {
-    Json.parse(
-      s"""
+  ): JsValue =
+    Json.parse(s"""
          |{
          |   "dateTime":"$dateTime",
          |   "message":"$message",
          |   "debugMessage": "$debugMessage"
          |}
          |""".stripMargin)
-  }
 
   def expectedEisErrorResponsePresentation(
     dateTime: String,
     message: String,
     debugMessage: String,
     correlationId: String
-  ): JsValue = {
-      Json.parse(
-        s"""
+  ): JsValue =
+    Json.parse(s"""
            |{
            |   "dateTime":"$dateTime",
            |   "message":"$message",
@@ -49,6 +46,5 @@ trait ErrorResponseSupport {
            |   "correlationId":"$correlationId"
            |}
            |""".stripMargin)
-  }
 
 }

@@ -22,7 +22,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType
 
 import scala.xml.NodeSeq
 
-trait IEMessage  {
+trait IEMessage {
   def messageIdentifier: String
 
   def consigneeId: Option[String]
@@ -41,10 +41,9 @@ trait IEMessage  {
 }
 
 trait SubmitterTypeConverter {
-  def convertSubmitterType(submitterType: SubmitterType): ExciseTraderType = {
+  def convertSubmitterType(submitterType: SubmitterType): ExciseTraderType =
     submitterType match {
       case Number1Value31 => Consignor
       case Number2Value30 => Consignee
     }
-  }
 }

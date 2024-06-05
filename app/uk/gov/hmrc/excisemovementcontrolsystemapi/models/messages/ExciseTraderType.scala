@@ -27,4 +27,3 @@ case object Consignor extends ExciseTraderType {
 case object Consignee extends ExciseTraderType {
   override def name: String = "Consignee"
 }
-

@@ -33,14 +33,16 @@ object MessageResponse {
   implicit val format: Reads[MessageResponse] = Json.reads[MessageResponse]
 
   implicit val write: Writes[MessageResponse] = (
-      (JsPath \ "encodedMessage").write[String] and
+    (JsPath \ "encodedMessage").write[String] and
       (JsPath \ "messageType").write[String] and
       (JsPath \ "messageId").write[String] and
-        (JsPath \ "createdOn").write[String]
-    )(e => (
-    e.encodedMessage,
-    e.messageType,
-    e.messageId,
-    e.createdOn.asStringInMilliseconds,
-  ))
+      (JsPath \ "createdOn").write[String]
+  )(e =>
+    (
+      e.encodedMessage,
+      e.messageType,
+      e.messageId,
+      e.createdOn.asStringInMilliseconds
+    )
+  )
 }

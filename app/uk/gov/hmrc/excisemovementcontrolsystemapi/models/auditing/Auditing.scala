@@ -31,16 +31,14 @@ trait Auditing {
 
       val messageInfo = Json.obj(
         "messageCode" -> messageCode,
-               "content" -> content
+        "content"     -> content
       )
 
       val outcomeInfo = failureOpt match {
-        case None =>
+        case None         =>
           Json.obj("outcome" -> Json.obj("status" -> "SUCCESS"))
         case Some(reason) =>
-          Json.obj(
-          "outcome" -> Json.obj("status" -> "FAILURE",
-                 "failureReason" -> reason))
+          Json.obj("outcome" -> Json.obj("status" -> "FAILURE", "failureReason" -> reason))
       }
 
       messageInfo ++ outcomeInfo
@@ -49,17 +47,17 @@ trait Auditing {
 
   object AuditEventFactory {
 
-    def createAuditEvent(input: IEMessage, failureOpt: Option[String])(implicit hc: HeaderCarrier): ExtendedDataEvent = {
+    def createAuditEvent(input: IEMessage, failureOpt: Option[String])(implicit
+      hc: HeaderCarrier
+    ): ExtendedDataEvent = {
       val detail = AuditDetail(input.messageType, input.toJson, failureOpt)
       ExtendedDataEvent(
-          auditSource = auditSource,
-          auditType = input.auditType.name,
-          tags = hc.toAuditTags(),
-          detail = detail.toJsObj
-        )
+        auditSource = auditSource,
+        auditType = input.auditType.name,
+        tags = hc.toAuditTags(),
+        detail = detail.toJsObj
+      )
     }
   }
 
-
 }
-

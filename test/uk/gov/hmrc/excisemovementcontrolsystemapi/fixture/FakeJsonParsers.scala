@@ -28,23 +28,24 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait FakeJsonParsers {
   object FakeSuccessJsonParser extends ParseJsonAction {
-    override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedPreValidateTraderRequest[A]]] = {
-      Future.successful(Right(preValidateTrader.request.ParsedPreValidateTraderRequest(
-        EnrolmentRequest(request, Set("ern123"), "123"),
-        getPreValidateTraderRequest)))
-    }
+    override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedPreValidateTraderRequest[A]]] =
+      Future.successful(
+        Right(
+          preValidateTrader.request.ParsedPreValidateTraderRequest(
+            EnrolmentRequest(request, Set("ern123"), "123"),
+            getPreValidateTraderRequest
+          )
+        )
+      )
 
     override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global
   }
 
   object FakeFailureJsonParser extends ParseJsonAction {
-    override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedPreValidateTraderRequest[A]]] = {
+    override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedPreValidateTraderRequest[A]]] =
       Future.successful(Left(BadRequest("error")))
-    }
 
     override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global
   }
 
-
 }
-

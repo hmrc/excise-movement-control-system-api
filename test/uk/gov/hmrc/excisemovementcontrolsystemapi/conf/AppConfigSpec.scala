@@ -47,7 +47,7 @@ class AppConfigSpec extends PlaySpec {
     """.stripMargin
 
   private def createAppConfig = {
-    val config = ConfigFactory.parseString(validAppConfig)
+    val config        = ConfigFactory.parseString(validAppConfig)
     val configuration = Configuration(config)
     new AppConfig(configuration, new ServicesConfig(configuration))
   }

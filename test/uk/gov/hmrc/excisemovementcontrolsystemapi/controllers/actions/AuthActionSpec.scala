@@ -38,19 +38,16 @@ import uk.gov.hmrc.play.bootstrap.tools.Stubs.stubMessagesControllerComponents
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
-class AuthActionSpec
-  extends PlaySpec
-    with AuthTestSupport
-    with BeforeAndAfterEach
-    with EitherValues {
+class AuthActionSpec extends PlaySpec with AuthTestSupport with BeforeAndAfterEach with EitherValues {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
   private val now = Instant.now
 
-  private val parser = mock[BodyParsers.Default]
+  private val parser          = mock[BodyParsers.Default]
   private val dateTimeService = mock[DateTimeService]
-  private val authenticator = new AuthActionImpl(authConnector, stubMessagesControllerComponents(), parser, dateTimeService)(ec)
+  private val authenticator   =
+    new AuthActionImpl(authConnector, stubMessagesControllerComponents(), parser, dateTimeService)(ec)
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -95,11 +92,15 @@ class AuthActionSpec
 
         val result = await(authenticator.invokeBlock(FakeRequest(), block))
 
-        result mustBe Unauthorized(Json.toJson(ErrorResponse(
-          now,
-          "Authorisation error",
-          "Could not retrieve internalId from Auth"
-        )))
+        result mustBe Unauthorized(
+          Json.toJson(
+            ErrorResponse(
+              now,
+              "Authorisation error",
+              "Could not retrieve internalId from Auth"
+            )
+          )
+        )
       }
 
       "affinity group is Individual" in {
@@ -107,11 +108,15 @@ class AuthActionSpec
 
         val result = await(authenticator.invokeBlock(FakeRequest(), block))
 
-        result mustBe Unauthorized(Json.toJson(ErrorResponse(
-          now,
-          "Authorisation error",
-          s"Invalid affinity group $Individual from Auth"
-        )))
+        result mustBe Unauthorized(
+          Json.toJson(
+            ErrorResponse(
+              now,
+              "Authorisation error",
+              s"Invalid affinity group $Individual from Auth"
+            )
+          )
+        )
       }
 
       "affinity group is Agent" in {
@@ -119,11 +124,15 @@ class AuthActionSpec
 
         val result = await(authenticator.invokeBlock(FakeRequest(), block))
 
-        result mustBe Unauthorized(Json.toJson(ErrorResponse(
-          now,
-          "Authorisation error",
-          s"Invalid affinity group $Agent from Auth"
-        )))
+        result mustBe Unauthorized(
+          Json.toJson(
+            ErrorResponse(
+              now,
+              "Authorisation error",
+              s"Invalid affinity group $Agent from Auth"
+            )
+          )
+        )
       }
 
       "has no affinity group" in {
@@ -131,11 +140,15 @@ class AuthActionSpec
 
         val result = await(authenticator.invokeBlock(FakeRequest(), block))
 
-        result mustBe Unauthorized(Json.toJson(ErrorResponse(
-          now,
-          "Authorisation error",
-          "Could not retrieve affinity group from Auth"
-        )))
+        result mustBe Unauthorized(
+          Json.toJson(
+            ErrorResponse(
+              now,
+              "Authorisation error",
+              "Could not retrieve affinity group from Auth"
+            )
+          )
+        )
       }
 
       "has no credential" in {
@@ -144,24 +157,31 @@ class AuthActionSpec
 
         val result = await(authenticator.invokeBlock(FakeRequest(), block))
 
-        result mustBe Unauthorized(Json.toJson(ErrorResponse(
-          now,
-          "Authorisation error",
-          "Could not retrieve credentials from Auth"
-        )))
+        result mustBe Unauthorized(
+          Json.toJson(
+            ErrorResponse(
+              now,
+              "Authorisation error",
+              "Could not retrieve credentials from Auth"
+            )
+          )
+        )
       }
-
 
       "throwing" in {
         withUnauthorizedTrader(new RuntimeException("error"))
 
         val result = await(authenticator.invokeBlock(FakeRequest(), block))
 
-        result mustBe Unauthorized(Json.toJson(ErrorResponse(
-          now,
-          "Authorisation error",
-          "Internal server error is error"
-        )))
+        result mustBe Unauthorized(
+          Json.toJson(
+            ErrorResponse(
+              now,
+              "Authorisation error",
+              "Internal server error is error"
+            )
+          )
+        )
       }
 
       "general failure" in {
@@ -170,11 +190,15 @@ class AuthActionSpec
 
         val result = await(authenticator.invokeBlock(FakeRequest(GET, "/foo"), block))
 
-        result mustBe Unauthorized(Json.toJson(ErrorResponse(
-          now,
-          "Authorisation error",
-          "Unauthorised Exception for /foo with error A general auth failure"
-        )))
+        result mustBe Unauthorized(
+          Json.toJson(
+            ErrorResponse(
+              now,
+              "Authorisation error",
+              "Unauthorised Exception for /foo with error A general auth failure"
+            )
+          )
+        )
       }
 
       "auth returns Insufficient enrolments" in {
@@ -182,11 +206,15 @@ class AuthActionSpec
 
         val result = await(authenticator.invokeBlock(FakeRequest(GET, "/get"), block))
 
-        result mustBe Unauthorized(Json.toJson(ErrorResponse(
-          now,
-          "Authorisation error",
-          "Unauthorised Exception for /get with error Insufficient Enrolments"
-        )))
+        result mustBe Unauthorized(
+          Json.toJson(
+            ErrorResponse(
+              now,
+              "Authorisation error",
+              "Unauthorised Exception for /get with error Insufficient Enrolments"
+            )
+          )
+        )
       }
     }
 
@@ -195,11 +223,15 @@ class AuthActionSpec
 
       val result = await(authenticator.invokeBlock(FakeRequest(GET, "/get"), block))
 
-      result mustBe Forbidden(Json.toJson(ErrorResponse(
-        now,
-        "Authorisation error",
-        "Could not find ExciseNumber"
-      )))
+      result mustBe Forbidden(
+        Json.toJson(
+          ErrorResponse(
+            now,
+            "Authorisation error",
+            "Could not find ExciseNumber"
+          )
+        )
+      )
 
     }
   }

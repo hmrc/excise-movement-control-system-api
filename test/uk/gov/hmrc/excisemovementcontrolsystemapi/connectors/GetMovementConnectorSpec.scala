@@ -37,22 +37,19 @@ import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.runtime.universe.typeOf
 
-class GetMovementConnectorSpec extends PlaySpec
-  with BeforeAndAfterEach
-  with EitherValues
-  with EISHeaderTestSupport {
+class GetMovementConnectorSpec extends PlaySpec with BeforeAndAfterEach with EitherValues with EISHeaderTestSupport {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.global
-  protected implicit val hc: HeaderCarrier = HeaderCarrier()
+  protected implicit val hc: HeaderCarrier    = HeaderCarrier()
 
-  private val httpClient = mock[HttpClient]
-  private val appConfig = mock[AppConfig]
-  private val metrics = mock[MetricRegistry](RETURNS_DEEP_STUBS)
+  private val httpClient           = mock[HttpClient]
+  private val appConfig            = mock[AppConfig]
+  private val metrics              = mock[MetricRegistry](RETURNS_DEEP_STUBS)
   private val correlationIdService = mock[CorrelationIdService]
-  private val dateTimeService = mock[DateTimeService]
-  private val sut = new GetMovementConnector(httpClient, appConfig, correlationIdService, metrics, dateTimeService)
-  private val timestamp = Instant.parse("2023-02-03T05:06:07.312456Z")
-  private val response = EISConsumptionResponse(
+  private val dateTimeService      = mock[DateTimeService]
+  private val sut                  = new GetMovementConnector(httpClient, appConfig, correlationIdService, metrics, dateTimeService)
+  private val timestamp            = Instant.parse("2023-02-03T05:06:07.312456Z")
+  private val response             = EISConsumptionResponse(
     timestamp,
     "ern",
     "message"
@@ -100,7 +97,9 @@ class GetMovementConnectorSpec extends PlaySpec
 
         val result = await(sut.get("ern", "arc"))
 
-        result.left.value mustBe InternalServerError(s"Response body could not be read as type ${typeOf[EISConsumptionResponse]}")
+        result.left.value mustBe InternalServerError(
+          s"Response body could not be read as type ${typeOf[EISConsumptionResponse]}"
+        )
       }
 
       "EIS return an error" in {

@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util
 
-
 import org.mockito.MockitoSugar.when
 import org.scalatest.EitherValues
 import org.scalatest.Inspectors.forAll
@@ -35,19 +34,20 @@ import scala.reflect.runtime.universe.typeOf
 
 class EISHttpReaderSpec extends PlaySpec with EitherValues {
 
-  private val localDateTime = Instant.parse("2023-09-19T15:57:23.654123456Z")
+  private val localDateTime   = Instant.parse("2023-09-19T15:57:23.654123456Z")
   private val dateTimeService = mock[DateTimeService]
   when(dateTimeService.timestamp()).thenReturn(localDateTime)
 
-  private val eisHttpParser = EISHttpReader("123", "GB123", "date time", dateTimeService, MessageTypes.IE815.value)
-  private val exampleEISError = Json.toJson(
+  private val eisHttpParser        = EISHttpReader("123", "GB123", "date time", dateTimeService, MessageTypes.IE815.value)
+  private val exampleEISError      = Json.toJson(
     EISErrorResponse(
       localDateTime,
       "BAD_REQUEST",
       "Error",
       "Error details",
       "123"
-    ))
+    )
+  )
   private val exampleResponseError = Json.toJson(
     EisErrorResponsePresentation(localDateTime, "Error", "Error details", "123")
   )
@@ -65,12 +65,15 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
       result mustBe Right(eisResponse)
     }
 
-    forAll(Seq(
-      (BAD_REQUEST, BadRequest(exampleResponseError)),
-      (NOT_FOUND, NotFound(exampleResponseError)),
-      (INTERNAL_SERVER_ERROR, InternalServerError(exampleResponseError)),
-      (SERVICE_UNAVAILABLE, ServiceUnavailable(exampleResponseError)),
-      (UNPROCESSABLE_ENTITY, UnprocessableEntity(exampleResponseError)))) { case (statusCode, expectedResult) =>
+    forAll(
+      Seq(
+        (BAD_REQUEST, BadRequest(exampleResponseError)),
+        (NOT_FOUND, NotFound(exampleResponseError)),
+        (INTERNAL_SERVER_ERROR, InternalServerError(exampleResponseError)),
+        (SERVICE_UNAVAILABLE, ServiceUnavailable(exampleResponseError)),
+        (UNPROCESSABLE_ENTITY, UnprocessableEntity(exampleResponseError))
+      )
+    ) { case (statusCode, expectedResult) =>
       s"return $statusCode" when {
         s"$statusCode has returned from HttpResponse" in {
           val result = eisHttpParser.read(
@@ -126,8 +129,7 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
         HttpResponse(BAD_GATEWAY, eisError.toString())
       )
 
-      val error = Json.parse(
-        s"""
+      val error = Json.parse(s"""
           |{
           |   "dateTime":"2023-09-19T15:57:23.654Z",
           |   "message":"Unexpected error",
@@ -136,41 +138,48 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
           |}
           |""".stripMargin)
 
-
       result.left.value mustBe InternalServerError(error)
 
     }
   }
 
-  private def createRimValidationResponse = {
+  private def createRimValidationResponse =
     RimValidationErrorResponse(
       emcsCorrelationId = "correlationId",
       message = Seq("Validation error(s) occurred"),
       validatorResults = Seq(
         createRimError(8080L, "/con:Control[1]/con:Parameter[1]/urn:IE815[1]/urn:DateOfDispatch[1]"),
-        createRimError(8090L,
+        createRimError(
+          8090L,
           "/con:Control[1]/con:Parameter[1]/urn:IE818[1]/urn:AcceptedOrRejectedReportOfReceiptExport[1]/urn:Attributes[1][1]",
-          None)
+          None
+        )
       )
     )
-  }
 
-  private def expectedRimValidationResponse = {
+  private def expectedRimValidationResponse =
     EisErrorResponsePresentation(
       localDateTime,
       "Validation error",
       "Validation error(s) occurred",
       "correlationId",
-      Some(Seq(
-        createLocalValidationError(8080L, "/urn:IE815[1]/urn:DateOfDispatch[1]"),
-        createLocalValidationError(8090L,
-          "/urn:IE818[1]/urn:AcceptedOrRejectedReportOfReceiptExport[1]/urn:Attributes[1][1]",
-          None)
-      ))
+      Some(
+        Seq(
+          createLocalValidationError(8080L, "/urn:IE815[1]/urn:DateOfDispatch[1]"),
+          createLocalValidationError(
+            8090L,
+            "/urn:IE818[1]/urn:AcceptedOrRejectedReportOfReceiptExport[1]/urn:Attributes[1][1]",
+            None
+          )
+        )
+      )
     )
-  }
 
-  private def createRimError(errorCode: BigInt, location: String, origValue: Option[String] = Some(localDateTime.toString)): RimValidatorResults = {
+  private def createRimError(
+    errorCode: BigInt,
+    location: String,
+    origValue: Option[String] = Some(localDateTime.toString)
+  ): RimValidatorResults =
     RimValidatorResults(
       errorCategory = Some("business"),
       errorType = Some(errorCode),
@@ -178,9 +187,12 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
       errorLocation = Some(location),
       originalAttributeValue = origValue
     )
-  }
 
-  private def createLocalValidationError(errorCode: BigInt, location: String, origValue: Option[String] = Some(localDateTime.toString)): ValidationResponse = {
+  private def createLocalValidationError(
+    errorCode: BigInt,
+    location: String,
+    origValue: Option[String] = Some(localDateTime.toString)
+  ): ValidationResponse =
     ValidationResponse(
       errorCategory = Some("business"),
       errorType = Some(errorCode),
@@ -188,5 +200,4 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
       errorLocation = Some(location),
       originalAttributeValue = origValue
     )
-  }
 }

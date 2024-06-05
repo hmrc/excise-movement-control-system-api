@@ -34,9 +34,9 @@ import scala.concurrent.{ExecutionContext, Future}
 class ValidateErnParameterActionSpec extends PlaySpec {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  private val dateTimeService = mock[DateTimeService]
-  private val currentDateTime = Instant.parse("2023-10-18T15:33:33.987654Z")
-  private val sut = new ValidateErnParameterActionImpl(dateTimeService, stubMessagesControllerComponents())
+  private val dateTimeService       = mock[DateTimeService]
+  private val currentDateTime       = Instant.parse("2023-10-18T15:33:33.987654Z")
+  private val sut                   = new ValidateErnParameterActionImpl(dateTimeService, stubMessagesControllerComponents())
 
   when(dateTimeService.timestamp()).thenReturn(currentDateTime)
 
@@ -46,7 +46,7 @@ class ValidateErnParameterActionSpec extends PlaySpec {
   "ValidateErnParameterActionSpec" should {
     "filter passes successfully" when {
 
-      val erns = Set("GBWK002281023", "GBWK002181023", "GBWK002281022")
+      val erns    = Set("GBWK002281023", "GBWK002181023", "GBWK002281022")
       val request = EnrolmentRequest(FakeRequest(), erns, "123")
 
       val checkResponseMatchesRequestBlock = (actual: EnrolmentRequest[_]) => {
@@ -77,10 +77,14 @@ class ValidateErnParameterActionSpec extends PlaySpec {
 
         val result = await(sut.apply(Some("GBWK002181023")).invokeBlock(request, defaultBlock))
 
-        result mustBe BadRequest(Json.toJson(ErrorResponse(
-          currentDateTime,
-          "ERN parameter value error",
-          "The ERN GBWK002181023 supplied in the parameter is not among the authorised ERNs 12356/234567"))
+        result mustBe BadRequest(
+          Json.toJson(
+            ErrorResponse(
+              currentDateTime,
+              "ERN parameter value error",
+              "The ERN GBWK002181023 supplied in the parameter is not among the authorised ERNs 12356/234567"
+            )
+          )
         )
       }
 

@@ -48,13 +48,13 @@ case class IE815Message(private val obj: IE815Type, auditType: AuditType) extend
 
   override def messageIdentifier: String = obj.Header.MessageIdentifier
 
-  override def toString: String = s"Message type: $messageType, message identifier: $messageIdentifier, LRN: $localReferenceNumber"
+  override def toString: String =
+    s"Message type: $messageType, message identifier: $messageIdentifier, LRN: $localReferenceNumber"
 
 }
 
 object IE815Message {
-  def createFromXml(xml: NodeSeq): IE815Message = {
+  def createFromXml(xml: NodeSeq): IE815Message =
     IE815Message(scalaxb.fromXML[IE815Type](xml), DraftMovement)
-  }
 
 }

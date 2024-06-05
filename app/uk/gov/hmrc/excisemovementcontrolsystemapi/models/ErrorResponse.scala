@@ -31,7 +31,7 @@ trait GenericErrorResponse {
 case class ErrorResponse(
   override val dateTime: Instant,
   override val message: String,
-  override val debugMessage: String,
+  override val debugMessage: String
 ) extends GenericErrorResponse
 
 object ErrorResponse {
@@ -42,12 +42,11 @@ object ErrorResponse {
     (JsPath \ "dateTime").write[String] and
       (JsPath \ "message").write[String] and
       (JsPath \ "debugMessage").write[String]
-    )(e => (e.dateTime.asStringInMilliseconds, e.message, e.debugMessage))
+  )(e => (e.dateTime.asStringInMilliseconds, e.message, e.debugMessage))
 
 }
 
-case class EisErrorResponsePresentation
-(
+case class EisErrorResponsePresentation(
   override val dateTime: Instant,
   override val message: String,
   override val debugMessage: String,
@@ -65,14 +64,15 @@ object EisErrorResponsePresentation {
       (JsPath \ "debugMessage").write[String] and
       (JsPath \ "correlationId").write[String] and
       (JsPath \ "validatorResults").writeNullable[Seq[ValidationResponse]]
-
-
-    )(e => (
-    e.dateTime.asStringInMilliseconds,
-    e.message, e.debugMessage,
-    e.correlationId,
-    e.validatorResults
-  ))
+  )(e =>
+    (
+      e.dateTime.asStringInMilliseconds,
+      e.message,
+      e.debugMessage,
+      e.correlationId,
+      e.validatorResults
+    )
+  )
 
 }
 
@@ -87,6 +87,3 @@ case class ValidationResponse(
 object ValidationResponse {
   implicit def format: OFormat[ValidationResponse] = Json.format[ValidationResponse]
 }
-
-
-

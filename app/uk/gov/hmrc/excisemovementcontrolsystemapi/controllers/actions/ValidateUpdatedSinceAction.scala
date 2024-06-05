@@ -24,46 +24,44 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
+import java.time.Instant
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 
-class ValidateErnParameterActionImpl @Inject() (
-  dateTimeService: DateTimeService,
-  cc: ControllerComponents
-)(implicit val ec: ExecutionContext)
-    extends BackendController(cc)
-    with ValidateErnParameterAction {
-
-  override def apply(ernParameter: Option[String]): ActionFilter[EnrolmentRequest] =
+class ValidateUpdatedSinceActionImpl @Inject() (dateTimeService: DateTimeService, cc: ControllerComponents)(implicit
+  val ec: ExecutionContext
+) extends BackendController(cc)
+    with ValidateUpdatedSinceAction {
+  override def apply(updatedSince: Option[String]): ActionFilter[EnrolmentRequest] =
     new ActionFilter[EnrolmentRequest] {
-
       override val executionContext: ExecutionContext = ec
 
       override def filter[A](request: EnrolmentRequest[A]): Future[Option[Result]] = Future.successful {
-
-        ernParameter.flatMap { value =>
-          // Ensure if they supplied an ERN it matches one they have logged in as
-          if (request.erns.contains(value)) None
-          else Some(badRequestResponse(value)(request))
-        }
+        updatedSince.flatMap(value =>
+          Try(Instant.parse(value)) match {
+            case Success(_) => None
+            case Failure(_) => Some(badRequestResponse())
+          }
+        )
 
       }
-
     }
 
-  private def badRequestResponse[A](ern: String)(implicit request: EnrolmentRequest[A]): Result =
+  private def badRequestResponse(): Result =
     BadRequest(
       Json.toJson(
         ErrorResponse(
           dateTimeService.timestamp(),
-          "ERN parameter value error",
-          s"The ERN $ern supplied in the parameter is not among the authorised ERNs ${request.erns.mkString("/")}"
+          "Invalid date format provided in the updatedSince query parameter",
+          "Date format should be like '2020-11-15T17:02:34.00Z'"
         )
       )
     )
 }
 
-@ImplementedBy(classOf[ValidateErnParameterActionImpl])
-trait ValidateErnParameterAction {
-  def apply(ern: Option[String]): ActionFilter[EnrolmentRequest]
+@ImplementedBy(classOf[ValidateUpdatedSinceActionImpl])
+trait ValidateUpdatedSinceAction {
+  def apply(updatedSince: Option[String]): ActionFilter[EnrolmentRequest]
+
 }

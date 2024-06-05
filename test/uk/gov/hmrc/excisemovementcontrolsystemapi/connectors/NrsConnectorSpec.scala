@@ -38,25 +38,21 @@ import java.time.ZonedDateTime
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
-class NrsConnectorSpec
-  extends PlaySpec
-    with NrsTestData
-    with EitherValues
-    with BeforeAndAfterEach {
+class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with BeforeAndAfterEach {
 
-  protected implicit val hc: HeaderCarrier = HeaderCarrier()
+  protected implicit val hc: HeaderCarrier    = HeaderCarrier()
   protected implicit val ec: ExecutionContext = ExecutionContext.global
-  protected implicit val futures: Futures = mock[Futures]
+  protected implicit val futures: Futures     = mock[Futures]
 
-  private val httpClient = mock[HttpClient]
-  private val appConfig = mock[AppConfig]
-  private val emcsUtils = mock[EmcsUtils]
-  private val metrics = mock[MetricRegistry](RETURNS_DEEP_STUBS)
-  private val connector = new NrsConnector(httpClient, appConfig, metrics)
+  private val httpClient   = mock[HttpClient]
+  private val appConfig    = mock[AppConfig]
+  private val emcsUtils    = mock[EmcsUtils]
+  private val metrics      = mock[MetricRegistry](RETURNS_DEEP_STUBS)
+  private val connector    = new NrsConnector(httpClient, appConfig, metrics)
   private val timerContext = mock[Timer.Context]
-  private val timeStamp = ZonedDateTime.now()
+  private val timeStamp    = ZonedDateTime.now()
 
-  private val nrsMetadata  = NrsMetadata(
+  private val nrsMetadata           = NrsMetadata(
     businessId = "emcs",
     notableEvent = "excise-movement-control-system",
     payloadContentType = "application/json",
@@ -67,7 +63,7 @@ class NrsConnectorSpec
     headerData = Map(),
     searchKeys = Map("ern" -> "123")
   )
-  private val nrsPayLoad = NrsPayload("encodepayload", nrsMetadata)
+  private val nrsPayLoad            = NrsPayload("encodepayload", nrsMetadata)
   private val successFulNrsResponse = HttpResponse(
     202,
     Json.obj("nrSubmissionId" -> "testNesSubmissionId").toString()
@@ -77,15 +73,17 @@ class NrsConnectorSpec
     super.beforeEach()
     reset(httpClient, appConfig, emcsUtils, metrics, timerContext)
 
-    when(httpClient.POST[Any,Any](any,any,any)(any,any,any,any))
+    when(httpClient.POST[Any, Any](any, any, any)(any, any, any, any))
       .thenReturn(Future.successful(successFulNrsResponse))
     when(appConfig.getNrsSubmissionUrl).thenReturn("/nrs-url")
     when(appConfig.nrsApiKey).thenReturn("authToken")
-    when(appConfig.nrsRetryDelays).thenReturn(Seq(
-      Duration.create(1L, "seconds"),
-      Duration.create(1L, "seconds"),
-      Duration.create(1L, "seconds")
-    ))
+    when(appConfig.nrsRetryDelays).thenReturn(
+      Seq(
+        Duration.create(1L, "seconds"),
+        Duration.create(1L, "seconds"),
+        Duration.create(1L, "seconds")
+      )
+    )
     when(futures.delay(any)).thenReturn(Future.successful(Done))
     when(metrics.timer(any).time()) thenReturn timerContext
   }
@@ -97,9 +95,8 @@ class NrsConnectorSpec
       result mustBe NonRepudiationSubmissionAccepted("testNesSubmissionId")
     }
 
-
     "return an error" in {
-      when(httpClient.POST[Any,Any](any,any,any)(any,any,any,any))
+      when(httpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(Future.successful(HttpResponse(400, "bad request")))
 
       val result = await(connector.sendToNrs(nrsPayLoad, "correlationId"))
@@ -129,7 +126,7 @@ class NrsConnectorSpec
       }
     }
 
-    "return straight after an exception" in{
+    "return straight after an exception" in {
       when(httpClient.POST[Any, Any](any, any, any)(any, any, any, any))
         .thenReturn(
           Future.failed(new RuntimeException("error")),
@@ -151,18 +148,16 @@ class NrsConnectorSpec
     }
   }
 
-  private def verifyHttpPostCAll(retriedAttempt: Int) = {
+  private def verifyHttpPostCAll(retriedAttempt: Int) =
     verify(httpClient, times(retriedAttempt)).POST[Any, Any](
       eqTo("/nrs-url"),
       eqTo(nrsPayLoad.toJsObject),
       eqTo(expectedHeader)
     )(any, any, any, any)
-  }
 
-  private def expectedHeader: Seq[(String, String)] = {
+  private def expectedHeader: Seq[(String, String)] =
     Seq(
       "Content-Type" -> "application/json",
       ("X-API-Key", "authToken")
     )
-  }
 }

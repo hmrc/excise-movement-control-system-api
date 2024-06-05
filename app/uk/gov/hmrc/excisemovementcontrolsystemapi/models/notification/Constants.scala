@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification
 
 object Constants {
-  val BoxName = "customs/excise##1.0##notificationUrl"
+  val BoxName         = "customs/excise##1.0##notificationUrl"
   val XClientIdHeader = "X-Client-Id"
-  val XCallbackBoxId = "X-Callback-Box-Id"
+  val XCallbackBoxId  = "X-Callback-Box-Id"
 }

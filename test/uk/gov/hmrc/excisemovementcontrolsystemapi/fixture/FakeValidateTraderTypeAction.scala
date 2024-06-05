@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2024 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,14 +18,14 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
 import play.api.mvc.Results.BadRequest
 import play.api.mvc.{ActionFilter, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateErnParameterAction
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateTraderTypeAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait FakeValidateErnParameterAction {
+trait FakeValidateTraderTypeAction {
 
-  object FakeValidateErnParameterSuccessAction extends ValidateErnParameterAction {
+  object FakeValidateTraderTypeSuccessAction extends ValidateTraderTypeAction {
 
     override def apply(ern: Option[String]): ActionFilter[EnrolmentRequest] =
       new ActionFilter[EnrolmentRequest] {
@@ -37,8 +37,7 @@ trait FakeValidateErnParameterAction {
       }
   }
 
-  object FakeValidateErnParameterFailureAction extends ValidateErnParameterAction {
-
+  object FakeValidateTraderTypeFailureAction extends ValidateTraderTypeAction {
     override def apply(ern: Option[String]): ActionFilter[EnrolmentRequest] =
       new ActionFilter[EnrolmentRequest] {
 

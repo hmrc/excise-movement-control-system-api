@@ -26,17 +26,17 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait FakeXmlParsers {
   case class FakeSuccessXMLParser(mockIeMessage: IEMessage) extends ParseXmlAction {
-    override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
-      Future.successful(Right(ParsedXmlRequest(EnrolmentRequest(request, Set.empty, "123"), mockIeMessage, Set.empty, "123")))
-    }
+    override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] =
+      Future.successful(
+        Right(ParsedXmlRequest(EnrolmentRequest(request, Set.empty, "123"), mockIeMessage, Set.empty, "123"))
+      )
 
     override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global
   }
 
   object FakeFailureXMLParser extends ParseXmlAction {
-    override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
+    override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] =
       Future.successful(Left(BadRequest("Invalid xml supplied")))
-    }
 
     override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global
   }

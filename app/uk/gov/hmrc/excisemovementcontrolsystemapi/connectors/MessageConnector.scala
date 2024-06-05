@@ -42,23 +42,24 @@ import scala.util.Try
 
 @Singleton
 class MessageConnector @Inject() (
-                                   configuration: Configuration,
-                                   httpClient: HttpClientV2,
-                                   correlationIdService: CorrelationIdService,
-                                   messageFactory: IEMessageFactory,
-                                   dateTimeService: DateTimeService,
-                                   auditService: AuditService
-                                 )(implicit ec: ExecutionContext) {
+  configuration: Configuration,
+  httpClient: HttpClientV2,
+  correlationIdService: CorrelationIdService,
+  messageFactory: IEMessageFactory,
+  dateTimeService: DateTimeService,
+  auditService: AuditService
+)(implicit ec: ExecutionContext) {
 
-  private val service: Service = configuration.get[Service]("microservice.services.eis")
+  private val service: Service    = configuration.get[Service]("microservice.services.eis")
   private val bearerToken: String = configuration.get[String]("microservice.services.eis.messages-bearer-token")
 
   def getNewMessages(ern: String)(implicit hc: HeaderCarrier): Future[GetMessagesResponse] = {
 
     val correlationId = correlationIdService.generateCorrelationId()
-    val timestamp = dateTimeService.timestamp().asStringInMilliseconds
+    val timestamp     = dateTimeService.timestamp().asStringInMilliseconds
 
-    httpClient.put(url"${service.baseUrl}/emcs/messages/v1/show-new-messages?exciseregistrationnumber=$ern")
+    httpClient
+      .put(url"${service.baseUrl}/emcs/messages/v1/show-new-messages?exciseregistrationnumber=$ern")
       .setHeader("X-Forwarded-Host" -> "MDTP")
       .setHeader("X-Correlation-Id" -> correlationId)
       .setHeader("Source" -> "APIP")
@@ -70,9 +71,10 @@ class MessageConnector @Inject() (
           for {
             response <- parseJson[EISConsumptionResponse](response.body)
             messages <- getMessages(response)
-            count <- countOfMessagesAvailable(response.message)
+            count    <- countOfMessagesAvailable(response.message)
           } yield GetMessagesResponse(messages, count)
-        } else {
+        }
+        else {
           Future.failed(new RuntimeException("Invalid status returned"))
         }
       }
@@ -81,9 +83,10 @@ class MessageConnector @Inject() (
   def acknowledgeMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] = {
 
     val correlationId = correlationIdService.generateCorrelationId()
-    val timestamp = dateTimeService.timestamp().asStringInMilliseconds
+    val timestamp     = dateTimeService.timestamp().asStringInMilliseconds
 
-    httpClient.put(url"${service.baseUrl}/emcs/messages/v1/message-receipt?exciseregistrationnumber=$ern")
+    httpClient
+      .put(url"${service.baseUrl}/emcs/messages/v1/message-receipt?exciseregistrationnumber=$ern")
       .setHeader("X-Forwarded-Host" -> "MDTP")
       .setHeader("X-Correlation-Id" -> correlationId)
       .setHeader("Source" -> "APIP")
@@ -93,7 +96,8 @@ class MessageConnector @Inject() (
       .flatMap { response =>
         if (response.status == OK) Future.fromTry {
           parseJson[MessageReceiptSuccessResponse](response.body).as(Done)
-        } else {
+        }
+        else {
           Future.failed(new RuntimeException("Invalid status returned"))
         }
       }
@@ -105,9 +109,11 @@ class MessageConnector @Inject() (
       response <- Try(json.as[A])
     } yield response
 
-  private def getMessages(response: EISConsumptionResponse)(implicit headerCarrier: HeaderCarrier): Try[Seq[IEMessage]] = Try {
+  private def getMessages(
+    response: EISConsumptionResponse
+  )(implicit headerCarrier: HeaderCarrier): Try[Seq[IEMessage]] = Try {
     val decodedMessage: String = base64Decode(response.message)
-    val xmlResponse = scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
+    val xmlResponse            = scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
     xmlResponse.Messages.messagesoption.map(messageFactory.createIEMessage).tapEach {
       auditService.auditMessage(_)(headerCarrier)
     }

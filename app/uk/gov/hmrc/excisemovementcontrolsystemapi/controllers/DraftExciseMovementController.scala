@@ -39,7 +39,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
 @Singleton
-class DraftExciseMovementController @Inject()(
+class DraftExciseMovementController @Inject() (
   authAction: AuthAction,
   xmlParser: ParseXmlAction,
   movementMessageService: MovementService,
@@ -52,57 +52,52 @@ class DraftExciseMovementController @Inject()(
   appConfig: AppConfig,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-  extends BackendController(cc) with Logging {
+    extends BackendController(cc)
+    with Logging {
 
-  def submit: Action[NodeSeq] = {
-
-    (authAction andThen xmlParser).async(parse.xml) {
-      implicit request =>
-
-        val result = for {
-          ie815Message <- getIe815Message(request.ieMessage)
-          authorisedErn <- validateMessage(ie815Message, request.erns)
-          clientId <- retrieveClientIdFromHeader(request)
-          boxId <- getBoxId(clientId)
-          movement <- submitSaveAudit(request, authorisedErn, boxId, ie815Message)
-        } yield {
-          Accepted(Json.toJson(ExciseMovementResponse(
+  def submit: Action[NodeSeq] =
+    (authAction andThen xmlParser).async(parse.xml) { implicit request =>
+      val result = for {
+        ie815Message  <- getIe815Message(request.ieMessage)
+        authorisedErn <- validateMessage(ie815Message, request.erns)
+        clientId      <- retrieveClientIdFromHeader(request)
+        boxId         <- getBoxId(clientId)
+        movement      <- submitSaveAudit(request, authorisedErn, boxId, ie815Message)
+      } yield Accepted(
+        Json.toJson(
+          ExciseMovementResponse(
             movement._id,
             boxId,
             movement.localReferenceNumber,
             movement.consignorId,
             movement.consigneeId,
-            None)
-          ))
+            None
+          )
+        )
+      )
 
-        }
-
-        result.merge
+      result.merge
     }
 
-
-  }
-
-  private def submitSaveAudit(request: ParsedXmlRequest[_], ern: String, boxId: Option[String], message: IE815Message)(implicit hc: HeaderCarrier): EitherT[Future, Result, Movement] = {
+  private def submitSaveAudit(request: ParsedXmlRequest[_], ern: String, boxId: Option[String], message: IE815Message)(
+    implicit hc: HeaderCarrier
+  ): EitherT[Future, Result, Movement] =
     EitherT {
       submissionMessageService.submit(request, ern).flatMap {
-        case Left(result) => auditService.auditMessage(message, "Failed to Submit")
+        case Left(result) =>
+          auditService.auditMessage(message, "Failed to Submit")
           Future.successful(Left(result))
-        case Right(_) => saveMovement(boxId, message).value
+        case Right(_)     => saveMovement(boxId, message).value
       }
     }
-  }
 
   private def validateMessage(
     message: IE815Message,
     authErns: Set[String]
-  ): EitherT[Future, Result, String] = {
-
-    EitherT.fromEither(messageValidator.validateDraftMovement(authErns, message).left.map {
-      x => messageValidator.convertErrorToResponse(x, dateTimeService.timestamp())
+  ): EitherT[Future, Result, String] =
+    EitherT.fromEither(messageValidator.validateDraftMovement(authErns, message).left.map { x =>
+      messageValidator.convertErrorToResponse(x, dateTimeService.timestamp())
     })
-  }
-
 
   private def saveMovement(
     boxId: Option[String],
@@ -113,15 +108,17 @@ class DraftExciseMovementController @Inject()(
     boxId.map(boxIdRepository.save(newMovement.consignorId, _))
 
     EitherT(movementMessageService.saveNewMovement(newMovement).map {
-      case Left(result) => auditService.auditMessage(message, "Failed to Save")
+      case Left(result)    =>
+        auditService.auditMessage(message, "Failed to Save")
         Left(result)
-      case Right(movement) => auditService.auditMessage(message)
+      case Right(movement) =>
+        auditService.auditMessage(message)
         Right(movement)
     })
 
   }
 
-  private def createMovementFomMessage(message: IE815Message, boxId: Option[String]): Movement = {
+  private def createMovementFomMessage(message: IE815Message, boxId: Option[String]): Movement =
     Movement(
       boxId,
       message.localReferenceNumber,
@@ -129,43 +126,47 @@ class DraftExciseMovementController @Inject()(
       message.consigneeId,
       None
     )
-  }
 
   private def getBoxId(
     clientId: String
-  )(implicit request: ParsedXmlRequest[_]): EitherT[Future, Result, Option[String]] = {
-
+  )(implicit request: ParsedXmlRequest[_]): EitherT[Future, Result, Option[String]] =
     if (appConfig.pushNotificationsEnabled) {
       val clientBoxId = request.headers.get(Constants.XCallbackBoxId)
-      EitherT(notificationService.getBoxId(clientId, clientBoxId).map(futureValue =>
-        futureValue.map(boxId => Some(boxId))
-      ))
+      EitherT(
+        notificationService.getBoxId(clientId, clientBoxId).map(futureValue => futureValue.map(boxId => Some(boxId)))
+      )
     } else {
       EitherT.fromEither(Right(None))
     }
-  }
 
-  private def getIe815Message(message: IEMessage): EitherT[Future, Result, IE815Message] = {
+  private def getIe815Message(message: IEMessage): EitherT[Future, Result, IE815Message] =
     EitherT.fromEither(message match {
       case x: IE815Message => Right(x)
-      case _ => Left(BadRequest(Json.toJson(
-        ErrorResponse(
-          dateTimeService.timestamp(),
-          "Invalid message type",
-          s"Message type ${message.messageType} cannot be sent to the draft excise movement endpoint"
+      case _               =>
+        Left(
+          BadRequest(
+            Json.toJson(
+              ErrorResponse(
+                dateTimeService.timestamp(),
+                "Invalid message type",
+                s"Message type ${message.messageType} cannot be sent to the draft excise movement endpoint"
+              )
+            )
+          )
         )
-      )))
     })
-  }
 
-  private def retrieveClientIdFromHeader(implicit request: ParsedXmlRequest[_]): EitherT[Future, Result, String] = {
+  private def retrieveClientIdFromHeader(implicit request: ParsedXmlRequest[_]): EitherT[Future, Result, String] =
     EitherT.fromOption(
       request.headers.get(Constants.XClientIdHeader),
-      BadRequest(Json.toJson(ErrorResponse(
-        dateTimeService.timestamp(),
-        s"ClientId error",
-        s"Request header is missing ${Constants.XClientIdHeader}"))
+      BadRequest(
+        Json.toJson(
+          ErrorResponse(
+            dateTimeService.timestamp(),
+            s"ClientId error",
+            s"Request header is missing ${Constants.XClientIdHeader}"
+          )
+        )
       )
     )
-  }
 }

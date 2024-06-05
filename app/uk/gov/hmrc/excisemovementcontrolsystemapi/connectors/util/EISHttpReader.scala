@@ -35,19 +35,18 @@ class EISHttpReader(
   val dateTimeService: DateTimeService,
   val messageType: String
 ) extends HttpReads[Either[Result, EISSubmissionResponse]]
-  with Logging
-  with ResponseHandler {
+    with Logging
+    with ResponseHandler {
 
   override def read(method: String, url: String, response: HttpResponse): Either[Result, EISSubmissionResponse] = {
     val result = extractIfSuccessful[EISSubmissionResponse](response)
     result match {
-      case Right(eisResponse) => Right(eisResponse)
+      case Right(eisResponse)               => Right(eisResponse)
       case Left(httpResponse: HttpResponse) => Left(handleErrorResponse(httpResponse))
     }
   }
 
-  private def handleErrorResponse
-  (
+  private def handleErrorResponse(
     response: HttpResponse
   ): Result = {
 
@@ -56,12 +55,16 @@ class EISHttpReader(
     (tryAsJson[RimValidationErrorResponse](response), tryAsJson[EISErrorResponse](response)) match {
       case (Some(x), None) => handleRimValidationResponse(response, x)
       case (None, Some(y)) => handleEISErrorResponse(response, y)
-      case _ =>
-        InternalServerError(Json.toJson(EisErrorResponsePresentation(
-          dateTimeService.timestamp(),
-          "Unexpected error",
-          "Error occurred while reading downstream response",
-          correlationId))
+      case _               =>
+        InternalServerError(
+          Json.toJson(
+            EisErrorResponsePresentation(
+              dateTimeService.timestamp(),
+              "Unexpected error",
+              "Error occurred while reading downstream response",
+              correlationId
+            )
+          )
         )
     }
 
@@ -69,8 +72,8 @@ class EISHttpReader(
 
   private def handleRimValidationResponse(response: HttpResponse, rimError: RimValidationErrorResponse): Result = {
 
-    val validationResponse = rimError.validatorResults.map(
-      x => ValidationResponse(
+    val validationResponse = rimError.validatorResults.map(x =>
+      ValidationResponse(
         x.errorCategory,
         x.errorType,
         x.errorReason,
@@ -79,32 +82,39 @@ class EISHttpReader(
       )
     )
 
-    Status(response.status)(Json.toJson(EisErrorResponsePresentation(
-      dateTimeService.timestamp(),
-      "Validation error",
-      rimError.message.mkString("\n"),
-      rimError.emcsCorrelationId,
-      Some(validationResponse)
-    )))
+    Status(response.status)(
+      Json.toJson(
+        EisErrorResponsePresentation(
+          dateTimeService.timestamp(),
+          "Validation error",
+          rimError.message.mkString("\n"),
+          rimError.emcsCorrelationId,
+          Some(validationResponse)
+        )
+      )
+    )
 
   }
 
-  private def handleEISErrorResponse(response: HttpResponse, eisError: EISErrorResponse) = {
+  private def handleEISErrorResponse(response: HttpResponse, eisError: EISErrorResponse) =
     Status(response.status)(Json.toJson(eisError.asPresentation))
-  }
 
-  private def tryAsJson[A](response: HttpResponse)(implicit reads: Reads[A], tt: TypeTag[A]): Option[A] = {
-
+  private def tryAsJson[A](response: HttpResponse)(implicit reads: Reads[A], tt: TypeTag[A]): Option[A] =
     Try(jsonAs[A](response.body)) match {
       case Success(value) => Some(value)
-      case _ => None
+      case _              => None
     }
-  }
 
 }
 
 object EISHttpReader {
-  def apply(correlationId: String, ern: String, createDateTime: String, dateTimeService: DateTimeService, messageType: String): EISHttpReader = {
+  def apply(
+    correlationId: String,
+    ern: String,
+    createDateTime: String,
+    dateTimeService: DateTimeService,
+    messageType: String
+  ): EISHttpReader =
     new EISHttpReader(
       correlationId: String,
       ern: String,
@@ -112,5 +122,4 @@ object EISHttpReader {
       dateTimeService: DateTimeService,
       messageType: String
     )
-  }
 }

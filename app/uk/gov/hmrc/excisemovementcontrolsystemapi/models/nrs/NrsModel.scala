@@ -26,32 +26,31 @@ object NrsSubmissionId {
 }
 
 case class NrsMetadata(
-                        businessId: String,
-                        notableEvent: String,
-                        payloadContentType: String,
-                        payloadSha256Checksum: String,
-                        userSubmissionTimestamp: String,
-                        identityData: IdentityData,
-                        userAuthToken: String,
-                        headerData: Map[String, String],
-                        searchKeys: Map[String, String]
-                      )
+  businessId: String,
+  notableEvent: String,
+  payloadContentType: String,
+  payloadSha256Checksum: String,
+  userSubmissionTimestamp: String,
+  identityData: IdentityData,
+  userAuthToken: String,
+  headerData: Map[String, String],
+  searchKeys: Map[String, String]
+)
 
 object NrsMetadata {
 
-  val EmcsCreateMovementNotableEventId = "emcs-create-a-movement-api"
-  val EmcsChangeDestinationNotableEventId = "emcs-change-a-destination-api"
-  val EmcsReportOfReceiptNotableEvent = "emcs-report-a-receipt-api"
-  val EmcsExplainADelayNotableEventId = "emcs-explain-a-delay-api"
-  val EmcsExplainAShortageNotableEventId = "emcs-explain-a-shortage-api"
-  val EmccCancelMovement = "emcs-cancel-a-movement-api"
+  val EmcsCreateMovementNotableEventId         = "emcs-create-a-movement-api"
+  val EmcsChangeDestinationNotableEventId      = "emcs-change-a-destination-api"
+  val EmcsReportOfReceiptNotableEvent          = "emcs-report-a-receipt-api"
+  val EmcsExplainADelayNotableEventId          = "emcs-explain-a-delay-api"
+  val EmcsExplainAShortageNotableEventId       = "emcs-explain-a-shortage-api"
+  val EmccCancelMovement                       = "emcs-cancel-a-movement-api"
   val EmcsSubmitAlertOrRejectionNotableEventId = "emcs-submit-alert-or-rejection-api"
 
   val BusinessId = "emcs"
-  val SearchKey = "ern"
+  val SearchKey  = "ern"
 
-  def create
-  (
+  def create(
     payLoad: String,
     emcsUtils: EmcsUtils,
     notableEventId: String,
@@ -60,7 +59,7 @@ object NrsMetadata {
     userAuthToken: String,
     userHeaderData: Map[String, String],
     exciseNumber: String
-  ): NrsMetadata = {
+  ): NrsMetadata                            =
     NrsMetadata(
       BusinessId,
       notableEventId,
@@ -72,7 +71,6 @@ object NrsMetadata {
       headerData = userHeaderData,
       searchKeys = Map(SearchKey -> exciseNumber)
     )
-  }
   implicit val format: OFormat[NrsMetadata] = Json.format[NrsMetadata]
 }
 

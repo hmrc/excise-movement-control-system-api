@@ -20,8 +20,7 @@ import play.api.libs.json.{Json, OFormat}
 
 import java.time.Instant
 
-case class EISConsumptionResponse
-(
+case class EISConsumptionResponse(
   dateTime: Instant,
   exciseRegistrationNumber: String,
   message: String

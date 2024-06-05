@@ -18,8 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
 trait StringSupport {
 
-  def clean(str: String): String = {
+  def clean(str: String): String =
     str.replaceAll("[\\t\\n\\r\\s]+", "")
-  }
 
 }

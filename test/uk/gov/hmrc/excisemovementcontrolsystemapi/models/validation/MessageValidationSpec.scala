@@ -28,13 +28,12 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
 import java.time.Instant
 
-
 class MessageValidationSpec extends PlaySpec with EitherValues {
 
-  private val authorisedErns = Set("123", "456")
-  private val movement = mock[Movement]
+  private val authorisedErns    = Set("123", "456")
+  private val movement          = mock[Movement]
   private val messageValidation = MessageValidation()
-  private val timestamp = Instant.now()
+  private val timestamp         = Instant.now()
 
   "validateDraftMovement" should {
     val ie815 = mock[IE815Message]
@@ -575,22 +574,30 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
 
         val result = messageValidation.convertErrorToResponse(ConsignorDoesNotMatch, timestamp)
 
-        result mustBe BadRequest(Json.toJson(ErrorResponse(
-          timestamp,
-          "Message does not match movement",
-          "The Consignor in the message does not match the Consignor in the movement"
-        )))
+        result mustBe BadRequest(
+          Json.toJson(
+            ErrorResponse(
+              timestamp,
+              "Message does not match movement",
+              "The Consignor in the message does not match the Consignor in the movement"
+            )
+          )
+        )
       }
 
       "message is missing key information" in {
 
         val result = messageValidation.convertErrorToResponse(ConsigneeIsMissing, timestamp)
 
-        result mustBe BadRequest(Json.toJson(ErrorResponse(
-          timestamp,
-          "Message missing key information",
-          "The Consignee in the message should not be empty"
-        )))
+        result mustBe BadRequest(
+          Json.toJson(
+            ErrorResponse(
+              timestamp,
+              "Message missing key information",
+              "The Consignee in the message should not be empty"
+            )
+          )
+        )
 
       }
 
@@ -598,11 +605,15 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
 
         val result = messageValidation.convertErrorToResponse(MessageTypeInvalid("IE811"), timestamp)
 
-        result mustBe BadRequest(Json.toJson(ErrorResponse(
-          timestamp,
-          "Message type is invalid",
-          "The supplied message type IE811 is not supported"
-        )))
+        result mustBe BadRequest(
+          Json.toJson(
+            ErrorResponse(
+              timestamp,
+              "Message type is invalid",
+              "The supplied message type IE811 is not supported"
+            )
+          )
+        )
       }
 
     }
@@ -613,12 +624,16 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
 
         val result = messageValidation.convertErrorToResponse(ConsignorIsUnauthorised, timestamp)
 
-        result mustBe Forbidden(Json.toJson(ErrorResponse(
-          timestamp,
-          "Message cannot be sent",
-          "The Consignor is not authorised to submit this message for the movement"
-        )))
+        result mustBe Forbidden(
+          Json.toJson(
+            ErrorResponse(
+              timestamp,
+              "Message cannot be sent",
+              "The Consignor is not authorised to submit this message for the movement"
+            )
+          )
+        )
       }
     }
-    }
+  }
 }

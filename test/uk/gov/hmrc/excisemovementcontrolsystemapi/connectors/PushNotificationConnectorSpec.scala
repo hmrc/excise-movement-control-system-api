@@ -34,19 +34,16 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
-class PushNotificationConnectorSpec
-  extends PlaySpec
-    with EitherValues
-    with BeforeAndAfterEach {
+class PushNotificationConnectorSpec extends PlaySpec with EitherValues with BeforeAndAfterEach {
 
   implicit val ec: ExecutionContext = ExecutionContext.global
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val hc: HeaderCarrier    = HeaderCarrier()
 
-  private val httpClient = mock[HttpClient]
-  private val appConfig = mock[AppConfig]
+  private val httpClient      = mock[HttpClient]
+  private val appConfig       = mock[AppConfig]
   private val dateTimeService = mock[DateTimeService]
-  private val timestamp = Instant.parse("2024-09-09T18:30:01.12345678Z")
-  private val boxId = "1c5b9365-18a6-55a5-99c9-83a091ac7f26"
+  private val timestamp       = Instant.parse("2024-09-09T18:30:01.12345678Z")
+  private val boxId           = "1c5b9365-18a6-55a5-99c9-83a091ac7f26"
 
   private val sut = new PushNotificationConnector(httpClient, appConfig, dateTimeService)
 
@@ -68,9 +65,9 @@ class PushNotificationConnectorSpec
     super.beforeEach()
     reset(httpClient, appConfig)
 
-    when(httpClient.GET[Any](any, any, any)(any,any,any))
+    when(httpClient.GET[Any](any, any, any)(any, any, any))
       .thenReturn(Future.successful(HttpResponse(200, boxIdSuccessResponse, Map())))
-    when(httpClient.POST[Any,Any](any, any, any)(any, any, any, any))
+    when(httpClient.POST[Any, Any](any, any, any)(any, any, any, any))
       .thenReturn(Future.successful(HttpResponse(201, """{"notificationId": "123"}""")))
     when(appConfig.pushPullNotificationsHost).thenReturn("/notificationUrl")
     when(appConfig.pushPullNotificationsUri(any)).thenReturn("/pushNotificationUrl")
@@ -90,12 +87,12 @@ class PushNotificationConnectorSpec
         "clientId" -> "clientId"
       )
       await(sut.getDefaultBoxId("clientId"))
-      verify(httpClient).GET(eqTo("/notificationUrl/box"), eqTo(queryParams), any)(any,any,any)
+      verify(httpClient).GET(eqTo("/notificationUrl/box"), eqTo(queryParams), any)(any, any, any)
     }
 
     "return an error" when {
       "Box Id not found" in {
-        when(httpClient.GET[Any](any, any, any)(any,any,any))
+        when(httpClient.GET[Any](any, any, any)(any, any, any))
           .thenReturn(Future.successful(HttpResponse(404, "Box does not exist")))
 
         val result = await(sut.getDefaultBoxId("clientId"))
@@ -105,7 +102,7 @@ class PushNotificationConnectorSpec
 
       "is bad request" in {
         val debugMessage = "BAD_REQUEST"
-        when(httpClient.GET[Any](any, any, any)(any,any,any))
+        when(httpClient.GET[Any](any, any, any)(any, any, any))
           .thenReturn(Future.successful(HttpResponse(400, "BAD_REQUEST")))
 
         val result = await(sut.getDefaultBoxId("clientId"))
@@ -115,7 +112,7 @@ class PushNotificationConnectorSpec
 
       "is unknown error" in {
         val debugMessage = "unknown error"
-        when(httpClient.GET[Any](any, any, any)(any,any,any))
+        when(httpClient.GET[Any](any, any, any)(any, any, any))
           .thenReturn(Future.successful(HttpResponse(500, debugMessage)))
 
         val result = await(sut.getDefaultBoxId("clientId"))
@@ -124,8 +121,8 @@ class PushNotificationConnectorSpec
       }
 
       "cannot parse json" in {
-        val errorJson = Json.obj( "code" -> "UNKNOWN_ERROR", "message" -> "Box does not exist")
-        when(httpClient.GET[Any](any, any, any)(any,any,any))
+        val errorJson = Json.obj("code" -> "UNKNOWN_ERROR", "message" -> "Box does not exist")
+        when(httpClient.GET[Any](any, any, any)(any, any, any))
           .thenReturn(Future.successful(HttpResponse(200, errorJson, Map())))
 
         val result = await(sut.getDefaultBoxId("clientId"))
@@ -138,9 +135,10 @@ class PushNotificationConnectorSpec
 
   "postNotification" should {
 
-    val messageId = "messageId"
-    val ern = "ern123"
-    val notification = Notification("mvId", "/url", messageId, "IE801", "consignor", Some("consignee"), Some("arc"), ern)
+    val messageId    = "messageId"
+    val ern          = "ern123"
+    val notification =
+      Notification("mvId", "/url", messageId, "IE801", "consignor", Some("consignee"), Some("arc"), ern)
 
     "return a success response" in {
       val result = await(sut.postNotification(boxId, notification))
@@ -161,7 +159,7 @@ class PushNotificationConnectorSpec
     "return an error" when {
 
       "the notification API return an error" in {
-        when(httpClient.POST[Any,Any](any, any, any)(any, any, any, any))
+        when(httpClient.POST[Any, Any](any, any, any)(any, any, any, any))
           .thenReturn(Future.successful(HttpResponse(BAD_REQUEST, "Box ID is not a UUID")))
 
         val result = await(sut.postNotification(boxId, notification))
@@ -171,30 +169,27 @@ class PushNotificationConnectorSpec
       }
 
       "invalid json" in {
-        when(httpClient.POST[Any,Any](any, any, any)(any, any, any, any))
+        when(httpClient.POST[Any, Any](any, any, any)(any, any, any, any))
           .thenReturn(Future.successful(HttpResponse(200, "invalid json")))
 
         val result = await(sut.postNotification(boxId, notification))
 
         Json.toJson(result.asInstanceOf[FailedPushNotification]) mustBe
-          buildPushNotificationJsonError(INTERNAL_SERVER_ERROR,
-          s"An exception occurred when sending a notification with excise number: $ern, boxId: $boxId, messageId: $messageId")
+          buildPushNotificationJsonError(
+            INTERNAL_SERVER_ERROR,
+            s"An exception occurred when sending a notification with excise number: $ern, boxId: $boxId, messageId: $messageId"
+          )
       }
     }
   }
 
-  private def buildBoxIdJsonError(debugMessage: String) = {
-    Json.parse(
-      s"""{"dateTime":"2024-09-09T18:30:01.123Z",
+  private def buildBoxIdJsonError(debugMessage: String) =
+    Json.parse(s"""{"dateTime":"2024-09-09T18:30:01.123Z",
          |"message":"Box Id error",
          |"debugMessage":"$debugMessage"}""".stripMargin)
-  }
 
-  private def buildPushNotificationJsonError(status: Int, debugMessage: String) = {
-    Json.parse(
-      s"""{"status":$status,
+  private def buildPushNotificationJsonError(status: Int, debugMessage: String) =
+    Json.parse(s"""{"status":$status,
          |"message":"Push notification error",
          |"debugMessage":"$debugMessage"}""".stripMargin)
-  }
 }
-

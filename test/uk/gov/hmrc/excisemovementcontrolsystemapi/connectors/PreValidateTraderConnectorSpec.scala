@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
-
 import com.codahale.metrics.{MetricRegistry, Timer}
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
@@ -43,27 +42,28 @@ import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
 class PreValidateTraderConnectorSpec
-  extends PlaySpec
+    extends PlaySpec
     with EISHeaderTestSupport
     with BeforeAndAfterEach
     with EitherValues {
 
-  protected implicit val hc: HeaderCarrier = HeaderCarrier()
+  protected implicit val hc: HeaderCarrier    = HeaderCarrier()
   protected implicit val ec: ExecutionContext = ExecutionContext.global
 
-  private val mockHttpClient = mock[HttpClient]
+  private val mockHttpClient       = mock[HttpClient]
   private val correlationIdService = mock[CorrelationIdService]
-  private val dateTimeService = mock[DateTimeService]
-  private val appConfig = mock[AppConfig]
+  private val dateTimeService      = mock[DateTimeService]
+  private val appConfig            = mock[AppConfig]
 
   private val metrics = mock[MetricRegistry](RETURNS_DEEP_STUBS)
 
-  private val connector = new PreValidateTraderConnector(mockHttpClient, correlationIdService, appConfig, metrics, dateTimeService)
-  private val emcsCorrelationId = "1234566"
-  private val timerContext = mock[Timer.Context]
+  private val connector                    =
+    new PreValidateTraderConnector(mockHttpClient, correlationIdService, appConfig, metrics, dateTimeService)
+  private val emcsCorrelationId            = "1234566"
+  private val timerContext                 = mock[Timer.Context]
   private val preValidateTraderBearerToken = "preValidateTraderBearerToken"
 
-  private val validRequest = getPreValidateTraderRequest
+  private val validRequest  = getPreValidateTraderRequest
   private val validResponse = getPreValidateTraderSuccessResponse
   private val businessError = getPreValidateTraderErrorResponse
 
@@ -98,7 +98,6 @@ class PreValidateTraderConnectorSpec
 
       result mustBe Right(Left(businessError))
     }
-
 
     "get URL from appConfig" in {
       submitPreValidateTrader()
@@ -139,11 +138,15 @@ class PreValidateTraderConnectorSpec
       val result = await(submitPreValidateTrader())
 
       result.left.value mustBe InternalServerError(
-        Json.toJson(EisErrorResponsePresentation(timestamp,
-          "Internal Server Error",
-          "Unexpected error occurred while processing PreValidateTrader request",
-          emcsCorrelationId
-        )))
+        Json.toJson(
+          EisErrorResponsePresentation(
+            timestamp,
+            "Internal Server Error",
+            "Unexpected error occurred while processing PreValidateTrader request",
+            emcsCorrelationId
+          )
+        )
+      )
     }
 
     "return Not found error" in {
@@ -194,7 +197,6 @@ class PreValidateTraderConnectorSpec
     preValidateTraderHttpReader
   }
 
-  private def submitPreValidateTrader(): Future[Either[Result, PreValidateTraderEISResponse]] = {
+  private def submitPreValidateTrader(): Future[Either[Result, PreValidateTraderEISResponse]] =
     connector.submitMessage(validRequest, "ern123")
-  }
 }

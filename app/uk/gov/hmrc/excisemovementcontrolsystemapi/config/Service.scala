@@ -31,16 +31,13 @@ final case class Service(host: String, port: String, protocol: String) {
 
 object Service {
 
-  implicit lazy val configLoader: ConfigLoader[Service] = ConfigLoader {
-    config =>
-      prefix =>
+  implicit lazy val configLoader: ConfigLoader[Service] = ConfigLoader { config => prefix =>
+    val service  = Configuration(config).get[Configuration](prefix)
+    val host     = service.get[String]("host")
+    val port     = service.get[String]("port")
+    val protocol = service.get[String]("protocol")
 
-        val service  = Configuration(config).get[Configuration](prefix)
-        val host     = service.get[String]("host")
-        val port     = service.get[String]("port")
-        val protocol = service.get[String]("protocol")
-
-        Service(host, port, protocol)
+    Service(host, port, protocol)
   }
 
   implicit def convertToString(service: Service): String =

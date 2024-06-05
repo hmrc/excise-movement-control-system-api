@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
-
 import com.codahale.metrics.{MetricRegistry, Timer}
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
@@ -43,25 +42,25 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.{Elem, NodeSeq}
 
 class EISSubmissionConnectorSpec
-  extends PlaySpec
+    extends PlaySpec
     with StringSupport
     with EISHeaderTestSupport
     with BeforeAndAfterEach
     with EitherValues {
 
-  protected implicit val hc: HeaderCarrier = HeaderCarrier()
+  protected implicit val hc: HeaderCarrier    = HeaderCarrier()
   protected implicit val ec: ExecutionContext = ExecutionContext.global
 
-  private val mockHttpClient = mock[HttpClient]
-  private val emcsUtils = mock[EmcsUtils]
-  private val appConfig = mock[AppConfig]
+  private val mockHttpClient  = mock[HttpClient]
+  private val emcsUtils       = mock[EmcsUtils]
+  private val appConfig       = mock[AppConfig]
   private val dateTimeService = mock[DateTimeService]
 
   private val metrics = mock[MetricRegistry](RETURNS_DEEP_STUBS)
 
-  private val connector = new EISSubmissionConnector(mockHttpClient, emcsUtils, appConfig, metrics, dateTimeService)
-  private val emcsCorrelationId = "1234566"
-  private val xml = <IE815></IE815>
+  private val connector               = new EISSubmissionConnector(mockHttpClient, emcsUtils, appConfig, metrics, dateTimeService)
+  private val emcsCorrelationId       = "1234566"
+  private val xml                     = <IE815></IE815>
   private val controlWrappedXml: Elem =
     <con:Control xmlns:con="http://www.govtalk.gov.uk/taxation/InternationalTrade/Common/ControlDocument">
       <con:MetaData>
@@ -80,11 +79,11 @@ class EISSubmissionConnectorSpec
         </con:ReturnData>
       </con:OperationRequest>
     </con:Control>
-  private val timerContext = mock[Timer.Context]
-  private val ie815Message = mock[IE815Message]
-  private val submissionBearerToken = "submissionBearerToken"
+  private val timerContext            = mock[Timer.Context]
+  private val ie815Message            = mock[IE815Message]
+  private val submissionBearerToken   = "submissionBearerToken"
 
-  private val ern = "123"
+  private val ern       = "123"
   private val timestamp = Instant.parse("2023-09-17T09:32:50.345456Z")
 
   override def beforeEach(): Unit = {
@@ -160,9 +159,15 @@ class EISSubmissionConnectorSpec
       val result = await(submitExciseMovementForIE815)
 
       result.left.value mustBe InternalServerError(
-        Json.toJson(EisErrorResponsePresentation(timestamp, "Internal server error",
-          "Unexpected error occurred while processing Submission request"
-          , emcsCorrelationId)))
+        Json.toJson(
+          EisErrorResponsePresentation(
+            timestamp,
+            "Internal server error",
+            "Unexpected error occurred while processing Submission request",
+            emcsCorrelationId
+          )
+        )
+      )
     }
 
     "return Not found error" in {
@@ -222,16 +227,13 @@ class EISSubmissionConnectorSpec
     eisHttpReader
   }
 
-  private def submitExciseMovementForIE815: Future[Either[Result, EISSubmissionResponse]] = {
+  private def submitExciseMovementForIE815: Future[Either[Result, EISSubmissionResponse]] =
     submitExciseMovementWithParams(xml, ie815Message, ern)
-  }
 
   private def submitExciseMovementWithParams(
     xml: NodeSeq,
     message: IEMessage,
     authErn: String
-  ): Future[Either[Result, EISSubmissionResponse]] = {
-
+  ): Future[Either[Result, EISSubmissionResponse]] =
     connector.submitMessage(message, xml.toString(), authErn, emcsCorrelationId)
-  }
 }

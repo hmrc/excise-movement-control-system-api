@@ -30,13 +30,14 @@ import scala.util.{Failure, Success}
 
 @Singleton
 class JobScheduler @Inject() (
-                               pollingNewMessagesJob: PollingNewMessagesJob,
-                               pushNotificationJob: PushNotificationJob,
-                               applicationLifecycle: ApplicationLifecycle,
-                               actorSystem: ActorSystem,
-                               metrics: Metrics,
-                               clock: Clock
-                             )(implicit val ec: ExecutionContext) extends Logging {
+  pollingNewMessagesJob: PollingNewMessagesJob,
+  pushNotificationJob: PushNotificationJob,
+  applicationLifecycle: ApplicationLifecycle,
+  actorSystem: ActorSystem,
+  metrics: Metrics,
+  clock: Clock
+)(implicit val ec: ExecutionContext)
+    extends Logging {
 
   private val scheduledJobs: Seq[ScheduledJob] = Seq(
     pollingNewMessagesJob,
@@ -55,7 +56,7 @@ class JobScheduler @Inject() (
         val duration = Duration.between(startTime, clock.instant())
         timers(job).update(duration)
         result match {
-          case Success(_) =>
+          case Success(_)         =>
             logger.info(s"Completed job ${job.name} in ${duration.toSeconds}s")
           case Failure(throwable) =>
             logger.error(s"Exception running job ${job.name} after ${duration.toSeconds}s", throwable)
@@ -64,9 +65,9 @@ class JobScheduler @Inject() (
     }
   }
 
-  applicationLifecycle.addStopHook(() => {
+  applicationLifecycle.addStopHook { () =>
     logger.info(s"Cancelling all scheduled jobs.")
     cancellables.foreach(_.cancel())
     Future.unit
-  })
+  }
 }

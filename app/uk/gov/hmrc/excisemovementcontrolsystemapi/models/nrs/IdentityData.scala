@@ -21,24 +21,24 @@ import uk.gov.hmrc.auth.core.retrieve._
 import uk.gov.hmrc.auth.core.{AffinityGroup, ConfidenceLevel, CredentialRole}
 
 case class IdentityData(
-                         internalId: Option[String] = None,
-                         externalId: Option[String] = None,
-                         agentCode: Option[String] = None,
-                         optionalCredentials: Option[Credentials] = None,
-                         confidenceLevel: ConfidenceLevel,
-                         nino: Option[String] = None,
-                         saUtr: Option[String] = None,
-                         optionalName: Option[Name] = None,
-                         email: Option[String] = None,
-                         agentInformation: AgentInformation,
-                         groupIdentifier: Option[String] = None,
-                         credentialRole: Option[CredentialRole] = None,
-                         mdtpInformation: Option[MdtpInformation] = None,
-                         optionalItmpName: Option[ItmpName] = None,
-                         optionalItmpAddress: Option[ItmpAddress] = None,
-                         affinityGroup: Option[AffinityGroup] = None,
-                         credentialStrength: Option[String] = None
-                       )
+  internalId: Option[String] = None,
+  externalId: Option[String] = None,
+  agentCode: Option[String] = None,
+  optionalCredentials: Option[Credentials] = None,
+  confidenceLevel: ConfidenceLevel,
+  nino: Option[String] = None,
+  saUtr: Option[String] = None,
+  optionalName: Option[Name] = None,
+  email: Option[String] = None,
+  agentInformation: AgentInformation,
+  groupIdentifier: Option[String] = None,
+  credentialRole: Option[CredentialRole] = None,
+  mdtpInformation: Option[MdtpInformation] = None,
+  optionalItmpName: Option[ItmpName] = None,
+  optionalItmpAddress: Option[ItmpAddress] = None,
+  affinityGroup: Option[AffinityGroup] = None,
+  credentialStrength: Option[String] = None
+)
 
 object IdentityData {
   implicit val credFormat: OFormat[Credentials]           = Json.format[Credentials]
@@ -50,4 +50,3 @@ object IdentityData {
   implicit val loginTimes: OFormat[LoginTimes]            = Json.format[LoginTimes]
   implicit val formats: OFormat[IdentityData]             = Json.format[IdentityData]
 }
-
