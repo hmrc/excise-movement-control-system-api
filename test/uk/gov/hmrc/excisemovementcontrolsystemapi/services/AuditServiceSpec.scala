@@ -33,7 +33,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class AuditServiceSpec extends PlaySpec with TestXml {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  protected implicit val hc: HeaderCarrier = HeaderCarrier()
+  protected implicit val hc: HeaderCarrier    = HeaderCarrier()
 
   class Harness(auditConnector: AuditConnector) extends AuditServiceImpl(auditConnector) {
     def getLogger(): Logger = logger
@@ -42,9 +42,10 @@ class AuditServiceSpec extends PlaySpec with TestXml {
   "auditMessage" should {
     "silently returns right on error" in {
       val auditConnector = mock[AuditConnector]
-      when(auditConnector.sendExtendedEvent(any)(any, any)).thenReturn(Future.successful(AuditResult.Failure("test", None)))
+      when(auditConnector.sendExtendedEvent(any)(any, any))
+        .thenReturn(Future.successful(AuditResult.Failure("test", None)))
 
-      val sut = new Harness(auditConnector)
+      val sut    = new Harness(auditConnector)
       val result = sut.auditMessage(IE815Message.createFromXml(IE815))
 
       await(result.value) equals Right(())
@@ -54,7 +55,7 @@ class AuditServiceSpec extends PlaySpec with TestXml {
       val auditConnector = mock[AuditConnector]
       when(auditConnector.sendExtendedEvent(any)(any, any)).thenReturn(Future.successful(AuditResult.Success))
 
-      val sut = new Harness(auditConnector)
+      val sut    = new Harness(auditConnector)
       val result = sut.auditMessage(IE815Message.createFromXml(IE815))
 
       await(result.value) equals Right(())

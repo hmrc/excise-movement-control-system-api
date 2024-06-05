@@ -32,30 +32,33 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class BoxIdRepository @Inject()
-(mongo: MongoComponent,
- configuration: Configuration,
- timeService: DateTimeService)(implicit ec: ExecutionContext) extends PlayMongoRepository[BoxIdRecord](
-  collectionName = "boxids",
-  mongoComponent = mongo,
-  domainFormat = BoxIdRecord.format,
-  indexes = mongoIndexes(configuration.get[Duration]("mongodb.boxId.TTL")),
-  replaceIndexes = true
-) with Logging {
+class BoxIdRepository @Inject() (mongo: MongoComponent, configuration: Configuration, timeService: DateTimeService)(
+  implicit ec: ExecutionContext
+) extends PlayMongoRepository[BoxIdRecord](
+      collectionName = "boxids",
+      mongoComponent = mongo,
+      domainFormat = BoxIdRecord.format,
+      indexes = mongoIndexes(configuration.get[Duration]("mongodb.boxId.TTL")),
+      replaceIndexes = true
+    )
+    with Logging {
 
   def getBoxIds(ern: String): Future[Set[String]] = Mdc.preservingMdc {
     collection.find(Filters.eq("ern", ern)).map(_.boxId).toFuture().map(_.toSet)
   }
 
   def save(ern: String, boxId: String): Future[Done] = Mdc.preservingMdc {
-    collection.replaceOne(
-      Filters.and(
-        Filters.eq("ern", ern),
-        Filters.eq("boxId", boxId)
-      ),
-      BoxIdRecord(ern, boxId, timeService.timestamp()),
-      ReplaceOptions().upsert(true)
-    ).toFuture().map(_ => Done)
+    collection
+      .replaceOne(
+        Filters.and(
+          Filters.eq("ern", ern),
+          Filters.eq("boxId", boxId)
+        ),
+        BoxIdRecord(ern, boxId, timeService.timestamp()),
+        ReplaceOptions().upsert(true)
+      )
+      .toFuture()
+      .map(_ => Done)
   }
 }
 
@@ -73,7 +76,8 @@ object BoxIdRepository {
           Indexes.ascending("ern"),
           Indexes.ascending("boxId")
         ),
-        IndexOptions().name("ern_boxId_index")
+        IndexOptions()
+          .name("ern_boxId_index")
           .unique(true)
       )
     )

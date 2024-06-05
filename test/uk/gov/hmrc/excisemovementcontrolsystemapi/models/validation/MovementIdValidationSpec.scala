@@ -28,7 +28,7 @@ import scala.concurrent.ExecutionContext
 class MovementIdValidationSpec extends PlaySpec with EitherValues with BeforeAndAfterEach {
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
-  private val timestamp = Instant.now()
+  private val timestamp           = Instant.now()
   private val movementIdValidator = new MovementIdValidation()
 
   "validateMovementId" should {
@@ -58,11 +58,15 @@ class MovementIdValidationSpec extends PlaySpec with EitherValues with BeforeAnd
 
         val result = movementIdValidator.convertErrorToResponse(MovementIdFormatInvalid(), timestamp)
 
-        result mustBe BadRequest(Json.toJson(ErrorResponse(
-          timestamp,
-          "Movement Id format error",
-          "The movement ID should be a valid UUID"
-        )))
+        result mustBe BadRequest(
+          Json.toJson(
+            ErrorResponse(
+              timestamp,
+              "Movement Id format error",
+              "The movement ID should be a valid UUID"
+            )
+          )
+        )
       }
 
     }

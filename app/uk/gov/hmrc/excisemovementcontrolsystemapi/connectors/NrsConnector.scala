@@ -33,16 +33,19 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Success, Try}
 
-class NrsConnector @Inject()
-(
+class NrsConnector @Inject() (
   httpClient: HttpClient,
   appConfig: AppConfig,
   metrics: MetricRegistry
-)(implicit val ec: ExecutionContext, val futures: Futures) extends Retrying with Logging {
+)(implicit val ec: ExecutionContext, val futures: Futures)
+    extends Retrying
+    with Logging {
 
-  def sendToNrs(payload: NrsPayload, correlationId: String)(implicit hc: HeaderCarrier): Future[NonRepudiationSubmission] = {
+  def sendToNrs(payload: NrsPayload, correlationId: String)(implicit
+    hc: HeaderCarrier
+  ): Future[NonRepudiationSubmission] = {
 
-    val timer = metrics.timer("emcs.nrs.submission.timer").time()
+    val timer      = metrics.timer("emcs.nrs.submission.timer").time()
     val jsonObject = payload.toJsObject
 
     retry(appConfig.nrsRetryDelays.toList, canRetry, appConfig.getNrsSubmissionUrl) {
@@ -52,10 +55,14 @@ class NrsConnector @Inject()
         response.status match {
           case ACCEPTED =>
             val submissionId = response.json.as[NonRepudiationSubmissionAccepted]
-            logger.info(s"[NrsConnector] - Non repudiation submission accepted with nrSubmissionId: ${submissionId.nrSubmissionId}")
+            logger.info(
+              s"[NrsConnector] - Non repudiation submission accepted with nrSubmissionId: ${submissionId.nrSubmissionId}"
+            )
             submissionId
-          case _ =>
-            logger.warn(s"[NrsConnector] - Error when submitting to Non repudiation system (NRS) with status: ${response.status}, body: ${response.body}, correlationId: $correlationId")
+          case _        =>
+            logger.warn(
+              s"[NrsConnector] - Error when submitting to Non repudiation system (NRS) with status: ${response.status}, body: ${response.body}, correlationId: $correlationId"
+            )
             NonRepudiationSubmissionFailed(response.status, response.body)
         }
       }
@@ -63,33 +70,29 @@ class NrsConnector @Inject()
   }
 
   def send(
-            jsonObject: JsObject,
-            correlationId: String
-          )(implicit hc: HeaderCarrier): Future[HttpResponse] = {
+    jsonObject: JsObject,
+    correlationId: String
+  )(implicit hc: HeaderCarrier): Future[HttpResponse] = {
 
     val nrsSubmissionUrl = appConfig.getNrsSubmissionUrl
-    logger.info(s"[NrsConnector] - NRS submission: sending POST request to $nrsSubmissionUrl. CorrelationId: $correlationId")
+    logger.info(
+      s"[NrsConnector] - NRS submission: sending POST request to $nrsSubmissionUrl. CorrelationId: $correlationId"
+    )
 
-    httpClient.POST[JsObject, HttpResponse](
-      nrsSubmissionUrl,
-      body = jsonObject,
-      createHeader)
+    httpClient.POST[JsObject, HttpResponse](nrsSubmissionUrl, body = jsonObject, createHeader)
   }
 
-  private def canRetry(response: Try[HttpResponse]): Boolean = {
+  private def canRetry(response: Try[HttpResponse]): Boolean =
     response match {
       case Success(r) => !is2xx(r.status)
-      case _ => true
+      case _          => true
     }
-  }
 
-
-  private def createHeader: Seq[(String, String)] = {
+  private def createHeader: Seq[(String, String)] =
     Seq(
       "Content-Type" -> "application/json",
       (XApiKeyHeaderKey, appConfig.nrsApiKey)
     )
-  }
 }
 
 object NrsConnector {

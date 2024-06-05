@@ -26,22 +26,21 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFor
 
 import scala.xml.NodeSeq
 
-case class IE803Message
-(
+case class IE803Message(
   private val obj: IE803Type,
   private val key: Option[String],
   private val namespace: Option[String],
   auditType: AuditType
-) extends IEMessage with GeneratedJsonWriters {
+) extends IEMessage
+    with GeneratedJsonWriters {
 
   def consigneeId: Option[String] = None
 
   override def administrativeReferenceCode: Seq[Option[String]] =
     Seq(Some(obj.Body.NotificationOfDivertedEADESAD.ExciseNotification.AdministrativeReferenceCode))
 
-  override def toXml: NodeSeq = {
+  override def toXml: NodeSeq =
     scalaxb.toXML[IE803Type](obj, namespace, key, generated.defaultScope)
-  }
 
   override def toJson: JsValue = Json.toJson(obj)
 
@@ -51,14 +50,14 @@ case class IE803Message
 
   override def lrnEquals(lrn: String): Boolean = false
 
-  override def toString: String = s"Message type: $messageType, message identifier: $messageIdentifier, ARC: $administrativeReferenceCode"
+  override def toString: String =
+    s"Message type: $messageType, message identifier: $messageIdentifier, ARC: $administrativeReferenceCode"
 
 }
 
 object IE803Message {
-  def apply(message: DataRecord[MessagesOption]): IE803Message = {
+  def apply(message: DataRecord[MessagesOption]): IE803Message =
     IE803Message(message.as[IE803Type], message.key, message.namespace, NotificationOfDivertedMovement)
-  }
 
   def createFromXml(xml: NodeSeq): IE803Message = {
     val ie803: IE803Type = scalaxb.fromXML[IE803Type](xml)

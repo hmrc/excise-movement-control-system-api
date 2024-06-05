@@ -21,27 +21,26 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresent
 
 import java.time.Instant
 
-case class EISErrorResponse(dateTime: Instant,
-                            status: String,
-                            message: String,
-                            debugMessage: String,
-                            emcsCorrelationId: String) {
-
-}
+case class EISErrorResponse(
+  dateTime: Instant,
+  status: String,
+  message: String,
+  debugMessage: String,
+  emcsCorrelationId: String
+) {}
 
 object EISErrorResponse {
   implicit val format: OFormat[EISErrorResponse] = Json.format[EISErrorResponse]
 
   implicit class Presentation(val errorResponse: EISErrorResponse) extends AnyVal {
 
-    implicit def asPresentation: EisErrorResponsePresentation = {
+    implicit def asPresentation: EisErrorResponsePresentation =
       EisErrorResponsePresentation(
         errorResponse.dateTime,
         errorResponse.message,
         errorResponse.debugMessage,
         errorResponse.emcsCorrelationId
       )
-    }
 
   }
 }

@@ -23,8 +23,7 @@ import scala.util.Try
 
 sealed trait MessageReceiptResponse
 
-case class MessageReceiptSuccessResponse
-(
+case class MessageReceiptSuccessResponse(
   dateTime: Instant,
   exciseRegistrationNumber: String,
   recordsAffected: Int
@@ -46,20 +45,20 @@ object MessageReceiptSuccessResponse {
 
     lazy val reads: Reads[MessageReceiptSuccessResponse] = (
       (__ \ "dateTime").read[Instant] and
-      (__ \ "exciseRegistrationNumber").read[String] and
-      (__ \ "recordsAffected").read(readNumber)
+        (__ \ "exciseRegistrationNumber").read[String] and
+        (__ \ "recordsAffected").read(readNumber)
     )(MessageReceiptSuccessResponse.apply _)
 
     OFormat(reads, writes)
   }
 }
 
-case class MessageReceiptFailResponse
-(
+case class MessageReceiptFailResponse(
   status: Int,
   dateTime: Instant,
   debugMessage: String
-) extends MessageReceiptResponse with GenericErrorResponse {
+) extends MessageReceiptResponse
+    with GenericErrorResponse {
   override val message = "Message Receipt error"
 }
 

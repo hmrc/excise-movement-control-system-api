@@ -35,43 +35,49 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-class PreValidateTraderConnector @Inject()
-(
+class PreValidateTraderConnector @Inject() (
   httpClient: HttpClient,
   correlationIdService: CorrelationIdService,
   appConfig: AppConfig,
   metrics: MetricRegistry,
   dateTimeService: DateTimeService
-)(implicit ec: ExecutionContext) extends EISSubmissionHeaders with Logging {
+)(implicit ec: ExecutionContext)
+    extends EISSubmissionHeaders
+    with Logging {
 
-  def submitMessage(request: PreValidateTraderRequest, ern: String)(implicit hc: HeaderCarrier):
-  Future[Either[Result, PreValidateTraderEISResponse]] = {
+  def submitMessage(request: PreValidateTraderRequest, ern: String)(implicit
+    hc: HeaderCarrier
+  ): Future[Either[Result, PreValidateTraderEISResponse]] = {
 
     val timer = metrics.timer("emcs.prevalidatetrader.connector.timer").time()
 
-    val correlationId = correlationIdService.generateCorrelationId()
-    val timestamp = dateTimeService.timestamp()
+    val correlationId   = correlationIdService.generateCorrelationId()
+    val timestamp       = dateTimeService.timestamp()
     val createdDateTime = timestamp.asStringInMilliseconds
 
-    httpClient.POST[PreValidateTraderRequest, Either[Result, PreValidateTraderEISResponse]](
-      appConfig.preValidateTraderUrl,
-      request,
-      build(correlationId, createdDateTime, appConfig.preValidateTraderBearerToken)
-    )(PreValidateTraderRequest.format, PreValidateTraderHttpReader(correlationId, ern, createdDateTime, dateTimeService), hc, ec)
+    httpClient
+      .POST[PreValidateTraderRequest, Either[Result, PreValidateTraderEISResponse]](
+        appConfig.preValidateTraderUrl,
+        request,
+        build(correlationId, createdDateTime, appConfig.preValidateTraderBearerToken)
+      )(
+        PreValidateTraderRequest.format,
+        PreValidateTraderHttpReader(correlationId, ern, createdDateTime, dateTimeService),
+        hc,
+        ec
+      )
       .andThen { case _ => timer.stop() }
-      .recover {
-        case ex: Throwable =>
+      .recover { case ex: Throwable =>
+        logger.warn(EISErrorMessage(createdDateTime, ern, ex.getMessage, correlationId, "PreValidateTrader"), ex)
 
-          logger.warn(EISErrorMessage(createdDateTime, ern, ex.getMessage, correlationId, "PreValidateTrader"), ex)
+        val error = EisErrorResponsePresentation(
+          timestamp,
+          "Internal Server Error",
+          "Unexpected error occurred while processing PreValidateTrader request",
+          correlationId
+        )
 
-          val error = EisErrorResponsePresentation(
-            timestamp,
-            "Internal Server Error",
-            "Unexpected error occurred while processing PreValidateTrader request",
-            correlationId
-          )
-
-          Left(InternalServerError(Json.toJson(error)))
+        Left(InternalServerError(Json.toJson(error)))
 
       }
 

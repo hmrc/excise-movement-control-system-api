@@ -32,9 +32,8 @@ trait FakeAuthentication {
 
     override def parser: BodyParser[AnyContent] = stubBodyParser()
 
-    override def invokeBlock[A](request: Request[A], block: EnrolmentRequest[A] => Future[Result]): Future[Result] = {
+    override def invokeBlock[A](request: Request[A], block: EnrolmentRequest[A] => Future[Result]): Future[Result] =
       block(EnrolmentRequest(request, ern, "testInternalId"))
-    }
 
     override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global
   }
@@ -43,9 +42,8 @@ trait FakeAuthentication {
 
     override def parser: BodyParser[AnyContent] = stubBodyParser()
 
-    override def invokeBlock[A](request: Request[A], block: EnrolmentRequest[A] => Future[Result]): Future[Result] = {
+    override def invokeBlock[A](request: Request[A], block: EnrolmentRequest[A] => Future[Result]): Future[Result] =
       block(EnrolmentRequest(request, erns, "testInternalId"))
-    }
 
     override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global
   }
@@ -54,9 +52,8 @@ trait FakeAuthentication {
 
     override def parser: BodyParser[AnyContent] = stubBodyParser()
 
-    override def invokeBlock[A](request: Request[A], block: EnrolmentRequest[A] => Future[Result]): Future[Result] = {
+    override def invokeBlock[A](request: Request[A], block: EnrolmentRequest[A] => Future[Result]): Future[Result] =
       Future.successful(Forbidden("Invalid header parameters supplied"))
-    }
 
     override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global
   }

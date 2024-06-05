@@ -29,33 +29,35 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-class ValidateUpdatedSinceActionImpl @Inject()
-(dateTimeService: DateTimeService,
-cc: ControllerComponents
-)(implicit val ec: ExecutionContext)
-  extends BackendController(cc)
+class ValidateUpdatedSinceActionImpl @Inject() (dateTimeService: DateTimeService, cc: ControllerComponents)(implicit
+  val ec: ExecutionContext
+) extends BackendController(cc)
     with ValidateUpdatedSinceAction {
   override def apply(updatedSince: Option[String]): ActionFilter[EnrolmentRequest] =
     new ActionFilter[EnrolmentRequest] {
       override val executionContext: ExecutionContext = ec
 
       override def filter[A](request: EnrolmentRequest[A]): Future[Option[Result]] = Future.successful {
-        updatedSince.flatMap( value =>
-            Try(Instant.parse(value)) match {
-              case Success(_) => None
-              case Failure(_) => Some(badRequestResponse())
-            }
+        updatedSince.flatMap(value =>
+          Try(Instant.parse(value)) match {
+            case Success(_) => None
+            case Failure(_) => Some(badRequestResponse())
+          }
         )
 
       }
     }
 
   private def badRequestResponse(): Result =
-    BadRequest(Json.toJson(ErrorResponse(
-      dateTimeService.timestamp(),
-      "Invalid date format provided in the updatedSince query parameter",
-      "Date format should be like '2020-11-15T17:02:34.00Z'")
-    ))
+    BadRequest(
+      Json.toJson(
+        ErrorResponse(
+          dateTimeService.timestamp(),
+          "Invalid date format provided in the updatedSince query parameter",
+          "Date format should be like '2020-11-15T17:02:34.00Z'"
+        )
+      )
+    )
 }
 
 @ImplementedBy(classOf[ValidateUpdatedSinceActionImpl])

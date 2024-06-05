@@ -32,79 +32,93 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class NrsService @Inject()
-(
+class NrsService @Inject() (
   override val authConnector: AuthConnector,
   nrsConnector: NrsConnector,
   dateTimeService: DateTimeService,
   emcsUtils: EmcsUtils,
   nrsEventIdMapper: NrsEventIdMapper
-)(implicit ec: ExecutionContext) extends AuthorisedFunctions with Logging {
+)(implicit ec: ExecutionContext)
+    extends AuthorisedFunctions
+    with Logging {
 
   def submitNrs(
-                 request: ParsedXmlRequest[_],
-                 authorisedErn: String,
-                 correlationId: String
-               )(implicit headerCarrier: HeaderCarrier): Future[NonRepudiationSubmission] = {
+    request: ParsedXmlRequest[_],
+    authorisedErn: String,
+    correlationId: String
+  )(implicit headerCarrier: HeaderCarrier): Future[NonRepudiationSubmission] = {
 
-    val payload = request.body.toString
+    val payload        = request.body.toString
     val userHeaderData = request.headersAsMap
-    val message = request.ieMessage
-    val exciseNumber = authorisedErn
+    val message        = request.ieMessage
+    val exciseNumber   = authorisedErn
     val notableEventId = nrsEventIdMapper.mapMessageToEventId(message)
 
     (for {
-      identityData <- retrieveIdentityData()
-      userAuthToken = retrieveUserAuthToken(headerCarrier)
-      metaData = NrsMetadata.create(payload, emcsUtils, notableEventId, identityData, dateTimeService.timestamp().toString,
-        userAuthToken, userHeaderData, exciseNumber)
-      encodedPayload = emcsUtils.encode(payload)
-      nrsPayload = NrsPayload(encodedPayload, metaData)
+      identityData         <- retrieveIdentityData()
+      userAuthToken         = retrieveUserAuthToken(headerCarrier)
+      metaData              = NrsMetadata.create(
+                                payload,
+                                emcsUtils,
+                                notableEventId,
+                                identityData,
+                                dateTimeService.timestamp().toString,
+                                userAuthToken,
+                                userHeaderData,
+                                exciseNumber
+                              )
+      encodedPayload        = emcsUtils.encode(payload)
+      nrsPayload            = NrsPayload(encodedPayload, metaData)
       retrievedNrsResponse <- nrsConnector.sendToNrs(nrsPayload, correlationId)
     } yield retrievedNrsResponse)
-      .recover {
-        case e: Exception =>
-          logger.warn(s"[NrsService] - Error when submitting to Non repudiation system (NRS) with message: ${e.getMessage}", e)
-          NonRepudiationSubmissionFailed(INTERNAL_SERVER_ERROR, e.getMessage)
+      .recover { case e: Exception =>
+        logger.warn(
+          s"[NrsService] - Error when submitting to Non repudiation system (NRS) with message: ${e.getMessage}",
+          e
+        )
+        NonRepudiationSubmissionFailed(INTERNAL_SERVER_ERROR, e.getMessage)
       }
   }
 
   private def retrieveIdentityData()(implicit headerCarrier: HeaderCarrier): Future[IdentityData] =
     authorised().retrieve(nonRepudiationIdentityRetrievals) {
       case affinityGroup ~ internalId ~
-        externalId ~ agentCode ~
-        credentials ~ confidenceLevel ~
-        nino ~ saUtr ~
-        name ~
-        email ~ agentInfo ~
-        groupId ~ credentialRole ~
-        mdtpInfo ~ itmpName ~
-        itmpAddress ~
-        credentialStrength =>
-        Future.successful(IdentityData(internalId = internalId,
-          externalId = externalId,
-          agentCode = agentCode,
-          optionalCredentials = credentials,
-          confidenceLevel = confidenceLevel,
-          nino = nino,
-          saUtr = saUtr,
-          optionalName = name,
-          email = email,
-          agentInformation = agentInfo,
-          groupIdentifier = groupId,
-          credentialRole = credentialRole,
-          mdtpInformation = mdtpInfo,
-          optionalItmpName = itmpName,
-          optionalItmpAddress = itmpAddress,
-          affinityGroup = affinityGroup,
-          credentialStrength = credentialStrength
-        ))
+          externalId ~ agentCode ~
+          credentials ~ confidenceLevel ~
+          nino ~ saUtr ~
+          name ~
+          email ~ agentInfo ~
+          groupId ~ credentialRole ~
+          mdtpInfo ~ itmpName ~
+          itmpAddress ~
+          credentialStrength =>
+        Future.successful(
+          IdentityData(
+            internalId = internalId,
+            externalId = externalId,
+            agentCode = agentCode,
+            optionalCredentials = credentials,
+            confidenceLevel = confidenceLevel,
+            nino = nino,
+            saUtr = saUtr,
+            optionalName = name,
+            email = email,
+            agentInformation = agentInfo,
+            groupIdentifier = groupId,
+            credentialRole = credentialRole,
+            mdtpInformation = mdtpInfo,
+            optionalItmpName = itmpName,
+            optionalItmpAddress = itmpAddress,
+            affinityGroup = affinityGroup,
+            credentialStrength = credentialStrength
+          )
+        )
     }
 
   private def retrieveUserAuthToken(hc: HeaderCarrier): String =
     hc.authorization match {
       case Some(Authorization(authToken)) => authToken
-      case _ => throw new InternalServerException("No auth token available for NRS")
+      case _                              => throw new InternalServerException("No auth token available for NRS")
     }
 }
 

@@ -19,11 +19,10 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.resp
 import play.api.libs.json.{Format, Json}
 
 case class ExciseTraderValidationResponse(
-                                           validationTimestamp: String,
-                                           exciseTraderResponse: Array[ExciseTraderResponse]
-                                         )
+  validationTimestamp: String,
+  exciseTraderResponse: Array[ExciseTraderResponse]
+)
 
 object ExciseTraderValidationResponse {
   implicit val format: Format[ExciseTraderValidationResponse] = Json.format[ExciseTraderValidationResponse]
 }
-

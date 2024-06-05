@@ -27,29 +27,25 @@ trait FakeValidateErnParameterAction {
 
   object FakeValidateErnParameterSuccessAction extends ValidateErnParameterAction {
 
-    override def apply(ern: Option[String]): ActionFilter[EnrolmentRequest] = {
+    override def apply(ern: Option[String]): ActionFilter[EnrolmentRequest] =
       new ActionFilter[EnrolmentRequest] {
 
         override val executionContext: ExecutionContext = ExecutionContext.Implicits.global
 
-        override def filter[A](request: EnrolmentRequest[A]): Future[Option[Result]] = {
+        override def filter[A](request: EnrolmentRequest[A]): Future[Option[Result]] =
           Future.successful(None)
-        }
       }
-    }
   }
 
   object FakeValidateErnParameterFailureAction extends ValidateErnParameterAction {
 
-    override def apply(ern: Option[String]): ActionFilter[EnrolmentRequest] = {
+    override def apply(ern: Option[String]): ActionFilter[EnrolmentRequest] =
       new ActionFilter[EnrolmentRequest] {
 
         override val executionContext: ExecutionContext = ExecutionContext.Implicits.global
 
-        override def filter[A](request: EnrolmentRequest[A]): Future[Option[Result]] = {
+        override def filter[A](request: EnrolmentRequest[A]): Future[Option[Result]] =
           Future.successful(Some(BadRequest("Error")))
-        }
       }
-    }
   }
 }

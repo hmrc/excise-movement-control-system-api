@@ -34,97 +34,100 @@ import scala.concurrent.Future.successful
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class MovementService @Inject()(
+class MovementService @Inject() (
   movementRepository: MovementRepository,
   emcsUtils: EmcsUtils,
   dateTimeService: DateTimeService
-)(implicit ec: ExecutionContext) extends Logging {
+)(implicit ec: ExecutionContext)
+    extends Logging {
 
-  def saveNewMovement(movement: Movement): Future[Either[Result, Movement]] = {
-
-    getMovementByLRNAndERNIn(movement.localReferenceNumber, List(movement.consignorId)).
-      flatMap {
+  def saveNewMovement(movement: Movement): Future[Either[Result, Movement]] =
+    getMovementByLRNAndERNIn(movement.localReferenceNumber, List(movement.consignorId))
+      .flatMap {
         case Some(m) if isLrnAlreadyUsed(movement, m) => createDuplicateErrorResponse(movement)
-        case Some(m) => Future(Right(m))
-        case _ => movementRepository.saveMovement(movement).map(_ => Right(movement))
+        case Some(m)                                  => Future(Right(m))
+        case _                                        => movementRepository.saveMovement(movement).map(_ => Right(movement))
       }
-  }.recover {
-    case ex: Throwable =>
-      logger.error(s"[MovementService] - Error occurred while saving movement, ${ex.getMessage}")
-      Left(InternalServerError(Json.toJson(
-        ErrorResponse(
-          dateTimeService.timestamp(),
-          "Database error",
-          ex.getMessage
+      .recover { case ex: Throwable =>
+        logger.error(s"[MovementService] - Error occurred while saving movement, ${ex.getMessage}")
+        Left(
+          InternalServerError(
+            Json.toJson(
+              ErrorResponse(
+                dateTimeService.timestamp(),
+                "Database error",
+                ex.getMessage
+              )
+            )
+          )
         )
-      )))
-  }
+      }
 
-  def getMovementById(id: String): Future[Option[Movement]] = {
+  def getMovementById(id: String): Future[Option[Movement]] =
     movementRepository.getMovementById(id)
-  }
 
-  def getMovementByLRNAndERNIn(lrn: String, erns: List[String]): Future[Option[Movement]] = {
+  def getMovementByLRNAndERNIn(lrn: String, erns: List[String]): Future[Option[Movement]] =
     movementRepository.getMovementByLRNAndERNIn(lrn, erns).map {
-      case Seq() => None
+      case Seq()       => None
       case head :: Nil => Some(head)
-      case _ => throw new RuntimeException(s"[MovementService] - Multiple movement found for local reference number: $lrn")
+      case _           =>
+        throw new RuntimeException(s"[MovementService] - Multiple movement found for local reference number: $lrn")
     }
-  }
 
   def getMovementByErn(
     ern: Seq[String],
     filter: MovementFilter = MovementFilter.empty
-  ): Future[Seq[Movement]] = {
-
-    movementRepository.getMovementByERN(ern).map {
-      movements => filter.filterMovement(movements)
+  ): Future[Seq[Movement]] =
+    movementRepository.getMovementByERN(ern).map { movements =>
+      filter.filterMovement(movements)
     }
-  }
 
-  def updateMovement(message: IEMessage, ern: String): Future[Seq[Movement]] = {
+  def updateMovement(message: IEMessage, ern: String): Future[Seq[Movement]] =
+    movementRepository
+      .getAllBy(ern)
+      .map { cachedMovements =>
+        //TODO temporary logs for QA investigation
+        logger.info(s"Message is ${message.toString}")
 
-    movementRepository.getAllBy(ern).map(cachedMovements => {
-
-      //TODO temporary logs for QA investigation
-      logger.info(s"Message is ${message.toString}")
-
-      message.administrativeReferenceCode
-        .map { messageArc =>
-          updateMovementForIndividualArc(message, ern, cachedMovements, messageArc)
-        }
-        .sequence
-        .map((o: Seq[Either[String, Movement]]) =>
-          transformAndLogAnyError(o, ern, message.messageType)
-        )
-    }).flatten
-  }
+        message.administrativeReferenceCode
+          .map { messageArc =>
+            updateMovementForIndividualArc(message, ern, cachedMovements, messageArc)
+          }
+          .sequence
+          .map((o: Seq[Either[String, Movement]]) => transformAndLogAnyError(o, ern, message.messageType))
+      }
+      .flatten
 
   private def transformAndLogAnyError(
     movements: Seq[Either[String, Movement]],
     ern: String,
     messageType: String
-  ): Seq[Movement] = {
-    movements.foldLeft[Seq[Movement]](Seq()) {
-      case (acc: Seq[Movement], mv: Either[String, Movement]) =>
-        mv match {
-          case Right(m) => acc :+ m
-          case Left(error) =>
-            logger.warn(s"[MovementService] - Could not update movement with excise number $ern and message: $messageType. Error was $error")
-            acc
-        }
+  ): Seq[Movement] =
+    movements.foldLeft[Seq[Movement]](Seq()) { case (acc: Seq[Movement], mv: Either[String, Movement]) =>
+      mv match {
+        case Right(m)    => acc :+ m
+        case Left(error) =>
+          logger.warn(
+            s"[MovementService] - Could not update movement with excise number $ern and message: $messageType. Error was $error"
+          )
+          acc
+      }
     }
-  }
 
-  private def createDuplicateErrorResponse(movement: Movement) = {
-    Future.successful(Left(BadRequest(Json.toJson(
-      ErrorResponse(
-        dateTimeService.timestamp(),
-        "Duplicate LRN error",
-        s"The local reference number ${movement.localReferenceNumber} has already been used for another movement"
+  private def createDuplicateErrorResponse(movement: Movement) =
+    Future.successful(
+      Left(
+        BadRequest(
+          Json.toJson(
+            ErrorResponse(
+              dateTimeService.timestamp(),
+              "Duplicate LRN error",
+              s"The local reference number ${movement.localReferenceNumber} has already been used for another movement"
+            )
+          )
+        )
       )
-    ))))
-  }
+    )
 
   private def updateMovementForIndividualArc(
     message: IEMessage,
@@ -132,25 +135,29 @@ class MovementService @Inject()(
     cachedMovements: Seq[Movement],
     messageArc: Option[String]
   ): Future[Either[String, Movement]] = {
-    val movementWithArc = cachedMovements.find(o => o.administrativeReferenceCode.exists(arc => messageArc.contains(arc)))
+    val movementWithArc =
+      cachedMovements.find(o => o.administrativeReferenceCode.exists(arc => messageArc.contains(arc)))
     val movementWithLrn = cachedMovements.find(m => message.lrnEquals(m.localReferenceNumber))
 
     //TODO temporary logs for QA investigation
-    logger.info(s"Attempting to find relevant movement for message. movementWithArc: ${movementWithArc.toString}, movementWithLrn: ${movementWithLrn.toString}, message: ${message.toString}")
+    logger.info(
+      s"Attempting to find relevant movement for message. movementWithArc: ${movementWithArc.toString}, movementWithLrn: ${movementWithLrn.toString}, message: ${message.toString}"
+    )
 
     (movementWithArc, movementWithLrn) match {
-      case (Some(mArc), _) => saveDistinctMessage(ern, mArc, message, messageArc)
+      case (Some(mArc), _)    => saveDistinctMessage(ern, mArc, message, messageArc)
       case (None, Some(mLrn)) => saveDistinctMessage(ern, mLrn, message, messageArc)
-      case _ => throw new RuntimeException(s"[MovementService] - Cannot find movement for ERN: $ern, ${message.toString}")
+      case _                  =>
+        throw new RuntimeException(s"[MovementService] - Cannot find movement for ERN: $ern, ${message.toString}")
     }
   }
 
   private def saveDistinctMessage(
-                                   recipient: String,
-                                   movement: Movement,
-                                   newMessage: IEMessage,
-                                   messageArc: Option[String]
-                                 ): Future[Either[String,Movement]] = {
+    recipient: String,
+    movement: Movement,
+    newMessage: IEMessage,
+    messageArc: Option[String]
+  ): Future[Either[String, Movement]] = {
 
     val message = Message(
       encodedMessage = emcsUtils.encode(newMessage.toXml.toString),
@@ -164,7 +171,7 @@ class MovementService @Inject()(
     //todo EMCS-382: remove hash from message class. Hash can calculate on the go in here
     movement.messages.find(o => o.hash.equals(message.hash)) match {
       case Some(_) => successful(Left(s"Message has already been saved against movement ${movement._id}"))
-      case _ =>
+      case _       =>
         val newArc = messageArc.orElse(movement.administrativeReferenceCode)
 
         val newMovement = movement.copy(
@@ -176,15 +183,13 @@ class MovementService @Inject()(
 
         updateResult.map {
           case Some(x) => Right(x)
-          case None => Left(s"Failed to update movement ${newMovement._id}")
+          case None    => Left(s"Failed to update movement ${newMovement._id}")
         }
     }
   }
 
-  private def isLrnAlreadyUsed(movement: Movement, movementFromDb: Movement) = {
+  private def isLrnAlreadyUsed(movement: Movement, movementFromDb: Movement) =
     movement.consignorId == movementFromDb.consignorId &&
       (movementFromDb.administrativeReferenceCode.isDefined
         || movementFromDb.consigneeId != movement.consigneeId)
-  }
 }
-

@@ -25,30 +25,26 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait FakeValidateTraderTypeAction {
 
-  object FakeValidateTraderTypeSuccessAction extends ValidateTraderTypeAction{
+  object FakeValidateTraderTypeSuccessAction extends ValidateTraderTypeAction {
 
-    override def apply(ern: Option[String]): ActionFilter[EnrolmentRequest] = {
+    override def apply(ern: Option[String]): ActionFilter[EnrolmentRequest] =
       new ActionFilter[EnrolmentRequest] {
 
         override val executionContext: ExecutionContext = ExecutionContext.Implicits.global
 
-        override def filter[A](request: EnrolmentRequest[A]): Future[Option[Result]] = {
+        override def filter[A](request: EnrolmentRequest[A]): Future[Option[Result]] =
           Future.successful(None)
-        }
       }
-    }
   }
 
   object FakeValidateTraderTypeFailureAction extends ValidateTraderTypeAction {
-    override def apply(ern: Option[String]): ActionFilter[EnrolmentRequest] = {
+    override def apply(ern: Option[String]): ActionFilter[EnrolmentRequest] =
       new ActionFilter[EnrolmentRequest] {
 
         override val executionContext: ExecutionContext = ExecutionContext.Implicits.global
 
-        override def filter[A](request: EnrolmentRequest[A]): Future[Option[Result]] = {
+        override def filter[A](request: EnrolmentRequest[A]): Future[Option[Result]] =
           Future.successful(Some(BadRequest("Error")))
-        }
       }
-    }
   }
 }

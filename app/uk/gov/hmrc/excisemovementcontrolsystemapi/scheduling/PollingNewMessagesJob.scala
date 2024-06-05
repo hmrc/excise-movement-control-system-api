@@ -30,8 +30,7 @@ import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class PollingNewMessagesJob @Inject
-(
+class PollingNewMessagesJob @Inject() (
   configuration: Configuration,
   movementRepository: MovementRepository,
   ernSubmissionRepository: ErnSubmissionRepository,
@@ -42,54 +41,55 @@ class PollingNewMessagesJob @Inject
   override def name: String = "polling-new-messages-job"
 
   override def execute(implicit ec: ExecutionContext): Future[Done] = {
-    val now = dateTimeService.timestamp()
+    val now              = dateTimeService.timestamp()
     val fastIntervalTime = timestampBeforeNow(now, fastPollingInterval)
-    val fastCutoffTime = timestampBeforeNow(now, fastPollingCutoff)
+    val fastCutoffTime   = timestampBeforeNow(now, fastPollingCutoff)
     val slowIntervalTime = timestampBeforeNow(now, slowPollingInterval)
-    getLastActivity.flatMap { lastActivityMap =>
-      lastActivityMap.toSeq.traverse { case (ern, lastActivity) =>
-        if (shouldUpdateMessages(lastActivity, fastIntervalTime, fastCutoffTime, slowIntervalTime)) {
-          messageService.updateMessages(ern)
-        } else {
-          Future.successful(Done)
+    getLastActivity
+      .flatMap { lastActivityMap =>
+        lastActivityMap.toSeq.traverse { case (ern, lastActivity) =>
+          if (shouldUpdateMessages(lastActivity, fastIntervalTime, fastCutoffTime, slowIntervalTime)) {
+            messageService.updateMessages(ern)
+          } else {
+            Future.successful(Done)
+          }
         }
       }
-    }.as(Done)
+      .as(Done)
   }
 
   private def shouldUpdateMessages(
-                                    lastActivity: Instant,
-                                    fastIntervalTime: Instant,
-                                    fastCutoffTime: Instant,
-                                    slowIntervalTime: Instant
-                                  ): Boolean = {
+    lastActivity: Instant,
+    fastIntervalTime: Instant,
+    fastCutoffTime: Instant,
+    slowIntervalTime: Instant
+  ): Boolean =
     (lastActivity.isBefore(fastIntervalTime) && lastActivity.isAfter(fastCutoffTime)) ||
       lastActivity.isBefore(slowIntervalTime)
-  }
 
-  private def timestampBeforeNow(now: Instant, duration: Duration): Instant = {
+  private def timestampBeforeNow(now: Instant, duration: Duration): Instant =
     now.minus(duration.length, duration.unit.toChronoUnit)
-  }
 
-  private def getLastActivity(implicit ec: ExecutionContext): Future[Map[String, Instant]] = {
+  private def getLastActivity(implicit ec: ExecutionContext): Future[Map[String, Instant]] =
     for {
-      ernsAndLastReceived <- movementRepository.getErnsAndLastReceived
+      ernsAndLastReceived  <- movementRepository.getErnsAndLastReceived
       ernsAndLastSubmitted <- ernSubmissionRepository.getErnsAndLastSubmitted
-    } yield {
-      ernsAndLastReceived.foldLeft(ernsAndLastSubmitted) { case (mergedMap, (k, v)) =>
-        mergedMap.updated(k, Seq(mergedMap.get(k), Some(v)).flatten.max)
-      }
+    } yield ernsAndLastReceived.foldLeft(ernsAndLastSubmitted) { case (mergedMap, (k, v)) =>
+      mergedMap.updated(k, Seq(mergedMap.get(k), Some(v)).flatten.max)
     }
-  }
 
   override val enabled: Boolean = true
 
-  override def initialDelay: FiniteDuration = configuration.get[FiniteDuration]("scheduler.pollingNewMessagesJob.initialDelay")
+  override def initialDelay: FiniteDuration =
+    configuration.get[FiniteDuration]("scheduler.pollingNewMessagesJob.initialDelay")
 
   override def interval: FiniteDuration = configuration.get[FiniteDuration]("scheduler.pollingNewMessagesJob.interval")
 
-  private val fastPollingInterval: FiniteDuration = configuration.get[FiniteDuration]("scheduler.pollingNewMessagesJob.fastPollingInterval")
-  private val fastPollingCutoff: FiniteDuration = configuration.get[FiniteDuration]("scheduler.pollingNewMessagesJob.fastPollingCutoff")
-  private val slowPollingInterval: FiniteDuration = configuration.get[FiniteDuration]("scheduler.pollingNewMessagesJob.slowPollingInterval")
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  private val fastPollingInterval: FiniteDuration =
+    configuration.get[FiniteDuration]("scheduler.pollingNewMessagesJob.fastPollingInterval")
+  private val fastPollingCutoff: FiniteDuration   =
+    configuration.get[FiniteDuration]("scheduler.pollingNewMessagesJob.fastPollingCutoff")
+  private val slowPollingInterval: FiniteDuration =
+    configuration.get[FiniteDuration]("scheduler.pollingNewMessagesJob.slowPollingInterval")
+  implicit val hc: HeaderCarrier                  = HeaderCarrier()
 }

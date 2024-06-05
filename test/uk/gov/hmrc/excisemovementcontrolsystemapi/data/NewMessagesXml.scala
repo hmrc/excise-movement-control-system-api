@@ -888,4 +888,3 @@ trait NewMessagesXml {
     <ns:CountOfMessagesAvailable>0</ns:CountOfMessagesAvailable>
   </ns:NewMessagesDataResponse>
 }
-

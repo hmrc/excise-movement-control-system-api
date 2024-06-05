@@ -37,25 +37,27 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 
-class PushNotificationJobSpec extends PlaySpec
-  with ScalaFutures
-  with IntegrationPatience
-  with GuiceOneAppPerSuite
-  with BeforeAndAfterEach {
+class PushNotificationJobSpec
+    extends PlaySpec
+    with ScalaFutures
+    with IntegrationPatience
+    with GuiceOneAppPerSuite
+    with BeforeAndAfterEach {
 
-  private val movementRepository = mock[MovementRepository]
-  private val pushNotificationService = mock[PushNotificationService]
+  private val movementRepository       = mock[MovementRepository]
+  private val pushNotificationService  = mock[PushNotificationService]
   private lazy val pushNotificationJob = app.injector.instanceOf[PushNotificationJob]
 
   override def fakeApplication(): Application = GuiceApplicationBuilder()
     .overrides(
       bind[MovementRepository].toInstance(movementRepository),
-      bind[PushNotificationService].toInstance(pushNotificationService),
+      bind[PushNotificationService].toInstance(pushNotificationService)
     )
     .configure(
       "scheduler.pushNotificationJob.initialDelay" -> "2 minutes",
-      "scheduler.pushNotificationJob.interval" -> "1 minute",
-    ).build()
+      "scheduler.pushNotificationJob.interval"     -> "1 minute"
+    )
+    .build()
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -130,7 +132,8 @@ class PushNotificationJobSpec extends PlaySpec
             eqTo("IE801"),
             eqTo("consignor"),
             eqTo(Some("consignee")),
-            eqTo(Some("arc1")))(any)
+            eqTo(Some("arc1"))
+          )(any)
           verify(pushNotificationService).sendNotification(
             eqTo("box2"),
             eqTo("consignee"),
@@ -139,7 +142,8 @@ class PushNotificationJobSpec extends PlaySpec
             eqTo("IE818"),
             eqTo("consignor"),
             eqTo(Some("consignee")),
-            eqTo(Some("arc2")))(any)
+            eqTo(Some("arc2"))
+          )(any)
         }
         "confirm each notification" in {
           val notification1 = MessageNotification(

@@ -30,7 +30,8 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 @Singleton
-class MessageRecipientMigration @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext) extends Logging {
+class MessageRecipientMigration @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
+    extends Logging {
 
   private lazy val collection: MongoCollection[JsObject] =
     CollectionFactory.collection(mongoComponent.database, "movements", implicitly, Seq.empty)
@@ -39,34 +40,38 @@ class MessageRecipientMigration @Inject() (mongoComponent: MongoComponent)(impli
 
     logger.info("Starting message recipient migration")
 
-    val result = collection.updateMany(
-      Filters.exists("messages.$[].recipient", exists = false),
-      Seq(
-        Aggregates.set(
-          Field(
-            "messages",
-            Json.obj(
-              "$map" -> Json.obj(
-                "input" -> "$messages",
-                "in" -> Json.obj(
-                  "$setField" -> Json.obj(
-                    "field" -> "recipient",
-                    "input" -> "$$this",
-                    "value" -> Json.obj(
-                      "$cond" -> Json.arr(
-                        Json.obj("$gt" -> Json.arr("$$this.recipient", JsNull)),
-                        "$$this.recipient",
-                        "$$ROOT.consignorId"
+    val result = collection
+      .updateMany(
+        Filters.exists("messages.$[].recipient", exists = false),
+        Seq(
+          Aggregates.set(
+            Field(
+              "messages",
+              Json
+                .obj(
+                  "$map" -> Json.obj(
+                    "input" -> "$messages",
+                    "in"    -> Json.obj(
+                      "$setField" -> Json.obj(
+                        "field" -> "recipient",
+                        "input" -> "$$this",
+                        "value" -> Json.obj(
+                          "$cond" -> Json.arr(
+                            Json.obj("$gt" -> Json.arr("$$this.recipient", JsNull)),
+                            "$$this.recipient",
+                            "$$ROOT.consignorId"
+                          )
+                        )
                       )
                     )
                   )
                 )
-              )
-            ).toDocument()
+                .toDocument()
+            )
           )
         )
       )
-    ).toFuture()
+      .toFuture()
 
     result.onComplete {
       case Success(_) =>

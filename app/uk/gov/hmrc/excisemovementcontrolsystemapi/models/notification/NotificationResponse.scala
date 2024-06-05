@@ -57,7 +57,7 @@ object NotificationResponse {
         (__ \ "dateTime").write[String] and
           (__ \ "message").write[String] and
           (__ \ "debugMessage").write[String]
-        ) (r => (r.dateTime.asStringInMilliseconds, r.message, r.debugMessage))
+      )(r => (r.dateTime.asStringInMilliseconds, r.message, r.debugMessage))
     }
   }
 
@@ -78,13 +78,12 @@ object NotificationResponse {
         (__ \ "status").write[Int] and
           (__ \ "message").write[String] and
           (__ \ "debugMessage").write[String]
-        ) (r => (r.status, r.message, r.debugMessage))
+      )(r => (r.status, r.message, r.debugMessage))
     }
   }
 }
 
-case class Notification
-(
+case class Notification(
   movementId: String,
   messageUri: String,
   messageId: String,

@@ -29,8 +29,7 @@ class MessageResponseSpec extends PlaySpec {
       val dateTime = Instant.parse("2024-12-05T12:30:15.15632145Z")
       val response = MessageResponse("encodedMessage", "IE801", "messageId", dateTime)
 
-      Json.toJson(response) mustBe Json.parse(
-        """
+      Json.toJson(response) mustBe Json.parse("""
           |{
           |   "encodedMessage":"encodedMessage",
           |   "messageType":"IE801",

@@ -41,26 +41,27 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
 
 class SubmitMessageControllerSpec
-  extends PlaySpec
+    extends PlaySpec
     with FakeAuthentication
     with FakeXmlParsers
     with BeforeAndAfterEach
     with TestXml
     with ErrorResponseSupport {
 
-  implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  private val cc = stubControllerComponents()
-  private val request = createRequest(IE818)
+  implicit val ec: ExecutionContext    = ExecutionContext.Implicits.global
+  private val cc                       = stubControllerComponents()
+  private val request                  = createRequest(IE818)
   private val submissionMessageService = mock[SubmissionMessageService]
-  private val movementService = mock[MovementService]
-  private val messageValidation = mock[MessageValidation]
-  private val movementValidation = mock[MovementIdValidation]
-  private val dateTimeService = mock[DateTimeService]
-  private val auditService = mock[AuditService]
+  private val movementService          = mock[MovementService]
+  private val messageValidation        = mock[MessageValidation]
+  private val movementValidation       = mock[MovementIdValidation]
+  private val dateTimeService          = mock[DateTimeService]
+  private val auditService             = mock[AuditService]
 
   private val consignorId = "testErn"
-  private val movement = Movement(Some("boxId"), "LRNQA20230909022221", consignorId, Some("GBWK002281023"), Some("23GB00000000000377161"))
-  private val timestamp = Instant.parse("2024-06-12T14:13:15.1234567Z")
+  private val movement    =
+    Movement(Some("boxId"), "LRNQA20230909022221", consignorId, Some("GBWK002281023"), Some("23GB00000000000377161"))
+  private val timestamp   = Instant.parse("2024-06-12T14:13:15.1234567Z")
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -101,7 +102,7 @@ class SubmitMessageControllerSpec
       when(submissionMessageService.submit(any, any)(any)).thenReturn(Future.successful(Left(BadRequest(""))))
       await(createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request))
 
-      verify(auditService).auditMessage(any,any)(any)
+      verify(auditService).auditMessage(any, any)(any)
     }
 
     "return an error when EIS errors" in {
@@ -142,7 +143,8 @@ class SubmitMessageControllerSpec
           )
 
           when(movementValidation.validateMovementId(any)).thenReturn(Left(MovementIdFormatInvalid()))
-          when(movementValidation.convertErrorToResponse(eqTo(MovementIdFormatInvalid()), eqTo(timestamp))).thenReturn(BadRequest(expectedError))
+          when(movementValidation.convertErrorToResponse(eqTo(MovementIdFormatInvalid()), eqTo(timestamp)))
+            .thenReturn(BadRequest(expectedError))
 
           val result = createWithSuccessfulAuth.submit("b405")(request)
 
@@ -189,8 +191,10 @@ class SubmitMessageControllerSpec
             "The Consignor in the message does not match the Consignor in the movement"
           )
 
-          when(messageValidation.validateSubmittedMessage(any, any, any)).thenReturn(Left(TestMessageDoesNotMatchMovement))
-          when(messageValidation.convertErrorToResponse(eqTo(TestMessageDoesNotMatchMovement), eqTo(timestamp))).thenReturn(BadRequest(Json.toJson(expectedError)))
+          when(messageValidation.validateSubmittedMessage(any, any, any))
+            .thenReturn(Left(TestMessageDoesNotMatchMovement))
+          when(messageValidation.convertErrorToResponse(eqTo(TestMessageDoesNotMatchMovement), eqTo(timestamp)))
+            .thenReturn(BadRequest(Json.toJson(expectedError)))
 
           val result = createWithSuccessfulAuth.submit(movement._id)(request)
 
@@ -205,7 +209,8 @@ class SubmitMessageControllerSpec
 
         "message validation converts the error into a Forbidden error" in {
 
-          case object TestMessageIdentifierIsUnauthorised extends MessageIdentifierIsUnauthorised(MessageValidation.consignor)
+          case object TestMessageIdentifierIsUnauthorised
+              extends MessageIdentifierIsUnauthorised(MessageValidation.consignor)
 
           val expectedError = expectedJsonErrorResponse(
             "2024-06-12T14:13:15.123Z",
@@ -213,8 +218,10 @@ class SubmitMessageControllerSpec
             "The Consignor is not authorised to submit this message for the movement"
           )
 
-          when(messageValidation.validateSubmittedMessage(any, any, any)).thenReturn(Left(TestMessageIdentifierIsUnauthorised))
-          when(messageValidation.convertErrorToResponse(eqTo(TestMessageIdentifierIsUnauthorised), eqTo(timestamp))).thenReturn(Forbidden(Json.toJson(expectedError)))
+          when(messageValidation.validateSubmittedMessage(any, any, any))
+            .thenReturn(Left(TestMessageIdentifierIsUnauthorised))
+          when(messageValidation.convertErrorToResponse(eqTo(TestMessageIdentifierIsUnauthorised), eqTo(timestamp)))
+            .thenReturn(Forbidden(Json.toJson(expectedError)))
 
           val result = createWithSuccessfulAuth.submit(movement._id)(request)
 
@@ -242,11 +249,10 @@ class SubmitMessageControllerSpec
       cc
     )
 
-  private def createRequest(body: Elem): FakeRequest[Elem] = {
+  private def createRequest(body: Elem): FakeRequest[Elem] =
     FakeRequest("POST", "/foo")
       .withHeaders(FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> "application/xml")))
       .withBody(body)
-  }
 
   private def createWithAuthActionFailure =
     new SubmitMessageController(

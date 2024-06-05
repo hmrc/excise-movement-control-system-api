@@ -27,21 +27,21 @@ import scala.util.Try
 
 class MovementIdValidation {
 
-  def validateMovementId(id: String): Either[MovementValidationError, String] = {
-
+  def validateMovementId(id: String): Either[MovementValidationError, String] =
     Try(UUID.fromString(id)).toEither match {
-      case Left(_) => Left(MovementIdFormatInvalid())
+      case Left(_)  => Left(MovementIdFormatInvalid())
       case Right(_) => Right(id)
     }
-  }
 
-  def convertErrorToResponse(error: MovementValidationError, timestamp: Instant): Result = {
+  def convertErrorToResponse(error: MovementValidationError, timestamp: Instant): Result =
     error match {
-      case x: MovementIdFormatInvalid => BadRequest(Json.toJson(
-        ErrorResponse(timestamp, "Movement Id format error", x.errorMessage)
-      ))
+      case x: MovementIdFormatInvalid =>
+        BadRequest(
+          Json.toJson(
+            ErrorResponse(timestamp, "Movement Id format error", x.errorMessage)
+          )
+        )
     }
-  }
 
 }
 

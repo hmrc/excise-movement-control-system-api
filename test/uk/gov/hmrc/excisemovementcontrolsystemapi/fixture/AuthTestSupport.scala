@@ -32,8 +32,8 @@ import scala.concurrent.Future
 trait AuthTestSupport extends NrsTestData {
 
   lazy val authConnector = mock[AuthConnector]
-  private val authFetch = authorisedEnrolments and affinityGroup and credentials and internalId
-  private val enrolment = Enrolment("HMRC-EMCS-ORG")
+  private val authFetch  = authorisedEnrolments and affinityGroup and credentials and internalId
+  private val enrolment  = Enrolment("HMRC-EMCS-ORG")
 
   def withAuthorizedTrader(identifier: String = "123"): Unit = {
     val retrieval = Enrolments(Set(createEnrolmentWithIdentifier(identifier))) and
@@ -91,28 +91,23 @@ trait AuthTestSupport extends NrsTestData {
 
   def withAuthorization(
     retrieval: Enrolments ~ Option[AffinityGroup] ~ Option[Credentials] ~ Option[String]
-  ): Unit = {
-
-    when(authConnector.authorise(ArgumentMatchers.argThat((p: Predicate) => true), eqTo(authFetch))(any,any))
+  ): Unit =
+    when(authConnector.authorise(ArgumentMatchers.argThat((p: Predicate) => true), eqTo(authFetch))(any, any))
       .thenReturn(Future.successful(retrieval))
-  }
 
-  def authorizeNrsWithIdentityData = {
-    when(authConnector.authorise(
-        ArgumentMatchers.eq(EmptyPredicate),
-        ArgumentMatchers.eq(nonRepudiationIdentityRetrievals))(
-        any,
-        any
-      )
+  def authorizeNrsWithIdentityData =
+    when(
+      authConnector
+        .authorise(ArgumentMatchers.eq(EmptyPredicate), ArgumentMatchers.eq(nonRepudiationIdentityRetrievals))(
+          any,
+          any
+        )
     ).thenReturn(Future.successful(testAuthRetrievals))
-  }
-
 
   def withUnauthorizedTrader(error: Throwable): Unit =
     when(authConnector.authorise(any, any)(any, any)).thenReturn(Future.failed(error))
 
-  private def createEnrolmentWithIdentifier(identifier: String = "123"): Enrolment = {
+  private def createEnrolmentWithIdentifier(identifier: String = "123"): Enrolment =
     Enrolment("HMRC-EMCS-ORG").withIdentifier("ExciseNumber", identifier)
-  }
 
 }

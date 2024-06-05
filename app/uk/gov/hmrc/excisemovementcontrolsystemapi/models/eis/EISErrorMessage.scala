@@ -19,12 +19,12 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 object EISErrorMessage {
 
   def apply(
-             createDateTime: String,
-             ern: String,
-             message: String,
-             correlationId: String,
-             messageTypes: String,
-  ): String = {
+    createDateTime: String,
+    ern: String,
+    message: String,
+    correlationId: String,
+    messageTypes: String
+  ): String =
     //todo EMCS-528: Store messageIdentifier from the header of the message as messageId
     s"""EIS error with message: $message,
     | messageId: $correlationId,
@@ -32,6 +32,5 @@ object EISErrorMessage {
     | messageType: $messageTypes,
     | timestamp: $createDateTime,
     | exciseId: $ern""".stripMargin
-  }
 
 }

@@ -21,13 +21,14 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
 
 trait EISSubmissionHeaders extends Headers {
 
-  override def build(correlationId: String, createdDateTime: String, bearerToken: String): Seq[(String, String)] = {
-    Seq(HeaderNames.ACCEPT -> ContentTypes.JSON,
+  override def build(correlationId: String, createdDateTime: String, bearerToken: String): Seq[(String, String)] =
+    Seq(
+      HeaderNames.ACCEPT       -> ContentTypes.JSON,
       HeaderNames.CONTENT_TYPE -> ContentTypes.JSON,
-      DateTimeName -> createdDateTime,
-      XCorrelationIdName -> correlationId,
-      XForwardedHostName -> MDTPHost,
-      SourceName -> APIPSource,
-      Authorization -> authorizationValue(bearerToken))
-  }
+      DateTimeName             -> createdDateTime,
+      XCorrelationIdName       -> correlationId,
+      XForwardedHostName       -> MDTPHost,
+      SourceName               -> APIPSource,
+      Authorization            -> authorizationValue(bearerToken)
+    )
 }

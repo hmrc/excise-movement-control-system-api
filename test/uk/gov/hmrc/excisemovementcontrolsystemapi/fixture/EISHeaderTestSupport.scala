@@ -28,9 +28,9 @@ trait EISHeaderTestSupport {
   ) = Seq(
     "X-Forwarded-Host" -> "MDTP",
     "X-Correlation-Id" -> correlationId,
-    "Source" -> "APIP",
-    "DateTime" -> timeStamp,
-    "Authorization" -> authorizationValue(bearerToken)
+    "Source"           -> "APIP",
+    "DateTime"         -> timeStamp,
+    "Authorization"    -> authorizationValue(bearerToken)
   )
 
   def expectedSubmissionHeader(
@@ -39,12 +39,12 @@ trait EISHeaderTestSupport {
     bearerToken: String
   ): Seq[(String, String)] =
     Seq(
-      "Accept" -> ContentTypes.JSON,
-      "Content-Type" -> ContentTypes.JSON,
-      "DateTime" -> timeStamp,
+      "Accept"           -> ContentTypes.JSON,
+      "Content-Type"     -> ContentTypes.JSON,
+      "DateTime"         -> timeStamp,
       "X-Correlation-Id" -> correlationId,
       "X-Forwarded-Host" -> "MDTP",
-      "Source" -> "APIP",
-      "Authorization" -> authorizationValue(bearerToken)
+      "Source"           -> "APIP",
+      "Authorization"    -> authorizationValue(bearerToken)
     )
 }

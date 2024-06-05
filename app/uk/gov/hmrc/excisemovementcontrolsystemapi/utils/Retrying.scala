@@ -39,22 +39,23 @@ trait Retrying extends Logging {
     def loop(delays: List[FiniteDuration]): Future[HttpResponse] = {
       def retryIfPossible(result: Try[HttpResponse]): Future[HttpResponse] =
         delays match {
-          case Nil => Future.fromTry(result)
-          case delay :: Nil => futures.delay(delay).flatMap {_ => Future.fromTry(result)}
+          case Nil           => Future.fromTry(result)
+          case delay :: Nil  => futures.delay(delay).flatMap(_ => Future.fromTry(result))
           case delay :: tail =>
             if (retryCondition(result)) {
-              val message = result.fold(e => s"error occurred ${e.getMessage}", r =>  s" with status ${r.status.toString}")
+              val message =
+                result.fold(e => s"error occurred ${e.getMessage}", r => s" with status ${r.status.toString}")
               logger.warn(s"[Retrying] - EMCS_API_RETRY retrying: url $url, $message")
-              futures.delay(delay).flatMap {_ => loop(tail)}
+              futures.delay(delay).flatMap(_ => loop(tail))
             } else Future.fromTry(result)
         }
 
       block.transformWith { result: Try[HttpResponse] =>
         result match {
           case Success(response) if Status.isSuccessful(response.status) => Future.successful(response)
-          case s: Success[HttpResponse] => retryIfPossible(s)
-          case f @ Failure(ex) =>
-             logger.warn(s"[Retrying] - EMCS_API_RETRY error when retrying: url $url with message ${ex.getMessage}", ex)
+          case s: Success[HttpResponse]                                  => retryIfPossible(s)
+          case f @ Failure(ex)                                           =>
+            logger.warn(s"[Retrying] - EMCS_API_RETRY error when retrying: url $url with message ${ex.getMessage}", ex)
             retryIfPossible(f)
         }
       }

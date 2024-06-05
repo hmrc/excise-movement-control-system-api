@@ -26,13 +26,13 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFor
 
 import scala.xml.NodeSeq
 
-case class IE840Message
-(
+case class IE840Message(
   private val obj: IE840Type,
   private val key: Option[String],
   private val namespace: Option[String],
   auditType: AuditType
-) extends IEMessage with GeneratedJsonWriters {
+) extends IEMessage
+    with GeneratedJsonWriters {
 
   override def consigneeId: Option[String] = None
 
@@ -41,9 +41,8 @@ case class IE840Message
 
   override def messageType: String = MessageTypes.IE840.value
 
-  override def toXml: NodeSeq = {
+  override def toXml: NodeSeq =
     scalaxb.toXML[IE840Type](obj, namespace, key, generated.defaultScope)
-  }
 
   override def toJson: JsValue = Json.toJson(obj)
 
@@ -51,14 +50,14 @@ case class IE840Message
 
   override def messageIdentifier: String = obj.Header.MessageIdentifier
 
-  override def toString: String = s"Message type: $messageType, message identifier: $messageIdentifier, ARC: $administrativeReferenceCode"
+  override def toString: String =
+    s"Message type: $messageType, message identifier: $messageIdentifier, ARC: $administrativeReferenceCode"
 
 }
 
 object IE840Message {
-  def apply(message: DataRecord[MessagesOption]): IE840Message = {
+  def apply(message: DataRecord[MessagesOption]): IE840Message =
     IE840Message(message.as[IE840Type], message.key, message.namespace, EventReport)
-  }
 
   def createFromXml(xml: NodeSeq): IE840Message = {
     val ie840: IE840Type = scalaxb.fromXML[IE840Type](xml)

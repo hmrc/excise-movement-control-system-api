@@ -23,4 +23,3 @@ case class EISSubmissionRequest(user: String, messageType: String, message: Stri
 object EISSubmissionRequest {
   implicit val format: OFormat[EISSubmissionRequest] = Json.format[EISSubmissionRequest]
 }
-

@@ -26,19 +26,19 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFor
 
 import scala.xml.NodeSeq
 
-case class IE704Message
-(
+case class IE704Message(
   private val obj: IE704Type,
   private val key: Option[String],
   private val namespace: Option[String],
   auditType: AuditType
-) extends IEMessage with GeneratedJsonWriters {
+) extends IEMessage
+    with GeneratedJsonWriters {
   override def consigneeId: Option[String] = None
 
   override def administrativeReferenceCode: Seq[Option[String]] =
     Seq(for {
       attribute <- obj.Body.GenericRefusalMessage.AttributesValue
-      arc <- attribute.AdministrativeReferenceCode
+      arc       <- attribute.AdministrativeReferenceCode
     } yield arc)
 
   override def messageType: String = MessageTypes.IE704.value
@@ -50,25 +50,23 @@ case class IE704Message
 
   override def toJson: JsValue = Json.toJson(obj)
 
-  override def lrnEquals(lrn: String): Boolean = {
+  override def lrnEquals(lrn: String): Boolean =
     localReferenceNumber.contains(lrn)
-  }
 
-  def localReferenceNumber: Option[String] = {
+  def localReferenceNumber: Option[String] =
     for {
-      attribute <- obj.Body.GenericRefusalMessage.AttributesValue
+      attribute  <- obj.Body.GenericRefusalMessage.AttributesValue
       messageLrn <- attribute.LocalReferenceNumber
     } yield messageLrn
-  }
 
-  override def toString: String = s"Message type: $messageType, message identifier: $messageIdentifier, LRN: $localReferenceNumber, ARC: $administrativeReferenceCode"
+  override def toString: String =
+    s"Message type: $messageType, message identifier: $messageIdentifier, LRN: $localReferenceNumber, ARC: $administrativeReferenceCode"
 
 }
 
 object IE704Message {
-  def apply(message: DataRecord[MessagesOption]): IE704Message = {
+  def apply(message: DataRecord[MessagesOption]): IE704Message =
     IE704Message(message.as[IE704Type], message.key, message.namespace, Refused)
-  }
 
   def createFromXml(xml: NodeSeq): IE704Message = {
     val ie704: IE704Type = scalaxb.fromXML[IE704Type](xml)

@@ -20,14 +20,13 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.Headers._
 
 trait EISConsumptionHeaders extends Headers {
 
-  override def build(correlationId: String, createdDateTime: String, bearerToken: String): Seq[(String, String)] = {
+  override def build(correlationId: String, createdDateTime: String, bearerToken: String): Seq[(String, String)] =
     Seq(
       XForwardedHostName -> MDTPHost,
       XCorrelationIdName -> correlationId,
-      SourceName -> APIPSource,
-      DateTimeName -> createdDateTime,
-      Authorization -> authorizationValue(bearerToken)
+      SourceName         -> APIPSource,
+      DateTimeName       -> createdDateTime,
+      Authorization      -> authorizationValue(bearerToken)
     )
-  }
 
 }

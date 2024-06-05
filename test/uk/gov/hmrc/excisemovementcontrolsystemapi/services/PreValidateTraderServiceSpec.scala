@@ -41,9 +41,9 @@ import scala.concurrent.{ExecutionContext, Future}
 class PreValidateTraderServiceSpec extends PlaySpec with BeforeAndAfterEach with EitherValues {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  protected implicit val hc: HeaderCarrier = HeaderCarrier()
+  protected implicit val hc: HeaderCarrier    = HeaderCarrier()
 
-  private val connector = mock[PreValidateTraderConnector]
+  private val connector       = mock[PreValidateTraderConnector]
   private val dateTimeService = mock[DateTimeService]
 
   private val now = Instant.now
@@ -82,19 +82,18 @@ class PreValidateTraderServiceSpec extends PlaySpec with BeforeAndAfterEach with
     )
   )
 
-
   override def beforeEach(): Unit = {
     super.beforeEach()
 
     reset(connector)
   }
 
-
   "submitMessage" should {
 
     "return in the API response format if the Connector returns the EIS success response" in {
 
-      when(connector.submitMessage(any, any)(any)).thenReturn(Future.successful(Right(getPreValidateTraderSuccessEISResponse)))
+      when(connector.submitMessage(any, any)(any))
+        .thenReturn(Future.successful(Right(getPreValidateTraderSuccessEISResponse)))
 
       val result = await(preValidateTraderService.submitMessage(validRequest))
 
@@ -104,7 +103,8 @@ class PreValidateTraderServiceSpec extends PlaySpec with BeforeAndAfterEach with
 
     "return in the API response format if the Connector returns the EIS business error response" in {
 
-      when(connector.submitMessage(any, any)(any)).thenReturn(Future.successful(Right(getPreValidateTraderErrorEISResponse)))
+      when(connector.submitMessage(any, any)(any))
+        .thenReturn(Future.successful(Right(getPreValidateTraderErrorEISResponse)))
 
       val result = await(preValidateTraderService.submitMessage(validRequest))
 
@@ -119,13 +119,15 @@ class PreValidateTraderServiceSpec extends PlaySpec with BeforeAndAfterEach with
 
       val result = await(preValidateTraderService.submitMessage(validRequest))
 
-      result.left.value mustBe InternalServerError(Json.toJson(
-        ErrorResponse(
-          now,
-          "PreValidateTrader Error",
-          "Failed to parse preValidateTrader response"
+      result.left.value mustBe InternalServerError(
+        Json.toJson(
+          ErrorResponse(
+            now,
+            "PreValidateTrader Error",
+            "Failed to parse preValidateTrader response"
+          )
         )
-      ))
+      )
 
     }
 

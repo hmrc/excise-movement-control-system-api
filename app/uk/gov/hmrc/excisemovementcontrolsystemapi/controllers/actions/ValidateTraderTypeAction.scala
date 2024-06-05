@@ -27,37 +27,37 @@ import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-class ValidateTraderTypeActionImpl @Inject()
-(dateTimeService: DateTimeService,
- cc: ControllerComponents
-)(implicit val ec: ExecutionContext)
-  extends BackendController(cc)
+class ValidateTraderTypeActionImpl @Inject() (dateTimeService: DateTimeService, cc: ControllerComponents)(implicit
+  val ec: ExecutionContext
+) extends BackendController(cc)
     with ValidateTraderTypeAction {
   override def apply(traderType: Option[String]): ActionFilter[EnrolmentRequest] =
-
     new ActionFilter[EnrolmentRequest] {
       override val executionContext: ExecutionContext = ec
 
       override def filter[A](request: EnrolmentRequest[A]): Future[Option[Result]] = Future.successful {
-          traderType.flatMap( value =>
-            if(value.equalsIgnoreCase("consignor") || value.equalsIgnoreCase("consignee")){
-              None
-            }else {
-              Some(badRequestResponse())
-            }
-          )
+        traderType.flatMap(value =>
+          if (value.equalsIgnoreCase("consignor") || value.equalsIgnoreCase("consignee")) {
+            None
+          } else {
+            Some(badRequestResponse())
+          }
+        )
 
       }
     }
-  private def badRequestResponse() =
-    BadRequest(Json.toJson(ErrorResponse(
-      dateTimeService.timestamp(),
-      "Invalid traderType passed in",
-      "traderType should be consignor or consignee")
-    ))
+  private def badRequestResponse()                                               =
+    BadRequest(
+      Json.toJson(
+        ErrorResponse(
+          dateTimeService.timestamp(),
+          "Invalid traderType passed in",
+          "traderType should be consignor or consignee"
+        )
+      )
+    )
 
 }
-
 
 @ImplementedBy(classOf[ValidateTraderTypeActionImpl])
 trait ValidateTraderTypeAction {

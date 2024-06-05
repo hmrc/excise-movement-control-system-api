@@ -38,7 +38,7 @@ import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
 class GetMovementsControllerSpec
-  extends PlaySpec
+    extends PlaySpec
     with FakeAuthentication
     with FakeValidateErnParameterAction
     with FakeValidateTraderTypeAction
@@ -48,11 +48,11 @@ class GetMovementsControllerSpec
     with BeforeAndAfterEach {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  private val cc = stubControllerComponents()
-  private val movementService = mock[MovementService]
-  private val dateTimeService = mock[DateTimeService]
-  private val messageService = mock[MessageService]
-  private val movementIdValidator = mock[MovementIdValidation]
+  private val cc                    = stubControllerComponents()
+  private val movementService       = mock[MovementService]
+  private val dateTimeService       = mock[DateTimeService]
+  private val messageService        = mock[MessageService]
+  private val movementIdValidator   = mock[MovementIdValidation]
 
   private val controller = new GetMovementsController(
     FakeSuccessAuthentication(Set(ern)),
@@ -66,7 +66,7 @@ class GetMovementsControllerSpec
     movementIdValidator
   )
 
-  private val timestamp = Instant.parse("2020-01-01T01:01:01.123456Z")
+  private val timestamp   = Instant.parse("2020-01-01T01:01:01.123456Z")
   private val fakeRequest = FakeRequest("POST", "/foo")
 
   override def beforeEach(): Unit = {
@@ -74,7 +74,22 @@ class GetMovementsControllerSpec
     reset(movementService, messageService)
 
     when(movementService.getMovementByErn(any, any))
-      .thenReturn(Future.successful(Seq(Movement("cfdb20c7-d0b0-4b8b-a071-737d68dede5e", Some("boxId"), "lrn", ern, Some("consigneeId"), Some("arc"), Instant.now(), Seq.empty))))
+      .thenReturn(
+        Future.successful(
+          Seq(
+            Movement(
+              "cfdb20c7-d0b0-4b8b-a071-737d68dede5e",
+              Some("boxId"),
+              "lrn",
+              ern,
+              Some("consigneeId"),
+              Some("arc"),
+              Instant.now(),
+              Seq.empty
+            )
+          )
+        )
+      )
 
     when(dateTimeService.timestamp()).thenReturn(timestamp)
 
@@ -157,37 +172,49 @@ class GetMovementsControllerSpec
       val result = controller.getMovements(None, None, None, None, None)(fakeRequest)
 
       status(result) mustBe OK
-      contentAsJson(result) mustBe Json.toJson(Seq(
-        createMovementResponseFromMovement(movement1),
-        createMovementResponseFromMovement(movement2)
-      ))
+      contentAsJson(result) mustBe Json.toJson(
+        Seq(
+          createMovementResponseFromMovement(movement1),
+          createMovementResponseFromMovement(movement2)
+        )
+      )
     }
 
     "use a filter" when {
       "traderType is consignor" in {
         val timestampNow = Instant.now()
-        await(controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString), Some("consignor"))(fakeRequest))
+        await(
+          controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString), Some("consignor"))(
+            fakeRequest
+          )
+        )
 
         val filter = MovementFilterBuilder()
           .withErn(Some(ern))
           .withLrn(Some("lrn"))
           .withArc(Some("arc"))
           .withUpdatedSince(Some(timestampNow))
-          .withTraderType(Some("consignor"), Seq(ern)).build()
+          .withTraderType(Some("consignor"), Seq(ern))
+          .build()
         verify(movementService).getMovementByErn(any, eqTo(filter))
 
       }
 
       "traderType is consignee" in {
         val timestampNow = Instant.now()
-        await(controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString), Some("consignee"))(fakeRequest))
+        await(
+          controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString), Some("consignee"))(
+            fakeRequest
+          )
+        )
 
         val filter = MovementFilterBuilder()
           .withErn(Some(ern))
           .withLrn(Some("lrn"))
           .withArc(Some("arc"))
           .withUpdatedSince(Some(timestampNow))
-          .withTraderType(Some("consignee"), Seq(ern)).build()
+          .withTraderType(Some("consignee"), Seq(ern))
+          .build()
         verify(movementService).getMovementByErn(any, eqTo(filter))
 
       }
@@ -196,7 +223,13 @@ class GetMovementsControllerSpec
     "return a bad request" when {
       "the updatedSince time is provided in an invalid format" in {
 
-        val result = createWithUpdateSinceActionFailure.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(Instant.now().toString), None)(fakeRequest)
+        val result = createWithUpdateSinceActionFailure.getMovements(
+          Some(ern),
+          Some("lrn"),
+          Some("arc"),
+          Some(Instant.now().toString),
+          None
+        )(fakeRequest)
 
         status(result) mustBe BAD_REQUEST
         contentAsJson(result) mustBe expectedJsonErrorResponse(
@@ -206,11 +239,18 @@ class GetMovementsControllerSpec
         )
       }
       "wrong traderType is passed in" in {
-        val result = createWithTraderTypeActionFailure.getMovements(Some(ern), Some("lrn"), Some("arc"), None, Some("wrongTraderType"))(fakeRequest)
+        val result = createWithTraderTypeActionFailure.getMovements(
+          Some(ern),
+          Some("lrn"),
+          Some("arc"),
+          None,
+          Some("wrongTraderType")
+        )(fakeRequest)
         status(result) mustBe BAD_REQUEST
       }
       "filtering by ERN and ERN filter is not in the authorised list" in {
-        val result = createControllerWithErnParameterError.getMovements(Some("ERNValue"), None, None, None, None)(fakeRequest)
+        val result =
+          createControllerWithErnParameterError.getMovements(Some("ERNValue"), None, None, None, None)(fakeRequest)
 
         status(result) mustBe BAD_REQUEST
       }
@@ -227,8 +267,9 @@ class GetMovementsControllerSpec
 
   "Get movement controller" should {
 
-    val uuid = "cfdb20c7-d0b0-4b8b-a071-737d68dede5b"
-    val movement = Movement(uuid, Some("id123"), "lrn1", "testErn", Some("consignee"), Some("arc"), Instant.now(), Seq.empty)
+    val uuid     = "cfdb20c7-d0b0-4b8b-a071-737d68dede5b"
+    val movement =
+      Movement(uuid, Some("id123"), "lrn1", "testErn", Some("consignee"), Some("arc"), Instant.now(), Seq.empty)
 
     "return the movement when successful" in {
 
@@ -282,7 +323,8 @@ class GetMovementsControllerSpec
       "movement in database is for different ERNs" in {
 
         when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))
-        when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement.copy(consignorId = "ern8921"))))
+        when(movementService.getMovementById(any))
+          .thenReturn(Future.successful(Some(movement.copy(consignorId = "ern8921"))))
 
         val result = controller.getMovement(uuid)(fakeRequest)
 
@@ -300,9 +342,9 @@ class GetMovementsControllerSpec
       "supplied movement Id is not in correct format" in {
 
         val expectedError = expectedJsonErrorResponse(
-            "2020-01-01T01:01:01.123Z",
-            "Movement Id format error",
-            s"Movement Id should be a valid UUID"
+          "2020-01-01T01:01:01.123Z",
+          "Movement Id format error",
+          s"Movement Id should be a valid UUID"
         )
 
         when(movementIdValidator.validateMovementId(any))
@@ -328,7 +370,6 @@ class GetMovementsControllerSpec
     }
 
   }
-
 
   private def createControllerWithErnParameterError =
     new GetMovementsController(

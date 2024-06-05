@@ -33,7 +33,7 @@ import java.time.Instant
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-class GetMovementsController @Inject()(
+class GetMovementsController @Inject() (
   authAction: AuthAction,
   validateErnParameterAction: ValidateErnParameterAction,
   validateUpdatedSinceAction: ValidateUpdatedSinceAction,
@@ -44,75 +44,84 @@ class GetMovementsController @Inject()(
   messageService: MessageService,
   movementIdValidator: MovementIdValidation
 )(implicit ec: ExecutionContext)
-  extends BackendController(cc) with Logging {
+    extends BackendController(cc)
+    with Logging {
 
-  def getMovements(ern: Option[String], lrn: Option[String], arc: Option[String], updatedSince: Option[String], traderType: Option[String]): Action[AnyContent] = {
+  def getMovements(
+    ern: Option[String],
+    lrn: Option[String],
+    arc: Option[String],
+    updatedSince: Option[String],
+    traderType: Option[String]
+  ): Action[AnyContent]                                   =
     (authAction andThen validateErnParameterAction(ern)
       andThen validateUpdatedSinceAction(updatedSince)
-      andThen validateTraderTypeAction(traderType)).async(parse.default) {
-      implicit request =>
-        messageService.updateAllMessages(ern.fold(request.erns)(Set(_)))
+      andThen validateTraderTypeAction(traderType)).async(parse.default) { implicit request =>
+      messageService.updateAllMessages(ern.fold(request.erns)(Set(_)))
 
-        val filter = MovementFilterBuilder().withErn(ern)
-          .withLrn(lrn)
-          .withArc(arc)
-          .withUpdatedSince(updatedSince.map(Instant.parse(_)))
-          .withTraderType(traderType, request.erns.toSeq).build()
+      val filter = MovementFilterBuilder()
+        .withErn(ern)
+        .withLrn(lrn)
+        .withArc(arc)
+        .withUpdatedSince(updatedSince.map(Instant.parse(_)))
+        .withTraderType(traderType, request.erns.toSeq)
+        .build()
 
-        movementService.getMovementByErn(request.erns.toSeq, filter)
-          .map { movement: Seq[Movement] =>
-            Ok(Json.toJson(movement.map(createResponseFrom)))
-          }
+      movementService
+        .getMovementByErn(request.erns.toSeq, filter)
+        .map { movement: Seq[Movement] =>
+          Ok(Json.toJson(movement.map(createResponseFrom)))
+        }
     }
-  }
-  def getMovement(movementId: String): Action[AnyContent] = {
+  def getMovement(movementId: String): Action[AnyContent] =
+    authAction.async(parse.default) { implicit request =>
+      val result = for {
+        validatedMovementId <- validateMovementId(movementId)
+        _                   <- EitherT.right(messageService.updateAllMessages(request.erns))
+        movement            <- getMovementFromDb(validatedMovementId)
+      } yield {
+        val authorisedErns = request.erns
+        val movementErns   = getErnsForMovement(movement)
 
-    authAction.async(parse.default) {
-      implicit request =>
-
-        val result = for {
-          validatedMovementId <- validateMovementId(movementId)
-          _ <- EitherT.right(messageService.updateAllMessages(request.erns))
-          movement <- getMovementFromDb(validatedMovementId)
-        } yield {
-          val authorisedErns = request.erns
-          val movementErns = getErnsForMovement(movement)
-
-          if (authorisedErns.intersect(movementErns).isEmpty) {
-            NotFound(Json.toJson(ErrorResponse(
-              dateTimeService.timestamp(),
-              "Movement not found",
-              s"Movement $movementId is not found within the data for ERNs ${authorisedErns.mkString("/")}"
-            )))
-          } else {
-            Ok(Json.toJson(createResponseFrom(movement)))
-          }
-
+        if (authorisedErns.intersect(movementErns).isEmpty) {
+          NotFound(
+            Json.toJson(
+              ErrorResponse(
+                dateTimeService.timestamp(),
+                "Movement not found",
+                s"Movement $movementId is not found within the data for ERNs ${authorisedErns.mkString("/")}"
+              )
+            )
+          )
+        } else {
+          Ok(Json.toJson(createResponseFrom(movement)))
         }
 
-        result.merge
-    }
-  }
+      }
 
-  private def validateMovementId(movementId: String): EitherT[Future, Result, String] = {
-    EitherT.fromEither[Future](movementIdValidator.validateMovementId(movementId)).leftMap {
-      x => movementIdValidator.convertErrorToResponse(x, dateTimeService.timestamp())
+      result.merge
     }
-  }
 
-  private def getMovementFromDb(id: String): EitherT[Future, Result, Movement] = {
+  private def validateMovementId(movementId: String): EitherT[Future, Result, String] =
+    EitherT.fromEither[Future](movementIdValidator.validateMovementId(movementId)).leftMap { x =>
+      movementIdValidator.convertErrorToResponse(x, dateTimeService.timestamp())
+    }
+
+  private def getMovementFromDb(id: String): EitherT[Future, Result, Movement] =
     OptionT(movementService.getMovementById(id)).toRightF(
-      Future.successful(NotFound(Json.toJson(
-        ErrorResponse(dateTimeService.timestamp(), "Movement not found", s"Movement $id could not be found")
-      )))
+      Future.successful(
+        NotFound(
+          Json.toJson(
+            ErrorResponse(dateTimeService.timestamp(), "Movement not found", s"Movement $id could not be found")
+          )
+        )
+      )
     )
-  }
 
-  private def getErnsForMovement(movement: Movement): Set[String] = {
+  private def getErnsForMovement(movement: Movement): Set[String] =
     Set(Some(movement.consignorId), movement.consigneeId).flatten
-  }
 
-  private def createResponseFrom(movement: Movement) = {
+  private def createResponseFrom(movement: Movement) =
     ExciseMovementResponse(
       movement._id,
       None,
@@ -121,6 +130,5 @@ class GetMovementsController @Inject()(
       movement.consigneeId,
       movement.administrativeReferenceCode
     )
-  }
 
 }

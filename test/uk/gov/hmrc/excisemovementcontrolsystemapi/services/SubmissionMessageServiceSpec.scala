@@ -38,32 +38,29 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class SubmissionMessageServiceSpec
-  extends PlaySpec
-    with ScalaFutures
-    with EitherValues
-    with BeforeAndAfterEach {
+class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with EitherValues with BeforeAndAfterEach {
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val hc: HeaderCarrier    = HeaderCarrier()
   implicit val ec: ExecutionContext = ExecutionContext.global
 
-  private val connector = mock[EISSubmissionConnector]
-  private val nrsService = mock[NrsService]
-  private val correlationIdService = mock[CorrelationIdService]
+  private val connector               = mock[EISSubmissionConnector]
+  private val nrsService              = mock[NrsService]
+  private val correlationIdService    = mock[CorrelationIdService]
   private val ernSubmissionRepository = mock[ErnSubmissionRepository]
-  private val sut = new SubmissionMessageServiceImpl(connector, nrsService, correlationIdService, ernSubmissionRepository)
+  private val sut                     =
+    new SubmissionMessageServiceImpl(connector, nrsService, correlationIdService, ernSubmissionRepository)
 
-  private val message = mock[IE815Message]
-  private val xmlBody = "<IE815>test</IE815>"
+  private val message                  = mock[IE815Message]
+  private val xmlBody                  = "<IE815>test</IE815>"
   val fakeRequest: FakeRequest[String] = FakeRequest()
     .withBody(xmlBody)
     .withHeaders(
       FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> "application/xml"))
     )
 
-  private val ern = "ern"
+  private val ern              = "ern"
   private val enrolmentRequest = EnrolmentRequest(fakeRequest, Set(ern), "123")
-  private val request = ParsedXmlRequest(enrolmentRequest, message, Set(ern), "123")
+  private val request          = ParsedXmlRequest(enrolmentRequest, message, Set(ern), "123")
 
   override def beforeEach(): Unit = {
     super.beforeEach()

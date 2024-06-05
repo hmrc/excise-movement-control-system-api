@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
-
 import org.mockito.MockitoSugar.when
 import org.scalatest.EitherValues
 import org.scalatest.concurrent.ScalaFutures
@@ -34,10 +33,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import java.time.Instant
 import scala.concurrent.ExecutionContext
 
-class ParseJsonActionSpec
-  extends PlaySpec
-    with ScalaFutures
-    with EitherValues {
+class ParseJsonActionSpec extends PlaySpec with ScalaFutures with EitherValues {
 
   implicit val ec: ExecutionContext = ExecutionContext.global
 
@@ -47,13 +43,17 @@ class ParseJsonActionSpec
     stubControllerComponents()
   )
 
-  private val exampleJson = "{\n    \"exciseTraderValidationRequest\": {\n        \"exciseTraderRequest\": {\n            \"exciseRegistrationNumber\": \"GBWK0000010\",\n            \"entityGroup\": \"UK Record\",\n            \"validateProductAuthorisationRequest\": [\n                {\n                    \"product\": {\n                        \"exciseProductCode\": \"W200\"\n                    }\n                },\n                {\n                    \"product\": {\n                        \"exciseProductCode\": \"S100\"\n                    }\n                }\n            ]\n        }\n    }\n}"
+  private val exampleJson                     =
+    "{\n    \"exciseTraderValidationRequest\": {\n        \"exciseTraderRequest\": {\n            \"exciseRegistrationNumber\": \"GBWK0000010\",\n            \"entityGroup\": \"UK Record\",\n            \"validateProductAuthorisationRequest\": [\n                {\n                    \"product\": {\n                        \"exciseProductCode\": \"W200\"\n                    }\n                },\n                {\n                    \"product\": {\n                        \"exciseProductCode\": \"S100\"\n                    }\n                }\n            ]\n        }\n    }\n}"
   private val examplePreValidateTraderRequest = PreValidateTraderRequest(
     ExciseTraderValidationRequest(
       ExciseTraderRequest(
         "GBWK0000010",
         "UK Record",
-        Seq(ValidateProductAuthorisationRequest(ExciseProductCode("W200")), ValidateProductAuthorisationRequest(ExciseProductCode("S100")))
+        Seq(
+          ValidateProductAuthorisationRequest(ExciseProductCode("W200")),
+          ValidateProductAuthorisationRequest(ExciseProductCode("S100"))
+        )
       )
     )
   )
@@ -82,12 +82,16 @@ class ParseJsonActionSpec
 
       "JSON parsing exception" in {
 
-        val exampleJson = "{\"exciseTraderValidationRequest\": 123 }"
+        val exampleJson      = "{\"exciseTraderValidationRequest\": 123 }"
         val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(Json.parse(exampleJson)), Set("ern"), "123")
 
         val result = parseJsonAction.refine(enrolmentRequest).futureValue
 
-        val expectedError = ErrorResponse(timestamp, "Not valid PreValidateTrader message", "Error parsing Json: List((/exciseTraderValidationRequest,List(JsonValidationError(List(error.expected.jsobject),List()))))")
+        val expectedError = ErrorResponse(
+          timestamp,
+          "Not valid PreValidateTrader message",
+          "Error parsing Json: List((/exciseTraderValidationRequest,List(JsonValidationError(List(error.expected.jsobject),List()))))"
+        )
         result.left.value mustBe BadRequest(Json.toJson(expectedError))
       }
 

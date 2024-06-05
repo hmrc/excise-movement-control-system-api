@@ -37,87 +37,86 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
 @Singleton
-class SubmitMessageController @Inject()(
-                                         authAction: AuthAction,
-                                         xmlParser: ParseXmlAction,
-                                         submissionMessageService: SubmissionMessageService,
-                                         movementService: MovementService,
-                                         auditService: AuditService,
-                                         messageValidator: MessageValidation,
-                                         movementIdValidator: MovementIdValidation,
-                                         dateTimeService: DateTimeService,
-                                         cc: ControllerComponents
-                                       )(implicit ec: ExecutionContext)
-  extends BackendController(cc) with Logging {
+class SubmitMessageController @Inject() (
+  authAction: AuthAction,
+  xmlParser: ParseXmlAction,
+  submissionMessageService: SubmissionMessageService,
+  movementService: MovementService,
+  auditService: AuditService,
+  messageValidator: MessageValidation,
+  movementIdValidator: MovementIdValidation,
+  dateTimeService: DateTimeService,
+  cc: ControllerComponents
+)(implicit ec: ExecutionContext)
+    extends BackendController(cc)
+    with Logging {
 
-  def submit(movementId: String): Action[NodeSeq] = {
+  def submit(movementId: String): Action[NodeSeq] =
+    (authAction andThen xmlParser).async(parse.xml) { implicit request =>
+      val result = for {
+        validatedMovementId <- validateMovementId(movementId)
+        movement            <- getMovement(validatedMovementId)
+        authorisedErn       <- validateMessage(movement, request.ieMessage, request.erns)
+        _                   <- sendRequest(request, authorisedErn)
+      } yield Accepted(
+        Json.toJson(
+          ExciseMovementResponse(
+            movement._id,
+            None,
+            movement.localReferenceNumber,
+            movement.consignorId,
+            movement.consigneeId,
+            movement.administrativeReferenceCode
+          )
+        )
+      )
 
-    (authAction andThen xmlParser).async(parse.xml) {
-      implicit request =>
-
-        val result = for {
-          validatedMovementId <- validateMovementId(movementId)
-          movement <- getMovement(validatedMovementId)
-          authorisedErn <- validateMessage(movement, request.ieMessage, request.erns)
-          _ <- sendRequest(request, authorisedErn)
-        } yield {
-          Accepted(Json.toJson(
-            ExciseMovementResponse(
-              movement._id,
-              None,
-              movement.localReferenceNumber,
-              movement.consignorId,
-              movement.consigneeId,
-              movement.administrativeReferenceCode
-            )
-          ))
-        }
-
-        result.merge
+      result.merge
     }
 
-  }
-
-  private def validateMovementId(movementId: String): EitherT[Future, Result, String] = {
-
-    EitherT.fromEither[Future](movementIdValidator.validateMovementId(movementId)).leftMap {
-      x => movementIdValidator.convertErrorToResponse(x, dateTimeService.timestamp())
+  private def validateMovementId(movementId: String): EitherT[Future, Result, String] =
+    EitherT.fromEither[Future](movementIdValidator.validateMovementId(movementId)).leftMap { x =>
+      movementIdValidator.convertErrorToResponse(x, dateTimeService.timestamp())
     }
-  }
 
-  private def getMovement(movementId: String): EitherT[Future, Result, Movement] = {
-
+  private def getMovement(movementId: String): EitherT[Future, Result, Movement] =
     EitherT(movementService.getMovementById(movementId).map {
       case Some(mvt) => Right(mvt)
-      case None => Left(NotFound(Json.toJson(
-        ErrorResponse(dateTimeService.timestamp(), "Movement not found", s"Movement $movementId could not be found")
-      )))
+      case None      =>
+        Left(
+          NotFound(
+            Json.toJson(
+              ErrorResponse(
+                dateTimeService.timestamp(),
+                "Movement not found",
+                s"Movement $movementId could not be found"
+              )
+            )
+          )
+        )
     })
-
-  }
 
   private def validateMessage(
-                               movement: Movement,
-                               message: IEMessage,
-                               authErns: Set[String]
-                             ): EitherT[Future, Result, String] = {
-
-    EitherT.fromEither(messageValidator.validateSubmittedMessage(authErns, movement, message).left.map {
-      x => messageValidator.convertErrorToResponse(x, dateTimeService.timestamp())
+    movement: Movement,
+    message: IEMessage,
+    authErns: Set[String]
+  ): EitherT[Future, Result, String] =
+    EitherT.fromEither(messageValidator.validateSubmittedMessage(authErns, movement, message).left.map { x =>
+      messageValidator.convertErrorToResponse(x, dateTimeService.timestamp())
     })
 
-  }
-
-  private def sendRequest(request: ParsedXmlRequest[_], authorisedErn: String)
-                         (implicit hc: HeaderCarrier): EitherT[Future, Result, EISSubmissionResponse] = {
+  private def sendRequest(request: ParsedXmlRequest[_], authorisedErn: String)(implicit
+    hc: HeaderCarrier
+  ): EitherT[Future, Result, EISSubmissionResponse] =
     EitherT {
       submissionMessageService.submit(request, authorisedErn).map {
-        case Left(result) => auditService.auditMessage(request.ieMessage, "Failed to Submit")
+        case Left(result)    =>
+          auditService.auditMessage(request.ieMessage, "Failed to Submit")
           Left(result)
-        case Right(response) => auditService.auditMessage(request.ieMessage)
+        case Right(response) =>
+          auditService.auditMessage(request.ieMessage)
           Right(response)
       }
     }
-  }
 
 }

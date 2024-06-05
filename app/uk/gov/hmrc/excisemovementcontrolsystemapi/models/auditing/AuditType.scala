@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
- abstract class AuditType(val name: String)
+abstract class AuditType(val name: String)
 
 object AuditType {
 
@@ -40,22 +40,22 @@ object AuditType {
     StatusResponse
   )
 
-  case object CancelMovement                  extends AuditType("CancelMovement")
-  case object ChangeOfDestination             extends AuditType("ChangeOfDestination")
-  case object DraftMovement                   extends AuditType("DraftMovement")
-  case object ReportOfReceipt                 extends AuditType("ReportOfReceipt")
-  case object AlertRejection                  extends AuditType("AlertRejection")
-  case object Delay                           extends AuditType("Delay")
-  case object ShortageOrExcess                extends AuditType("ShortageOrExcess")
-  case object Refused                         extends AuditType("Refused")
-  case object MovementGenerated               extends AuditType("MovementGenerated")
-  case object Reminder                        extends AuditType("Reminder")
-  case object NotificationOfDivertedMovement  extends AuditType("NotificationOfDivertedMovement")
-  case object InterruptionOfMovement          extends AuditType("InterruptionOfMovement")
-  case object NotificationOfAcceptedExport    extends AuditType("NotificationOfAcceptedExport")
-  case object RefusalByCustoms                extends AuditType("RefusalByCustoms")
-  case object EventReport                     extends AuditType("EventReport")
-  case object ManualClosure                   extends AuditType("ManualClosure")
-  case object StatusResponse                  extends AuditType("StatusResponse")
+  case object CancelMovement extends AuditType("CancelMovement")
+  case object ChangeOfDestination extends AuditType("ChangeOfDestination")
+  case object DraftMovement extends AuditType("DraftMovement")
+  case object ReportOfReceipt extends AuditType("ReportOfReceipt")
+  case object AlertRejection extends AuditType("AlertRejection")
+  case object Delay extends AuditType("Delay")
+  case object ShortageOrExcess extends AuditType("ShortageOrExcess")
+  case object Refused extends AuditType("Refused")
+  case object MovementGenerated extends AuditType("MovementGenerated")
+  case object Reminder extends AuditType("Reminder")
+  case object NotificationOfDivertedMovement extends AuditType("NotificationOfDivertedMovement")
+  case object InterruptionOfMovement extends AuditType("InterruptionOfMovement")
+  case object NotificationOfAcceptedExport extends AuditType("NotificationOfAcceptedExport")
+  case object RefusalByCustoms extends AuditType("RefusalByCustoms")
+  case object EventReport extends AuditType("EventReport")
+  case object ManualClosure extends AuditType("ManualClosure")
+  case object StatusResponse extends AuditType("StatusResponse")
 
 }

@@ -423,10 +423,11 @@ trait TestXml {
     </urn:Body>
   </urn:IE813>
 
-  lazy val IE815: Elem = IE815Template("GBWK002281023")
+  lazy val IE815: Elem                = IE815Template("GBWK002281023")
   lazy val IE815WithNoConsignor: Elem = IE815Template("")
 
-  private def IE815Template(consignor: String): Elem = <urn:IE815 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13"
+  private def IE815Template(consignor: String): Elem =
+    <urn:IE815 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13"
                                                                   xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                                                   xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                                                                   xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"

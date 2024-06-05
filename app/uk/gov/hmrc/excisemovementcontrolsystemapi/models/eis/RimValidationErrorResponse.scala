@@ -18,7 +18,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
 import play.api.libs.json.{Json, OFormat}
 
-
 case class RimValidatorResults(
   errorCategory: Option[String],
   errorType: Option[BigInt],
@@ -31,8 +30,7 @@ object RimValidatorResults {
   implicit val format: OFormat[RimValidatorResults] = Json.format[RimValidatorResults]
 }
 
-case class RimValidationErrorResponse
-(
+case class RimValidationErrorResponse(
   emcsCorrelationId: String,
   message: Seq[String],
   validatorResults: Seq[RimValidatorResults]

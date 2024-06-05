@@ -18,5 +18,5 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth
 
 object EnrolmentKey {
   val EMCS_ENROLMENT = "HMRC-EMCS-ORG"
-  val ERN = "ExciseNumber"
+  val ERN            = "ExciseNumber"
 }

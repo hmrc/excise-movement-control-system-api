@@ -27,23 +27,21 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class PreValidateTraderController @Inject()(
+class PreValidateTraderController @Inject() (
   authAction: AuthAction,
   parseJsonAction: ParseJsonAction,
   preValidateTraderService: PreValidateTraderService,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-  extends BackendController(cc) {
+    extends BackendController(cc) {
 
-  def submit: Action[JsValue] = {
-
+  def submit: Action[JsValue] =
     (authAction andThen parseJsonAction).async(parse.json) {
       implicit request: ParsedPreValidateTraderRequest[JsValue] =>
         preValidateTraderService.submitMessage(request).flatMap {
           case Right(response) => Future.successful(Ok(Json.toJson(response)))
-          case Left(error) => Future.successful(error)
+          case Left(error)     => Future.successful(error)
         }
     }
 
-  }
 }

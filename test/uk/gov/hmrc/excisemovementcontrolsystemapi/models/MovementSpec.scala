@@ -28,8 +28,9 @@ import java.util.UUID
 class MovementSpec extends AnyFreeSpec with Matchers {
 
   private val oldFormat: OFormat[Movement] = Json.format[Movement]
-  private val timestamp = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-  private val movement = Movement(UUID.randomUUID().toString, Some("boxId"), "123", "345", Some("789"), None, timestamp, Seq.empty)
+  private val timestamp                    = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+  private val movement                     =
+    Movement(UUID.randomUUID().toString, Some("boxId"), "123", "345", Some("789"), None, timestamp, Seq.empty)
 
   "must read/write a Movement" in {
     val result = Json.toJson(movement).as[Movement]

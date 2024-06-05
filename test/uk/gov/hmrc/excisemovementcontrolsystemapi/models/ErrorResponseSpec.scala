@@ -28,7 +28,7 @@ class ErrorResponseSpec extends PlaySpec with ErrorResponseSupport {
     "display dateTime in milliseconds format when writing to Json" in {
 
       val dateTime = Instant.parse("2024-12-05T12:30:15.15632145Z")
-      val error = ErrorResponse(dateTime, "any message", "any debug message")
+      val error    = ErrorResponse(dateTime, "any message", "any debug message")
 
       Json.toJson(error) mustBe expectedJsonErrorResponse(
         "2024-12-05T12:30:15.156Z",
@@ -42,7 +42,7 @@ class ErrorResponseSpec extends PlaySpec with ErrorResponseSupport {
     "display dateTime in milliseconds format when writing to Json" in {
 
       val dateTime = Instant.parse("2024-12-05T12:30:15.15632145Z")
-      val error = EisErrorResponsePresentation(dateTime, "any message", "any debug message", "correlationId")
+      val error    = EisErrorResponsePresentation(dateTime, "any message", "any debug message", "correlationId")
 
       Json.toJson(error) mustBe expectedEisErrorResponsePresentation(
         "2024-12-05T12:30:15.156Z",

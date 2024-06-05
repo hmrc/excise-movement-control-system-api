@@ -34,23 +34,22 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidat
 import scala.concurrent.{ExecutionContext, Future}
 
 class PreValidateTraderControllerSpec
-  extends PlaySpec
+    extends PlaySpec
     with FakeAuthentication
     with FakeJsonParsers
     with BeforeAndAfterEach {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  implicit val sys: ActorSystem = ActorSystem("DraftExciseMovementControllerSpec")
-  private val service = mock[PreValidateTraderService]
-  private val cc = stubControllerComponents()
-  private val request = createRequest(Json.toJson(getPreValidateTraderRequest))
+  implicit val sys: ActorSystem     = ActorSystem("DraftExciseMovementControllerSpec")
+  private val service               = mock[PreValidateTraderService]
+  private val cc                    = stubControllerComponents()
+  private val request               = createRequest(Json.toJson(getPreValidateTraderRequest))
 
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(service)
 
-    when(service.submitMessage(any)(any)).
-      thenReturn(Future.successful(Right(getPreValidateTraderSuccessResponse)))
+    when(service.submitMessage(any)(any)).thenReturn(Future.successful(Right(getPreValidateTraderSuccessResponse)))
   }
 
   "submit" should {
@@ -63,8 +62,7 @@ class PreValidateTraderControllerSpec
     }
 
     "return 200 when business error" in {
-      when(service.submitMessage(any)(any)).
-        thenReturn(Future.successful(Right(getPreValidateTraderErrorResponse)))
+      when(service.submitMessage(any)(any)).thenReturn(Future.successful(Right(getPreValidateTraderErrorResponse)))
 
       val result = createWithSuccessfulAuth.submit(request)
 
@@ -131,9 +129,8 @@ class PreValidateTraderControllerSpec
       cc
     )
 
-  private def createRequest(body: JsValue): FakeRequest[JsValue] = {
+  private def createRequest(body: JsValue): FakeRequest[JsValue] =
     FakeRequest("POST", "/foo")
       .withHeaders(FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> "application/json")))
       .withBody(body)
-  }
 }

@@ -32,33 +32,38 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class ErnSubmissionRepository @Inject()
-(mongo: MongoComponent,
- configuration: Configuration,
- timeService: DateTimeService)(implicit ec: ExecutionContext) extends
-  PlayMongoRepository[ErnSubmission](
-    collectionName = "ernsubmissions",
-    mongoComponent = mongo,
-    domainFormat = ErnSubmission.format,
-    indexes = mongoIndexes(configuration.get[Duration]("mongodb.ernSubmission.TTL")),
-    replaceIndexes = true
-  ) with Logging {
+class ErnSubmissionRepository @Inject() (
+  mongo: MongoComponent,
+  configuration: Configuration,
+  timeService: DateTimeService
+)(implicit ec: ExecutionContext)
+    extends PlayMongoRepository[ErnSubmission](
+      collectionName = "ernsubmissions",
+      mongoComponent = mongo,
+      domainFormat = ErnSubmission.format,
+      indexes = mongoIndexes(configuration.get[Duration]("mongodb.ernSubmission.TTL")),
+      replaceIndexes = true
+    )
+    with Logging {
 
   def getErnsAndLastSubmitted: Future[Map[String, Instant]] = Mdc.preservingMdc {
     collection.find().toFuture().map(_.map(ernSubmission => ernSubmission.ern -> ernSubmission.lastSubmitted).toMap)
   }
 
   def save(ern: String): Future[Done] = Mdc.preservingMdc {
-    collection.replaceOne(
-      Filters.eq("ern", ern),
-      ErnSubmission(ern, timeService.timestamp()),
-      ReplaceOptions().upsert(true)
-    ).toFuture().map(_ => Done)
+    collection
+      .replaceOne(
+        Filters.eq("ern", ern),
+        ErnSubmission(ern, timeService.timestamp()),
+        ReplaceOptions().upsert(true)
+      )
+      .toFuture()
+      .map(_ => Done)
   }
 }
 
 object ErnSubmissionRepository {
-  def mongoIndexes(ttl: Duration): Seq[IndexModel] = {
+  def mongoIndexes(ttl: Duration): Seq[IndexModel] =
     Seq(
       IndexModel(
         Indexes.ascending("lastSubmitted"),
@@ -73,5 +78,4 @@ object ErnSubmissionRepository {
           .unique(true)
       )
     )
-  }
 }

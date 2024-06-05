@@ -30,51 +30,57 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-class ParseJsonActionImpl @Inject()
-(
+class ParseJsonActionImpl @Inject() (
   dateTimeService: DateTimeService,
   cc: ControllerComponents
-)(implicit val executionContext: ExecutionContext) extends BackendController(cc)
-  with ParseJsonAction
-  with Logging {
+)(implicit val executionContext: ExecutionContext)
+    extends BackendController(cc)
+    with ParseJsonAction
+    with Logging {
 
-
-  override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedPreValidateTraderRequest[A]]] = {
-
+  override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedPreValidateTraderRequest[A]]] =
     request.body match {
       case body: JsValue => parseJson(body, request)
-      case _ =>
+      case _             =>
         logger.error("Not valid Json")
         Future.successful(Left(BadRequest(Json.toJson(handleError("Json error", "Not valid Json or Json is empty")))))
     }
-  }
 
   def parseJson[A](
-                    jsonBody: JsValue,
-                    request: EnrolmentRequest[A]
-                  ): Future[Either[Result, ParsedPreValidateTraderRequest[A]]] = {
-
+    jsonBody: JsValue,
+    request: EnrolmentRequest[A]
+  ): Future[Either[Result, ParsedPreValidateTraderRequest[A]]] =
     Try(jsonBody.as[PreValidateTraderRequest]) match {
       case Success(value) =>
         Future.successful(Right(preValidateTrader.request.ParsedPreValidateTraderRequest(request, value)))
 
       case Failure(exception: JsResultException) =>
         logger.error(s"Not valid Pre Validate Trader message: ${exception.getMessage}", exception)
-        Future.successful(Left(BadRequest(Json.toJson(handleError(s"Not valid PreValidateTrader message", s"Error parsing Json: ${exception.errors.toString()}")))))
+        Future.successful(
+          Left(
+            BadRequest(
+              Json.toJson(
+                handleError(
+                  s"Not valid PreValidateTrader message",
+                  s"Error parsing Json: ${exception.errors.toString()}"
+                )
+              )
+            )
+          )
+        )
 
       case Failure(exception) =>
         logger.error(s"Not valid Pre Validate Trader message: ${exception.getMessage}", exception)
-        Future.successful(Left(BadRequest(Json.toJson(handleError(s"Not valid PreValidateTrader message", exception.getMessage)))))
+        Future.successful(
+          Left(BadRequest(Json.toJson(handleError(s"Not valid PreValidateTrader message", exception.getMessage))))
+        )
     }
-  }
 
-  private def handleError
-  (
+  private def handleError(
     message: String,
     debugMessage: String
-  ): ErrorResponse = {
+  ): ErrorResponse =
     ErrorResponse(dateTimeService.timestamp(), message, debugMessage)
-  }
 }
 
 @ImplementedBy(classOf[ParseJsonActionImpl])

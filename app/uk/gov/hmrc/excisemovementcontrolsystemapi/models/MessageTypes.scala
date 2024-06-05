@@ -20,7 +20,6 @@ import enumeratum.values.{StringEnum, StringEnumEntry, StringPlayJsonValueEnum}
 
 import scala.collection.immutable
 
-
 sealed abstract class MessageTypes(val value: String) extends StringEnumEntry
 
 object MessageTypes extends StringEnum[MessageTypes] with StringPlayJsonValueEnum[MessageTypes] {
@@ -47,4 +46,3 @@ object MessageTypes extends StringEnum[MessageTypes] with StringPlayJsonValueEnu
   case object IE_MESSAGE_RECEIPT extends MessageTypes("IEMessageReceipt")
   case object IE_MOVEMENT_FOR_TRADER extends MessageTypes("IEMessageForTrader")
 }
-

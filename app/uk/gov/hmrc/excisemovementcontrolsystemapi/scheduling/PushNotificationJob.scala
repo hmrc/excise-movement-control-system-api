@@ -30,34 +30,36 @@ import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
 
 @Singleton
-class PushNotificationJob @Inject
-(
+class PushNotificationJob @Inject() (
   configuration: Configuration,
   movementRepository: MovementRepository,
   pushNotificationService: PushNotificationService
-) extends ScheduledJob with Logging {
+) extends ScheduledJob
+    with Logging {
 
   override def name: String = "push-notification-job"
 
-  override def execute(implicit ec: ExecutionContext): Future[Done] = {
-    movementRepository.getPendingMessageNotifications.flatMap { notifications =>
-      notifications.traverse { notification =>
-        processNotification(notification).recover { case NonFatal(_) =>
-          logger.info(s"Failed to notify ${notification.recipient} for message ${notification.messageId}. Will try again later.")
-          Done
+  override def execute(implicit ec: ExecutionContext): Future[Done] =
+    movementRepository.getPendingMessageNotifications
+      .flatMap { notifications =>
+        notifications.traverse { notification =>
+          processNotification(notification).recover { case NonFatal(_) =>
+            logger.info(
+              s"Failed to notify ${notification.recipient} for message ${notification.messageId}. Will try again later."
+            )
+            Done
+          }
         }
       }
-    }.as(Done)
-  }
+      .as(Done)
 
-  private def processNotification(notification: MessageNotification)(implicit ec: ExecutionContext): Future[Done] = {
+  private def processNotification(notification: MessageNotification)(implicit ec: ExecutionContext): Future[Done] =
     for {
       _ <- sendNotification(notification)
       _ <- confirmNotification(notification)
     } yield Done
-  }
 
-  private def sendNotification(notification: MessageNotification): Future[Done] = {
+  private def sendNotification(notification: MessageNotification): Future[Done] =
     pushNotificationService.sendNotification(
       notification.boxId,
       notification.recipient,
@@ -68,14 +70,13 @@ class PushNotificationJob @Inject
       notification.consignee,
       notification.arc
     )
-  }
 
-  private def confirmNotification(notification: MessageNotification): Future[Done] = {
+  private def confirmNotification(notification: MessageNotification): Future[Done] =
     movementRepository.confirmNotification(notification.movementId, notification.messageId, notification.boxId)
-  }
 
-  override val enabled: Boolean = configuration.get[Boolean]("featureFlags.pushNotificationsEnabled")
-  override def initialDelay: FiniteDuration = configuration.get[FiniteDuration]("scheduler.pushNotificationJob.initialDelay")
-  override def interval: FiniteDuration = configuration.get[FiniteDuration]("scheduler.pushNotificationJob.interval")
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  override val enabled: Boolean             = configuration.get[Boolean]("featureFlags.pushNotificationsEnabled")
+  override def initialDelay: FiniteDuration =
+    configuration.get[FiniteDuration]("scheduler.pushNotificationJob.initialDelay")
+  override def interval: FiniteDuration     = configuration.get[FiniteDuration]("scheduler.pushNotificationJob.interval")
+  implicit val hc: HeaderCarrier            = HeaderCarrier()
 }

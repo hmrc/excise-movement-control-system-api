@@ -35,7 +35,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 @Singleton
-class GetMessagesController @Inject()(
+class GetMessagesController @Inject() (
   authAction: AuthAction,
   validateAcceptHeaderAction: ValidateAcceptHeaderAction,
   movementService: MovementService,
@@ -45,152 +45,159 @@ class GetMessagesController @Inject()(
   emcsUtil: EmcsUtils,
   dateTimeService: DateTimeService
 )(implicit ec: ExecutionContext)
-  extends BackendController(cc) {
-  def getMessageForMovement(movementId: String, messageId: String): Action[AnyContent] = {
+    extends BackendController(cc) {
+  def getMessageForMovement(movementId: String, messageId: String): Action[AnyContent] =
     (
       Action andThen
-      validateAcceptHeaderAction andThen
-      authAction
-      ).async(parse.default) {
-        implicit _ =>
-
-        //todo EMCS-529: do we need to validate messageId here? This is the messageIdentifier
-        // of the message abd according to the xsd this is not a UUID and can be
-        // of any char between 1 and 44 char length
-        val result = for {
-          mvtId <- validateMovementId(movementId)
-          movement <- getMovement(mvtId)
-        } yield {
-          movement.messages.filter(o => o.messageId.equals(messageId))
-            .toList match {
-            case Nil => messageNotFoundError(messageId)
-            case head :: _ =>
-              val decodedXml = emcsUtil.decode(head.encodedMessage)
-              Ok(xml.XML.loadString(decodedXml))
-          }
-        }
-        result.merge
-    }
-  }
-
-  def getMessagesForMovement(movementId: String, updatedSince: Option[String], traderType: Option[String]): Action[AnyContent] = {
-
-    authAction.async(parse.default) {
-      implicit request: EnrolmentRequest[AnyContent] => {
-
-        val result: EitherT[Future, Result, Result] = for {
-          validatedMovementId <- validateMovementId(movementId)
-          updatedSince <- validateUpdatedSince(updatedSince)
-          traderType <- validateTraderType(traderType)
-          _ <- EitherT.right(messageService.updateAllMessages(request.erns))
-          movement <- getMovement(validatedMovementId)
-        } yield {
-
-          if (getErnsForMovement(movement).intersect(request.erns).isEmpty) {
-            Forbidden(Json.toJson(ErrorResponse(
-              dateTimeService.timestamp(),
-              "Forbidden",
-              "Invalid MovementID supplied for ERN"
-            )))
-          } else {
-            Ok(Json.toJson(
-              filterMessages(movement, updatedSince, traderType)
-            ))
-          }
-        }
-
-        result.merge
-
+        validateAcceptHeaderAction andThen
+        authAction
+    ).async(parse.default) { implicit request =>
+      //todo EMCS-529: do we need to validate messageId here? This is the messageIdentifier
+      // of the message abd according to the xsd this is not a UUID and can be
+      // of any char between 1 and 44 char length
+      val result = for {
+        mvtId    <- validateMovementId(movementId)
+        movement <- getMovement(mvtId)
+      } yield movement.messages.filter(o => o.messageId.equals(messageId)).toList match {
+        case Nil       => messageNotFoundError(messageId)
+        case head :: _ =>
+          val decodedXml = emcsUtil.decode(head.encodedMessage)
+          Ok(xml.XML.loadString(decodedXml))
       }
+      result.merge
     }
-  }
+
+  def getMessagesForMovement(
+    movementId: String,
+    updatedSince: Option[String],
+    traderType: Option[String]
+  ): Action[AnyContent]                               =
+    authAction.async(parse.default) { implicit request: EnrolmentRequest[AnyContent] =>
+      val result: EitherT[Future, Result, Result] = for {
+        validatedMovementId <- validateMovementId(movementId)
+        updatedSince        <- validateUpdatedSince(updatedSince)
+        traderType          <- validateTraderType(traderType)
+        _                   <- EitherT.right(messageService.updateAllMessages(request.erns))
+        movement            <- getMovement(validatedMovementId)
+      } yield
+        if (getErnsForMovement(movement).intersect(request.erns).isEmpty) {
+          Forbidden(
+            Json.toJson(
+              ErrorResponse(
+                dateTimeService.timestamp(),
+                "Forbidden",
+                "Invalid MovementID supplied for ERN"
+              )
+            )
+          )
+        } else {
+          Ok(
+            Json.toJson(
+              filterMessages(movement, updatedSince, traderType)
+            )
+          )
+        }
+
+      result.merge
+
+    }
 
   private def filterMessages(movement: Movement, updatedSince: Option[Instant], traderType: Option[String]) = {
     val filteredByTraderType = filterMessagesByTraderType(movement, traderType)
-    filterMessagesByTime(filteredByTraderType, updatedSince).map {
-      filteredMessage =>
-        MessageResponse(
-          encodedMessage = filteredMessage.encodedMessage,
-          messageType = filteredMessage.messageType,
-          messageId = filteredMessage.messageId,
-          createdOn = filteredMessage.createdOn
+    filterMessagesByTime(filteredByTraderType, updatedSince).map { filteredMessage =>
+      MessageResponse(
+        encodedMessage = filteredMessage.encodedMessage,
+        messageType = filteredMessage.messageType,
+        messageId = filteredMessage.messageId,
+        createdOn = filteredMessage.createdOn
+      )
+    }
+
+  }
+  private def messageNotFoundError(messageId: String) =
+    NotFound(
+      Json.toJson(
+        ErrorResponse(
+          dateTimeService.timestamp(),
+          "No message found for the MovementID provided",
+          s"MessageId $messageId was not found in the database"
         )
+      )
+    )
+
+  private def validateMovementId(movementId: String): EitherT[Future, Result, String] =
+    EitherT.fromEither[Future](movementIdValidator.validateMovementId(movementId)).leftMap { x =>
+      movementIdValidator.convertErrorToResponse(x, dateTimeService.timestamp())
     }
-
-
-  }
-  private def messageNotFoundError(messageId: String) = {
-    NotFound(Json.toJson(ErrorResponse(
-      dateTimeService.timestamp(),
-      "No message found for the MovementID provided",
-      s"MessageId $messageId was not found in the database"
-    )))
-  }
-
-  private def validateMovementId(movementId: String): EitherT[Future, Result, String] = {
-    EitherT.fromEither[Future](movementIdValidator.validateMovementId(movementId)).leftMap {
-      x => movementIdValidator.convertErrorToResponse(x, dateTimeService.timestamp())
-    }
-  }
 
   private def validateUpdatedSince(updatedSince: Option[String]): EitherT[Future, Result, Option[Instant]] =
-    EitherT.fromEither(Try(updatedSince.map(Instant.parse(_))).toEither.left.map(_ =>
-      BadRequest(Json.toJson(ErrorResponse(
-        dateTimeService.timestamp(),
-        "Invalid date format provided in the updatedSince query parameter",
-        "Date format should be like '2020-11-15T17:02:34.00Z'")
-      ))
-    ))
+    EitherT.fromEither(
+      Try(updatedSince.map(Instant.parse(_))).toEither.left.map(_ =>
+        BadRequest(
+          Json.toJson(
+            ErrorResponse(
+              dateTimeService.timestamp(),
+              "Invalid date format provided in the updatedSince query parameter",
+              "Date format should be like '2020-11-15T17:02:34.00Z'"
+            )
+          )
+        )
+      )
+    )
 
-  private def filterMessagesByTraderType(movement: Movement, traderType: Option[String]): Seq[Message] = {
-     traderType.fold[Seq[Message]](movement.messages)(trader =>
-       if(trader.equalsIgnoreCase("consignor")){
-         movement.messages.filter(o => o.recipient.equals(movement.consignorId))
-       }else{
-         movement.messages.filter(o => movement.consigneeId.contains(o.recipient))
-       }
-     )
-  }
+  private def filterMessagesByTraderType(movement: Movement, traderType: Option[String]): Seq[Message] =
+    traderType.fold[Seq[Message]](movement.messages)(trader =>
+      if (trader.equalsIgnoreCase("consignor")) {
+        movement.messages.filter(o => o.recipient.equals(movement.consignorId))
+      } else {
+        movement.messages.filter(o => movement.consigneeId.contains(o.recipient))
+      }
+    )
 
   private def validateTraderType(traderType: Option[String]): EitherT[Future, Result, Option[String]] =
-    EitherT{
+    EitherT {
       Future.successful(
         traderType match {
-          case None => Right(None)
+          case None        => Right(None)
           case Some(value) =>
-            if(value.equalsIgnoreCase("consignor") || value.equalsIgnoreCase("consignee")){
+            if (value.equalsIgnoreCase("consignor") || value.equalsIgnoreCase("consignee")) {
               Right(traderType)
-            }else {
-              Left{
-                BadRequest(Json.toJson(ErrorResponse(
-                  dateTimeService.timestamp(),
-                  "Invalid traderType passed in",
-                  "traderType should be consignor or consignee")
-                ))
+            } else {
+              Left {
+                BadRequest(
+                  Json.toJson(
+                    ErrorResponse(
+                      dateTimeService.timestamp(),
+                      "Invalid traderType passed in",
+                      "traderType should be consignor or consignee"
+                    )
+                  )
+                )
               }
-          }
+            }
         }
       )
     }
 
-
-  private def getMovement(id: String): EitherT[Future, Result, Movement] = {
- OptionT(movementService.getMovementById(id)).toRightF(
-      Future.successful(NotFound(
-        Json.toJson(ErrorResponse(
-          dateTimeService.timestamp(),
-          "Movement not found",
-          s"Movement $id could not be found"
-        ))
-      ))
+  private def getMovement(id: String): EitherT[Future, Result, Movement] =
+    OptionT(movementService.getMovementById(id)).toRightF(
+      Future.successful(
+        NotFound(
+          Json.toJson(
+            ErrorResponse(
+              dateTimeService.timestamp(),
+              "Movement not found",
+              s"Movement $id could not be found"
+            )
+          )
+        )
+      )
     )
-  }
 
-  private def filterMessagesByTime(messages: Seq[Message], updatedSince: Option[Instant]): Seq[Message] = {
+  private def filterMessagesByTime(messages: Seq[Message], updatedSince: Option[Instant]): Seq[Message] =
     updatedSince.fold[Seq[Message]](messages)(a =>
       messages.filter(o => o.createdOn.isAfter(a) || o.createdOn.equals(a))
     )
-  }
 
   private def getErnsForMovement(movement: Movement): Set[String] = {
     val messageRecipients = movement.messages.map(_.recipient)

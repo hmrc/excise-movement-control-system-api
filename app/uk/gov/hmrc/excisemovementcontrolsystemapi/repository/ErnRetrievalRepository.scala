@@ -33,29 +33,31 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class ErnRetrievalRepository @Inject()
-(mongo: MongoComponent,
- appConfig: AppConfig,
- timeService: DateTimeService)(implicit ec: ExecutionContext) extends
-  PlayMongoRepository[ErnRetrieval](
-    collectionName = "ernretrievals",
-    mongoComponent = mongo,
-    domainFormat = ErnRetrieval.format,
-    indexes = mongoIndexes(appConfig.ernRetrievalTTL),
-    replaceIndexes = true
-  ) with Logging {
+class ErnRetrievalRepository @Inject() (mongo: MongoComponent, appConfig: AppConfig, timeService: DateTimeService)(
+  implicit ec: ExecutionContext
+) extends PlayMongoRepository[ErnRetrieval](
+      collectionName = "ernretrievals",
+      mongoComponent = mongo,
+      domainFormat = ErnRetrieval.format,
+      indexes = mongoIndexes(appConfig.ernRetrievalTTL),
+      replaceIndexes = true
+    )
+    with Logging {
 
   def getLastRetrieved(ern: String): Future[Option[Instant]] = Mdc.preservingMdc {
-    collection.findOneAndReplace(
-      Filters.eq("ern", ern),
-      ErnRetrieval(ern, timeService.timestamp()),
-      FindOneAndReplaceOptions().upsert(true)
-    ).headOption().map(_.map(_.lastRetrieved))
+    collection
+      .findOneAndReplace(
+        Filters.eq("ern", ern),
+        ErnRetrieval(ern, timeService.timestamp()),
+        FindOneAndReplaceOptions().upsert(true)
+      )
+      .headOption()
+      .map(_.map(_.lastRetrieved))
   }
 }
 
 object ErnRetrievalRepository {
-  def mongoIndexes(ttl: Duration): Seq[IndexModel] = {
+  def mongoIndexes(ttl: Duration): Seq[IndexModel] =
     Seq(
       IndexModel(
         Indexes.ascending("lastRetrieved"),
@@ -70,5 +72,4 @@ object ErnRetrievalRepository {
           .unique(true)
       )
     )
-  }
 }

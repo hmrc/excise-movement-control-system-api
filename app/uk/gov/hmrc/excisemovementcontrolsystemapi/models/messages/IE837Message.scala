@@ -26,25 +26,26 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFor
 
 import scala.xml.NodeSeq
 
-
-case class IE837Message
-(
+case class IE837Message(
   private val obj: IE837Type,
   private val key: Option[String],
   private val namespace: Option[String],
   auditType: AuditType
-
-) extends IEMessage with SubmitterTypeConverter with GeneratedJsonWriters {
-  def submitter: ExciseTraderType = convertSubmitterType(obj.Body.ExplanationOnDelayForDelivery.AttributesValue.SubmitterType)
+) extends IEMessage
+    with SubmitterTypeConverter
+    with GeneratedJsonWriters {
+  def submitter: ExciseTraderType = convertSubmitterType(
+    obj.Body.ExplanationOnDelayForDelivery.AttributesValue.SubmitterType
+  )
 
   def consignorId: Option[String] = submitter match {
     case Consignor => Some(obj.Body.ExplanationOnDelayForDelivery.AttributesValue.SubmitterIdentification)
-    case _ => None
+    case _         => None
   }
 
   override def consigneeId: Option[String] = submitter match {
     case Consignee => Some(obj.Body.ExplanationOnDelayForDelivery.AttributesValue.SubmitterIdentification)
-    case _ => None
+    case _         => None
   }
 
   override def administrativeReferenceCode: Seq[Option[String]] =
@@ -52,9 +53,8 @@ case class IE837Message
 
   override def messageType: String = MessageTypes.IE837.value
 
-  override def toXml: NodeSeq = {
+  override def toXml: NodeSeq =
     scalaxb.toXML[IE837Type](obj, namespace, key, generated.defaultScope)
-  }
 
   override def toJson: JsValue = Json.toJson(obj)
 
@@ -62,14 +62,14 @@ case class IE837Message
 
   override def messageIdentifier: String = obj.Header.MessageIdentifier
 
-  override def toString: String = s"Message type: $messageType, message identifier: $messageIdentifier, ARC: $administrativeReferenceCode"
+  override def toString: String =
+    s"Message type: $messageType, message identifier: $messageIdentifier, ARC: $administrativeReferenceCode"
 
 }
 
 object IE837Message {
-  def apply(message: DataRecord[MessagesOption]): IE837Message = {
+  def apply(message: DataRecord[MessagesOption]): IE837Message =
     IE837Message(message.as[IE837Type], message.key, message.namespace, Delay)
-  }
 
   def createFromXml(xml: NodeSeq): IE837Message = {
     val ie837: IE837Type = scalaxb.fromXML[IE837Type](xml)

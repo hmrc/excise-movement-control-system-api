@@ -43,24 +43,24 @@ import java.util.{Base64, UUID}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
 
-class GetMessagesControllerSpec extends PlaySpec
-  with FakeAuthentication
-  with ErrorResponseSupport
-  with BeforeAndAfterEach {
+class GetMessagesControllerSpec
+    extends PlaySpec
+    with FakeAuthentication
+    with ErrorResponseSupport
+    with BeforeAndAfterEach {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  implicit val sys: ActorSystem = ActorSystem("GetMessagesControllerSpec")
+  implicit val sys: ActorSystem     = ActorSystem("GetMessagesControllerSpec")
 
   private val movementService = mock[MovementService]
-  private val cc = stubControllerComponents()
-  private val validUUID = "cfdb20c7-d0b0-4b8b-a071-737d68dede5e"
+  private val cc              = stubControllerComponents()
+  private val validUUID       = "cfdb20c7-d0b0-4b8b-a071-737d68dede5e"
   private val dateTimeService = mock[DateTimeService]
-  private val timeStamp = Instant.parse("2020-01-01T01:01:01.123456Z")
-  private val messageService = mock[MessageService]
+  private val timeStamp       = Instant.parse("2020-01-01T01:01:01.123456Z")
+  private val messageService  = mock[MessageService]
   private val messageCreateOn = Instant.now()
 
-  private val MovementIdFormatError = Json.parse(
-    """
+  private val MovementIdFormatError = Json.parse("""
       |{
       | "dateTime":"2020-01-01T01:01:01.123Z",
       | "message":"Movement Id format error",
@@ -84,14 +84,15 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "respond with BAD_REQUEST when invalid traderType has passed" in {
-      val result = createWithSuccessfulAuth().getMessagesForMovement(UUID.randomUUID().toString, None, Some("invalidTraderType"))(createRequest())
+      val result = createWithSuccessfulAuth()
+        .getMessagesForMovement(UUID.randomUUID().toString, None, Some("invalidTraderType"))(createRequest())
 
       status(result) mustBe BAD_REQUEST
     }
 
     "return 200 when consignor is valid" in {
-      val message = Message(123, "message", "IE801", "messageId", "ern", Set.empty, messageCreateOn)
-      val movement = createMovementWithMessages(Seq(message))
+      val message    = Message(123, "message", "IE801", "messageId", "ern", Set.empty, messageCreateOn)
+      val movement   = createMovementWithMessages(Seq(message))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
       val controller = new GetMessagesController(
         FakeSuccessAuthenticationMultiErn(Set(ern, "otherErn")),
@@ -109,40 +110,58 @@ class GetMessagesControllerSpec extends PlaySpec
     }
 
     "return 200 when consignee is valid" in {
-      val message = Message(123, "message", "IE801", "messageId", "ern", Set.empty, messageCreateOn)
-      val movement = Movement(validUUID, Some("boxId"), "lrn", "consignor", Some("testErn"), Some("arc"), Instant.now, Seq(message))
+      val message  = Message(123, "message", "IE801", "messageId", "ern", Set.empty, messageCreateOn)
+      val movement =
+        Movement(validUUID, Some("boxId"), "lrn", "consignor", Some("testErn"), Some("arc"), Instant.now, Seq(message))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth().getMessagesForMovement(validUUID, None, None)(createRequest())
 
       status(result) mustBe OK
-      contentAsJson(result) mustBe JsArray(Seq(expectedMessageResponseAsJson(
-        "message",
-        "IE801",
-        "messageId",
-        messageCreateOn
-      )))
+      contentAsJson(result) mustBe JsArray(
+        Seq(
+          expectedMessageResponseAsJson(
+            "message",
+            "IE801",
+            "messageId",
+            messageCreateOn
+          )
+        )
+      )
     }
 
     "return 200 when message recipient is valid" in {
-      val message = Message(123, "message", "IE801", "messageId", "testErn", Set.empty, messageCreateOn)
-      val movement = Movement(validUUID, Some("boxId"), "lrn", "consignor", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
+      val message  = Message(123, "message", "IE801", "messageId", "testErn", Set.empty, messageCreateOn)
+      val movement = Movement(
+        validUUID,
+        Some("boxId"),
+        "lrn",
+        "consignor",
+        Some("consigneeId"),
+        Some("arc"),
+        Instant.now,
+        Seq(message)
+      )
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth().getMessagesForMovement(validUUID, None, None)(createRequest())
 
       status(result) mustBe OK
-      contentAsJson(result) mustBe JsArray(Seq(expectedMessageResponseAsJson(
-        "message",
-        "IE801",
-        "messageId",
-        messageCreateOn
-      )))
+      contentAsJson(result) mustBe JsArray(
+        Seq(
+          expectedMessageResponseAsJson(
+            "message",
+            "IE801",
+            "messageId",
+            messageCreateOn
+          )
+        )
+      )
     }
 
     "get all the new messages" in {
-      val message = Message(123, "message", "IE801", "messageId1", "ern", Set.empty, messageCreateOn)
-      val message2 = Message(345,"message2", "IE801", "messageId2", "ern", Set.empty, messageCreateOn)
+      val message  = Message(123, "message", "IE801", "messageId1", "ern", Set.empty, messageCreateOn)
+      val message2 = Message(345, "message2", "IE801", "messageId2", "ern", Set.empty, messageCreateOn)
       val movement = createMovementWithMessages(Seq(message, message2))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
@@ -159,35 +178,34 @@ class GetMessagesControllerSpec extends PlaySpec
 
     "get all the new messages when there is a time query parameter provided" in {
       val timeInFuture = Instant.now.plusSeconds(1000)
-      val timeInPast = Instant.now.minusSeconds(1000)
-      val message = Message("message", "IE801", "messageId1", "ern", Set.empty, timeInFuture)
-      val message2 = Message("message2", "IE801", "messageId2", "ern", Set.empty, timeInPast)
-      val movement = createMovementWithMessages(Seq(message, message2))
+      val timeInPast   = Instant.now.minusSeconds(1000)
+      val message      = Message("message", "IE801", "messageId1", "ern", Set.empty, timeInFuture)
+      val message2     = Message("message2", "IE801", "messageId2", "ern", Set.empty, timeInPast)
+      val movement     = createMovementWithMessages(Seq(message, message2))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
-      val result = createWithSuccessfulAuth().getMessagesForMovement(validUUID, Some(messageCreateOn.toString), None)(createRequest())
+      val result = createWithSuccessfulAuth().getMessagesForMovement(validUUID, Some(messageCreateOn.toString), None)(
+        createRequest()
+      )
 
       status(result) mustBe OK
 
-      val jsonResponse = expectedMessageResponseAsJson(
-        "message",
-        "IE801",
-        "messageId1",
-        timeInFuture)
+      val jsonResponse = expectedMessageResponseAsJson("message", "IE801", "messageId1", timeInFuture)
       contentAsJson(result) mustBe JsArray(Seq(jsonResponse))
     }
 
     "get all the new messages including messages with a createdOn time of NOW when there is a time query parameter provided" in {
       val timeNowString = messageCreateOn.toString
-      val timeInFuture = Instant.now.plusSeconds(1000)
-      val timeInPast = Instant.now.minusSeconds(1000)
-      val message = Message("message", "IE801", "messageId1", "ern", Set.empty, timeInFuture)
-      val message2 = Message("message2", "IE801", "messageId2", "ern", Set.empty, timeInPast)
-      val message3 = Message("message3", "IE801", "messageId3", "ern", Set.empty, messageCreateOn)
-      val movement = createMovementWithMessages(Seq(message, message2, message3))
+      val timeInFuture  = Instant.now.plusSeconds(1000)
+      val timeInPast    = Instant.now.minusSeconds(1000)
+      val message       = Message("message", "IE801", "messageId1", "ern", Set.empty, timeInFuture)
+      val message2      = Message("message2", "IE801", "messageId2", "ern", Set.empty, timeInPast)
+      val message3      = Message("message3", "IE801", "messageId3", "ern", Set.empty, messageCreateOn)
+      val movement      = createMovementWithMessages(Seq(message, message2, message3))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
-      val result = createWithSuccessfulAuth().getMessagesForMovement(validUUID, Some(timeNowString), None)(createRequest())
+      val result =
+        createWithSuccessfulAuth().getMessagesForMovement(validUUID, Some(timeNowString), None)(createRequest())
 
       status(result) mustBe OK
 
@@ -200,11 +218,13 @@ class GetMessagesControllerSpec extends PlaySpec
 
     "succeed when a valid date format is provided" in {
       val timeInFuture = Instant.now.plusSeconds(1000)
-      val message = Message("message", "IE801", "messageId", "ern", Set.empty, timeInFuture)
-      val movement = createMovementWithMessages(Seq(message))
+      val message      = Message("message", "IE801", "messageId", "ern", Set.empty, timeInFuture)
+      val movement     = createMovementWithMessages(Seq(message))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
-      val result = createWithSuccessfulAuth().getMessagesForMovement(validUUID, Some("2020-11-15T17:02:34.00Z"), None)(createRequest())
+      val result = createWithSuccessfulAuth().getMessagesForMovement(validUUID, Some("2020-11-15T17:02:34.00Z"), None)(
+        createRequest()
+      )
 
       status(result) mustBe OK
 
@@ -226,7 +246,8 @@ class GetMessagesControllerSpec extends PlaySpec
       val movement = createMovementWithMessages(Seq(message1, message2, message3))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
-      val result = createWithSuccessfulAuth().getMessagesForMovement(validUUID, None, Some("consignor"))(createRequest())
+      val result =
+        createWithSuccessfulAuth().getMessagesForMovement(validUUID, None, Some("consignor"))(createRequest())
 
       status(result) mustBe OK
 
@@ -255,7 +276,8 @@ class GetMessagesControllerSpec extends PlaySpec
       val movement = createMovementWithMessages(Seq(message1, message2, message3))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
-      val result = createWithSuccessfulAuth(Set("other_ern", "consigneeId")).getMessagesForMovement(validUUID, None, Some("consignee"))(createRequest())
+      val result = createWithSuccessfulAuth(Set("other_ern", "consigneeId"))
+        .getMessagesForMovement(validUUID, None, Some("consignee"))(createRequest())
 
       status(result) mustBe OK
 
@@ -270,11 +292,12 @@ class GetMessagesControllerSpec extends PlaySpec
     }
     "fail when an invalid date format is provided" in {
       val timeInFuture = Instant.now.plusSeconds(1000)
-      val message = Message("message", "IE801", "messageId", "ern", Set.empty, timeInFuture)
-      val movement = createMovementWithMessages(Seq(message))
+      val message      = Message("message", "IE801", "messageId", "ern", Set.empty, timeInFuture)
+      val movement     = createMovementWithMessages(Seq(message))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
-      val result = createWithSuccessfulAuth().getMessagesForMovement(validUUID, Some("invalid date"), None)(createRequest())
+      val result =
+        createWithSuccessfulAuth().getMessagesForMovement(validUUID, Some("invalid date"), None)(createRequest())
 
       status(result) mustBe BAD_REQUEST
 
@@ -304,13 +327,22 @@ class GetMessagesControllerSpec extends PlaySpec
       contentAsJson(result) mustBe expectedJsonErrorResponse(
         "2020-01-01T01:01:01.123Z",
         "Movement not found",
-          s"Movement $validUUID could not be found"
+        s"Movement $validUUID could not be found"
       )
     }
 
     "return FORBIDDEN when movement is for a different ern " in {
-      val message = Message("message", "IE801", "messageId", "ern", Set.empty, Instant.now)
-      val movement = Movement(validUUID, Some("boxId"), "lrn", "consignor", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
+      val message  = Message("message", "IE801", "messageId", "ern", Set.empty, Instant.now)
+      val movement = Movement(
+        validUUID,
+        Some("boxId"),
+        "lrn",
+        "consignor",
+        Some("consigneeId"),
+        Some("arc"),
+        Instant.now,
+        Seq(message)
+      )
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
       val result = createWithSuccessfulAuth().getMessagesForMovement(validUUID, None, None)(createRequest())
@@ -336,8 +368,8 @@ class GetMessagesControllerSpec extends PlaySpec
 
     val encodeMessage = Base64.getEncoder.encodeToString(messageXml.getBytes(StandardCharsets.UTF_8))
 
-    val messageId = UUID.randomUUID().toString
-    val message = Message(encodeMessage, "IE801", messageId, "ern", Set.empty, timeStamp)
+    val messageId           = UUID.randomUUID().toString
+    val message             = Message(encodeMessage, "IE801", messageId, "ern", Set.empty, timeStamp)
     val movementWithMessage = createMovementWithMessages(Seq(message))
 
     "return 200" in {
@@ -437,13 +469,11 @@ class GetMessagesControllerSpec extends PlaySpec
 
   }
 
-  private def contentAsXml(result: Future[Result]): Elem = {
+  private def contentAsXml(result: Future[Result]): Elem =
     xml.XML.loadString(contentAsString(result))
-  }
 
-  private def createMovementWithMessages(messages: Seq[Message]): Movement = {
+  private def createMovementWithMessages(messages: Seq[Message]): Movement =
     Movement(validUUID, Some("boxId"), "lrn", "testErn", Some("consigneeId"), Some("arc"), Instant.now, messages)
-  }
 
   private def createWithSuccessfulAuth(erns: Set[String] = Set(ern)) =
     new GetMessagesController(
@@ -471,29 +501,28 @@ class GetMessagesControllerSpec extends PlaySpec
 
   private def createRequest(
     acceptHeader: String = "application/vnd.hmrc.1.0+xml"
-  ): FakeRequest[AnyContent] = {
+  ): FakeRequest[AnyContent] =
     FakeRequest()
-      .withHeaders(FakeHeaders(Seq(
-        HeaderNames.ACCEPT -> acceptHeader
-      )))
-  }
+      .withHeaders(
+        FakeHeaders(
+          Seq(
+            HeaderNames.ACCEPT -> acceptHeader
+          )
+        )
+      )
 
-  private def formatToValidDateTime(dateTime: Instant): String = {
+  private def formatToValidDateTime(dateTime: Instant): String =
     ZonedDateTime
       .ofInstant(dateTime, ZoneOffset.UTC)
       .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX"))
-
-
-  }
 
   private def expectedMessageResponseAsJson(
     encodedMessage: String,
     messageType: String,
     messageId: String,
     dateTime: Instant
-  ): JsValue = {
-    Json.parse(
-      s"""
+  ): JsValue =
+    Json.parse(s"""
          |{
          |   "encodedMessage":"$encodedMessage",
          |   "messageType":"$messageType",
@@ -501,5 +530,4 @@ class GetMessagesControllerSpec extends PlaySpec
          |   "createdOn": "${formatToValidDateTime(dateTime)}"
          | }
          |""".stripMargin)
-  }
 }

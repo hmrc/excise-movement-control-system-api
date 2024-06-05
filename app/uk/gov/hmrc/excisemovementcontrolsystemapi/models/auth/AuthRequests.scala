@@ -19,13 +19,10 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth
 import play.api.mvc.{Request, WrappedRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 
-case class EnrolmentRequest[A](
-                                request: Request[A],
-                                erns: Set[String],
-                                internalId: String) extends WrappedRequest[A](request)
+case class EnrolmentRequest[A](request: Request[A], erns: Set[String], internalId: String)
+    extends WrappedRequest[A](request)
 
-case class ParsedXmlRequest[A]
-(
+case class ParsedXmlRequest[A](
   request: EnrolmentRequest[A],
   ieMessage: IEMessage,
   erns: Set[String],
@@ -36,5 +33,3 @@ case class ParsedXmlRequest[A]
     request.request.headers.headers.toMap
 
 }
-
-

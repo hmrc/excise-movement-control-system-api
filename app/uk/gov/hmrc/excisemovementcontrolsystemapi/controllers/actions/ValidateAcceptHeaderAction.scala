@@ -27,7 +27,8 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class ValidateAcceptHeaderAction @Inject()(datetimeService: DateTimeService)(implicit ec: ExecutionContext) extends ActionFilter[Request] {
+class ValidateAcceptHeaderAction @Inject() (datetimeService: DateTimeService)(implicit ec: ExecutionContext)
+    extends ActionFilter[Request] {
 
   override val executionContext: ExecutionContext = ec
 
@@ -37,11 +38,18 @@ class ValidateAcceptHeaderAction @Inject()(datetimeService: DateTimeService)(imp
 
     request.headers.get(HeaderNames.ACCEPT) match {
       case Some(value) if pattern.matches(value) => None
-      case _ => Some(NotAcceptable(Json.toJson(
-        ErrorResponse(
-          datetimeService.timestamp(),
-          "Invalid Accept header",
-          "The accept header is missing or invalid"))))
+      case _                                     =>
+        Some(
+          NotAcceptable(
+            Json.toJson(
+              ErrorResponse(
+                datetimeService.timestamp(),
+                "Invalid Accept header",
+                "The accept header is missing or invalid"
+              )
+            )
+          )
+        )
     }
   }
 

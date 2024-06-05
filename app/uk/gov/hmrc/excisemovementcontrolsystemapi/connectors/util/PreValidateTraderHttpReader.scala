@@ -33,14 +33,18 @@ class PreValidateTraderHttpReader(
   val createdDateTime: String,
   val dateTimeService: DateTimeService
 ) extends HttpReads[Either[Result, PreValidateTraderEISResponse]]
-  with Logging
-  with ResponseHandler {
+    with Logging
+    with ResponseHandler {
 
-  override def read(method: String, url: String, response: HttpResponse): Either[Result, PreValidateTraderEISResponse] = {
+  override def read(
+    method: String,
+    url: String,
+    response: HttpResponse
+  ): Either[Result, PreValidateTraderEISResponse] = {
 
     val result = extractIfSuccessful(response)
     result match {
-      case Right(eisResponse) => Right(eisResponse)
+      case Right(eisResponse)               => Right(eisResponse)
       case Left(httpResponse: HttpResponse) => Left(handleErrorResponse(httpResponse))
     }
   }
@@ -49,17 +53,22 @@ class PreValidateTraderHttpReader(
     if (is2xx(response.status)) Right(extractResponse(response))
     else Left(response)
 
-  private def extractResponse(httpResponse: HttpResponse): PreValidateTraderEISResponse = {
+  private def extractResponse(httpResponse: HttpResponse): PreValidateTraderEISResponse =
     jsonAs[PreValidateTraderEISResponse](httpResponse.body)
-  }
 
-
-  private def handleErrorResponse
-  (
+  private def handleErrorResponse(
     response: HttpResponse
   ): Result = {
 
-    logger.warn(EISErrorMessage(createdDateTime, ern, s"status: ${response.status}, body: ${response.body}", correlationId, "PreValidateTrader"))
+    logger.warn(
+      EISErrorMessage(
+        createdDateTime,
+        ern,
+        s"status: ${response.status}, body: ${response.body}",
+        correlationId,
+        "PreValidateTrader"
+      )
+    )
 
     //Not expecting EIS response bodies to have any payload here
     val ourErrorResponse = EisErrorResponsePresentation(
@@ -75,12 +84,16 @@ class PreValidateTraderHttpReader(
 }
 
 object PreValidateTraderHttpReader {
-  def apply(correlationId: String, ern: String, createDateTime: String, dateTimeService: DateTimeService): PreValidateTraderHttpReader = {
+  def apply(
+    correlationId: String,
+    ern: String,
+    createDateTime: String,
+    dateTimeService: DateTimeService
+  ): PreValidateTraderHttpReader =
     new PreValidateTraderHttpReader(
       correlationId,
       ern,
       createDateTime,
       dateTimeService
     )
-  }
 }

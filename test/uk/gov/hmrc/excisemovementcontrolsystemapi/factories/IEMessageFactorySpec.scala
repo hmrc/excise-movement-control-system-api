@@ -26,13 +26,10 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 
-class IEMessageFactorySpec
-  extends PlaySpec
-    with TestXml
-    with BeforeAndAfterEach {
+class IEMessageFactorySpec extends PlaySpec with TestXml with BeforeAndAfterEach {
 
   private val message = mock[DataRecord[MessagesOption]]
-  private val sut = IEMessageFactory()
+  private val sut     = IEMessageFactory()
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -276,7 +273,11 @@ class IEMessageFactorySpec
 
     "return an instance of IE839Message with multiple ARCs" in {
       val result = sut.createFromXml("IE839", IE839MultipleArcs).asInstanceOf[IE839Message]
-      result.administrativeReferenceCode mustBe Seq(Some("23XI00000000000056341"), Some("23XI00000000000056342"), Some("23XI00000000000056343"))
+      result.administrativeReferenceCode mustBe Seq(
+        Some("23XI00000000000056341"),
+        Some("23XI00000000000056342"),
+        Some("23XI00000000000056343")
+      )
     }
 
     "return an instance of IE840Message" in {

@@ -41,24 +41,24 @@ trait NrsTestData {
   val testConfidenceLevel: ConfidenceLevel = ConfidenceLevel.L200
   val testSautr                            = "testSautr"
   val testNino                             = "NB686868C"
-  val testDate: LocalDate         = LocalDate.of(2017, 1, 1)
-  val testDateTime: ZonedDateTime = ZonedDateTime.of(2022, 7, 1, 12, 34, 37, 0, ZoneId.of("Z"))
-  val testDateTimeString: String = "2022-07-01T12:34:37Z" // <-- this is an actual date string taken from production
+  val testDate: LocalDate                  = LocalDate.of(2017, 1, 1)
+  val testDateTime: ZonedDateTime          = ZonedDateTime.of(2022, 7, 1, 12, 34, 37, 0, ZoneId.of("Z"))
+  val testDateTimeString: String           = "2022-07-01T12:34:37Z" // <-- this is an actual date string taken from production
 
   val testAuthName: Name =
     uk.gov.hmrc.auth.core.retrieve.Name(Some("testFirstName"), Some("testLastName"))
 
-  val testEmail: String                            = "testEmail"
-  val testErn: String                               = "GB123456789"
-  val testAuthToken: String                        = "testAuthToken"
-  val testUserHeaders: Map[String, String]         = Map("testKey" -> "testValue")
-  val testSearchKeys: Map[String, String]          = Map("ern" -> testErn)
+  val testEmail: String                    = "testEmail"
+  val testErn: String                      = "GB123456789"
+  val testAuthToken: String                = "testAuthToken"
+  val testUserHeaders: Map[String, String] = Map("testKey" -> "testValue")
+  val testSearchKeys: Map[String, String]  = Map("ern" -> testErn)
 
   val testAgentInformation: AgentInformation =
     AgentInformation(Some("testAgentId"), Some("testAgentCode"), Some("testAgentFriendlyName"))
-  val testGroupIdentifier                  = "testGroupIdentifier"
-  val testCredentialRole: User.type        = User
-  val testMdtpInformation: MdtpInformation = MdtpInformation("testDeviceId", "testSessionId")
+  val testGroupIdentifier                    = "testGroupIdentifier"
+  val testCredentialRole: User.type          = User
+  val testMdtpInformation: MdtpInformation   = MdtpInformation("testDeviceId", "testSessionId")
 
   val testItmpName: ItmpName =
     ItmpName(Some("testGivenName"), Some("testMiddleName"), Some("testFamilyName"))
@@ -67,7 +67,6 @@ trait NrsTestData {
     ItmpAddress(Some("testLine1"), None, None, None, None, Some("testPostcode"), None, None)
 
   val testCredentialStrength: String = CredentialStrength.strong
-
 
   implicit class RetrievalCombiner[A](a: A) {
     def ~[B](b: B): A ~ B = new ~(a, b)
@@ -90,7 +89,6 @@ trait NrsTestData {
       Some(testItmpName) ~
       Some(testItmpAddress) ~
       Some(testCredentialStrength)
-
 
   val nonRepudiationIdentityRetrievals: Retrieval[NonRepudiationIdentityRetrievals] =
     Retrievals.affinityGroup and Retrievals.internalId and
@@ -125,6 +123,12 @@ trait NrsTestData {
   )
 
   def sha256Hash(text: String): String =
-    format("%064x", new BigInteger(1, getInstance("SHA-256")
-      .digest(text.getBytes("UTF-8"))))
+    format(
+      "%064x",
+      new BigInteger(
+        1,
+        getInstance("SHA-256")
+          .digest(text.getBytes("UTF-8"))
+      )
+    )
 }

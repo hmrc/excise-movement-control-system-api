@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util
 
-
 import org.mockito.MockitoSugar.when
 import org.scalatest.EitherValues
 import org.scalatest.Inspectors.forAll
@@ -37,7 +36,7 @@ class PreValidateTraderHttpReaderSpec extends PlaySpec with EitherValues {
   private val validResponse = getPreValidateTraderSuccessEISResponse
   private val businessError = getPreValidateTraderErrorEISResponse
 
-  private val now = Instant.now
+  private val now             = Instant.now
   private val dateTimeService = mock[DateTimeService]
 
   when(dateTimeService.timestamp()).thenReturn(now)
@@ -70,29 +69,34 @@ class PreValidateTraderHttpReaderSpec extends PlaySpec with EitherValues {
       val responseObject = result.toOption.value
 
       responseObject.exciseTraderValidationResponse.validationTimestamp mustBe businessError.exciseTraderValidationResponse.validationTimestamp
-      responseObject.exciseTraderValidationResponse.exciseTraderResponse(0) mustBe businessError.exciseTraderValidationResponse.exciseTraderResponse(0)
+      responseObject.exciseTraderValidationResponse.exciseTraderResponse(
+        0
+      ) mustBe businessError.exciseTraderValidationResponse.exciseTraderResponse(0)
     }
 
-    forAll(Seq(
-      BAD_REQUEST,
-      NOT_FOUND,
-      INTERNAL_SERVER_ERROR,
-      SERVICE_UNAVAILABLE)) { statusCode =>
+    forAll(Seq(BAD_REQUEST, NOT_FOUND, INTERNAL_SERVER_ERROR, SERVICE_UNAVAILABLE)) { statusCode =>
       s"return $statusCode" when {
         s"$statusCode has returned from HttpResponse" in {
 
-          val expectedResponse = Status(statusCode)(Json.toJson(EisErrorResponsePresentation(
-            now,
-            "PreValidateTrader error",
-            "Error occurred during PreValidateTrader request",
-            "123"
-          )))
+          val expectedResponse = Status(statusCode)(
+            Json.toJson(
+              EisErrorResponsePresentation(
+                now,
+                "PreValidateTrader error",
+                "Error occurred during PreValidateTrader request",
+                "123"
+              )
+            )
+          )
 
-          val result = preValidateTraderHttpReader.read(
-            "ANY",
-            "/foo",
-            HttpResponse(statusCode, "")
-          ).left.value
+          val result = preValidateTraderHttpReader
+            .read(
+              "ANY",
+              "/foo",
+              HttpResponse(statusCode, "")
+            )
+            .left
+            .value
 
           result mustBe expectedResponse
         }

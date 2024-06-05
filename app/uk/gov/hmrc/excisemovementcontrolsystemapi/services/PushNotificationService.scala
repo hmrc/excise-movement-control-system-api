@@ -36,38 +36,41 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-class PushNotificationServiceImpl @Inject()(
+class PushNotificationServiceImpl @Inject() (
   notificationConnector: PushNotificationConnector,
   dateTimeService: DateTimeService
-)(implicit val ec: ExecutionContext) extends PushNotificationService with ResponseHandler with Logging {
+)(implicit val ec: ExecutionContext)
+    extends PushNotificationService
+    with ResponseHandler
+    with Logging {
 
   def getBoxId(
     clientId: String,
     clientBoxId: Option[String] = None
-  )(implicit hc: HeaderCarrier): Future[Either[Result, String]] = {
-
+  )(implicit hc: HeaderCarrier): Future[Either[Result, String]] =
     (clientBoxId match {
       case Some(id) => Future.successful(validateClientBoxId(id))
-      case _ => notificationConnector.getDefaultBoxId(clientId)
-    }).map(futureValue => futureValue
-      .map(response => response.boxId)
+      case _        => notificationConnector.getDefaultBoxId(clientId)
+    }).map(futureValue =>
+      futureValue
+        .map(response => response.boxId)
     )
-  }
 
-  private def buildMessageUriAsString(movementId: String, messageId: String): String = {
+  private def buildMessageUriAsString(movementId: String, messageId: String): String =
     routes.GetMessagesController.getMessageForMovement(movementId, messageId).url
-  }
 
-  private def validateClientBoxId(boxId: String): Either[Result, SuccessBoxNotificationResponse] = {
+  private def validateClientBoxId(boxId: String): Either[Result, SuccessBoxNotificationResponse] =
     Try(UUID.fromString(boxId)) match {
       case Success(value) => Right(SuccessBoxNotificationResponse(value.toString))
-      case Failure(_) =>
-        Left(BadRequest(Json.toJson(FailedBoxIdNotificationResponse(
-          dateTimeService.timestamp(),
-          "Client box id should be a valid UUID")))
+      case Failure(_)     =>
+        Left(
+          BadRequest(
+            Json.toJson(
+              FailedBoxIdNotificationResponse(dateTimeService.timestamp(), "Client box id should be a valid UUID")
+            )
+          )
         )
     }
-  }
 
   override def sendNotification(
     boxId: String,
@@ -87,7 +90,8 @@ class PushNotificationServiceImpl @Inject()(
       consignor,
       consignee,
       arc,
-      recipientErn)
+      recipientErn
+    )
 
     // TODO remove the need to convert this to a done in the connector, just return done
     notificationConnector.postNotification(boxId, notification).as(Done)
