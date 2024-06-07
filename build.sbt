@@ -49,3 +49,5 @@ lazy val scoverageSettings: Seq[Setting[_]] = Seq(
   ScoverageKeys.coverageFailOnMinimum := true,
   ScoverageKeys.coverageHighlighting := true
 )
+
+addCommandAlias("runAllChecks", ";clean;compile;scalafmtAll;test;it/test")
