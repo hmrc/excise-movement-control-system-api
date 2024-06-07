@@ -215,7 +215,7 @@ class MessageService @Inject() (
     Movement(
       correlationIdService.generateCorrelationId(),
       None,
-      message.localReferenceNumber.get, // TODO remove .get
+      message.localReferenceNumber,
       consignor,
       message.consigneeId,
       administrativeReferenceCode = message.administrativeReferenceCode.head, // TODO remove .head

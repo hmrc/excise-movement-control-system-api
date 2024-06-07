@@ -33,8 +33,8 @@ case class IE801Message(
   auditType: AuditType
 ) extends IEMessage
     with GeneratedJsonWriters {
-  def localReferenceNumber: Option[String] =
-    Some(obj.Body.EADESADContainer.EadEsad.LocalReferenceNumber)
+  def localReferenceNumber: String =
+    obj.Body.EADESADContainer.EadEsad.LocalReferenceNumber
 
   def consignorId: Option[String] =
     Some(obj.Body.EADESADContainer.ConsignorTrader.TraderExciseNumber)
