@@ -441,6 +441,34 @@ class MessageServiceSpec
               s"An IE818 message has been retrieved with no movement, unable to create movement"
             )
           }
+          "an IE704 message is audited with failure if it does not have an LRN" in {
+            val ern      = "testErn"
+            val ie704    = XmlMessageGeneratorFactory.generate(
+              ern,
+              MessageParams(IE704, "XI000001")
+            )
+            val messages = Seq(IE704Message.createFromXml(ie704))
+
+            when(correlationIdService.generateCorrelationId()).thenReturn(newId)
+            when(auditService.auditMessage(any, any)(any)).thenReturn(EitherT.pure(()))
+            when(dateTimeService.timestamp()).thenReturn(now)
+            when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
+            when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+            when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+            when(messageConnector.getNewMessages(any)(any))
+              .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+            when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+
+            messageService.updateMessages(ern).futureValue
+
+            verify(messageConnector).getNewMessages(eqTo(ern))(any)
+            verify(movementRepository).getAllBy(eqTo(ern))
+            verify(auditService).auditMessage(
+              messages.head,
+              s"An IE704 message has been retrieved with no movement, unable to create movement"
+            )
+          }
 
           "a single new movement should be created when there are multiple messages for the same ern" in {
             val ern              = "testErn"
