@@ -148,7 +148,7 @@ class IEMessageFactorySpec extends PlaySpec with TestXml with BeforeAndAfterEach
       result.consignorId mustBe Some("tokentokentok")
       result.consigneeId mustBe Some("token")
       result.administrativeReferenceCode mustBe Seq(Some("tokentokentokentokent"))
-      result.localReferenceNumber mustBe Some("token")
+      result.localReferenceNumber mustBe "token"
       result.messageIdentifier mustBe "token"
       result.messageType mustBe MessageTypes.IE801.value
       result.lrnEquals("token") mustBe true

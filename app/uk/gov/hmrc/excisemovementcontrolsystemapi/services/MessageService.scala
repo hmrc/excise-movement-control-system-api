@@ -189,33 +189,44 @@ class MessageService @Inject() (
     hc: HeaderCarrier
   ): Option[Movement] =
     message match {
-      case ie704: IE704Message  => Some(createMovementFromIE704(ern, ie704, boxIds))
-      case ie801: IE801Message  => Some(createMovementFromIE801(ern, ie801, boxIds))
-      case ieMessage: IEMessage =>
-        val errorMessage =
-          s"An ${ieMessage.messageType} message has been retrieved with no movement, unable to create movement"
-        auditService.auditMessage(ieMessage, errorMessage)
-        logger.error(errorMessage)
-        None
+      case ie704: IE704Message => createMovementFromIE704(ern, ie704, boxIds)
+      case ie801: IE801Message => Some(createMovementFromIE801(ern, ie801, boxIds))
+      case _                   => auditMessageForNoMovement(message)
     }
 
-  private def createMovementFromIE704(consignor: String, message: IE704Message, boxIds: Set[String]): Movement =
-    Movement(
-      correlationIdService.generateCorrelationId(),
-      None,
-      message.localReferenceNumber.get, // TODO remove .get
-      consignor,
-      None,
-      administrativeReferenceCode = message.administrativeReferenceCode.head, // TODO remove .head
-      dateTimeService.timestamp(),
-      messages = Seq(convertMessage(consignor, message, boxIds))
+  private def auditMessageForNoMovement(message: IEMessage)(implicit
+    hc: HeaderCarrier
+  ): Option[Movement] = {
+    val errorMessage =
+      s"An ${message.messageType} message has been retrieved with no movement, unable to create movement"
+    auditService.auditMessage(message, errorMessage)
+    logger.error(errorMessage)
+    None
+  }
+
+  private def createMovementFromIE704(consignor: String, message: IE704Message, boxIds: Set[String])(implicit
+    hc: HeaderCarrier
+  ): Option[Movement] =
+    message.localReferenceNumber.fold[Option[Movement]](auditMessageForNoMovement(message))(lrn =>
+      Some(
+        Movement(
+          correlationIdService.generateCorrelationId(),
+          None,
+          lrn,
+          consignor,
+          None,
+          administrativeReferenceCode = message.administrativeReferenceCode.head, // TODO remove .head
+          dateTimeService.timestamp(),
+          messages = Seq(convertMessage(consignor, message, boxIds))
+        )
+      )
     )
 
   private def createMovementFromIE801(consignor: String, message: IE801Message, boxIds: Set[String]): Movement =
     Movement(
       correlationIdService.generateCorrelationId(),
       None,
-      message.localReferenceNumber.get, // TODO remove .get
+      message.localReferenceNumber,
       consignor,
       message.consigneeId,
       administrativeReferenceCode = message.administrativeReferenceCode.head, // TODO remove .head
