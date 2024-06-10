@@ -273,17 +273,6 @@ paths:
                 message: Authorisation error
                 debugMessage: Unauthorised Exception with error Bearer token expired
 
-        '403':
-          description: Excise Number is not in authorisation bearer token
-          content:
-            application/vnd.hmrc.1.0+json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              example:
-                dateTime: "2024-01-17T15:27:29.540089Z"
-                message: Authorisation error
-                debugMessage: Could not find ExciseNumber
-
       security:
         - userRestricted:
             - excise-movement-control-system
@@ -328,17 +317,6 @@ paths:
                 dateTime: "2024-01-17T15:27:29.540089Z"
                 message: Authorisation error
                 debugMessage: Unauthorised Exception with error Bearer token expired
-
-        '403':
-          description: Excise Number is not in authorisation bearer token
-          content:
-            application/vnd.hmrc.1.0+json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              example:
-                dateTime: "2024-01-17T15:27:29.540089Z"
-                message: Authorisation error
-                debugMessage: Could not find ExciseNumber
 
         '404':
           description: Movement with supplied id not found for this ERN
@@ -500,7 +478,7 @@ paths:
                     debugMessage: Could not find ExciseNumber
 
         '404':
-          description: Movement doesn't exist or movement cannot be accessed by enrolled user or downstream connection issues
+          description: Movement doesn't exist or downstream connection issues
           content:
             application/vnd.hmrc.1.0+json:
               schema:
@@ -642,15 +620,15 @@ paths:
                 debugMessage: Unauthorised Exception with error Bearer token expired
 
         '403':
-          description: Consignor ID or Consignee ID is not in authorisation bearer token
+          description: Consignor ID or Consignee ID for movement is not in authorisation bearer token
           content:
             application/vnd.hmrc.1.0+json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
-                dateTime: "2024-01-17T15:27:29.540089Z"
-                message: Authorisation error
-                debugMessage: Could not find ExciseNumber
+                dateTime: '2024-01-17T16:27:41.095827Z'
+                message: Forbidden
+                debugMessage: Invalid MovementID supplied for ERN
 
         '404':
           description: Movement with supplied id not found for this ERN
@@ -665,12 +643,6 @@ paths:
                     dateTime: '2024-01-17T16:26:18.062304Z'
                     message: Movement not found
                     debugMessage: Movement b6ba6a73-d723-4c9f-b9b7-99e533fb614f is not found
-                movementNotForErn:
-                  summary: Movement not valid for ERN
-                  value:
-                    dateTime: '2024-01-17T16:27:41.095827Z'
-                    message: Movement not found
-                    debugMessage: Movement b6ba6a73-d723-4c9f-b9b7-99e533fb614f is not found within the data for ERNs GBWK002281022
 
       security:
         - userRestricted:
@@ -857,15 +829,15 @@ paths:
                 debugMessage: Unauthorised Exception with error Bearer token expired
 
         '403':
-          description: Consignor ID or Consignee ID is not in authorisation bearer token
+          description: Consignor ID or Consignee ID for movement is not in authorisation bearer token
           content:
             application/vnd.hmrc.1.0+json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
-                dateTime: "2024-01-17T15:27:29.540089Z"
-                message: Authorisation error
-                debugMessage: Could not find ExciseNumber
+                dateTime: '2024-01-17T16:27:41.095827Z'
+                message: Forbidden
+                debugMessage: Invalid MovementID supplied for ERN
 
         '404':
           description: Movement with supplied id not found for this ERN
@@ -880,12 +852,6 @@ paths:
                     dateTime: '2024-01-17T16:26:18.062304Z'
                     message: Movement not found
                     debugMessage: Movement b6ba6a73-d723-4c9f-b9b7-99e533fb614f is not found
-                movementNotForErn:
-                  summary: Movement not valid for ERN
-                  value:
-                    dateTime: '2024-01-17T16:27:41.095827Z'
-                    message: Movement not found
-                    debugMessage: Movement b6ba6a73-d723-4c9f-b9b7-99e533fb614f is not found within the data for ERNs GBWK002281022
 
         '406':
           description: Accepted header is not acceptable
@@ -1004,17 +970,6 @@ paths:
                 dateTime: "2024-01-17T15:27:29.540089Z"
                 message: Authorisation error
                 debugMessage: Unauthorised Exception with error Bearer token expired
-
-        '403':
-          description: ERN is not in authorisation bearer token
-          content:
-            application/vnd.hmrc.1.0+json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              example:
-                dateTime: "2024-01-17T15:27:29.540089Z"
-                message: Authorisation error
-                debugMessage: Could not find ExciseNumber
 
         '500':
           description: Internal server error
@@ -1321,6 +1276,8 @@ components:
           $ref: '#/components/schemas/EntityGroup'
         validateProductAuthorisationRequest:
           type: array
+          minItems: 1
+          maxItems: 10
           items:
             $ref: '#/components/schemas/ValidateProductAuthorisationRequest'
     EntityGroup:
