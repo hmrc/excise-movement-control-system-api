@@ -57,7 +57,7 @@ class PushNotificationServiceImpl @Inject() (
     )
 
   private def buildMessageUriAsString(movementId: String, messageId: String): String =
-    routes.GetMessagesController.getMessageForMovement(movementId, messageId).url
+    s"/customs/excise${routes.GetMessagesController.getMessageForMovement(movementId, messageId).url}"
 
   private def validateClientBoxId(boxId: String): Either[Result, SuccessBoxNotificationResponse] =
     Try(UUID.fromString(boxId)) match {
