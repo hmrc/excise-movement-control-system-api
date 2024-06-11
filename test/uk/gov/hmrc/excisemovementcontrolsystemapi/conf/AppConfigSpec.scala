@@ -22,7 +22,7 @@ import play.api.Configuration
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
-import scala.concurrent.duration.{DAYS, Duration, MINUTES}
+import scala.concurrent.duration.{DAYS, Duration}
 
 class AppConfigSpec extends PlaySpec {
 
@@ -31,15 +31,6 @@ class AppConfigSpec extends PlaySpec {
       |appName=excise-movement-control-system-api
       |mongodb.uri="mongodb://localhost:27017/plastic-packaging-tax-returns"
       |mongodb.movement.TTL=10days
-      |scheduler.pollingNewMessageJob.interval=4 minutes
-      |scheduler.pollingNewMessageJob.initialDelay=4 minutes
-      |scheduler.workItems.inProgressTimeOut=4 minutes
-      |scheduler.workItems.failureRetryAttempts=2
-      |scheduler.workItems.failureRetryAfter=8 minutes
-      |scheduler.workItems.fastIntervalRetryAttempts=2
-      |scheduler.workItems.fastInterval=3 minutes
-      |scheduler.workItems.slowInterval=32 minutes
-      |mongodb.workItem.TTL = 10 days
       |microservice.services.nrs.api-key="test-key"
       |microservice.services.push-pull-notifications.host="notification"
       |microservice.services.push-pull-notifications.port="1111"
@@ -57,42 +48,6 @@ class AppConfigSpec extends PlaySpec {
   "AppConfig" should {
     "return config for TTL for Movement Mongo collection" in {
       configService.movementTTL mustBe Duration.create(10, DAYS)
-    }
-
-    "return config for TTL for Work Item Mongo collection" in {
-      configService.workItemTTL mustBe Duration.create(10, DAYS)
-    }
-
-    "return config for PollingNewMessageJob interval" in {
-      configService.interval mustBe Duration.create(4, MINUTES)
-    }
-
-    "return config for PollingNewMessageJob initialDelay" in {
-      configService.initialDelay mustBe Duration.create(4, MINUTES)
-    }
-
-    "return config for the Work Item in progress time out" in {
-      configService.workItemInProgressTimeOut mustBe Duration.create(4, MINUTES)
-    }
-
-    "return config for the Work Item failure retry attempts" in {
-      configService.maxFailureRetryAttempts mustBe 2
-    }
-
-    "return config for Work Item failure retry delay interval" in {
-      configService.failureRetryAfter mustBe Duration.create(8, MINUTES)
-    }
-
-    "return config for the fast interval retry attempts" in {
-      configService.fastIntervalRetryAttempts mustBe 2
-    }
-
-    "return config for Work Item fast interval" in {
-      configService.workItemFastInterval mustBe Duration.create(3, MINUTES)
-    }
-
-    "return config for Work Item slow interval" in {
-      configService.workItemSlowInterval mustBe Duration.create(32, MINUTES)
     }
 
     "return config forApi Key" in {
