@@ -123,6 +123,7 @@ class GetMessagesControllerSpec
           expectedMessageResponseAsJson(
             "message",
             "IE801",
+            "ern",
             "messageId",
             messageCreateOn
           )
@@ -152,6 +153,7 @@ class GetMessagesControllerSpec
           expectedMessageResponseAsJson(
             "message",
             "IE801",
+            "testErn",
             "messageId",
             messageCreateOn
           )
@@ -170,8 +172,8 @@ class GetMessagesControllerSpec
       status(result) mustBe OK
 
       val expectedJson = Seq(
-        expectedMessageResponseAsJson("message", "IE801", "messageId1", messageCreateOn),
-        expectedMessageResponseAsJson("message2", "IE801", "messageId2", messageCreateOn)
+        expectedMessageResponseAsJson("message", "IE801", "ern", "messageId1", messageCreateOn),
+        expectedMessageResponseAsJson("message2", "IE801", "ern", "messageId2", messageCreateOn)
       )
       contentAsJson(result) mustBe JsArray(expectedJson)
     }
@@ -190,7 +192,7 @@ class GetMessagesControllerSpec
 
       status(result) mustBe OK
 
-      val jsonResponse = expectedMessageResponseAsJson("message", "IE801", "messageId1", timeInFuture)
+      val jsonResponse = expectedMessageResponseAsJson("message", "IE801", "ern", "messageId1", timeInFuture)
       contentAsJson(result) mustBe JsArray(Seq(jsonResponse))
     }
 
@@ -210,8 +212,8 @@ class GetMessagesControllerSpec
       status(result) mustBe OK
 
       val expectedJson = Seq(
-        expectedMessageResponseAsJson("message", "IE801", "messageId1", timeInFuture),
-        expectedMessageResponseAsJson("message3", "IE801", "messageId3", messageCreateOn)
+        expectedMessageResponseAsJson("message", "IE801", "ern", "messageId1", timeInFuture),
+        expectedMessageResponseAsJson("message3", "IE801", "ern", "messageId3", messageCreateOn)
       )
       contentAsJson(result) mustBe JsArray(expectedJson)
     }
@@ -231,6 +233,7 @@ class GetMessagesControllerSpec
       val expectedJson = expectedMessageResponseAsJson(
         "message",
         "IE801",
+        "ern",
         "messageId",
         timeInFuture
       )
@@ -254,12 +257,14 @@ class GetMessagesControllerSpec
       val expectedJson1 = expectedMessageResponseAsJson(
         "firstMessage",
         "IE801",
+        ern,
         "messageId",
         timeInFuture
       )
       val expectedJson2 = expectedMessageResponseAsJson(
         "secondMessage",
         "IE801",
+        ern,
         "messageId",
         timeInFuture
       )
@@ -284,6 +289,7 @@ class GetMessagesControllerSpec
       val expectedJson1 = expectedMessageResponseAsJson(
         "firstMessage",
         "IE801",
+        "consigneeId",
         "messageId",
         timeInFuture
       )
@@ -519,6 +525,7 @@ class GetMessagesControllerSpec
   private def expectedMessageResponseAsJson(
     encodedMessage: String,
     messageType: String,
+    recipient: String,
     messageId: String,
     dateTime: Instant
   ): JsValue =
@@ -526,6 +533,7 @@ class GetMessagesControllerSpec
          |{
          |   "encodedMessage":"$encodedMessage",
          |   "messageType":"$messageType",
+         |   "recipient":"$recipient",
          |   "messageId":"$messageId",
          |   "createdOn": "${formatToValidDateTime(dateTime)}"
          | }

@@ -577,10 +577,12 @@ paths:
               example:
                 - encodedMessage: PElFODE1PjwhLS0gRXhhbXBsZSBJRTgxNSBtZXNzYWdlIC0tPjwvSUU4MTU+
                   messageType: IE815
+                  recipient: recipientERN
                   messageId: messageId1
                   createdOn: 2023-10-30T15:36:08.985Z
                 - encodedMessage: PElFODAxPjwhLS0gRXhhbXBsZSBJRTgwMSBtZXNzYWdlIC0tPjwvSUU4MDE+
                   messageType: IE801
+                  recipient: recipientERN
                   messageId: messageId2
                   createdOn: 2023-10-28T15:36:08.985Z
               schema:
