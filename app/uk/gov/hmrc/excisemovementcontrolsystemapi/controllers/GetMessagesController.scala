@@ -108,6 +108,7 @@ class GetMessagesController @Inject() (
       MessageResponse(
         encodedMessage = filteredMessage.encodedMessage,
         messageType = filteredMessage.messageType,
+        recipient = filteredMessage.recipient,
         messageId = filteredMessage.messageId,
         createdOn = filteredMessage.createdOn
       )

@@ -25,6 +25,7 @@ import java.time.Instant
 case class MessageResponse(
   encodedMessage: String,
   messageType: String,
+  recipient: String,
   messageId: String,
   createdOn: Instant
 )
@@ -35,12 +36,14 @@ object MessageResponse {
   implicit val write: Writes[MessageResponse] = (
     (JsPath \ "encodedMessage").write[String] and
       (JsPath \ "messageType").write[String] and
+      (JsPath \ "recipient").write[String] and
       (JsPath \ "messageId").write[String] and
       (JsPath \ "createdOn").write[String]
   )(e =>
     (
       e.encodedMessage,
       e.messageType,
+      e.recipient,
       e.messageId,
       e.createdOn.asStringInMilliseconds
     )

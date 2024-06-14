@@ -27,12 +27,13 @@ class MessageResponseSpec extends PlaySpec {
     "display dateTime in milliseconds format when writing to Json" in {
 
       val dateTime = Instant.parse("2024-12-05T12:30:15.15632145Z")
-      val response = MessageResponse("encodedMessage", "IE801", "messageId", dateTime)
+      val response = MessageResponse("encodedMessage", "IE801", "recipient", "messageId", dateTime)
 
       Json.toJson(response) mustBe Json.parse("""
           |{
           |   "encodedMessage":"encodedMessage",
           |   "messageType":"IE801",
+          |   "recipient":"recipient",
           |   "messageId":"messageId",
           |   "createdOn":"2024-12-05T12:30:15.156Z"
           |}

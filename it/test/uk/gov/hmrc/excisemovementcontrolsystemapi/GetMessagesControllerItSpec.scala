@@ -40,26 +40,26 @@ import java.time.Instant
 import java.util.{Base64, UUID}
 import scala.concurrent.{ExecutionContext, Future}
 
-class GetMessagesControllerItSpec extends PlaySpec
-  with GuiceOneServerPerSuite
-  with ApplicationBuilderSupport
-  with TestXml
-  with NewMessagesXml
-  with WireMockServerSpec
-  with ErrorResponseSupport
-  with BeforeAndAfterAll
-  with BeforeAndAfterEach {
+class GetMessagesControllerItSpec
+    extends PlaySpec
+    with GuiceOneServerPerSuite
+    with ApplicationBuilderSupport
+    with TestXml
+    with NewMessagesXml
+    with WireMockServerSpec
+    with ErrorResponseSupport
+    with BeforeAndAfterAll
+    with BeforeAndAfterEach {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
+  private lazy val wsClient: WSClient         = app.injector.instanceOf[WSClient]
 
   private val consignorId = "GBWK002281023"
-  private val validUUID = "cfdb20c7-d0b0-4b8b-a071-737d68dede5e"
-  private val messageId = UUID.randomUUID().toString
-  private val url = s"http://localhost:$port/movements/$validUUID/messages"
-  private val messageUrl = s"http://localhost:$port/movements/$validUUID/messages/$messageId"
-  private val timestamp = Instant.parse("2024-10-05T12:12:12.12345678Z")
-
+  private val validUUID   = "cfdb20c7-d0b0-4b8b-a071-737d68dede5e"
+  private val messageId   = UUID.randomUUID().toString
+  private val url         = s"http://localhost:$port/movements/$validUUID/messages"
+  private val messageUrl  = s"http://localhost:$port/movements/$validUUID/messages/$messageId"
+  private val timestamp   = Instant.parse("2024-10-05T12:12:12.12345678Z")
 
   override lazy val app: Application = {
     wireMock.start()
@@ -89,7 +89,7 @@ class GetMessagesControllerItSpec extends PlaySpec
     "return 200" in {
       withAuthorizedTrader(consignorId)
 
-      val message = createEncodeMessage
+      val message  = createEncodeMessage
       val movement = Movement(validUUID, Some("boxId"), "lrn", consignorId, None, None, Instant.now, Seq(message))
       when(movementRepository.getMovementById(any))
         .thenReturn(Future.successful(Some(movement)))
@@ -99,12 +99,12 @@ class GetMessagesControllerItSpec extends PlaySpec
       result.status mustBe OK
 
       withClue("return a list of messages as response") {
-        result.json mustBe Json.parse(
-          s"""
+        result.json mustBe Json.parse(s"""
             |[
             | {
             |   "encodedMessage":"${message.encodedMessage}",
             |   "messageType":"IE801",
+            |   "recipient": "ern",
             |   "messageId":"$messageId",
             |   "createdOn":"2024-10-05T12:12:12.123Z"
             | }
@@ -128,7 +128,11 @@ class GetMessagesControllerItSpec extends PlaySpec
       withAuthorizedTrader(consignorId)
       val message = Message("encodedMessage", "IE801", "messageId", "ern", Set.empty, timestamp)
       when(movementRepository.getMovementById(any))
-        .thenReturn(Future.successful(Some(Movement(validUUID, Some("boxId"), "lrn", "consignor", None, None, Instant.now, Seq(message)))))
+        .thenReturn(
+          Future.successful(
+            Some(Movement(validUUID, Some("boxId"), "lrn", "consignor", None, None, Instant.now, Seq(message)))
+          )
+        )
 
       val result = getRequest()
 
@@ -159,11 +163,11 @@ class GetMessagesControllerItSpec extends PlaySpec
 
   }
 
-
   "GET a message for a movement and a messageId" in {
     withAuthorizedTrader(consignorId)
 
-    val movement = Movement(validUUID, Some("boxId"), "lrn", consignorId, None, None, Instant.now, Seq(createEncodeMessage))
+    val movement =
+      Movement(validUUID, Some("boxId"), "lrn", consignorId, None, None, Instant.now, Seq(createEncodeMessage))
     when(movementRepository.getMovementById(any))
       .thenReturn(Future.successful(Some(movement)))
 
@@ -191,7 +195,7 @@ class GetMessagesControllerItSpec extends PlaySpec
       withAuthorizedTrader(consignorId)
 
       val encodedMessage = Base64.getEncoder.encodeToString(IE801.toString().getBytes(StandardCharsets.UTF_8))
-      val message = Message(encodedMessage, "IE801", "messageId", "ern", Set.empty, timestamp)
+      val message        = Message(encodedMessage, "IE801", "messageId", "ern", Set.empty, timestamp)
       when(movementRepository.getMovementById(any))
         .thenReturn(Future.successful(Some(createMovementWithMessages(messages = Seq(message)))))
 
@@ -220,7 +224,7 @@ class GetMessagesControllerItSpec extends PlaySpec
       withAuthorizedTrader(consignorId)
 
       val invalidUrl = s"http://localhost:$port/movements/12345/messages/$messageId"
-      val result = getRequest(invalidUrl)
+      val result     = getRequest(invalidUrl)
 
       result.status mustBe BAD_REQUEST
       result.json mustBe expectedJsonErrorResponse(
@@ -267,7 +271,8 @@ class GetMessagesControllerItSpec extends PlaySpec
   "return an error if Accept header is not supported" in {
     withAuthorizedTrader(consignorId)
 
-    val movement = Movement(validUUID, Some("boxId"), "lrn", consignorId, None, None, Instant.now, Seq(createEncodeMessage))
+    val movement =
+      Movement(validUUID, Some("boxId"), "lrn", consignorId, None, None, Instant.now, Seq(createEncodeMessage))
     when(movementRepository.getMovementById(any))
       .thenReturn(Future.successful(Some(movement)))
 
@@ -284,37 +289,36 @@ class GetMessagesControllerItSpec extends PlaySpec
   private def getRequest(
     url: String = url,
     acceptHeader: String = "application/vnd.hmrc.1.0+xml"
-  ): WSResponse = {
-    await(wsClient.url(url)
-      .addHttpHeaders(
-        HeaderNames.AUTHORIZATION -> "TOKEN",
-        HeaderNames.ACCEPT -> acceptHeader
-      ).get()
+  ): WSResponse =
+    await(
+      wsClient
+        .url(url)
+        .addHttpHeaders(
+          HeaderNames.AUTHORIZATION -> "TOKEN",
+          HeaderNames.ACCEPT        -> acceptHeader
+        )
+        .get()
     )
-  }
 
   private def createEncodeMessage = {
     val encodedMessage = Base64.getEncoder.encodeToString(IE801.toString().getBytes(StandardCharsets.UTF_8))
     Message(encodedMessage, "IE801", messageId, "ern", Set.empty, timestamp)
   }
 
-  private def createMovementWithMessages(movementId: String = validUUID, messages: Seq[Message] = Seq.empty):Movement = {
+  private def createMovementWithMessages(movementId: String = validUUID, messages: Seq[Message] = Seq.empty): Movement =
     Movement(movementId, Some("boxId"), "lrn", consignorId, Some("consigneeId"), Some("arc"), Instant.now, messages)
-  }
 
-  private def movementNotFoundError: ErrorResponse = {
+  private def movementNotFoundError: ErrorResponse =
     ErrorResponse(
       timestamp,
       "Movement not found",
       s"Movement $validUUID could not be found"
     )
-  }
 
-  private def messageNotFoundError: ErrorResponse = {
+  private def messageNotFoundError: ErrorResponse =
     ErrorResponse(
       timestamp,
       "No message found for the MovementID provided",
       s"MessageId $messageId was not found in the database"
     )
-  }
 }
