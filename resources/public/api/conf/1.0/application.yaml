@@ -577,12 +577,12 @@ paths:
               example:
                 - encodedMessage: PElFODE1PjwhLS0gRXhhbXBsZSBJRTgxNSBtZXNzYWdlIC0tPjwvSUU4MTU+
                   messageType: IE815
-                  recipient: recipientERN
+                  recipient: GBWK002281024
                   messageId: messageId1
                   createdOn: 2023-10-30T15:36:08.985Z
                 - encodedMessage: PElFODAxPjwhLS0gRXhhbXBsZSBJRTgwMSBtZXNzYWdlIC0tPjwvSUU4MDE+
                   messageType: IE801
-                  recipient: recipientERN
+                  recipient: GBWK002281024
                   messageId: messageId2
                   createdOn: 2023-10-28T15:36:08.985Z
               schema:
@@ -1231,6 +1231,7 @@ components:
         - encodedMessage
         - createdOn
         - messageId
+        - recipient
       type: object
       properties:
         encodedMessage:
@@ -1241,6 +1242,8 @@ components:
         messageId:
           type: string
           pattern: '.{1,44}'
+        recipient:
+          $ref: "#/components/schemas/ExciseReferenceNumber"
       xml:
         name: message
     MessageWithType:
