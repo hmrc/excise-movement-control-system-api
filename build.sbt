@@ -23,7 +23,6 @@ lazy val microservice = Project("excise-movement-control-system-api", file("."))
   )
   .settings(resolvers += Resolver.jcenterRepo)
   .settings(scoverageSettings: _*)
-  .settings(scalafmtOnCompile := true)
   .settings(
     Compile / unmanagedResourceDirectories += baseDirectory.value / "resources"
   )
