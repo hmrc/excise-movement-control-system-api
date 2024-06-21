@@ -223,32 +223,26 @@ object MovementRepository {
           Indexes.ascending("consignorId")
         ),
         IndexOptions()
-          .name("lrn_consignor_index")
-          .background(true)
+          .name("lrn_consignor_idx")
           .unique(true)
       ),
-      createIndexWithBackground("administrativeReferenceCode", "arc_index"),
-      createIndex("consignorId", "consignorId_ttl_idx"),
-      createIndex("consigneeId", "consigneeId_ttl_idx"),
+      IndexModel(
+        Indexes.ascending("administrativeReferenceCode"),
+        IndexOptions().name("arc_idx")
+      ),
+      IndexModel(
+        Indexes.ascending("consignorId"),
+        IndexOptions().name("consignorId_idx")
+      ),
+      IndexModel(
+        Indexes.ascending("consigneeId"),
+        IndexOptions().name("consigneeId_idx")
+      ),
       IndexModel(
         Indexes.ascending("messages.boxesToNotify"),
         IndexOptions()
           .name("boxesToNotify_idx")
       )
-    )
-
-  private def createIndex(fieldName: String, indexName: String): IndexModel =
-    IndexModel(
-      Indexes.ascending(fieldName),
-      IndexOptions().name(indexName)
-    )
-
-  private def createIndexWithBackground(fieldName: String, indexName: String): IndexModel =
-    IndexModel(
-      Indexes.ascending(fieldName),
-      IndexOptions()
-        .name(indexName)
-        .background(true)
     )
 
   final case class ErnAndLastReceived(_id: String, lastReceived: Instant)
