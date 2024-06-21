@@ -28,6 +28,7 @@ import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.InternalError
+import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.MovementTestUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.ApplicationBuilderSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
@@ -36,24 +37,26 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import scala.concurrent.{ExecutionContext, Future}
 
-class GetMovementsControllerItSpec extends PlaySpec
-  with GuiceOneServerPerSuite
-  with ApplicationBuilderSupport
-  with MovementTestUtils
-  with BeforeAndAfterEach {
+class GetMovementsControllerItSpec
+    extends PlaySpec
+    with GuiceOneServerPerSuite
+    with ApplicationBuilderSupport
+    with MovementTestUtils
+    with BeforeAndAfterEach {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
+  private lazy val wsClient: WSClient         = app.injector.instanceOf[WSClient]
 
-  private val consignorId = "GBWK002281023"
-  private val consigneeId = "GBWK002281027"
-  private val lrn = "token"
-  private val baseUrl = s"http://localhost:$port/movements"
-  private val timestampNow = Instant.now()
+  private val consignorId         = "GBWK002281023"
+  private val consigneeId         = "GBWK002281027"
+  private val lrn                 = "token"
+  private val baseUrl             = s"http://localhost:$port/movements"
+  private val timestampNow        = Instant.now()
   private val timestampTwoDaysAgo = Instant.now().minus(2, ChronoUnit.DAYS)
 
   private val movement1 = Movement(Some("boxId"), lrn, consignorId, Some(consigneeId), Some("arc1"), timestampNow)
-  private val movement2 = Movement(Some("boxId"), "lrn1", consignorId, Some("consignee2"), Some("arc2"), timestampTwoDaysAgo)
+  private val movement2 =
+    Movement(Some("boxId"), "lrn1", consignorId, Some("consignee2"), Some("arc2"), timestampTwoDaysAgo)
   private val movement3 = Movement(Some("boxId"), "lrn2", "ern2", Some(consigneeId), Some("arc3"), timestampTwoDaysAgo)
 
   override lazy val app: Application = applicationBuilder.build()
@@ -69,96 +72,22 @@ class GetMovementsControllerItSpec extends PlaySpec
   "Get Movements" should {
     "return 200 and movements when logged in as consignor" in {
       withAuthorizedTrader(consignorId)
-      when(movementRepository.getMovementByERN(Seq(consignorId)))
+      when(
+        movementRepository.getMovementByERN(Seq(consignorId), MovementFilter.emptyFilter)
+      )
         .thenReturn(Future.successful(Seq(movement1, movement2)))
 
       val result = getRequest(baseUrl)
 
       result.status mustBe OK
       withClue("return an EIS response") {
-        result.json mustBe Json.toJson(Seq(
-          createMovementResponseFromMovement(movement1),
-          createMovementResponseFromMovement(movement2)
-        ))
+        result.json mustBe Json.toJson(
+          Seq(
+            createMovementResponseFromMovement(movement1),
+            createMovementResponseFromMovement(movement2)
+          )
+        )
       }
-    }
-
-    "get filtered movement by ERN" in {
-      withAuthorizedTrader(consignorId)
-      when(movementRepository.getMovementByERN(Seq(consignorId)))
-        .thenReturn(Future.successful(Seq(movement1, movement2, movement3)))
-
-      val result = getRequest(s"$baseUrl?ern=$consignorId")
-
-      result.json mustBe Json.toJson(Seq(
-        createMovementResponseFromMovement(movement1),
-        createMovementResponseFromMovement(movement2)
-      ))
-    }
-
-    "get filtered movement by ERN when you are the consignee" in {
-      withAuthorizedTrader(consigneeId)
-      when(movementRepository.getMovementByERN(Seq(consigneeId)))
-        .thenReturn(Future.successful(Seq(movement1, movement2, movement3)))
-
-      val result = getRequest(s"$baseUrl?ern=$consigneeId")
-
-      result.json mustBe Json.toJson(Seq(
-        createMovementResponseFromMovement(movement1),
-        createMovementResponseFromMovement(movement3)
-      ))
-    }
-
-    "get filtered movement by LRN" in {
-      withAuthorizedTrader(consignorId)
-      when(movementRepository.getMovementByERN(Seq(consignorId)))
-        .thenReturn(Future.successful(Seq(movement1, movement2, movement3)))
-
-      val result = getRequest(s"$baseUrl?lrn=$lrn")
-
-      result.json mustBe Json.toJson(Seq(
-        createMovementResponseFromMovement(movement1)
-      ))
-    }
-
-    "get filtered movement by arc" in {
-      withAuthorizedTrader(consignorId)
-      when(movementRepository.getMovementByERN(Seq(consignorId)))
-        .thenReturn(Future.successful(Seq(movement1, movement2, movement3)))
-
-      val result = getRequest(s"$baseUrl?arc=arc1")
-
-      result.json mustBe Json.toJson(Seq(
-        createMovementResponseFromMovement(movement1)
-      ))
-    }
-
-    "get filtered movement by updatedSince" in {
-      val timeFilter = Instant.now().minus(1, ChronoUnit.DAYS)
-
-      withAuthorizedTrader(consignorId)
-      when(movementRepository.getMovementByERN(Seq(consignorId)))
-        .thenReturn(Future.successful(Seq(movement1, movement2, movement3)))
-
-      val urlToGoIn = s"$baseUrl?updatedSince=$timeFilter"
-
-      val result = getRequest(urlToGoIn)
-
-      result.json mustBe Json.toJson(Seq(
-        createMovementResponseFromMovement(movement1)
-      ))
-    }
-
-    "get filtered movement by ern, lrn and arc" in {
-      withAuthorizedTrader(consignorId)
-      when(movementRepository.getMovementByERN(Seq(consignorId)))
-        .thenReturn(Future.successful(Seq(movement1, movement2, movement3)))
-
-      val result = getRequest(s"$baseUrl?arc=arc1&lrn=$lrn&ern=$consignorId")
-
-      result.json mustBe Json.toJson(Seq(
-        createMovementResponseFromMovement(movement1)
-      ))
     }
 
     "return an Unauthorized (401) when no authorized trader" in {
@@ -179,7 +108,7 @@ class GetMovementsControllerItSpec extends PlaySpec
   "Get Movement" should {
 
     val movementId = "cfdb20c7-d0b0-4b8b-a071-737d68dede5b"
-    val movement = Movement(
+    val movement   = Movement(
       movementId,
       Some("boxId"),
       "LRNQA20230909022221",
@@ -264,11 +193,13 @@ class GetMovementsControllerItSpec extends PlaySpec
 
   }
 
-  private def getRequest(url: String) = {
-    await(wsClient.url(url)
-      .addHttpHeaders(
-        HeaderNames.AUTHORIZATION -> "TOKEN"
-      ).get()
+  private def getRequest(url: String) =
+    await(
+      wsClient
+        .url(url)
+        .addHttpHeaders(
+          HeaderNames.AUTHORIZATION -> "TOKEN"
+        )
+        .get()
     )
-  }
 }
