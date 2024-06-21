@@ -24,7 +24,7 @@ import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, InternalServerError}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilterBuilder
+import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, TraderType}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
@@ -234,14 +234,13 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
     }
 
     "return only the movements that correspond to the filter ERN" in {
-      val consignorId2      = "ABC2"
       val expectedMovement1 = Movement(Some("boxId"), "lrn1", consignorId, None, Some("arc1"))
-      val expectedMovement2 = Movement(Some("boxId"), "lrn1", consignorId2, None, Some("arc1"))
 
-      when(mockMovementRepository.getMovementByERN(Seq(consignorId)))
-        .thenReturn(Future.successful(Seq(expectedMovement1, expectedMovement2)))
+      val filter = MovementFilter.emptyFilter.copy(ern = Some(consignorId))
 
-      val filter = MovementFilterBuilder().withErn(Some(consignorId)).build()
+      when(mockMovementRepository.getMovementByERN(Seq(consignorId), filter))
+        .thenReturn(Future.successful(Seq(expectedMovement1)))
+
       val result = await(movementService.getMovementByErn(Seq(consignorId), filter))
 
       result mustBe Seq(expectedMovement1)
@@ -249,39 +248,37 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
     "return only the movements that correspond to the filter LRN" in {
       val lrnToFilterBy     = "lrn2"
-      val expectedMovement1 = Movement(Some("boxId"), "lrn1", consignorId, None, Some("arc1"))
       val expectedMovement2 = Movement(Some("boxId"), lrnToFilterBy, consignorId, None, Some("arc1"))
+      val filter            =
+        MovementFilter(ern = None, lrn = Some(lrnToFilterBy), arc = None, updatedSince = None, traderType = None)
 
-      when(mockMovementRepository.getMovementByERN(Seq(consignorId)))
-        .thenReturn(Future.successful(Seq(expectedMovement1, expectedMovement2)))
+      when(mockMovementRepository.getMovementByERN(Seq(consignorId), filter))
+        .thenReturn(Future.successful(Seq(expectedMovement2)))
 
-      val filter = MovementFilterBuilder().withLrn(Some(lrnToFilterBy)).build()
       val result = await(movementService.getMovementByErn(Seq(consignorId), filter))
 
       result mustBe Seq(expectedMovement2)
     }
 
     "return only the movements that correspond to the filter ARC" in {
-      val expectedMovement1 = Movement(Some("boxId"), "lrn1", consignorId, None, Some("arc1"))
       val expectedMovement2 = Movement(Some("boxId"), "lrn1", consignorId, None, Some("arc2"))
+      val filter            = MovementFilter.emptyFilter.copy(arc = Some(arcToFilterBy))
 
-      when(mockMovementRepository.getMovementByERN(Seq(consignorId)))
-        .thenReturn(Future.successful(Seq(expectedMovement1, expectedMovement2)))
+      when(mockMovementRepository.getMovementByERN(Seq(consignorId), filter))
+        .thenReturn(Future.successful(Seq(expectedMovement2)))
 
-      val filter = MovementFilterBuilder().withArc(Some(arcToFilterBy)).build()
       val result = await(movementService.getMovementByErn(Seq(consignorId), filter))
 
       result mustBe Seq(expectedMovement2)
     }
 
     "return only the movements that correspond to the filter traderType equals consignor" in {
-      val expectedMovement1 = Movement(Some("boxId"), "lrn1", "test-consignorId", None, Some("arc1"))
       val expectedMovement2 = Movement(Some("boxId"), "lrn1", consignorId, None, Some("arc2"))
+      val filter            = MovementFilter.emptyFilter.copy(traderType = Some(TraderType("consignor", Seq(consignorId))))
 
-      when(mockMovementRepository.getMovementByERN(Seq(consignorId)))
-        .thenReturn(Future.successful(Seq(expectedMovement1, expectedMovement2)))
+      when(mockMovementRepository.getMovementByERN(Seq(consignorId), filter))
+        .thenReturn(Future.successful(Seq(expectedMovement2)))
 
-      val filter = MovementFilterBuilder().withTraderType(Some("consignor"), Seq(consignorId)).build()
       val result = await(movementService.getMovementByErn(Seq(consignorId), filter))
 
       result mustBe Seq(expectedMovement2)
@@ -289,52 +286,43 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
     "return only the movements that correspond to the filter traderType equals consignee" in {
       val expectedMovement1 = Movement(Some("boxId"), "lrn1", "test-consignorId", Some("consigneeId"), Some("arc1"))
-      val expectedMovement2 = Movement(Some("boxId"), "lrn1", consignorId, None, Some("arc2"))
+      val filter            = MovementFilter.emptyFilter.copy(traderType = Some(TraderType("consignee", Seq("consigneeId"))))
 
-      when(mockMovementRepository.getMovementByERN(Seq(consignorId)))
-        .thenReturn(Future.successful(Seq(expectedMovement1, expectedMovement2)))
+      when(mockMovementRepository.getMovementByERN(Seq(consignorId), filter))
+        .thenReturn(Future.successful(Seq(expectedMovement1)))
 
-      val filter = MovementFilterBuilder().withTraderType(Some("consignee"), Seq("consigneeId")).build()
       val result = await(movementService.getMovementByErn(Seq(consignorId), filter))
 
       result mustBe Seq(expectedMovement1)
     }
 
     "return only the movements that correspond to the filter LRN and ern" in {
-      val expectedMovement1 = Movement(Some("boxId"), "lrn1", consignorId, None, Some("arc1"))
-      val expectedMovement2 = Movement(Some("boxId"), lrnToFilterBy, consignorId, None, Some("arc1"))
-      val expectedMovement3 = Movement(Some("boxId"), "lrn1", ernToFilterBy, None, Some("arc1"))
       val expectedMovement4 = Movement(Some("boxId"), lrnToFilterBy, ernToFilterBy, None, Some("arc1"))
+      val filter            = MovementFilter.emptyFilter.copy(ern = Some(ernToFilterBy), lrn = Some(lrnToFilterBy))
 
-      when(mockMovementRepository.getMovementByERN(Seq(consignorId)))
-        .thenReturn(Future.successful(Seq(expectedMovement1, expectedMovement2, expectedMovement3, expectedMovement4)))
+      when(mockMovementRepository.getMovementByERN(Seq(consignorId), filter))
+        .thenReturn(Future.successful(Seq(expectedMovement4)))
 
-      val filter = MovementFilterBuilder().withErn(Some(ernToFilterBy)).withLrn(Some(lrnToFilterBy)).build()
       val result = await(movementService.getMovementByErn(Seq(consignorId), filter))
 
       result mustBe Seq(expectedMovement4)
     }
 
     "return only the movements that correspond to the filter LRN, ern and arc" in {
-
-      val expectedMovement1 = Movement(Some("boxId"), "lrn1", consignorId, None, Some("arc1"))
-      val expectedMovement2 = Movement(Some("boxId"), lrnToFilterBy, consignorId, None, Some("arc1"))
-      val expectedMovement3 = Movement(Some("boxId"), "lrn1", ernToFilterBy, None, Some("arc1"))
       val expectedMovement4 = Movement(Some("boxId"), lrnToFilterBy, ernToFilterBy, None, Some(arcToFilterBy))
-      val expectedMovement5 = Movement(Some("boxId"), "lrn1", consignorId, None, Some(arcToFilterBy))
+      val filter            = MovementFilter.emptyFilter.copy(
+        ern = Some(ernToFilterBy),
+        lrn = Some(lrnToFilterBy),
+        arc = Some(arcToFilterBy)
+      )
 
-      when(mockMovementRepository.getMovementByERN(Seq(consignorId)))
+      when(mockMovementRepository.getMovementByERN(Seq(consignorId), filter))
         .thenReturn(
           Future.successful(
-            Seq(expectedMovement1, expectedMovement2, expectedMovement3, expectedMovement4, expectedMovement5)
+            Seq(expectedMovement4)
           )
         )
 
-      val filter = MovementFilterBuilder()
-        .withErn(Some(ernToFilterBy))
-        .withLrn(Some(lrnToFilterBy))
-        .withArc(Some(arcToFilterBy))
-        .build()
       val result = await(movementService.getMovementByErn(Seq(consignorId), filter))
 
       result mustBe Seq(expectedMovement4)

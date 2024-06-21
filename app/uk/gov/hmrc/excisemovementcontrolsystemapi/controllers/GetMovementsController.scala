@@ -21,7 +21,7 @@ import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ValidateErnParameterAction, ValidateTraderTypeAction, ValidateUpdatedSinceAction}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilterBuilder
+import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, TraderType}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
@@ -59,13 +59,14 @@ class GetMovementsController @Inject() (
       andThen validateTraderTypeAction(traderType)).async(parse.default) { implicit request =>
       messageService.updateAllMessages(ern.fold(request.erns)(Set(_)))
 
-      val filter = MovementFilterBuilder()
-        .withErn(ern)
-        .withLrn(lrn)
-        .withArc(arc)
-        .withUpdatedSince(updatedSince.map(Instant.parse(_)))
-        .withTraderType(traderType, request.erns.toSeq)
-        .build()
+      val filter =
+        MovementFilter(
+          ern,
+          lrn,
+          arc,
+          updatedSince.map(Instant.parse(_)),
+          traderType.map(trader => TraderType(trader, request.erns.toSeq))
+        )
 
       movementService
         .getMovementByErn(request.erns.toSeq, filter)

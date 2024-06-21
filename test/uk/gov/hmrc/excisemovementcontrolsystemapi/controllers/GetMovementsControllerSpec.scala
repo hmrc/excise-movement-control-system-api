@@ -27,7 +27,7 @@ import play.api.libs.json.Json
 import play.api.mvc.Results.BadRequest
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilterBuilder
+import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, TraderType}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication, FakeValidateErnParameterAction, FakeValidateTraderTypeAction, FakeValidateUpdatedSinceAction, MovementTestUtils}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MovementIdFormatInvalid, MovementIdValidation}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
@@ -189,13 +189,13 @@ class GetMovementsControllerSpec
           )
         )
 
-        val filter = MovementFilterBuilder()
-          .withErn(Some(ern))
-          .withLrn(Some("lrn"))
-          .withArc(Some("arc"))
-          .withUpdatedSince(Some(timestampNow))
-          .withTraderType(Some("consignor"), Seq(ern))
-          .build()
+        val filter = MovementFilter(
+          ern = Some(ern),
+          lrn = Some("lrn"),
+          arc = Some("arc"),
+          updatedSince = Some(timestampNow),
+          traderType = Some(TraderType(traderType = "consignor", erns = Seq(ern)))
+        )
         verify(movementService).getMovementByErn(any, eqTo(filter))
 
       }
@@ -208,13 +208,13 @@ class GetMovementsControllerSpec
           )
         )
 
-        val filter = MovementFilterBuilder()
-          .withErn(Some(ern))
-          .withLrn(Some("lrn"))
-          .withArc(Some("arc"))
-          .withUpdatedSince(Some(timestampNow))
-          .withTraderType(Some("consignee"), Seq(ern))
-          .build()
+        val filter = MovementFilter(
+          ern = Some(ern),
+          lrn = Some("lrn"),
+          arc = Some("arc"),
+          updatedSince = Some(timestampNow),
+          traderType = Some(TraderType(traderType = "consignee", erns = Seq(ern)))
+        )
         verify(movementService).getMovementByErn(any, eqTo(filter))
 
       }

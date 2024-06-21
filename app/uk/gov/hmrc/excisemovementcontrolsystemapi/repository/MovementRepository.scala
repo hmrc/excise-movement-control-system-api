@@ -24,6 +24,7 @@ import org.mongodb.scala.model._
 import play.api.Logging
 import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
+import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository.{ErnAndLastReceived, MessageNotification, mongoIndexes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -108,19 +109,45 @@ class MovementRepository @Inject() (
     collection.find(byLrnAndErns(lrn, erns)).toFuture()
   }
 
-  def getMovementByERN(ern: Seq[String]): Future[Seq[Movement]] = Mdc.preservingMdc {
+  def getMovementByERN(
+    ern: Seq[String],
+    movementFilter: MovementFilter = MovementFilter.emptyFilter
+  ): Future[Seq[Movement]] = Mdc.preservingMdc {
+
+    val ernFilters = Seq(
+      Filters.in("consignorId", ern: _*),
+      Filters.in("consigneeId", ern: _*)
+    )
+    val filters    =
+      Seq(
+        movementFilter.updatedSince.map(Filters.eq("lastUpdated", _)),
+        movementFilter.lrn.map(Filters.eq("localReferenceNumber", _)),
+        movementFilter.arc.map(Filters.eq("administrativeReferenceCode", _)),
+        movementFilter.traderType.map { traderType =>
+          if (traderType.traderType.equalsIgnoreCase("consignor")) {
+            Filters.in("consignorId", traderType.erns: _*)
+          } else {
+            Filters.in("consigneeId", traderType.erns: _*)
+          }
+        }
+      ).flatten
+
+    val filter = if (filters.nonEmpty) Filters.and(filters: _*) else Filters.empty
+
     collection
       .find(
-        or(
-          in("consignorId", ern: _*),
-          in("consigneeId", ern: _*)
+        and(
+          filter,
+          or(
+            ernFilters: _*
+          )
         )
       )
       .toFuture()
   }
 
   def getAllBy(ern: String): Future[Seq[Movement]] = Mdc.preservingMdc {
-    getMovementByERN(Seq(ern))
+    getMovementByERN(Seq(ern), MovementFilter.emptyFilter)
   }
 
   def getErnsAndLastReceived: Future[Map[String, Instant]] = Mdc.preservingMdc {
@@ -210,13 +237,13 @@ object MovementRepository {
       )
     )
 
-  def createIndex(fieldName: String, indexName: String): IndexModel =
+  private def createIndex(fieldName: String, indexName: String): IndexModel =
     IndexModel(
       Indexes.ascending(fieldName),
       IndexOptions().name(indexName)
     )
 
-  def createIndexWithBackground(fieldName: String, indexName: String): IndexModel =
+  private def createIndexWithBackground(fieldName: String, indexName: String): IndexModel =
     IndexModel(
       Indexes.ascending(fieldName),
       IndexOptions()

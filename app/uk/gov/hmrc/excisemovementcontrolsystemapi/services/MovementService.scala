@@ -76,11 +76,9 @@ class MovementService @Inject() (
 
   def getMovementByErn(
     ern: Seq[String],
-    filter: MovementFilter = MovementFilter.empty
+    filter: MovementFilter = MovementFilter.emptyFilter
   ): Future[Seq[Movement]] =
-    movementRepository.getMovementByERN(ern).map { movements =>
-      filter.filterMovement(movements)
-    }
+    movementRepository.getMovementByERN(ern, filter)
 
   def updateMovement(message: IEMessage, ern: String): Future[Seq[Movement]] =
     movementRepository
