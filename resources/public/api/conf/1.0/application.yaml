@@ -576,12 +576,12 @@ paths:
             application/vnd.hmrc.1.0+json:
               example:
                 - encodedMessage: PElFODE1PjwhLS0gRXhhbXBsZSBJRTgxNSBtZXNzYWdlIC0tPjwvSUU4MTU+
-                  messageType: IE815
+                  messageType: IE801
                   recipient: GBWK002281024
                   messageId: messageId1
                   createdOn: 2023-10-30T15:36:08.985Z
                 - encodedMessage: PElFODAxPjwhLS0gRXhhbXBsZSBJRTgwMSBtZXNzYWdlIC0tPjwvSUU4MDE+
-                  messageType: IE801
+                  messageType: IE818
                   recipient: GBWK002281024
                   messageId: messageId2
                   createdOn: 2023-10-28T15:36:08.985Z
