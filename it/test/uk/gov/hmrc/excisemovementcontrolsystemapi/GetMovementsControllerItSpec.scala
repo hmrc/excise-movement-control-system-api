@@ -57,7 +57,6 @@ class GetMovementsControllerItSpec
   private val movement1 = Movement(Some("boxId"), lrn, consignorId, Some(consigneeId), Some("arc1"), timestampNow)
   private val movement2 =
     Movement(Some("boxId"), "lrn1", consignorId, Some("consignee2"), Some("arc2"), timestampTwoDaysAgo)
-  private val movement3 = Movement(Some("boxId"), "lrn2", "ern2", Some(consigneeId), Some("arc3"), timestampTwoDaysAgo)
 
   override lazy val app: Application = applicationBuilder.build()
 
