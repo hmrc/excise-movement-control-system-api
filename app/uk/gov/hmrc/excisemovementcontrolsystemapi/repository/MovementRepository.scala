@@ -120,7 +120,7 @@ class MovementRepository @Inject() (
     )
     val filters    =
       Seq(
-        movementFilter.updatedSince.map(Filters.eq("lastUpdated", _)),
+        movementFilter.updatedSince.map(Filters.gte("lastUpdated", _)),
         movementFilter.lrn.map(Filters.eq("localReferenceNumber", _)),
         movementFilter.arc.map(Filters.eq("administrativeReferenceCode", _)),
         movementFilter.traderType.map { traderType =>
