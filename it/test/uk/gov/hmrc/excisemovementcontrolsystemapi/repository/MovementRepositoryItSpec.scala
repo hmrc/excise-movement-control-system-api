@@ -36,7 +36,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, DefaultPlayMongoRepositorySupport}
 
-import java.time.{Instant, LocalDateTime, ZoneOffset}
+import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
@@ -347,18 +347,33 @@ class MovementRepositoryItSpec
 
       "updatedSince from filter matches record from database" in {
         val expectedMovement1 =
-          Movement(Some("boxId"), "1", "consignorId1", Some("ern1"), Some("arc1"), lastUpdated = timestamp)
+          Movement(
+            Some("boxId"),
+            "1",
+            "ern1",
+            Some("ern1"),
+            Some("arc1"),
+            lastUpdated = timestamp.minus(5, ChronoUnit.MINUTES)
+          )
         val expectedMovement2 =
           Movement(Some("boxId"), "2", "ern1", Some("ern2"), Some("arc2"), lastUpdated = timestamp)
         val expectedMovement3 =
-          Movement(Some("boxId"), "3", "consignorId1", Some("ern1"), Some("arc3"), lastUpdated = timestamp)
-        val expectedMovement4 = Movement(Some("boxId"), "4", "ern4", None, Some("arc4"), lastUpdated = timestamp)
+          Movement(
+            Some("boxId"),
+            "3",
+            "ern1",
+            Some("ern1"),
+            Some("arc3"),
+            lastUpdated = timestamp.plus(5, ChronoUnit.MINUTES)
+          )
+        val expectedMovement4 =
+          Movement(Some("boxId"), "4", "ern4", None, Some("arc4"), lastUpdated = timestamp)
         insertMovement(expectedMovement1)
         insertMovement(expectedMovement2)
         insertMovement(expectedMovement3)
         insertMovement(expectedMovement4)
 
-        val filterTimestamp = LocalDateTime.of(2023, 1, 1, 12, 0).toInstant(ZoneOffset.MIN)
+        val filterTimestamp = timestamp
 
         val result =
           repository
@@ -366,12 +381,104 @@ class MovementRepositoryItSpec
             .futureValue
 
         result.sortBy(_.localReferenceNumber) mustBe Seq(
-          expectedMovement1,
           expectedMovement2,
           expectedMovement3
         )
 
       }
+    }
+
+    "arc and lrn from filter matches record from database" in {
+      val expectedMovement1 =
+        Movement(Some("boxId"), "1", "ern1", Some("ern1"), Some("arc1"), lastUpdated = timestamp)
+      val expectedMovement2 =
+        Movement(Some("boxId"), "2", "ern1", Some("ern2"), Some("arc1"), lastUpdated = timestamp)
+      val expectedMovement3 =
+        Movement(Some("boxId"), "3", "ern1", Some("ern1"), Some("arc2"), lastUpdated = timestamp)
+      val expectedMovement4 = Movement(Some("boxId"), "4", "ern4", None, Some("arc4"), lastUpdated = timestamp)
+      insertMovement(expectedMovement1)
+      insertMovement(expectedMovement2)
+      insertMovement(expectedMovement3)
+      insertMovement(expectedMovement4)
+
+      val result =
+        repository
+          .getMovementByERN(Seq("ern1"), MovementFilter.emptyFilter.copy(arc = Some("arc1"), lrn = Some("2")))
+          .futureValue
+
+      result mustBe Seq(
+        expectedMovement2
+      )
+
+    }
+
+    "arc and ern from filter matches record from database" in {
+      val expectedMovement1 =
+        Movement(Some("boxId"), "1", "ern1", Some("ern1"), Some("arc1"), lastUpdated = timestamp)
+      val expectedMovement2 =
+        Movement(
+          Some("boxId"),
+          "2",
+          "ern1",
+          Some("ern2"),
+          Some("arc1"),
+          lastUpdated = timestamp
+        )
+      val expectedMovement3 =
+        Movement(Some("boxId"), "3", "ern2", Some("ern1"), Some("arc3"), lastUpdated = timestamp)
+      val expectedMovement4 =
+        Movement(Some("boxId"), "4", "ern4", None, Some("arc4"), lastUpdated = timestamp)
+      insertMovement(expectedMovement1)
+      insertMovement(expectedMovement2)
+      insertMovement(expectedMovement3)
+      insertMovement(expectedMovement4)
+
+      val result =
+        repository
+          .getMovementByERN(
+            Seq("ern1", "ern2"),
+            MovementFilter.emptyFilter.copy(arc = Some("arc1"), ern = Some("ern1"))
+          )
+          .futureValue
+
+      result.sortBy(_.localReferenceNumber) mustBe Seq(
+        expectedMovement1,
+        expectedMovement2
+      )
+
+    }
+
+    "lrn and ern from filter matches record from database" in {
+      val expectedMovement1 =
+        Movement(Some("boxId"), "1", "ern1", Some("ern1"), Some("arc1"), lastUpdated = timestamp)
+      val expectedMovement2 =
+        Movement(
+          Some("boxId"),
+          "2",
+          "ern1",
+          Some("ern2"),
+          Some("arc1"),
+          lastUpdated = timestamp
+        )
+      val expectedMovement3 =
+        Movement(Some("boxId"), "3", "ern2", Some("ern1"), Some("arc3"), lastUpdated = timestamp)
+      val expectedMovement4 =
+        Movement(Some("boxId"), "4", "ern4", None, Some("arc4"), lastUpdated = timestamp)
+      insertMovement(expectedMovement1)
+      insertMovement(expectedMovement2)
+      insertMovement(expectedMovement3)
+      insertMovement(expectedMovement4)
+
+      val result =
+        repository
+          .getMovementByERN(
+            Seq("ern1", "ern2"),
+            MovementFilter.emptyFilter.copy(lrn = Some("1"), ern = Some("ern1"))
+          )
+          .futureValue
+
+      result.sortBy(_.localReferenceNumber) mustBe Seq(expectedMovement1)
+
     }
 
     "return an empty list" in {
