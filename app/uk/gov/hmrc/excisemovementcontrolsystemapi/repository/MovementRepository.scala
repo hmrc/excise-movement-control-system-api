@@ -123,14 +123,7 @@ class MovementRepository @Inject() (
         movementFilter.updatedSince.map(Filters.gte("lastUpdated", _)),
         movementFilter.lrn.map(Filters.eq("localReferenceNumber", _)),
         movementFilter.arc.map(Filters.eq("administrativeReferenceCode", _)),
-        movementFilter.ern.map(ern => Filters.or(Filters.eq("consignorId", ern), Filters.eq("consigneeId", ern))),
-        movementFilter.traderType.map { traderType =>
-          if (traderType.traderType.equalsIgnoreCase("consignor")) {
-            Filters.in("consignorId", traderType.erns: _*)
-          } else {
-            Filters.in("consigneeId", traderType.erns: _*)
-          }
-        }
+        movementFilter.ern.map(ern => Filters.or(Filters.eq("consignorId", ern), Filters.eq("consigneeId", ern)))
       ).flatten
 
     val filter = if (filters.nonEmpty) Filters.and(filters: _*) else Filters.empty

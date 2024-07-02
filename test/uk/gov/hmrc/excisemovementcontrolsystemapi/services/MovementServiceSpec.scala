@@ -273,27 +273,29 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
     }
 
     "return only the movements that correspond to the filter traderType equals consignor" in {
-      val expectedMovement2 = Movement(Some("boxId"), "lrn1", consignorId, None, Some("arc2"))
+      val expectedMovement  = Movement(Some("boxId"), "lrn1", consignorId, None, Some("arc2"))
+      val expectedMovement2 = Movement(Some("boxId"), "lrn1", "consignee", None, Some("arc2"))
       val filter            = MovementFilter.emptyFilter.copy(traderType = Some(TraderType("consignor", Seq(consignorId))))
 
       when(mockMovementRepository.getMovementByERN(Seq(consignorId), filter))
-        .thenReturn(Future.successful(Seq(expectedMovement2)))
+        .thenReturn(Future.successful(Seq(expectedMovement, expectedMovement2)))
 
       val result = await(movementService.getMovementByErn(Seq(consignorId), filter))
 
-      result mustBe Seq(expectedMovement2)
+      result mustBe Seq(expectedMovement)
     }
 
     "return only the movements that correspond to the filter traderType equals consignee" in {
-      val expectedMovement1 = Movement(Some("boxId"), "lrn1", "test-consignorId", Some("consigneeId"), Some("arc1"))
+      val expectedMovement  = Movement(Some("boxId"), "lrn1", "test-consignorId", Some("consigneeId"), Some("arc1"))
+      val expectedMovement2 = Movement(Some("boxId"), "lrn1", consignorId, None, Some("arc1"))
       val filter            = MovementFilter.emptyFilter.copy(traderType = Some(TraderType("consignee", Seq("consigneeId"))))
 
       when(mockMovementRepository.getMovementByERN(Seq(consignorId), filter))
-        .thenReturn(Future.successful(Seq(expectedMovement1)))
+        .thenReturn(Future.successful(Seq(expectedMovement, expectedMovement2)))
 
       val result = await(movementService.getMovementByErn(Seq(consignorId), filter))
 
-      result mustBe Seq(expectedMovement1)
+      result mustBe Seq(expectedMovement)
     }
 
     "return only the movements that correspond to the filter LRN and ern" in {
