@@ -142,7 +142,7 @@ class MovementRepository @Inject() (
         movementFilter.ern.map(ern => Filters.or(Filters.eq("consignorId", ern), Filters.eq("consigneeId", ern)))
       ).flatten
 
-    val filter = if (filters.nonEmpty) Filters.and(filters: _*) else Filters.empty
+    val filter = if (filters.nonEmpty) Filters.and(filters: _*) else Filters.empty()
 
     collection
       .find(
