@@ -22,7 +22,7 @@ import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
+import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, TraderType}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
@@ -78,9 +78,21 @@ class MovementService @Inject() (
     ern: Seq[String],
     filter: MovementFilter = MovementFilter.emptyFilter
   ): Future[Seq[Movement]] =
-    movementRepository.getMovementByERN(ern, filter)
+    movementRepository
+      .getMovementByERN(ern, filter)
+      .map(movements => filterMovementByTraderType(movements, filter.traderType))
 
-  def updateMovement(message: IEMessage, ern: String): Future[Seq[Movement]] =
+  private def filterMovementByTraderType(movements: Seq[Movement], traderType: Option[TraderType]) =
+    traderType.fold[Seq[Movement]](movements) { trader =>
+      if (trader.traderType.equalsIgnoreCase("consignor")) {
+        movements.filter(m => trader.erns.contains(m.consignorId))
+      } else if (trader.traderType.equalsIgnoreCase("consignee")) {
+        movements.filter(m => m.consigneeId.exists(trader.erns.contains(_)))
+      } else {
+        movements
+      }
+    }
+  def updateMovement(message: IEMessage, ern: String): Future[Seq[Movement]]                       =
     movementRepository
       .getAllBy(ern)
       .map { cachedMovements =>
