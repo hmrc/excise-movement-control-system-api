@@ -20,6 +20,7 @@ import cats.syntax.all._
 import org.apache.pekko.Done
 import play.api.{Configuration, Logging}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, TraderMovementConnector}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnRetrievalRepository, MovementRepository}
@@ -75,6 +76,15 @@ class MessageService @Inject() (
       }
     }
 
+  // TODO, temporarily exposed as a public method to call in Movements Controller and see what we get back from EMCS in QA
+  def getTraderMovementMessages(ern: String, arc: String)(implicit
+    hc: HeaderCarrier
+  ): Future[Seq[IEMessage]] =
+    traderMovementConnector.getMovementMessages(ern, arc).recover { case NonFatal(error) =>
+      logger.warn(s"[MessageService]: Failed to call trader-movement for: $ern, $arc", error)
+      Seq.empty
+    }
+
   private def shouldProcessNewMessages(maybeLastRetrieved: Option[Instant]): Boolean = {
     val cutoffTime = dateTimeService.timestamp().minus(throttleCutoff.length, throttleCutoff.unit.toChronoUnit)
     //noinspection MapGetOrElseBoolean
@@ -117,7 +127,7 @@ class MessageService @Inject() (
             .foldLeft(Future.successful(Seq.empty[Movement])) { (accumulated, message) =>
               for {
                 accumulatedMovements <- accumulated
-                updatedMovements <- updateOrCreateMovements(ern, movements, accumulatedMovements, message, boxIds)
+                updatedMovements     <- updateOrCreateMovements(ern, movements, accumulatedMovements, message, boxIds)
               } yield (updatedMovements ++ accumulatedMovements)
                 .distinctBy { movement =>
                   (movement.localReferenceNumber, movement.consignorId, movement.administrativeReferenceCode)
