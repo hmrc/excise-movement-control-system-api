@@ -36,8 +36,8 @@ case class IE801Message(
   def localReferenceNumber: String =
     obj.Body.EADESADContainer.EadEsad.LocalReferenceNumber
 
-  def consignorId: Option[String] =
-    Some(obj.Body.EADESADContainer.ConsignorTrader.TraderExciseNumber)
+  def consignorId: String =
+    obj.Body.EADESADContainer.ConsignorTrader.TraderExciseNumber
 
   override def consigneeId: Option[String] =
     obj.Body.EADESADContainer.ConsigneeTrader.flatMap(_.Traderid)

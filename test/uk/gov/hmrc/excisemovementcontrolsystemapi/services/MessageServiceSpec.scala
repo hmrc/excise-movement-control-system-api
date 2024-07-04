@@ -29,7 +29,7 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, TraderMovementConnector}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessageGeneratorFactory}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
@@ -51,13 +51,14 @@ class MessageServiceSpec
     with GuiceOneAppPerSuite
     with BeforeAndAfterEach {
 
-  private val movementRepository     = mock[MovementRepository]
-  private val ernRetrievalRepository = mock[ErnRetrievalRepository]
-  private val boxIdRepository        = mock[BoxIdRepository]
-  private val messageConnector       = mock[MessageConnector]
-  private val dateTimeService        = mock[DateTimeService]
-  private val correlationIdService   = mock[CorrelationIdService]
-  private val auditService           = mock[AuditService]
+  private val movementRepository      = mock[MovementRepository]
+  private val ernRetrievalRepository  = mock[ErnRetrievalRepository]
+  private val boxIdRepository         = mock[BoxIdRepository]
+  private val messageConnector        = mock[MessageConnector]
+  private val traderMovementConnector = mock[TraderMovementConnector]
+  private val dateTimeService         = mock[DateTimeService]
+  private val correlationIdService    = mock[CorrelationIdService]
+  private val auditService            = mock[AuditService]
 
   private lazy val messageService = app.injector.instanceOf[MessageService]
 
@@ -72,6 +73,7 @@ class MessageServiceSpec
       bind[ErnRetrievalRepository].toInstance(ernRetrievalRepository),
       bind[BoxIdRepository].toInstance(boxIdRepository),
       bind[MessageConnector].toInstance(messageConnector),
+      bind[TraderMovementConnector].toInstance(traderMovementConnector),
       bind[DateTimeService].toInstance(dateTimeService),
       bind[CorrelationIdService].toInstance(correlationIdService),
       bind[AuditService].toInstance(auditService)
@@ -88,6 +90,7 @@ class MessageServiceSpec
       ernRetrievalRepository,
       boxIdRepository,
       messageConnector,
+      traderMovementConnector,
       dateTimeService,
       correlationIdService,
       auditService
@@ -413,7 +416,62 @@ class MessageServiceSpec
             verify(movementRepository).save(eqTo(expectedMovement))
             verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
           }
-          "a message is audited with failure if its not an IE801 or IE704" in {
+          "a new movement is created from trader-movement call IE801 message if message is not an IE801 or IE704" in {
+            val ern                    = "testErn"
+            val ie801Xml               = XmlMessageGeneratorFactory.generate(
+              ern,
+              MessageParams(
+                IE801,
+                "GB00001",
+                Some("testConsignee"),
+                Some("23XI00000000000000012"),
+                Some("lrnie8158976912")
+              )
+            )
+            val ie801Message           = IE801Message.createFromXml(ie801Xml)
+            val ie818Xml               = XmlMessageGeneratorFactory.generate(
+              ern,
+              MessageParams(IE818, "GB00002", Some("testConsignee"), Some("23XI00000000000000012"))
+            )
+            val ie818Message           = IE818Message.createFromXml(ie818Xml)
+            val messages               = Seq(ie818Message)
+            val traderMovementMessages = Seq(ie801Message, ie818Message)
+            val expectedMovement       = Movement(
+              newId,
+              None,
+              "lrnie8158976912",
+              "testErn",
+              Some("testConsignee"),
+              Some("23XI00000000000000012"),
+              now,
+              messages = Seq(
+                Message(utils.encode(ie801Message.toXml.toString()), "IE801", "GB00001", ern, Set.empty, now),
+                Message(utils.encode(ie818Message.toXml.toString()), "IE818", "GB00002", ern, Set.empty, now)
+              )
+            )
+
+            when(correlationIdService.generateCorrelationId()).thenReturn(newId)
+            when(auditService.auditMessage(any, any)(any)).thenReturn(EitherT.pure(()))
+            when(dateTimeService.timestamp()).thenReturn(now)
+            when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
+            when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+            when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
+            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+            when(messageConnector.getNewMessages(any)(any))
+              .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+            when(traderMovementConnector.getMovementMessages(any, any)(any))
+              .thenReturn(Future.successful(traderMovementMessages))
+            when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+
+            messageService.updateMessages(ern).futureValue
+
+            verify(messageConnector).getNewMessages(eqTo(ern))(any)
+            verify(traderMovementConnector).getMovementMessages(eqTo(ern), eqTo("23XI00000000000000012"))(any)
+            verify(movementRepository).getAllBy(eqTo(ern))
+            verify(movementRepository).save(eqTo(expectedMovement))
+            verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
+          }
+          "a message is audited with failure if its not an IE801 or IE704, and the trader movement messages don't include an IE801" in {
             val ern      = "testErn"
             val ie818    = XmlMessageGeneratorFactory.generate(
               ern,
@@ -430,22 +488,25 @@ class MessageServiceSpec
             when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
             when(messageConnector.getNewMessages(any)(any))
               .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+            when(traderMovementConnector.getMovementMessages(any, any)(any))
+              .thenReturn(Future.successful(messages))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
             messageService.updateMessages(ern).futureValue
 
             verify(messageConnector).getNewMessages(eqTo(ern))(any)
+            verify(traderMovementConnector).getMovementMessages(eqTo(ern), eqTo("23XI00000000000000012"))(any)
             verify(movementRepository).getAllBy(eqTo(ern))
             verify(auditService).auditMessage(
               messages.head,
               s"An IE818 message has been retrieved with no movement, unable to create movement"
             )
           }
-          "an IE704 message is audited with failure if it does not have an LRN" in {
+          "an IE704 message is audited with failure if it does not have an LRN, and the trader movement messages don't include an IE801" in {
             val ern      = "testErn"
             val ie704    = XmlMessageGeneratorFactory.generate(
               ern,
-              MessageParams(IE704, "XI000001")
+              MessageParams(IE704, "XI000001", administrativeReferenceCode = Some("23XI00000000000000012"))
             )
             val messages = Seq(IE704Message.createFromXml(ie704))
 
@@ -458,11 +519,14 @@ class MessageServiceSpec
             when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
             when(messageConnector.getNewMessages(any)(any))
               .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+            when(traderMovementConnector.getMovementMessages(any, any)(any))
+              .thenReturn(Future.successful(messages))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
             messageService.updateMessages(ern).futureValue
 
             verify(messageConnector).getNewMessages(eqTo(ern))(any)
+            verify(traderMovementConnector).getMovementMessages(eqTo(ern), eqTo("23XI00000000000000012"))(any)
             verify(movementRepository).getAllBy(eqTo(ern))
             verify(auditService).auditMessage(
               messages.head,

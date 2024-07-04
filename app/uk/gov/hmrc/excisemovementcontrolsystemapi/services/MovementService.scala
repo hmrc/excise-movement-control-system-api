@@ -106,9 +106,4 @@ class MovementService @Inject() (
         )
       )
     )
-
-  private def isLrnAlreadyUsed(movement: Movement, movementFromDb: Movement) =
-    movement.consignorId == movementFromDb.consignorId &&
-      (movementFromDb.administrativeReferenceCode.isDefined
-        || movementFromDb.consigneeId != movement.consigneeId)
 }

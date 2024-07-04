@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 import cats.syntax.all._
 import org.apache.pekko.Done
 import play.api.{Configuration, Logging}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, TraderMovementConnector}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnRetrievalRepository, MovementRepository}
@@ -39,6 +39,7 @@ class MessageService @Inject() (
   ernRetrievalRepository: ErnRetrievalRepository,
   boxIdRepository: BoxIdRepository,
   messageConnector: MessageConnector,
+  traderMovementConnector: TraderMovementConnector,
   dateTimeService: DateTimeService,
   correlationIdService: CorrelationIdService,
   emcsUtils: EmcsUtils,
@@ -113,13 +114,18 @@ class MessageService @Inject() (
         .getAllBy(ern)
         .flatMap { movements =>
           messages
-            .foldLeft(Seq.empty[Movement]) { (updatedMovements, message) =>
-              (updateOrCreateMovements(ern, movements, updatedMovements, message, boxIds) ++ updatedMovements)
-                .distinctBy(movement =>
+            .foldLeft(Future.successful(Seq.empty[Movement])) { (accumulated, message) =>
+              for {
+                accumulatedMovements <- accumulated
+                updatedMovements <- updateOrCreateMovements(ern, movements, accumulatedMovements, message, boxIds)
+              } yield (updatedMovements ++ accumulatedMovements)
+                .distinctBy { movement =>
                   (movement.localReferenceNumber, movement.consignorId, movement.administrativeReferenceCode)
-                )
+                }
             }
-            .traverse(movementRepository.save)
+            .flatMap {
+              _.traverse(movementRepository.save)
+            }
         }
         .as(Done)
     } else {
@@ -132,16 +138,18 @@ class MessageService @Inject() (
     updatedMovements: Seq[Movement],
     message: IEMessage,
     boxIds: Set[String]
-  )(implicit hc: HeaderCarrier): Seq[Movement] = {
+  )(implicit hc: HeaderCarrier): Future[Seq[Movement]] = {
     val matchedMovements: Seq[Movement] = findMovementsForMessage(movements, updatedMovements, message)
-    (
-      if (matchedMovements.nonEmpty) matchedMovements.map { movement =>
-        Some(updateMovement(ern, movement, message, boxIds))
+    if (matchedMovements.nonEmpty) {
+      Future.successful {
+        matchedMovements.map { movement =>
+          updateMovement(ern, movement, message, boxIds)
+        }
       }
-      else {
-        createMovement(ern, message, boxIds)
-      } +: updatedMovements.map(Some(_))
-    ).flatten
+    } else {
+      createMovement(ern, message, boxIds)
+        .map(movement => (movement +: updatedMovements.map(Some(_))).flatten)
+    }
   }
 
   private def updateMovement(recipient: String, movement: Movement, message: IEMessage, boxIds: Set[String]): Movement =
@@ -195,11 +203,44 @@ class MessageService @Inject() (
 
   private def createMovement(ern: String, message: IEMessage, boxIds: Set[String])(implicit
     hc: HeaderCarrier
-  ): Option[Movement] =
+  ): Future[Option[Movement]] =
     message match {
-      case ie704: IE704Message => createMovementFromIE704(ern, ie704, boxIds)
-      case ie801: IE801Message => Some(createMovementFromIE801(ern, ie801, boxIds))
-      case _                   => auditMessageForNoMovement(message)
+      case ie704: IE704Message if ie704.localReferenceNumber.isDefined =>
+        Future.successful(createMovementFromIE704(ern, ie704, boxIds))
+      case ie801: IE801Message                                         => Future.successful(Some(createMovementFromIE801(ern, ie801, boxIds)))
+      case _                                                           => createMovementFromTraderMovement(ern, message, boxIds)
+    }
+
+  private def createMovementFromTraderMovement(ern: String, message: IEMessage, boxIds: Set[String])(implicit
+    hc: HeaderCarrier
+  ): Future[Option[Movement]] =
+    // TODO, we might have to loop over ARCs here for 829
+    message.administrativeReferenceCode.flatten.headOption
+      .map { arc =>
+        val traderMovementMessages = traderMovementConnector.getMovementMessages(ern, arc)
+        val movement               =
+          traderMovementMessages.map((messages: Seq[IEMessage]) =>
+            buildMovementFromTraderMovement(messages, boxIds, message, ern)
+          )
+        movement
+      }
+      .getOrElse {
+        // Auditing here because we only want to audit on the message we've picked up rather than the messages from `getMovementMessages`
+        Future.successful(auditMessageForNoMovement(message))
+      }
+
+  private def buildMovementFromTraderMovement(
+    messages: Seq[IEMessage],
+    boxIds: Set[String],
+    originatingMessage: IEMessage,
+    originatingErn: String
+  )(implicit
+    hc: HeaderCarrier
+  ): Option[Movement] =
+    messages.find(_.isInstanceOf[IE801Message]).fold(auditMessageForNoMovement(originatingMessage)) {
+      case ie801: IE801Message =>
+        val movement = createMovementFromIE801(ie801.consignorId, ie801, boxIds)
+        Some(updateMovement(originatingErn, movement, originatingMessage, boxIds))
     }
 
   private def auditMessageForNoMovement(message: IEMessage)(implicit
