@@ -142,7 +142,12 @@ class MessageService @Inject() (
   }
 
   private def updateMovement(recipient: String, movement: Movement, message: IEMessage, boxIds: Set[String]): Movement =
-    if (movement.messages.exists(m => m.messageId == message.messageIdentifier)) {
+    if (
+      movement.messages.exists(m =>
+        m.messageId == message.messageIdentifier
+          && m.recipient.equalsIgnoreCase(recipient)
+      )
+    ) {
       movement
     } else {
       movement.copy(

@@ -541,7 +541,6 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         }
       }
     }
-
     "do not save duplicate messages to DB" in {
       val cachedMessage = createMessage("<foo>test</foo>", MessageTypes.IE801.value, messageIdForNewMessage)
 
