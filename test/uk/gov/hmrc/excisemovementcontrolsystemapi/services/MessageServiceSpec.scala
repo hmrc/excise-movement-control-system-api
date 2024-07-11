@@ -934,6 +934,69 @@ class MessageServiceSpec
 
           verify(movementRepository).save(movement)
         }
+
+        "the duplicate message is added to the movement if recipient is different" in {
+          val ern   = "testErn"
+          val ie801 = XmlMessageGeneratorFactory.generate(
+            ern,
+            MessageParams(
+              IE801,
+              "GB00001",
+              Some("testConsignee"),
+              Some("23XI00000000000000012"),
+              Some("lrnie8158976912")
+            )
+          )
+
+          val ie801Consignee = XmlMessageGeneratorFactory.generate(
+            "testConsignee",
+            MessageParams(
+              IE801,
+              "GB00001",
+              Some("testConsignee"),
+              Some("23XI00000000000000012"),
+              Some("lrnie8158976912")
+            )
+          )
+
+          val messages = Seq(IE801Message.createFromXml(ie801), IE801Message.createFromXml(ie801Consignee))
+
+          val existingMessages =
+            Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, Set.empty, now))
+
+          val expectedMessages =
+            Seq(
+              Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, Set.empty, now),
+              Message(utils.encode(messages(1).toXml.toString()), "IE801", "GB00001", "testConsignee", Set.empty, now)
+            )
+
+          val movement = Movement(
+            newId,
+            None,
+            "lrnie8158976912",
+            ern,
+            Some("testConsignee"),
+            Some("23XI00000000000000012"),
+            now,
+            existingMessages
+          )
+
+          val expectedMovement = movement.copy(messages = expectedMessages)
+
+          when(correlationIdService.generateCorrelationId()).thenReturn(newId)
+          when(dateTimeService.timestamp()).thenReturn(now)
+          when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
+          when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+          when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+          when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+          when(messageConnector.getNewMessages(any)(any))
+            .thenReturn(Future.successful(GetMessagesResponse(Seq(messages(1)), 1)))
+          when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+
+          messageService.updateMessages("testConsignee").futureValue
+
+          verify(movementRepository).save(expectedMovement)
+        }
       }
     }
     // TODO what about 829 where one movement is found and another isn't?
