@@ -93,7 +93,7 @@ class GetMessagesController @Inject() (
         } else {
           Ok(
             Json.toJson(
-              filterMessages(movement, updatedSince, traderType)
+              filterMessages(request.erns.toSeq, movement, updatedSince, traderType)
             )
           )
         }
@@ -102,8 +102,17 @@ class GetMessagesController @Inject() (
 
     }
 
-  private def filterMessages(movement: Movement, updatedSince: Option[Instant], traderType: Option[String]) = {
-    val filteredByTraderType = filterMessagesByTraderType(movement, traderType)
+  private def filterMessages(
+    ern: Seq[String],
+    movement: Movement,
+    updatedSince: Option[Instant],
+    traderType: Option[String]
+  ) = {
+
+    val byRecipient = filterMessagesByRecipient(ern, movement)
+
+    val filteredByTraderType = filterMessagesByTraderType(byRecipient, movement, traderType)
+
     filterMessagesByTime(filteredByTraderType, updatedSince).map { filteredMessage =>
       MessageResponse(
         encodedMessage = filteredMessage.encodedMessage,
@@ -146,14 +155,21 @@ class GetMessagesController @Inject() (
       )
     )
 
-  private def filterMessagesByTraderType(movement: Movement, traderType: Option[String]): Seq[Message] =
-    traderType.fold[Seq[Message]](movement.messages)(trader =>
+  private def filterMessagesByTraderType(
+    messages: Seq[Message],
+    movement: Movement,
+    traderType: Option[String]
+  ): Seq[Message] =
+    traderType.fold[Seq[Message]](messages)(trader =>
       if (trader.equalsIgnoreCase("consignor")) {
-        movement.messages.filter(o => o.recipient.equals(movement.consignorId))
+        messages.filter(o => o.recipient.equals(movement.consignorId))
       } else {
-        movement.messages.filter(o => movement.consigneeId.contains(o.recipient))
+        messages.filter(o => movement.consigneeId.contains(o.recipient))
       }
     )
+
+  private def filterMessagesByRecipient(recipient: Seq[String], movement: Movement): Seq[Message] =
+    movement.messages.filter(message => recipient.contains(message.recipient))
 
   private def validateTraderType(traderType: Option[String]): EitherT[Future, Result, Option[String]] =
     EitherT {

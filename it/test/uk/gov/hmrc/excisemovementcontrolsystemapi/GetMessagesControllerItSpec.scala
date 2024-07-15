@@ -89,7 +89,7 @@ class GetMessagesControllerItSpec
     "return 200" in {
       withAuthorizedTrader(consignorId)
 
-      val message  = createEncodeMessage
+      val message  = createEncodeMessage(consignorId)
       val movement = Movement(validUUID, Some("boxId"), "lrn", consignorId, None, None, Instant.now, Seq(message))
       when(movementRepository.getMovementById(any))
         .thenReturn(Future.successful(Some(movement)))
@@ -104,7 +104,7 @@ class GetMessagesControllerItSpec
             | {
             |   "encodedMessage":"${message.encodedMessage}",
             |   "messageType":"IE801",
-            |   "recipient": "ern",
+            |   "recipient": "$consignorId",
             |   "messageId":"$messageId",
             |   "createdOn":"2024-10-05T12:12:12.123Z"
             | }
@@ -167,7 +167,7 @@ class GetMessagesControllerItSpec
     withAuthorizedTrader(consignorId)
 
     val movement =
-      Movement(validUUID, Some("boxId"), "lrn", consignorId, None, None, Instant.now, Seq(createEncodeMessage))
+      Movement(validUUID, Some("boxId"), "lrn", consignorId, None, None, Instant.now, Seq(createEncodeMessage()))
     when(movementRepository.getMovementById(any))
       .thenReturn(Future.successful(Some(movement)))
 
@@ -272,7 +272,7 @@ class GetMessagesControllerItSpec
     withAuthorizedTrader(consignorId)
 
     val movement =
-      Movement(validUUID, Some("boxId"), "lrn", consignorId, None, None, Instant.now, Seq(createEncodeMessage))
+      Movement(validUUID, Some("boxId"), "lrn", consignorId, None, None, Instant.now, Seq(createEncodeMessage()))
     when(movementRepository.getMovementById(any))
       .thenReturn(Future.successful(Some(movement)))
 
@@ -300,9 +300,9 @@ class GetMessagesControllerItSpec
         .get()
     )
 
-  private def createEncodeMessage = {
+  private def createEncodeMessage(ern: String = "ern") = {
     val encodedMessage = Base64.getEncoder.encodeToString(IE801.toString().getBytes(StandardCharsets.UTF_8))
-    Message(encodedMessage, "IE801", messageId, "ern", Set.empty, timestamp)
+    Message(encodedMessage, "IE801", messageId, ern, Set.empty, timestamp)
   }
 
   private def createMovementWithMessages(movementId: String = validUUID, messages: Seq[Message] = Seq.empty): Movement =

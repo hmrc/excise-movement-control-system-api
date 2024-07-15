@@ -110,7 +110,7 @@ class GetMessagesControllerSpec
     }
 
     "return 200 when consignee is valid" in {
-      val message  = Message(123, "message", "IE801", "messageId", "ern", Set.empty, messageCreateOn)
+      val message  = Message(123, "message", "IE801", "messageId", "testErn", Set.empty, messageCreateOn)
       val movement =
         Movement(validUUID, Some("boxId"), "lrn", "consignor", Some("testErn"), Some("arc"), Instant.now, Seq(message))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
@@ -123,7 +123,7 @@ class GetMessagesControllerSpec
           expectedMessageResponseAsJson(
             "message",
             "IE801",
-            "ern",
+            "testErn",
             "messageId",
             messageCreateOn
           )
@@ -162,7 +162,24 @@ class GetMessagesControllerSpec
     }
 
     "get all the new messages" in {
-      val message  = Message(123, "message", "IE801", "messageId1", "ern", Set.empty, messageCreateOn)
+      val message  = Message(123, "message", "IE801", "messageId1", "testErn", Set.empty, messageCreateOn)
+      val message2 = Message(345, "message2", "IE801", "messageId2", "testErn", Set.empty, messageCreateOn)
+      val movement = createMovementWithMessages(Seq(message, message2))
+      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
+
+      val result = createWithSuccessfulAuth().getMessagesForMovement(validUUID, None, None)(createRequest())
+
+      status(result) mustBe OK
+
+      val expectedJson = Seq(
+        expectedMessageResponseAsJson("message", "IE801", "testErn", "messageId1", messageCreateOn),
+        expectedMessageResponseAsJson("message2", "IE801", "testErn", "messageId2", messageCreateOn)
+      )
+      contentAsJson(result) mustBe JsArray(expectedJson)
+    }
+
+    "get only messages that match erns from request" in {
+      val message  = Message(123, "message", "IE801", "messageId1", "testErn", Set.empty, messageCreateOn)
       val message2 = Message(345, "message2", "IE801", "messageId2", "ern", Set.empty, messageCreateOn)
       val movement = createMovementWithMessages(Seq(message, message2))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
@@ -172,8 +189,7 @@ class GetMessagesControllerSpec
       status(result) mustBe OK
 
       val expectedJson = Seq(
-        expectedMessageResponseAsJson("message", "IE801", "ern", "messageId1", messageCreateOn),
-        expectedMessageResponseAsJson("message2", "IE801", "ern", "messageId2", messageCreateOn)
+        expectedMessageResponseAsJson("message", "IE801", "testErn", "messageId1", messageCreateOn)
       )
       contentAsJson(result) mustBe JsArray(expectedJson)
     }
@@ -181,7 +197,7 @@ class GetMessagesControllerSpec
     "get all the new messages when there is a time query parameter provided" in {
       val timeInFuture = Instant.now.plusSeconds(1000)
       val timeInPast   = Instant.now.minusSeconds(1000)
-      val message      = Message("message", "IE801", "messageId1", "ern", Set.empty, timeInFuture)
+      val message      = Message("message", "IE801", "messageId1", "testErn", Set.empty, timeInFuture)
       val message2     = Message("message2", "IE801", "messageId2", "ern", Set.empty, timeInPast)
       val movement     = createMovementWithMessages(Seq(message, message2))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
@@ -192,7 +208,7 @@ class GetMessagesControllerSpec
 
       status(result) mustBe OK
 
-      val jsonResponse = expectedMessageResponseAsJson("message", "IE801", "ern", "messageId1", timeInFuture)
+      val jsonResponse = expectedMessageResponseAsJson("message", "IE801", "testErn", "messageId1", timeInFuture)
       contentAsJson(result) mustBe JsArray(Seq(jsonResponse))
     }
 
@@ -200,9 +216,9 @@ class GetMessagesControllerSpec
       val timeNowString = messageCreateOn.toString
       val timeInFuture  = Instant.now.plusSeconds(1000)
       val timeInPast    = Instant.now.minusSeconds(1000)
-      val message       = Message("message", "IE801", "messageId1", "ern", Set.empty, timeInFuture)
+      val message       = Message("message", "IE801", "messageId1", "testErn", Set.empty, timeInFuture)
       val message2      = Message("message2", "IE801", "messageId2", "ern", Set.empty, timeInPast)
-      val message3      = Message("message3", "IE801", "messageId3", "ern", Set.empty, messageCreateOn)
+      val message3      = Message("message3", "IE801", "messageId3", "testErn", Set.empty, messageCreateOn)
       val movement      = createMovementWithMessages(Seq(message, message2, message3))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
@@ -212,15 +228,15 @@ class GetMessagesControllerSpec
       status(result) mustBe OK
 
       val expectedJson = Seq(
-        expectedMessageResponseAsJson("message", "IE801", "ern", "messageId1", timeInFuture),
-        expectedMessageResponseAsJson("message3", "IE801", "ern", "messageId3", messageCreateOn)
+        expectedMessageResponseAsJson("message", "IE801", "testErn", "messageId1", timeInFuture),
+        expectedMessageResponseAsJson("message3", "IE801", "testErn", "messageId3", messageCreateOn)
       )
       contentAsJson(result) mustBe JsArray(expectedJson)
     }
 
     "succeed when a valid date format is provided" in {
       val timeInFuture = Instant.now.plusSeconds(1000)
-      val message      = Message("message", "IE801", "messageId", "ern", Set.empty, timeInFuture)
+      val message      = Message("message", "IE801", "messageId", "testErn", Set.empty, timeInFuture)
       val movement     = createMovementWithMessages(Seq(message))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
@@ -233,7 +249,7 @@ class GetMessagesControllerSpec
       val expectedJson = expectedMessageResponseAsJson(
         "message",
         "IE801",
-        "ern",
+        "testErn",
         "messageId",
         timeInFuture
       )
