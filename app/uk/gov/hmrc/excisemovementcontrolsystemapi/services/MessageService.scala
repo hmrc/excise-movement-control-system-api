@@ -60,14 +60,17 @@ class MessageService @Inject() (
       .as(Done)
 
   def updateMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] =
-    ernRetrievalRepository.getLastRetrieved(ern).flatMap { maybeLastRetrieved =>
+    ernRetrievalRepository.setLastRetrieved(ern, dateTimeService.timestamp()).flatMap { maybeLastRetrieved =>
       if (shouldProcessNewMessages(maybeLastRetrieved)) {
         for {
           boxIds <- getBoxIds(ern)
           _      <- processNewMessages(ern, boxIds)
         } yield Done
       } else {
-        Future.successful(Done)
+        // set back to previous value if we didn't actually process messages
+        maybeLastRetrieved
+          .map(ernRetrievalRepository.setLastRetrieved(ern, _).map(_ => Done))
+          .getOrElse(Future.successful(Done))
       }
     }
 
