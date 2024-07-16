@@ -56,7 +56,7 @@ class MovementRepository @Inject() (
         Codecs.playFormatCodec(ErnAndLastReceived.format),
         Codecs.playFormatCodec(MessageNotification.format)
       ),
-      replaceIndexes = true
+      replaceIndexes = false
     )
     with Logging {
 

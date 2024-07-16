@@ -39,7 +39,7 @@ class BoxIdRepository @Inject() (mongo: MongoComponent, configuration: Configura
       mongoComponent = mongo,
       domainFormat = BoxIdRecord.format,
       indexes = mongoIndexes(configuration.get[Duration]("mongodb.boxId.TTL")),
-      replaceIndexes = true
+      replaceIndexes = false
     )
     with Logging {
 
