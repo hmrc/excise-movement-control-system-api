@@ -40,7 +40,7 @@ class ErnRetrievalRepository @Inject() (mongo: MongoComponent, appConfig: AppCon
       mongoComponent = mongo,
       domainFormat = ErnRetrieval.format,
       indexes = mongoIndexes(appConfig.ernRetrievalTTL),
-      replaceIndexes = true
+      replaceIndexes = false
     )
     with Logging {
 
