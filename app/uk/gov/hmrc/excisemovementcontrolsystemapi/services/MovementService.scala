@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import cats.syntax.all._
 import com.google.inject.Singleton
+import com.mongodb.MongoWriteException
 import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.Result
@@ -42,25 +43,29 @@ class MovementService @Inject() (
     extends Logging {
 
   def saveNewMovement(movement: Movement): Future[Either[Result, Movement]] =
-    getMovementByLRNAndERNIn(movement.localReferenceNumber, List(movement.consignorId))
-      .flatMap {
-        case Some(m) if isLrnAlreadyUsed(movement, m) => createDuplicateErrorResponse(movement)
-        case Some(m)                                  => Future(Right(m))
-        case _                                        => movementRepository.saveMovement(movement).map(_ => Right(movement))
+    movementRepository
+      .findDraftMovement(movement)
+      .flatMap { draftMovement =>
+        draftMovement.map(movement => Future.successful(Right(movement))).getOrElse {
+          movementRepository.saveMovement(movement).map(_ => Right(movement))
+        }
       }
-      .recover { case ex: Throwable =>
-        logger.error(s"[MovementService] - Error occurred while saving movement, ${ex.getMessage}")
-        Left(
-          InternalServerError(
-            Json.toJson(
-              ErrorResponse(
-                dateTimeService.timestamp(),
-                "Database error",
-                ex.getMessage
+      .recover {
+        case _: MongoWriteException =>
+          createDuplicateErrorResponse(movement)
+        case e: Throwable           =>
+          logger.error(s"[MovementService] - Error occurred while saving movement, ${e.getMessage}", e)
+          Left(
+            InternalServerError(
+              Json.toJson(
+                ErrorResponse(
+                  dateTimeService.timestamp(),
+                  "Database error",
+                  e.getMessage
+                )
               )
             )
           )
-        )
       }
 
   def getMovementById(id: String): Future[Option[Movement]] =
@@ -124,16 +129,14 @@ class MovementService @Inject() (
       }
     }
 
-  private def createDuplicateErrorResponse(movement: Movement) =
-    Future.successful(
-      Left(
-        BadRequest(
-          Json.toJson(
-            ErrorResponse(
-              dateTimeService.timestamp(),
-              "Duplicate LRN error",
-              s"The local reference number ${movement.localReferenceNumber} has already been used for another movement"
-            )
+  private def createDuplicateErrorResponse(movement: Movement): Either[Result, Movement] =
+    Left(
+      BadRequest(
+        Json.toJson(
+          ErrorResponse(
+            dateTimeService.timestamp(),
+            "Duplicate LRN error",
+            s"The local reference number ${movement.localReferenceNumber} has already been used for another movement"
           )
         )
       )

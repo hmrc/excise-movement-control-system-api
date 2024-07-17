@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 import cats.implicits.toFunctorOps
 import org.apache.pekko.Done
 import org.bson.conversions.Bson
-import org.mongodb.scala.model.Filters.{and, equal, in, or}
+import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model._
 import play.api.Logging
 import play.api.libs.json.{Json, OFormat}
@@ -67,6 +67,22 @@ class MovementRepository @Inject() (
       equal("localReferenceNumber", localReferenceNumber),
       or(in("consignorId", erns: _*), in("consigneeId", erns: _*))
     )
+
+  def findDraftMovement(movement: Movement): Future[Option[Movement]] = Mdc.preservingMdc {
+    val filters = Seq(
+      Some(equal("consignorId", movement.consignorId)),
+      Some(equal("localReferenceNumber", movement.localReferenceNumber)),
+      Some(not(exists("administrativeReferenceCode"))),
+      movement.consigneeId.map(consignee => equal("consigneeId", consignee))
+    )
+    collection
+      .find(
+        filter = and(
+          filters.flatten: _*
+        )
+      )
+      .headOption()
+  }
 
   def saveMovement(movement: Movement): Future[Boolean] = Mdc.preservingMdc {
     collection

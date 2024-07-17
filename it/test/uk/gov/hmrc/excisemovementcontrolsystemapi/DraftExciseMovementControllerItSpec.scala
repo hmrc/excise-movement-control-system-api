@@ -429,8 +429,8 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     when(movementRepository.saveMovement(any))
       .thenReturn(Future.successful(true))
 
-    when(movementRepository.getMovementByLRNAndERNIn(any, any))
-      .thenReturn(Future.successful(Seq.empty))
+    when(movementRepository.findDraftMovement(any))
+      .thenReturn(Future.successful(None))
   }
 
   private def assertValidResult(result: WSResponse, expectedBoxId: String = defaultBoxId) = {
