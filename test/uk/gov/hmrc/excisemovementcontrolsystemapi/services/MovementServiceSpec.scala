@@ -16,8 +16,11 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
+import com.mongodb.{MongoWriteException, WriteError}
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, times, verify, when}
+import org.mongodb.scala.ServerAddress
+import org.mongodb.scala.bson.BsonDocument
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
@@ -66,8 +69,8 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
   "saveNewMovement" should {
     "return a Movement" in {
       val successMovement = exampleMovement
-      when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq.empty))
+      when(mockMovementRepository.findDraftMovement(any))
+        .thenReturn(Future.successful(None))
 
       when(mockMovementRepository.saveMovement(any))
         .thenReturn(Future.successful(true))
@@ -77,9 +80,9 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       result mustBe Right(successMovement)
     }
 
-    "throw an error when cannot save movement" in {
-      when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq.empty))
+    "return an internal server error when cannot save movement" in {
+      when(mockMovementRepository.findDraftMovement(any))
+        .thenReturn(Future.successful(None))
 
       when(mockMovementRepository.saveMovement(any))
         .thenReturn(Future.failed(new RuntimeException("error")))
@@ -90,11 +93,15 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       result.left.value mustBe InternalServerError(Json.toJson(expectedError))
     }
 
-    "throw an error when LRN is already in database for consignor with an ARC" in {
-      val exampleMovementWithArc = exampleMovement.copy(administrativeReferenceCode = Some("arc"))
-
-      when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq(exampleMovementWithArc)))
+    "return a bad request when there is a duplicate key exception" in {
+      when(mockMovementRepository.findDraftMovement(any))
+        .thenReturn(Future.successful(None))
+      when(mockMovementRepository.saveMovement(any))
+        .thenReturn(
+          Future.failed(
+            new MongoWriteException(new WriteError(11000, "Duplicate Key", BsonDocument()), ServerAddress())
+          )
+        )
 
       val result = await(movementService.saveNewMovement(exampleMovement))
 
@@ -106,9 +113,11 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       result.left.value mustBe BadRequest(Json.toJson(expectedError))
     }
 
-    "return an error if database fail on retrieving movement" in {
-      when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
+    "return an internal server error if there is an issue finding the draft movement" in {
+      when(mockMovementRepository.findDraftMovement(any))
         .thenReturn(Future.failed(new RuntimeException("Database error")))
+      when(mockMovementRepository.saveMovement(any))
+        .thenReturn(Future.successful(true))
 
       val result = await(movementService.saveNewMovement(exampleMovement))
 
@@ -116,60 +125,16 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       result.left.value mustBe InternalServerError(Json.toJson(expectedError))
     }
 
-    "throw an error when LRN is already in database with no ARC for same consignor but different consignee" in {
-      val exampleMovementWithDifferentConsignee = exampleMovement.copy(consigneeId = Some("1234"))
-
-      when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq(exampleMovementWithDifferentConsignee)))
-
-      val result = await(movementService.saveNewMovement(exampleMovement))
-
-      val expectedError = ErrorResponse(
-        testDateTime,
-        "Duplicate LRN error",
-        "The local reference number 123 has already been used for another movement"
-      )
-      result.left.value mustBe BadRequest(Json.toJson(expectedError))
-    }
-
     "return the database movement when LRN is already in database with no ARC for same consignor and same consignee" in {
-      val movementInDB = exampleMovement.copy(lastUpdated = Instant.now)
 
-      when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq(movementInDB)))
+      when(mockMovementRepository.findDraftMovement(any))
+        .thenReturn(Future.successful(Some(exampleMovement)))
       when(mockMovementRepository.saveMovement(any))
         .thenReturn(Future.successful(true))
 
       val result = await(movementService.saveNewMovement(exampleMovement))
 
-      result mustBe Right(movementInDB)
-    }
-
-    "return the database movement when LRN is already in database for different consignor but same consignee" in {
-      val movementInDB = exampleMovement.copy(lastUpdated = Instant.now, consignorId = "newConsignor")
-
-      when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq(movementInDB)))
-      when(mockMovementRepository.saveMovement(any))
-        .thenReturn(Future.successful(true))
-
-      val result = await(movementService.saveNewMovement(exampleMovement))
-
-      result mustBe Right(movementInDB)
-    }
-
-    "return the database movement when LRN is already in database as a consignee and it is submitted as a consignor" in {
-      val movementInDB =
-        exampleMovement.copy(lastUpdated = Instant.now, consignorId = consigneeId, consigneeId = Some(consignorId))
-
-      when(mockMovementRepository.getMovementByLRNAndERNIn(any, any))
-        .thenReturn(Future.successful(Seq(movementInDB)))
-      when(mockMovementRepository.saveMovement(any))
-        .thenReturn(Future.successful(true))
-
-      val result = await(movementService.saveNewMovement(exampleMovement))
-
-      result mustBe Right(movementInDB)
+      result mustBe Right(exampleMovement)
     }
 
   }
