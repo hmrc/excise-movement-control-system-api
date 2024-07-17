@@ -263,6 +263,42 @@ class MovementRepositoryItSpec
     mustPreserveMdc(repository.getMovementByLRNAndERNIn("someLrn", List("some ern")))
   }
 
+  "findDraftMovement" should {
+    val lrn                   = "123"
+    val consignorId           = "Abc"
+    val consigneeId           = "def"
+    val otherConsignee        = "ghi"
+    val arc                   = "arc1"
+    val movement              = Movement(Some("boxId"), lrn, consignorId, Some(consigneeId), None, lastUpdated = timestamp)
+    val movementDiffConsignee = movement.copy(consigneeId = Some(otherConsignee))
+    val movementWithArc       = movement.copy(administrativeReferenceCode = Some(arc))
+    "return None if no matching movement" in {
+      val result = repository.findDraftMovement(movement).futureValue
+
+      result mustBe None
+    }
+    "return None if matching movement but already has ARC" in {
+      insertMovement(movementWithArc)
+      val result = repository.findDraftMovement(movement).futureValue
+
+      result mustBe None
+    }
+    "return None if matching LRN and consignor but has different consignee" in {
+      insertMovement(movementDiffConsignee)
+      val result = repository.findDraftMovement(movement).futureValue
+
+      result mustBe None
+    }
+    "return the existing movement matching the consignor, consignee and LRN with no ARC" in {
+      insertMovement(movement)
+
+      val result = repository.findDraftMovement(movement).futureValue
+
+      result mustBe Some(movement)
+    }
+    mustPreserveMdc(repository.findDraftMovement(movement))
+  }
+
   "getMovementByErn" should {
     "return a list of movement" when {
       "ern match the consignorId " in {
