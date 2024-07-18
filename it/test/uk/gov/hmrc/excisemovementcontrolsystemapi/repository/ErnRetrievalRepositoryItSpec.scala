@@ -50,21 +50,21 @@ class ErnRetrievalRepositoryItSpec extends PlaySpec
 
   override protected lazy val repository: ErnRetrievalRepository = app.injector.instanceOf[ErnRetrievalRepository]
 
-  "getLastRetrieved" should {
+  "setLastRetrieved" should {
 
-    "return none and update the lastRetrieved time when ern does not exist" in {
+    "return none and update the lastRetrieved time to now when ern does not exist" in {
 
       val instant = Instant.now.truncatedTo(ChronoUnit.MILLIS)
       when(mockTimeService.timestamp()).thenReturn(instant)
 
-      val lastRetrieved = repository.getLastRetrieved("testErn").futureValue
+      val lastRetrieved = repository.setLastRetrieved("testErn").futureValue
 
       lastRetrieved mustBe None
 
       find(Filters.eq("ern", "testErn")).futureValue.head mustBe ErnRetrieval("testErn", instant)
     }
 
-    "return the lastRetrieved and update the lastRetrieved time for an ern that exists" in {
+    "return the lastRetrieved and update the lastRetrieved time to now for an ern that exists" in {
 
       val instant = Instant.now.truncatedTo(ChronoUnit.MILLIS)
       when(mockTimeService.timestamp()).thenReturn(instant)
@@ -72,13 +72,27 @@ class ErnRetrievalRepositoryItSpec extends PlaySpec
       val lastRetrieved = instant.minus(5, ChronoUnit.MINUTES)
       insert(ErnRetrieval("testErn", lastRetrieved)).futureValue
 
-      val actualLastRetrieved = repository.getLastRetrieved("testErn").futureValue
+      val actualLastRetrieved = repository.setLastRetrieved("testErn").futureValue
       actualLastRetrieved mustBe Some(lastRetrieved)
 
       find(Filters.eq("ern", "testErn")).futureValue.head mustBe ErnRetrieval("testErn", instant)
     }
 
-    mustPreserveMdc(repository.getLastRetrieved("testErn"))
+    "return the lastRetrieved and update the lastRetrieved to the provided time for an ern that exists" in {
+
+      val instant = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+      when(mockTimeService.timestamp()).thenReturn(instant)
+
+      val lastRetrieved = instant.minus(5, ChronoUnit.MINUTES)
+      insert(ErnRetrieval("testErn", instant)).futureValue
+
+      val actualLastRetrieved = repository.setLastRetrieved("testErn", lastRetrieved).futureValue
+      actualLastRetrieved mustBe Some(instant)
+
+      find(Filters.eq("ern", "testErn")).futureValue.head mustBe ErnRetrieval("testErn", lastRetrieved)
+    }
+
+    mustPreserveMdc(repository.setLastRetrieved("testErn"))
   }
 
   private def mustPreserveMdc[A](f: => Future[A])(implicit pos: Position): Unit =

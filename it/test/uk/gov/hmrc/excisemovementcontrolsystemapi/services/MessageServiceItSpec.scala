@@ -43,6 +43,7 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Promise}
+import java.time.Duration
 
 class MessageServiceItSpec
   extends AnyFreeSpec
@@ -170,6 +171,31 @@ class MessageServiceItSpec
       future2.futureValue
 
       verify(mockMessageConnector, times(1)).getNewMessages(any)(any)
+    }
+    "must not cause throttled requests to increase the throttle timeout" in {
+
+      val hc = HeaderCarrier()
+      val ern = "testErn"
+      val lrn = "lrnie8158976912"
+
+      val ie704 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some(lrn)))
+      val messages = Seq(IE704Message.createFromXml(ie704))
+
+      val timeout = app.configuration.get[Duration]("microservice.services.eis.throttle-cutoff")
+
+      when(mockCorrelationIdService.generateCorrelationId()).thenReturn(newId)
+
+      when(mockMessageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+      when(mockMessageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+
+      when(mockDateTimeService.timestamp()).thenReturn(now)
+      service.updateMessages(ern)(hc).futureValue
+      when(mockDateTimeService.timestamp()).thenReturn(now.plus(timeout.dividedBy(2)))
+      service.updateMessages(ern)(hc).futureValue
+      when(mockDateTimeService.timestamp()).thenReturn(now.plus(timeout.plus(Duration.ofSeconds(1))))
+      service.updateMessages(ern)(hc).futureValue
+
+      verify(mockMessageConnector, times(2)).getNewMessages(any)(any)
     }
   }
 }
