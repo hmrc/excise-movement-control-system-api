@@ -49,9 +49,6 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   def submissionBearerToken: String  =
     servicesConfig.getConfString("eis.submission-bearer-token", "dummySubmissionBearerToken")
 
-  def traderMovementUrl: String   = s"$eisHost/emcs/movements/v1/trader-movement"
-  def movementBearerToken: String =
-    servicesConfig.getConfString("eis.movement-bearer-token", "dummyMovementBearerToken")
   def getNrsSubmissionUrl: String = s"$nrsHost/submission"
 
   def preValidateTraderUrl: String         = s"$eisHost/emcs/pre-validate-trader/v1"

@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-import cats.syntax.all._
 import com.google.inject.Singleton
 import com.mongodb.MongoWriteException
 import play.api.Logging
@@ -25,19 +24,16 @@ import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, TraderType}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import javax.inject.Inject
-import scala.concurrent.Future.successful
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class MovementService @Inject() (
   movementRepository: MovementRepository,
-  emcsUtils: EmcsUtils,
   dateTimeService: DateTimeService
 )(implicit ec: ExecutionContext)
     extends Logging {
@@ -97,37 +93,6 @@ class MovementService @Inject() (
         movements
       }
     }
-  def updateMovement(message: IEMessage, ern: String): Future[Seq[Movement]]                       =
-    movementRepository
-      .getAllBy(ern)
-      .map { cachedMovements =>
-        //TODO temporary logs for QA investigation
-        logger.info(s"Message is ${message.toString}")
-
-        message.administrativeReferenceCode
-          .map { messageArc =>
-            updateMovementForIndividualArc(message, ern, cachedMovements, messageArc)
-          }
-          .sequence
-          .map((o: Seq[Either[String, Movement]]) => transformAndLogAnyError(o, ern, message.messageType))
-      }
-      .flatten
-
-  private def transformAndLogAnyError(
-    movements: Seq[Either[String, Movement]],
-    ern: String,
-    messageType: String
-  ): Seq[Movement] =
-    movements.foldLeft[Seq[Movement]](Seq()) { case (acc: Seq[Movement], mv: Either[String, Movement]) =>
-      mv match {
-        case Right(m)    => acc :+ m
-        case Left(error) =>
-          logger.warn(
-            s"[MovementService] - Could not update movement with excise number $ern and message: $messageType. Error was $error"
-          )
-          acc
-      }
-    }
 
   private def createDuplicateErrorResponse(movement: Movement): Either[Result, Movement] =
     Left(
@@ -141,68 +106,4 @@ class MovementService @Inject() (
         )
       )
     )
-
-  private def updateMovementForIndividualArc(
-    message: IEMessage,
-    ern: String,
-    cachedMovements: Seq[Movement],
-    messageArc: Option[String]
-  ): Future[Either[String, Movement]] = {
-    val movementWithArc =
-      cachedMovements.find(o => o.administrativeReferenceCode.exists(arc => messageArc.contains(arc)))
-    val movementWithLrn = cachedMovements.find(m => message.lrnEquals(m.localReferenceNumber))
-
-    //TODO temporary logs for QA investigation
-    logger.info(
-      s"Attempting to find relevant movement for message. movementWithArc: ${movementWithArc.toString}, movementWithLrn: ${movementWithLrn.toString}, message: ${message.toString}"
-    )
-
-    (movementWithArc, movementWithLrn) match {
-      case (Some(mArc), _)    => saveDistinctMessage(ern, mArc, message, messageArc)
-      case (None, Some(mLrn)) => saveDistinctMessage(ern, mLrn, message, messageArc)
-      case _                  =>
-        throw new RuntimeException(s"[MovementService] - Cannot find movement for ERN: $ern, ${message.toString}")
-    }
-  }
-
-  private def saveDistinctMessage(
-    recipient: String,
-    movement: Movement,
-    newMessage: IEMessage,
-    messageArc: Option[String]
-  ): Future[Either[String, Movement]] = {
-
-    val message = Message(
-      encodedMessage = emcsUtils.encode(newMessage.toXml.toString),
-      messageType = newMessage.messageType,
-      messageId = newMessage.messageIdentifier,
-      recipient = recipient,
-      boxesToNotify = Set.empty,
-      createdOn = dateTimeService.timestamp()
-    )
-
-    //todo EMCS-382: remove hash from message class. Hash can calculate on the go in here
-    movement.messages.find(o => o.hash.equals(message.hash)) match {
-      case Some(_) => successful(Left(s"Message has already been saved against movement ${movement._id}"))
-      case _       =>
-        val newArc = messageArc.orElse(movement.administrativeReferenceCode)
-
-        val newMovement = movement.copy(
-          administrativeReferenceCode = movement.administrativeReferenceCode.fold(newArc)(Some(_)),
-          messages = movement.messages :+ message
-        )
-
-        val updateResult = movementRepository.updateMovement(newMovement)
-
-        updateResult.map {
-          case Some(x) => Right(x)
-          case None    => Left(s"Failed to update movement ${newMovement._id}")
-        }
-    }
-  }
-
-  private def isLrnAlreadyUsed(movement: Movement, movementFromDb: Movement) =
-    movement.consignorId == movementFromDb.consignorId &&
-      (movementFromDb.administrativeReferenceCode.isDefined
-        || movementFromDb.consigneeId != movement.consigneeId)
 }
