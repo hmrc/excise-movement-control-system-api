@@ -22,7 +22,7 @@ import com.github.tomakehurst.wiremock.extension.Parameters
 import com.github.tomakehurst.wiremock.http.Request
 import com.github.tomakehurst.wiremock.matching.{MatchResult, RequestMatcherExtension}
 import org.mockito.ArgumentMatchersSugar.any
-import org.mockito.MockitoSugar.{verify, when, reset => mockitoSugerReset}
+import org.mockito.MockitoSugar.{verify, when, reset => mockitoSugarReset}
 import org.mockito.captor.ArgCaptor
 import org.scalatest.concurrent.{Eventually, IntegrationPatience}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
@@ -98,9 +98,10 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    mockitoSugerReset(
+    mockitoSugarReset(
       dateTimeService,
       movementRepository,
+      ernSubmissionRepository,
       authConnector
     )
 
@@ -130,6 +131,17 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         withClue("submit to NRS") {
           wireMock.verify(postRequestedFor(urlEqualTo("/submission")))
         }
+      }
+
+      "should add consignor and consignee to ern submissions so both start polling straight away" in {
+        withAuthorizedTrader(consignorId)
+        stubEISSuccessfulRequest
+        setupRepositories
+
+        postRequest(IE815)
+
+        verify(ernSubmissionRepository).save(consignorId)
+        verify(ernSubmissionRepository).save(consigneeId)
       }
 
       "should get the default box Id when X-Callback-Box-Id is not in the header" in {

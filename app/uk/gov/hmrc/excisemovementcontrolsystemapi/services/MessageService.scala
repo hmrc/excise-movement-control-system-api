@@ -20,7 +20,6 @@ import cats.syntax.all._
 import org.apache.pekko.Done
 import play.api.{Configuration, Logging}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, TraderMovementConnector}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnRetrievalRepository, MovementRepository}
