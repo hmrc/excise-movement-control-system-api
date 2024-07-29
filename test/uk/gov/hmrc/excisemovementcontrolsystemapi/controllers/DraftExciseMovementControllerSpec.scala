@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import cats.data.EitherT
+import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, times, verify, verifyZeroInteractions, when}
 import org.mockito.captor.ArgCaptor
@@ -36,7 +37,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IE818Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MessageIdentifierIsUnauthorised, MessageValidation}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.BoxIdRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnSubmissionRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -61,6 +62,7 @@ class DraftExciseMovementControllerSpec
   private val request                  = createRequestWithClientId
   private val mockIeMessage            = mock[IE815Message]
   private val boxIdRepository          = mock[BoxIdRepository]
+  private val ernSubmissionRepository  = mock[ErnSubmissionRepository]
   private val notificationService      = mock[PushNotificationService]
   private val messageValidation        = mock[MessageValidation]
   private val dateTimeService          = mock[DateTimeService]
@@ -79,7 +81,8 @@ class DraftExciseMovementControllerSpec
       submissionMessageService,
       notificationService,
       auditService,
-      boxIdRepository
+      boxIdRepository,
+      ernSubmissionRepository
     )
 
     when(submissionMessageService.submit(any, any)(any))
@@ -97,6 +100,7 @@ class DraftExciseMovementControllerSpec
     when(appConfig.pushNotificationsEnabled).thenReturn(true)
     when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(auditService.auditMessage(any)(any)).thenReturn(EitherT.fromEither(Right(())))
+    when(ernSubmissionRepository.save(any)).thenReturn(Future.successful(Done))
   }
 
   "submit" should {
@@ -336,6 +340,7 @@ class DraftExciseMovementControllerSpec
       dateTimeService,
       auditService,
       boxIdRepository,
+      ernSubmissionRepository,
       appConfig,
       cc
     )
@@ -352,6 +357,7 @@ class DraftExciseMovementControllerSpec
       dateTimeService,
       auditService,
       boxIdRepository,
+      ernSubmissionRepository,
       appConfig,
       cc
     )
@@ -367,6 +373,7 @@ class DraftExciseMovementControllerSpec
       dateTimeService,
       auditService,
       boxIdRepository,
+      ernSubmissionRepository,
       appConfig,
       cc
     )
@@ -382,6 +389,7 @@ class DraftExciseMovementControllerSpec
       dateTimeService,
       auditService,
       boxIdRepository,
+      ernSubmissionRepository,
       appConfig,
       cc
     )

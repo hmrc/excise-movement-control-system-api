@@ -27,7 +27,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Constants
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.BoxIdRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnSubmissionRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -49,6 +49,7 @@ class DraftExciseMovementController @Inject() (
   dateTimeService: DateTimeService,
   auditService: AuditService,
   boxIdRepository: BoxIdRepository,
+  ernSubmissionRepository: ErnSubmissionRepository,
   appConfig: AppConfig,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
@@ -113,6 +114,7 @@ class DraftExciseMovementController @Inject() (
         Left(result)
       case Right(movement) =>
         auditService.auditMessage(message)
+        message.consigneeId.map(consignee => ernSubmissionRepository.save(consignee))
         Right(movement)
     })
 
