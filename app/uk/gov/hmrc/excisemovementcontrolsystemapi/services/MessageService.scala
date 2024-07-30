@@ -284,16 +284,16 @@ class MessageService @Inject() (
       )
     )
 
-  private def createMovementFromIE801(consignor: String, message: IE801Message, boxIds: Set[String]): Movement =
+  private def createMovementFromIE801(recipient: String, message: IE801Message, boxIds: Set[String]): Movement =
     Movement(
       correlationIdService.generateCorrelationId(),
       None,
       message.localReferenceNumber,
-      consignor,
+      message.consignorId,
       message.consigneeId,
       administrativeReferenceCode = message.administrativeReferenceCode.head, // TODO remove .head
       dateTimeService.timestamp(),
-      messages = Seq(convertMessage(consignor, message, boxIds))
+      messages = Seq(convertMessage(recipient, message, boxIds))
     )
 
   private def findByArc(movements: Seq[Movement], message: IEMessage): Option[Seq[Movement]] = {
