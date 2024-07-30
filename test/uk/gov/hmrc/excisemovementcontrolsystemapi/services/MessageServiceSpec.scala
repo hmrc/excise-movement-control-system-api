@@ -374,10 +374,10 @@ class MessageServiceSpec
             verify(movementRepository).save(eqTo(expectedMovement))
             verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
           }
-          "a new movement should be created from an IE801 message" in {
-            val ern              = "testErn"
+          "a new movement should be created from an IE801 message for the consignor" in {
+            val consignor        = "testErn"
             val ie801            = XmlMessageGeneratorFactory.generate(
-              ern,
+              consignor,
               MessageParams(
                 IE801,
                 "GB00001",
@@ -395,8 +395,9 @@ class MessageServiceSpec
               Some("testConsignee"),
               Some("23XI00000000000000012"),
               now,
-              messages =
-                Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, Set.empty, now))
+              messages = Seq(
+                Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", consignor, Set.empty, now)
+              )
             )
 
             when(correlationIdService.generateCorrelationId()).thenReturn(newId)
@@ -409,12 +410,56 @@ class MessageServiceSpec
               .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
-            messageService.updateMessages(ern).futureValue
+            messageService.updateMessages(consignor).futureValue
 
-            verify(messageConnector).getNewMessages(eqTo(ern))(any)
-            verify(movementRepository).getAllBy(eqTo(ern))
+            verify(messageConnector).getNewMessages(eqTo(consignor))(any)
+            verify(movementRepository).getAllBy(eqTo(consignor))
             verify(movementRepository).save(eqTo(expectedMovement))
-            verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
+            verify(messageConnector).acknowledgeMessages(eqTo(consignor))(any)
+          }
+          "a new movement should be created from an IE801 message for the consignee" in {
+            val consignor        = "testErn"
+            val consignee        = "testConsignee"
+            val ie801            = XmlMessageGeneratorFactory.generate(
+              consignor,
+              MessageParams(
+                IE801,
+                "GB00001",
+                Some(consignee),
+                Some("23XI00000000000000012"),
+                Some("lrnie8158976912")
+              )
+            )
+            val messages         = Seq(IE801Message.createFromXml(ie801))
+            val expectedMovement = Movement(
+              newId,
+              None,
+              "lrnie8158976912",
+              "testErn",
+              Some(consignee),
+              Some("23XI00000000000000012"),
+              now,
+              messages = Seq(
+                Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", consignee, Set.empty, now)
+              )
+            )
+
+            when(correlationIdService.generateCorrelationId()).thenReturn(newId)
+            when(dateTimeService.timestamp()).thenReturn(now)
+            when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
+            when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+            when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
+            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+            when(messageConnector.getNewMessages(any)(any))
+              .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+            when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+
+            messageService.updateMessages(consignee).futureValue
+
+            verify(messageConnector).getNewMessages(eqTo(consignee))(any)
+            verify(movementRepository).getAllBy(eqTo(consignee))
+            verify(movementRepository).save(eqTo(expectedMovement))
+            verify(messageConnector).acknowledgeMessages(eqTo(consignee))(any)
           }
           "a new movement is created from trader-movement call IE801 message if message is not an IE801 or IE704" in {
             val ern                    = "testErn"
