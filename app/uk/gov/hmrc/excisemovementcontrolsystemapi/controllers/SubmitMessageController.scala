@@ -66,7 +66,8 @@ class SubmitMessageController @Inject() (
             movement.localReferenceNumber,
             movement.consignorId,
             movement.consigneeId,
-            movement.administrativeReferenceCode
+            movement.administrativeReferenceCode,
+            None
           )
         )
       )

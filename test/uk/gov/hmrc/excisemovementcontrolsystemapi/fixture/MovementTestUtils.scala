@@ -18,6 +18,9 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ExciseMovementResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
+
+import java.time.Instant
 
 trait MovementTestUtils {
 
@@ -25,7 +28,8 @@ trait MovementTestUtils {
     consignorId: String,
     lrn: String,
     arc: String,
-    consigneeId: Option[String]
+    consigneeId: Option[String],
+    lastUpdated: Option[Instant]
   ): ExciseMovementResponse =
     ExciseMovementResponse(
       "cfdb20c7-d0b0-4b8b-a071-737d68dede5e",
@@ -33,7 +37,8 @@ trait MovementTestUtils {
       lrn,
       consignorId,
       consigneeId,
-      Some(arc)
+      Some(arc),
+      lastUpdated.map(_.asStringInMilliseconds)
     )
 
   def createMovementResponseFromMovement(
@@ -45,7 +50,8 @@ trait MovementTestUtils {
       movement.localReferenceNumber,
       movement.consignorId,
       movement.consigneeId,
-      movement.administrativeReferenceCode
+      movement.administrativeReferenceCode,
+      Some(movement.lastUpdated.asStringInMilliseconds)
     )
 
 }

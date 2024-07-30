@@ -24,7 +24,8 @@ case class ExciseMovementResponse(
   localReferenceNumber: String,
   consignorId: String,
   consigneeId: Option[String],
-  administrativeReferenceCode: Option[String]
+  administrativeReferenceCode: Option[String],
+  lastUpdated: Option[String]
 )
 
 object ExciseMovementResponse {

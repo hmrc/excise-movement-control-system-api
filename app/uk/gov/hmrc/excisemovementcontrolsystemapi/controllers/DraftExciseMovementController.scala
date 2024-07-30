@@ -72,6 +72,7 @@ class DraftExciseMovementController @Inject() (
             movement.localReferenceNumber,
             movement.consignorId,
             movement.consigneeId,
+            None,
             None
           )
         )

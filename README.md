@@ -1,7 +1,7 @@
 
 # Excise Movement Control System API
 
-This is the public facing EMCS API to process and record Excise Movements. Further text TBD
+This is the public facing EMCS API to process and record Excise Movements.
 
 ## Nomenclature
 
@@ -15,16 +15,19 @@ LRN - Local Reference Number
 
 ## Technical documentation
 
-TBD
+See the [Service Guide](https://developer.service.hmrc.gov.uk/guides/emcs-api-service-guide/)
 
 ### Before running the app (if applicable)
 
-TBD
+Ensure you have MongoDb running and dependencies, via `sm2` below. If you want to run the API against a local version of the stub, you will not need to include `EMCS_API_EIS_STUB` in the `sm2` run.
 
 ### Running the test suite
 
-TBD
+To run unit tests you can run (either in a terminal or in a sbt shell):
+`sbt test`
 
+To run integration tests, run:
+`sbt it/test`
 
 ### Test push notification locally
 
@@ -133,7 +136,7 @@ Notice: You can use the run_local_with_push_notification.sh script file to creat
 #### Create a movement
 
 1. Open Postman 
-2. You can create your own request for the Draft Movement endpoint or you can import.
+2. You can create your own request for the Draft Movement endpoint, or you can import.
 the postman json file that is in the emcs-api-eis-stub repo. 
 3. If you import the postman json file in the repo once imported.
 4. Click on the **EMCSApiPollingScenarios** workflow.
@@ -141,7 +144,7 @@ the postman json file that is in the emcs-api-eis-stub repo.
 6. Enter the Excise Number. 
 7. Enter the access token. 
 8. Enter the ClientId that was generated previously in the steps above.
-9. Right click the **EMCSApiPollingScenarios** workflow. 
+9. Right-click the **EMCSApiPollingScenarios** workflow. 
 10. Select **Run Collection**.
 11. Press the **Run EMCSApiPollingScenarios**" button.
 12. You should see a response that contains the boxId for each IE815 submission.
@@ -220,10 +223,6 @@ the newly acquired access token. Then from command line type the following comma
 
 This will create a client application and give you back a clientId. This will also start the excise-movement-control-system-api
  service locally.
-
-### Further documentation
-
-TBD
 
 ## Licence
 
