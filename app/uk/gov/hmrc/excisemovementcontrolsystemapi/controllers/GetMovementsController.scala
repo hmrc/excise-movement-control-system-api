@@ -28,6 +28,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseM
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MessageService, MovementService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -138,7 +139,8 @@ class GetMovementsController @Inject() (
       movement.localReferenceNumber,
       movement.consignorId,
       movement.consigneeId,
-      movement.administrativeReferenceCode
+      movement.administrativeReferenceCode,
+      Some(movement.lastUpdated.asStringInMilliseconds)
     )
 
 }

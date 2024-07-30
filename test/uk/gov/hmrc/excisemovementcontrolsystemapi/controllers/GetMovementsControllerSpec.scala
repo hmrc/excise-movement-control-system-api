@@ -69,6 +69,58 @@ class GetMovementsControllerSpec
   private val timestamp   = Instant.parse("2020-01-01T01:01:01.123456Z")
   private val fakeRequest = FakeRequest("POST", "/foo")
 
+  private def createControllerWithErnParameterError =
+    new GetMovementsController(
+      FakeSuccessAuthentication(Set(ern)),
+      FakeValidateErnParameterFailureAction,
+      FakeValidateUpdatedSinceSuccessAction,
+      FakeValidateTraderTypeSuccessAction,
+      cc,
+      movementService,
+      dateTimeService,
+      messageService,
+      movementIdValidator
+    )
+
+  private def createWithAuthActionFailure =
+    new GetMovementsController(
+      FakeFailingAuthentication,
+      FakeValidateErnParameterSuccessAction,
+      FakeValidateUpdatedSinceSuccessAction,
+      FakeValidateTraderTypeSuccessAction,
+      cc,
+      movementService,
+      dateTimeService,
+      messageService,
+      movementIdValidator
+    )
+
+  private val createWithUpdateSinceActionFailure =
+    new GetMovementsController(
+      FakeSuccessAuthentication(Set(ern)),
+      FakeValidateErnParameterSuccessAction,
+      FakeValidateUpdatedSinceFailureAction,
+      FakeValidateTraderTypeSuccessAction,
+      cc,
+      movementService,
+      dateTimeService,
+      messageService,
+      movementIdValidator
+    )
+
+  private val createWithTraderTypeActionFailure =
+    new GetMovementsController(
+      FakeSuccessAuthentication(Set(ern)),
+      FakeValidateErnParameterSuccessAction,
+      FakeValidateUpdatedSinceFailureAction,
+      FakeValidateTraderTypeSuccessAction,
+      cc,
+      movementService,
+      dateTimeService,
+      messageService,
+      movementIdValidator
+    )
+
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(movementService, messageService)
@@ -84,7 +136,7 @@ class GetMovementsControllerSpec
               ern,
               Some("consigneeId"),
               Some("arc"),
-              Instant.now(),
+              timestamp,
               Seq.empty
             )
           )
@@ -102,7 +154,9 @@ class GetMovementsControllerSpec
       val result = controller.getMovements(None, None, None, None, None)(fakeRequest)
 
       status(result) mustBe OK
-      contentAsJson(result) mustBe Json.toJson(Seq(createMovementResponse(ern, "lrn", "arc", Some("consigneeId"))))
+      contentAsJson(result) mustBe Json.toJson(
+        Seq(createMovementResponse(ern, "lrn", "arc", Some("consigneeId"), Some(timestamp)))
+      )
     }
 
     "get all movement for an ERN" in {
@@ -370,57 +424,5 @@ class GetMovementsControllerSpec
     }
 
   }
-
-  private def createControllerWithErnParameterError =
-    new GetMovementsController(
-      FakeSuccessAuthentication(Set(ern)),
-      FakeValidateErnParameterFailureAction,
-      FakeValidateUpdatedSinceSuccessAction,
-      FakeValidateTraderTypeSuccessAction,
-      cc,
-      movementService,
-      dateTimeService,
-      messageService,
-      movementIdValidator
-    )
-
-  private def createWithAuthActionFailure =
-    new GetMovementsController(
-      FakeFailingAuthentication,
-      FakeValidateErnParameterSuccessAction,
-      FakeValidateUpdatedSinceSuccessAction,
-      FakeValidateTraderTypeSuccessAction,
-      cc,
-      movementService,
-      dateTimeService,
-      messageService,
-      movementIdValidator
-    )
-
-  private val createWithUpdateSinceActionFailure =
-    new GetMovementsController(
-      FakeSuccessAuthentication(Set(ern)),
-      FakeValidateErnParameterSuccessAction,
-      FakeValidateUpdatedSinceFailureAction,
-      FakeValidateTraderTypeSuccessAction,
-      cc,
-      movementService,
-      dateTimeService,
-      messageService,
-      movementIdValidator
-    )
-
-  private val createWithTraderTypeActionFailure =
-    new GetMovementsController(
-      FakeSuccessAuthentication(Set(ern)),
-      FakeValidateErnParameterSuccessAction,
-      FakeValidateUpdatedSinceFailureAction,
-      FakeValidateTraderTypeSuccessAction,
-      cc,
-      movementService,
-      dateTimeService,
-      messageService,
-      movementIdValidator
-    )
 
 }
