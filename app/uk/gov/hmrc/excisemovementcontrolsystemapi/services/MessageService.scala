@@ -93,12 +93,14 @@ class MessageService @Inject() (
   private def getBoxIds(ern: String): Future[Set[String]] =
     boxIdRepository.getBoxIds(ern)
 
-  private def processNewMessages(ern: String, boxIds: Set[String])(implicit hc: HeaderCarrier): Future[Done] =
+  private def processNewMessages(ern: String, boxIds: Set[String])(implicit hc: HeaderCarrier): Future[Done] = {
+    logger.info(s"[MessageService]: Processing new messages for ern: $ern")
     for {
       response <- messageConnector.getNewMessages(ern)
       _        <- updateMovements(ern, response.messages, boxIds)
       _        <- acknowledgeAndContinue(response, ern, boxIds)
     } yield Done
+  }
 
   private def acknowledgeAndContinue(response: GetMessagesResponse, ern: String, boxIds: Set[String])(implicit
     hc: HeaderCarrier
@@ -117,7 +119,8 @@ class MessageService @Inject() (
 
   private def updateMovements(ern: String, messages: Seq[IEMessage], boxIds: Set[String])(implicit
     hc: HeaderCarrier
-  ): Future[Done] =
+  ): Future[Done] = {
+    logger.info(s"[MessageService]: Updating movements for ern: $ern")
     if (messages.nonEmpty) {
       movementRepository
         .getAllBy(ern)
@@ -140,6 +143,7 @@ class MessageService @Inject() (
     } else {
       Future.successful(Done)
     }
+  }
 
   private def updateOrCreateMovements(
     ern: String,

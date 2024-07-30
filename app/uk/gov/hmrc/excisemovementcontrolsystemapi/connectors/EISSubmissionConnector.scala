@@ -50,6 +50,7 @@ class EISSubmissionConnector @Inject() (
     authorisedErn: String,
     correlationId: String
   )(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
+    logger.info("[EISSubmissionConnector]: Submitting a message to EIS")
 
     val timer = metrics.timer("emcs.submission.connector.timer").time()
 

@@ -118,7 +118,9 @@ class NrsService @Inject() (
   private def retrieveUserAuthToken(hc: HeaderCarrier): String =
     hc.authorization match {
       case Some(Authorization(authToken)) => authToken
-      case _                              => throw new InternalServerException("No auth token available for NRS")
+      case _                              =>
+        logger.warn("[NrsService] - No auth token available for NRS")
+        throw new InternalServerException("No auth token available for NRS")
     }
 }
 

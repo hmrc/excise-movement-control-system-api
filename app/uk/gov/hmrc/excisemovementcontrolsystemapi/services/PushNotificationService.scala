@@ -63,6 +63,7 @@ class PushNotificationServiceImpl @Inject() (
     Try(UUID.fromString(boxId)) match {
       case Success(value) => Right(SuccessBoxNotificationResponse(value.toString))
       case Failure(_)     =>
+        logger.warn("[PushNotificationService] - Client box id should be a valid UUID")
         Left(
           BadRequest(
             Json.toJson(

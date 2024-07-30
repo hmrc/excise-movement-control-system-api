@@ -17,17 +17,19 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.factories
 
 import generated.MessagesOption
+import play.api.Logging
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 
 import scala.xml.NodeSeq
 
-case class IEMessageFactory() {
+case class IEMessageFactory() extends Logging {
   def createIEMessage(message: DataRecord[MessagesOption]): IEMessage = {
-    val messageType = message.key.getOrElse(
+    val messageType = message.key.getOrElse {
+      logger.warn(s"[IEMessageFactory] - Could not create Message object. Message type is empty")
       throw new IEMessageFactoryException("Could not create Message object. Message type is empty")
-    )
+    }
 
     MessageTypes.withValueOpt(messageType) match {
       case Some(MessageTypes.IE704) => IE704Message(message)
@@ -47,6 +49,7 @@ case class IEMessageFactory() {
       case Some(MessageTypes.IE881) => IE881Message(message)
       case Some(MessageTypes.IE905) => IE905Message(message)
       case _                        =>
+        logger.warn(s"[IEMessageFactory] - Could not create Message object. Unsupported message: $messageType")
         throw new IEMessageFactoryException(s"Could not create Message object. Unsupported message: $messageType")
     }
   }
@@ -71,6 +74,7 @@ case class IEMessageFactory() {
       case Some(MessageTypes.IE881) => IE881Message.createFromXml(xml)
       case Some(MessageTypes.IE905) => IE905Message.createFromXml(xml)
       case _                        =>
+        logger.warn(s"[IEMessageFactory] - Could not create Message object. Unsupported message: $messageType")
         throw new IEMessageFactoryException(s"Could not create Message object. Unsupported message: $messageType")
     }
 }

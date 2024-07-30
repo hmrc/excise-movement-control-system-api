@@ -84,6 +84,7 @@ class SubmitMessageController @Inject() (
     EitherT(movementService.getMovementById(movementId).map {
       case Some(mvt) => Right(mvt)
       case None      =>
+        logger.warn(s"[GetMovementsController] - Movement $movementId could not be found")
         Left(
           NotFound(
             Json.toJson(
