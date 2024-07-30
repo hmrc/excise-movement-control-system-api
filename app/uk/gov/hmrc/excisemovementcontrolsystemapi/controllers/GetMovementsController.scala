@@ -88,6 +88,9 @@ class GetMovementsController @Inject() (
         val movementErns   = getErnsForMovement(movement)
 
         if (authorisedErns.intersect(movementErns).isEmpty) {
+          logger.warn(
+            s"[GetMovementsController] - Movement $movementId is not found within the data for ERNs ${authorisedErns.mkString("/")}"
+          )
           NotFound(
             Json.toJson(
               ErrorResponse(

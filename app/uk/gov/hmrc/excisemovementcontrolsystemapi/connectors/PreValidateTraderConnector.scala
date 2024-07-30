@@ -49,6 +49,8 @@ class PreValidateTraderConnector @Inject() (
     hc: HeaderCarrier
   ): Future[Either[Result, PreValidateTraderEISResponse]] = {
 
+    logger.info("[PreValidateTraderConnector]: Submitting PreValidateTrader message")
+
     val timer = metrics.timer("emcs.prevalidatetrader.connector.timer").time()
 
     val correlationId   = correlationIdService.generateCorrelationId()

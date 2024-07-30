@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import cats.data.{EitherT, OptionT}
 import cats.implicits._
+import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ValidateAcceptHeaderAction}
@@ -45,7 +46,8 @@ class GetMessagesController @Inject() (
   emcsUtil: EmcsUtils,
   dateTimeService: DateTimeService
 )(implicit ec: ExecutionContext)
-    extends BackendController(cc) {
+    extends BackendController(cc)
+    with Logging {
   def getMessageForMovement(movementId: String, messageId: String): Action[AnyContent] =
     (
       Action andThen
@@ -71,7 +73,7 @@ class GetMessagesController @Inject() (
     movementId: String,
     updatedSince: Option[String],
     traderType: Option[String]
-  ): Action[AnyContent]                               =
+  ): Action[AnyContent] =
     authAction.async(parse.default) { implicit request: EnrolmentRequest[AnyContent] =>
       val result: EitherT[Future, Result, Result] = for {
         validatedMovementId <- validateMovementId(movementId)
@@ -81,6 +83,7 @@ class GetMessagesController @Inject() (
         movement            <- getMovement(validatedMovementId)
       } yield
         if (getErnsForMovement(movement).intersect(request.erns).isEmpty) {
+          logger.warn(s"[GetMessagesController] - Invalid MovementID supplied for ERN")
           Forbidden(
             Json.toJson(
               ErrorResponse(
@@ -124,7 +127,8 @@ class GetMessagesController @Inject() (
     }
 
   }
-  private def messageNotFoundError(messageId: String) =
+  private def messageNotFoundError(messageId: String) = {
+    logger.warn(s"[GetMessagesController] - MessageId $messageId was not found in the database")
     NotFound(
       Json.toJson(
         ErrorResponse(
@@ -134,6 +138,7 @@ class GetMessagesController @Inject() (
         )
       )
     )
+  }
 
   private def validateMovementId(movementId: String): EitherT[Future, Result, String] =
     EitherT.fromEither[Future](movementIdValidator.validateMovementId(movementId)).leftMap { x =>
@@ -142,7 +147,8 @@ class GetMessagesController @Inject() (
 
   private def validateUpdatedSince(updatedSince: Option[String]): EitherT[Future, Result, Option[Instant]] =
     EitherT.fromEither(
-      Try(updatedSince.map(Instant.parse(_))).toEither.left.map(_ =>
+      Try(updatedSince.map(Instant.parse(_))).toEither.left.map { _ =>
+        logger.warn(s"[GetMessagesController] - Invalid date format provided in the updatedSince query parameter")
         BadRequest(
           Json.toJson(
             ErrorResponse(
@@ -152,7 +158,7 @@ class GetMessagesController @Inject() (
             )
           )
         )
-      )
+      }
     )
 
   private def filterMessagesByTraderType(
@@ -181,6 +187,7 @@ class GetMessagesController @Inject() (
               Right(traderType)
             } else {
               Left {
+                logger.warn(s"[GetMessagesController] - Invalid traderType passed in")
                 BadRequest(
                   Json.toJson(
                     ErrorResponse(

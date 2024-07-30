@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 import cats.implicits.toFunctorOps
 import generated.NewMessagesDataResponse
 import org.apache.pekko.Done
-import play.api.Configuration
+import play.api.{Configuration, Logging}
 import play.api.http.Status.OK
 import play.api.libs.json.{Json, Reads}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.Service
@@ -48,12 +48,14 @@ class MessageConnector @Inject() (
   messageFactory: IEMessageFactory,
   dateTimeService: DateTimeService,
   auditService: AuditService
-)(implicit ec: ExecutionContext) {
+)(implicit ec: ExecutionContext)
+    extends Logging {
 
   private val service: Service    = configuration.get[Service]("microservice.services.eis")
   private val bearerToken: String = configuration.get[String]("microservice.services.eis.messages-bearer-token")
 
   def getNewMessages(ern: String)(implicit hc: HeaderCarrier): Future[GetMessagesResponse] = {
+    logger.info(s"[MessageConnector]: Getting new messages for ern: $ern")
 
     val correlationId = correlationIdService.generateCorrelationId()
     val timestamp     = dateTimeService.timestamp().asStringInMilliseconds
@@ -75,6 +77,7 @@ class MessageConnector @Inject() (
           } yield GetMessagesResponse(messages, count)
         }
         else {
+          logger.warn(s"[MessageConnector]: Invalid status returned: ${response.status}")
           Future.failed(new RuntimeException("Invalid status returned"))
         }
       }
@@ -82,6 +85,7 @@ class MessageConnector @Inject() (
 
   def acknowledgeMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] = {
 
+    logger.info(s"[MessageConnector]: Acknowledging messages for ern: $ern")
     val correlationId = correlationIdService.generateCorrelationId()
     val timestamp     = dateTimeService.timestamp().asStringInMilliseconds
 
@@ -98,6 +102,7 @@ class MessageConnector @Inject() (
           parseJson[MessageReceiptSuccessResponse](response.body).as(Done)
         }
         else {
+          logger.warn(s"[MessageConnector]: Invalid status returned: ${response.status}")
           Future.failed(new RuntimeException("Invalid status returned"))
         }
       }

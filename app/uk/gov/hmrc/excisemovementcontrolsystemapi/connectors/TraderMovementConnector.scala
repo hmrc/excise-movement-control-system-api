@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import generated.{MessageBodyType, MovementForTraderDataResponse}
-import play.api.Configuration
+import play.api.{Configuration, Logging}
 import play.api.http.Status.{OK, UNPROCESSABLE_ENTITY}
 import play.api.libs.json.{Json, Reads}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.Service
@@ -44,13 +44,14 @@ class TraderMovementConnector @Inject() (
   correlationIdService: CorrelationIdService,
   messageFactory: IEMessageFactory,
   dateTimeService: DateTimeService
-)(implicit ec: ExecutionContext) {
+)(implicit ec: ExecutionContext)
+    extends Logging {
 
   private val service: Service    = configuration.get[Service]("microservice.services.eis")
   private val bearerToken: String = configuration.get[String]("microservice.services.eis.movement-bearer-token")
 
   def getMovementMessages(ern: String, arc: String)(implicit hc: HeaderCarrier): Future[Seq[IEMessage]] = {
-
+    logger.info(s"[TraderMovementConnector]: Getting movement messages for ern: $ern and arc: $arc")
     val correlationId = correlationIdService.generateCorrelationId()
     val timestamp     = dateTimeService.timestamp().asStringInMilliseconds
 
@@ -72,6 +73,7 @@ class TraderMovementConnector @Inject() (
         else if (response.status == UNPROCESSABLE_ENTITY) {
           Future.successful(Seq())
         } else {
+          logger.warn(s"[TraderMovementConnector]: Invalid status returned: ${response.status}")
           Future.failed(new RuntimeException("[TraderMovementConnector]: Invalid status returned"))
         }
       }

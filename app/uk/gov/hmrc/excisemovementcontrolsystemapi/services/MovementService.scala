@@ -48,6 +48,9 @@ class MovementService @Inject() (
       }
       .recover {
         case _: MongoWriteException =>
+          logger.error(
+            s"[MovementService] - The local reference number ${movement.localReferenceNumber} has already been used for another movement"
+          )
           createDuplicateErrorResponse(movement)
         case e: Throwable           =>
           logger.error(s"[MovementService] - Error occurred while saving movement, ${e.getMessage}", e)
@@ -72,6 +75,7 @@ class MovementService @Inject() (
       case Seq()       => None
       case head :: Nil => Some(head)
       case _           =>
+        logger.warn(s"[MovementService] - Multiple movement found for local reference number: $lrn")
         throw new RuntimeException(s"[MovementService] - Multiple movement found for local reference number: $lrn")
     }
 

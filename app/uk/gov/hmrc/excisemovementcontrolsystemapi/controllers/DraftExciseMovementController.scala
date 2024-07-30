@@ -145,6 +145,9 @@ class DraftExciseMovementController @Inject() (
     EitherT.fromEither(message match {
       case x: IE815Message => Right(x)
       case _               =>
+        logger.warn(
+          s"[DraftExciseMovementController] - Message type ${message.messageType} cannot be sent to the draft excise movement endpoint"
+        )
         Left(
           BadRequest(
             Json.toJson(
