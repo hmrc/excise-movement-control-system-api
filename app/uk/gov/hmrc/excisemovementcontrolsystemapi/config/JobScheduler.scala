@@ -24,6 +24,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.{PollingNewMessages
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.{Clock, Duration}
+import java.util.UUID
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
@@ -49,17 +50,19 @@ class JobScheduler @Inject() (
   }.toMap
 
   private val cancellables = scheduledJobs.map { job =>
+    logger.info(s"Scheduling $job")
     actorSystem.scheduler.scheduleWithFixedDelay(job.initialDelay, job.interval) { () =>
       val startTime = clock.instant()
-      logger.info(s"Executing job ${job.name}")
+      val runId     = UUID.randomUUID()
+      logger.info(s"Executing job ${job.name} with runID $runId")
       job.execute.onComplete { result =>
         val duration = Duration.between(startTime, clock.instant())
         timers(job).update(duration)
         result match {
           case Success(_)         =>
-            logger.info(s"Completed job ${job.name} in ${duration.toSeconds}s")
+            logger.info(s"Completed job ${job.name} with runID $runId in ${duration.toSeconds}s")
           case Failure(throwable) =>
-            logger.error(s"Exception running job ${job.name} after ${duration.toSeconds}s", throwable)
+            logger.error(s"Exception running job ${job.name} with runID $runId after ${duration.toSeconds}s", throwable)
         }
       }
     }
