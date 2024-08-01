@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.config
 
-import com.codahale.metrics.Timer
+import com.codahale.metrics.{Counter, Timer}
 import org.apache.pekko.actor.ActorSystem
 import play.api.Logging
 import play.api.inject.ApplicationLifecycle
@@ -49,14 +49,20 @@ class JobScheduler @Inject() (
     job -> metrics.defaultRegistry.timer(s"${job.name}.timer")
   }.toMap
 
+  private val counters: Map[ScheduledJob, Counter] = scheduledJobs.map { job =>
+    job -> metrics.defaultRegistry.counter(s"${job.name}.gauge")
+  }.toMap
+
   private val cancellables = scheduledJobs.map { job =>
     logger.info(s"Scheduling $job")
     actorSystem.scheduler.scheduleWithFixedDelay(job.initialDelay, job.interval) { () =>
       val startTime = clock.instant()
       val runId     = UUID.randomUUID()
       logger.info(s"Executing job ${job.name} with runID $runId")
+      counters(job).inc()
       job.execute.onComplete { result =>
         val duration = Duration.between(startTime, clock.instant())
+        counters(job).dec()
         timers(job).update(duration)
         result match {
           case Success(_)         =>
