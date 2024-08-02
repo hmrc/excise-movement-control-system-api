@@ -75,7 +75,7 @@ class InjectControllerSpec extends PlaySpec with GuiceOneAppPerSuite with Before
 
   private val expectedPredicate = Predicate.Permission(
     Resource(ResourceType("excise-movement-control-system-api"), ResourceLocation("/inject/submit")),
-    IAAction("WRITE")
+    IAAction("ADMIN")
   )
 
   "submit" must {
