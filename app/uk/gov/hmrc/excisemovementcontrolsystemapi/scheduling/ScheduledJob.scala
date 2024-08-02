@@ -16,15 +16,13 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
-import org.apache.pekko.Done
-
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
 trait ScheduledJob {
   def name: String
 
-  def execute(implicit ec: ExecutionContext): Future[Done]
+  def execute(implicit ec: ExecutionContext): Future[ScheduledJob.Result]
 
   val enabled: Boolean
 
@@ -33,4 +31,14 @@ trait ScheduledJob {
   def interval: FiniteDuration
 
   override def toString = s"$name after $initialDelay every $interval"
+}
+
+object ScheduledJob {
+
+  sealed trait Result
+
+  object Result {
+    case object Completed extends Result
+    case object Cancelled extends Result
+  }
 }
