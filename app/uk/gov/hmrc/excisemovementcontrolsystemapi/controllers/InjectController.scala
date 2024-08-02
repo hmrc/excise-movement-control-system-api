@@ -17,12 +17,14 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import com.google.inject.Inject
-import play.api.libs.json.{Json, Reads}
-import play.api.mvc.{Action, ControllerComponents}
+import play.api.libs.json.{JsError, JsValue, Json, Reads}
+import play.api.mvc.Results.EmptyContent
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.InjectController.CsvRow
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnSubmissionRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
+import uk.gov.hmrc.internalauth.client.{AuthenticatedRequest, BackendAuthComponents, IAAction, Predicate, Resource, ResourceLocation, ResourceType, Retrieval}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
@@ -31,19 +33,35 @@ import scala.concurrent.{ExecutionContext, Future}
 class InjectController @Inject() (
   cc: ControllerComponents,
   movementService: MovementService,
-  ernSubmissionRepository: ErnSubmissionRepository
+  ernSubmissionRepository: ErnSubmissionRepository,
+  auth: BackendAuthComponents
 )(implicit ec: ExecutionContext)
     extends BackendController(cc) {
 
-  def submit(): Action[CsvRow] = Action.async(parse.json[CsvRow]) { request =>
-    movementService.saveNewMovement(request.body.toMovement).flatMap {
-      case Left(error)     => Future.successful(error)
-      case Right(movement) =>
-        movement.consigneeId.fold(Future.successful(Accepted))(consignee =>
-          ernSubmissionRepository.save(consignee).map(_ => Accepted)
-        )
+  private val permission = Predicate.Permission(
+    Resource(ResourceType("excise-movement-control-system-api"), ResourceLocation("/inject/submit")),
+    IAAction("WRITE")
+  )
+
+  Predicate.Permission(
+    Resource(ResourceType("excise-movement-control-system-api"), ResourceLocation("/inject/submit")),
+    IAAction("WRITE")
+  )
+
+  def submit(): Action[JsValue] =
+    auth.authorizedAction(permission).async(parse.json[JsValue]) { implicit request: AuthenticatedRequest[JsValue, _] =>
+      withJsonBody[CsvRow] { csvRow =>
+        movementService.saveNewMovement(csvRow.toMovement).flatMap {
+          case Left(error)     => Future.successful(error)
+          case Right(movement) =>
+            movement.consigneeId
+              .fold(Future.successful(Accepted))(consignee =>
+                ernSubmissionRepository.save(consignee).map(_ => Accepted)
+              )
+        }
+      }
     }
-  }
+
 }
 
 object InjectController {
