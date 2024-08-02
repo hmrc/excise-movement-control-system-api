@@ -38,7 +38,7 @@ class InjectController @Inject() (
     extends BackendController(cc) {
 
   private val permission        = Predicate.Permission(
-    Resource(ResourceType("excise-movement-control-system-api"), ResourceLocation("/inject/submit")),
+    Resource(ResourceType("excise-movement-control-system-api"), ResourceLocation("inject/submit")),
     IAAction("ADMIN")
   )
   def submit(): Action[JsValue] =
