@@ -42,12 +42,6 @@ class InjectController @Inject() (
     Resource(ResourceType("excise-movement-control-system-api"), ResourceLocation("/inject/submit")),
     IAAction("WRITE")
   )
-
-  Predicate.Permission(
-    Resource(ResourceType("excise-movement-control-system-api"), ResourceLocation("/inject/submit")),
-    IAAction("WRITE")
-  )
-
   def submit(): Action[JsValue] =
     auth.authorizedAction(permission).async(parse.json[JsValue]) { implicit request: AuthenticatedRequest[JsValue, _] =>
       withJsonBody[CsvRow] { csvRow =>
