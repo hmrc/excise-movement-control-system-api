@@ -65,9 +65,11 @@ class JobScheduler @Inject() (
         counters(job).dec()
         timers(job).update(duration)
         result match {
-          case Success(_)         =>
+          case Success(ScheduledJob.Result.Completed) =>
             logger.info(s"Completed job ${job.name} with runID $runId in ${duration.toSeconds}s")
-          case Failure(throwable) =>
+          case Success(ScheduledJob.Result.Cancelled) =>
+            logger.warn(s"Cancelled job ${job.name} with runID $runId after ${duration.toSeconds}")
+          case Failure(throwable)                     =>
             logger.error(s"Exception running job ${job.name} with runID $runId after ${duration.toSeconds}s", throwable)
         }
       }

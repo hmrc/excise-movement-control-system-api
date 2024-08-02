@@ -17,7 +17,6 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
 import cats.syntax.all._
-import org.apache.pekko.Done
 import play.api.Configuration
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnSubmissionRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService
@@ -25,6 +24,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.concurrent.{ExecutionContext, Future}
@@ -40,22 +40,34 @@ class PollingNewMessagesJob @Inject() (
 
   override def name: String = "polling-new-messages-job"
 
-  override def execute(implicit ec: ExecutionContext): Future[Done] = {
-    val now              = dateTimeService.timestamp()
-    val fastIntervalTime = timestampBeforeNow(now, fastPollingInterval)
-    val fastCutoffTime   = timestampBeforeNow(now, fastPollingCutoff)
-    val slowIntervalTime = timestampBeforeNow(now, slowPollingInterval)
+  override def execute(implicit ec: ExecutionContext): Future[ScheduledJob.Result] = {
+    val deadline = dateTimeService.timestamp().plus(interval.toMillis, ChronoUnit.MILLIS)
     getLastActivity
       .flatMap { lastActivityMap =>
         lastActivityMap.toSeq.traverse { case (ern, lastActivity) =>
-          if (shouldUpdateMessages(lastActivity, fastIntervalTime, fastCutoffTime, slowIntervalTime)) {
-            messageService.updateMessages(ern)
+          val now              = dateTimeService.timestamp()
+          val fastIntervalTime = timestampBeforeNow(now, fastPollingInterval)
+          val fastCutoffTime   = timestampBeforeNow(now, fastPollingCutoff)
+          val slowIntervalTime = timestampBeforeNow(now, slowPollingInterval)
+
+          if (now.isBefore(deadline)) {
+            if (shouldUpdateMessages(lastActivity, fastIntervalTime, fastCutoffTime, slowIntervalTime)) {
+              messageService.updateMessages(ern).as(ScheduledJob.Result.Completed)
+            } else {
+              Future.successful(ScheduledJob.Result.Completed)
+            }
           } else {
-            Future.successful(Done)
+            Future.successful(ScheduledJob.Result.Cancelled)
           }
         }
       }
-      .as(Done)
+      .map { results =>
+        if (results.contains(ScheduledJob.Result.Cancelled)) {
+          ScheduledJob.Result.Cancelled
+        } else {
+          ScheduledJob.Result.Completed
+        }
+      }
   }
 
   private def shouldUpdateMessages(

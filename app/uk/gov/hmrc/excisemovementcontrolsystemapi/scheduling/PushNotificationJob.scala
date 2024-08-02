@@ -39,7 +39,7 @@ class PushNotificationJob @Inject() (
 
   override def name: String = "push-notification-job"
 
-  override def execute(implicit ec: ExecutionContext): Future[Done] =
+  override def execute(implicit ec: ExecutionContext): Future[ScheduledJob.Result] =
     movementRepository.getPendingMessageNotifications
       .flatMap { notifications =>
         notifications.traverse { notification =>
@@ -51,7 +51,7 @@ class PushNotificationJob @Inject() (
           }
         }
       }
-      .as(Done)
+      .as(ScheduledJob.Result.Completed)
 
   private def processNotification(notification: MessageNotification)(implicit ec: ExecutionContext): Future[Done] =
     for {

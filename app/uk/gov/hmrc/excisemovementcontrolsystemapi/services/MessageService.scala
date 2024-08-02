@@ -26,12 +26,11 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Mov
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.TimestampSupport
-import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository, ScheduledLockService}
+import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
 
 import java.time.Instant
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
@@ -47,7 +46,7 @@ class MessageService @Inject() (
   correlationIdService: CorrelationIdService,
   emcsUtils: EmcsUtils,
   auditService: AuditService,
-  mongoLockRepository: MongoLockRepository,
+  mongoLockRepository: MongoLockRepository
 )(implicit executionContext: ExecutionContext)
     extends Logging {
 
@@ -66,20 +65,22 @@ class MessageService @Inject() (
 
   def updateMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] = {
     val lockService = LockService(mongoLockRepository, ern, throttleCutoff)
-    lockService.withLock {
-      val now = dateTimeService.timestamp()
-      ernRetrievalRepository.getLastRetrieved(ern).flatMap { maybeLastRetrieved =>
-        if (shouldProcessNewMessages(maybeLastRetrieved)) {
-          for {
-            boxIds <- getBoxIds(ern)
-            _      <- processNewMessages(ern, boxIds)
-            _      <- ernRetrievalRepository.setLastRetrieved(ern, now)
-          } yield Done
-        } else {
-          Future.successful(Done)
+    lockService
+      .withLock {
+        val now = dateTimeService.timestamp()
+        ernRetrievalRepository.getLastRetrieved(ern).flatMap { maybeLastRetrieved =>
+          if (shouldProcessNewMessages(maybeLastRetrieved)) {
+            for {
+              boxIds <- getBoxIds(ern)
+              _      <- processNewMessages(ern, boxIds)
+              _      <- ernRetrievalRepository.setLastRetrieved(ern, now)
+            } yield Done
+          } else {
+            Future.successful(Done)
+          }
         }
       }
-    }.as(Done)
+      .as(Done)
   }
 
   // TODO, temporarily exposed as a public method to call in Movements Controller and see what we get back from EMCS in QA
