@@ -44,6 +44,13 @@ class ErnRetrievalRepository @Inject() (mongo: MongoComponent, appConfig: AppCon
     )
     with Logging {
 
+  def getLastRetrieved(ern: String): Future[Option[Instant]] = Mdc.preservingMdc {
+    collection
+      .find(Filters.eq("ern", ern))
+      .headOption()
+      .map(_.map(_.lastRetrieved))
+  }
+
   def setLastRetrieved(ern: String, instant: Instant = timeService.timestamp()): Future[Option[Instant]] =
     Mdc.preservingMdc {
       collection
