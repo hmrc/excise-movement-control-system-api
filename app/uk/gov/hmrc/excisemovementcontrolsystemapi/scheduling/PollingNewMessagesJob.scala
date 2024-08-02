@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 import cats.syntax.all._
 import com.codahale.metrics.SettableGauge
 import play.api.Configuration
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnSubmissionRepository, MovementRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, ErnSubmissionRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
@@ -36,6 +36,7 @@ class PollingNewMessagesJob @Inject() (
   configuration: Configuration,
   movementRepository: MovementRepository,
   ernSubmissionRepository: ErnSubmissionRepository,
+  ernRetrievalRepository: ErnRetrievalRepository,
   messageService: MessageService,
   dateTimeService: DateTimeService,
   metrics: Metrics
@@ -43,24 +44,28 @@ class PollingNewMessagesJob @Inject() (
 
   override def name: String = "polling-new-messages-job"
 
-  private val backlogCount   = metrics.defaultRegistry.gauge[SettableGauge[Int]]("polling-new-messages-job.backlog")
-  private val processedCount = metrics.defaultRegistry.gauge[SettableGauge[Int]]("polling-new-messages-job.processed")
+  private val backlogCount                   = metrics.defaultRegistry.gauge[SettableGauge[Int]]("polling-new-messages-job.backlog")
+  private val processedCount                 = metrics.defaultRegistry.gauge[SettableGauge[Int]]("polling-new-messages-job.processed")
+  private val beforeFastPollingMeter         =
+    metrics.defaultRegistry.meter("polling-new-messages-job.before-fast-polling-meter")
+  private val fastPollingMeter               = metrics.defaultRegistry.meter("polling-new-messages-job.fast-polling-meter")
+  private val betweenFastAndSlowPollingMeter =
+    metrics.defaultRegistry.meter("polling-new-messages-job.no-polling-meter")
+  private val slowPollingMeter               = metrics.defaultRegistry.meter("polling-new-messages-job.slow-polling-meter")
 
   override def execute(implicit ec: ExecutionContext): Future[ScheduledJob.Result] = {
     val deadline = dateTimeService.timestamp().plus(interval.toMillis, ChronoUnit.MILLIS)
     getLastActivity
       .flatMap { lastActivityMap =>
         lastActivityMap.toSeq.traverse { case (ern, lastActivity) =>
-          val now              = dateTimeService.timestamp()
-          val fastIntervalTime = timestampBeforeNow(now, fastPollingInterval)
-          val fastCutoffTime   = timestampBeforeNow(now, fastPollingCutoff)
-          val slowIntervalTime = timestampBeforeNow(now, slowPollingInterval)
-
+          val now = dateTimeService.timestamp()
           if (now.isBefore(deadline)) {
-            if (shouldUpdateMessages(lastActivity, fastIntervalTime, fastCutoffTime, slowIntervalTime)) {
-              messageService.updateMessages(ern).as(ScheduledJob.Result.Completed)
-            } else {
-              Future.successful(ScheduledJob.Result.Completed)
+            ernRetrievalRepository.getLastRetrieved(ern).flatMap { lastRetrieved =>
+              if (shouldUpdateMessages(now, lastActivity, lastRetrieved)) {
+                messageService.updateMessages(ern).as(ScheduledJob.Result.Completed)
+              } else {
+                Future.successful(ScheduledJob.Result.Completed)
+              }
             }
           } else {
             Future.successful(ScheduledJob.Result.Cancelled)
@@ -81,13 +86,27 @@ class PollingNewMessagesJob @Inject() (
   }
 
   private def shouldUpdateMessages(
+    now: Instant,
     lastActivity: Instant,
-    fastIntervalTime: Instant,
-    fastCutoffTime: Instant,
-    slowIntervalTime: Instant
+    lastRetrieved: Option[Instant]
   ): Boolean =
-    (lastActivity.isBefore(fastIntervalTime) && lastActivity.isAfter(fastCutoffTime)) ||
-      lastActivity.isBefore(slowIntervalTime)
+    if (lastActivity.isBefore(timestampBeforeNow(now, fastPollingCutoff))) {
+      if (lastRetrieved.forall(_.isBefore(timestampBeforeNow(now, slowPollingInterval)))) {
+        fastPollingMeter.mark()
+        true
+      } else {
+        beforeFastPollingMeter.mark()
+        false
+      }
+    } else {
+      if (lastRetrieved.forall(_.isBefore(timestampBeforeNow(now, fastPollingInterval)))) {
+        slowPollingMeter.mark()
+        true
+      } else {
+        betweenFastAndSlowPollingMeter.mark()
+        false
+      }
+    }
 
   private def timestampBeforeNow(now: Instant, duration: Duration): Instant =
     now.minus(duration.length, duration.unit.toChronoUnit)
