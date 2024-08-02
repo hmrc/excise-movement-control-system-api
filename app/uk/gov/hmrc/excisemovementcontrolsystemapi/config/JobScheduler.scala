@@ -50,7 +50,7 @@ class JobScheduler @Inject() (
   }.toMap
 
   private val counters: Map[ScheduledJob, Counter] = scheduledJobs.map { job =>
-    job -> metrics.defaultRegistry.counter(s"${job.name}.gauge")
+    job -> metrics.defaultRegistry.counter(s"${job.name}.number-running")
   }.toMap
 
   private val cancellables = scheduledJobs.map { job =>

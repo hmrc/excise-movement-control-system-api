@@ -17,11 +17,13 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
 import cats.syntax.all._
+import com.codahale.metrics.SettableGauge
 import play.api.Configuration
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnSubmissionRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -35,10 +37,13 @@ class PollingNewMessagesJob @Inject() (
   movementRepository: MovementRepository,
   ernSubmissionRepository: ErnSubmissionRepository,
   messageService: MessageService,
-  dateTimeService: DateTimeService
+  dateTimeService: DateTimeService,
+  metrics: Metrics
 ) extends ScheduledJob {
 
   override def name: String = "polling-new-messages-job"
+
+  private val backlogCount = metrics.defaultRegistry.gauge[SettableGauge[Int]]("polling-new-messages-job.backlog")
 
   override def execute(implicit ec: ExecutionContext): Future[ScheduledJob.Result] = {
     val deadline = dateTimeService.timestamp().plus(interval.toMillis, ChronoUnit.MILLIS)
@@ -62,7 +67,9 @@ class PollingNewMessagesJob @Inject() (
         }
       }
       .map { results =>
-        if (results.contains(ScheduledJob.Result.Cancelled)) {
+        val numberOfUnprocessedJobs = results.count(_ == ScheduledJob.Result.Cancelled)
+        backlogCount.setValue(numberOfUnprocessedJobs)
+        if (numberOfUnprocessedJobs > 0) {
           ScheduledJob.Result.Cancelled
         } else {
           ScheduledJob.Result.Completed
