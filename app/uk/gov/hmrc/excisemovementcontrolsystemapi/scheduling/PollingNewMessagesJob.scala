@@ -43,7 +43,8 @@ class PollingNewMessagesJob @Inject() (
 
   override def name: String = "polling-new-messages-job"
 
-  private val backlogCount = metrics.defaultRegistry.gauge[SettableGauge[Int]]("polling-new-messages-job.backlog")
+  private val backlogCount   = metrics.defaultRegistry.gauge[SettableGauge[Int]]("polling-new-messages-job.backlog")
+  private val processedCount = metrics.defaultRegistry.gauge[SettableGauge[Int]]("polling-new-messages-job.processed")
 
   override def execute(implicit ec: ExecutionContext): Future[ScheduledJob.Result] = {
     val deadline = dateTimeService.timestamp().plus(interval.toMillis, ChronoUnit.MILLIS)
@@ -68,7 +69,9 @@ class PollingNewMessagesJob @Inject() (
       }
       .map { results =>
         val numberOfUnprocessedJobs = results.count(_ == ScheduledJob.Result.Cancelled)
+        val numberOfProcessedJobs   = results.size - numberOfUnprocessedJobs
         backlogCount.setValue(numberOfUnprocessedJobs)
+        processedCount.setValue(numberOfProcessedJobs)
         if (numberOfUnprocessedJobs > 0) {
           ScheduledJob.Result.Cancelled
         } else {
