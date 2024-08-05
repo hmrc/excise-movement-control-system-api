@@ -110,7 +110,8 @@ class PollingNewMessagesJobSpec
         )
         when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
         when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
-        when(messageService.updateMessages(any)(any)).thenReturn(Future.successful(Done))
+        when(messageService.updateMessages(any)(any))
+          .thenReturn(Future.successful(MessageService.UpdateOutcome.Updated))
 
         val result = pollingNewMessagesJob.execute.futureValue
 
@@ -127,7 +128,8 @@ class PollingNewMessagesJobSpec
         when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
         when(ernRetrievalRepository.getLastRetrieved(any))
           .thenReturn(Future.successful(Some(now.minus(2, ChronoUnit.MINUTES))))
-        when(messageService.updateMessages(any)(any)).thenReturn(Future.successful(Done))
+        when(messageService.updateMessages(any)(any))
+          .thenReturn(Future.successful(MessageService.UpdateOutcome.Updated))
 
         val result = pollingNewMessagesJob.execute.futureValue
 
@@ -144,7 +146,8 @@ class PollingNewMessagesJobSpec
         when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
         when(ernRetrievalRepository.getLastRetrieved(any))
           .thenReturn(Future.successful(Some(now.minus(6, ChronoUnit.MINUTES))))
-        when(messageService.updateMessages(any)(any)).thenReturn(Future.successful(Done))
+        when(messageService.updateMessages(any)(any))
+          .thenReturn(Future.successful(MessageService.UpdateOutcome.Updated))
 
         val result = pollingNewMessagesJob.execute.futureValue
 
@@ -161,7 +164,8 @@ class PollingNewMessagesJobSpec
         when(timeService.timestamp()).thenReturn(now)
         when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
         when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
-        when(messageService.updateMessages(any)(any)).thenReturn(Future.successful(Done))
+        when(messageService.updateMessages(any)(any))
+          .thenReturn(Future.successful(MessageService.UpdateOutcome.Updated))
 
         val result = pollingNewMessagesJob.execute.futureValue
 
@@ -178,7 +182,8 @@ class PollingNewMessagesJobSpec
         when(timeService.timestamp()).thenReturn(now)
         when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
         when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
-        when(messageService.updateMessages(any)(any)).thenReturn(Future.successful(Done))
+        when(messageService.updateMessages(any)(any))
+          .thenReturn(Future.successful(MessageService.UpdateOutcome.Updated))
 
         val result = pollingNewMessagesJob.execute.futureValue
 
@@ -195,7 +200,8 @@ class PollingNewMessagesJobSpec
         when(timeService.timestamp()).thenReturn(now)
         when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
         when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
-        when(messageService.updateMessages(any)(any)).thenReturn(Future.successful(Done))
+        when(messageService.updateMessages(any)(any))
+          .thenReturn(Future.successful(MessageService.UpdateOutcome.Updated))
 
         val result = pollingNewMessagesJob.execute.futureValue
 
@@ -212,7 +218,8 @@ class PollingNewMessagesJobSpec
         when(timeService.timestamp()).thenReturn(now)
         when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
         when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
-        when(messageService.updateMessages(any)(any)).thenReturn(Future.successful(Done))
+        when(messageService.updateMessages(any)(any))
+          .thenReturn(Future.successful(MessageService.UpdateOutcome.Updated))
 
         val result = pollingNewMessagesJob.execute.futureValue
 
@@ -229,7 +236,8 @@ class PollingNewMessagesJobSpec
         when(timeService.timestamp()).thenReturn(now)
         when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
         when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
-        when(messageService.updateMessages(any)(any)).thenReturn(Future.successful(Done))
+        when(messageService.updateMessages(any)(any))
+          .thenReturn(Future.successful(MessageService.UpdateOutcome.Updated))
 
         val result = pollingNewMessagesJob.execute.futureValue
 
@@ -245,7 +253,8 @@ class PollingNewMessagesJobSpec
         when(timeService.timestamp()).thenReturn(now)
         when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(Map.empty))
         when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
-        when(messageService.updateMessages(any)(any)).thenReturn(Future.successful(Done))
+        when(messageService.updateMessages(any)(any))
+          .thenReturn(Future.successful(MessageService.UpdateOutcome.Updated))
 
         val result = pollingNewMessagesJob.execute.futureValue
 
@@ -260,7 +269,8 @@ class PollingNewMessagesJobSpec
         when(timeService.timestamp()).thenReturn(now)
         when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
         when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(Map.empty))
-        when(messageService.updateMessages(any)(any)).thenReturn(Future.successful(Done))
+        when(messageService.updateMessages(any)(any))
+          .thenReturn(Future.successful(MessageService.UpdateOutcome.Updated))
 
         val result = pollingNewMessagesJob.execute.futureValue
 
