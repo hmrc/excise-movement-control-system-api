@@ -23,6 +23,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, 
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnRetrievalRepository, MovementRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService.UpdateOutcome
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
@@ -62,7 +63,7 @@ class MessageService @Inject() (
       }
       .as(Done)
 
-  def updateMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] = {
+  def updateMessages(ern: String)(implicit hc: HeaderCarrier): Future[UpdateOutcome] = {
     val lockService = LockService(mongoLockRepository, ern, throttleCutoff)
     lockService
       .withLock {
@@ -73,13 +74,13 @@ class MessageService @Inject() (
               boxIds <- getBoxIds(ern)
               _      <- processNewMessages(ern, boxIds)
               _      <- ernRetrievalRepository.setLastRetrieved(ern, now)
-            } yield Done
+            } yield UpdateOutcome.Updated
           } else {
-            Future.successful(Done)
+            Future.successful(UpdateOutcome.NotUpdatedThrottled)
           }
         }
       }
-      .as(Done)
+      .map(_.getOrElse(UpdateOutcome.Locked))
   }
 
   // TODO, temporarily exposed as a public method to call in Movements Controller and see what we get back from EMCS in QA
@@ -326,4 +327,14 @@ class MessageService @Inject() (
       boxesToNotify = boxIds,
       createdOn = dateTimeService.timestamp()
     )
+}
+
+object MessageService {
+  sealed trait UpdateOutcome
+
+  object UpdateOutcome {
+    case object Updated extends UpdateOutcome
+    case object Locked extends UpdateOutcome
+    case object NotUpdatedThrottled extends UpdateOutcome
+  }
 }
