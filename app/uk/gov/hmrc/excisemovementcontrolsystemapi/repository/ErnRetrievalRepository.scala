@@ -44,6 +44,10 @@ class ErnRetrievalRepository @Inject() (mongo: MongoComponent, appConfig: AppCon
     )
     with Logging {
 
+  def getErnsAndLastRetrieved: Future[Map[String, Instant]] = Mdc.preservingMdc {
+    collection.find().toFuture().map(_.map(ernSubmission => ernSubmission.ern -> ernSubmission.lastRetrieved).toMap)
+  }
+
   def getLastRetrieved(ern: String): Future[Option[Instant]] = Mdc.preservingMdc {
     collection
       .find(Filters.eq("ern", ern))
