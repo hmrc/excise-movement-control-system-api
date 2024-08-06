@@ -30,6 +30,8 @@ trait ScheduledJob {
 
   def interval: FiniteDuration
 
+  def numberOfInstances: Int = 1
+
   override def toString = s"$name after $initialDelay every $interval"
 }
 

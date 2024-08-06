@@ -55,24 +55,30 @@ class JobScheduler @Inject() (
     job -> metrics.defaultRegistry.counter(s"${job.name}.number-running")
   }.toMap
 
-  private val cancellables = scheduledJobs.map { job =>
+  private val cancellables = scheduledJobs.flatMap { job =>
     logger.info(s"Scheduling $job")
-    actorSystem.scheduler.scheduleWithFixedDelay(job.initialDelay, job.interval) { () =>
-      val startTime = clock.instant()
-      val runId     = UUID.randomUUID()
-      logger.info(s"Executing job ${job.name} with runID $runId")
-      counters(job).inc()
-      job.execute.onComplete { result =>
-        val duration = Duration.between(startTime, clock.instant())
-        counters(job).dec()
-        timers(job).update(duration)
-        result match {
-          case Success(ScheduledJob.Result.Completed) =>
-            logger.info(s"Completed job ${job.name} with runID $runId in ${duration.toSeconds}s")
-          case Success(ScheduledJob.Result.Cancelled) =>
-            logger.warn(s"Cancelled job ${job.name} with runID $runId after ${duration.toSeconds}")
-          case Failure(throwable)                     =>
-            logger.error(s"Exception running job ${job.name} with runID $runId after ${duration.toSeconds}s", throwable)
+
+    (0 until job.numberOfInstances).map { _ =>
+      actorSystem.scheduler.scheduleWithFixedDelay(job.initialDelay, job.interval) { () =>
+        val startTime = clock.instant()
+        val runId     = UUID.randomUUID()
+        logger.info(s"Executing job ${job.name} with runID $runId")
+        counters(job).inc()
+        job.execute.onComplete { result =>
+          val duration = Duration.between(startTime, clock.instant())
+          counters(job).dec()
+          timers(job).update(duration)
+          result match {
+            case Success(ScheduledJob.Result.Completed) =>
+              logger.info(s"Completed job ${job.name} with runID $runId in ${duration.toSeconds}s")
+            case Success(ScheduledJob.Result.Cancelled) =>
+              logger.warn(s"Cancelled job ${job.name} with runID $runId after ${duration.toSeconds}")
+            case Failure(throwable)                     =>
+              logger.error(
+                s"Exception running job ${job.name} with runID $runId after ${duration.toSeconds}s",
+                throwable
+              )
+          }
         }
       }
     }
