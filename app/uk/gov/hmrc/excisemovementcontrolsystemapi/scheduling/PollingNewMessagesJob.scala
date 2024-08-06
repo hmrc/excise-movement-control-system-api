@@ -83,6 +83,16 @@ class PollingNewMessagesJob @Inject() (
       }
   }
 
+  def getBacklog()(implicit ec: ExecutionContext): Future[Int] = {
+    val now = dateTimeService.timestamp()
+    for {
+      lastActivityMap      <- getLastActivity
+      ernsAndLastRetrieved <- ernRetrievalRepository.getErnsAndLastRetrieved
+    } yield lastActivityMap.count { case (ern, lastActivity) =>
+      shouldUpdateMessages(now, lastActivity, ernsAndLastRetrieved.get(ern))
+    }
+  }
+
   private def shouldUpdateMessages(
     now: Instant,
     lastActivity: Instant,
