@@ -24,7 +24,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresent
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISErrorMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderEISResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
-import uk.gov.hmrc.http.HttpReads.is2xx
+import uk.gov.hmrc.http.HttpErrorFunctions.is2xx
 import uk.gov.hmrc.http.{HttpReads, HttpResponse}
 
 class PreValidateTraderHttpReader(
