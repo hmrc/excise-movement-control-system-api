@@ -160,6 +160,14 @@ class MovementRepository @Inject() (
     getMovementByERN(Seq(ern), MovementFilter.emptyFilter)
   }
 
+  def getByArc(arc: String): Future[Option[Movement]] = Mdc.preservingMdc {
+    collection
+      .find(
+        filter = Filters.equal("administrativeReferenceCode", arc)
+      )
+      .headOption()
+  }
+
   def getErnsAndLastReceived: Future[Map[String, Instant]] = Mdc.preservingMdc {
     collection
       .aggregate[ErnAndLastReceived](

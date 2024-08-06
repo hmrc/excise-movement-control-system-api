@@ -299,6 +299,28 @@ class MovementRepositoryItSpec
     mustPreserveMdc(repository.findDraftMovement(movement))
   }
 
+
+  "getByArc" should {
+    val lrn                   = "123"
+    val consignorId           = "Abc"
+    val consigneeId           = "def"
+    val arc                   = "arc1"
+    val movement              = Movement(Some("boxId"), lrn, consignorId, Some(consigneeId), Some(arc), lastUpdated = timestamp)
+    "return None if no matching movement" in {
+      val result = repository.getByArc(arc).futureValue
+
+      result mustBe None
+    }
+    "return the existing movement matching the ARC" in {
+      insertMovement(movement)
+
+      val result = repository.getByArc(arc).futureValue
+
+      result mustBe Some(movement)
+    }
+    mustPreserveMdc(repository.getByArc(arc))
+  }
+
   "getMovementByErn" should {
     "return a list of movement" when {
       "ern match the consignorId " in {
