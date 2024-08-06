@@ -65,7 +65,7 @@ class GetMovementsControllerItSpec
     reset(dateTimeService)
 
     when(dateTimeService.timestamp()).thenReturn(Instant.now)
-    when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
+    when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
   }
 
   "Get Movements" should {

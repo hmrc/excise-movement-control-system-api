@@ -29,6 +29,7 @@ import java.time.temporal.ChronoUnit
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Random
 
 @Singleton
 class PollingNewMessagesJob @Inject() (
@@ -51,12 +52,12 @@ class PollingNewMessagesJob @Inject() (
     val deadline = dateTimeService.timestamp().plus(interval.toMillis, ChronoUnit.MILLIS)
     getLastActivity
       .flatMap { lastActivityMap =>
-        lastActivityMap.toSeq.traverse { case (ern, lastActivity) =>
+        Random.shuffle(lastActivityMap.toSeq).traverse { case (ern, lastActivity) =>
           val now = dateTimeService.timestamp()
           if (now.isBefore(deadline)) {
             ernRetrievalRepository.getLastRetrieved(ern).flatMap { lastRetrieved =>
               if (shouldUpdateMessages(now, lastActivity, lastRetrieved)) {
-                messageService.updateMessages(ern).map { r =>
+                messageService.updateMessages(ern, lastRetrieved).map { r =>
                   r match {
                     case MessageService.UpdateOutcome.Updated             => updatedMeter.mark()
                     case MessageService.UpdateOutcome.NotUpdatedThrottled => throttledMeter.mark()

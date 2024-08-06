@@ -57,28 +57,28 @@ class MessageService @Inject() (
   def updateAllMessages(erns: Set[String])(implicit hc: HeaderCarrier): Future[Done] =
     erns.toSeq
       .traverse { ern =>
-        updateMessages(ern).recover { case NonFatal(error) =>
-          logger.warn(s"[MessageService]: Failed to update messages for ERN: $ern", error)
-          Done
+        ernRetrievalRepository.getLastRetrieved(ern).flatMap { lastRetrieved =>
+          updateMessages(ern, lastRetrieved).recover { case NonFatal(error) =>
+            logger.warn(s"[MessageService]: Failed to update messages for ERN: $ern", error)
+            Done
+          }
         }
       }
       .as(Done)
 
-  def updateMessages(ern: String)(implicit hc: HeaderCarrier): Future[UpdateOutcome] = {
+  def updateMessages(ern: String, lastRetrieved: Option[Instant])(implicit hc: HeaderCarrier): Future[UpdateOutcome] = {
     val lockService = LockService(mongoLockRepository, ern, throttleCutoff)
     lockService
       .withLock {
         val now = dateTimeService.timestamp()
-        ernRetrievalRepository.getLastRetrieved(ern).flatMap { maybeLastRetrieved =>
-          if (shouldProcessNewMessages(maybeLastRetrieved)) {
-            for {
-              boxIds <- getBoxIds(ern)
-              _      <- processNewMessages(ern, boxIds)
-              _      <- ernRetrievalRepository.setLastRetrieved(ern, now)
-            } yield UpdateOutcome.Updated
-          } else {
-            Future.successful(UpdateOutcome.NotUpdatedThrottled)
-          }
+        if (shouldProcessNewMessages(lastRetrieved)) {
+          for {
+            boxIds <- getBoxIds(ern)
+            _      <- processNewMessages(ern, boxIds)
+            _      <- ernRetrievalRepository.setLastRetrieved(ern, now)
+          } yield UpdateOutcome.Updated
+        } else {
+          Future.successful(UpdateOutcome.NotUpdatedThrottled)
         }
       }
       .map(_.getOrElse(UpdateOutcome.Locked))
