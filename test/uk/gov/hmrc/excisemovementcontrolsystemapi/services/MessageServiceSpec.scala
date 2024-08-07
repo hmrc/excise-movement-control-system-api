@@ -1128,7 +1128,6 @@ class MessageServiceSpec
         }
       }
     }
-    // TODO what about 829 where one movement is found and another isn't?
   }
   "update all messages" when {
     "all erns are successful" should {

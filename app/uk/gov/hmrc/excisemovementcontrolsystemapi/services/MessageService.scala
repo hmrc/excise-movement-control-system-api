@@ -54,7 +54,7 @@ class MessageService @Inject() (
     erns.toSeq
       .traverse { ern =>
         updateMessages(ern).recover { case NonFatal(error) =>
-          logger.warn(s"[MessageService]: Failed to update messages for ERN: $ern", error)
+          logger.warn(s"[MessageService]: Failed to update messages", error)
           Done
         }
       }
@@ -75,12 +75,11 @@ class MessageService @Inject() (
       }
     }
 
-  // TODO, temporarily exposed as a public method to call in Movements Controller and see what we get back from EMCS in QA
   def getTraderMovementMessages(ern: String, arc: String)(implicit
     hc: HeaderCarrier
   ): Future[Seq[IEMessage]] =
     traderMovementConnector.getMovementMessages(ern, arc).recover { case NonFatal(error) =>
-      logger.warn(s"[MessageService]: Failed to call trader-movement for: $ern, $arc", error)
+      logger.warn(s"[MessageService]: Failed to call trader-movement", error)
       Seq.empty
     }
 
@@ -94,7 +93,7 @@ class MessageService @Inject() (
     boxIdRepository.getBoxIds(ern)
 
   private def processNewMessages(ern: String, boxIds: Set[String])(implicit hc: HeaderCarrier): Future[Done] = {
-    logger.info(s"[MessageService]: Processing new messages for ern: $ern")
+    logger.info(s"[MessageService]: Processing new messages")
     for {
       response <- messageConnector.getNewMessages(ern)
       _        <- updateMovements(ern, response.messages, boxIds)
@@ -120,7 +119,7 @@ class MessageService @Inject() (
   private def updateMovements(ern: String, messages: Seq[IEMessage], boxIds: Set[String])(implicit
     hc: HeaderCarrier
   ): Future[Done] = {
-    logger.info(s"[MessageService]: Updating movements for ern: $ern")
+    logger.info(s"[MessageService]: Updating movements")
     if (messages.nonEmpty) {
       movementRepository
         .getAllBy(ern)
@@ -227,7 +226,6 @@ class MessageService @Inject() (
   private def createMovementFromTraderMovement(ern: String, message: IEMessage, boxIds: Set[String])(implicit
     hc: HeaderCarrier
   ): Future[Option[Movement]] =
-    // TODO, we might have to loop over ARCs here for 829
     message.administrativeReferenceCode.flatten.headOption
       .map { arc =>
         val traderMovementMessages = traderMovementConnector.getMovementMessages(ern, arc)

@@ -51,7 +51,7 @@ class TraderMovementConnector @Inject() (
   private val bearerToken: String = configuration.get[String]("microservice.services.eis.movement-bearer-token")
 
   def getMovementMessages(ern: String, arc: String)(implicit hc: HeaderCarrier): Future[Seq[IEMessage]] = {
-    logger.info(s"[TraderMovementConnector]: Getting movement messages for ern: $ern and arc: $arc")
+    logger.info(s"[TraderMovementConnector]: Getting movement messages")
     val correlationId = correlationIdService.generateCorrelationId()
     val timestamp     = dateTimeService.timestamp().asStringInMilliseconds
 

@@ -17,10 +17,10 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import org.apache.pekko.Done
-import org.mongodb.scala.model.{Filters, IndexModel, IndexOptions, Indexes, ReplaceOptions}
-import play.api.{Configuration, Logging}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.BoxIdRecord
+import org.mongodb.scala.model._
+import play.api.Configuration
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.BoxIdRepository.mongoIndexes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.BoxIdRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
@@ -40,8 +40,7 @@ class BoxIdRepository @Inject() (mongo: MongoComponent, configuration: Configura
       domainFormat = BoxIdRecord.format,
       indexes = mongoIndexes(configuration.get[Duration]("mongodb.boxId.TTL")),
       replaceIndexes = false
-    )
-    with Logging {
+    ) {
 
   def getBoxIds(ern: String): Future[Set[String]] = Mdc.preservingMdc {
     collection.find(Filters.eq("ern", ern)).map(_.boxId).toFuture().map(_.toSet)

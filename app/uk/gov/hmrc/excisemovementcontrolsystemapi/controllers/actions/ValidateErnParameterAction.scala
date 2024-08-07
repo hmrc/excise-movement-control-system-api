@@ -42,7 +42,6 @@ class ValidateErnParameterActionImpl @Inject() (
       override def filter[A](request: EnrolmentRequest[A]): Future[Option[Result]] = Future.successful {
 
         ernParameter.flatMap { value =>
-          // Ensure if they supplied an ERN it matches one they have logged in as
           if (request.erns.contains(value)) None
           else Some(badRequestResponse(value)(request))
         }

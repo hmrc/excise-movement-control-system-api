@@ -55,7 +55,7 @@ class MessageConnector @Inject() (
   private val bearerToken: String = configuration.get[String]("microservice.services.eis.messages-bearer-token")
 
   def getNewMessages(ern: String)(implicit hc: HeaderCarrier): Future[GetMessagesResponse] = {
-    logger.info(s"[MessageConnector]: Getting new messages for ern: $ern")
+    logger.info(s"[MessageConnector]: Getting new messages")
 
     val correlationId = correlationIdService.generateCorrelationId()
     val timestamp     = dateTimeService.timestamp().asStringInMilliseconds
@@ -85,7 +85,7 @@ class MessageConnector @Inject() (
 
   def acknowledgeMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] = {
 
-    logger.info(s"[MessageConnector]: Acknowledging messages for ern: $ern")
+    logger.info(s"[MessageConnector]: Acknowledging messages")
     val correlationId = correlationIdService.generateCorrelationId()
     val timestamp     = dateTimeService.timestamp().asStringInMilliseconds
 

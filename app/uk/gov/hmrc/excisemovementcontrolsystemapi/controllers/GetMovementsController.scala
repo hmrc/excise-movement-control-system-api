@@ -56,7 +56,7 @@ class GetMovementsController @Inject() (
     arc: Option[String],
     updatedSince: Option[String],
     traderType: Option[String]
-  ): Action[AnyContent]                                   =
+  ): Action[AnyContent]                                                                                         =
     (authAction andThen validateErnParameterAction(ern)
       andThen validateUpdatedSinceAction(updatedSince)
       andThen validateTraderTypeAction(traderType)).async(parse.default) { implicit request =>
@@ -77,7 +77,7 @@ class GetMovementsController @Inject() (
           Ok(Json.toJson(movement.map(createResponseFrom)))
         }
     }
-  def getMovement(movementId: String): Action[AnyContent] =
+  def getMovement(movementId: String): Action[AnyContent]                                                       =
     authAction.async(parse.default) { implicit request =>
       val result = for {
         validatedMovementId <- validateMovementId(movementId)
@@ -90,7 +90,7 @@ class GetMovementsController @Inject() (
 
         if (authorisedErns.intersect(movementErns).isEmpty) {
           logger.warn(
-            s"[GetMovementsController] - Movement $movementId is not found within the data for ERNs ${authorisedErns.mkString("/")}"
+            s"[GetMovementsController] - Movement $movementId is not found within the data for authorisedERNs"
           )
           NotFound(
             Json.toJson(
@@ -109,8 +109,6 @@ class GetMovementsController @Inject() (
 
       result.merge
     }
-
-  // TODO, temporarily added so we can inspect what we get back for trader-movement in EMCS QA
   private def getTraderMovementMessages(movement: Movement)(implicit hc: HeaderCarrier): Future[Seq[IEMessage]] =
     movement.administrativeReferenceCode.fold(Future.successful(Seq.empty[IEMessage])) { arc =>
       messageService.getTraderMovementMessages(movement.consignorId, arc)

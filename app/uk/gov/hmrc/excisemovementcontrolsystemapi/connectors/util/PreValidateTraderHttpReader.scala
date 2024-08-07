@@ -63,7 +63,6 @@ class PreValidateTraderHttpReader(
     logger.warn(
       EISErrorMessage(
         createdDateTime,
-        ern,
         s"status: ${response.status}, body: ${response.body}",
         correlationId,
         "PreValidateTrader"

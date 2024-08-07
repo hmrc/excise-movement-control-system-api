@@ -163,7 +163,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
       intercept[RuntimeException] {
         await(movementService.getMovementByLRNAndERNIn(lrn, List(consignorId)))
-      }.getMessage mustBe s"[MovementService] - Multiple movement found for local reference number: $lrn"
+      }.getMessage mustBe s"[MovementService] - Multiple movement found for local reference number"
     }
   }
 

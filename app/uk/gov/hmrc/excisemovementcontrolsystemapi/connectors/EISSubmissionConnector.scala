@@ -52,9 +52,7 @@ class EISSubmissionConnector @Inject() (
   )(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
     logger.info("[EISSubmissionConnector]: Submitting a message to EIS")
 
-    val timer = metrics.timer("emcs.submission.connector.timer").time()
-
-    //todo EMCS-530: add retry
+    val timer           = metrics.timer("emcs.submission.connector.timer").time()
     val timestamp       = dateTimeService.timestamp()
     val createdDateTime = timestamp.asStringInMilliseconds
     val wrappedXml      = wrapXmlInControlDocument(message.messageIdentifier, requestXmlAsString, authorisedErn)
@@ -76,7 +74,7 @@ class EISSubmissionConnector @Inject() (
       )
       .andThen { case _ => timer.stop() }
       .recover { case ex: Throwable =>
-        logger.warn(EISErrorMessage(createdDateTime, authorisedErn, ex.getMessage, correlationId, messageType), ex)
+        logger.warn(EISErrorMessage(createdDateTime, ex.getMessage, correlationId, messageType), ex)
 
         val error = EisErrorResponsePresentation(
           timestamp,

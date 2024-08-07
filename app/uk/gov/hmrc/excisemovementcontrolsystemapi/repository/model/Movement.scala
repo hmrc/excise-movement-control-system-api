@@ -24,7 +24,7 @@ import java.util.UUID
 
 case class Movement(
   _id: String,
-  boxId: Option[String], // TODO remove
+  boxId: Option[String],
   localReferenceNumber: String,
   consignorId: String,
   consigneeId: Option[String],

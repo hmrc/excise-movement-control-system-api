@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import org.apache.pekko.Done
 import org.mongodb.scala.model._
-import play.api.{Configuration, Logging}
+import play.api.Configuration
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnSubmissionRepository.mongoIndexes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ErnSubmission
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -43,8 +43,7 @@ class ErnSubmissionRepository @Inject() (
       domainFormat = ErnSubmission.format,
       indexes = mongoIndexes(configuration.get[Duration]("mongodb.ernSubmission.TTL")),
       replaceIndexes = false
-    )
-    with Logging {
+    ) {
 
   def getErnsAndLastSubmitted: Future[Map[String, Instant]] = Mdc.preservingMdc {
     collection.find().toFuture().map(_.map(ernSubmission => ernSubmission.ern -> ernSubmission.lastSubmitted).toMap)
