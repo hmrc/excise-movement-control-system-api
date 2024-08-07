@@ -5,7 +5,7 @@ object AppDependencies {
   private val bootstrapVersion = "9.2.0"
   val dispatchVersion        = "1.2.0"
   lazy val mongoVersion = "1.7.0"
-git checkout
+
 
   val compile: Seq[ModuleID] = Seq(
     "uk.gov.hmrc"             %% "bootstrap-backend-play-30"          % bootstrapVersion,
