@@ -136,7 +136,7 @@ class MovementRepository @Inject() (
       Filters.in("messages.recipient", ern: _*)
     )
 
-    val filters    =
+    val filters =
       Seq(
         movementFilter.updatedSince.map(Filters.gte("lastUpdated", _)),
         movementFilter.lrn.map(Filters.eq("localReferenceNumber", _)),

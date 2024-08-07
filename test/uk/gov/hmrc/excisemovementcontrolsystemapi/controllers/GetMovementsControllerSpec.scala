@@ -341,8 +341,16 @@ class GetMovementsControllerSpec
     "return the movement if the ern is in the message recipients" in {
 
       val movement =
-        Movement(uuid, Some("id123"), "lrn1", "consignor", Some("consignee"), Some("arc"), Instant.now(),
-          Seq(Message("message","IE801","messageId", ern, Set.empty, timestamp)))
+        Movement(
+          uuid,
+          Some("id123"),
+          "lrn1",
+          "consignor",
+          Some("consignee"),
+          Some("arc"),
+          Instant.now(),
+          Seq(Message("message", "IE801", "messageId", ern, Set.empty, timestamp))
+        )
 
       when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
