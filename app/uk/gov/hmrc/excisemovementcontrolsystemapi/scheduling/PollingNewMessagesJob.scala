@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
 import cats.syntax.all._
 import org.apache.pekko.Done
-import play.api.Configuration
+import play.api.{Configuration, Logging}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnSubmissionRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -36,11 +36,13 @@ class PollingNewMessagesJob @Inject() (
   ernSubmissionRepository: ErnSubmissionRepository,
   messageService: MessageService,
   dateTimeService: DateTimeService
-) extends ScheduledJob {
+) extends ScheduledJob
+    with Logging {
 
   override def name: String = "polling-new-messages-job"
 
   override def execute(implicit ec: ExecutionContext): Future[Done] = {
+    logger.warn("[PollingNewMessagesJob] - Started PollingNewMessagesJob")
     val now              = dateTimeService.timestamp()
     val fastIntervalTime = timestampBeforeNow(now, fastPollingInterval)
     val fastCutoffTime   = timestampBeforeNow(now, fastPollingCutoff)
@@ -49,8 +51,10 @@ class PollingNewMessagesJob @Inject() (
       .flatMap { lastActivityMap =>
         lastActivityMap.toSeq.traverse { case (ern, lastActivity) =>
           if (shouldUpdateMessages(lastActivity, fastIntervalTime, fastCutoffTime, slowIntervalTime)) {
+            logger.warn(s"[PollingNewMessagesJob] - Updating messages for ern: $ern")
             messageService.updateMessages(ern)
           } else {
+            logger.warn(s"[PollingNewMessagesJob] - No messages to update for ern: $ern")
             Future.successful(Done)
           }
         }

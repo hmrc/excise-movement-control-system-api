@@ -39,25 +39,30 @@ class PushNotificationJob @Inject() (
 
   override def name: String = "push-notification-job"
 
-  override def execute(implicit ec: ExecutionContext): Future[Done] =
+  override def execute(implicit ec: ExecutionContext): Future[Done] = {
+    logger.warn(s"[PushNotificationJob] - Started PushNotificationJob")
+
     movementRepository.getPendingMessageNotifications
       .flatMap { notifications =>
         notifications.traverse { notification =>
           processNotification(notification).recover { case NonFatal(_) =>
-            logger.info(
-              s"Failed to notify ${notification.recipient} for message ${notification.messageId}. Will try again later."
+            logger.warn(
+              s"[PushNotificationJob] - Failed to notify ${notification.recipient} for message ${notification.messageId}. Will try again later."
             )
             Done
           }
         }
       }
       .as(Done)
+  }
 
-  private def processNotification(notification: MessageNotification)(implicit ec: ExecutionContext): Future[Done] =
+  private def processNotification(notification: MessageNotification)(implicit ec: ExecutionContext): Future[Done] = {
+    logger.warn("[PushNotificationJob] - Processing notifications")
     for {
       _ <- sendNotification(notification)
       _ <- confirmNotification(notification)
     } yield Done
+  }
 
   private def sendNotification(notification: MessageNotification): Future[Done] =
     pushNotificationService.sendNotification(
