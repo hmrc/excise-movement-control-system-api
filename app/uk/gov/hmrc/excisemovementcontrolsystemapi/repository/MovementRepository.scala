@@ -141,7 +141,10 @@ class MovementRepository @Inject() (
         movementFilter.updatedSince.map(Filters.gte("lastUpdated", _)),
         movementFilter.lrn.map(Filters.eq("localReferenceNumber", _)),
         movementFilter.arc.map(Filters.eq("administrativeReferenceCode", _)),
-        movementFilter.ern.map(ern => Filters.or(Filters.eq("consignorId", ern), Filters.eq("consigneeId", ern)))
+        movementFilter.ern.map(ern =>
+          Filters
+            .or(Filters.eq("consignorId", ern), Filters.eq("consigneeId", ern), Filters.eq("messages.recipient", ern))
+        )
       ).flatten
 
     val filter = if (filters.nonEmpty) Filters.and(filters: _*) else Filters.empty()
