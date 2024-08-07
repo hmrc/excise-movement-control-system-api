@@ -403,6 +403,7 @@ class MessageServiceSpec
             when(correlationIdService.generateCorrelationId()).thenReturn(newId)
             when(dateTimeService.timestamp()).thenReturn(now)
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
+            when(movementRepository.getByArc(any)).thenReturn(Future.successful(None))
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
             when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
@@ -447,6 +448,7 @@ class MessageServiceSpec
             when(correlationIdService.generateCorrelationId()).thenReturn(newId)
             when(dateTimeService.timestamp()).thenReturn(now)
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
+            when(movementRepository.getByArc(any)).thenReturn(Future.successful(None))
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
             when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
@@ -499,6 +501,7 @@ class MessageServiceSpec
             when(auditService.auditMessage(any, any)(any)).thenReturn(EitherT.pure(()))
             when(dateTimeService.timestamp()).thenReturn(now)
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
+            when(movementRepository.getByArc(any)).thenReturn(Future.successful(None))
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
             when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
@@ -528,6 +531,7 @@ class MessageServiceSpec
             when(auditService.auditMessage(any, any)(any)).thenReturn(EitherT.pure(()))
             when(dateTimeService.timestamp()).thenReturn(now)
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
+            when(movementRepository.getByArc(any)).thenReturn(Future.successful(None))
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
             when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
@@ -559,6 +563,7 @@ class MessageServiceSpec
             when(auditService.auditMessage(any, any)(any)).thenReturn(EitherT.pure(()))
             when(dateTimeService.timestamp()).thenReturn(now)
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
+            when(movementRepository.getByArc(any)).thenReturn(Future.successful(None))
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
             when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
@@ -613,6 +618,7 @@ class MessageServiceSpec
             when(correlationIdService.generateCorrelationId()).thenReturn(newId)
             when(dateTimeService.timestamp()).thenReturn(now)
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
+            when(movementRepository.getByArc(any)).thenReturn(Future.successful(None))
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
             when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
@@ -837,10 +843,73 @@ class MessageServiceSpec
         verify(ernRetrievalRepository).setLastRetrieved(eqTo(ern), eqTo(previousLastRetrieved))
       }
     }
+    "we get no movements for the ern" when {
+      "there is a movement for the arc of a received IE801" when {
+        "the consignee is different" should {
+          "update the consignee on the movement" in {
+            val ern              = "testErn"
+            val movement         = Movement(
+              newId,
+              None,
+              "lrnie8158976912",
+              ern,
+              Some("Consignee"),
+              Some("23XI00000000000000012"),
+              now,
+              Seq.empty
+            )
+            val ie801            = XmlMessageGeneratorFactory.generate(
+              ern,
+              MessageParams(
+                IE801,
+                "GB00001",
+                Some("testConsignee"),
+                Some("23XI00000000000000012"),
+                Some("lrnie8158976912")
+              )
+            )
+            val messages         = Seq(IE801Message.createFromXml(ie801))
+            val expectedMessages =
+              Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, Set.empty, now))
+            val expectedMovement =
+              movement.copy(
+                messages = expectedMessages,
+                administrativeReferenceCode = Some("23XI00000000000000012"),
+                consigneeId = Some("testConsignee")
+              )
+
+            when(correlationIdService.generateCorrelationId()).thenReturn(newId)
+            when(dateTimeService.timestamp()).thenReturn(now)
+            when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
+            when(movementRepository.getByArc(any)).thenReturn(Future.successful(Some(movement)))
+            when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+            when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
+            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+            when(messageConnector.getNewMessages(any)(any))
+              .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+            when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+
+            messageService.updateMessages(ern).futureValue
+
+            verify(movementRepository).save(expectedMovement)
+          }
+        }
+
+      }
+    }
     "the existing movement has a consignee" when {
-      "we get a 801, it should not change the consignee" in {
+      "we get a 801, it should change the consignee" in {
         val ern              = "testErn"
-        val movement         = Movement(newId, None, "lrnie8158976912", ern, Some("Consignee"), None, now, Seq.empty)
+        val movement         = Movement(
+          newId,
+          None,
+          "lrnie8158976912",
+          ern,
+          Some("Consignee"),
+          Some("23XI00000000000000012"),
+          now,
+          Seq.empty
+        )
         val ie801            = XmlMessageGeneratorFactory.generate(
           ern,
           MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912"))
@@ -849,7 +918,11 @@ class MessageServiceSpec
         val expectedMessages =
           Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, Set.empty, now))
         val expectedMovement =
-          movement.copy(messages = expectedMessages, administrativeReferenceCode = Some("23XI00000000000000012"))
+          movement.copy(
+            messages = expectedMessages,
+            administrativeReferenceCode = Some("23XI00000000000000012"),
+            consigneeId = Some("testConsignee")
+          )
 
         when(correlationIdService.generateCorrelationId()).thenReturn(newId)
         when(dateTimeService.timestamp()).thenReturn(now)
@@ -1318,6 +1391,7 @@ class MessageServiceSpec
 
         when(dateTimeService.timestamp()).thenReturn(now)
         when(movementRepository.getAllBy(eqTo("ern1"))).thenReturn(Future.successful(Seq(ern1Movement)))
+        when(movementRepository.getByArc(any)).thenReturn(Future.successful(None))
         when(movementRepository.save(any)).thenReturn(Future.successful(Done))
         when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
         when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))

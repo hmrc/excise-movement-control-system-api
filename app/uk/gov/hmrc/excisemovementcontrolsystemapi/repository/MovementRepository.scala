@@ -132,14 +132,19 @@ class MovementRepository @Inject() (
 
     val ernFilters = Seq(
       Filters.in("consignorId", ern: _*),
-      Filters.in("consigneeId", ern: _*)
+      Filters.in("consigneeId", ern: _*),
+      Filters.in("messages.recipient", ern: _*)
     )
-    val filters    =
+
+    val filters =
       Seq(
         movementFilter.updatedSince.map(Filters.gte("lastUpdated", _)),
         movementFilter.lrn.map(Filters.eq("localReferenceNumber", _)),
         movementFilter.arc.map(Filters.eq("administrativeReferenceCode", _)),
-        movementFilter.ern.map(ern => Filters.or(Filters.eq("consignorId", ern), Filters.eq("consigneeId", ern)))
+        movementFilter.ern.map(ern =>
+          Filters
+            .or(Filters.eq("consignorId", ern), Filters.eq("consigneeId", ern), Filters.eq("messages.recipient", ern))
+        )
       ).flatten
 
     val filter = if (filters.nonEmpty) Filters.and(filters: _*) else Filters.empty()
@@ -158,6 +163,14 @@ class MovementRepository @Inject() (
 
   def getAllBy(ern: String): Future[Seq[Movement]] = Mdc.preservingMdc {
     getMovementByERN(Seq(ern), MovementFilter.emptyFilter)
+  }
+
+  def getByArc(arc: String): Future[Option[Movement]] = Mdc.preservingMdc {
+    collection
+      .find(
+        filter = Filters.equal("administrativeReferenceCode", arc)
+      )
+      .headOption()
   }
 
   def getErnsAndLastReceived: Future[Map[String, Instant]] = Mdc.preservingMdc {
@@ -252,6 +265,11 @@ object MovementRepository {
         Indexes.ascending("messages.boxesToNotify"),
         IndexOptions()
           .name("boxesToNotify_idx")
+      ),
+      IndexModel(
+        Indexes.ascending("messages.recipient"),
+        IndexOptions()
+          .name("recipient_idx")
       )
     )
 

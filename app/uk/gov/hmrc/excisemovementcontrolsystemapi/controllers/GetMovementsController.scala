@@ -132,8 +132,10 @@ class GetMovementsController @Inject() (
       )
     )
 
-  private def getErnsForMovement(movement: Movement): Set[String] =
-    Set(Some(movement.consignorId), movement.consigneeId).flatten
+  private def getErnsForMovement(movement: Movement): Set[String] = {
+    val messageRecipients = movement.messages.map(_.recipient)
+    Set(Some(movement.consignorId), movement.consigneeId, messageRecipients).flatten
+  }
 
   private def createResponseFrom(movement: Movement) =
     ExciseMovementResponse(
