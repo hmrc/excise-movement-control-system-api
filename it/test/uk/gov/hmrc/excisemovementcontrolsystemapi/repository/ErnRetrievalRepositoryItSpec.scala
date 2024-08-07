@@ -25,7 +25,7 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import org.slf4j.MDC
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ErnRetrieval
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ErnRetrieval, ErnSubmission}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import play.api.inject.bind
@@ -108,6 +108,29 @@ class ErnRetrievalRepositoryItSpec extends PlaySpec
     }
 
     mustPreserveMdc(repository.setLastRetrieved("testErn"))
+  }
+
+  "getErnsAndLastSubmitted" should {
+
+    "return an empty map if there are no ern submissions" in {
+      repository.getErnsAndLastRetrieved.futureValue mustEqual Map.empty
+    }
+
+    "return a map of all erns and last retrieved timestamps" in {
+      val firstInstant = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+      val secondInstant = firstInstant.minus(1, ChronoUnit.SECONDS)
+
+      insert(ErnRetrieval("testErn1", firstInstant)).futureValue
+      insert(ErnRetrieval("testErn2", secondInstant)).futureValue
+
+      val expectedMap = Map("testErn1" -> firstInstant, "testErn2" -> secondInstant)
+
+      val ernsAndLastSubmitted = repository.getErnsAndLastRetrieved.futureValue
+
+      ernsAndLastSubmitted mustBe expectedMap
+    }
+
+    mustPreserveMdc(repository.getErnsAndLastRetrieved)
   }
 
   private def mustPreserveMdc[A](f: => Future[A])(implicit pos: Position): Unit =
