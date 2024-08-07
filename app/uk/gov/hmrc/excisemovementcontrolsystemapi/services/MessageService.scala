@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
+import cats.data.OptionT
 import cats.syntax.all._
 import org.apache.pekko.Done
 import play.api.{Configuration, Logging}
@@ -151,19 +152,19 @@ class MessageService @Inject() (
     updatedMovements: Seq[Movement],
     message: IEMessage,
     boxIds: Set[String]
-  )(implicit hc: HeaderCarrier): Future[Seq[Movement]] = {
-    val matchedMovements: Seq[Movement] = findMovementsForMessage(movements, updatedMovements, message)
-    if (matchedMovements.nonEmpty) {
-      Future.successful {
-        matchedMovements.map { movement =>
-          updateMovement(ern, movement, message, boxIds)
+  )(implicit hc: HeaderCarrier): Future[Seq[Movement]] =
+    findMovementsForMessage(movements, updatedMovements, message).flatMap { matchedMovements =>
+      if (matchedMovements.nonEmpty) {
+        Future.successful {
+          matchedMovements.map { movement =>
+            updateMovement(ern, movement, message, boxIds)
+          }
         }
+      } else {
+        createMovement(ern, message, boxIds)
+          .map(movement => (movement +: updatedMovements.map(Some(_))).flatten)
       }
-    } else {
-      createMovement(ern, message, boxIds)
-        .map(movement => (movement +: updatedMovements.map(Some(_))).flatten)
     }
-  }
 
   private def updateMovement(recipient: String, movement: Movement, message: IEMessage, boxIds: Set[String]): Movement =
     if (
@@ -193,16 +194,16 @@ class MessageService @Inject() (
     movements: Seq[Movement],
     updatedMovements: Seq[Movement],
     message: IEMessage
-  ): Seq[Movement] = {
-    findByArc(updatedMovements, message) orElse
+  ): Future[Seq[Movement]] =
+    (findByArc(updatedMovements, message) orElse
       findByLrn(updatedMovements, message) orElse
       findByArc(movements, message) orElse
-      findByLrn(movements, message)
-  }.getOrElse(Seq.empty)
+      findByLrn(movements, message) orElse
+      findByArcInMessage(message)).getOrElse(Seq.empty)
 
   private def getConsignee(movement: Movement, message: IEMessage): Option[String] =
     message match {
-      case ie801: IE801Message => movement.consigneeId orElse ie801.consigneeId
+      case ie801: IE801Message => ie801.consigneeId
       case ie813: IE813Message => ie813.consigneeId orElse movement.consigneeId
       case _                   => movement.consigneeId
     }
@@ -296,19 +297,26 @@ class MessageService @Inject() (
       messages = Seq(convertMessage(recipient, message, boxIds))
     )
 
-  private def findByArc(movements: Seq[Movement], message: IEMessage): Option[Seq[Movement]] = {
+  private def findByArc(movements: Seq[Movement], message: IEMessage): OptionT[Future, Seq[Movement]] = {
 
     val matchedMovements = message.administrativeReferenceCode.flatten.flatMap { arc =>
       movements.find(_.administrativeReferenceCode.contains(arc))
     }
 
-    if (matchedMovements.isEmpty) None else Some(matchedMovements)
+    if (matchedMovements.isEmpty) OptionT.none else OptionT.pure(matchedMovements)
   }
 
-  private def findByLrn(movements: Seq[Movement], message: IEMessage): Option[Seq[Movement]] =
-    movements
-      .find(movement => message.lrnEquals(movement.localReferenceNumber))
-      .map(Seq(_))
+  private def findByArcInMessage(message: IEMessage): OptionT[Future, Seq[Movement]] =
+    message.administrativeReferenceCode.flatten.traverse { arc =>
+      OptionT(movementRepository.getByArc(arc))
+    }
+
+  private def findByLrn(movements: Seq[Movement], message: IEMessage): OptionT[Future, Seq[Movement]] =
+    OptionT.fromOption(
+      movements
+        .find(movement => message.lrnEquals(movement.localReferenceNumber))
+        .map(Seq(_))
+    )
 
   private def convertMessage(recipient: String, input: IEMessage, boxIds: Set[String]): Message =
     Message(
