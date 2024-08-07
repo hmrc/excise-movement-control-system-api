@@ -17,6 +17,8 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import com.google.inject.Inject
+import org.apache.pekko.Done
+import play.api.Logging
 import play.api.libs.json.{JsValue, Json, Reads}
 import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.InjectController.CsvRow
@@ -35,7 +37,8 @@ class InjectController @Inject() (
   ernSubmissionRepository: ErnSubmissionRepository,
   auth: BackendAuthComponents
 )(implicit ec: ExecutionContext)
-    extends BackendController(cc) {
+    extends BackendController(cc)
+    with Logging {
 
   private val permission        = Predicate.Permission(
     Resource(ResourceType("excise-movement-control-system-api"), ResourceLocation("inject/submit")),
@@ -55,9 +58,31 @@ class InjectController @Inject() (
       }
     }
 
+  def submitBatch(): Action[JsValue] =
+    auth.authorizedAction(permission).async(parse.json[JsValue]) { implicit request: AuthenticatedRequest[JsValue, _] =>
+      withJsonBody[List[CsvRow]] { csvRows =>
+        Future
+          .sequence {
+            csvRows.map { csvRow =>
+              movementService.saveNewMovement(csvRow.toMovement).flatMap {
+                case Left(error)     =>
+                  logger.warn(s"Failed to save movement with PK: ${csvRow.pk}")
+                  Future.successful(error)
+                case Right(movement) =>
+                  movement.consigneeId
+                    .map(consignee => ernSubmissionRepository.save(consignee))
+                    .getOrElse(Future.successful(Done))
+              }
+            }
+          }
+          .map(_ => Accepted)
+      }
+    }
+
 }
 
 object InjectController {
+
   case class CsvRow(
     pk: Int,
     arcUk: Option[String],
