@@ -30,7 +30,7 @@ import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, TraderType}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication, FakeValidateErnParameterAction, FakeValidateTraderTypeAction, FakeValidateUpdatedSinceAction, MovementTestUtils}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MovementIdFormatInvalid, MovementIdValidation}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MessageService, MovementService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
@@ -326,6 +326,23 @@ class GetMovementsControllerSpec
       Movement(uuid, Some("id123"), "lrn1", "testErn", Some("consignee"), Some("arc"), Instant.now(), Seq.empty)
 
     "return the movement when successful" in {
+
+      when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))
+      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
+
+      val result = controller.getMovement(uuid)(fakeRequest)
+
+      status(result) mustBe OK
+
+      contentAsJson(result) mustBe Json.toJson(createMovementResponseFromMovement(movement))
+
+    }
+
+    "return the movement if the ern is in the message recipients" in {
+
+      val movement =
+        Movement(uuid, Some("id123"), "lrn1", "consignor", Some("consignee"), Some("arc"), Instant.now(),
+          Seq(Message("message","IE801","messageId", ern, Set.empty, timestamp)))
 
       when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
