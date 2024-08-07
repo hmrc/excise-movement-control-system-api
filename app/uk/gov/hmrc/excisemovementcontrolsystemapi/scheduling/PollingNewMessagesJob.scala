@@ -54,7 +54,6 @@ class PollingNewMessagesJob @Inject() (
             logger.warn(s"[PollingNewMessagesJob] - Updating messages for ern: $ern")
             messageService.updateMessages(ern)
           } else {
-            logger.warn(s"[PollingNewMessagesJob] - No messages to update for ern: $ern")
             Future.successful(Done)
           }
         }

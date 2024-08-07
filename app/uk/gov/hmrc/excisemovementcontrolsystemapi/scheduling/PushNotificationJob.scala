@@ -47,7 +47,7 @@ class PushNotificationJob @Inject() (
         notifications.traverse { notification =>
           processNotification(notification).recover { case NonFatal(_) =>
             logger.warn(
-              s"[PushNotificationJob] - Failed to notify ${notification.recipient} for message ${notification.messageId}. Will try again later."
+              s"[PushNotificationJob] - Failed to notify recipient for message ${notification.messageId}. Will try again later."
             )
             Done
           }
