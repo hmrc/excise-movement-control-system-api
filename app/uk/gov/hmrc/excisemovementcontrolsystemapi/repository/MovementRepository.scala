@@ -132,8 +132,10 @@ class MovementRepository @Inject() (
 
     val ernFilters = Seq(
       Filters.in("consignorId", ern: _*),
-      Filters.in("consigneeId", ern: _*)
+      Filters.in("consigneeId", ern: _*),
+      Filters.in("messages.recipient", ern: _*)
     )
+
     val filters    =
       Seq(
         movementFilter.updatedSince.map(Filters.gte("lastUpdated", _)),
@@ -260,6 +262,11 @@ object MovementRepository {
         Indexes.ascending("messages.boxesToNotify"),
         IndexOptions()
           .name("boxesToNotify_idx")
+      ),
+      IndexModel(
+        Indexes.ascending("messages.recipient"),
+        IndexOptions()
+          .name("recipient_idx")
       )
     )
 

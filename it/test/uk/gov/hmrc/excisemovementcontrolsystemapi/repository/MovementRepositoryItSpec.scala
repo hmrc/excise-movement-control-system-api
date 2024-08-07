@@ -539,6 +539,26 @@ class MovementRepositoryItSpec
 
     }
 
+    "return a movement" when {
+      "the movement doesn't contain the ERN in consignee or consignor, but a message on the movement does" in {
+        val messages = Seq(Message("blah","IE801","MessageId", "Recipient", Set.empty, timestamp))
+        val expectedMovement1 = Movement(
+          Some("boxId"),
+          "1",
+          "consignor",
+          Some("consignee"),
+          Some("arc1"),
+          lastUpdated = timestamp,
+          messages = messages
+        )
+        insertMovement(expectedMovement1)
+
+        val result = repository.getMovementByERN(Seq("Recipient")).futureValue
+
+        result mustBe Seq(expectedMovement1)
+      }
+    }
+
     "return an empty list" in {
       val expectedMovement1 =
         Movement(Some("boxId"), "lrn", "consignorId1", Some("ern1"), Some("arc1"), lastUpdated = timestamp)
