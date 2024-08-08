@@ -87,6 +87,26 @@ class MovementRepositoryItSpec
     }
   }
 
+  "saveMovements" should {
+
+    val uuid     = UUID.randomUUID()
+    val uuid2     = UUID.randomUUID()
+    val movement = Movement(uuid.toString, Some("boxId"), "lrn1", "345", Some("789"), None, timestamp, Seq.empty)
+    val movement2 = Movement(uuid2.toString, Some("boxId"), "lrn2", "789", Some("789"), None, timestamp, Seq.empty)
+
+    "return insert a movement" in {
+      repository.saveMovements(List(movement, movement2)).futureValue
+
+      find(
+          Filters.equal("localReferenceNumber", "lrn1")
+      ).futureValue.headOption.value mustBe movement
+
+      find(
+          Filters.equal("localReferenceNumber", "lrn2")
+      ).futureValue.headOption.value mustBe movement2
+    }
+  }
+
   "updateMovement" should {
     "update a movement by lrn and consignorId" in {
       val movementLRN1 = Movement(Some("boxId1"), "1", "345", Some("789"), None, timestamp)
