@@ -93,8 +93,6 @@ class PushNotificationServiceImpl @Inject() (
       arc,
       recipientErn
     )
-
-    // TODO remove the need to convert this to a done in the connector, just return done
     notificationConnector.postNotification(boxId, notification).as(Done)
   }
 }

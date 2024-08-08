@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util
 
-import play.api.Logging
 import play.api.libs.json.{Json, Reads}
 import uk.gov.hmrc.http.HttpErrorFunctions.is2xx
 import uk.gov.hmrc.http.HttpResponse
@@ -24,7 +23,7 @@ import uk.gov.hmrc.http.HttpResponse
 import scala.reflect.runtime.universe.{TypeTag, typeOf}
 import scala.util.{Failure, Success, Try}
 
-trait ResponseHandler extends Logging {
+trait ResponseHandler {
 
   def extractIfSuccessful[T](
     response: HttpResponse

@@ -57,7 +57,6 @@ class AuthActionImpl @Inject() (
 
     authorise.flatMap {
       case Right(authorisedRequest) =>
-        logger.info(s"Authorised request for ${authorisedRequest.erns.mkString(",")}")
         block(authorisedRequest)
 
       case Left(error) if error.statusCode == FORBIDDEN =>

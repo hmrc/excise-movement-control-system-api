@@ -70,7 +70,7 @@ class PreValidateTraderConnector @Inject() (
       )
       .andThen { case _ => timer.stop() }
       .recover { case ex: Throwable =>
-        logger.warn(EISErrorMessage(createdDateTime, ern, ex.getMessage, correlationId, "PreValidateTrader"), ex)
+        logger.warn(EISErrorMessage(createdDateTime, ex.getMessage, correlationId, "PreValidateTrader"), ex)
 
         val error = EisErrorResponsePresentation(
           timestamp,

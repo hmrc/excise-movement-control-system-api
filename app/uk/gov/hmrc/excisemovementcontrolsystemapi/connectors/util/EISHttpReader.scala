@@ -50,7 +50,7 @@ class EISHttpReader(
     response: HttpResponse
   ): Result = {
 
-    logger.warn(EISErrorMessage(createdDateTime, ern, response.body, correlationId, messageType))
+    logger.warn(EISErrorMessage(createdDateTime, response.body, correlationId, messageType))
 
     (tryAsJson[RimValidationErrorResponse](response), tryAsJson[EISErrorResponse](response)) match {
       case (Some(x), None) => handleRimValidationResponse(response, x)

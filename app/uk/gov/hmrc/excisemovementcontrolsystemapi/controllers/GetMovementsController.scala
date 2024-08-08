@@ -22,14 +22,12 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ValidateErnParameterAction, ValidateTraderTypeAction, ValidateUpdatedSinceAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, TraderType}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MessageService, MovementService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
@@ -56,7 +54,7 @@ class GetMovementsController @Inject() (
     arc: Option[String],
     updatedSince: Option[String],
     traderType: Option[String]
-  ): Action[AnyContent]                                   =
+  ): Action[AnyContent]                                                                                         =
     (authAction andThen validateErnParameterAction(ern)
       andThen validateUpdatedSinceAction(updatedSince)
       andThen validateTraderTypeAction(traderType)).async(parse.default) { implicit request =>
@@ -77,20 +75,19 @@ class GetMovementsController @Inject() (
           Ok(Json.toJson(movement.map(createResponseFrom)))
         }
     }
-  def getMovement(movementId: String): Action[AnyContent] =
+  def getMovement(movementId: String): Action[AnyContent]                                                       =
     authAction.async(parse.default) { implicit request =>
       val result = for {
         validatedMovementId <- validateMovementId(movementId)
         _                   <- EitherT.right(messageService.updateAllMessages(request.erns))
         movement            <- getMovementFromDb(validatedMovementId)
       } yield {
-        getTraderMovementMessages(movement)
         val authorisedErns = request.erns
         val movementErns   = getErnsForMovement(movement)
 
         if (authorisedErns.intersect(movementErns).isEmpty) {
           logger.warn(
-            s"[GetMovementsController] - Movement $movementId is not found within the data for ERNs ${authorisedErns.mkString("/")}"
+            s"[GetMovementsController] - Movement $movementId is not found within the data for authorisedERNs"
           )
           NotFound(
             Json.toJson(
@@ -108,12 +105,6 @@ class GetMovementsController @Inject() (
       }
 
       result.merge
-    }
-
-  // TODO, temporarily added so we can inspect what we get back for trader-movement in EMCS QA
-  private def getTraderMovementMessages(movement: Movement)(implicit hc: HeaderCarrier): Future[Seq[IEMessage]] =
-    movement.administrativeReferenceCode.fold(Future.successful(Seq.empty[IEMessage])) { arc =>
-      messageService.getTraderMovementMessages(movement.consignorId, arc)
     }
 
   private def validateMovementId(movementId: String): EitherT[Future, Result, String] =

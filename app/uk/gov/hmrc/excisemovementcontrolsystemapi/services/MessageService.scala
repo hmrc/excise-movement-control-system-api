@@ -59,7 +59,7 @@ class MessageService @Inject() (
       .traverse { ern =>
         ernRetrievalRepository.getLastRetrieved(ern).flatMap { lastRetrieved =>
           updateMessages(ern, lastRetrieved).recover { case NonFatal(error) =>
-            logger.warn(s"[MessageService]: Failed to update messages for ERN: $ern", error)
+            logger.warn(s"[MessageService]: Failed to update messages", error)
             Done
           }
         }
@@ -84,15 +84,6 @@ class MessageService @Inject() (
       .map(_.getOrElse(UpdateOutcome.Locked))
   }
 
-  // TODO, temporarily exposed as a public method to call in Movements Controller and see what we get back from EMCS in QA
-  def getTraderMovementMessages(ern: String, arc: String)(implicit
-    hc: HeaderCarrier
-  ): Future[Seq[IEMessage]] =
-    traderMovementConnector.getMovementMessages(ern, arc).recover { case NonFatal(error) =>
-      logger.warn(s"[MessageService]: Failed to call trader-movement for: $ern, $arc", error)
-      Seq.empty
-    }
-
   private def shouldProcessNewMessages(maybeLastRetrieved: Option[Instant]): Boolean = {
     val cutoffTime = dateTimeService.timestamp().minus(throttleCutoff.length, throttleCutoff.unit.toChronoUnit)
     //noinspection MapGetOrElseBoolean
@@ -103,7 +94,7 @@ class MessageService @Inject() (
     boxIdRepository.getBoxIds(ern)
 
   private def processNewMessages(ern: String, boxIds: Set[String])(implicit hc: HeaderCarrier): Future[Done] = {
-    logger.info(s"[MessageService]: Processing new messages for ern: $ern")
+    logger.info(s"[MessageService]: Processing new messages")
     for {
       response <- messageConnector.getNewMessages(ern)
       _        <- updateMovements(ern, response.messages, boxIds)
@@ -129,7 +120,7 @@ class MessageService @Inject() (
   private def updateMovements(ern: String, messages: Seq[IEMessage], boxIds: Set[String])(implicit
     hc: HeaderCarrier
   ): Future[Done] = {
-    logger.info(s"[MessageService]: Updating movements for ern: $ern")
+    logger.info(s"[MessageService]: Updating movements")
     if (messages.nonEmpty) {
       movementRepository
         .getAllBy(ern)
@@ -138,7 +129,7 @@ class MessageService @Inject() (
             .foldLeft(Future.successful(Seq.empty[Movement])) { (accumulated, message) =>
               for {
                 accumulatedMovements <- accumulated
-                updatedMovements     <- updateOrCreateMovements(ern, movements, accumulatedMovements, message, boxIds)
+                updatedMovements <- updateOrCreateMovements(ern, movements, accumulatedMovements, message, boxIds)
               } yield (updatedMovements ++ accumulatedMovements)
                 .distinctBy { movement =>
                   (movement.localReferenceNumber, movement.consignorId, movement.administrativeReferenceCode)
@@ -236,7 +227,6 @@ class MessageService @Inject() (
   private def createMovementFromTraderMovement(ern: String, message: IEMessage, boxIds: Set[String])(implicit
     hc: HeaderCarrier
   ): Future[Option[Movement]] =
-    // TODO, we might have to loop over ARCs here for 829
     message.administrativeReferenceCode.flatten.headOption
       .map { arc =>
         val traderMovementMessages = traderMovementConnector.getMovementMessages(ern, arc)
@@ -286,7 +276,7 @@ class MessageService @Inject() (
           lrn,
           consignor,
           None,
-          administrativeReferenceCode = message.administrativeReferenceCode.head, // TODO remove .head
+          administrativeReferenceCode = message.administrativeReferenceCode.head,
           dateTimeService.timestamp(),
           messages = Seq(convertMessage(consignor, message, boxIds))
         )
@@ -300,7 +290,7 @@ class MessageService @Inject() (
       message.localReferenceNumber,
       message.consignorId,
       message.consigneeId,
-      administrativeReferenceCode = message.administrativeReferenceCode.head, // TODO remove .head
+      administrativeReferenceCode = message.administrativeReferenceCode.head,
       dateTimeService.timestamp(),
       messages = Seq(convertMessage(recipient, message, boxIds))
     )

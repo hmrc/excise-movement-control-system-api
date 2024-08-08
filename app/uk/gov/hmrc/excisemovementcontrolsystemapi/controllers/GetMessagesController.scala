@@ -54,9 +54,6 @@ class GetMessagesController @Inject() (
         validateAcceptHeaderAction andThen
         authAction
     ).async(parse.default) { implicit request =>
-      //todo EMCS-529: do we need to validate messageId here? This is the messageIdentifier
-      // of the message abd according to the xsd this is not a UUID and can be
-      // of any char between 1 and 44 char length
       val result = for {
         mvtId    <- validateMovementId(movementId)
         movement <- getMovement(mvtId)

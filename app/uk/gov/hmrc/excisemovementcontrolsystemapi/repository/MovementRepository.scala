@@ -21,11 +21,10 @@ import org.apache.pekko.Done
 import org.bson.conversions.Bson
 import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model._
-import play.api.Logging
 import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository.{ErnAndLastReceived, MessageNotification, mongoIndexes}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.MongoComponent
@@ -57,8 +56,7 @@ class MovementRepository @Inject() (
         Codecs.playFormatCodec(MessageNotification.format)
       ),
       replaceIndexes = false
-    )
-    with Logging {
+    ) {
 
   private def byId(id: String): Bson = Filters.equal("_id", id)
 
@@ -120,8 +118,6 @@ class MovementRepository @Inject() (
   }
 
   def getMovementByLRNAndERNIn(lrn: String, erns: List[String]): Future[Seq[Movement]] = Mdc.preservingMdc {
-    //TODO EMCS-527 -  case where returns more than one (e.g. consignee has the same LRN for two different consignors)
-    // IN this case would this be the same movement? So we are ok to get the head?
     collection.find(byLrnAndErns(lrn, erns)).toFuture()
   }
 
