@@ -84,9 +84,15 @@ class MovementRepository @Inject() (
       .headOption()
   }
 
-  def saveMovement(movement: Movement): Future[Boolean] = Mdc.preservingMdc {
+  def saveMovement(movement: Movement): Future[Boolean]       = Mdc.preservingMdc {
     collection
       .insertOne(movement.copy(lastUpdated = timeService.timestamp()))
+      .toFuture()
+      .map(_ => true)
+  }
+  def saveMovements(movement: Seq[Movement]): Future[Boolean] = Mdc.preservingMdc {
+    collection
+      .insertMany(movement.map(_.copy(lastUpdated = timeService.timestamp())))
       .toFuture()
       .map(_ => true)
   }
