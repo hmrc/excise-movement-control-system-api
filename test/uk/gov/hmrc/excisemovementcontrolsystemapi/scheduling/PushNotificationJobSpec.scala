@@ -86,8 +86,9 @@ class PushNotificationJobSpec
       "not send any notifications" in {
         when(movementRepository.getPendingMessageNotifications).thenReturn(Future.successful(Seq.empty))
 
-        pushNotificationJob.execute.futureValue
+        val result = pushNotificationJob.execute.futureValue
 
+        result mustBe ScheduledJob.Result.Completed
         verify(pushNotificationService, never()).sendNotification(any, any, any, any, any, any, any, any)(any)
       }
     }
@@ -122,8 +123,9 @@ class PushNotificationJobSpec
             Future.successful(Done)
           )
 
-          pushNotificationJob.execute.futureValue
+          val result = pushNotificationJob.execute.futureValue
 
+          result mustBe ScheduledJob.Result.Completed
           verify(pushNotificationService).sendNotification(
             eqTo("box1"),
             eqTo("consignor"),
@@ -174,8 +176,9 @@ class PushNotificationJobSpec
             Future.successful(Done)
           )
 
-          pushNotificationJob.execute.futureValue
+          val result = pushNotificationJob.execute.futureValue
 
+          result mustBe ScheduledJob.Result.Completed
           verify(movementRepository).confirmNotification("movement1", "message1", "box1")
           verify(movementRepository).confirmNotification("movement1", "message2", "box2")
         }
@@ -212,8 +215,9 @@ class PushNotificationJobSpec
             Future.successful(Done)
           )
 
-          pushNotificationJob.execute.futureValue
+          val result = pushNotificationJob.execute.futureValue
 
+          result mustBe ScheduledJob.Result.Completed
           verify(movementRepository, never()).confirmNotification("movement1", "message1", "box1")
           verify(movementRepository).confirmNotification("movement1", "message2", "box2")
         }
@@ -252,8 +256,9 @@ class PushNotificationJobSpec
             Future.successful(Done)
           )
 
-          pushNotificationJob.execute.futureValue
+          val result = pushNotificationJob.execute.futureValue
 
+          result mustBe ScheduledJob.Result.Completed
           verify(movementRepository).confirmNotification("movement1", "message2", "box2")
         }
       }

@@ -24,8 +24,10 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, 
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnRetrievalRepository, MovementRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService.UpdateOutcome
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
 
 import java.time.Instant
 import javax.inject.{Inject, Singleton}
@@ -44,7 +46,8 @@ class MessageService @Inject() (
   dateTimeService: DateTimeService,
   correlationIdService: CorrelationIdService,
   emcsUtils: EmcsUtils,
-  auditService: AuditService
+  auditService: AuditService,
+  mongoLockRepository: MongoLockRepository
 )(implicit executionContext: ExecutionContext)
     extends Logging {
 
@@ -54,27 +57,32 @@ class MessageService @Inject() (
   def updateAllMessages(erns: Set[String])(implicit hc: HeaderCarrier): Future[Done] =
     erns.toSeq
       .traverse { ern =>
-        updateMessages(ern).recover { case NonFatal(error) =>
-          logger.warn(s"[MessageService]: Failed to update messages for ERN: $ern", error)
-          Done
+        ernRetrievalRepository.getLastRetrieved(ern).flatMap { lastRetrieved =>
+          updateMessages(ern, lastRetrieved).recover { case NonFatal(error) =>
+            logger.warn(s"[MessageService]: Failed to update messages for ERN: $ern", error)
+            Done
+          }
         }
       }
       .as(Done)
 
-  def updateMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] =
-    ernRetrievalRepository.setLastRetrieved(ern, dateTimeService.timestamp()).flatMap { maybeLastRetrieved =>
-      if (shouldProcessNewMessages(maybeLastRetrieved)) {
-        for {
-          boxIds <- getBoxIds(ern)
-          _      <- processNewMessages(ern, boxIds)
-        } yield Done
-      } else {
-        // set back to previous value if we didn't actually process messages
-        maybeLastRetrieved
-          .map(ernRetrievalRepository.setLastRetrieved(ern, _).map(_ => Done))
-          .getOrElse(Future.successful(Done))
+  def updateMessages(ern: String, lastRetrieved: Option[Instant])(implicit hc: HeaderCarrier): Future[UpdateOutcome] = {
+    val lockService = LockService(mongoLockRepository, ern, throttleCutoff)
+    lockService
+      .withLock {
+        val now = dateTimeService.timestamp()
+        if (shouldProcessNewMessages(lastRetrieved)) {
+          for {
+            boxIds <- getBoxIds(ern)
+            _      <- processNewMessages(ern, boxIds)
+            _      <- ernRetrievalRepository.setLastRetrieved(ern, now)
+          } yield UpdateOutcome.Updated
+        } else {
+          Future.successful(UpdateOutcome.NotUpdatedThrottled)
+        }
       }
-    }
+      .map(_.getOrElse(UpdateOutcome.Locked))
+  }
 
   // TODO, temporarily exposed as a public method to call in Movements Controller and see what we get back from EMCS in QA
   def getTraderMovementMessages(ern: String, arc: String)(implicit
@@ -327,4 +335,14 @@ class MessageService @Inject() (
       boxesToNotify = boxIds,
       createdOn = dateTimeService.timestamp()
     )
+}
+
+object MessageService {
+  sealed trait UpdateOutcome
+
+  object UpdateOutcome {
+    case object Updated extends UpdateOutcome
+    case object Locked extends UpdateOutcome
+    case object NotUpdatedThrottled extends UpdateOutcome
+  }
 }

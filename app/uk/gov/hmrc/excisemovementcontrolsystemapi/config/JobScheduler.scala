@@ -16,11 +16,11 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.config
 
-import com.codahale.metrics.Timer
+import com.codahale.metrics.{Counter, Timer}
 import org.apache.pekko.actor.ActorSystem
 import play.api.Logging
 import play.api.inject.ApplicationLifecycle
-import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.{PollingNewMessagesJob, PushNotificationJob, ScheduledJob}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.{MetricsReportingJob, PollingNewMessagesJob, PushNotificationJob, ScheduledJob}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.{Clock, Duration}
@@ -34,6 +34,7 @@ class JobScheduler @Inject() (
   pollingNewMessagesJob: PollingNewMessagesJob,
   pushNotificationJob: PushNotificationJob,
   applicationLifecycle: ApplicationLifecycle,
+  metricsJob: MetricsReportingJob,
   actorSystem: ActorSystem,
   metrics: Metrics,
   clock: Clock
@@ -42,27 +43,42 @@ class JobScheduler @Inject() (
 
   private val scheduledJobs: Seq[ScheduledJob] = Seq(
     pollingNewMessagesJob,
-    pushNotificationJob
+    pushNotificationJob,
+    metricsJob
   ).filter(_.enabled)
 
   private val timers: Map[ScheduledJob, Timer] = scheduledJobs.map { job =>
     job -> metrics.defaultRegistry.timer(s"${job.name}.timer")
   }.toMap
 
-  private val cancellables = scheduledJobs.map { job =>
+  private val counters: Map[ScheduledJob, Counter] = scheduledJobs.map { job =>
+    job -> metrics.defaultRegistry.counter(s"${job.name}.number-running")
+  }.toMap
+
+  private val cancellables = scheduledJobs.flatMap { job =>
     logger.info(s"Scheduling $job")
-    actorSystem.scheduler.scheduleWithFixedDelay(job.initialDelay, job.interval) { () =>
-      val startTime = clock.instant()
-      val runId     = UUID.randomUUID()
-      logger.info(s"Executing job ${job.name} with runID $runId")
-      job.execute.onComplete { result =>
-        val duration = Duration.between(startTime, clock.instant())
-        timers(job).update(duration)
-        result match {
-          case Success(_)         =>
-            logger.info(s"Completed job ${job.name} with runID $runId in ${duration.toSeconds}s")
-          case Failure(throwable) =>
-            logger.error(s"Exception running job ${job.name} with runID $runId after ${duration.toSeconds}s", throwable)
+
+    (0 until job.numberOfInstances).map { _ =>
+      actorSystem.scheduler.scheduleWithFixedDelay(job.initialDelay, job.interval) { () =>
+        val startTime = clock.instant()
+        val runId     = UUID.randomUUID()
+        logger.info(s"Executing job ${job.name} with runID $runId")
+        counters(job).inc()
+        job.execute.onComplete { result =>
+          val duration = Duration.between(startTime, clock.instant())
+          counters(job).dec()
+          timers(job).update(duration)
+          result match {
+            case Success(ScheduledJob.Result.Completed) =>
+              logger.info(s"Completed job ${job.name} with runID $runId in ${duration.toSeconds}s")
+            case Success(ScheduledJob.Result.Cancelled) =>
+              logger.warn(s"Cancelled job ${job.name} with runID $runId after ${duration.toSeconds}")
+            case Failure(throwable)                     =>
+              logger.error(
+                s"Exception running job ${job.name} with runID $runId after ${duration.toSeconds}s",
+                throwable
+              )
+          }
         }
       }
     }

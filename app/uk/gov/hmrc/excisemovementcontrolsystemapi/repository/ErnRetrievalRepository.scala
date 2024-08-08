@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
+import com.mongodb.ReadConcern
 import org.mongodb.scala.model._
 import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
@@ -43,6 +44,18 @@ class ErnRetrievalRepository @Inject() (mongo: MongoComponent, appConfig: AppCon
       replaceIndexes = false
     )
     with Logging {
+
+  def getErnsAndLastRetrieved: Future[Map[String, Instant]] = Mdc.preservingMdc {
+    collection.find().toFuture().map(_.map(ernSubmission => ernSubmission.ern -> ernSubmission.lastRetrieved).toMap)
+  }
+
+  def getLastRetrieved(ern: String): Future[Option[Instant]] = Mdc.preservingMdc {
+    collection
+      .withReadConcern(ReadConcern.AVAILABLE)
+      .find(Filters.eq("ern", ern))
+      .headOption()
+      .map(_.map(_.lastRetrieved))
+  }
 
   def setLastRetrieved(ern: String, instant: Instant = timeService.timestamp()): Future[Option[Instant]] =
     Mdc.preservingMdc {
