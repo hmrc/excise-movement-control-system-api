@@ -25,7 +25,7 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import org.slf4j.MDC
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ErnRetrieval
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{ErnRetrieval, ErnSubmission}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import play.api.inject.bind
@@ -49,6 +49,21 @@ class ErnRetrievalRepositoryItSpec extends PlaySpec
     ).build()
 
   override protected lazy val repository: ErnRetrievalRepository = app.injector.instanceOf[ErnRetrievalRepository]
+
+  "getLastRetrieved" should {
+
+    "return none if the lastRetrieved when the ern does not exist" in {
+      repository.getLastRetrieved("testErn").futureValue mustBe None
+    }
+
+    "return the lastRetrieved when the ern exists" in {
+      val instant = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+      repository.collection.insertOne(ErnRetrieval("testErn", instant)).toFuture().futureValue
+      repository.getLastRetrieved("testErn").futureValue.value mustEqual instant
+    }
+
+    mustPreserveMdc(repository.getLastRetrieved("testErn"))
+  }
 
   "setLastRetrieved" should {
 
@@ -93,6 +108,29 @@ class ErnRetrievalRepositoryItSpec extends PlaySpec
     }
 
     mustPreserveMdc(repository.setLastRetrieved("testErn"))
+  }
+
+  "getErnsAndLastSubmitted" should {
+
+    "return an empty map if there are no ern submissions" in {
+      repository.getErnsAndLastRetrieved.futureValue mustEqual Map.empty
+    }
+
+    "return a map of all erns and last retrieved timestamps" in {
+      val firstInstant = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+      val secondInstant = firstInstant.minus(1, ChronoUnit.SECONDS)
+
+      insert(ErnRetrieval("testErn1", firstInstant)).futureValue
+      insert(ErnRetrieval("testErn2", secondInstant)).futureValue
+
+      val expectedMap = Map("testErn1" -> firstInstant, "testErn2" -> secondInstant)
+
+      val ernsAndLastSubmitted = repository.getErnsAndLastRetrieved.futureValue
+
+      ernsAndLastSubmitted mustBe expectedMap
+    }
+
+    mustPreserveMdc(repository.getErnsAndLastRetrieved)
   }
 
   private def mustPreserveMdc[A](f: => Future[A])(implicit pos: Position): Unit =

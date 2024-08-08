@@ -17,57 +17,101 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
 import cats.syntax.all._
-import org.apache.pekko.Done
 import play.api.Configuration
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnSubmissionRepository, MovementRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, ErnSubmissionRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import java.time.Instant
+import java.time.{Duration, Instant}
+import java.time.temporal.ChronoUnit
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.duration.{Duration, FiniteDuration}
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Random
 
 @Singleton
 class PollingNewMessagesJob @Inject() (
   configuration: Configuration,
   movementRepository: MovementRepository,
   ernSubmissionRepository: ErnSubmissionRepository,
+  ernRetrievalRepository: ErnRetrievalRepository,
   messageService: MessageService,
-  dateTimeService: DateTimeService
+  dateTimeService: DateTimeService,
+  metrics: Metrics
 ) extends ScheduledJob {
 
   override def name: String = "polling-new-messages-job"
 
-  override def execute(implicit ec: ExecutionContext): Future[Done] = {
-    val now              = dateTimeService.timestamp()
-    val fastIntervalTime = timestampBeforeNow(now, fastPollingInterval)
-    val fastCutoffTime   = timestampBeforeNow(now, fastPollingCutoff)
-    val slowIntervalTime = timestampBeforeNow(now, slowPollingInterval)
+  private val lockedMeter    = metrics.defaultRegistry.meter("polling-new-messages-job.locked-meter")
+  private val updatedMeter   = metrics.defaultRegistry.meter("polling-new-messages-job.updated-meter")
+  private val throttledMeter = metrics.defaultRegistry.meter("polling-new-messages-job.throttled-meter")
+
+  override def execute(implicit ec: ExecutionContext): Future[ScheduledJob.Result] = {
+    val deadline = dateTimeService.timestamp().plus(interval.toMillis, ChronoUnit.MILLIS)
     getLastActivity
       .flatMap { lastActivityMap =>
-        lastActivityMap.toSeq.traverse { case (ern, lastActivity) =>
-          if (shouldUpdateMessages(lastActivity, fastIntervalTime, fastCutoffTime, slowIntervalTime)) {
-            messageService.updateMessages(ern)
+        Random.shuffle(lastActivityMap.toSeq).traverse { case (ern, lastActivity) =>
+          val now = dateTimeService.timestamp()
+          if (now.isBefore(deadline)) {
+            ernRetrievalRepository.getLastRetrieved(ern).flatMap { lastRetrieved =>
+              if (shouldUpdateMessages(now, lastActivity, lastRetrieved)) {
+                messageService.updateMessages(ern, lastRetrieved).map { r =>
+                  r match {
+                    case MessageService.UpdateOutcome.Updated             => updatedMeter.mark()
+                    case MessageService.UpdateOutcome.NotUpdatedThrottled => throttledMeter.mark()
+                    case MessageService.UpdateOutcome.Locked              => lockedMeter.mark()
+                  }
+                  ScheduledJob.Result.Completed
+                }
+              } else {
+                Future.successful(ScheduledJob.Result.Completed)
+              }
+            }
           } else {
-            Future.successful(Done)
+            Future.successful(ScheduledJob.Result.Cancelled)
           }
         }
       }
-      .as(Done)
+      .map { results =>
+        val numberOfUnprocessedJobs = results.count(_ == ScheduledJob.Result.Cancelled)
+        if (numberOfUnprocessedJobs > 0) {
+          ScheduledJob.Result.Cancelled
+        } else {
+          ScheduledJob.Result.Completed
+        }
+      }
+  }
+
+  def getBacklog()(implicit ec: ExecutionContext): Future[Int] = {
+    val now = dateTimeService.timestamp()
+    for {
+      lastActivityMap      <- getLastActivity
+      ernsAndLastRetrieved <- ernRetrievalRepository.getErnsAndLastRetrieved
+    } yield lastActivityMap.count { case (ern, lastActivity) =>
+      shouldUpdateMessages(now, lastActivity, ernsAndLastRetrieved.get(ern))
+    }
   }
 
   private def shouldUpdateMessages(
+    now: Instant,
     lastActivity: Instant,
-    fastIntervalTime: Instant,
-    fastCutoffTime: Instant,
-    slowIntervalTime: Instant
-  ): Boolean =
-    (lastActivity.isBefore(fastIntervalTime) && lastActivity.isAfter(fastCutoffTime)) ||
-      lastActivity.isBefore(slowIntervalTime)
+    lastRetrievedOption: Option[Instant]
+  ): Boolean = {
+    val pollingThreshold = if (lastActivity.isBefore(timestampBeforeNow(now, fastPollingCutoff))) {
+      slowPollingInterval
+    } else {
+      fastPollingInterval
+    }
 
-  private def timestampBeforeNow(now: Instant, duration: Duration): Instant =
+    lastRetrievedOption.forall { lastRetrieved =>
+      val timeSinceLastPoll = Duration.between(lastRetrieved, now)
+      timeSinceLastPoll.toMillis > pollingThreshold.toMillis
+    }
+  }
+
+  private def timestampBeforeNow(now: Instant, duration: FiniteDuration): Instant =
     now.minus(duration.length, duration.unit.toChronoUnit)
 
   private def getLastActivity(implicit ec: ExecutionContext): Future[Map[String, Instant]] =
@@ -78,7 +122,9 @@ class PollingNewMessagesJob @Inject() (
       mergedMap.updated(k, Seq(mergedMap.get(k), Some(v)).flatten.max)
     }
 
-  override val enabled: Boolean = true
+  override val enabled: Boolean       = true
+  override val numberOfInstances: Int =
+    configuration.get[Int]("scheduler.pollingNewMessagesJob.numberOfInstances").max(1)
 
   override def initialDelay: FiniteDuration =
     configuration.get[FiniteDuration]("scheduler.pollingNewMessagesJob.initialDelay")

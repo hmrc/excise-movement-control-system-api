@@ -299,6 +299,28 @@ class MovementRepositoryItSpec
     mustPreserveMdc(repository.findDraftMovement(movement))
   }
 
+
+  "getByArc" should {
+    val lrn                   = "123"
+    val consignorId           = "Abc"
+    val consigneeId           = "def"
+    val arc                   = "arc1"
+    val movement              = Movement(Some("boxId"), lrn, consignorId, Some(consigneeId), Some(arc), lastUpdated = timestamp)
+    "return None if no matching movement" in {
+      val result = repository.getByArc(arc).futureValue
+
+      result mustBe None
+    }
+    "return the existing movement matching the ARC" in {
+      insertMovement(movement)
+
+      val result = repository.getByArc(arc).futureValue
+
+      result mustBe Some(movement)
+    }
+    mustPreserveMdc(repository.getByArc(arc))
+  }
+
   "getMovementByErn" should {
     "return a list of movement" when {
       "ern match the consignorId " in {
@@ -357,6 +379,39 @@ class MovementRepositoryItSpec
           expectedMovement1
         )
 
+      }
+      "ern from filter matches record from database" when {
+        val allErns = Seq("consignor", "consignee", "recipient")
+        "ern is consignor" in {
+          val consignorMovement =
+            Movement(Some("boxId"), "1", "consignor", Some("ern1"), Some("arc1"), lastUpdated = timestamp)
+          insertMovement(consignorMovement)
+          val result =
+            repository.getMovementByERN(allErns, MovementFilter.emptyFilter.copy(ern = Some("consignor"))).futureValue
+          result mustBe Seq(
+            consignorMovement
+          )
+        }
+        "ern is consignee" in {
+          val consigneeMovement =
+            Movement(Some("boxId"), "2", "ern1", Some("consignee"), Some("arc2"), lastUpdated = timestamp)
+          insertMovement(consigneeMovement)
+          val result =
+            repository.getMovementByERN(allErns, MovementFilter.emptyFilter.copy(ern = Some("consignee"))).futureValue
+          result mustBe Seq(
+            consigneeMovement
+          )
+        }
+        "ern is message recipient" in {
+          val recipientMovement =
+            Movement(Some("boxId"), "3", "consignorId1", Some("ern1"), Some("arc3"), lastUpdated = timestamp, messages = Seq(Message("encoded", "IE801", "Id", "recipient", Set.empty, timestamp)))
+          insertMovement(recipientMovement)
+          val result =
+            repository.getMovementByERN(allErns, MovementFilter.emptyFilter.copy(ern = Some("recipient"))).futureValue
+          result mustBe Seq(
+            recipientMovement
+          )
+        }
       }
 
       "arc from filter matches record from database" in {
@@ -515,6 +570,26 @@ class MovementRepositoryItSpec
 
       result.sortBy(_.localReferenceNumber) mustBe Seq(expectedMovement1)
 
+    }
+
+    "return a movement" when {
+      "the movement doesn't contain the ERN in consignee or consignor, but a message on the movement does" in {
+        val messages = Seq(Message("blah","IE801","MessageId", "Recipient", Set.empty, timestamp))
+        val expectedMovement1 = Movement(
+          Some("boxId"),
+          "1",
+          "consignor",
+          Some("consignee"),
+          Some("arc1"),
+          lastUpdated = timestamp,
+          messages = messages
+        )
+        insertMovement(expectedMovement1)
+
+        val result = repository.getMovementByERN(Seq("Recipient")).futureValue
+
+        result mustBe Seq(expectedMovement1)
+      }
     }
 
     "return an empty list" in {

@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
+import cats.data.OptionT
 import cats.syntax.all._
 import org.apache.pekko.Done
 import play.api.{Configuration, Logging}
@@ -23,8 +24,10 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, 
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnRetrievalRepository, MovementRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService.UpdateOutcome
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
 
 import java.time.Instant
 import javax.inject.{Inject, Singleton}
@@ -43,7 +46,8 @@ class MessageService @Inject() (
   dateTimeService: DateTimeService,
   correlationIdService: CorrelationIdService,
   emcsUtils: EmcsUtils,
-  auditService: AuditService
+  auditService: AuditService,
+  mongoLockRepository: MongoLockRepository
 )(implicit executionContext: ExecutionContext)
     extends Logging {
 
@@ -53,27 +57,32 @@ class MessageService @Inject() (
   def updateAllMessages(erns: Set[String])(implicit hc: HeaderCarrier): Future[Done] =
     erns.toSeq
       .traverse { ern =>
-        updateMessages(ern).recover { case NonFatal(error) =>
-          logger.warn(s"[MessageService]: Failed to update messages", error)
-          Done
+        ernRetrievalRepository.getLastRetrieved(ern).flatMap { lastRetrieved =>
+          updateMessages(ern, lastRetrieved).recover { case NonFatal(error) =>
+            logger.warn(s"[MessageService]: Failed to update messages", error)
+            Done
+          }
         }
       }
       .as(Done)
 
-  def updateMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] =
-    ernRetrievalRepository.setLastRetrieved(ern, dateTimeService.timestamp()).flatMap { maybeLastRetrieved =>
-      if (shouldProcessNewMessages(maybeLastRetrieved)) {
-        for {
-          boxIds <- getBoxIds(ern)
-          _      <- processNewMessages(ern, boxIds)
-        } yield Done
-      } else {
-        // set back to previous value if we didn't actually process messages
-        maybeLastRetrieved
-          .map(ernRetrievalRepository.setLastRetrieved(ern, _).map(_ => Done))
-          .getOrElse(Future.successful(Done))
+  def updateMessages(ern: String, lastRetrieved: Option[Instant])(implicit hc: HeaderCarrier): Future[UpdateOutcome] = {
+    val lockService = LockService(mongoLockRepository, ern, throttleCutoff)
+    lockService
+      .withLock {
+        val now = dateTimeService.timestamp()
+        if (shouldProcessNewMessages(lastRetrieved)) {
+          for {
+            boxIds <- getBoxIds(ern)
+            _      <- processNewMessages(ern, boxIds)
+            _      <- ernRetrievalRepository.setLastRetrieved(ern, now)
+          } yield UpdateOutcome.Updated
+        } else {
+          Future.successful(UpdateOutcome.NotUpdatedThrottled)
+        }
       }
-    }
+      .map(_.getOrElse(UpdateOutcome.Locked))
+  }
 
   def getTraderMovementMessages(ern: String, arc: String)(implicit
     hc: HeaderCarrier
@@ -150,19 +159,19 @@ class MessageService @Inject() (
     updatedMovements: Seq[Movement],
     message: IEMessage,
     boxIds: Set[String]
-  )(implicit hc: HeaderCarrier): Future[Seq[Movement]] = {
-    val matchedMovements: Seq[Movement] = findMovementsForMessage(movements, updatedMovements, message)
-    if (matchedMovements.nonEmpty) {
-      Future.successful {
-        matchedMovements.map { movement =>
-          updateMovement(ern, movement, message, boxIds)
+  )(implicit hc: HeaderCarrier): Future[Seq[Movement]] =
+    findMovementsForMessage(movements, updatedMovements, message).flatMap { matchedMovements =>
+      if (matchedMovements.nonEmpty) {
+        Future.successful {
+          matchedMovements.map { movement =>
+            updateMovement(ern, movement, message, boxIds)
+          }
         }
+      } else {
+        createMovement(ern, message, boxIds)
+          .map(movement => (movement +: updatedMovements.map(Some(_))).flatten)
       }
-    } else {
-      createMovement(ern, message, boxIds)
-        .map(movement => (movement +: updatedMovements.map(Some(_))).flatten)
     }
-  }
 
   private def updateMovement(recipient: String, movement: Movement, message: IEMessage, boxIds: Set[String]): Movement =
     if (
@@ -192,16 +201,16 @@ class MessageService @Inject() (
     movements: Seq[Movement],
     updatedMovements: Seq[Movement],
     message: IEMessage
-  ): Seq[Movement] = {
-    findByArc(updatedMovements, message) orElse
+  ): Future[Seq[Movement]] =
+    (findByArc(updatedMovements, message) orElse
       findByLrn(updatedMovements, message) orElse
       findByArc(movements, message) orElse
-      findByLrn(movements, message)
-  }.getOrElse(Seq.empty)
+      findByLrn(movements, message) orElse
+      findByArcInMessage(message)).getOrElse(Seq.empty)
 
   private def getConsignee(movement: Movement, message: IEMessage): Option[String] =
     message match {
-      case ie801: IE801Message => movement.consigneeId orElse ie801.consigneeId
+      case ie801: IE801Message => ie801.consigneeId
       case ie813: IE813Message => ie813.consigneeId orElse movement.consigneeId
       case _                   => movement.consigneeId
     }
@@ -275,7 +284,7 @@ class MessageService @Inject() (
           lrn,
           consignor,
           None,
-          administrativeReferenceCode = message.administrativeReferenceCode.head, // TODO remove .head
+          administrativeReferenceCode = message.administrativeReferenceCode.head,
           dateTimeService.timestamp(),
           messages = Seq(convertMessage(consignor, message, boxIds))
         )
@@ -289,24 +298,31 @@ class MessageService @Inject() (
       message.localReferenceNumber,
       message.consignorId,
       message.consigneeId,
-      administrativeReferenceCode = message.administrativeReferenceCode.head, // TODO remove .head
+      administrativeReferenceCode = message.administrativeReferenceCode.head,
       dateTimeService.timestamp(),
       messages = Seq(convertMessage(recipient, message, boxIds))
     )
 
-  private def findByArc(movements: Seq[Movement], message: IEMessage): Option[Seq[Movement]] = {
+  private def findByArc(movements: Seq[Movement], message: IEMessage): OptionT[Future, Seq[Movement]] = {
 
     val matchedMovements = message.administrativeReferenceCode.flatten.flatMap { arc =>
       movements.find(_.administrativeReferenceCode.contains(arc))
     }
 
-    if (matchedMovements.isEmpty) None else Some(matchedMovements)
+    if (matchedMovements.isEmpty) OptionT.none else OptionT.pure(matchedMovements)
   }
 
-  private def findByLrn(movements: Seq[Movement], message: IEMessage): Option[Seq[Movement]] =
-    movements
-      .find(movement => message.lrnEquals(movement.localReferenceNumber))
-      .map(Seq(_))
+  private def findByArcInMessage(message: IEMessage): OptionT[Future, Seq[Movement]] =
+    message.administrativeReferenceCode.flatten.traverse { arc =>
+      OptionT(movementRepository.getByArc(arc))
+    }
+
+  private def findByLrn(movements: Seq[Movement], message: IEMessage): OptionT[Future, Seq[Movement]] =
+    OptionT.fromOption(
+      movements
+        .find(movement => message.lrnEquals(movement.localReferenceNumber))
+        .map(Seq(_))
+    )
 
   private def convertMessage(recipient: String, input: IEMessage, boxIds: Set[String]): Message =
     Message(
@@ -317,4 +333,14 @@ class MessageService @Inject() (
       boxesToNotify = boxIds,
       createdOn = dateTimeService.timestamp()
     )
+}
+
+object MessageService {
+  sealed trait UpdateOutcome
+
+  object UpdateOutcome {
+    case object Updated extends UpdateOutcome
+    case object Locked extends UpdateOutcome
+    case object NotUpdatedThrottled extends UpdateOutcome
+  }
 }

@@ -19,6 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.config
 import play.api.inject.Binding
 import play.api.{Configuration, Environment}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MessageRecipientMigration, MovementMigration}
+import uk.gov.hmrc.mongo.metrix.MetricOrchestrator
 
 import java.time.Clock
 
@@ -28,7 +29,8 @@ class Module extends play.api.inject.Module {
     Seq(
       bind[AppConfig].toSelf.eagerly(),
       bind[JobScheduler].toSelf.eagerly(),
-      bind[Clock].toInstance(Clock.systemUTC())
+      bind[Clock].toInstance(Clock.systemUTC()),
+      bind[MetricOrchestrator].toProvider[MetricsProvider]
     ) ++ migrationBindings(configuration)
 
   private def migrationBindings(configuration: Configuration): Seq[Binding[_]] =

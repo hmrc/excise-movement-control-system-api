@@ -19,7 +19,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.{Mockito, MockitoSugar}
-import org.mongodb.scala.model.{Filters, Updates}
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -39,11 +38,10 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
-import java.time.Instant
+import java.time.{Duration, Instant}
 import java.time.temporal.ChronoUnit
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Promise}
-import java.time.Duration
 
 class MessageServiceItSpec
   extends AnyFreeSpec
@@ -124,18 +122,12 @@ class MessageServiceItSpec
         Future.successful(Done)
       )
 
-      service.updateMessages(ern)(hc).failed.futureValue
+      service.updateMessages(ern, None)(hc).failed.futureValue
       val result1 = repository.getMovementByLRNAndERNIn(lrn, List(ern)).futureValue
 
       result1 must contain only expectedMovement
 
-      // Reset the lastRetrieved time so that a second run will not be throttled
-      ernRetrievalRepository.collection.findOneAndUpdate(
-        Filters.eq("ern", ern),
-        Updates.set("lastRetrieved", now.minus(10, ChronoUnit.MINUTES))
-      ).toFuture().futureValue
-
-      service.updateMessages(ern)(hc).futureValue
+      service.updateMessages(ern, Some(now.minus(10, ChronoUnit.MINUTES)))(hc).futureValue
       val result2 = repository.getMovementByLRNAndERNIn(lrn, List(ern)).futureValue
 
       result1 mustEqual result2
@@ -163,8 +155,8 @@ class MessageServiceItSpec
       when(mockMessageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
       when(mockMessageConnector.acknowledgeMessages(any)(any)).thenReturn(Future(promise.future).flatten)
 
-      val future = service.updateMessages(ern)(hc)
-      val future2 = service.updateMessages(ern)(hc)
+      val future = service.updateMessages(ern, None)(hc)
+      val future2 = service.updateMessages(ern, None)(hc)
 
       promise.success(Done)
       future.futureValue
@@ -189,11 +181,11 @@ class MessageServiceItSpec
       when(mockMessageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
       when(mockDateTimeService.timestamp()).thenReturn(now)
-      service.updateMessages(ern)(hc).futureValue
+      service.updateMessages(ern, ernRetrievalRepository.getLastRetrieved(ern).futureValue)(hc).futureValue
       when(mockDateTimeService.timestamp()).thenReturn(now.plus(timeout.dividedBy(2)))
-      service.updateMessages(ern)(hc).futureValue
+      service.updateMessages(ern, ernRetrievalRepository.getLastRetrieved(ern).futureValue)(hc).futureValue
       when(mockDateTimeService.timestamp()).thenReturn(now.plus(timeout.plus(Duration.ofSeconds(1))))
-      service.updateMessages(ern)(hc).futureValue
+      service.updateMessages(ern, ernRetrievalRepository.getLastRetrieved(ern).futureValue)(hc).futureValue
 
       verify(mockMessageConnector, times(2)).getNewMessages(any)(any)
     }
