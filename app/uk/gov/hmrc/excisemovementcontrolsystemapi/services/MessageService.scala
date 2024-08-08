@@ -84,14 +84,6 @@ class MessageService @Inject() (
       .map(_.getOrElse(UpdateOutcome.Locked))
   }
 
-  def getTraderMovementMessages(ern: String, arc: String)(implicit
-    hc: HeaderCarrier
-  ): Future[Seq[IEMessage]] =
-    traderMovementConnector.getMovementMessages(ern, arc).recover { case NonFatal(error) =>
-      logger.warn(s"[MessageService]: Failed to call trader-movement", error)
-      Seq.empty
-    }
-
   private def shouldProcessNewMessages(maybeLastRetrieved: Option[Instant]): Boolean = {
     val cutoffTime = dateTimeService.timestamp().minus(throttleCutoff.length, throttleCutoff.unit.toChronoUnit)
     //noinspection MapGetOrElseBoolean
@@ -137,7 +129,7 @@ class MessageService @Inject() (
             .foldLeft(Future.successful(Seq.empty[Movement])) { (accumulated, message) =>
               for {
                 accumulatedMovements <- accumulated
-                updatedMovements     <- updateOrCreateMovements(ern, movements, accumulatedMovements, message, boxIds)
+                updatedMovements <- updateOrCreateMovements(ern, movements, accumulatedMovements, message, boxIds)
               } yield (updatedMovements ++ accumulatedMovements)
                 .distinctBy { movement =>
                   (movement.localReferenceNumber, movement.consignorId, movement.administrativeReferenceCode)
