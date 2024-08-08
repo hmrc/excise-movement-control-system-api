@@ -903,13 +903,15 @@ class MessageServiceSpec
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
             when(movementRepository.getByArc(any)).thenReturn(Future.successful(Some(movement)))
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+            when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
+            when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
             when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
             when(messageConnector.getNewMessages(any)(any))
               .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
-            messageService.updateMessages(ern).futureValue
+            messageService.updateMessages(ern, None).futureValue
 
             verify(movementRepository).save(expectedMovement)
           }
