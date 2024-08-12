@@ -31,7 +31,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class ClientBoxIdRepository @Inject()(
+class ClientBoxIdRepository @Inject() (
   mongo: MongoComponent,
   configuration: Configuration,
   timeService: DateTimeService
@@ -45,9 +45,10 @@ class ClientBoxIdRepository @Inject()(
     ) {
 
   def getBoxId(clientId: String): Future[Option[String]] = Mdc.preservingMdc {
-    collection.find(
-      Filters.eq("clientId", clientId)
-    )
+    collection
+      .find(
+        Filters.eq("clientId", clientId)
+      )
       .map(_.boxId)
       .headOption()
   }
@@ -76,6 +77,6 @@ object ClientBoxIdRepository {
         IndexOptions()
           .name("clientId_idx")
           .unique(true)
-      ),
+      )
     )
 }
