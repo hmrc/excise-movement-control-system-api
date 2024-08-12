@@ -129,7 +129,7 @@ class MessageService @Inject() (
             .foldLeft(Future.successful(Seq.empty[Movement])) { (accumulated, message) =>
               for {
                 accumulatedMovements <- accumulated
-                updatedMovements <- updateOrCreateMovements(ern, movements, accumulatedMovements, message, boxIds)
+                updatedMovements     <- updateOrCreateMovements(ern, movements, accumulatedMovements, message, boxIds)
               } yield (updatedMovements ++ accumulatedMovements)
                 .distinctBy { movement =>
                   (movement.localReferenceNumber, movement.consignorId, movement.administrativeReferenceCode)
