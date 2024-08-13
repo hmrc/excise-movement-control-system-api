@@ -24,17 +24,18 @@ import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.{FailedBoxIdNotificationResponse, FailedPushNotification, SuccessBoxNotificationResponse, SuccessPushNotificationResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class PushNotificationConnector @Inject() (
-  httpClient: HttpClient,
+  httpClient: HttpClientV2,
   appConfig: AppConfig,
   dateTimeService: DateTimeService
 )(implicit val ec: ExecutionContext)
@@ -45,14 +46,11 @@ class PushNotificationConnector @Inject() (
     clientId: String
   )(implicit hc: HeaderCarrier): Future[Either[Result, SuccessBoxNotificationResponse]] = {
 
-    val url         = s"${appConfig.pushPullNotificationsHost}/box"
-    val queryParams = Seq(
-      "boxName"  -> Constants.BoxName,
-      "clientId" -> clientId
-    )
+    val url = s"${appConfig.pushPullNotificationsHost}/box"
 
     httpClient
-      .GET[HttpResponse](url, queryParams)
+      .get(url"$url?boxName=${Constants.BoxName}&clientId=$clientId")
+      .execute[HttpResponse]
       .map { response =>
         extractIfSuccessful[SuccessBoxNotificationResponse](response)
           .fold(error => Left(handleBoxNotificationError(error, clientId)), Right(_))
@@ -80,11 +78,10 @@ class PushNotificationConnector @Inject() (
     val url = appConfig.pushPullNotificationsUri(boxId)
 
     httpClient
-      .POST[Notification, HttpResponse](
-        url,
-        notification,
-        Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON)
-      )
+      .post(url"$url")
+      .withBody(Json.toJson(notification))
+      .setHeader(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON)
+      .execute[HttpResponse]
       .map { response =>
         extractIfSuccessful[SuccessPushNotificationResponse](response)
           .fold(

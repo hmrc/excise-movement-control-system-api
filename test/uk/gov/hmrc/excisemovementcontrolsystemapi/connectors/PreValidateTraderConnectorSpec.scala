@@ -17,26 +17,27 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import com.codahale.metrics.{MetricRegistry, Timer}
-import org.mockito.ArgumentMatchersSugar.{any, eqTo}
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchersSugar.eqTo
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.mockito.MockitoSugar.{reset, verify, when}
-import org.mockito.captor.ArgCaptor
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
+import play.api.http.Status._
 import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTraderHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.EISHeaderTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderEISResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.CorrelationIdService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderErrorResponse, getPreValidateTraderRequest, getPreValidateTraderSuccessResponse}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils._
+import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
@@ -50,7 +51,7 @@ class PreValidateTraderConnectorSpec
   protected implicit val hc: HeaderCarrier    = HeaderCarrier()
   protected implicit val ec: ExecutionContext = ExecutionContext.global
 
-  private val mockHttpClient       = mock[HttpClient]
+  private val mockHttpClient       = mock[HttpClientV2]
   private val correlationIdService = mock[CorrelationIdService]
   private val dateTimeService      = mock[DateTimeService]
   private val appConfig            = mock[AppConfig]
@@ -62,6 +63,7 @@ class PreValidateTraderConnectorSpec
   private val emcsCorrelationId            = "1234566"
   private val timerContext                 = mock[Timer.Context]
   private val preValidateTraderBearerToken = "preValidateTraderBearerToken"
+  private val mockRequestBuilder           = mock[RequestBuilder]
 
   private val validRequest  = getPreValidateTraderRequest
   private val validResponse = getPreValidateTraderSuccessResponse
@@ -73,12 +75,15 @@ class PreValidateTraderConnectorSpec
     super.beforeEach()
     reset(mockHttpClient, appConfig, metrics, timerContext)
 
-    when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
-      .thenReturn(Future.successful(Right(Right(validResponse))))
+    when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
+    when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
+    when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
+    when(mockRequestBuilder.execute[HttpResponse](any(), any()))
+      .thenReturn(Future.successful(HttpResponse(OK, Json.toJson(validResponse).toString())))
 
     when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(correlationIdService.generateCorrelationId()).thenReturn(emcsCorrelationId)
-    when(appConfig.preValidateTraderUrl).thenReturn("/eis/path")
+    when(appConfig.preValidateTraderUrl).thenReturn("http://localhost:8080/eis/path")
     when(appConfig.preValidateTraderBearerToken).thenReturn(preValidateTraderBearerToken)
     when(metrics.timer(any).time()) thenReturn timerContext
   }
@@ -91,8 +96,11 @@ class PreValidateTraderConnectorSpec
     }
 
     "return business error response" in {
-      when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
-        .thenReturn(Future.successful(Right(Left(businessError))))
+      when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.execute[HttpResponse](any(), any()))
+        .thenReturn(Future.successful(HttpResponse(OK, Json.toJson(businessError).toString())))
 
       val result = await(submitPreValidateTrader())
 
@@ -108,24 +116,22 @@ class PreValidateTraderConnectorSpec
     "send a request with the right parameters" in {
       submitPreValidateTrader()
 
-      verify(mockHttpClient).POST(
-        eqTo("/eis/path"),
-        eqTo(validRequest),
-        eqTo(expectedSubmissionHeader("2023-09-17T09:32:50.000Z", "1234566", preValidateTraderBearerToken))
-      )(any, any, any, any)
-    }
-
-    "use the right request parameters in http client" in {
-      submitPreValidateTrader()
-
-      val preValidateTraderHttpReader = verifyHttpHeader
-
-      preValidateTraderHttpReader.ern mustBe "ern123"
+      verify(mockHttpClient)
+        .post(eqTo(url"http://localhost:8080/eis/path"))
+        .setHeader(
+          eqTo(
+            expectedSubmissionHeader("2023-09-17T09:32:50.345Z", emcsCorrelationId, preValidateTraderBearerToken)
+          ): _*
+        )
+        .withBody(eqTo(Json.toJson(validRequest)))
     }
 
     "return Bad request error" in {
-      when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
-        .thenReturn(Future.successful(Left(BadRequest("any error"))))
+      when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.execute[HttpResponse](any(), any()))
+        .thenReturn(Future.successful(HttpResponse(BAD_REQUEST, "any error")))
 
       val result = await(submitPreValidateTrader())
 
@@ -133,8 +139,12 @@ class PreValidateTraderConnectorSpec
     }
 
     "return 500 if post request fail" in {
-      when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
-        .thenReturn(Future.failed(new RuntimeException("error")))
+      when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.execute[HttpResponse](any(), any()))
+        .thenReturn(Future.successful(HttpResponse(INTERNAL_SERVER_ERROR, "error")))
+
       val result = await(submitPreValidateTrader())
 
       result.left.value mustBe InternalServerError(
@@ -150,8 +160,11 @@ class PreValidateTraderConnectorSpec
     }
 
     "return Not found error" in {
-      when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
-        .thenReturn(Future.successful(Left(NotFound("error"))))
+      when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.execute[HttpResponse](any(), any()))
+        .thenReturn(Future.successful(HttpResponse(NOT_FOUND, "error")))
 
       val result = await(submitPreValidateTrader())
 
@@ -159,8 +172,11 @@ class PreValidateTraderConnectorSpec
     }
 
     "return service unavailable error" in {
-      when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
-        .thenReturn(Future.successful(Left(ServiceUnavailable("any error"))))
+      when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.execute[HttpResponse](any(), any()))
+        .thenReturn(Future.successful(HttpResponse(SERVICE_UNAVAILABLE, "any error")))
 
       val result = await(submitPreValidateTrader())
 
@@ -168,8 +184,11 @@ class PreValidateTraderConnectorSpec
     }
 
     "return Internal service error error" in {
-      when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
-        .thenReturn(Future.successful(Left(InternalServerError("any error"))))
+      when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.execute[HttpResponse](any(), any()))
+        .thenReturn(Future.successful(HttpResponse(INTERNAL_SERVER_ERROR, "any error")))
 
       val result = await(submitPreValidateTrader())
 
@@ -177,8 +196,11 @@ class PreValidateTraderConnectorSpec
     }
 
     "start and stop metrics" in {
-      when(mockHttpClient.POST[Any, Any](any, any, any)(any, any, any, any))
-        .thenReturn(Future.successful(Left(BadRequest("any error"))))
+      when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.execute[HttpResponse](any(), any()))
+        .thenReturn(Future.successful(HttpResponse(BAD_REQUEST, "any error")))
 
       await(submitPreValidateTrader())
 
@@ -186,15 +208,6 @@ class PreValidateTraderConnectorSpec
       verify(metrics.timer(eqTo("emcs.prevalidatetrader.connector.timer"))).time()
       verify(timerContext).stop()
     }
-  }
-
-  private def verifyHttpHeader: PreValidateTraderHttpReader = {
-    val captor = ArgCaptor[PreValidateTraderHttpReader]
-    verify(mockHttpClient).POST(any, any, any)(any, captor.capture, any, any)
-
-    val preValidateTraderHttpReader = captor.value
-    preValidateTraderHttpReader.isInstanceOf[PreValidateTraderHttpReader] mustBe true
-    preValidateTraderHttpReader
   }
 
   private def submitPreValidateTrader(): Future[Either[Result, PreValidateTraderEISResponse]] =

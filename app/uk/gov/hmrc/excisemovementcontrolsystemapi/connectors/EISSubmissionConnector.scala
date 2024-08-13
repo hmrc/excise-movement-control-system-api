@@ -22,27 +22,29 @@ import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
 class EISSubmissionConnector @Inject() (
-  httpClient: HttpClient,
+  httpClient: HttpClientV2,
   emcsUtils: EmcsUtils,
   appConfig: AppConfig,
   metrics: MetricRegistry,
   dateTimeService: DateTimeService
 )(implicit ec: ExecutionContext)
     extends EISSubmissionHeaders
-    with Logging {
+    with Logging
+    with ResponseHandler {
 
   def submitMessage(
     message: IEMessage,
@@ -59,29 +61,28 @@ class EISSubmissionConnector @Inject() (
     val messageType     = message.messageType
     val encodedMessage  = emcsUtils.encode(wrappedXml.toString)
 
+    val error = EisErrorResponsePresentation(
+      timestamp,
+      "Internal server error",
+      "Unexpected error occurred while processing Submission request",
+      correlationId
+    )
+
     val eisRequest = EISSubmissionRequest(authorisedErn, messageType, encodedMessage)
 
     httpClient
-      .POST[EISSubmissionRequest, Either[Result, EISSubmissionResponse]](
-        appConfig.emcsReceiverMessageUrl,
-        eisRequest,
-        build(correlationId, createdDateTime, appConfig.submissionBearerToken)
-      )(
-        EISSubmissionRequest.format,
-        EISHttpReader(correlationId, authorisedErn, createdDateTime, dateTimeService, messageType),
-        hc,
-        ec
-      )
+      .post(url"${appConfig.emcsReceiverMessageUrl}")
+      .setHeader(build(correlationId, createdDateTime, appConfig.submissionBearerToken): _*)
+      .withBody(Json.toJson(eisRequest))
+      .execute[HttpResponse]
+      .map { value =>
+        extractIfSuccessful[EISSubmissionResponse](value)
+          .fold(_ => Left(InternalServerError(Json.toJson(error))), Right(_))
+      }
       .andThen { case _ => timer.stop() }
       .recover { case ex: Throwable =>
         logger.warn(EISErrorMessage(createdDateTime, ex.getMessage, correlationId, messageType), ex)
 
-        val error = EisErrorResponsePresentation(
-          timestamp,
-          "Internal server error",
-          "Unexpected error occurred while processing Submission request",
-          correlationId
-        )
         Left(InternalServerError(Json.toJson(error)))
       }
   }

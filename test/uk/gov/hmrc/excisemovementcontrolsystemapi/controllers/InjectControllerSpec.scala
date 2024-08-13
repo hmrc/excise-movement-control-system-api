@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import org.apache.pekko.Done
-import org.mockito.ArgumentMatchers.{any, argThat, refEq}
+import org.mockito.ArgumentMatchers.{any, refEq}
 import org.mockito.Mockito.never
 import org.mockito.MockitoSugar.{reset, verify, when}
 import org.scalatest.BeforeAndAfterEach
@@ -25,7 +25,6 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
-import play.api.http.Status
 import play.api.http.Status.ACCEPTED
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -34,19 +33,15 @@ import play.api.mvc.Result
 import play.api.mvc.Results.ImATeapot
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
-import play.api.test.Helpers.{route, status}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.InjectController.CsvRow
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnSubmissionRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 import uk.gov.hmrc.http.UpstreamErrorResponse
-import uk.gov.hmrc.internalauth.client.Predicate.Permission
-import uk.gov.hmrc.internalauth.client.test.{BackendAuthComponentsStub, FrontendAuthComponentsStub, StubBehaviour}
-import uk.gov.hmrc.internalauth.client.{BackendAuthComponents, FrontendAuthComponents, IAAction, Predicate, Resource, ResourceLocation, ResourceType, Retrieval}
+import uk.gov.hmrc.internalauth.client.test.{BackendAuthComponentsStub, StubBehaviour}
+import uk.gov.hmrc.internalauth.client._
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
 
 class InjectControllerSpec extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterEach {
 
