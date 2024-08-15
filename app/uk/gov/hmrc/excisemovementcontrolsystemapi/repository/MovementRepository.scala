@@ -20,7 +20,7 @@ import cats.implicits.toFunctorOps
 import org.apache.pekko.Done
 import org.bson.conversions.Bson
 import org.mongodb.scala.model.Filters._
-import org.mongodb.scala.model._
+import org.mongodb.scala.model.{InsertManyOptions, _}
 import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
@@ -90,7 +90,10 @@ class MovementRepository @Inject() (
   }
   def saveMovements(movement: Seq[Movement]): Future[Boolean] = Mdc.preservingMdc {
     collection
-      .insertMany(movement.map(_.copy(lastUpdated = timeService.timestamp())))
+      .insertMany(
+        movement.map(_.copy(lastUpdated = timeService.timestamp())),
+        InsertManyOptions().ordered(false)
+      )
       .toFuture()
       .map(_ => true)
   }
