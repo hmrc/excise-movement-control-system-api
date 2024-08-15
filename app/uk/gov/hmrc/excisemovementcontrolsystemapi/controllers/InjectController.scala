@@ -52,7 +52,6 @@ class InjectController @Inject() (
           .map(_ => Accepted)
       }
     }
-
 }
 
 object InjectController {
