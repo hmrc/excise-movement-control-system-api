@@ -60,7 +60,7 @@ class AuthActionImpl @Inject() (
         block(authorisedRequest)
 
       case Left(error) if error.statusCode == FORBIDDEN =>
-        logger.error(s"Forbidden: ${error.message}")
+        logger.warn(s"Forbidden: ${error.message}")
 
         Future.successful(
           Forbidden(
@@ -75,7 +75,7 @@ class AuthActionImpl @Inject() (
         )
 
       case Left(error) =>
-        logger.error(s"Problems with Authorisation: ${error.message}")
+        logger.warn(s"Problems with Authorisation: ${error.message}")
 
         Future.successful(
           Unauthorized(
@@ -129,7 +129,7 @@ class AuthActionImpl @Inject() (
     val erns = getAllErnsForEmcsEnrolment(enrolments)
 
     if (erns.isEmpty) {
-      logger.error(s"Could not find ${EnrolmentKey.ERN}")
+      logger.warn(s"Could not find ${EnrolmentKey.ERN}")
       Left(ErrorResponse(FORBIDDEN, s"Could not find ${EnrolmentKey.ERN}"))
     } else {
       Right(EnrolmentRequest(request, erns, internalId))

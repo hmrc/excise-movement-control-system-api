@@ -45,7 +45,7 @@ class ParseXmlActionImpl @Inject() (
     request.body match {
       case body: NodeSeq if body.nonEmpty => parseXml(body, request)
       case _                              =>
-        logger.error("Not valid XML or XML is empty")
+        logger.warn("Not valid XML or XML is empty")
         Future.successful(Left(BadRequest(Json.toJson(handleError("XML error", "Not valid XML or XML is empty")))))
     }
 
@@ -60,7 +60,7 @@ class ParseXmlActionImpl @Inject() (
         Future.successful(Right(ParsedXmlRequest(request, value, request.erns, request.internalId)))
 
       case Failure(exception: ParserFailure) =>
-        logger.error(s"[ParseXmlActionImpl] - Not valid $messageType message: ${exception.getMessage}", exception)
+        logger.warn(s"[ParseXmlActionImpl] - Not valid $messageType message: ${exception.getMessage}", exception)
         Future.successful(
           Left(
             BadRequest(
@@ -72,14 +72,14 @@ class ParseXmlActionImpl @Inject() (
         )
 
       case Failure(exception: IEMessageFactoryException) =>
-        logger.error(s"[ParseXmlActionImpl] - Not valid $messageType message: ${exception.getMessage}", exception)
+        logger.warn(s"[ParseXmlActionImpl] - Not valid $messageType message: ${exception.getMessage}", exception)
         // Happy to return this exception message as we control it
         Future.successful(
           Left(BadRequest(Json.toJson(handleError(s"Not valid $messageType message", exception.getMessage))))
         )
 
       case Failure(exception) =>
-        logger.error(s"[ParseXmlActionImpl] - Not valid $messageType message: ${exception.getMessage}", exception)
+        logger.warn(s"[ParseXmlActionImpl] - Not valid $messageType message: ${exception.getMessage}", exception)
         // Don't return exception message as we don't know what is in it
         Future.successful(
           Left(
