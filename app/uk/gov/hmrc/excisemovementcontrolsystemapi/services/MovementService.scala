@@ -48,7 +48,7 @@ class MovementService @Inject() (
       }
       .recover {
         case _: MongoWriteException =>
-          logger.error(
+          logger.warn(
             s"[MovementService] - The local reference number has already been used for another movement"
           )
           createDuplicateErrorResponse(movement)

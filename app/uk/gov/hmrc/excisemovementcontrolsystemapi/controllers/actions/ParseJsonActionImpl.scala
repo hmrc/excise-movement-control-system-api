@@ -42,7 +42,7 @@ class ParseJsonActionImpl @Inject() (
     request.body match {
       case body: JsValue => parseJson(body, request)
       case _             =>
-        logger.error("Not valid Json")
+        logger.warn("Not valid Json")
         Future.successful(Left(BadRequest(Json.toJson(handleError("Json error", "Not valid Json or Json is empty")))))
     }
 
@@ -55,7 +55,7 @@ class ParseJsonActionImpl @Inject() (
         Future.successful(Right(preValidateTrader.request.ParsedPreValidateTraderRequest(request, value)))
 
       case Failure(exception: JsResultException) =>
-        logger.error(s"Not valid Pre Validate Trader message: ${exception.getMessage}", exception)
+        logger.warn(s"Not valid Pre Validate Trader message: ${exception.getMessage}", exception)
         Future.successful(
           Left(
             BadRequest(
@@ -70,7 +70,7 @@ class ParseJsonActionImpl @Inject() (
         )
 
       case Failure(exception) =>
-        logger.error(s"Not valid Pre Validate Trader message: ${exception.getMessage}", exception)
+        logger.warn(s"Not valid Pre Validate Trader message: ${exception.getMessage}", exception)
         Future.successful(
           Left(BadRequest(Json.toJson(handleError(s"Not valid PreValidateTrader message", exception.getMessage))))
         )
