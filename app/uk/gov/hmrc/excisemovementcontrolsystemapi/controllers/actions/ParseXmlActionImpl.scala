@@ -60,7 +60,8 @@ class ParseXmlActionImpl @Inject() (
         Future.successful(Right(ParsedXmlRequest(request, value, request.erns, request.internalId)))
 
       case Failure(exception: ParserFailure) =>
-        logger.warn(s"[ParseXmlActionImpl] - Not valid $messageType message: ${exception.getMessage}", exception)
+        logger.warn(s"[ParseXmlActionImpl] - Not valid $messageType")
+        logger.debug(s"[ParseXmlActionImpl] - Not valid $messageType message: ${exception.getMessage}", exception)
         Future.successful(
           Left(
             BadRequest(
