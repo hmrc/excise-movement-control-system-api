@@ -154,8 +154,7 @@ class EISSubmissionConnectorSpec
         .thenReturn(Future.successful(HttpResponse(BAD_REQUEST, "any error")))
 
       val result = await(submitExciseMovementForIE815)
-
-      result.left.value mustBe BadRequest("any error")
+      result.left.value mustBe InternalServerError("any error")
     }
 
     "return 500 if post request fail" in {

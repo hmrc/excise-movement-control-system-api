@@ -22,7 +22,7 @@ import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.{PreValidateTraderHttpReader, ResponseHandler}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.PreValidateTraderRequest
@@ -65,7 +65,6 @@ class PreValidateTraderConnector @Inject() (
       "Unexpected error occurred while processing PreValidateTrader request",
       correlationId
     )
-
     httpClient
       .post(url"${appConfig.preValidateTraderUrl}")
       .setHeader(build(correlationId, createdDateTime, appConfig.preValidateTraderBearerToken): _*)

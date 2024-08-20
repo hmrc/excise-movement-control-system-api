@@ -46,16 +46,16 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
   protected implicit val ec: ExecutionContext = ExecutionContext.global
   protected implicit val futures: Futures     = mock[Futures]
 
-  private val httpClient            = mock[HttpClientV2]
-  private val mockRequestBuilder    = mock[RequestBuilder]
-  private val appConfig             = mock[AppConfig]
-  private val emcsUtils             = mock[EmcsUtils]
-  private val metrics               = mock[MetricRegistry](RETURNS_DEEP_STUBS)
-  private val connector             = new NrsConnector(httpClient, appConfig, metrics)
-  private val timerContext          = mock[Timer.Context]
-  private val timeStamp             = ZonedDateTime.now()
-  private val nrsUrl                = "http://localhost:8080/nrs-url"
-  private val nrsMetadata           = NrsMetadata(
+  private val httpClient                 = mock[HttpClientV2]
+  val mockRequestBuilder: RequestBuilder = mock[RequestBuilder]
+  private val appConfig                  = mock[AppConfig]
+  private val emcsUtils                  = mock[EmcsUtils]
+  private val metrics                    = mock[MetricRegistry](RETURNS_DEEP_STUBS)
+  private val connector                  = new NrsConnector(httpClient, appConfig, metrics)
+  private val timerContext               = mock[Timer.Context]
+  private val timeStamp                  = ZonedDateTime.now()
+  private val nrsUrl                     = "http://localhost:8080/nrs-url"
+  private val nrsMetadata                = NrsMetadata(
     businessId = "emcs",
     notableEvent = "excise-movement-control-system",
     payloadContentType = "application/json",
@@ -66,8 +66,8 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
     headerData = Map(),
     searchKeys = Map("ern" -> "123")
   )
-  private val nrsPayLoad            = NrsPayload("encodepayload", nrsMetadata)
-  private val successFulNrsResponse = HttpResponse(
+  private val nrsPayLoad                 = NrsPayload("encodepayload", nrsMetadata)
+  private val successFulNrsResponse      = HttpResponse(
     202,
     Json.obj("nrSubmissionId" -> "testNesSubmissionId").toString()
   )
@@ -77,7 +77,7 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
     reset(httpClient, appConfig, emcsUtils, metrics, timerContext, mockRequestBuilder)
 
     when(httpClient.post(any)(any)).thenReturn(mockRequestBuilder)
-    when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
+    when(mockRequestBuilder.setHeader(any(), any())).thenReturn(mockRequestBuilder)
     when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
     when(mockRequestBuilder.execute[HttpResponse](any(), any()))
       .thenReturn(Future.successful(successFulNrsResponse))
@@ -150,7 +150,7 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
       when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.execute[HttpResponse](any(), any()))
-        .thenReturn(Future.successful(successFulNrsResponse))
+        .thenReturn(Future.failed(new RuntimeException("error")), Future.successful(successFulNrsResponse))
 
       val result = await(connector.sendToNrs(nrsPayLoad, "correlationId"))
 
