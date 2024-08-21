@@ -26,7 +26,7 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
-import play.api.http.Status.{INTERNAL_SERVER_ERROR, OK}
+import play.api.http.Status.{FORBIDDEN, INTERNAL_SERVER_ERROR, OK, UNAUTHORIZED}
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
@@ -193,7 +193,39 @@ class MessageConnectorSpec
           )
       )
 
-      connector.getNewMessages(ern)(hc).failed.futureValue
+      connector.getNewMessages(ern)(hc).failed.futureValue.getMessage mustBe "Invalid status returned"
+    }
+
+    "must fail when the server responds with FORBIDDEN" in {
+
+      when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
+      when(mockDateTimeService.timestamp()).thenReturn(timestamp)
+
+      wireMockServer.stubFor(
+        put(urlEqualTo(url))
+          .willReturn(
+            aResponse()
+              .withStatus(FORBIDDEN)
+          )
+      )
+
+      connector.getNewMessages(ern)(hc).failed.futureValue.getMessage mustBe "FORBIDDEN status returned"
+    }
+
+    "must fail when the server responds with UNAUTHORIZED" in {
+
+      when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
+      when(mockDateTimeService.timestamp()).thenReturn(timestamp)
+
+      wireMockServer.stubFor(
+        put(urlEqualTo(url))
+          .willReturn(
+            aResponse()
+              .withStatus(UNAUTHORIZED)
+          )
+      )
+
+      connector.getNewMessages(ern)(hc).failed.futureValue.getMessage mustBe "UNAUTHORIZED status returned"
     }
 
     "must fail when the server responds with a non-json body" in {

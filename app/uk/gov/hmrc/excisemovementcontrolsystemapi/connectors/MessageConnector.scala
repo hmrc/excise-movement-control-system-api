@@ -19,9 +19,9 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 import cats.implicits.toFunctorOps
 import generated.NewMessagesDataResponse
 import org.apache.pekko.Done
-import play.api.{Configuration, Logging}
-import play.api.http.Status.OK
+import play.api.http.Status.{FORBIDDEN, OK, UNAUTHORIZED}
 import play.api.libs.json.{Json, Reads}
+import play.api.{Configuration, Logging}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.Service
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptSuccessResponse
@@ -30,9 +30,9 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesRe
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, CorrelationIdService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService._
-import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
 import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{BadRequestException, HeaderCarrier, HttpResponse, StringContextOps}
 
 import java.nio.charset.StandardCharsets
 import java.util.Base64
@@ -69,16 +69,24 @@ class MessageConnector @Inject() (
       .setHeader("Authorization" -> s"Bearer $bearerToken")
       .execute[HttpResponse]
       .flatMap { response =>
-        if (response.status == OK) Future.fromTry {
-          for {
-            response <- parseJson[EISConsumptionResponse](response.body)
-            messages <- getMessages(response)
-            count    <- countOfMessagesAvailable(response.message)
-          } yield GetMessagesResponse(messages, count)
-        }
-        else {
-          logger.warn(s"[MessageConnector]: Invalid status returned: ${response.status}")
-          Future.failed(new RuntimeException("Invalid status returned"))
+        response.status match {
+          case OK           =>
+            Future.fromTry {
+              for {
+                response <- parseJson[EISConsumptionResponse](response.body)
+                messages <- getMessages(response)
+                count    <- countOfMessagesAvailable(response.message)
+              } yield GetMessagesResponse(messages, count)
+            }
+          case UNAUTHORIZED =>
+            logger.warn(s"[MessageConnector]: Invalid status returned: ${response.status}")
+            Future.failed(new BadRequestException("UNAUTHORIZED status returned"))
+          case FORBIDDEN    =>
+            logger.warn(s"[MessageConnector]: Invalid status returned: ${response.status}")
+            Future.failed(new BadRequestException("FORBIDDEN status returned"))
+          case _            =>
+            logger.warn(s"[MessageConnector]: Invalid status returned: ${response.status}")
+            Future.failed(new RuntimeException("Invalid status returned"))
         }
       }
   }
