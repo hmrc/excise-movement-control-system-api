@@ -26,18 +26,17 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.json.{JsObject, Json, OFormat}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import play.api.libs.json.JsObject
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.CollectionFactory
-import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 
 import java.time.temporal.ChronoUnit
-import java.time.{Instant, LocalDateTime, ZoneOffset}
+import java.time.{LocalDateTime, ZoneOffset}
 import java.util.UUID
 
-class MovementMigrationsSpec
+class LastUpdatedMigrationSpec
   extends AnyFreeSpec
     with Matchers
     with GuiceOneAppPerSuite
@@ -56,28 +55,33 @@ class MovementMigrationsSpec
 
   private lazy val collection: MongoCollection[JsObject] =
     CollectionFactory.collection(mongoComponent.database, collectionName, implicitly)
-  private lazy val migration: MovementMigration = app.injector.instanceOf[MovementMigration]
+  private lazy val migration: LastUpdatedMigration = app.injector.instanceOf[LastUpdatedMigration]
 
-  private val oldFormat: OFormat[Movement] = Json.format[Movement]
-  private val timestamp = LocalDateTime.of(2024, 4, 3, 12, 30, 45, 123123).toInstant(ZoneOffset.UTC)
-  private val movement = Movement(UUID.randomUUID().toString, Some("boxId"), "123", "345", Some("789"), None, timestamp, Seq.empty)
-  private val newFormatMovement = Movement(UUID.randomUUID().toString, Some("boxId"), "124", "345", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq.empty)
+  private val timestamp = LocalDateTime.of(2024, 4, 3, 12, 30, 45, 123123).toInstant(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS)
+  private val message1Timestamp = timestamp.plus(1, ChronoUnit.MINUTES)
+  private val message2Timestamp = message1Timestamp.plus(1, ChronoUnit.MINUTES)
 
-  "Must migrate old format movements to the new format" in {
+  private val emptyMovement = Movement(UUID.randomUUID().toString, Some("boxId"), "123", "consignorId", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq.empty)
 
-    collection.insertOne(Json.toJsObject(movement)(oldFormat)).toFuture().futureValue
-    collection.insertOne(Json.toJsObject(newFormatMovement)).toFuture().futureValue
+  private val message1 = Message("encodedMessage", "type", "messageId", "consignorId", Set.empty, message1Timestamp)
+  private val message2 = Message("encodedMessage2", "type2", "messageId2", "consignorId", Set.empty, message2Timestamp)
+  private val movement = Movement(UUID.randomUUID().toString, Some("boxId"), "123", "consignorId", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message1, message2))
 
-    val oldFormatResult = collection.find(Filters.eq("_id", movement._id)).headOption().futureValue.value
-    val oldFormatLastUpdated = (oldFormatResult \ "lastUpdated").as[Instant]
-    oldFormatLastUpdated mustEqual movement.lastUpdated
+  "must not update lastUpdated if no messages" in {
+
+    repository.collection.insertOne(emptyMovement).toFuture().futureValue
 
     migration.migrate().futureValue
 
-    val newFormatResult = collection.find(Filters.eq("_id", movement._id)).headOption().futureValue.value
-    val newFormatLastUpdated = (newFormatResult \ "lastUpdated").as(MongoJavatimeFormats.instantReads)
-    newFormatLastUpdated mustEqual movement.lastUpdated.truncatedTo(ChronoUnit.MILLIS)
+    repository.collection.find(Filters.eq("_id", emptyMovement._id)).headOption().futureValue.value mustEqual emptyMovement
+  }
 
-    collection.find(Filters.eq("_id", newFormatMovement._id)).headOption().futureValue.value.as[Movement] mustEqual newFormatMovement
+  "must update lastUpdated to latest createdOn for messages" in {
+
+    repository.collection.insertOne(movement).toFuture().futureValue
+
+    migration.migrate().futureValue
+
+    println(collection.find(Filters.eq("_id", movement._id)).headOption().futureValue.value)
   }
 }

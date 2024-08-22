@@ -18,55 +18,39 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import org.apache.pekko.Done
 import org.mongodb.scala.MongoCollection
-import org.mongodb.scala.model.{Aggregates, Field, Filters}
+import org.mongodb.scala.model.{Aggregates, Field, Filters, UpdateOptions, Updates}
 import play.api.Logging
-import play.api.libs.json.{JsNull, JsObject, Json}
+import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.Codecs.JsonOps
 import uk.gov.hmrc.mongo.play.json.CollectionFactory
 
+import java.time.{Duration, Instant}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 @Singleton
-class MessageRecipientMigration @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
-    extends Logging {
+class LastUpdatedMigration @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext) extends Logging {
 
   private lazy val collection: MongoCollection[JsObject] =
     CollectionFactory.collection(mongoComponent.database, "movements", implicitly, Seq.empty)
 
   def migrate(): Future[Done] = {
 
-    logger.info("Starting message recipient migration")
+    logger.info("Starting movement lastUpdated migration")
+    val start = Instant.now
 
     val result = collection
       .updateMany(
-        Filters.exists("messages.$[].recipient", exists = false),
+        Filters.and(Filters.exists("messages"), Filters.not(Filters.size("messages", 0))),
         Seq(
           Aggregates.set(
             Field(
-              "messages",
-              Json
-                .obj(
-                  "$map" -> Json.obj(
-                    "input" -> "$messages",
-                    "in"    -> Json.obj(
-                      "$setField" -> Json.obj(
-                        "field" -> "recipient",
-                        "input" -> "$$this",
-                        "value" -> Json.obj(
-                          "$cond" -> Json.arr(
-                            Json.obj("$gt" -> Json.arr("$$this.recipient", JsNull)),
-                            "$$this.recipient",
-                            "$$ROOT.consignorId"
-                          )
-                        )
-                      )
-                    )
-                  )
-                )
-                .toDocument()
+              "lastUpdated",
+              Json.obj(
+                "$max" -> "$messages.createdOn"
+              )
             )
           )
         )
@@ -75,9 +59,10 @@ class MessageRecipientMigration @Inject() (mongoComponent: MongoComponent)(impli
 
     result.onComplete {
       case Success(_) =>
-        logger.info("migration successful")
+        val end = Instant.now
+        logger.info(s"Movement lastUpdated migration successful after ${Duration.between(start, end)}")
       case Failure(e) =>
-        logger.error("migration failed", e)
+        logger.error("Movement lastUpdated migration failed", e)
     }
 
     result.map(_ => Done)
