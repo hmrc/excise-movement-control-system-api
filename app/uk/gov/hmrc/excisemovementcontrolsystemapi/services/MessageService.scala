@@ -71,7 +71,7 @@ class MessageService @Inject() (
     lockService
       .withLock {
         val now = dateTimeService.timestamp()
-        if (shouldProcessNewMessages(lastRetrieved)) {
+        if (shouldProcessNewMessages(lastRetrieved, now)) {
           for {
             boxIds <- getBoxIds(ern)
             _      <- processNewMessages(ern, boxIds)
@@ -84,8 +84,8 @@ class MessageService @Inject() (
       .map(_.getOrElse(UpdateOutcome.Locked))
   }
 
-  private def shouldProcessNewMessages(maybeLastRetrieved: Option[Instant]): Boolean = {
-    val cutoffTime = dateTimeService.timestamp().minus(throttleCutoff.length, throttleCutoff.unit.toChronoUnit)
+  private def shouldProcessNewMessages(maybeLastRetrieved: Option[Instant], now: Instant): Boolean = {
+    val cutoffTime = now.minus(throttleCutoff.length, throttleCutoff.unit.toChronoUnit)
     //noinspection MapGetOrElseBoolean
     maybeLastRetrieved.map(_.isBefore(cutoffTime)).getOrElse(true)
   }
@@ -174,10 +174,12 @@ class MessageService @Inject() (
     ) {
       movement
     } else {
+      val timestamp = dateTimeService.timestamp()
       movement.copy(
-        messages = getUpdatedMessages(recipient, movement, message, boxIds),
+        messages = getUpdatedMessages(recipient, movement, message, boxIds, timestamp),
         administrativeReferenceCode = getArc(movement, message),
-        consigneeId = getConsignee(movement, message)
+        consigneeId = getConsignee(movement, message),
+        lastUpdated = timestamp
       )
     }
 
@@ -185,9 +187,10 @@ class MessageService @Inject() (
     recipient: String,
     movement: Movement,
     message: IEMessage,
-    boxIds: Set[String]
+    boxIds: Set[String],
+    timestamp: Instant
   ): Seq[Message] =
-    movement.messages :+ convertMessage(recipient, message, boxIds)
+    movement.messages :+ convertMessage(recipient, message, boxIds, timestamp)
 
   private def findMovementsForMessage(
     movements: Seq[Movement],
@@ -251,8 +254,26 @@ class MessageService @Inject() (
   ): Option[Movement] =
     messages.find(_.isInstanceOf[IE801Message]).fold(auditMessageForNoMovement(originatingMessage)) {
       case ie801: IE801Message =>
-        val movement = createMovementFromIE801(ie801.consignorId, ie801, boxIds)
-        Some(updateMovement(originatingErn, movement, originatingMessage, boxIds))
+        val timestamp     = dateTimeService.timestamp()
+        // For a new movement from trader-movement call, add the IE801 for the consignor and consignee
+        // also add the originating message all at once
+        val messagesToAdd = Seq(
+          Some(convertMessage(ie801.consignorId, ie801, boxIds, timestamp)),
+          ie801.consigneeId.map(consignee => convertMessage(consignee, ie801, boxIds, timestamp)),
+          Some(convertMessage(originatingErn, originatingMessage, boxIds, timestamp))
+        ).flatten
+        Some(
+          Movement(
+            correlationIdService.generateCorrelationId(),
+            None,
+            ie801.localReferenceNumber,
+            ie801.consignorId,
+            ie801.consigneeId,
+            administrativeReferenceCode = ie801.administrativeReferenceCode.head,
+            timestamp,
+            messages = messagesToAdd
+          )
+        )
     }
 
   private def auditMessageForNoMovement(message: IEMessage)(implicit
@@ -267,7 +288,8 @@ class MessageService @Inject() (
 
   private def createMovementFromIE704(consignor: String, message: IE704Message, boxIds: Set[String])(implicit
     hc: HeaderCarrier
-  ): Option[Movement] =
+  ): Option[Movement] = {
+    val timestamp = dateTimeService.timestamp()
     message.localReferenceNumber.fold[Option[Movement]](auditMessageForNoMovement(message))(lrn =>
       Some(
         Movement(
@@ -277,13 +299,15 @@ class MessageService @Inject() (
           consignor,
           None,
           administrativeReferenceCode = message.administrativeReferenceCode.head,
-          dateTimeService.timestamp(),
-          messages = Seq(convertMessage(consignor, message, boxIds))
+          timestamp,
+          messages = Seq(convertMessage(consignor, message, boxIds, timestamp))
         )
       )
     )
+  }
 
-  private def createMovementFromIE801(recipient: String, message: IE801Message, boxIds: Set[String]): Movement =
+  private def createMovementFromIE801(recipient: String, message: IE801Message, boxIds: Set[String]): Movement = {
+    val timestamp = dateTimeService.timestamp()
     Movement(
       correlationIdService.generateCorrelationId(),
       None,
@@ -291,9 +315,10 @@ class MessageService @Inject() (
       message.consignorId,
       message.consigneeId,
       administrativeReferenceCode = message.administrativeReferenceCode.head,
-      dateTimeService.timestamp(),
-      messages = Seq(convertMessage(recipient, message, boxIds))
+      timestamp,
+      messages = Seq(convertMessage(recipient, message, boxIds, timestamp))
     )
+  }
 
   private def findByArc(movements: Seq[Movement], message: IEMessage): OptionT[Future, Seq[Movement]] = {
 
@@ -316,14 +341,14 @@ class MessageService @Inject() (
         .map(Seq(_))
     )
 
-  private def convertMessage(recipient: String, input: IEMessage, boxIds: Set[String]): Message =
+  private def convertMessage(recipient: String, input: IEMessage, boxIds: Set[String], timestamp: Instant): Message =
     Message(
       encodedMessage = emcsUtils.encode(input.toXml.toString),
       messageType = input.messageType,
       messageId = input.messageIdentifier,
       recipient = recipient,
       boxesToNotify = boxIds,
-      createdOn = dateTimeService.timestamp()
+      createdOn = timestamp
     )
 }
 
