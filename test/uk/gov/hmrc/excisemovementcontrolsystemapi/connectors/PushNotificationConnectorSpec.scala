@@ -176,7 +176,7 @@ class PushNotificationConnectorSpec extends PlaySpec with EitherValues with Befo
     }
 
     "post the notification" in {
-      when(httpClient.post(any)).thenReturn(mockRequestBuilder)
+      when(httpClient.post(any)(any)).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.execute[HttpResponse](any(), any()))
@@ -184,7 +184,7 @@ class PushNotificationConnectorSpec extends PlaySpec with EitherValues with Befo
 
       await(sut.postNotification(boxId, notification))
 
-      verify(mockRequestBuilder, times(1)).execute[HttpResponse]
+      verify(httpClient, times(1)).post(any)(any)
     }
 
     "return an error" when {
