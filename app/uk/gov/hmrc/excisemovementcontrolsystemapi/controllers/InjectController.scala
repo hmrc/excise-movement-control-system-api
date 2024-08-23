@@ -17,47 +17,43 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import com.google.inject.Inject
-import play.api.libs.json.{JsValue, Json, Reads}
+import play.api.Logging
+import play.api.libs.json._
 import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.InjectController.CsvRow
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnSubmissionRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MovementService
 import uk.gov.hmrc.internalauth.client._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class InjectController @Inject() (
   cc: ControllerComponents,
-  movementService: MovementService,
-  ernSubmissionRepository: ErnSubmissionRepository,
+  movementRepository: MovementRepository,
   auth: BackendAuthComponents
 )(implicit ec: ExecutionContext)
-    extends BackendController(cc) {
+    extends BackendController(cc)
+    with Logging {
 
-  private val permission        = Predicate.Permission(
+  private val permission = Predicate.Permission(
     Resource(ResourceType("excise-movement-control-system-api"), ResourceLocation("inject/submit")),
     IAAction("ADMIN")
   )
-  def submit(): Action[JsValue] =
+
+  def submitBatch(): Action[JsValue] =
     auth.authorizedAction(permission).async(parse.json[JsValue]) { implicit request: AuthenticatedRequest[JsValue, _] =>
-      withJsonBody[CsvRow] { csvRow =>
-        movementService.saveNewMovement(csvRow.toMovement).flatMap {
-          case Left(error)     => Future.successful(error)
-          case Right(movement) =>
-            movement.consigneeId
-              .fold(Future.successful(Accepted))(consignee =>
-                ernSubmissionRepository.save(consignee).map(_ => Accepted)
-              )
-        }
+      withJsonBody[List[CsvRow]] { csvRows =>
+        movementRepository
+          .saveMovements(csvRows.map(_.toMovement))
+          .map(_ => Accepted)
       }
     }
-
 }
 
 object InjectController {
+
   case class CsvRow(
     pk: Int,
     arcUk: Option[String],

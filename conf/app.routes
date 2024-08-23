@@ -11,4 +11,4 @@ GET        /movements/:movementId/messages/:messageId   uk.gov.hmrc.excisemoveme
 
 POST       /traders/pre-validate                        uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.PreValidateTraderController.submit
 
-POST       /inject/submit                               uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.InjectController.submit()
+POST       /inject/submit-batch                         uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.InjectController.submitBatch()
