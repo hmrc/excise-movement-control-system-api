@@ -18,68 +18,79 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
-import org.mockito.MockitoSugar.{reset, verify, when}
+import org.mockito.MockitoSugar.{reset, times, verify, when}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.mockito.MockitoSugar.mock
-import org.scalatestplus.play.PlaySpec
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ClientBoxIdRepository}
+import play.api.mvc.Results.Ok
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, MovementRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NotificationsService.NoBoxIdError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class NotificationsServiceSpec
-    extends PlaySpec
-    with ScalaFutures
-    with IntegrationPatience
-    with BeforeAndAfterEach {
+class NotificationsServiceSpec extends AnyFreeSpec with Matchers with ScalaFutures with IntegrationPatience with BeforeAndAfterEach {
 
-  private val clientBoxIdRepository   = mock[ClientBoxIdRepository]
+  private val movementRepository   = mock[MovementRepository]
   private val boxIdRepository         = mock[BoxIdRepository]
   private val pushNotificationService = mock[PushNotificationService]
   private val dateTimeService         = mock[DateTimeService]
 
-  private val notificationsService = new NotificationsService(
-    clientBoxIdRepository,
-    boxIdRepository,
-    pushNotificationService)
+  private val notificationsService =
+    new NotificationsService(boxIdRepository, pushNotificationService, movementRepository)
 
   private implicit val hc: HeaderCarrier = HeaderCarrier()
 
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(
-      clientBoxIdRepository,
+      movementRepository,
       boxIdRepository,
       pushNotificationService,
-      dateTimeService,
+      dateTimeService
     )
   }
 
-  "subscribe ERNs for client id" when {
-    "subscribes all erns to the client's box Id" when {
-      "the client's boxId isn't in the cache" when {
-        "gets the client's default box and adds to the cache" in {
-          val clientId = "testClient"
-          val boxId = "testBox"
-          val consignor = "consignor"
-          val consignee = "consignee"
-          when(clientBoxIdRepository.getBoxId(any)).thenReturn(Future.successful(None))
-          when(clientBoxIdRepository.save(any, any)).thenReturn(Future.successful(Done))
-          when(pushNotificationService.getBoxId(any, any)(any)).thenReturn(Future.successful(Right(boxId)))
-          when(boxIdRepository.save(any, any)).thenReturn(Future.successful(Done))
+  "subscribeErns" - {
 
-          notificationsService.subscribeErns(clientId, Seq(consignor, consignee))
+    "must add a relationship between the boxId for the given clientId and the given ERNs and update movements to add notifications for the relevant box id" in {
 
-          verify(clientBoxIdRepository).getBoxId(clientId)
-          verify(pushNotificationService).getBoxId(eqTo(clientId), eqTo(None))(any)
-          verify(clientBoxIdRepository.save(clientId, boxId))
-          verify(boxIdRepository.save(consignor, boxId))
-          verify(boxIdRepository.save(consignee, boxId))
-        }
-      }
+      val clientId = "clientId"
+      val boxId = "testBox"
+      val ern1 = "ern1"
+      val ern2 = "ern2"
+
+      when(pushNotificationService.getBoxId(any, any)(any)).thenReturn(Future.successful(Right(boxId)))
+      when(boxIdRepository.save(any, any)).thenReturn(Future.successful(Done))
+      when(movementRepository.addBoxIdToMessages(any, any)).thenReturn(Future.successful(Done))
+
+      notificationsService.subscribeErns(clientId, Seq(ern1, ern2)).futureValue
+
+      verify(pushNotificationService).getBoxId(eqTo(clientId), eqTo(None))(any)
+      verify(boxIdRepository).save(ern1, boxId)
+      verify(boxIdRepository).save(ern2, boxId)
+      verify(movementRepository).addBoxIdToMessages(ern1, boxId)
+      verify(movementRepository).addBoxIdToMessages(ern2, boxId)
+    }
+
+    "must fail with a NoBoxIdError when there is no box id for the client" in {
+
+      val clientId = "clientId"
+      val ern1 = "ern1"
+
+      when(pushNotificationService.getBoxId(any, any)(any)).thenReturn(Future.successful(Left(Ok)))
+
+      val result = notificationsService.subscribeErns(clientId, Seq(ern1)).failed.futureValue
+
+      result mustBe NoBoxIdError(clientId)
+
+      verify(pushNotificationService).getBoxId(eqTo(clientId), eqTo(None))(any)
+      verify(boxIdRepository, times(0)).save(any, any)
+      verify(movementRepository, times(0)).addBoxIdToMessages(any, any)
     }
   }
 }

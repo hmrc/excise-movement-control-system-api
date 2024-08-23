@@ -16,9 +16,11 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-import cats.implicits.toTraverseOps
+import cats.data.EitherT
+import cats.implicits.{toFunctorOps, toTraverseOps}
 import org.apache.pekko.Done
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ClientBoxIdRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, MovementRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NotificationsService.NoBoxIdError
 import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.{Inject, Singleton}
@@ -26,24 +28,36 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class NotificationsService @Inject() (
-  clientBoxIdRepository: ClientBoxIdRepository,
   boxIdRepository: BoxIdRepository,
-  pushNotificationService: PushNotificationService
-                                     )(implicit hc: HeaderCarrier, ec: ExecutionContext) {
-  def subscribeErns(clientId: String, erns: Seq[String]): Future[Done] = {
-    clientBoxIdRepository.getBoxId(clientId).flatMap { maybeBoxId =>
-      val boxId = maybeBoxId.getOrElse {
-        val box = pushNotificationService.getBoxId(clientId)
-          box.map(x => x.map(y => {
-          clientBoxIdRepository.save(clientId, y)
-          y
-        }))
-        box
-      }
-      erns.traverse { ern =>
-        boxIdRepository.save(ern, boxId)
-      }.as(Done)
-    }
-  }
+  pushNotificationService: PushNotificationService,
+  movementRepository: MovementRepository
+)(implicit hc: HeaderCarrier, ec: ExecutionContext) {
 
+  def subscribeErns(clientId: String, erns: Seq[String]): Future[Done] =
+    for {
+      boxId <- getClientBoxId(clientId)
+      _     <- saveBoxIdForErns(boxId, erns)
+    } yield Done
+
+  private def getClientBoxId(clientId: String): Future[String] =
+    EitherT(pushNotificationService.getBoxId(clientId)).toOption.getOrElseF {
+      Future.failed(NoBoxIdError(clientId))
+    }
+
+  private def saveBoxIdForErns(boxId: String, erns: Seq[String]): Future[Done] =
+    erns
+      .traverse { ern =>
+        for {
+          _ <- boxIdRepository.save(ern, boxId)
+          _ <- movementRepository.addBoxIdToMessages(ern, boxId)
+        } yield Done
+      }
+      .as(Done)
+}
+
+object NotificationsService {
+
+  final case class NoBoxIdError(clientId: String) extends Throwable {
+    override def getMessage: String = s"No box id found in PPNS for $clientId"
+  }
 }
