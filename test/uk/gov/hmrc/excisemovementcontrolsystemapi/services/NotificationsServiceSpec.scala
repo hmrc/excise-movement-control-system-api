@@ -33,9 +33,14 @@ import uk.gov.hmrc.http.HeaderCarrier
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class NotificationsServiceSpec extends AnyFreeSpec with Matchers with ScalaFutures with IntegrationPatience with BeforeAndAfterEach {
+class NotificationsServiceSpec
+    extends AnyFreeSpec
+    with Matchers
+    with ScalaFutures
+    with IntegrationPatience
+    with BeforeAndAfterEach {
 
-  private val movementRepository   = mock[MovementRepository]
+  private val movementRepository      = mock[MovementRepository]
   private val boxIdRepository         = mock[BoxIdRepository]
   private val pushNotificationService = mock[PushNotificationService]
   private val dateTimeService         = mock[DateTimeService]
@@ -43,7 +48,7 @@ class NotificationsServiceSpec extends AnyFreeSpec with Matchers with ScalaFutur
   private val notificationsService =
     new NotificationsService(boxIdRepository, pushNotificationService, movementRepository)
 
-  private implicit val hc: HeaderCarrier = HeaderCarrier()
+  private val hc: HeaderCarrier = HeaderCarrier()
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -60,15 +65,15 @@ class NotificationsServiceSpec extends AnyFreeSpec with Matchers with ScalaFutur
     "must add a relationship between the boxId for the given clientId and the given ERNs and update movements to add notifications for the relevant box id" in {
 
       val clientId = "clientId"
-      val boxId = "testBox"
-      val ern1 = "ern1"
-      val ern2 = "ern2"
+      val boxId    = "testBox"
+      val ern1     = "ern1"
+      val ern2     = "ern2"
 
       when(pushNotificationService.getBoxId(any, any)(any)).thenReturn(Future.successful(Right(boxId)))
       when(boxIdRepository.save(any, any)).thenReturn(Future.successful(Done))
       when(movementRepository.addBoxIdToMessages(any, any)).thenReturn(Future.successful(Done))
 
-      notificationsService.subscribeErns(clientId, Seq(ern1, ern2)).futureValue
+      notificationsService.subscribeErns(clientId, Seq(ern1, ern2))(hc).futureValue
 
       verify(pushNotificationService).getBoxId(eqTo(clientId), eqTo(None))(any)
       verify(boxIdRepository).save(ern1, boxId)
@@ -80,11 +85,11 @@ class NotificationsServiceSpec extends AnyFreeSpec with Matchers with ScalaFutur
     "must fail with a NoBoxIdError when there is no box id for the client" in {
 
       val clientId = "clientId"
-      val ern1 = "ern1"
+      val ern1     = "ern1"
 
       when(pushNotificationService.getBoxId(any, any)(any)).thenReturn(Future.successful(Left(Ok)))
 
-      val result = notificationsService.subscribeErns(clientId, Seq(ern1)).failed.futureValue
+      val result = notificationsService.subscribeErns(clientId, Seq(ern1))(hc).failed.futureValue
 
       result mustBe NoBoxIdError(clientId)
 

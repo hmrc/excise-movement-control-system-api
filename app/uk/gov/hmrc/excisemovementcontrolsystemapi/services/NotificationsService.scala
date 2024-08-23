@@ -31,15 +31,15 @@ class NotificationsService @Inject() (
   boxIdRepository: BoxIdRepository,
   pushNotificationService: PushNotificationService,
   movementRepository: MovementRepository
-)(implicit hc: HeaderCarrier, ec: ExecutionContext) {
+)(implicit ec: ExecutionContext) {
 
-  def subscribeErns(clientId: String, erns: Seq[String]): Future[Done] =
+  def subscribeErns(clientId: String, erns: Seq[String])(implicit hc: HeaderCarrier): Future[Done] =
     for {
       boxId <- getClientBoxId(clientId)
       _     <- saveBoxIdForErns(boxId, erns)
     } yield Done
 
-  private def getClientBoxId(clientId: String): Future[String] =
+  private def getClientBoxId(clientId: String)(implicit hc: HeaderCarrier): Future[String] =
     EitherT(pushNotificationService.getBoxId(clientId)).toOption.getOrElseF {
       Future.failed(NoBoxIdError(clientId))
     }
