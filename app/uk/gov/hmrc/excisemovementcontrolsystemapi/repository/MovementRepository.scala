@@ -234,6 +234,17 @@ class MovementRepository @Inject() (
       .toFuture()
       .as(Done)
   }
+
+  def addBoxIdToMessages(recipient: String, boxId: String): Future[Done] = Mdc.preservingMdc {
+    collection
+      .updateMany(
+        Filters.eq("messages.recipient", recipient),
+        Updates.addToSet("messages.$[m].boxesToNotify", boxId),
+        UpdateOptions().arrayFilters(List(Filters.eq("m.recipient", recipient)).asJava)
+      )
+      .toFuture()
+      .as(Done)
+  }
 }
 
 object MovementRepository {
