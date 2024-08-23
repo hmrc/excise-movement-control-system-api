@@ -30,13 +30,14 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.respo
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.CorrelationIdService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, StringContextOps}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class PreValidateTraderConnector @Inject() (
-  httpClient: HttpClient,
+  httpClient: HttpClientV2,
   correlationIdService: CorrelationIdService,
   appConfig: AppConfig,
   metrics: MetricRegistry,
@@ -57,17 +58,17 @@ class PreValidateTraderConnector @Inject() (
     val timestamp       = dateTimeService.timestamp()
     val createdDateTime = timestamp.asStringInMilliseconds
 
+    implicit val reader: HttpReads[Either[Result, PreValidateTraderEISResponse]] = PreValidateTraderHttpReader(
+      correlationId = correlationId,
+      ern = ern,
+      createDateTime = createdDateTime,
+      dateTimeService = dateTimeService
+    )
     httpClient
-      .POST[PreValidateTraderRequest, Either[Result, PreValidateTraderEISResponse]](
-        appConfig.preValidateTraderUrl,
-        request,
-        build(correlationId, createdDateTime, appConfig.preValidateTraderBearerToken)
-      )(
-        PreValidateTraderRequest.format,
-        PreValidateTraderHttpReader(correlationId, ern, createdDateTime, dateTimeService),
-        hc,
-        ec
-      )
+      .post(url"${appConfig.preValidateTraderUrl}")
+      .setHeader(build(correlationId, createdDateTime, appConfig.preValidateTraderBearerToken): _*)
+      .withBody(Json.toJson(request))
+      .execute[Either[Result, PreValidateTraderEISResponse]]
       .andThen { case _ => timer.stop() }
       .recover { case ex: Throwable =>
         logger.warn(EISErrorMessage(createdDateTime, ex.getMessage, correlationId, "PreValidateTrader"), ex)
@@ -80,7 +81,6 @@ class PreValidateTraderConnector @Inject() (
         )
 
         Left(InternalServerError(Json.toJson(error)))
-
       }
 
   }

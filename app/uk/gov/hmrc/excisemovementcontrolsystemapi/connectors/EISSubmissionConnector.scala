@@ -28,14 +28,15 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, StringContextOps}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
 class EISSubmissionConnector @Inject() (
-  httpClient: HttpClient,
+  httpClient: HttpClientV2,
   emcsUtils: EmcsUtils,
   appConfig: AppConfig,
   metrics: MetricRegistry,
@@ -59,19 +60,21 @@ class EISSubmissionConnector @Inject() (
     val messageType     = message.messageType
     val encodedMessage  = emcsUtils.encode(wrappedXml.toString)
 
+    implicit val reader: HttpReads[Either[Result, EISSubmissionResponse]] = EISHttpReader(
+      correlationId = correlationId,
+      ern = authorisedErn,
+      createDateTime = createdDateTime,
+      dateTimeService = dateTimeService,
+      messageType = messageType
+    )
+
     val eisRequest = EISSubmissionRequest(authorisedErn, messageType, encodedMessage)
 
     httpClient
-      .POST[EISSubmissionRequest, Either[Result, EISSubmissionResponse]](
-        appConfig.emcsReceiverMessageUrl,
-        eisRequest,
-        build(correlationId, createdDateTime, appConfig.submissionBearerToken)
-      )(
-        EISSubmissionRequest.format,
-        EISHttpReader(correlationId, authorisedErn, createdDateTime, dateTimeService, messageType),
-        hc,
-        ec
-      )
+      .post(url"${appConfig.emcsReceiverMessageUrl}")
+      .setHeader(build(correlationId, createdDateTime, appConfig.submissionBearerToken): _*)
+      .withBody(Json.toJson(eisRequest))
+      .execute[Either[Result, EISSubmissionResponse]]
       .andThen { case _ => timer.stop() }
       .recover { case ex: Throwable =>
         logger.warn(EISErrorMessage(createdDateTime, ex.getMessage, correlationId, messageType), ex)

@@ -23,18 +23,19 @@ import play.api.libs.concurrent.Futures
 import play.api.libs.json.JsObject
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.XApiKeyHeaderKey
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NonRepudiationSubmission, NonRepudiationSubmissionAccepted, NonRepudiationSubmissionFailed, NrsPayload}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.Retrying
 import uk.gov.hmrc.http.HttpErrorFunctions.is2xx
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Success, Try}
 
 class NrsConnector @Inject() (
-  httpClient: HttpClient,
+  httpClient: HttpClientV2,
   appConfig: AppConfig,
   metrics: MetricRegistry
 )(implicit val ec: ExecutionContext, val futures: Futures)
@@ -69,7 +70,7 @@ class NrsConnector @Inject() (
       .andThen { case _ => timer.stop() }
   }
 
-  def send(
+  private def send(
     jsonObject: JsObject,
     correlationId: String
   )(implicit hc: HeaderCarrier): Future[HttpResponse] = {
@@ -78,8 +79,11 @@ class NrsConnector @Inject() (
     logger.info(
       s"[NrsConnector] - NRS submission: sending POST request to $nrsSubmissionUrl. CorrelationId: $correlationId"
     )
-
-    httpClient.POST[JsObject, HttpResponse](nrsSubmissionUrl, body = jsonObject, createHeader)
+    httpClient
+      .post(url"$nrsSubmissionUrl")
+      .setHeader(createHeader: _*)
+      .withBody(jsonObject)
+      .execute[HttpResponse]
   }
 
   private def canRetry(response: Try[HttpResponse]): Boolean =

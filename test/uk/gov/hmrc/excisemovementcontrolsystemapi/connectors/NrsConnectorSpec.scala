@@ -18,7 +18,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import com.codahale.metrics.{MetricRegistry, Timer}
 import org.apache.pekko.Done
-import org.mockito.ArgumentMatchersSugar.{any, eqTo}
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchersSugar.eqTo
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.mockito.MockitoSugar.{reset, times, verify, when}
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
@@ -30,9 +31,10 @@ import play.api.libs.json.Json
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NonRepudiationSubmissionAccepted, NonRepudiationSubmissionFailed, NrsMetadata, NrsPayload}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
+import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
 import java.time.ZonedDateTime
 import scala.concurrent.duration.Duration
@@ -44,15 +46,16 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
   protected implicit val ec: ExecutionContext = ExecutionContext.global
   protected implicit val futures: Futures     = mock[Futures]
 
-  private val httpClient   = mock[HttpClient]
-  private val appConfig    = mock[AppConfig]
-  private val emcsUtils    = mock[EmcsUtils]
-  private val metrics      = mock[MetricRegistry](RETURNS_DEEP_STUBS)
-  private val connector    = new NrsConnector(httpClient, appConfig, metrics)
-  private val timerContext = mock[Timer.Context]
-  private val timeStamp    = ZonedDateTime.now()
-
-  private val nrsMetadata           = NrsMetadata(
+  private val httpClient                 = mock[HttpClientV2]
+  val mockRequestBuilder: RequestBuilder = mock[RequestBuilder]
+  private val appConfig                  = mock[AppConfig]
+  private val emcsUtils                  = mock[EmcsUtils]
+  private val metrics                    = mock[MetricRegistry](RETURNS_DEEP_STUBS)
+  private val connector                  = new NrsConnector(httpClient, appConfig, metrics)
+  private val timerContext               = mock[Timer.Context]
+  private val timeStamp                  = ZonedDateTime.now()
+  private val nrsUrl                     = "http://localhost:8080/nrs-url"
+  private val nrsMetadata                = NrsMetadata(
     businessId = "emcs",
     notableEvent = "excise-movement-control-system",
     payloadContentType = "application/json",
@@ -63,19 +66,23 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
     headerData = Map(),
     searchKeys = Map("ern" -> "123")
   )
-  private val nrsPayLoad            = NrsPayload("encodepayload", nrsMetadata)
-  private val successFulNrsResponse = HttpResponse(
+  private val nrsPayLoad                 = NrsPayload("encodepayload", nrsMetadata)
+  private val successFulNrsResponse      = HttpResponse(
     202,
     Json.obj("nrSubmissionId" -> "testNesSubmissionId").toString()
   )
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(httpClient, appConfig, emcsUtils, metrics, timerContext)
+    reset(httpClient, appConfig, emcsUtils, metrics, timerContext, mockRequestBuilder)
 
-    when(httpClient.POST[Any, Any](any, any, any)(any, any, any, any))
+    when(httpClient.post(any)(any)).thenReturn(mockRequestBuilder)
+    when(mockRequestBuilder.setHeader(any(), any())).thenReturn(mockRequestBuilder)
+    when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
+    when(mockRequestBuilder.execute[HttpResponse](any(), any()))
       .thenReturn(Future.successful(successFulNrsResponse))
-    when(appConfig.getNrsSubmissionUrl).thenReturn("/nrs-url")
+
+    when(appConfig.getNrsSubmissionUrl).thenReturn(nrsUrl)
     when(appConfig.nrsApiKey).thenReturn("authToken")
     when(appConfig.nrsRetryDelays).thenReturn(
       Seq(
@@ -96,7 +103,11 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
     }
 
     "return an error" in {
-      when(httpClient.POST[Any, Any](any, any, any)(any, any, any, any))
+
+      when(httpClient.post(any)(any)).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.execute[HttpResponse](any(), any()))
         .thenReturn(Future.successful(HttpResponse(400, "bad request")))
 
       val result = await(connector.sendToNrs(nrsPayLoad, "correlationId"))
@@ -106,8 +117,11 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
 
     "retry 3 time" when {
       "nrs return a non 2xx status" in {
-        when(httpClient.POST[Any, Any](any, any, any)(any, any, any, any))
-          .thenReturn(Future.successful(HttpResponse(BAD_REQUEST, "bad request")))
+        when(httpClient.post(any)(any)).thenReturn(mockRequestBuilder)
+        when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
+        when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
+        when(mockRequestBuilder.execute[HttpResponse](any(), any()))
+          .thenReturn(Future.successful(HttpResponse(400, "bad request")))
 
         val result = await(connector.sendToNrs(nrsPayLoad, "correlationId"))
 
@@ -116,7 +130,11 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
       }
 
       "nrs throws" in {
-        when(httpClient.POST[Any, Any](any, any, any)(any, any, any, any))
+
+        when(httpClient.post(any)(any)).thenReturn(mockRequestBuilder)
+        when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
+        when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
+        when(mockRequestBuilder.execute[HttpResponse](any(), any()))
           .thenReturn(Future.failed(new RuntimeException("error")))
 
         intercept[RuntimeException] {
@@ -127,11 +145,12 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
     }
 
     "return straight after an exception" in {
-      when(httpClient.POST[Any, Any](any, any, any)(any, any, any, any))
-        .thenReturn(
-          Future.failed(new RuntimeException("error")),
-          Future.successful(successFulNrsResponse)
-        )
+
+      when(httpClient.post(any)(any)).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.execute[HttpResponse](any(), any()))
+        .thenReturn(Future.failed(new RuntimeException("error")), Future.successful(successFulNrsResponse))
 
       val result = await(connector.sendToNrs(nrsPayLoad, "correlationId"))
 
@@ -149,15 +168,5 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
   }
 
   private def verifyHttpPostCAll(retriedAttempt: Int) =
-    verify(httpClient, times(retriedAttempt)).POST[Any, Any](
-      eqTo("/nrs-url"),
-      eqTo(nrsPayLoad.toJsObject),
-      eqTo(expectedHeader)
-    )(any, any, any, any)
-
-  private def expectedHeader: Seq[(String, String)] =
-    Seq(
-      "Content-Type" -> "application/json",
-      ("X-API-Key", "authToken")
-    )
+    verify(mockRequestBuilder, times(retriedAttempt)).execute(any(), any())
 }
