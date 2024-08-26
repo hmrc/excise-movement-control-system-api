@@ -146,15 +146,15 @@ class MessageService @Inject() (
                         movement.administrativeReferenceCode.flatTraverse(movementRepository.getByArc).map {
                           movementByArc =>
                             val movementMessage      =
-                              s"consignor: ${movement.consignorId}, consignee: ${movement.consigneeId}, arc: ${movement.administrativeReferenceCode}"
+                              s"consignor: ${movement.consignorId}, lrn: ${movement.localReferenceNumber}, consignee: ${movement.consigneeId}, arc: ${movement.administrativeReferenceCode}"
                             val movementByLrnMessage = movementByLrn.headOption
                               .map(m =>
-                                s"Some(consignor: ${m.consignorId}, consignee: ${m.consigneeId}, arc: ${m.administrativeReferenceCode})"
+                                s"Some(consignor: ${m.consignorId}, lrn: ${m.localReferenceNumber}, consignee: ${m.consigneeId}, arc: ${m.administrativeReferenceCode})"
                               )
                               .getOrElse("None")
                             val movementByArcMessage = movementByArc
                               .map(m =>
-                                s"Some(consignor: ${m.consignorId}, consignee: ${m.consigneeId}, arc: ${m.administrativeReferenceCode})"
+                                s"Some(consignor: ${m.consignorId}, lrn: ${m.localReferenceNumber}, consignee: ${m.consigneeId}, arc: ${m.administrativeReferenceCode})"
                               )
                               .getOrElse("None")
                             logger.warn(
