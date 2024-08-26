@@ -19,6 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 import cats.data.OptionT
 import cats.syntax.all._
 import org.apache.pekko.Done
+import org.mongodb.scala.MongoCommandException
 import play.api.{Configuration, Logging}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, TraderMovementConnector}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
@@ -136,7 +137,35 @@ class MessageService @Inject() (
                 }
             }
             .flatMap {
-              _.traverse(movementRepository.save)
+              _.traverse { movement =>
+                movementRepository.save(movement).recoverWith {
+                  case e: MongoCommandException if e.getErrorCode == 11000 =>
+                    movementRepository
+                      .getMovementByLRNAndERNIn(movement.localReferenceNumber, List(movement.consignorId))
+                      .flatMap { movementByLrn =>
+                        movement.administrativeReferenceCode.flatTraverse(movementRepository.getByArc).map {
+                          movementByArc =>
+                            val movementMessage      =
+                              s"Movement(consignor: ${movement.consignorId}, consignee: ${movement.consigneeId}, arc: ${movement.administrativeReferenceCode}"
+                            val movementByLrnMessage = movementByLrn.headOption
+                              .map(m =>
+                                s"Some(consignor: ${m.consignorId}, consignee: ${m.consigneeId}, arc: ${m.administrativeReferenceCode})"
+                              )
+                              .getOrElse("None")
+                            val movementByArcMessage = movementByArc
+                              .map(m =>
+                                s"Some(consignor: ${m.consignorId}, consignee: ${m.consigneeId}, arc: ${m.administrativeReferenceCode})"
+                              )
+                              .getOrElse("None")
+                            logger.warn(
+                              s"Failed to save movement because of duplicate key violation: \n$movementMessage \n$movementByLrnMessage \n$movementByArcMessage",
+                              e
+                            )
+                        }
+                        Future.failed(e)
+                      }
+                }
+              }
             }
         }
         .as(Done)
