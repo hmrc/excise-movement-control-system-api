@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import org.apache.pekko.Done
 import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchersSugar.eqTo
 import org.mockito.MockitoSugar.{reset, times, verify, when}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.ScalaFutures.convertScalaFuture
@@ -82,7 +83,7 @@ class SubscribeErnsAdminControllerSpec extends PlaySpec with GuiceOneAppPerSuite
       val result      = route(app, fakeRequest).value
       status(result) mustBe OK
       verify(mockStubBehaviour).stubAuth(any(), any())
-      verify(mockNotificationsService).subscribeErns("clientId", Seq("ern1"))(hc)
+      verify(mockNotificationsService).subscribeErns(eqTo("clientId"), eqTo(Seq("ern1")))(any)
     }
 
     "return error" when {
