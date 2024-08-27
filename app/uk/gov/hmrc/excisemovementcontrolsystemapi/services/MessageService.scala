@@ -146,18 +146,21 @@ class MessageService @Inject() (
                         movement.administrativeReferenceCode.flatTraverse(movementRepository.getByArc).map {
                           movementByArc =>
                             val movementMessage      =
-                              s"id: ${movement._id}, consignor: ${movement.consignorId}, lrn: ${movement.localReferenceNumber}, consignee: ${movement.consigneeId}, arc: ${movement.administrativeReferenceCode}, oldestMessage: ${movement.messages
-                                .minByOption(_.createdOn).map(_.createdOn)}, messageType: ${movement.messages.minByOption(_.createdOn).map(_.messageType)}, currentTime: ${Instant.now()})"
+                              s"id: ${movement._id}, consignor: ${movement.consignorId}, lrn: ${movement.localReferenceNumber}, consignee: ${movement.consigneeId}, arc: ${movement.administrativeReferenceCode}, messages: ${movement.messages
+                                .map(_.messageType)}, currentTime: ${Instant.now()})"
                             val movementByLrnMessage = movementByLrn.headOption
                               .map(m =>
-                                s"Some(id: ${m._id}, consignor: ${m.consignorId}, lrn: ${m.localReferenceNumber}, consignee: ${m.consigneeId}, arc: ${m.administrativeReferenceCode}, lastUpdated: ${m.lastUpdated}, latestMessage: ${m.messages
-                                  .maxByOption(_.createdOn).map(_.createdOn)})"
+                                s"Some(id: ${m._id}, consignor: ${m.consignorId}, lrn: ${m.localReferenceNumber}, consignee: ${m.consigneeId}, arc: ${m.administrativeReferenceCode}, exists in initially retrieved movements: ${movements
+                                  .exists(_._id == m._id)}, lastUpdated: ${m.lastUpdated}, latestMessageUpdate: ${m.messages
+                                  .maxByOption(_.createdOn)
+                                  .map(_.createdOn)}, messages: ${m.messages.map(_.messageType)})"
                               )
                               .getOrElse("None")
                             val movementByArcMessage = movementByArc
                               .map(m =>
                                 s"Some(id: ${m._id}, consignor: ${m.consignorId}, lrn: ${m.localReferenceNumber}, consignee: ${m.consigneeId}, arc: ${m.administrativeReferenceCode}, lastUpdated: ${m.lastUpdated}, latestMessage: ${m.messages
-                                  .maxByOption(_.createdOn).map(_.createdOn)})"
+                                  .maxByOption(_.createdOn)
+                                  .map(_.createdOn)}, messages: ${m.messages.map(_.messageType)})"
                               )
                               .getOrElse("None")
                             logger.warn(
@@ -347,6 +350,10 @@ class MessageService @Inject() (
         .find(movement => message.lrnEquals(movement.localReferenceNumber))
         .map(Seq(_))
     )
+
+  private def findByLrn2(movements: Seq[Movement], message: IEMessage): Option[Movement] =
+    movements
+      .find(movement => message.lrnEquals(movement.localReferenceNumber))
 
   private def convertMessage(recipient: String, input: IEMessage, boxIds: Set[String]): Message =
     Message(
