@@ -146,15 +146,18 @@ class MessageService @Inject() (
                         movement.administrativeReferenceCode.flatTraverse(movementRepository.getByArc).map {
                           movementByArc =>
                             val movementMessage      =
-                              s"consignor: ${movement.consignorId}, lrn: ${movement.localReferenceNumber}, consignee: ${movement.consigneeId}, arc: ${movement.administrativeReferenceCode}"
+                              s"id: ${movement._id}, consignor: ${movement.consignorId}, lrn: ${movement.localReferenceNumber}, consignee: ${movement.consigneeId}, arc: ${movement.administrativeReferenceCode}, oldestMessage: ${movement.messages
+                                .minByOption(_.createdOn)}, currentTime: ${Instant.now()}"
                             val movementByLrnMessage = movementByLrn.headOption
                               .map(m =>
-                                s"Some(consignor: ${m.consignorId}, lrn: ${m.localReferenceNumber}, consignee: ${m.consigneeId}, arc: ${m.administrativeReferenceCode})"
+                                s"Some(id: ${m._id}, consignor: ${m.consignorId}, lrn: ${m.localReferenceNumber}, consignee: ${m.consigneeId}, arc: ${m.administrativeReferenceCode}, lastUpdated: ${m.lastUpdated}, latestMessage: ${m.messages
+                                  .maxByOption(_.createdOn)})"
                               )
                               .getOrElse("None")
                             val movementByArcMessage = movementByArc
                               .map(m =>
-                                s"Some(consignor: ${m.consignorId}, lrn: ${m.localReferenceNumber}, consignee: ${m.consigneeId}, arc: ${m.administrativeReferenceCode})"
+                                s"Some(id: ${m._id}, consignor: ${m.consignorId}, lrn: ${m.localReferenceNumber}, consignee: ${m.consigneeId}, arc: ${m.administrativeReferenceCode}, lastUpdated: ${m.lastUpdated}, latestMessage: ${m.messages
+                                  .maxByOption(_.createdOn)})"
                               )
                               .getOrElse("None")
                             logger.warn(
