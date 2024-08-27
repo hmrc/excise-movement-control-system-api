@@ -151,13 +151,13 @@ class MessageService @Inject() (
                             val movementByLrnMessage = movementByLrn.headOption
                               .map(m =>
                                 s"Some(id: ${m._id}, consignor: ${m.consignorId}, lrn: ${m.localReferenceNumber}, consignee: ${m.consigneeId}, arc: ${m.administrativeReferenceCode}, lastUpdated: ${m.lastUpdated}, latestMessage: ${m.messages
-                                  .maxByOption(_.createdOn)})"
+                                  .maxByOption(_.createdOn).map(_.createdOn)})"
                               )
                               .getOrElse("None")
                             val movementByArcMessage = movementByArc
                               .map(m =>
                                 s"Some(id: ${m._id}, consignor: ${m.consignorId}, lrn: ${m.localReferenceNumber}, consignee: ${m.consigneeId}, arc: ${m.administrativeReferenceCode}, lastUpdated: ${m.lastUpdated}, latestMessage: ${m.messages
-                                  .maxByOption(_.createdOn)})"
+                                  .maxByOption(_.createdOn).map(_.createdOn)})"
                               )
                               .getOrElse("None")
                             logger.warn(
