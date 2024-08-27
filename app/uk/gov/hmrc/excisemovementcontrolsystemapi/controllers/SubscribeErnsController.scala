@@ -16,23 +16,41 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
+import cats.implicits.toFunctorOps
 import play.api.Logging
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.libs.json.{JsValue, Json, OFormat}
+import play.api.mvc.{Action, ControllerComponents}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubscribeErnsAdminController.SubscribeErnsRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NotificationsService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 @Singleton
 class SubscribeErnsController @Inject() (
                                           authAction: AuthAction,
-                                          cc: ControllerComponents
+                                          cc: ControllerComponents,
+                                          notificationsService: NotificationsService
                                         )(implicit ec: ExecutionContext) extends BackendController(cc)
   with Logging {
 
-  def subscribeErns: Action[AnyContent] = authAction.async(parse.default) { implicit request =>
-    Future.successful(Ok("all good"))
+  def subscribeErns: Action[JsValue] = authAction.async(parse.json) { implicit request =>
+    withJsonBody[SubscribeErnsRequest] { subscribeRequest =>
+      notificationsService
+        .subscribeErns(subscribeRequest.clientId, subscribeRequest.erns.toSeq)
+        .as(Ok)
+    }
   }
 
+}
+
+object SubscribeErnsController {
+
+  final case class SubscribeErnsRequest(clientId: String, erns: Set[String])
+
+  object SubscribeErnsRequest {
+    implicit lazy val format: OFormat[SubscribeErnsRequest] = Json.format
+  }
 }
