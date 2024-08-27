@@ -147,7 +147,7 @@ class MessageService @Inject() (
                           movementByArc =>
                             val movementMessage      =
                               s"id: ${movement._id}, consignor: ${movement.consignorId}, lrn: ${movement.localReferenceNumber}, consignee: ${movement.consigneeId}, arc: ${movement.administrativeReferenceCode}, oldestMessage: ${movement.messages
-                                .minByOption(_.createdOn)}, currentTime: ${Instant.now()}"
+                                .minByOption(_.createdOn).map(_.createdOn)}, currentTime: ${Instant.now()}"
                             val movementByLrnMessage = movementByLrn.headOption
                               .map(m =>
                                 s"Some(id: ${m._id}, consignor: ${m.consignorId}, lrn: ${m.localReferenceNumber}, consignee: ${m.consigneeId}, arc: ${m.administrativeReferenceCode}, lastUpdated: ${m.lastUpdated}, latestMessage: ${m.messages
