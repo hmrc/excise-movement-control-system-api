@@ -963,6 +963,57 @@ class MovementRepositoryItSpec
     mustPreserveMdc(repository.confirmNotification("movementId", "messageId", "boxId"))
   }
 
+  "addBoxIdToMessages" should {
+
+    "add the given boxId to the list of boxIds to notify for all messages for the given recipient" in {
+
+      val message1 = Message(
+        "encodedMessage",
+        "type",
+        "messageId",
+        "recipient1",
+        Set("boxId1", "boxId2"),
+        timestamp.minus(1, ChronoUnit.DAYS)
+      )
+      val message2 = Message("encodedMessage", "type2", "messageId2", "recipient2", Set("boxId1", "boxId2"), timestamp)
+      val movement = Movement(
+        UUID.randomUUID().toString,
+        None,
+        "123",
+        "consignorId",
+        Some("789"),
+        None,
+        timestamp.truncatedTo(ChronoUnit.MILLIS),
+        Seq(message1, message2)
+      )
+
+      val message3  = Message("encodedMessage", "type", "messageId", "recipient3", Set("boxId1", "boxId2"), timestamp)
+      val message4  = Message("encodedMessage", "type", "messageId4", "recipient1", Set("boxId1", "boxId2", "boxId3"), timestamp)
+      val movement2 = Movement(
+        UUID.randomUUID().toString,
+        None,
+        "124",
+        "consignorId",
+        None,
+        Some("arc"),
+        timestamp.truncatedTo(ChronoUnit.MILLIS),
+        Seq(message3, message4)
+      )
+
+      repository.collection.insertMany(Seq(movement, movement2)).toFuture().futureValue
+
+      val updatedMessage1    = message1.copy(boxesToNotify = Set("boxId1", "boxId2", "boxId3"))
+      val updatedMovement1   = movement.copy(messages = Seq(updatedMessage1, message2))
+      val expectedMovements = Seq(updatedMovement1, movement2)
+
+      repository.addBoxIdToMessages("recipient1", "boxId3").futureValue
+
+      repository.collection.find().toFuture().futureValue must contain theSameElementsAs expectedMovements
+    }
+
+    mustPreserveMdc(repository.addBoxIdToMessages("recipient1", "boxId3"))
+  }
+
   private def insertMovement(movement: Movement) =
     insert(movement).futureValue
 
