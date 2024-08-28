@@ -51,7 +51,7 @@ Notice: You can use the run_local_with_push_notification.sh script file to creat
     ```
 
 #### Generate an access token
-* Use the [Auth wizard](https://www.development.tax.service.gov.uk/auth-login-stub/gg-sign-in)
+* Use the [Auth wizard](http://localhost:9949/auth-login-stub/gg-sign-in)
 * Fill the following details: 
 <br><br>
 

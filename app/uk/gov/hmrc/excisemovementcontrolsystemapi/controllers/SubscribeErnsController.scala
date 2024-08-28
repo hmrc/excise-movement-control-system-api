@@ -16,56 +16,57 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import cats.implicits.toFunctorOps
+import cats.data.EitherT
+import org.apache.pekko.Done
 import play.api.Logging
-import play.api.libs.json.{JsValue, Json, OFormat}
-import play.api.mvc.{Action, ControllerComponents}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubscribeErnsController.{SubscribeErnRequest, UnsubscribeErnRequest}
+import play.api.libs.json.Json
+import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Constants
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NotificationsService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class SubscribeErnsController @Inject() (
   authAction: AuthAction,
   cc: ControllerComponents,
-  notificationsService: NotificationsService
+  notificationsService: NotificationsService,
+  dateTimeService: DateTimeService
 )(implicit ec: ExecutionContext)
     extends BackendController(cc)
     with Logging {
 
-  def subscribeErn(ernID: String): Action[JsValue] = authAction.async(parse.json) { implicit request =>
-    withJsonBody[SubscribeErnRequest] { subscribeRequest =>
-      notificationsService
-        .subscribeErns(subscribeRequest.clientId, Seq(ernID))
-        .as(Ok)
-    }
+  def subscribeErn(ernId: String): Action[AnyContent] = authAction.async { implicit request =>
+    (for {
+      clientId <- retrieveClientIdFromHeader(request)
+      _        <- EitherT.liftF[Future, Result, Done](notificationsService.subscribeErns(clientId, Seq(ernId)))
+    } yield Ok).valueOrF(Future.successful)
   }
 
-  def unsubscribeErn(ernID: String): Action[JsValue] = authAction.async(parse.json) { implicit request =>
-    withJsonBody[UnsubscribeErnRequest] { subscribeRequest =>
-      notificationsService
-        .unsubscribeErns(subscribeRequest.clientId, Seq(ernID))
-        .as(Ok)
-    }
+  def unsubscribeErn(ernId: String): Action[AnyContent] = authAction.async { implicit request =>
+    (for {
+      clientId <- retrieveClientIdFromHeader(request)
+      _        <- EitherT.liftF[Future, Result, Done](notificationsService.unsubscribeErns(clientId, Seq(ernId)))
+    } yield Ok).valueOrF(Future.successful)
   }
 
-}
-
-object SubscribeErnsController {
-
-  final case class SubscribeErnRequest(clientId: String)
-
-  object SubscribeErnRequest {
-    implicit lazy val format: OFormat[SubscribeErnRequest] = Json.format
-  }
-
-  final case class UnsubscribeErnRequest(clientId: String)
-
-  object UnsubscribeErnRequest {
-    implicit lazy val format: OFormat[UnsubscribeErnRequest] = Json.format
-  }
+  private def retrieveClientIdFromHeader(implicit request: EnrolmentRequest[_]): EitherT[Future, Result, String] =
+    EitherT.fromOption(
+      request.headers.get(Constants.XClientIdHeader),
+      BadRequest(
+        Json.toJson(
+          ErrorResponse(
+            dateTimeService.timestamp(),
+            s"ClientId error",
+            s"Request header is missing ${Constants.XClientIdHeader}"
+          )
+        )
+      )
+    )
 }
