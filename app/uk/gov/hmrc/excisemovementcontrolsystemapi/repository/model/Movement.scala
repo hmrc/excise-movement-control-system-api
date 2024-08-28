@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model
 
-import play.api.libs.json.{Format, Json, OFormat, OWrites, Reads}
+import play.api.libs.json._
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 import java.time.Instant
@@ -33,7 +33,7 @@ case class Movement(
   messages: Seq[Message]
 )
 
-case class Message(
+final case class Message(
   hash: Int,
   encodedMessage: String,
   messageType: String,
@@ -41,7 +41,11 @@ case class Message(
   recipient: String,
   boxesToNotify: Set[String],
   createdOn: Instant
-)
+) {
+
+  override def toString: String =
+    s"AMessage($hash, $messageType, $messageId, $recipient, $boxesToNotify, $createdOn)"
+}
 
 object Movement {
 
