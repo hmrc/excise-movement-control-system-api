@@ -20,7 +20,7 @@ import cats.implicits.toFunctorOps
 import play.api.Logging
 import play.api.libs.json.{JsValue, Json, OFormat}
 import play.api.mvc.{Action, ControllerComponents}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubscribeErnsAdminController.SubscribeErnsRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubscribeErnsController.{SubscribeErnRequest, UnsubscribeErnRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NotificationsService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -30,16 +30,25 @@ import scala.concurrent.ExecutionContext
 
 @Singleton
 class SubscribeErnsController @Inject() (
-                                          authAction: AuthAction,
-                                          cc: ControllerComponents,
-                                          notificationsService: NotificationsService
-                                        )(implicit ec: ExecutionContext) extends BackendController(cc)
-  with Logging {
+  authAction: AuthAction,
+  cc: ControllerComponents,
+  notificationsService: NotificationsService
+)(implicit ec: ExecutionContext)
+    extends BackendController(cc)
+    with Logging {
 
-  def subscribeErns: Action[JsValue] = authAction.async(parse.json) { implicit request =>
-    withJsonBody[SubscribeErnsRequest] { subscribeRequest =>
+  def subscribeErn(ernID: String): Action[JsValue] = authAction.async(parse.json) { implicit request =>
+    withJsonBody[SubscribeErnRequest] { subscribeRequest =>
       notificationsService
-        .subscribeErns(subscribeRequest.clientId, subscribeRequest.erns.toSeq)
+        .subscribeErns(subscribeRequest.clientId, Seq(ernID))
+        .as(Ok)
+    }
+  }
+
+  def unsubscribeErn(ernID: String): Action[JsValue] = authAction.async(parse.json) { implicit request =>
+    withJsonBody[UnsubscribeErnRequest] { subscribeRequest =>
+      notificationsService
+        .unsubscribeErns(subscribeRequest.clientId, Seq(ernID))
         .as(Ok)
     }
   }
@@ -48,9 +57,15 @@ class SubscribeErnsController @Inject() (
 
 object SubscribeErnsController {
 
-  final case class SubscribeErnsRequest(clientId: String, erns: Set[String])
+  final case class SubscribeErnRequest(clientId: String, ern: String)
 
-  object SubscribeErnsRequest {
-    implicit lazy val format: OFormat[SubscribeErnsRequest] = Json.format
+  object SubscribeErnRequest {
+    implicit lazy val format: OFormat[SubscribeErnRequest] = Json.format
+  }
+
+  final case class UnsubscribeErnRequest(clientId: String, ern: String)
+
+  object UnsubscribeErnRequest {
+    implicit lazy val format: OFormat[UnsubscribeErnRequest] = Json.format
   }
 }
