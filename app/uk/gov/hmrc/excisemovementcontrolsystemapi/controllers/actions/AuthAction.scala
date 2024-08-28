@@ -34,6 +34,7 @@ import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 
 class AuthActionImpl @Inject() (
   override val authConnector: AuthConnector,
@@ -109,7 +110,7 @@ class AuthActionImpl @Inject() (
       .recover {
         case error: AuthorisationException =>
           handleException(UNAUTHORIZED, s"Unauthorised Exception for ${request.uri} with error ${error.reason}")
-        case ex: Throwable                 =>
+        case NonFatal(ex)                 =>
           handleException(INTERNAL_SERVER_ERROR, s"Internal server error is ${ex.getMessage}")
       }
 

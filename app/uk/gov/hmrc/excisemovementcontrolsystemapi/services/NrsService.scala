@@ -30,6 +30,7 @@ import uk.gov.hmrc.http.{Authorization, HeaderCarrier, InternalServerException}
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 
 @Singleton
 class NrsService @Inject() (
@@ -71,7 +72,7 @@ class NrsService @Inject() (
       nrsPayload            = NrsPayload(encodedPayload, metaData)
       retrievedNrsResponse <- nrsConnector.sendToNrs(nrsPayload, correlationId)
     } yield retrievedNrsResponse)
-      .recover { case e: Exception =>
+      .recover { case NonFatal(e) =>
         logger.warn(
           s"[NrsService] - Error when submitting to Non repudiation system (NRS) with message: ${e.getMessage}",
           e

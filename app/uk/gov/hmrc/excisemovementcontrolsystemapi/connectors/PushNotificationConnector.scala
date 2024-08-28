@@ -33,6 +33,7 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 
 class PushNotificationConnector @Inject() (
   httpClient: HttpClientV2,
@@ -55,7 +56,7 @@ class PushNotificationConnector @Inject() (
         extractIfSuccessful[SuccessBoxNotificationResponse](response)
           .fold(error => Left(handleBoxNotificationError(error, clientId)), Right(_))
       }
-      .recover { case ex: Throwable =>
+      .recover { case NonFatal(ex) =>
         logger.error(s"[PushNotificationConnector] - Error retrieving BoxId for clientId: $clientId", ex)
         Left(
           InternalServerError(
@@ -99,7 +100,7 @@ class PushNotificationConnector @Inject() (
             }
           )
       }
-      .recover { case ex: Throwable =>
+      .recover { case NonFatal(ex) =>
         logger.error(
           s"[PushNotificationConnector] - error sending notification with boxId: $boxId error, for messageId: ${notification.messageId}",
           ex
