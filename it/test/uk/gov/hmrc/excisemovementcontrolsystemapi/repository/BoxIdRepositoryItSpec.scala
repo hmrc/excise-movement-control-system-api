@@ -34,6 +34,7 @@ import play.api.inject.bind
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
+import scala.collection.View.Empty
 import scala.concurrent.{ExecutionContext, Future}
 
 class BoxIdRepositoryItSpec extends PlaySpec
@@ -116,6 +117,45 @@ class BoxIdRepositoryItSpec extends PlaySpec
     mustPreserveMdc(repository.save("testErn", "testBoxId"))
 
   }
+
+  "delete" should {
+    "delete when there is a submission" in {
+      val fixedInstant = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+      val fixedInstantInThePast = fixedInstant.minusSeconds(60)
+
+      insert(BoxIdRecord("testErn", "testBoxId", fixedInstantInThePast)).futureValue
+
+      repository.delete("testErn", "testBoxId").futureValue
+
+      find(Filters.eq("ern", "testErn")).futureValue mustBe Seq()
+
+    }
+
+    "not delete records with the same ern but a different boxId" in {
+      val fixedInstant = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+      val fixedInstantInThePast = fixedInstant.minusSeconds(60)
+      when(mockTimeService.timestamp()).thenReturn(fixedInstant)
+
+      insert(BoxIdRecord("testErn", "testBoxId", fixedInstantInThePast)).futureValue
+      insert(BoxIdRecord("testErn", "differentBoxId", fixedInstantInThePast)).futureValue
+
+      repository.delete("testErn", "testBoxId").futureValue
+
+      find(Filters.and(
+        Filters.eq("ern", "testErn"),
+        Filters.eq("boxId", "testBoxId")
+      )).futureValue mustBe Seq()
+
+      find(Filters.and(
+        Filters.eq("ern", "testErn"),
+        Filters.eq("boxId", "differentBoxId")
+      )).futureValue.head mustBe BoxIdRecord("testErn", "differentBoxId", fixedInstantInThePast)
+
+    }
+
+    mustPreserveMdc(repository.save("testErn", "testBoxId"))
+  }
+
 
 
   "getBoxIdsForErn" should {

@@ -57,13 +57,13 @@ class SubscribeErnsController @Inject() (
 
 object SubscribeErnsController {
 
-  final case class SubscribeErnRequest(clientId: String, ern: String)
+  final case class SubscribeErnRequest(clientId: String)
 
   object SubscribeErnRequest {
     implicit lazy val format: OFormat[SubscribeErnRequest] = Json.format
   }
 
-  final case class UnsubscribeErnRequest(clientId: String, ern: String)
+  final case class UnsubscribeErnRequest(clientId: String)
 
   object UnsubscribeErnRequest {
     implicit lazy val format: OFormat[UnsubscribeErnRequest] = Json.format
