@@ -29,12 +29,11 @@ import play.api.http.HeaderNames
 import play.api.http.Status.OK
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.json.Json
+import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import play.api.test.{FakeHeaders, FakeRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubscribeErnsController.{SubscribeErnRequest, UnsubscribeErnRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeAuthentication
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NotificationsService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -45,19 +44,21 @@ class SubscribeErnsControllerSpec
     with BeforeAndAfterEach {
 
   private val mockNotificationsService = mock[NotificationsService]
+  private val mockDateTimeService      = mock[DateTimeService]
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
   override def fakeApplication(): Application =
     new GuiceApplicationBuilder()
       .overrides(
-        bind[NotificationsService].toInstance(mockNotificationsService)
+        bind[NotificationsService].toInstance(mockNotificationsService),
+        bind[DateTimeService].toInstance(mockDateTimeService)
       )
       .build()
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(mockNotificationsService)
+    reset(mockNotificationsService, mockDateTimeService)
   }
 
   "subscribeErn" must {
@@ -67,15 +68,10 @@ class SubscribeErnsControllerSpec
 
       val request = FakeRequest(routes.SubscribeErnsController.subscribeErn("ern1"))
         .withHeaders(
-          FakeHeaders(
-            Seq(
-              HeaderNames.CONTENT_TYPE -> "application/json",
-              "X-Client-Id"            -> "clientId",
-              "X-Callback-Box-Id"      -> "clientBoxId"
-            )
-          )
+          HeaderNames.CONTENT_TYPE -> "application/json",
+          "X-Client-Id"            -> "clientId",
+          "X-Callback-Box-Id"      -> "clientBoxId"
         )
-        .withBody(Json.toJson(SubscribeErnRequest("clientId")))
 
       val result = createWithSuccessfulAuth.subscribeErn("ern1")(request)
 
@@ -86,41 +82,16 @@ class SubscribeErnsControllerSpec
     "return error" when {
       "unauthorised" in {
 
-        val request = FakeRequest()
+        val request = FakeRequest(routes.SubscribeErnsController.subscribeErn("ern1"))
           .withHeaders(
-            FakeHeaders(
-              Seq(
-                HeaderNames.CONTENT_TYPE -> "application/json",
-                "X-Client-Id"            -> "clientId",
-                "X-Callback-Box-Id"      -> "clientBoxId"
-              )
-            )
+            HeaderNames.CONTENT_TYPE -> "application/json",
+            "X-Client-Id"            -> "clientId",
+            "X-Callback-Box-Id"      -> "clientBoxId"
           )
-          .withBody(Json.toJson(SubscribeErnRequest("clientId")))
 
         val result = createWithFailingAuth.subscribeErn("ern1")(request)
 
         status(result) mustBe FORBIDDEN
-        verify(mockNotificationsService, times(0)).subscribeErns(any, any)(any)
-      }
-
-      "request body is malformed" in {
-
-        val request = FakeRequest()
-          .withHeaders(
-            FakeHeaders(
-              Seq(
-                HeaderNames.CONTENT_TYPE -> "application/json",
-                "X-Client-Id"            -> "clientId",
-                "X-Callback-Box-Id"      -> "clientBoxId"
-              )
-            )
-          )
-          .withBody(Json.obj())
-
-        val result = createWithSuccessfulAuth.subscribeErn("ern1")(request)
-
-        status(result) mustBe BAD_REQUEST
         verify(mockNotificationsService, times(0)).subscribeErns(any, any)(any)
       }
     }
@@ -131,17 +102,12 @@ class SubscribeErnsControllerSpec
 
       when(mockNotificationsService.unsubscribeErns(any, any)(any)).thenReturn(Future.successful(Done))
 
-      val request = FakeRequest(routes.SubscribeErnsController.unsubscribeErn("ern1"))
+      val request = FakeRequest(routes.SubscribeErnsController.subscribeErn("ern1"))
         .withHeaders(
-          FakeHeaders(
-            Seq(
-              HeaderNames.CONTENT_TYPE -> "application/json",
-              "X-Client-Id"            -> "clientId",
-              "X-Callback-Box-Id"      -> "clientBoxId"
-            )
-          )
+          HeaderNames.CONTENT_TYPE -> "application/json",
+          "X-Client-Id"            -> "clientId",
+          "X-Callback-Box-Id"      -> "clientBoxId"
         )
-        .withBody(Json.toJson(UnsubscribeErnRequest("clientId")))
 
       val result = createWithSuccessfulAuth.unsubscribeErn("ern1")(request)
 
@@ -152,41 +118,16 @@ class SubscribeErnsControllerSpec
     "return error" when {
       "unauthorised" in {
 
-        val request = FakeRequest()
+        val request = FakeRequest(routes.SubscribeErnsController.subscribeErn("ern1"))
           .withHeaders(
-            FakeHeaders(
-              Seq(
-                HeaderNames.CONTENT_TYPE -> "application/json",
-                "X-Client-Id"            -> "clientId",
-                "X-Callback-Box-Id"      -> "clientBoxId"
-              )
-            )
+            HeaderNames.CONTENT_TYPE -> "application/json",
+            "X-Client-Id"            -> "clientId",
+            "X-Callback-Box-Id"      -> "clientBoxId"
           )
-          .withBody(Json.toJson(UnsubscribeErnRequest("clientId")))
 
         val result = createWithFailingAuth.unsubscribeErn("ern1")(request)
 
         status(result) mustBe FORBIDDEN
-        verify(mockNotificationsService, times(0)).unsubscribeErns(any, any)(any)
-      }
-
-      "request body is malformed" in {
-
-        val request = FakeRequest()
-          .withHeaders(
-            FakeHeaders(
-              Seq(
-                HeaderNames.CONTENT_TYPE -> "application/json",
-                "X-Client-Id"            -> "clientId",
-                "X-Callback-Box-Id"      -> "clientBoxId"
-              )
-            )
-          )
-          .withBody(Json.obj())
-
-        val result = createWithSuccessfulAuth.unsubscribeErn("ern1")(request)
-
-        status(result) mustBe BAD_REQUEST
         verify(mockNotificationsService, times(0)).unsubscribeErns(any, any)(any)
       }
     }
@@ -197,14 +138,15 @@ class SubscribeErnsControllerSpec
     new SubscribeErnsController(
       FakeSuccessAuthentication(Set(ern)),
       stubControllerComponents(),
-      mockNotificationsService
+      mockNotificationsService,
+      mockDateTimeService
     )
 
   private def createWithFailingAuth =
     new SubscribeErnsController(
       FakeFailingAuthentication,
       stubControllerComponents(),
-      mockNotificationsService
+      mockNotificationsService,
+      mockDateTimeService
     )
-
 }
