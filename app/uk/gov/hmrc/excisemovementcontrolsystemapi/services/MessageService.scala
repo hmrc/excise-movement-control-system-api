@@ -83,9 +83,8 @@ class MessageService @Inject() (
         }
         if (shouldProcessNewMessages(lastRetrieved, now)) {
           for {
-            boxIds <- getBoxIds(ern)
-            _      <- processNewMessages(ern, boxIds)
-            _      <- ernRetrievalRepository.setLastRetrieved(ern, now)
+            _ <- processNewMessages(ern)
+            _ <- ernRetrievalRepository.setLastRetrieved(ern, now)
           } yield UpdateOutcome.Updated
         } else {
           Future.successful(UpdateOutcome.NotUpdatedThrottled)
@@ -107,16 +106,16 @@ class MessageService @Inject() (
   private def getBoxIds(ern: String): Future[Set[String]] =
     boxIdRepository.getBoxIds(ern)
 
-  private def processNewMessages(ern: String, boxIds: Set[String])(implicit hc: HeaderCarrier): Future[Done] = {
+  private def processNewMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] = {
     logger.info(s"[MessageService]: Processing new messages")
     for {
       response <- messageConnector.getNewMessages(ern)
-      _        <- updateMovements(ern, response.messages, boxIds)
-      _        <- acknowledgeAndContinue(response, ern, boxIds)
+      _        <- updateMovements(ern, response.messages)
+      _        <- acknowledgeAndContinue(response, ern)
     } yield Done
   }
 
-  private def acknowledgeAndContinue(response: GetMessagesResponse, ern: String, boxIds: Set[String])(implicit
+  private def acknowledgeAndContinue(response: GetMessagesResponse, ern: String)(implicit
     hc: HeaderCarrier
   ): Future[Done] =
     if (response.messageCount == 0) {
@@ -124,14 +123,14 @@ class MessageService @Inject() (
     } else {
       messageConnector.acknowledgeMessages(ern).flatMap { _ =>
         if (response.messageCount > response.messages.size) {
-          processNewMessages(ern, boxIds)
+          processNewMessages(ern)
         } else {
           Future.successful(Done)
         }
       }
     }
 
-  private def updateMovements(ern: String, messages: Seq[IEMessage], boxIds: Set[String])(implicit
+  private def updateMovements(ern: String, messages: Seq[IEMessage])(implicit
     hc: HeaderCarrier
   ): Future[Done] = {
     logger.info(s"[MessageService]: Updating movements")
@@ -302,9 +301,9 @@ class MessageService @Inject() (
           if (movements.nonEmpty) {
             movements.traverse { movement =>
               val messagesToAdd = Seq(
-                Some(originatingErn -> ie801),
+                Some(ie801.consignorId -> ie801),
                 ie801.consigneeId.map(consignee => consignee -> ie801),
-                Some(originatingErn -> originatingMessage)
+                Some(originatingErn    -> originatingMessage)
               ).flatten
 
               updateMovement(movement, messagesToAdd)

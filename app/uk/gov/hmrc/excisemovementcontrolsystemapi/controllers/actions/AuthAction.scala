@@ -110,7 +110,7 @@ class AuthActionImpl @Inject() (
       .recover {
         case error: AuthorisationException =>
           handleException(UNAUTHORIZED, s"Unauthorised Exception for ${request.uri} with error ${error.reason}")
-        case NonFatal(ex)                 =>
+        case NonFatal(ex)                  =>
           handleException(INTERNAL_SERVER_ERROR, s"Internal server error is ${ex.getMessage}")
       }
 

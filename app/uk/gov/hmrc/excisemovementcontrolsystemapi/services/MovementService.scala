@@ -53,7 +53,7 @@ class MovementService @Inject() (
             s"[MovementService] - The local reference number has already been used for another movement"
           )
           createDuplicateErrorResponse(movement)
-        case NonFatal(e)           =>
+        case NonFatal(e)            =>
           logger.error(s"[MovementService] - Error occurred while saving movement, ${e.getMessage}", e)
           Left(
             InternalServerError(

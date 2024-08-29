@@ -1032,24 +1032,22 @@ class MessageServiceSpec
       }
     }
     "last retrieved is at the throttle cut-off" when {
-      "we try to retrieve messages but there are none" should {
-        "does not call downstream service to get messages" in {
-          val ern      = "testErn"
-          val movement = Movement(None, "LRN", "Consignor", None)
-          when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
-          when(movementRepository.save(any)).thenReturn(Future.successful(Done))
-          when(movementRepository.migrateLastUpdated(any)).thenReturn(Future.successful(Done))
-          when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
-          when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
-          when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
-          when(messageConnector.getNewMessages(any)(any))
-            .thenReturn(Future.successful(GetMessagesResponse(Seq.empty, 0)))
+      "does not call downstream service to get messages" in {
+        val ern      = "testErn"
+        val movement = Movement(None, "LRN", "Consignor", None)
+        when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
+        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(movementRepository.migrateLastUpdated(any)).thenReturn(Future.successful(Done))
+        when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
+        when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
+        when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+        when(messageConnector.getNewMessages(any)(any))
+          .thenReturn(Future.successful(GetMessagesResponse(Seq.empty, 0)))
 
-          messageService.updateMessages(ern, Some(lastRetrievedTimestamp.minus(5, ChronoUnit.MINUTES))).futureValue
+        messageService.updateMessages(ern, Some(lastRetrievedTimestamp.minus(5, ChronoUnit.MINUTES))).futureValue
 
-          verify(messageConnector, never).getNewMessages(any)(any)
-          verify(ernRetrievalRepository, never).setLastRetrieved(any, any)
-        }
+        verify(messageConnector, never).getNewMessages(any)(any)
+        verify(ernRetrievalRepository, never).setLastRetrieved(any, any)
       }
     }
     "last retrieved is after the throttle cut-off" when {
@@ -1117,7 +1115,7 @@ class MessageServiceSpec
     "we get no movements for the ern" when {
       "there is a movement for the arc of a received IE801" when {
         "the consignee is different" should {
-          "update the consignee on the movement" in {
+          "update the consignee on the movement" in { // TODO is this test valid?
             val consignor        = "testErn"
             val oldConsignee     = "Consignee"
             val newConsignee     = "NewConsignee"
@@ -1639,9 +1637,6 @@ class MessageServiceSpec
           when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
           messageService.updateMessages(consignee, None).futureValue
-
-//          Movement("a216942e-a608-49d5-b0b4-ebb70c550af6", None, "lrnie8158976912", "testErn", Some("testConsignee"), Some("23XI00000000000000012"), 2024-08-28T15:34:48.372926Z, List(AMessage(271462105, IE801, GB00001, testErn, Set(boxId1), 2024-08-28T15:34:46.372926Z), AMessage(271462105, IE801, GB00001, testConsignee, Set(boxId2), 2024-08-28T15:34:48.372926Z)))
-//          Movement("a216942e-a608-49d5-b0b4-ebb70c550af6", None, "lrnie8158976912", "testErn", Some("testConsignee"), Some("23XI00000000000000012"), 2024-08-28T15:34:48.372926Z, List(AMessage(271462105, IE801, GB00001, testErn, Set(boxId1), 2024-08-28T15:34:46.372926Z), AMessage(271462105, IE801, GB00001, testConsignee, Set(), 2024-08-28T15:34:48.372926Z)))
 
           verify(movementRepository).save(expectedMovement)
         }
