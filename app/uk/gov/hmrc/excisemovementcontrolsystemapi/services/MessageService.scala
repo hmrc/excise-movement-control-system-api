@@ -24,7 +24,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, 
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnRetrievalRepository, MovementRepository}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService.UpdateOutcome
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService.{EnrichedError, UpdateOutcome}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
@@ -149,7 +149,11 @@ class MessageService @Inject() (
                 }
             }
             .flatMap {
-              _.traverse(movementRepository.save)
+              _.traverse { movement =>
+                movementRepository.save(movement).recoverWith { case NonFatal(e) =>
+                  Future.failed(EnrichedError(ern, movement._id, e))
+                }
+              }
             }
         }
         .as(Done)
@@ -435,5 +439,9 @@ object MessageService {
     case object Updated extends UpdateOutcome
     case object Locked extends UpdateOutcome
     case object NotUpdatedThrottled extends UpdateOutcome
+  }
+
+  final case class EnrichedError(ern: String, movementId: String, inner: Throwable) extends Throwable {
+    override def getMessage: String = s"ern: $ern, movementId: $movementId, inner: ${inner.getMessage}"
   }
 }
