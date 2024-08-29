@@ -27,10 +27,10 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, TraderMovementConnector}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessageGeneratorFactory}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes.IE704
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE704Message}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes.{IE704, IE801, IE818}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE704Message, IE801Message, IE818Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
@@ -40,6 +40,7 @@ import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import java.time.{Duration, Instant}
 import java.time.temporal.ChronoUnit
+import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Promise}
 
@@ -60,6 +61,7 @@ class MessageServiceItSpec
   private val mockMessageConnector = mock[MessageConnector]
   private val mockDateTimeService = mock[DateTimeService]
   private val mockCorrelationIdService = mock[CorrelationIdService]
+  private val mockTraderMovementConnector = mock[TraderMovementConnector]
 
   private val now = Instant.now.truncatedTo(ChronoUnit.MILLIS)
   private val newId = "some-id"
@@ -67,7 +69,7 @@ class MessageServiceItSpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    Mockito.reset(mockMessageConnector)
+    Mockito.reset(mockMessageConnector, mockDateTimeService, mockCorrelationIdService, mockTraderMovementConnector)
   }
 
   override protected lazy val repository: MovementRepository =
@@ -77,6 +79,7 @@ class MessageServiceItSpec
     app.injector.instanceOf[ErnRetrievalRepository]
 
   private lazy val service = app.injector.instanceOf[MessageService]
+  private lazy val movementService = app.injector.instanceOf[MovementService]
 
   override def fakeApplication(): Application =
     GuiceApplicationBuilder()
@@ -84,7 +87,8 @@ class MessageServiceItSpec
         bind[MongoComponent].toInstance(mongoComponent),
         bind[MessageConnector].toInstance(mockMessageConnector),
         bind[DateTimeService].toInstance(mockDateTimeService),
-        bind[CorrelationIdService].toInstance(mockCorrelationIdService)
+        bind[CorrelationIdService].toInstance(mockCorrelationIdService),
+        bind[TraderMovementConnector].toInstance(mockTraderMovementConnector)
       )
       .build()
 
@@ -164,6 +168,7 @@ class MessageServiceItSpec
 
       verify(mockMessageConnector, times(1)).getNewMessages(any)(any)
     }
+
     "must not cause throttled requests to increase the throttle timeout" in {
 
       val hc = HeaderCarrier()
@@ -188,6 +193,57 @@ class MessageServiceItSpec
       service.updateMessages(ern, ernRetrievalRepository.getLastRetrieved(ern).futureValue)(hc).futureValue
 
       verify(mockMessageConnector, times(2)).getNewMessages(any)(any)
+    }
+
+    "must not try to create a movement which already exists" in {
+
+      val hc = HeaderCarrier()
+      val consignorErn = "testErn"
+      val consigneeErn = "testErn2"
+      val lrn = "lrnie8158976912"
+      val arc = "arc"
+
+      val ie801 = XmlMessageGeneratorFactory.generate(consignorErn, MessageParams(IE801, "XI000001", consigneeErn = Some(consigneeErn), localReferenceNumber = Some(lrn), administrativeReferenceCode = Some(arc)))
+      val ie818 = XmlMessageGeneratorFactory.generate(consignorErn, MessageParams(IE818, "XI000002", consigneeErn = Some(consigneeErn), localReferenceNumber = None, administrativeReferenceCode = Some(arc)))
+      val messages = Seq(IE801Message.createFromXml(ie801), IE818Message.createFromXml(ie818))
+
+      val initialMovement = Movement(
+        None,
+        lrn,
+        consignorErn,
+        Some(consigneeErn),
+        None,
+        lastUpdated = now
+      )
+
+      val expectedMovement = initialMovement.copy(
+        messages = Seq(
+          Message(utils.encode(messages.head.toXml.toString()), "IE801", "XI000001", consignorErn, Set.empty, now),
+          Message(utils.encode(messages.head.toXml.toString()), "IE801", "XI000001", consigneeErn, Set.empty, now),
+          Message(utils.encode(messages(1).toXml.toString()), "IE818", "XI000002", consignorErn, Set.empty, now),
+        ),
+        administrativeReferenceCode = Some(arc)
+      )
+
+      when(mockDateTimeService.timestamp()).thenReturn(now)
+
+      when(mockCorrelationIdService.generateCorrelationId()).thenAnswer(UUID.randomUUID().toString)
+
+      when(mockMessageConnector.getNewMessages(any)(any)).thenReturn(
+        Future.successful(GetMessagesResponse(Seq(messages(1)), 1))
+      )
+
+      when(mockMessageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+
+      when(mockTraderMovementConnector.getMovementMessages(any, any)(any)).thenReturn(Future.successful(messages))
+
+      movementService.saveNewMovement(initialMovement).futureValue.isRight mustBe true
+      service.updateMessages(consignorErn, None)(hc).futureValue
+
+      val result = repository.getMovementByLRNAndERNIn(lrn, List(consignorErn)).futureValue
+
+      result.length mustBe 1
+      result.head mustEqual expectedMovement
     }
   }
 }

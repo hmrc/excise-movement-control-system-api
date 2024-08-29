@@ -28,8 +28,11 @@ import org.slf4j.MDC
 import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessageGeneratorFactory}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes.IE801
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE801Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository.MessageNotification
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -664,8 +667,9 @@ class MovementRepositoryItSpec
     mustPreserveMdc(repository.getMovementByERN(Seq("some ern")))
   }
 
-  "getAll" should {
-    "get all record for a consignorId" in {
+  "getAllBy" should {
+
+    "get all records for a consignorId" in {
       val movementLrn1 = Movement(Some("boxId"), "1", "345", Some("789"), None, timestamp)
       val movementLrn2 = Movement(Some("boxId"), "2", "897", Some("456"), None, timestamp)
       val movementLrn6 = Movement(Some("boxId"), "6", "345", Some("523"), None, timestamp)
@@ -679,7 +683,7 @@ class MovementRepositoryItSpec
       result mustBe Seq(movementLrn1, movementLrn6)
     }
 
-    "get all record for a consignee" in {
+    "get all records for a consignee" in {
       val movementLrn1             = Movement(Some("boxId"), "1", "345", Some("789"), None, timestamp)
       val movementLrn2             = Movement(Some("boxId"), "2", "897", Some("456"), None, timestamp)
       val movementLrn6             = Movement(Some("boxId"), "6", "345", Some("523"), None, timestamp)
@@ -692,6 +696,16 @@ class MovementRepositoryItSpec
       val result = repository.getAllBy("456").futureValue
 
       result mustBe Seq(movementLrn2, movementLrn1Consignor564)
+    }
+
+    "get all records for recipient" in {
+      val message         = Message("any, message", MessageTypes.IE801.value, "messageId", "456", Set.empty, timestamp)
+      val movementLrn1    = Movement(Some("boxId"), "1", "345", Some("789"), None, timestamp, messages = Seq(message))
+      insertMovement(movementLrn1)
+
+      val result = repository.getAllBy("456").futureValue
+
+      result mustBe Seq(movementLrn1)
     }
 
     "return an empty list if there are no matching records" in {

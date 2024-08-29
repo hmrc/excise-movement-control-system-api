@@ -35,6 +35,7 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, StringContextOps}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 
 class PreValidateTraderConnector @Inject() (
   httpClient: HttpClientV2,
@@ -70,7 +71,7 @@ class PreValidateTraderConnector @Inject() (
       .withBody(Json.toJson(request))
       .execute[Either[Result, PreValidateTraderEISResponse]]
       .andThen { case _ => timer.stop() }
-      .recover { case ex: Throwable =>
+      .recover { case NonFatal(ex) =>
         logger.warn(EISErrorMessage(createdDateTime, ex.getMessage, correlationId, "PreValidateTrader"), ex)
 
         val error = EisErrorResponsePresentation(

@@ -33,6 +33,7 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, StringContextOps}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 import scala.xml.NodeSeq
 
 class EISSubmissionConnector @Inject() (
@@ -76,7 +77,7 @@ class EISSubmissionConnector @Inject() (
       .withBody(Json.toJson(eisRequest))
       .execute[Either[Result, EISSubmissionResponse]]
       .andThen { case _ => timer.stop() }
-      .recover { case ex: Throwable =>
+      .recover { case NonFatal(ex) =>
         logger.warn(EISErrorMessage(createdDateTime, ex.getMessage, correlationId, messageType), ex)
 
         val error = EisErrorResponsePresentation(
