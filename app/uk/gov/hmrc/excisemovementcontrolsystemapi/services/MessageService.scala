@@ -56,6 +56,8 @@ class MessageService @Inject() (
     extends Logging {
 
   private val messageSizes = metricRegistry.histogram("message-size")
+  private val messageCount = metricRegistry.histogram("message-count")
+  private val totalMessageSize = metricRegistry.histogram("total-message-size")
 
   private val throttleCutoff: FiniteDuration =
     configuration.get[FiniteDuration]("microservice.services.eis.throttle-cutoff")
@@ -156,6 +158,8 @@ class MessageService @Inject() (
             }
             .flatMap {
               _.traverse { movement =>
+                messageCount.update(movement.messages.length)
+                totalMessageSize.update(movement.messages.map(_.encodedMessage.length).sum)
                 movementRepository.save(movement).recoverWith { case NonFatal(e) =>
                   createEnrichedError(e, ern, movements, movement)
                 }
