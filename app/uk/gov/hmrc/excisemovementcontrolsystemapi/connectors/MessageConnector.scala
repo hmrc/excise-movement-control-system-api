@@ -23,6 +23,7 @@ import play.api.{Configuration, Logging}
 import play.api.http.Status.OK
 import play.api.libs.json.{Json, Reads}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.Service
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector.GetMessagesException
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptSuccessResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
@@ -39,6 +40,7 @@ import java.util.Base64
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
+import scala.util.control.NonFatal
 
 @Singleton
 class MessageConnector @Inject() (
@@ -80,6 +82,8 @@ class MessageConnector @Inject() (
           logger.warn(s"[MessageConnector]: Invalid status returned: ${response.status}")
           Future.failed(new RuntimeException("Invalid status returned"))
         }
+      }.recoverWith{
+        case NonFatal(e) => Future.failed(GetMessagesException(ern, e))
       }
   }
 
@@ -131,4 +135,12 @@ class MessageConnector @Inject() (
 
   private def base64Decode(string: String): String =
     new String(Base64.getDecoder.decode(string), StandardCharsets.UTF_8)
+}
+
+object MessageConnector {
+  final case class GetMessagesException(ern: String, cause: Throwable) extends Throwable {
+    override def getStackTrace: Array[StackTraceElement] = cause.getStackTrace
+
+    override def getMessage: String = s"Failed to get messages for ern: $ern, cause: ${cause.getMessage}"
+  }
 }

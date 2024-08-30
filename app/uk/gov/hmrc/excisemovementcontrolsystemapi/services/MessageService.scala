@@ -444,48 +444,54 @@ class MessageService @Inject() (
     }
 
   private def createEnrichedError[A](
-    e: Throwable,
-    ern: String,
-    movements: Seq[Movement],
-    movement: Movement
-  ): Future[A] =
+                                      e: Throwable,
+                                      ern: String,
+                                      movements: Seq[Movement],
+                                      movement: Movement
+                                    ): Future[A] =
     e match {
       case e: MongoCommandException if e.getErrorCode == 11000 =>
         movementRepository
           .getMovementByLRNAndERNIn(movement.localReferenceNumber, List(movement.consignorId))
           .flatMap { movementByLrn =>
-            movement.administrativeReferenceCode.flatTraverse(movementRepository.getByArc).map { movementByArc =>
-              val movementMessage      =
-                s"id: ${movement._id}, consignor: ${movement.consignorId}, lrn: ${movement.localReferenceNumber}, consignee: ${movement.consigneeId}, arc: ${movement.administrativeReferenceCode}, messages: ${movement.messages
-                  .map(_.messageType)}, currentTime: ${Instant.now()})"
-              val movementByLrnMessage = movementByLrn.headOption
-                .map(m =>
-                  s"Some(id: ${m._id}, consignor: ${m.consignorId}, lrn: ${m.localReferenceNumber}, consignee: ${m.consigneeId}, arc: ${m.administrativeReferenceCode}, exists in initially retrieved movements: ${movements
-                    .exists(_._id == m._id)}, lastUpdated: ${m.lastUpdated}, latestMessageUpdate: ${m.messages
+            val movementMessage =
+              s"id: ${movement._id}, consignor: ${movement.consignorId}, lrn: ${movement.localReferenceNumber}, consignee: ${movement.consigneeId}, arc: ${movement.administrativeReferenceCode}, messages: ${
+                movement.messages
+                  .map(_.messageType)
+              }, currentTime: ${Instant.now()})"
+            val movementByLrnMessage = movementByLrn.headOption
+              .map(m =>
+                s"Some(id: ${m._id}, consignor: ${m.consignorId}, lrn: ${m.localReferenceNumber}, consignee: ${m.consigneeId}, arc: ${m.administrativeReferenceCode}, exists in initially retrieved movements: ${
+                  movements
+                    .exists(_._id == m._id)
+                }, lastUpdated: ${m.lastUpdated}, latestMessageUpdate: ${
+                  m.messages
                     .maxByOption(_.createdOn)
-                    .map(_.createdOn)}, messages: ${m.messages.map(_.messageType)})"
-                )
-                .getOrElse("None")
-              val movementByArcMessage = movementByArc
-                .map(m =>
-                  s"Some(id: ${m._id}, consignor: ${m.consignorId}, lrn: ${m.localReferenceNumber}, consignee: ${m.consigneeId}, arc: ${m.administrativeReferenceCode}, lastUpdated: ${m.lastUpdated}, latestMessage: ${m.messages
-                    .maxByOption(_.createdOn)
-                    .map(_.createdOn)}, messages: ${m.messages.map(_.messageType)})"
-                )
-                .getOrElse("None")
-              logger.warn(
-                s"Failed to save movement because of duplicate key violation: \n\nMovement - $movementMessage \n\nExisting movement by LRN - $movementByLrnMessage \n\nExisting movement by ARC - $movementByArcMessage",
-                e
+                    .map(_.createdOn)
+                }, messages: ${m.messages.map(_.messageType)})"
               )
+              .getOrElse("None")
+            movement.administrativeReferenceCode.flatTraverse(movementRepository.getByArc).map { movementByArc =>
+              movementByArc
+                .map(m =>
+                  s"Some(id: ${m._id}, consignor: ${m.consignorId}, lrn: ${m.localReferenceNumber}, consignee: ${m.consigneeId}, arc: ${m.administrativeReferenceCode}, lastUpdated: ${m.lastUpdated}, latestMessage: ${
+                    m.messages
+                      .maxByOption(_.createdOn)
+                      .map(_.createdOn)
+                  }, messages: ${m.messages.map(_.messageType)})"
+                )
+                .getOrElse("None")
+            }.flatMap { movementByArcMessage =>
+              val message = s"Failed to save movement because of duplicate key violation: \n\nMovement - $movementMessage \n\nExisting movement by LRN - $movementByLrnMessage \n\nExisting movement by ARC - $movementByArcMessage"
+              Future.failed(EnrichedError(message, e))
             }
-            Future.failed(e)
           }
-      case _: BsonMaximumSizeExceededException                 =>
+      case _: BsonMaximumSizeExceededException =>
         val messageSizes = movement.messages.map(_.encodedMessage.length).mkString("[", ", ", "]")
-        val message      =
+        val message =
           s"ern: $ern, movementId: ${movement._id}, numberOfMessages: ${movement.messages.size}, messageSizes:$messageSizes inner: ${e.getMessage}"
         Future.failed(EnrichedError(message, e))
-      case _                                                   =>
+      case _ =>
         val message = s"ern: $ern, movementId: ${movement._id}, inner: ${e.getMessage}"
         Future.failed(EnrichedError(message, e))
     }
