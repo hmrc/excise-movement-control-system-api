@@ -18,7 +18,10 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import cats.data.OptionT
 import cats.syntax.all._
+import com.codahale.metrics.MetricRegistry
 import org.apache.pekko.Done
+import org.bson.BsonMaximumSizeExceededException
+import org.mongodb.scala.MongoCommandException
 import play.api.{Configuration, Logging}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, TraderMovementConnector}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
@@ -47,9 +50,12 @@ class MessageService @Inject() (
   correlationIdService: CorrelationIdService,
   emcsUtils: EmcsUtils,
   auditService: AuditService,
-  mongoLockRepository: MongoLockRepository
+  mongoLockRepository: MongoLockRepository,
+  metricRegistry: MetricRegistry
 )(implicit executionContext: ExecutionContext)
     extends Logging {
+
+  private val messageSizes = metricRegistry.histogram("message-size")
 
   private val throttleCutoff: FiniteDuration =
     configuration.get[FiniteDuration]("microservice.services.eis.throttle-cutoff")
@@ -151,7 +157,7 @@ class MessageService @Inject() (
             .flatMap {
               _.traverse { movement =>
                 movementRepository.save(movement).recoverWith { case NonFatal(e) =>
-                  Future.failed(EnrichedError(ern, movement._id, e))
+                  createEnrichedError(e, ern, movements, movement)
                 }
               }
             }
@@ -421,14 +427,63 @@ class MessageService @Inject() (
 
   private def convertMessage(recipient: String, input: IEMessage, timestamp: Instant): Future[Message] =
     boxIdRepository.getBoxIds(recipient).map { boxIds =>
+      val encodedMessage = emcsUtils.encode(input.toXml.toString)
+      messageSizes.update(encodedMessage.length)
       Message(
-        encodedMessage = emcsUtils.encode(input.toXml.toString),
+        encodedMessage = encodedMessage,
         messageType = input.messageType,
         messageId = input.messageIdentifier,
         recipient = recipient,
         boxesToNotify = boxIds,
         createdOn = timestamp
       )
+    }
+
+  private def createEnrichedError[A](
+    e: Throwable,
+    ern: String,
+    movements: Seq[Movement],
+    movement: Movement
+  ): Future[A] =
+    e match {
+      case e: MongoCommandException if e.getErrorCode == 11000 =>
+        movementRepository
+          .getMovementByLRNAndERNIn(movement.localReferenceNumber, List(movement.consignorId))
+          .flatMap { movementByLrn =>
+            movement.administrativeReferenceCode.flatTraverse(movementRepository.getByArc).map { movementByArc =>
+              val movementMessage      =
+                s"id: ${movement._id}, consignor: ${movement.consignorId}, lrn: ${movement.localReferenceNumber}, consignee: ${movement.consigneeId}, arc: ${movement.administrativeReferenceCode}, messages: ${movement.messages
+                  .map(_.messageType)}, currentTime: ${Instant.now()})"
+              val movementByLrnMessage = movementByLrn.headOption
+                .map(m =>
+                  s"Some(id: ${m._id}, consignor: ${m.consignorId}, lrn: ${m.localReferenceNumber}, consignee: ${m.consigneeId}, arc: ${m.administrativeReferenceCode}, exists in initially retrieved movements: ${movements
+                    .exists(_._id == m._id)}, lastUpdated: ${m.lastUpdated}, latestMessageUpdate: ${m.messages
+                    .maxByOption(_.createdOn)
+                    .map(_.createdOn)}, messages: ${m.messages.map(_.messageType)})"
+                )
+                .getOrElse("None")
+              val movementByArcMessage = movementByArc
+                .map(m =>
+                  s"Some(id: ${m._id}, consignor: ${m.consignorId}, lrn: ${m.localReferenceNumber}, consignee: ${m.consigneeId}, arc: ${m.administrativeReferenceCode}, lastUpdated: ${m.lastUpdated}, latestMessage: ${m.messages
+                    .maxByOption(_.createdOn)
+                    .map(_.createdOn)}, messages: ${m.messages.map(_.messageType)})"
+                )
+                .getOrElse("None")
+              logger.warn(
+                s"Failed to save movement because of duplicate key violation: \n\nMovement - $movementMessage \n\nExisting movement by LRN - $movementByLrnMessage \n\nExisting movement by ARC - $movementByArcMessage",
+                e
+              )
+            }
+            Future.failed(e)
+          }
+      case _: BsonMaximumSizeExceededException                 =>
+        val messageSizes = movement.messages.map(_.encodedMessage.length).mkString("[", ", ", "]")
+        val message      =
+          s"ern: $ern, movementId: ${movement._id}, numberOfMessages: ${movement.messages.size}, messageSizes:$messageSizes inner: ${e.getMessage}"
+        Future.failed(EnrichedError(message, e))
+      case _                                                   =>
+        val message = s"ern: $ern, movementId: ${movement._id}, inner: ${e.getMessage}"
+        Future.failed(EnrichedError(message, e))
     }
 }
 
@@ -441,7 +496,8 @@ object MessageService {
     case object NotUpdatedThrottled extends UpdateOutcome
   }
 
-  final case class EnrichedError(ern: String, movementId: String, inner: Throwable) extends Throwable {
-    override def getMessage: String = s"ern: $ern, movementId: $movementId, inner: ${inner.getMessage}"
+  final case class EnrichedError(message: String, cause: Throwable) extends Throwable {
+    override def getStackTrace: Array[StackTraceElement] = cause.getStackTrace
+    override def getMessage: String                      = message
   }
 }
