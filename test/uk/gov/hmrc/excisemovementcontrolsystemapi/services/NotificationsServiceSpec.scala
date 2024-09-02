@@ -98,4 +98,43 @@ class NotificationsServiceSpec
       verify(movementRepository, times(0)).addBoxIdToMessages(any, any)
     }
   }
+
+  "unsubscribeErns" - {
+
+    "must remove a relationship between the boxId for the given clientId and the given ERNs and update movements to remove notifications for the relevant box id" in {
+
+      val clientId = "clientId"
+      val boxId    = "testBox"
+      val ern1     = "ern1"
+      val ern2     = "ern2"
+
+      when(pushNotificationService.getBoxId(any, any)(any)).thenReturn(Future.successful(Right(boxId)))
+      when(boxIdRepository.delete(any, any)).thenReturn(Future.successful(Done))
+      when(movementRepository.removeBoxIdFromMessages(any, any)).thenReturn(Future.successful(Done))
+
+      notificationsService.unsubscribeErns(clientId, Seq(ern1, ern2))(hc).futureValue
+
+      verify(pushNotificationService).getBoxId(eqTo(clientId), eqTo(None))(any)
+      verify(boxIdRepository).delete(ern1, boxId)
+      verify(boxIdRepository).delete(ern2, boxId)
+      verify(movementRepository).removeBoxIdFromMessages(ern1, boxId)
+      verify(movementRepository).removeBoxIdFromMessages(ern2, boxId)
+    }
+
+    "must fail with a NoBoxIdError when there is no box id for the client" in {
+
+      val clientId = "clientId"
+      val ern1     = "ern1"
+
+      when(pushNotificationService.getBoxId(any, any)(any)).thenReturn(Future.successful(Left(Ok)))
+
+      val result = notificationsService.unsubscribeErns(clientId, Seq(ern1))(hc).failed.futureValue
+
+      result mustBe NoBoxIdError(clientId)
+
+      verify(pushNotificationService).getBoxId(eqTo(clientId), eqTo(None))(any)
+      verify(boxIdRepository, times(0)).delete(any, any)
+      verify(movementRepository, times(0)).removeBoxIdFromMessages(any, any)
+    }
+  }
 }

@@ -59,6 +59,18 @@ class BoxIdRepository @Inject() (mongo: MongoComponent, configuration: Configura
       .toFuture()
       .map(_ => Done)
   }
+
+  def delete(ern: String, boxId: String): Future[Done] = Mdc.preservingMdc {
+    collection
+      .deleteOne(
+        Filters.and(
+          Filters.eq("ern", ern),
+          Filters.eq("boxId", boxId)
+        )
+      )
+      .toFuture()
+      .map(_ => Done)
+  }
 }
 
 object BoxIdRepository {

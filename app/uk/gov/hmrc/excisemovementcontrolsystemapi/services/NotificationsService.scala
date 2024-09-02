@@ -39,6 +39,12 @@ class NotificationsService @Inject() (
       _     <- saveBoxIdForErns(boxId, erns)
     } yield Done
 
+  def unsubscribeErns(clientId: String, erns: Seq[String])(implicit hc: HeaderCarrier): Future[Done] =
+    for {
+      boxId <- getClientBoxId(clientId)
+      _     <- removeBoxIdForErns(boxId, erns)
+    } yield Done
+
   private def getClientBoxId(clientId: String)(implicit hc: HeaderCarrier): Future[String] =
     EitherT(pushNotificationService.getBoxId(clientId)).toOption.getOrElseF {
       Future.failed(NoBoxIdError(clientId))
@@ -50,6 +56,16 @@ class NotificationsService @Inject() (
         for {
           _ <- boxIdRepository.save(ern, boxId)
           _ <- movementRepository.addBoxIdToMessages(ern, boxId)
+        } yield Done
+      }
+      .as(Done)
+
+  private def removeBoxIdForErns(boxId: String, erns: Seq[String]): Future[Done] =
+    erns
+      .traverse { ern =>
+        for {
+          _ <- boxIdRepository.delete(ern, boxId)
+          _ <- movementRepository.removeBoxIdFromMessages(ern, boxId)
         } yield Done
       }
       .as(Done)

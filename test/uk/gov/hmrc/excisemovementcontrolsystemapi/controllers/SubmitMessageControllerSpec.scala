@@ -79,7 +79,7 @@ class SubmitMessageControllerSpec
   }
 
   "submit" should {
-    "return 200" in {
+    "return 202" in {
       val result = createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request)
       status(result) mustBe ACCEPTED
     }
