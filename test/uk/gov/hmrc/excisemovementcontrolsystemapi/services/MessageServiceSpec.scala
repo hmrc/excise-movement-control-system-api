@@ -66,6 +66,7 @@ class MessageServiceSpec
 
   private val utils                      = new EmcsUtils
   private val now                        = Instant.now
+  private val migrateCutoffTimestamp     = now.minus(1, ChronoUnit.SECONDS)
   private val lastRetrievedTimestamp     = now.plus(1, ChronoUnit.SECONDS)
   private val updateOrCreateTimestamp    = lastRetrievedTimestamp.plus(1, ChronoUnit.SECONDS)
   private val newId                      = UUID.randomUUID().toString
@@ -85,7 +86,8 @@ class MessageServiceSpec
       bind[MongoLockRepository].toInstance(mongoLockRepository)
     )
     .configure(
-      "microservice.services.eis.throttle-cutoff" -> "5 minutes"
+      "microservice.services.eis.throttle-cutoff" -> "5 minutes",
+      "migrateLastUpdatedCutoff"                  -> migrateCutoffTimestamp.toString
     )
     .build()
 
@@ -131,8 +133,10 @@ class MessageServiceSpec
             verify(ernRetrievalRepository).setLastRetrieved(ern, lastRetrievedTimestamp)
           }
         }
+
         "we try to retrieve messages and there are some" should {
-          "add messages to only the movement with the right LRN" in {
+
+          "add messages to only the movement when the message has an LRN" in {
             val ern                = "testErn"
             val lrnMovement        = Movement(None, "lrnie8158976912", ern, None)
             val notLrnMovement     = Movement(None, "notTheLrn", ern, None)
@@ -148,7 +152,7 @@ class MessageServiceSpec
                   "IE704",
                   "XI000001",
                   ern,
-                  Set.empty,
+                  Set("boxId1", "boxId2"),
                   updateOrCreateTimestamp
                 )
               )
@@ -160,7 +164,7 @@ class MessageServiceSpec
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
-            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set("boxId1", "boxId2")))
             when(messageConnector.getNewMessages(any)(any))
               .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
@@ -173,116 +177,102 @@ class MessageServiceSpec
             verify(movementRepository).save(expectedMovement)
             verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
           }
-          "add messages to only the movement with the right ARC" in {
-            val ern                = "testErn"
-            val arcMovement        = Movement(
-              None,
-              "notTheLrn",
-              ern,
-              Some("testConsignee"),
-              administrativeReferenceCode = Some("23XI00000000000000012")
+
+          "add messages to only the movement when the message has no LRN" in {
+            val consignorErn   = "testErn"
+            val consigneeErn   = "consigneeErn"
+            val arc            = "23XI00000000000000012"
+            val ie818          = XmlMessageGeneratorFactory.generate(
+              consignorErn,
+              MessageParams(
+                IE818,
+                "GB00002",
+                Some(consigneeErn),
+                Some(arc),
+                None
+              )
             )
-            val notArcMovement     = Movement(None, "notTheLrn", ern, None)
-            val ie801              = XmlMessageGeneratorFactory.generate(
-              ern,
+            val ie801          = XmlMessageGeneratorFactory.generate(
+              consignorErn,
               MessageParams(
                 IE801,
                 "GB00001",
-                Some("testConsignee"),
-                Some("23XI00000000000000012"),
-                Some("lrnie8158976912")
+                Some(consigneeErn),
+                Some(arc),
+                Some("lrn1")
               )
             )
-            val messages           = Seq(IE801Message.createFromXml(ie801))
+            val messages       = Seq(IE801Message.createFromXml(ie801), IE818Message.createFromXml(ie818))
+            val arcMovement    = Movement(
+              None,
+              "lrn1",
+              consignorErn,
+              Some(consigneeErn),
+              administrativeReferenceCode = None,
+              messages = Seq.empty
+            )
+            val notArcMovement = Movement(None, "lrn2", consignorErn, None)
+
             val expectedMessages   =
               Seq(
                 Message(
                   utils.encode(messages.head.toXml.toString()),
                   "IE801",
                   "GB00001",
-                  ern,
-                  Set.empty,
+                  consignorErn,
+                  Set("boxId1"),
                   updateOrCreateTimestamp
-                )
-              )
-            val expectedMovement   = arcMovement.copy(messages = expectedMessages, lastUpdated = updateOrCreateTimestamp)
-            val unexpectedMovement = notArcMovement.copy(messages = expectedMessages)
-
-            when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(arcMovement, notArcMovement)))
-            when(movementRepository.save(any)).thenReturn(Future.successful(Done))
-            when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
-            when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
-            when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
-            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
-            when(messageConnector.getNewMessages(any)(any))
-              .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
-            when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
-
-            messageService.updateMessages(ern, None).futureValue
-
-            verify(messageConnector).getNewMessages(eqTo(ern))(any)
-            verify(movementRepository).getAllBy(ern)
-            verify(movementRepository, never).save(unexpectedMovement)
-            verify(movementRepository).save(expectedMovement)
-            verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
-          }
-          "add the boxIds to notify to saved messages" in {
-            val ern                = "testErn"
-            val boxIds             = Set("box1", "box2")
-            val arcMovement        = Movement(
-              None,
-              "notTheLrn",
-              ern,
-              Some("testConsignee"),
-              administrativeReferenceCode = Some("23XI00000000000000012")
-            )
-            val notArcMovement     = Movement(None, "notTheLrn", ern, None)
-            val ie801              = XmlMessageGeneratorFactory.generate(
-              ern,
-              MessageParams(
-                IE801,
-                "GB00001",
-                Some("testConsignee"),
-                Some("23XI00000000000000012"),
-                Some("lrnie8158976912")
-              )
-            )
-            val messages           = Seq(IE801Message.createFromXml(ie801))
-            val expectedMessages   =
-              Seq(
+                ),
                 Message(
                   utils.encode(messages.head.toXml.toString()),
                   "IE801",
                   "GB00001",
-                  ern,
-                  boxIds,
+                  consigneeErn,
+                  Set("boxId2"),
+                  updateOrCreateTimestamp
+                ),
+                Message(
+                  utils.encode(messages(1).toXml.toString()),
+                  "IE818",
+                  "GB00002",
+                  consignorErn,
+                  Set("boxId1"),
                   updateOrCreateTimestamp
                 )
               )
-            val expectedMovement   = arcMovement.copy(messages = expectedMessages, lastUpdated = updateOrCreateTimestamp)
+            val expectedMovement   = arcMovement.copy(
+              messages = expectedMessages,
+              lastUpdated = updateOrCreateTimestamp,
+              administrativeReferenceCode = Some(arc)
+            )
             val unexpectedMovement = notArcMovement.copy(messages = expectedMessages)
 
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(arcMovement, notArcMovement)))
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+            when(movementRepository.getByArc(any)).thenReturn(Future.successful(None))
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
-            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(boxIds))
+            when(boxIdRepository.getBoxIds(consignorErn)).thenReturn(Future.successful(Set("boxId1")))
+            when(boxIdRepository.getBoxIds(consigneeErn)).thenReturn(Future.successful(Set("boxId2")))
             when(messageConnector.getNewMessages(any)(any))
-              .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+              .thenReturn(Future.successful(GetMessagesResponse(Seq(messages(1)), 1)))
+            when(traderMovementConnector.getMovementMessages(any, any)(any))
+              .thenReturn(Future.successful(Seq(messages.head)))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
-            messageService.updateMessages(ern, None).futureValue
+            messageService.updateMessages(consignorErn, None).futureValue
 
-            verify(messageConnector).getNewMessages(eqTo(ern))(any)
-            verify(movementRepository).getAllBy(ern)
+            verify(messageConnector).getNewMessages(eqTo(consignorErn))(any)
+            verify(movementRepository).getAllBy(consignorErn)
+            verify(movementRepository).getByArc(arc)
             verify(movementRepository, never).save(unexpectedMovement)
             verify(movementRepository).save(expectedMovement)
-            verify(boxIdRepository).getBoxIds(ern)
-            verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
+            verify(messageConnector).acknowledgeMessages(eqTo(consignorErn))(any)
           }
         }
       }
+
       "there is a movement that already has messages" when {
         "we try to retrieve new messages and there are some" should {
           "add the new messages to the movement" in {
@@ -341,7 +331,7 @@ class MessageServiceSpec
           }
         }
       }
-      "there are multiple movements for one message (an 829)"        should {
+      "there are multiple movements for one message (an 829)" should {
         "update all relevant movements with the message" in {
           // 829 doesn't have consignor in it - can't make a movement from this
           // movements created here won't get push notifications
@@ -417,7 +407,7 @@ class MessageServiceSpec
                   "IE704",
                   "XI000001",
                   ern,
-                  Set.empty,
+                  Set("boxId"),
                   updateOrCreateTimestamp
                 )
               )
@@ -429,7 +419,7 @@ class MessageServiceSpec
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
-            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set("boxId")))
             when(messageConnector.getNewMessages(any)(any))
               .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
@@ -443,6 +433,7 @@ class MessageServiceSpec
           }
           "a new movement should be created from an IE801 message for the consignor" in {
             val consignor        = "testErn"
+            val consignee        = "testConsignee"
             val ie801            = XmlMessageGeneratorFactory.generate(
               consignor,
               MessageParams(
@@ -468,7 +459,15 @@ class MessageServiceSpec
                   "IE801",
                   "GB00001",
                   consignor,
-                  Set.empty,
+                  Set("boxId1"),
+                  updateOrCreateTimestamp
+                ),
+                Message(
+                  utils.encode(messages.head.toXml.toString()),
+                  "IE801",
+                  "GB00001",
+                  consignee,
+                  Set("boxId2"),
                   updateOrCreateTimestamp
                 )
               )
@@ -481,7 +480,8 @@ class MessageServiceSpec
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
-            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+            when(boxIdRepository.getBoxIds(consignor)).thenReturn(Future.successful(Set("boxId1")))
+            when(boxIdRepository.getBoxIds(consignee)).thenReturn(Future.successful(Set("boxId2")))
             when(messageConnector.getNewMessages(any)(any))
               .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
@@ -520,8 +520,16 @@ class MessageServiceSpec
                   utils.encode(messages.head.toXml.toString()),
                   "IE801",
                   "GB00001",
+                  consignor,
+                  Set("boxId1"),
+                  updateOrCreateTimestamp
+                ),
+                Message(
+                  utils.encode(messages.head.toXml.toString()),
+                  "IE801",
+                  "GB00001",
                   consignee,
-                  Set.empty,
+                  Set("boxId2"),
                   updateOrCreateTimestamp
                 )
               )
@@ -534,7 +542,8 @@ class MessageServiceSpec
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
-            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+            when(boxIdRepository.getBoxIds(consignor)).thenReturn(Future.successful(Set("boxId1")))
+            when(boxIdRepository.getBoxIds(consignee)).thenReturn(Future.successful(Set("boxId2")))
             when(messageConnector.getNewMessages(any)(any))
               .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
@@ -546,22 +555,24 @@ class MessageServiceSpec
             verify(movementRepository).save(eqTo(expectedMovement))
             verify(messageConnector).acknowledgeMessages(eqTo(consignee))(any)
           }
+
           "a new movement is created from trader-movement call IE801 message if message is not an IE801 or IE704" in {
-            val ern                    = "testErn"
+            val consignor              = "testErn"
+            val consignee              = "testConsignee"
             val ie801Xml               = XmlMessageGeneratorFactory.generate(
-              ern,
+              consignor,
               MessageParams(
                 IE801,
                 "GB00001",
-                Some("testConsignee"),
+                Some(consignee),
                 Some("23XI00000000000000012"),
                 Some("lrnie8158976912")
               )
             )
             val ie801Message           = IE801Message.createFromXml(ie801Xml)
             val ie818Xml               = XmlMessageGeneratorFactory.generate(
-              ern,
-              MessageParams(IE818, "GB00002", Some("testConsignee"), Some("23XI00000000000000012"))
+              consignor,
+              MessageParams(IE818, "GB00002", Some(consignee), Some("23XI00000000000000012"))
             )
             val ie818Message           = IE818Message.createFromXml(ie818Xml)
             val messages               = Seq(ie818Message)
@@ -571,7 +582,7 @@ class MessageServiceSpec
               None,
               "lrnie8158976912",
               "testErn",
-              Some("testConsignee"),
+              Some(consignee),
               Some("23XI00000000000000012"),
               updateOrCreateTimestamp,
               messages = Seq(
@@ -579,24 +590,24 @@ class MessageServiceSpec
                   utils.encode(ie801Message.toXml.toString()),
                   "IE801",
                   "GB00001",
-                  ern,
-                  Set.empty,
+                  consignor,
+                  Set("boxId1"),
                   updateOrCreateTimestamp
                 ),
                 Message(
                   utils.encode(ie801Message.toXml.toString()),
                   "IE801",
                   "GB00001",
-                  "testConsignee",
-                  Set.empty,
+                  consignee,
+                  Set("boxId2"),
                   updateOrCreateTimestamp
                 ),
                 Message(
                   utils.encode(ie818Message.toXml.toString()),
                   "IE818",
                   "GB00002",
-                  ern,
-                  Set.empty,
+                  consignor,
+                  Set("boxId1"),
                   updateOrCreateTimestamp
                 )
               )
@@ -610,20 +621,21 @@ class MessageServiceSpec
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
-            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+            when(boxIdRepository.getBoxIds(consignor)).thenReturn(Future.successful(Set("boxId1")))
+            when(boxIdRepository.getBoxIds(consignee)).thenReturn(Future.successful(Set("boxId2")))
             when(messageConnector.getNewMessages(any)(any))
               .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
             when(traderMovementConnector.getMovementMessages(any, any)(any))
               .thenReturn(Future.successful(traderMovementMessages))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
-            messageService.updateMessages(ern, None).futureValue
+            messageService.updateMessages(consignor, None).futureValue
 
-            verify(messageConnector).getNewMessages(eqTo(ern))(any)
-            verify(traderMovementConnector).getMovementMessages(eqTo(ern), eqTo("23XI00000000000000012"))(any)
-            verify(movementRepository).getAllBy(eqTo(ern))
+            verify(messageConnector).getNewMessages(eqTo(consignor))(any)
+            verify(traderMovementConnector).getMovementMessages(eqTo(consignor), eqTo("23XI00000000000000012"))(any)
+            verify(movementRepository).getAllBy(eqTo(consignor))
             verify(movementRepository).save(eqTo(expectedMovement))
-            verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
+            verify(messageConnector).acknowledgeMessages(eqTo(consignor))(any)
           }
           "a message is audited with failure if its not an IE801 or IE704, and the trader movement messages don't include an IE801" in {
             val ern      = "testErn"
@@ -695,19 +707,20 @@ class MessageServiceSpec
           "a single new movement should be created when there are multiple messages for the same ern" in {
             val ie801Timestamp   = now.plus(1, ChronoUnit.SECONDS)
             val ie802Timestamp   = ie801Timestamp.plus(1, ChronoUnit.SECONDS)
-            val ern              = "testErn"
+            val consignor        = "testErn"
+            val consignee        = "testConsignee"
             val ie801            = XmlMessageGeneratorFactory.generate(
-              ern,
+              consignor,
               MessageParams(
                 IE801,
                 "GB00001",
-                Some("testConsignee"),
+                Some(consignee),
                 Some("23XI00000000000000012"),
                 Some("lrnie8158976912")
               )
             )
             val ie802            = XmlMessageGeneratorFactory.generate(
-              ern,
+              consignor,
               MessageParams(IE802, "GB0002", administrativeReferenceCode = Some("23XI00000000000000012"))
             )
             val messages         = Seq(IE801Message.createFromXml(ie801), IE802Message.createFromXml(ie802))
@@ -716,7 +729,7 @@ class MessageServiceSpec
               None,
               "lrnie8158976912",
               "testErn",
-              Some("testConsignee"),
+              Some(consignee),
               Some("23XI00000000000000012"),
               ie802Timestamp,
               messages = Seq(
@@ -724,11 +737,26 @@ class MessageServiceSpec
                   utils.encode(messages.head.toXml.toString()),
                   "IE801",
                   "GB00001",
-                  ern,
-                  Set.empty,
+                  consignor,
+                  Set("boxId1"),
                   ie801Timestamp
                 ),
-                Message(utils.encode(messages(1).toXml.toString()), "IE802", "GB0002", ern, Set.empty, ie802Timestamp)
+                Message(
+                  utils.encode(messages.head.toXml.toString()),
+                  "IE801",
+                  "GB00001",
+                  consignee,
+                  Set("boxId2"),
+                  ie801Timestamp
+                ),
+                Message(
+                  utils.encode(messages(1).toXml.toString()),
+                  "IE802",
+                  "GB0002",
+                  consignor,
+                  Set("boxId1"),
+                  ie802Timestamp
+                )
               )
             )
 
@@ -740,30 +768,33 @@ class MessageServiceSpec
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
-            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+            when(boxIdRepository.getBoxIds(consignor)).thenReturn(Future.successful(Set("boxId1")))
+            when(boxIdRepository.getBoxIds(consignee)).thenReturn(Future.successful(Set("boxId2")))
             when(messageConnector.getNewMessages(any)(any))
               .thenReturn(Future.successful(GetMessagesResponse(messages, 0)))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
-            messageService.updateMessages(ern, None).futureValue
+            messageService.updateMessages(consignor, None).futureValue
 
             verify(dateTimeService, times(3)).timestamp()
-            verify(messageConnector).getNewMessages(eqTo(ern))(any)
-            verify(movementRepository).getAllBy(eqTo(ern))
+            verify(messageConnector).getNewMessages(eqTo(consignor))(any)
+            verify(movementRepository).getAllBy(eqTo(consignor))
             verify(movementRepository).save(eqTo(expectedMovement))
           }
         }
       }
+
       "there are multiple batches of messages for the same movement" should {
         "must retrieve all messages" in {
           val message1Timestamp = now.plus(1, ChronoUnit.SECONDS)
           val message2Timestamp = message1Timestamp.plus(1, ChronoUnit.SECONDS)
           val message3Timestamp = message2Timestamp.plus(1, ChronoUnit.SECONDS)
-          val ern               = "testErn"
-          val lrnMovement       = Movement(None, "lrnie8158976912", ern, Some("testConsignee"))
+          val consignor         = "testErn"
+          val consignee         = "testConsignee"
+          val lrnMovement       = Movement(None, "lrnie8158976912", consignor, Some(consignee))
 
           val ie704                = XmlMessageGeneratorFactory.generate(
-            ern,
+            consignor,
             MessageParams(IE704, "XI000001", localReferenceNumber = Some("lrnie8158976912"))
           )
           val firstMessage         = IE704Message.createFromXml(ie704)
@@ -772,13 +803,13 @@ class MessageServiceSpec
               utils.encode(firstMessage.toXml.toString()),
               "IE704",
               "XI000001",
-              ern,
-              Set.empty,
+              consignor,
+              Set("boxId1"),
               message1Timestamp
             )
 
           val ie7042                = XmlMessageGeneratorFactory.generate(
-            ern,
+            consignor,
             MessageParams(IE704, "XI000002", localReferenceNumber = Some("lrnie8158976912"))
           )
           val secondMessage         = IE704Message.createFromXml(ie7042)
@@ -787,31 +818,35 @@ class MessageServiceSpec
               utils.encode(secondMessage.toXml.toString()),
               "IE704",
               "XI000002",
-              ern,
-              Set.empty,
+              consignor,
+              Set("boxId1"),
               message2Timestamp
             )
 
-          val ie801                = XmlMessageGeneratorFactory.generate(
-            ern,
+          val ie801                 = XmlMessageGeneratorFactory.generate(
+            consignor,
             MessageParams(
               IE801,
               "GB00001",
-              Some("testConsignee"),
+              Some(consignee),
               Some("23XI00000000000000012"),
               Some("lrnie8158976912")
             )
           )
-          val thirdMessage         = IE801Message.createFromXml(ie801)
-          val thirdExpectedMessage =
+          val thirdMessage          = IE801Message.createFromXml(ie801)
+          val thirdExpectedMessage  =
             Message(
               utils.encode(thirdMessage.toXml.toString()),
               "IE801",
               "GB00001",
-              ern,
-              Set.empty,
+              consignor,
+              Set("boxId1"),
               message3Timestamp
             )
+          val fourthExpectedMessage = thirdExpectedMessage.copy(
+            recipient = consignee,
+            boxesToNotify = Set("boxId2")
+          )
 
           val firstExpectedMovement  =
             lrnMovement.copy(messages = Seq(firstExpectedMessage), lastUpdated = message1Timestamp)
@@ -820,7 +855,7 @@ class MessageServiceSpec
             lastUpdated = message2Timestamp
           )
           val thirdExpectedMovement  = lrnMovement.copy(
-            messages = Seq(firstExpectedMessage, secondExpectedMessage, thirdExpectedMessage),
+            messages = Seq(firstExpectedMessage, secondExpectedMessage, thirdExpectedMessage, fourthExpectedMessage),
             administrativeReferenceCode = Some("23XI00000000000000012"),
             lastUpdated = message3Timestamp
           )
@@ -838,7 +873,8 @@ class MessageServiceSpec
           when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
           when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
           when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
-          when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+          when(boxIdRepository.getBoxIds(consignor)).thenReturn(Future.successful(Set("boxId1")))
+          when(boxIdRepository.getBoxIds(consignee)).thenReturn(Future.successful(Set("boxId2")))
           when(messageConnector.getNewMessages(any)(any)).thenReturn(
             Future.successful(GetMessagesResponse(Seq(firstMessage), 3)),
             Future.successful(GetMessagesResponse(Seq(secondMessage), 2)),
@@ -846,15 +882,15 @@ class MessageServiceSpec
           )
           when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
-          messageService.updateMessages(ern, None).futureValue
+          messageService.updateMessages(consignor, None).futureValue
 
           val movementCaptor = ArgCaptor[Movement]
 
           verify(dateTimeService, times(4)).timestamp()
-          verify(messageConnector, times(3)).getNewMessages(eqTo(ern))(any)
-          verify(movementRepository, times(3)).getAllBy(eqTo(ern))
+          verify(messageConnector, times(3)).getNewMessages(eqTo(consignor))(any)
+          verify(movementRepository, times(3)).getAllBy(eqTo(consignor))
           verify(movementRepository, times(3)).save(movementCaptor)
-          verify(messageConnector, times(3)).acknowledgeMessages(eqTo(ern))(any)
+          verify(messageConnector, times(3)).acknowledgeMessages(eqTo(consignor))(any)
 
           movementCaptor.values.head mustEqual firstExpectedMovement
           movementCaptor.values(1) mustEqual secondExpectedMovement
@@ -866,21 +902,22 @@ class MessageServiceSpec
           val movement1Timestamp = now.plus(1, ChronoUnit.SECONDS)
           val movement2Timestamp = movement1Timestamp.plus(1, ChronoUnit.SECONDS)
           val movement3Timestamp = movement2Timestamp.plus(1, ChronoUnit.SECONDS)
-          val ern                = "testErn"
-          val movement1          = Movement(None, "lrn1", ern, Some("testConsignee"))
+          val consignor          = "testErn"
+          val consignee          = "testConsignee"
+          val movement1          = Movement(None, "lrn1", consignor, Some(consignee))
           val ie801_1            = XmlMessageGeneratorFactory.generate(
-            ern,
-            MessageParams(IE801, "message1", Some("testConsignee"), Some("arc1"), Some("lrn1"))
+            consignor,
+            MessageParams(IE801, "message1", Some(consignee), Some("arc1"), Some("lrn1"))
           )
-          val movement2          = Movement(None, "lrn2", ern, Some("testConsignee"))
+          val movement2          = Movement(None, "lrn2", consignor, Some(consignee))
           val ie801_2            = XmlMessageGeneratorFactory.generate(
-            ern,
-            MessageParams(IE801, "message2", Some("testConsignee"), Some("arc2"), Some("lrn2"))
+            consignor,
+            MessageParams(IE801, "message2", Some(consignee), Some("arc2"), Some("lrn2"))
           )
-          val movement3          = Movement(None, "lrn3", ern, Some("testConsignee"))
+          val movement3          = Movement(None, "lrn3", consignor, Some(consignee))
           val ie801_3            = XmlMessageGeneratorFactory.generate(
-            ern,
-            MessageParams(IE801, "message3", Some("testConsignee"), Some("arc3"), Some("lrn3"))
+            consignor,
+            MessageParams(IE801, "message3", Some(consignee), Some("arc3"), Some("lrn3"))
           )
           val messages           = Seq(
             IE801Message.createFromXml(ie801_1),
@@ -894,7 +931,15 @@ class MessageServiceSpec
                 utils.encode(messages.head.toXml.toString()),
                 "IE801",
                 "message1",
-                ern,
+                consignor,
+                Set.empty,
+                movement1Timestamp
+              ),
+              Message(
+                utils.encode(messages.head.toXml.toString()),
+                "IE801",
+                "message1",
+                consignee,
                 Set.empty,
                 movement1Timestamp
               )
@@ -908,7 +953,15 @@ class MessageServiceSpec
                 utils.encode(messages(1).toXml.toString()),
                 "IE801",
                 "message2",
-                ern,
+                consignor,
+                Set.empty,
+                movement2Timestamp
+              ),
+              Message(
+                utils.encode(messages(1).toXml.toString()),
+                "IE801",
+                "message2",
+                consignee,
                 Set.empty,
                 movement2Timestamp
               )
@@ -922,7 +975,15 @@ class MessageServiceSpec
                 utils.encode(messages(2).toXml.toString()),
                 "IE801",
                 "message3",
-                ern,
+                consignor,
+                Set.empty,
+                movement3Timestamp
+              ),
+              Message(
+                utils.encode(messages(2).toXml.toString()),
+                "IE801",
+                "message3",
+                consignee,
                 Set.empty,
                 movement3Timestamp
               )
@@ -942,7 +1003,7 @@ class MessageServiceSpec
             .thenReturn(Future.successful(GetMessagesResponse(messages, 3)))
           when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
-          messageService.updateMessages(ern, None).futureValue
+          messageService.updateMessages(consignor, None).futureValue
 
           verify(dateTimeService, times(4)).timestamp()
           verify(movementRepository).save(expectedMovement1)
@@ -957,6 +1018,7 @@ class MessageServiceSpec
         val movement = Movement(None, "LRN", "Consignor", None)
         when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
         when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(movementRepository.migrateLastUpdated(any)).thenReturn(Future.successful(Done))
         when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
         when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
         when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -970,23 +1032,22 @@ class MessageServiceSpec
       }
     }
     "last retrieved is at the throttle cut-off" when {
-      "we try to retrieve messages but there are none" should {
-        "does not call downstream service to get messages" in {
-          val ern      = "testErn"
-          val movement = Movement(None, "LRN", "Consignor", None)
-          when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
-          when(movementRepository.save(any)).thenReturn(Future.successful(Done))
-          when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
-          when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
-          when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
-          when(messageConnector.getNewMessages(any)(any))
-            .thenReturn(Future.successful(GetMessagesResponse(Seq.empty, 0)))
+      "does not call downstream service to get messages" in {
+        val ern      = "testErn"
+        val movement = Movement(None, "LRN", "Consignor", None)
+        when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
+        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(movementRepository.migrateLastUpdated(any)).thenReturn(Future.successful(Done))
+        when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
+        when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
+        when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+        when(messageConnector.getNewMessages(any)(any))
+          .thenReturn(Future.successful(GetMessagesResponse(Seq.empty, 0)))
 
-          messageService.updateMessages(ern, Some(lastRetrievedTimestamp.minus(5, ChronoUnit.MINUTES))).futureValue
+        messageService.updateMessages(ern, Some(lastRetrievedTimestamp.minus(5, ChronoUnit.MINUTES))).futureValue
 
-          verify(messageConnector, never).getNewMessages(any)(any)
-          verify(ernRetrievalRepository, never).setLastRetrieved(any, any)
-        }
+        verify(messageConnector, never).getNewMessages(any)(any)
+        verify(ernRetrievalRepository, never).setLastRetrieved(any, any)
       }
     }
     "last retrieved is after the throttle cut-off" when {
@@ -996,6 +1057,7 @@ class MessageServiceSpec
           val movement = Movement(None, "LRN", "Consignor", None)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+          when(movementRepository.migrateLastUpdated(any)).thenReturn(Future.successful(Done))
           when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
           when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
           when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
@@ -1009,27 +1071,70 @@ class MessageServiceSpec
         }
       }
     }
+    "last retrieved is after the migrate lastUpdated cut-off" when {
+      "we try to migrate lastUpdated" should {
+        "does not migrate lastUpdated" in {
+          val ern      = "testErn"
+          val movement = Movement(None, "LRN", "Consignor", None)
+          when(movementRepository.migrateLastUpdated(any)).thenReturn(Future.successful(Done))
+          when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
+          when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+          when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
+          when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
+          when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+          when(messageConnector.getNewMessages(any)(any))
+            .thenReturn(Future.successful(GetMessagesResponse(Seq.empty, 0)))
+
+          messageService.updateMessages(ern, Some(migrateCutoffTimestamp.plus(5, ChronoUnit.MINUTES))).futureValue
+
+          verify(movementRepository, never).migrateLastUpdated(any)
+        }
+      }
+    }
+    "last retrieved is before the migrate lastUpdated cut-off" when {
+      "we try to migrate lastUpdated" should {
+        "does migrate lastUpdated" in {
+          val ern      = "testErn"
+          val movement = Movement(None, "LRN", "Consignor", None)
+          when(movementRepository.migrateLastUpdated(any)).thenReturn(Future.successful(Done))
+          when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
+          when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+          when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
+          when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
+          when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
+          when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+          when(messageConnector.getNewMessages(any)(any))
+            .thenReturn(Future.successful(GetMessagesResponse(Seq.empty, 0)))
+
+          messageService.updateMessages(ern, Some(migrateCutoffTimestamp.minus(5, ChronoUnit.MINUTES))).futureValue
+
+          verify(movementRepository).migrateLastUpdated(any)
+        }
+      }
+    }
     "we get no movements for the ern" when {
       "there is a movement for the arc of a received IE801" when {
         "the consignee is different" should {
-          "update the consignee on the movement" in {
-            val ern              = "testErn"
+          "update the consignee on the movement" in { // TODO is this test valid?
+            val consignor        = "testErn"
+            val oldConsignee     = "Consignee"
+            val newConsignee     = "NewConsignee"
             val movement         = Movement(
               newId,
               None,
               "lrnie8158976912",
-              ern,
-              Some("Consignee"),
+              consignor,
+              Some(oldConsignee),
               Some("23XI00000000000000012"),
               updateOrCreateTimestamp,
               Seq.empty
             )
             val ie801            = XmlMessageGeneratorFactory.generate(
-              ern,
+              consignor,
               MessageParams(
                 IE801,
                 "GB00001",
-                Some("testConsignee"),
+                Some(newConsignee),
                 Some("23XI00000000000000012"),
                 Some("lrnie8158976912")
               )
@@ -1041,8 +1146,16 @@ class MessageServiceSpec
                   utils.encode(messages.head.toXml.toString()),
                   "IE801",
                   "GB00001",
-                  ern,
-                  Set.empty,
+                  consignor,
+                  Set("boxId1"),
+                  updateOrCreateTimestamp
+                ),
+                Message(
+                  utils.encode(messages.head.toXml.toString()),
+                  "IE801",
+                  "GB00001",
+                  newConsignee,
+                  Set("boxId2"),
                   updateOrCreateTimestamp
                 )
               )
@@ -1050,7 +1163,7 @@ class MessageServiceSpec
               movement.copy(
                 messages = expectedMessages,
                 administrativeReferenceCode = Some("23XI00000000000000012"),
-                consigneeId = Some("testConsignee")
+                consigneeId = Some(newConsignee)
               )
 
             when(correlationIdService.generateCorrelationId()).thenReturn(newId)
@@ -1060,12 +1173,13 @@ class MessageServiceSpec
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
-            when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+            when(boxIdRepository.getBoxIds(consignor)).thenReturn(Future.successful(Set("boxId1")))
+            when(boxIdRepository.getBoxIds(newConsignee)).thenReturn(Future.successful(Set("boxId2")))
             when(messageConnector.getNewMessages(any)(any))
               .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
             when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
-            messageService.updateMessages(ern, None).futureValue
+            messageService.updateMessages(consignor, None).futureValue
 
             verify(movementRepository).save(expectedMovement)
           }
@@ -1073,22 +1187,25 @@ class MessageServiceSpec
 
       }
     }
+
     "the existing movement has a consignee" when {
       "we get a 801, it should change the consignee" in {
-        val ern              = "testErn"
+        val consignor        = "testErn"
+        val oldConsignee     = "Consignee"
+        val newConsignee     = "testConsignee"
         val movement         = Movement(
           newId,
           None,
           "lrnie8158976912",
-          ern,
-          Some("Consignee"),
+          consignor,
+          Some(oldConsignee),
           Some("23XI00000000000000012"),
           updateOrCreateTimestamp,
           Seq.empty
         )
         val ie801            = XmlMessageGeneratorFactory.generate(
-          ern,
-          MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912"))
+          consignor,
+          MessageParams(IE801, "GB00001", Some(newConsignee), Some("23XI00000000000000012"), Some("lrnie8158976912"))
         )
         val messages         = Seq(IE801Message.createFromXml(ie801))
         val expectedMessages =
@@ -1097,8 +1214,16 @@ class MessageServiceSpec
               utils.encode(messages.head.toXml.toString()),
               "IE801",
               "GB00001",
-              ern,
-              Set.empty,
+              consignor,
+              Set("boxId1"),
+              updateOrCreateTimestamp
+            ),
+            Message(
+              utils.encode(messages.head.toXml.toString()),
+              "IE801",
+              "GB00001",
+              newConsignee,
+              Set("boxId2"),
               updateOrCreateTimestamp
             )
           )
@@ -1106,7 +1231,7 @@ class MessageServiceSpec
           movement.copy(
             messages = expectedMessages,
             administrativeReferenceCode = Some("23XI00000000000000012"),
-            consigneeId = Some("testConsignee")
+            consigneeId = Some(newConsignee)
           )
 
         when(correlationIdService.generateCorrelationId()).thenReturn(newId)
@@ -1115,29 +1240,33 @@ class MessageServiceSpec
         when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
         when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
         when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
-        when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+        when(boxIdRepository.getBoxIds(consignor)).thenReturn(Future.successful(Set("boxId1")))
+        when(boxIdRepository.getBoxIds(newConsignee)).thenReturn(Future.successful(Set("boxId2")))
         when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
         when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
-        messageService.updateMessages(ern, None).futureValue
+        messageService.updateMessages(consignor, None).futureValue
 
         verify(movementRepository).save(expectedMovement)
       }
+
       "we get an 813, it should change the consignee" in {
         val ern              = "testErn"
+        val oldConsignee     = "Consignee"
+        val newConsignee     = "testConsignee"
         val movement         = Movement(
           newId,
           None,
           "lrnie8158976912",
           ern,
-          Some("Consignee"),
+          Some(oldConsignee),
           Some("23XI00000000000000012"),
           updateOrCreateTimestamp,
           Seq.empty
         )
         val ie813            = XmlMessageGeneratorFactory.generate(
           ern,
-          MessageParams(IE813, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912"))
+          MessageParams(IE813, "GB00001", Some(newConsignee), Some("23XI00000000000000012"), Some("lrnie8158976912"))
         )
         val messages         = Seq(IE813Message.createFromXml(ie813))
         val expectedMessages =
@@ -1151,7 +1280,7 @@ class MessageServiceSpec
               updateOrCreateTimestamp
             )
           )
-        val expectedMovement = movement.copy(messages = expectedMessages, consigneeId = Some("testConsignee"))
+        val expectedMovement = movement.copy(messages = expectedMessages, consigneeId = Some(newConsignee))
 
         when(correlationIdService.generateCorrelationId()).thenReturn(newId)
         when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
@@ -1168,13 +1297,16 @@ class MessageServiceSpec
         verify(movementRepository).save(expectedMovement)
       }
     }
+
     "the existing movement doesn't have a consignee" when {
       "we get a 801, it should set the consignee" in {
-        val ern              = "testErn"
-        val movement         = Movement(newId, None, "lrnie8158976912", ern, None, None, updateOrCreateTimestamp, Seq.empty)
+        val consignor        = "testErn"
+        val consignee        = "testConsignee"
+        val movement         =
+          Movement(newId, None, "lrnie8158976912", consignor, None, None, updateOrCreateTimestamp, Seq.empty)
         val ie801            = XmlMessageGeneratorFactory.generate(
-          ern,
-          MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912"))
+          consignor,
+          MessageParams(IE801, "GB00001", Some(consignee), Some("23XI00000000000000012"), Some("lrnie8158976912"))
         )
         val messages         = Seq(IE801Message.createFromXml(ie801))
         val expectedMessages =
@@ -1183,14 +1315,22 @@ class MessageServiceSpec
               utils.encode(messages.head.toXml.toString()),
               "IE801",
               "GB00001",
-              ern,
+              consignor,
+              Set.empty,
+              updateOrCreateTimestamp
+            ),
+            Message(
+              utils.encode(messages.head.toXml.toString()),
+              "IE801",
+              "GB00001",
+              consignee,
               Set.empty,
               updateOrCreateTimestamp
             )
           )
         val expectedMovement = movement.copy(
           messages = expectedMessages,
-          consigneeId = Some("testConsignee"),
+          consigneeId = Some(consignee),
           administrativeReferenceCode = Some("23XI00000000000000012")
         )
 
@@ -1204,10 +1344,11 @@ class MessageServiceSpec
         when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
         when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
-        messageService.updateMessages(ern, None).futureValue
+        messageService.updateMessages(consignor, None).futureValue
 
         verify(movementRepository).save(expectedMovement)
       }
+
       "we get an 813, it should set the consignee" in {
         val ern              = "testErn"
         val movement         =
@@ -1254,13 +1395,24 @@ class MessageServiceSpec
         verify(movementRepository).save(expectedMovement)
       }
     }
+
     "the existing movement doesn't have an ARC" when {
       "we get a 801, it should set the ARC" in {
-        val ern              = "testErn"
+        val consignor        = "testErn"
+        val consignee        = "testConsignee"
         val movement         =
-          Movement(newId, None, "lrnie8158976912", ern, Some("testConsignee"), None, updateOrCreateTimestamp, Seq.empty)
+          Movement(
+            newId,
+            None,
+            "lrnie8158976912",
+            consignor,
+            Some("testConsignee"),
+            None,
+            updateOrCreateTimestamp,
+            Seq.empty
+          )
         val ie801            = XmlMessageGeneratorFactory.generate(
-          ern,
+          consignor,
           MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912"))
         )
         val messages         = Seq(IE801Message.createFromXml(ie801))
@@ -1270,11 +1422,20 @@ class MessageServiceSpec
               utils.encode(messages.head.toXml.toString()),
               "IE801",
               "GB00001",
-              ern,
-              Set.empty,
+              consignor,
+              Set("boxId1"),
+              updateOrCreateTimestamp
+            ),
+            Message(
+              utils.encode(messages.head.toXml.toString()),
+              "IE801",
+              "GB00001",
+              consignee,
+              Set("boxId2"),
               updateOrCreateTimestamp
             )
           )
+
         val expectedMovement =
           movement.copy(messages = expectedMessages, administrativeReferenceCode = Some("23XI00000000000000012"))
 
@@ -1284,35 +1445,38 @@ class MessageServiceSpec
         when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
         when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
         when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
-        when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+        when(boxIdRepository.getBoxIds(consignor)).thenReturn(Future.successful(Set("boxId1")))
+        when(boxIdRepository.getBoxIds(consignee)).thenReturn(Future.successful(Set("boxId2")))
         when(messageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
         when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
-        messageService.updateMessages(ern, None).futureValue
+        messageService.updateMessages(consignor, None).futureValue
 
         verify(movementRepository).save(expectedMovement)
       }
     }
+
     "the movement has no messages" when {
       "we get a duplicate messages back from the downstream service" when {
         "only one message is added to the movement" in {
-          val ern              = "testErn"
+          val consignor        = "testErn"
+          val consignee        = "testConsignee"
           val movement         = Movement(
             newId,
             None,
             "lrnie8158976912",
-            ern,
-            Some("testConsignee"),
+            consignor,
+            Some(consignee),
             None,
             updateOrCreateTimestamp,
             Seq.empty
           )
           val ie801            = XmlMessageGeneratorFactory.generate(
-            ern,
+            consignor,
             MessageParams(
               IE801,
               "GB00001",
-              Some("testConsignee"),
+              Some(consignee),
               Some("23XI00000000000000012"),
               Some("lrnie8158976912")
             )
@@ -1324,7 +1488,15 @@ class MessageServiceSpec
                 utils.encode(messages.head.toXml.toString()),
                 "IE801",
                 "GB00001",
-                ern,
+                consignor,
+                Set.empty,
+                updateOrCreateTimestamp
+              ),
+              Message(
+                utils.encode(messages.head.toXml.toString()),
+                "IE801",
+                "GB00001",
+                consignee,
                 Set.empty,
                 updateOrCreateTimestamp
               )
@@ -1343,12 +1515,13 @@ class MessageServiceSpec
             .thenReturn(Future.successful(GetMessagesResponse(messages, 2)))
           when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
-          messageService.updateMessages(ern, None).futureValue
+          messageService.updateMessages(consignor, None).futureValue
 
           verify(movementRepository).save(expectedMovement)
         }
       }
     }
+
     "the movement has a message" when {
       "we get the same message back from the downstream service" when {
         "the duplicate message is not added to the movement" in {
@@ -1394,24 +1567,25 @@ class MessageServiceSpec
         }
 
         "the duplicate message is added to the movement if recipient is different" in {
-          val ern   = "testErn"
-          val ie801 = XmlMessageGeneratorFactory.generate(
-            ern,
+          val consignor = "testErn"
+          val consignee = "testConsignee"
+          val ie801     = XmlMessageGeneratorFactory.generate(
+            consignor,
             MessageParams(
               IE801,
               "GB00001",
-              Some("testConsignee"),
+              Some(consignee),
               Some("23XI00000000000000012"),
               Some("lrnie8158976912")
             )
           )
 
           val ie801Consignee = XmlMessageGeneratorFactory.generate(
-            "testConsignee",
+            consignor,
             MessageParams(
               IE801,
               "GB00001",
-              Some("testConsignee"),
+              Some(consignee),
               Some("23XI00000000000000012"),
               Some("lrnie8158976912")
             )
@@ -1420,17 +1594,19 @@ class MessageServiceSpec
           val messages = Seq(IE801Message.createFromXml(ie801), IE801Message.createFromXml(ie801Consignee))
 
           val existingMessages =
-            Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, Set.empty, now))
+            Seq(
+              Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", consignor, Set("boxId1"), now)
+            )
 
           val expectedMessages =
             Seq(
-              Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, Set.empty, now),
+              Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", consignor, Set("boxId1"), now),
               Message(
                 utils.encode(messages(1).toXml.toString()),
                 "IE801",
                 "GB00001",
-                "testConsignee",
-                Set.empty,
+                consignee,
+                Set("boxId2"),
                 updateOrCreateTimestamp
               )
             )
@@ -1439,8 +1615,8 @@ class MessageServiceSpec
             newId,
             None,
             "lrnie8158976912",
-            ern,
-            Some("testConsignee"),
+            consignor,
+            Some(consignee),
             Some("23XI00000000000000012"),
             updateOrCreateTimestamp,
             existingMessages
@@ -1454,18 +1630,20 @@ class MessageServiceSpec
           when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
           when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
           when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
-          when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+          when(boxIdRepository.getBoxIds(consignor)).thenReturn(Future.successful(Set("boxId1")))
+          when(boxIdRepository.getBoxIds(consignee)).thenReturn(Future.successful(Set("boxId2")))
           when(messageConnector.getNewMessages(any)(any))
             .thenReturn(Future.successful(GetMessagesResponse(Seq(messages(1)), 1)))
           when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
-          messageService.updateMessages("testConsignee", None).futureValue
+          messageService.updateMessages(consignee, None).futureValue
 
           verify(movementRepository).save(expectedMovement)
         }
       }
     }
   }
+
   "update all messages" when {
     "all erns are successful" should {
       "process all erns" in {
@@ -1636,6 +1814,14 @@ class MessageServiceSpec
               message1Timestamp
             ),
             Message(
+              utils.encode(message1.toXml.toString()),
+              "IE801",
+              "XI0000021a",
+              "AT00000602078",
+              Set.empty,
+              message1Timestamp
+            ),
+            Message(
               utils.encode(message2.toXml.toString()),
               "IE819",
               "X00008a",
@@ -1738,6 +1924,14 @@ class MessageServiceSpec
               message1Timestamp
             ),
             Message(
+              utils.encode(message1.toXml.toString()),
+              "IE801",
+              "XI0000021a",
+              "AT00000602078",
+              Set.empty,
+              message1Timestamp
+            ),
+            Message(
               utils.encode(message2.toXml.toString()),
               "IE819",
               "X00008a",
@@ -1778,6 +1972,14 @@ class MessageServiceSpec
               "IE801",
               "XI0000099",
               "ern1",
+              Set.empty,
+              message5Timestamp
+            ),
+            Message(
+              utils.encode(message5.toXml.toString()),
+              "IE801",
+              "XI0000099",
+              "AT00000602078",
               Set.empty,
               message5Timestamp
             )

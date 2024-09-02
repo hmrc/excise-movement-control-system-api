@@ -28,15 +28,18 @@ import org.slf4j.MDC
 import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessageGeneratorFactory}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes.IE801
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE801Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository.MessageNotification
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, DefaultPlayMongoRepositorySupport}
 
-import java.time.Instant
+import java.time.{Instant, LocalDateTime, ZoneOffset}
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
@@ -319,7 +322,6 @@ class MovementRepositoryItSpec
     mustPreserveMdc(repository.findDraftMovement(movement))
   }
 
-
   "getByArc" should {
     val lrn                   = "123"
     val consignorId           = "Abc"
@@ -339,6 +341,40 @@ class MovementRepositoryItSpec
       result mustBe Some(movement)
     }
     mustPreserveMdc(repository.getByArc(arc))
+  }
+
+  "migrateLastUpdated" should {
+    val ern = "consignorId"
+    val timestamp = LocalDateTime.of(2024, 4, 3, 12, 30, 45, 123123).toInstant(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS)
+    val message1Timestamp = timestamp.plus(1, ChronoUnit.MINUTES)
+    val message2Timestamp = message1Timestamp.plus(1, ChronoUnit.MINUTES)
+
+    val emptyMovement = Movement(UUID.randomUUID().toString, Some("boxId"), "123", "consignorId", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq.empty)
+    val otherErnMovement = Movement(UUID.randomUUID().toString, Some("boxId"), "123", "notConsignor", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq.empty)
+
+    val message1 = Message("encodedMessage", "type", "messageId", "consignorId", Set.empty, message1Timestamp)
+    val message2 = Message("encodedMessage2", "type2", "messageId2", "consignorId", Set.empty, message2Timestamp)
+    val consignorMovement = Movement(UUID.randomUUID().toString, Some("boxId"), "123", "consignorId", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message1, message2))
+
+    "not update a movement with no messages for the ERN" in {
+      insertMovement(emptyMovement)
+      repository.migrateLastUpdated(ern).futureValue
+
+      repository.collection.find(Filters.eq("_id", emptyMovement._id)).headOption().futureValue.value mustEqual emptyMovement
+    }
+    "not update a movement for a different ERN" in {
+      insertMovement(otherErnMovement)
+      repository.migrateLastUpdated(ern).futureValue
+
+      repository.collection.find(Filters.eq("_id", otherErnMovement._id)).headOption().futureValue.value mustEqual otherErnMovement
+    }
+    "update the lastUpdated to be the latest createdOn in the messages" in {
+      insertMovement(consignorMovement)
+      repository.migrateLastUpdated(ern).futureValue
+
+      repository.collection.find(Filters.eq("_id", consignorMovement._id)).headOption().futureValue.value.lastUpdated mustBe message2Timestamp
+    }
+    mustPreserveMdc(repository.migrateLastUpdated(ern))
   }
 
   "getMovementByErn" should {
@@ -631,8 +667,9 @@ class MovementRepositoryItSpec
     mustPreserveMdc(repository.getMovementByERN(Seq("some ern")))
   }
 
-  "getAll" should {
-    "get all record for a consignorId" in {
+  "getAllBy" should {
+
+    "get all records for a consignorId" in {
       val movementLrn1 = Movement(Some("boxId"), "1", "345", Some("789"), None, timestamp)
       val movementLrn2 = Movement(Some("boxId"), "2", "897", Some("456"), None, timestamp)
       val movementLrn6 = Movement(Some("boxId"), "6", "345", Some("523"), None, timestamp)
@@ -646,7 +683,7 @@ class MovementRepositoryItSpec
       result mustBe Seq(movementLrn1, movementLrn6)
     }
 
-    "get all record for a consignee" in {
+    "get all records for a consignee" in {
       val movementLrn1             = Movement(Some("boxId"), "1", "345", Some("789"), None, timestamp)
       val movementLrn2             = Movement(Some("boxId"), "2", "897", Some("456"), None, timestamp)
       val movementLrn6             = Movement(Some("boxId"), "6", "345", Some("523"), None, timestamp)
@@ -659,6 +696,16 @@ class MovementRepositoryItSpec
       val result = repository.getAllBy("456").futureValue
 
       result mustBe Seq(movementLrn2, movementLrn1Consignor564)
+    }
+
+    "get all records for recipient" in {
+      val message         = Message("any, message", MessageTypes.IE801.value, "messageId", "456", Set.empty, timestamp)
+      val movementLrn1    = Movement(Some("boxId"), "1", "345", Some("789"), None, timestamp, messages = Seq(message))
+      insertMovement(movementLrn1)
+
+      val result = repository.getAllBy("456").futureValue
+
+      result mustBe Seq(movementLrn1)
     }
 
     "return an empty list if there are no matching records" in {

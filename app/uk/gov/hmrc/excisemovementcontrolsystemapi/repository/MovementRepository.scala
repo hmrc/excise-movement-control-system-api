@@ -135,11 +135,7 @@ class MovementRepository @Inject() (
     movementFilter: MovementFilter = MovementFilter.emptyFilter
   ): Future[Seq[Movement]] = Mdc.preservingMdc {
 
-    val ernFilters = Seq(
-      Filters.in("consignorId", ern: _*),
-      Filters.in("consigneeId", ern: _*),
-      Filters.in("messages.recipient", ern: _*)
-    )
+    val ernFilters = getErnFilters(ern)
 
     val filters =
       Seq(
@@ -166,6 +162,13 @@ class MovementRepository @Inject() (
       .toFuture()
   }
 
+  private def getErnFilters(ern: Seq[String]) =
+    Seq(
+      Filters.in("consignorId", ern: _*),
+      Filters.in("consigneeId", ern: _*),
+      Filters.in("messages.recipient", ern: _*)
+    )
+
   def getAllBy(ern: String): Future[Seq[Movement]] = Mdc.preservingMdc {
     getMovementByERN(Seq(ern), MovementFilter.emptyFilter)
   }
@@ -176,6 +179,31 @@ class MovementRepository @Inject() (
         filter = Filters.equal("administrativeReferenceCode", arc)
       )
       .headOption()
+  }
+
+  def migrateLastUpdated(ern: String): Future[Done] = Mdc.preservingMdc {
+    val ernFilters = getErnFilters(Seq(ern))
+    collection
+      .updateMany(
+        Filters.and(
+          Filters.and(Filters.exists("messages"), Filters.not(Filters.size("messages", 0))),
+          Filters.or(ernFilters: _*)
+        ),
+        Seq(
+          Aggregates.set(
+            Field(
+              "lastUpdated",
+              Json
+                .obj(
+                  "$max" -> "$messages.createdOn"
+                )
+                .toDocument()
+            )
+          )
+        )
+      )
+      .toFuture()
+      .as(Done)
   }
 
   def getErnsAndLastReceived: Future[Map[String, Instant]] = Mdc.preservingMdc {
