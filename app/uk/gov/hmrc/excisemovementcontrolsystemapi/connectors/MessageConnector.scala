@@ -82,8 +82,9 @@ class MessageConnector @Inject() (
           logger.warn(s"[MessageConnector]: Invalid status returned: ${response.status}")
           Future.failed(new RuntimeException("Invalid status returned"))
         }
-      }.recoverWith{
-        case NonFatal(e) => Future.failed(GetMessagesException(ern, e))
+      }
+      .recoverWith { case NonFatal(e) =>
+        Future.failed(GetMessagesException(ern, e))
       }
   }
 
