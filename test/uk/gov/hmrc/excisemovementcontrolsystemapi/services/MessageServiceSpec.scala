@@ -476,6 +476,7 @@ class MessageServiceSpec
             when(correlationIdService.generateCorrelationId()).thenReturn(newId)
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
             when(movementRepository.getByArc(any)).thenReturn(Future.successful(None))
+            when(movementRepository.getMovementByLRNAndERNIn(any, any)).thenReturn(Future.successful(Seq.empty))
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
@@ -538,6 +539,7 @@ class MessageServiceSpec
             when(correlationIdService.generateCorrelationId()).thenReturn(newId)
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
             when(movementRepository.getByArc(any)).thenReturn(Future.successful(None))
+            when(movementRepository.getMovementByLRNAndERNIn(any, any)).thenReturn(Future.successful(Seq.empty))
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
@@ -617,6 +619,7 @@ class MessageServiceSpec
             when(auditService.auditMessage(any, any)(any)).thenReturn(EitherT.pure(()))
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
             when(movementRepository.getByArc(any)).thenReturn(Future.successful(None))
+            when(movementRepository.getMovementByLRNAndERNIn(any, any)).thenReturn(Future.successful(Seq.empty))
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
@@ -764,6 +767,7 @@ class MessageServiceSpec
             when(correlationIdService.generateCorrelationId()).thenReturn(newId)
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
             when(movementRepository.getByArc(any)).thenReturn(Future.successful(None))
+            when(movementRepository.getMovementByLRNAndERNIn(any, any)).thenReturn(Future.successful(Seq.empty))
             when(movementRepository.save(any)).thenReturn(Future.successful(Done))
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
@@ -1899,6 +1903,7 @@ class MessageServiceSpec
         )
         when(movementRepository.getAllBy(eqTo("ern1"))).thenReturn(Future.successful(Seq(ern1Movement)))
         when(movementRepository.getByArc(any)).thenReturn(Future.successful(None))
+        when(movementRepository.getMovementByLRNAndERNIn(any, any)).thenReturn(Future.successful(Seq.empty))
         when(movementRepository.save(any)).thenReturn(Future.successful(Done))
         when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
         when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
@@ -1992,7 +1997,6 @@ class MessageServiceSpec
 
         movementCaptor.values.head mustBe expectedMovement2
         movementCaptor.values(1) mustBe expectedMovement1
-
       }
     }
   }

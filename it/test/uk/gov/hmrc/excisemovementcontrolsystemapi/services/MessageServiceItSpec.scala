@@ -245,5 +245,53 @@ class MessageServiceItSpec
       result.length mustBe 1
       result.head mustEqual expectedMovement
     }
+
+    "must not create a new movement when an existing movement can be found in the database via consignor ERN and LRN" in {
+
+      val hc = HeaderCarrier()
+      val consignorErn = "testErn"
+      val consigneeErn = "testErn2"
+      val lrn = "lrnie8158976912"
+      val arc = "arc"
+
+      val ie801 = XmlMessageGeneratorFactory.generate(consignorErn, MessageParams(IE801, "XI000001", consigneeErn = Some(consigneeErn), localReferenceNumber = Some(lrn), administrativeReferenceCode = Some(arc)))
+      val messages = Seq(IE801Message.createFromXml(ie801))
+
+      val initialMovement = Movement(
+        None,
+        lrn,
+        consignorErn,
+        None,
+        None,
+        lastUpdated = now
+      )
+
+      val expectedMovement = initialMovement.copy(
+        messages = Seq(
+          Message(utils.encode(messages.head.toXml.toString()), "IE801", "XI000001", consignorErn, Set.empty, now),
+          Message(utils.encode(messages.head.toXml.toString()), "IE801", "XI000001", consigneeErn, Set.empty, now)
+        ),
+        administrativeReferenceCode = Some(arc),
+        consigneeId = Some(consigneeErn)
+      )
+
+      when(mockDateTimeService.timestamp()).thenReturn(now)
+
+      when(mockCorrelationIdService.generateCorrelationId()).thenAnswer(UUID.randomUUID().toString)
+
+      when(mockMessageConnector.getNewMessages(any)(any)).thenReturn(
+        Future.successful(GetMessagesResponse(Seq(messages.head), 1))
+      )
+
+      when(mockMessageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+
+      movementService.saveNewMovement(initialMovement).futureValue.isRight mustBe true
+      service.updateMessages(consigneeErn, None)(hc).futureValue
+
+      val result = repository.getMovementByLRNAndERNIn(lrn, List(consignorErn)).futureValue
+
+      result.length mustBe 1
+      result.head mustEqual expectedMovement
+    }
   }
 }
