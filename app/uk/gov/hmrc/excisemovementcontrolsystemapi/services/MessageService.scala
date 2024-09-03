@@ -22,6 +22,7 @@ import com.codahale.metrics.MetricRegistry
 import org.apache.pekko.Done
 import org.bson.BsonMaximumSizeExceededException
 import org.mongodb.scala.MongoCommandException
+import play.api.libs.json.{JsObject, JsPath, Json, OWrites, __}
 import play.api.{Configuration, Logging}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, TraderMovementConnector}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
@@ -492,14 +493,21 @@ class MessageService @Inject() (
               }
           }
       case _: BsonMaximumSizeExceededException                 =>
-        val messageSizes = movement.messages.map(_.encodedMessage.length).mkString("[", ", ", "]")
-        val message      =
-          s"ern: $ern, movementId: ${movement._id}, numberOfMessages: ${movement.messages.size}, messageSizes:$messageSizes inner: ${e.getMessage}"
+        val messageInfo = movement.messages.map(limitedMessageWrites.writes).mkString("[", ", ", "]")
+        val message     =
+          s"ern: $ern, movementId: ${movement._id}, arc: ${movement.administrativeReferenceCode}, numberOfMessages: ${movement.messages.size}, messageInfo: $messageInfo inner: ${e.getMessage}"
         Future.failed(EnrichedError(message, e))
       case _                                                   =>
         val message = s"ern: $ern, movementId: ${movement._id}, inner: ${e.getMessage}"
         Future.failed(EnrichedError(message, e))
     }
+
+  import play.api.libs.functional.syntax._
+  private val limitedMessageWrites: OWrites[Message] =
+    ((__ \ "Id").write[String] ~
+      (__ \ "size").write[Int] ~
+      (__ \ "type").write[String] ~
+      (__ \ "recipient").write[String])(m => (m.messageId, m.encodedMessage.length, m.messageType, m.recipient))
 }
 
 object MessageService {
