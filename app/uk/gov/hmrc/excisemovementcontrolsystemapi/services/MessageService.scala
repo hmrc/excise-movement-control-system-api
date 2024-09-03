@@ -458,7 +458,7 @@ class MessageService @Inject() (
     ern: String,
     movements: Seq[Movement],
     movement: Movement
-  ): Future[A] = {
+  ): Future[A] =
     e match {
       case e: MongoCommandException if e.getErrorCode == 11000 =>
         movementRepository
@@ -493,21 +493,17 @@ class MessageService @Inject() (
               }
           }
       case _: BsonMaximumSizeExceededException                 =>
-
-        Future.failed(EnrichedError(debugInfo(ern, movement), e))
+        val messageInfo = movement.messages.map(limitedMessageWrites.writes).mkString("[", ", ", "]")
+        val message     =
+          s"ern: $ern, movementId: ${movement._id}, arc: ${movement.administrativeReferenceCode}, numberOfMessages: ${movement.messages.size}, messageInfo: $messageInfo inner: ${e.getMessage}"
+        Future.failed(EnrichedError(message, e))
       case _                                                   =>
         val message = s"ern: $ern, movementId: ${movement._id}, inner: ${e.getMessage}"
         Future.failed(EnrichedError(message, e))
     }
-  }
-
-  def debugInfo(ern:String, movement: Movement): String = {
-    val messageInfo = movement.messages.map(limitedMessageWrites.writes).mkString("[", ", ", "]")
-    s"ern: $ern, movementId: ${movement._id}, arc: ${movement.administrativeReferenceCode}, numberOfMessages: ${movement.messages.size}, messageInfo: $messageInfo inner: ${e.getMessage}"
-  }
 
   import play.api.libs.functional.syntax._
-    private val limitedMessageWrites: OWrites[Message] =
+  private val limitedMessageWrites: OWrites[Message] =
     ((__ \ "Id").write[String] ~
       (__ \ "size").write[Int] ~
       (__ \ "type").write[String] ~
