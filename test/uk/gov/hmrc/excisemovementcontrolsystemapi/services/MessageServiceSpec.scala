@@ -19,8 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 import cats.data.EitherT
 import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
-import org.mockito.MockSettings
-import org.mockito.MockitoSugar.{never, reset, times, verify, when, withSettings}
+import org.mockito.MockitoSugar.{never, reset, times, verify, when}
 import org.mockito.captor.ArgCaptor
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
