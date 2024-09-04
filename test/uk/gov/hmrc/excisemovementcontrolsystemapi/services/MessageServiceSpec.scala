@@ -220,7 +220,7 @@ class MessageServiceSpec
                   "IE801",
                   "GB00001",
                   consignorErn,
-                  Set("boxId1"),
+                  Set.empty,
                   updateOrCreateTimestamp
                 ),
                 Message(
@@ -228,7 +228,7 @@ class MessageServiceSpec
                   "IE801",
                   "GB00001",
                   consigneeErn,
-                  Set("boxId2"),
+                  Set.empty,
                   updateOrCreateTimestamp
                 ),
                 Message(
@@ -593,7 +593,7 @@ class MessageServiceSpec
                   "IE801",
                   "GB00001",
                   consignor,
-                  Set("boxId1"),
+                  Set.empty,
                   updateOrCreateTimestamp
                 ),
                 Message(
@@ -601,7 +601,7 @@ class MessageServiceSpec
                   "IE801",
                   "GB00001",
                   consignee,
-                  Set("boxId2"),
+                  Set.empty,
                   updateOrCreateTimestamp
                 ),
                 Message(
