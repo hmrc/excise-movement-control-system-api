@@ -33,11 +33,11 @@ class NotificationsService @Inject() (
   movementRepository: MovementRepository
 )(implicit ec: ExecutionContext) {
 
-  def subscribeErns(clientId: String, erns: Seq[String])(implicit hc: HeaderCarrier): Future[Done] =
+  def subscribeErns(clientId: String, erns: Seq[String])(implicit hc: HeaderCarrier): Future[String] =
     for {
       boxId <- getClientBoxId(clientId)
       _     <- saveBoxIdForErns(boxId, erns)
-    } yield Done
+    } yield boxId
 
   def unsubscribeErns(clientId: String, erns: Seq[String])(implicit hc: HeaderCarrier): Future[Done] =
     for {

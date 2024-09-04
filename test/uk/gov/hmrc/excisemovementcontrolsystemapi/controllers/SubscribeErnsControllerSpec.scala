@@ -64,7 +64,7 @@ class SubscribeErnsControllerSpec
   "subscribeErn" must {
     "subscribe the given ern to the clientId" in {
 
-      when(mockNotificationsService.subscribeErns(any, any)(any)).thenReturn(Future.successful(Done))
+      when(mockNotificationsService.subscribeErns(any, any)(any)).thenReturn(Future.successful("boxId"))
 
       val request = FakeRequest(routes.SubscribeErnsController.subscribeErn("ern1"))
         .withHeaders(

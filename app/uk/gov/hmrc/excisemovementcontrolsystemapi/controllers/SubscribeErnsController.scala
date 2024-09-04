@@ -45,7 +45,7 @@ class SubscribeErnsController @Inject() (
   def subscribeErn(ernId: String): Action[AnyContent] = authAction.async { implicit request =>
     (for {
       clientId <- retrieveClientIdFromHeader(request)
-      _        <- EitherT.liftF[Future, Result, Done](notificationsService.subscribeErns(clientId, Seq(ernId)))
+      _        <- EitherT.liftF[Future, Result, String](notificationsService.subscribeErns(clientId, Seq(ernId)))
     } yield Ok).valueOrF(Future.successful)
   }
 
