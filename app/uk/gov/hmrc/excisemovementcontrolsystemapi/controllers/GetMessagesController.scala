@@ -122,8 +122,8 @@ class GetMessagesController @Inject() (
         createdOn = filteredMessage.createdOn
       )
     }
-
   }
+
   private def messageNotFoundError(messageId: String) = {
     logger.warn(s"[GetMessagesController] - MessageId $messageId was not found in the database")
     NotFound(

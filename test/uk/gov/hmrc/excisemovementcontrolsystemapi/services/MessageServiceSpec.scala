@@ -19,7 +19,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 import cats.data.EitherT
 import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
-import org.mockito.MockitoSugar.{never, reset, times, verify, when}
+import org.mockito.MockSettings
+import org.mockito.MockitoSugar.{never, reset, times, verify, when, withSettings}
 import org.mockito.captor.ArgCaptor
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
@@ -1998,6 +1999,83 @@ class MessageServiceSpec
         movementCaptor.values.head mustBe expectedMovement2
         movementCaptor.values(1) mustBe expectedMovement1
       }
+    }
+  }
+
+
+  "temporary tests of private functions to build it up" should {
+    "not save the substring LRN message" in {
+
+    }
+  }
+
+  "There is a movement with an lrn, and we try to add a message with an lrn that is a substring of that lrn" should {
+    "not add that message, because it doesn't belong on that movement - it should create a new movement instead" in {
+
+      val ern   = "testErn"
+      val movement         = Movement(
+        newId,
+        None,
+        "2",
+        ern,
+        Some("testConsignee"),
+        None,
+        now,
+        Seq.empty
+      )
+
+      val new801WithSubstringLrn = Seq(
+        IE801Message.createFromXml(
+          XmlMessageGeneratorFactory.generate(
+            ern,
+            MessageParams(
+              IE801,
+              "GB00001",
+              Some("testConsignee"),
+              Some("23XI00000000000000099"),
+              Some("lrn234")
+            )
+          )
+        )
+      )
+
+      val messagesWithSubstringLrn = Seq(
+        Message(utils.encode(new801WithSubstringLrn.head.toXml.toString()), "IE801", "GB00001", ern, Set.empty, now),
+        Message(utils.encode(new801WithSubstringLrn.head.toXml.toString()), "IE801", "GB00001", "testConsignee", Set.empty, now)
+      )
+
+      val expectedMovement = Movement(
+        newId,
+        None,
+        "lrn234",
+        ern,
+        Some("testConsignee"),
+        Some("23XI00000000000000099"),
+        now,
+        messagesWithSubstringLrn
+      )
+
+      when(correlationIdService.generateCorrelationId()).thenReturn(newId)
+
+      when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+      when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
+      when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
+      when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
+      when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+      when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+      when(dateTimeService.timestamp()).thenReturn(now)
+
+      // These are the mocks that specify the important bits for this test:
+      when(messageConnector.getNewMessages(any)(any))
+        .thenReturn(Future.successful(GetMessagesResponse(new801WithSubstringLrn, 1)))
+      when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
+      when(movementRepository.getByArc(any)).thenReturn(Future.successful(None))
+      when(movementRepository.getMovementByLRNAndERNIn(any, any)).thenReturn(Future.successful(Seq.empty))
+
+      messageService.updateMessages(ern, None).futureValue
+
+      verify(movementRepository).save(expectedMovement)
+
     }
   }
 }
