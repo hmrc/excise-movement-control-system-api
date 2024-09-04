@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import org.apache.pekko.Done
+import org.apache.pekko.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchersSugar.eqTo
 import org.mockito.MockitoSugar.{reset, times, verify, when}
@@ -74,7 +75,7 @@ class SubscribeErnsAdminControllerSpec extends PlaySpec with GuiceOneAppPerSuite
       when(mockStubBehaviour.stubAuth(Some(expectedPredicate), Retrieval.EmptyRetrieval))
         .thenReturn(Future.successful(()))
 
-      when(mockNotificationsService.subscribeErns(any, any)(any)).thenReturn(Future.successful(Done))
+      when(mockNotificationsService.subscribeErns(any, any)(any)).thenReturn(Future.successful("boxId"))
 
       val fakeRequest = FakeRequest(routes.SubscribeErnsAdminController.subscribeErns())
         .withBody(Json.toJson(SubscribeErnsRequest("clientId", Set("ern1"))))
@@ -82,6 +83,7 @@ class SubscribeErnsAdminControllerSpec extends PlaySpec with GuiceOneAppPerSuite
 
       val result      = route(app, fakeRequest).value
       status(result) mustBe OK
+      contentAsString(result) mustBe "boxId"
       verify(mockStubBehaviour).stubAuth(any(), any())
       verify(mockNotificationsService).subscribeErns(eqTo("clientId"), eqTo(Seq("ern1")))(any)
     }

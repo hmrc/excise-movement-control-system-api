@@ -73,8 +73,9 @@ class NotificationsServiceSpec
       when(boxIdRepository.save(any, any)).thenReturn(Future.successful(Done))
       when(movementRepository.addBoxIdToMessages(any, any)).thenReturn(Future.successful(Done))
 
-      notificationsService.subscribeErns(clientId, Seq(ern1, ern2))(hc).futureValue
+      val result = notificationsService.subscribeErns(clientId, Seq(ern1, ern2))(hc).futureValue
 
+      result mustBe boxId
       verify(pushNotificationService).getBoxId(eqTo(clientId), eqTo(None))(any)
       verify(boxIdRepository).save(ern1, boxId)
       verify(boxIdRepository).save(ern2, boxId)

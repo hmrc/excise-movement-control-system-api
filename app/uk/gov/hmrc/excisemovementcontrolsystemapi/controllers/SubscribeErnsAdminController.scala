@@ -50,7 +50,7 @@ class SubscribeErnsAdminController @Inject() (
       withJsonBody[SubscribeErnsRequest] { subscribeRequest =>
         notificationsService
           .subscribeErns(subscribeRequest.clientId, subscribeRequest.erns.toSeq)
-          .as(Ok)
+          .map(Ok(_))
       }
     }
 }
