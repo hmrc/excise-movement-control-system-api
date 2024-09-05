@@ -146,7 +146,7 @@ class MessageService @Inject() (
     if (messages.nonEmpty) {
       movementRepository
         .getAllBy(ern)
-        .flatMap { movements =>
+        .flatMap { movements: Seq[Movement] =>
           messages
             .foldLeft(Future.successful(Seq.empty[Movement])) { (accumulated, message) =>
               for {
@@ -493,21 +493,13 @@ class MessageService @Inject() (
               }
           }
       case _: BsonMaximumSizeExceededException                 =>
-        val messageInfo = movement.messages.map(limitedMessageWrites.writes).mkString("[", ", ", "]")
-        val message     =
-          s"ern: $ern, movementId: ${movement._id}, arc: ${movement.administrativeReferenceCode}, numberOfMessages: ${movement.messages.size}, messageInfo: $messageInfo inner: ${e.getMessage}"
+        val message =
+          s"ern: $ern, movementId: ${movement._id}, arc: ${movement.administrativeReferenceCode}, numberOfMessages: ${movement.messages.size}, inner: ${e.getMessage}"
         Future.failed(EnrichedError(message, e))
       case _                                                   =>
         val message = s"ern: $ern, movementId: ${movement._id}, inner: ${e.getMessage}"
         Future.failed(EnrichedError(message, e))
     }
-
-  import play.api.libs.functional.syntax._
-  private val limitedMessageWrites: OWrites[Message] =
-    ((__ \ "Id").write[String] ~
-      (__ \ "size").write[Int] ~
-      (__ \ "type").write[String] ~
-      (__ \ "recipient").write[String])(m => (m.messageId, m.encodedMessage.length, m.messageType, m.recipient))
 }
 
 object MessageService {
