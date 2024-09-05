@@ -21,10 +21,9 @@ import org.mongodb.scala.model._
 import play.api.Configuration
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.BoxIdRepository.mongoIndexes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.BoxIdRecord
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, Mdc}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.play.http.logging.Mdc
 
 import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Singleton}
