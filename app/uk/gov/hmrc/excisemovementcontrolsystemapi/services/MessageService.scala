@@ -182,7 +182,7 @@ class MessageService @Inject() (
     findMovementsForMessage(movements, updatedMovements, message).flatMap { matchedMovements =>
       if (matchedMovements.nonEmpty) {
         matchedMovements.traverse { movement =>
-          updateMovement(movement, ern, message)
+          updateMovement(movement, ern, message, shouldNotify = true)
         }
       } else {
         createMovements(ern, message, movements, updatedMovements)
@@ -190,7 +190,12 @@ class MessageService @Inject() (
       }
     }
 
-  private def updateMovement(movement: Movement, recipient: String, message: IEMessage): Future[Movement] =
+  private def updateMovement(
+    movement: Movement,
+    recipient: String,
+    message: IEMessage,
+    shouldNotify: Boolean
+  ): Future[Movement] =
     if (
       movement.messages.exists(m =>
         m.messageId == message.messageIdentifier
@@ -200,7 +205,7 @@ class MessageService @Inject() (
       Future.successful(movement)
     } else {
       val timestamp = dateTimeService.timestamp()
-      getUpdatedMessages(recipient, movement, message, timestamp).map { updatedMessages =>
+      getUpdatedMessages(recipient, movement, message, timestamp, shouldNotify).map { updatedMessages =>
         movement.copy(
           messages = updatedMessages,
           administrativeReferenceCode = getArc(movement, message),
@@ -210,22 +215,18 @@ class MessageService @Inject() (
       }
     }
 
-  private def updateMovement(movement: Movement, messages: Seq[(String, IEMessage)]): Future[Movement] =
-    messages.foldLeft(Future.successful(movement)) { case (movement, (recipient, message)) =>
-      movement.flatMap(updateMovement(_, recipient, message))
-    }
-
   private def getUpdatedMessages(
     recipient: String,
     movement: Movement,
     message: IEMessage,
-    timestamp: Instant
+    timestamp: Instant,
+    shouldNotify: Boolean
   ): Future[Seq[Message]] =
     message match {
       case ie801: IE801Message =>
         Seq(
-          Some(convertMessage(ie801.consignorId, ie801, timestamp)),
-          ie801.consigneeId.map(convertMessage(_, ie801, timestamp))
+          Some(convertMessage(ie801.consignorId, ie801, timestamp, shouldNotify)),
+          ie801.consigneeId.map(convertMessage(_, ie801, timestamp, shouldNotify))
         ).flatten.sequence.map { messages =>
           val newMessages = messages.filterNot { m1 =>
             movement.messages.exists { m2 =>
@@ -236,7 +237,7 @@ class MessageService @Inject() (
           movement.messages ++ newMessages
         }
       case _                   =>
-        convertMessage(recipient, message, timestamp).map(movement.messages :+ _)
+        convertMessage(recipient, message, timestamp, shouldNotify).map(movement.messages :+ _)
     }
 
   private def findMovementsForMessage(
@@ -316,13 +317,16 @@ class MessageService @Inject() (
         findMovementsForMessage(movements, updatedMovements, ie801).flatMap { movements =>
           if (movements.nonEmpty) {
             movements.traverse { movement =>
-              val messagesToAdd = Seq(
-                Some(ie801.consignorId -> ie801),
-                ie801.consigneeId.map(consignee => consignee -> ie801),
-                Some(originatingErn    -> originatingMessage)
-              ).flatten
-
-              updateMovement(movement, messagesToAdd)
+              updateMovement(movement, ie801.consignorId, ie801, shouldNotify = false).flatMap { updatedMovement =>
+                ie801.consigneeId
+                  .map { consigneeId =>
+                    updateMovement(updatedMovement, consigneeId, ie801, shouldNotify = false)
+                  }
+                  .getOrElse(Future.successful(updatedMovement))
+                  .flatMap { updatedMovement =>
+                    updateMovement(updatedMovement, originatingErn, originatingMessage, shouldNotify = true)
+                  }
+              }
             }
           } else {
 
@@ -330,9 +334,9 @@ class MessageService @Inject() (
             // also add the originating message all at once
             val timestamp = dateTimeService.timestamp()
             Seq(
-              Some(convertMessage(ie801.consignorId, ie801, timestamp)),
-              ie801.consigneeId.map(convertMessage(_, ie801, timestamp)),
-              Some(convertMessage(originatingErn, originatingMessage, timestamp))
+              Some(convertMessage(ie801.consignorId, ie801, timestamp, shouldNotify = false)),
+              ie801.consigneeId.map(convertMessage(_, ie801, timestamp, shouldNotify = false)),
+              Some(convertMessage(originatingErn, originatingMessage, timestamp, shouldNotify = true))
             ).flatten.sequence.map { messagesToAdd =>
               Seq(
                 Movement(
@@ -368,7 +372,7 @@ class MessageService @Inject() (
     hc: HeaderCarrier
   ): Future[Seq[Movement]] = {
     val timestamp = dateTimeService.timestamp()
-    convertMessage(consignor, message, timestamp).map { convertedMessage =>
+    convertMessage(consignor, message, timestamp, shouldNotify = true).map { convertedMessage =>
       message.localReferenceNumber
         .map { lrn =>
           Seq(
@@ -394,8 +398,8 @@ class MessageService @Inject() (
   private def createMovementFromIE801(message: IE801Message): Future[Movement] = {
     val timestamp = dateTimeService.timestamp()
     Seq(
-      Some(convertMessage(message.consignorId, message, timestamp)),
-      message.consigneeId.map(convertMessage(_, message, timestamp))
+      Some(convertMessage(message.consignorId, message, timestamp, shouldNotify = true)),
+      message.consigneeId.map(convertMessage(_, message, timestamp, shouldNotify = true))
     ).flatten.sequence.map { messages =>
       Movement(
         correlationIdService.generateCorrelationId(),
@@ -439,8 +443,14 @@ class MessageService @Inject() (
         .map(Seq(_))
     )
 
-  private def convertMessage(recipient: String, input: IEMessage, timestamp: Instant): Future[Message] =
-    boxIdRepository.getBoxIds(recipient).map { boxIds =>
+  private def convertMessage(
+    recipient: String,
+    input: IEMessage,
+    timestamp: Instant,
+    shouldNotify: Boolean
+  ): Future[Message] = {
+
+    def createMessage(boxIds: Set[String]): Message = {
       val encodedMessage = emcsUtils.encode(input.toXml.toString)
       messageSizes.update(encodedMessage.length)
       Message(
@@ -452,6 +462,13 @@ class MessageService @Inject() (
         createdOn = timestamp
       )
     }
+
+    if (shouldNotify) {
+      boxIdRepository.getBoxIds(recipient).map(createMessage)
+    } else {
+      Future.successful(createMessage(Set.empty))
+    }
+  }
 
   private def createEnrichedError[A](
     e: Throwable,

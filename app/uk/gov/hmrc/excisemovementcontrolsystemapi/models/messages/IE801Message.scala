@@ -52,7 +52,7 @@ case class IE801Message(
 
   override def toJson: JsValue = Json.toJson(obj)
 
-  override def lrnEquals(lrn: String): Boolean = localReferenceNumber.contains(lrn)
+  override def lrnEquals(lrn: String): Boolean = localReferenceNumber == lrn
 
   override def messageIdentifier: String = obj.Header.MessageIdentifier
 
