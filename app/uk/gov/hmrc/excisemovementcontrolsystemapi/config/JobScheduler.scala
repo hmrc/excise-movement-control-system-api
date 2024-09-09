@@ -17,8 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.config
 
 import com.codahale.metrics.{Counter, Timer}
-import org.apache.pekko.Done
-import org.apache.pekko.actor.{ActorSystem, CoordinatedShutdown}
+import org.apache.pekko.actor.ActorSystem
 import play.api.Logging
 import play.api.inject.ApplicationLifecycle
 import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.{MetricsReportingJob, PollingNewMessagesJob, PushNotificationJob, ScheduledJob}
@@ -39,8 +38,7 @@ class JobScheduler @Inject() (
   metricsJob: MetricsReportingJob,
   actorSystem: ActorSystem,
   metrics: Metrics,
-  clock: Clock,
-  cs: CoordinatedShutdown
+  clock: Clock
 )(implicit val ec: ExecutionContext)
     extends Logging {
 
