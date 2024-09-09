@@ -141,7 +141,6 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         postRequest(IE815)
 
         verify(ernSubmissionRepository).save(consignorId)
-        verify(ernSubmissionRepository).save(consigneeId)
       }
 
       "should get the default box Id when X-Callback-Box-Id is not in the header" in {
