@@ -115,7 +115,6 @@ class DraftExciseMovementController @Inject() (
         Left(result)
       case Right(movement) =>
         auditService.auditMessage(message)
-        message.consigneeId.map(consignee => ernSubmissionRepository.save(consignee))
         Right(movement)
     })
 
