@@ -17,22 +17,27 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import com.codahale.metrics.MetricRegistry
+import com.typesafe.config.Config
+import org.apache.pekko.actor.ActorSystem
 import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.Result
-import play.api.mvc.Results.InternalServerError
+import play.api.mvc.Results.{InternalServerError, Status}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.{EISHttpReader, ResponseHandler}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisErrorResponsePresentation, ValidationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
+import uk.gov.hmrc.http.HttpErrorFunctions.{is2xx, is4xx, is5xx}
+import uk.gov.hmrc.http.HttpReadsInstances.readEitherOf
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, StringContextOps}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, HttpReadsEither, HttpResponse, Retries, StringContextOps, UpstreamErrorResponse}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
 import scala.xml.NodeSeq
 
@@ -41,10 +46,14 @@ class EISSubmissionConnector @Inject() (
   emcsUtils: EmcsUtils,
   appConfig: AppConfig,
   metrics: MetricRegistry,
-  dateTimeService: DateTimeService
+  dateTimeService: DateTimeService,
+  override val configuration: Config,
+  override val actorSystem: ActorSystem
 )(implicit ec: ExecutionContext)
     extends EISSubmissionHeaders
-    with Logging {
+    with Logging
+    with Retries
+    with ResponseHandler {
 
   def submitMessage(
     message: IEMessage,
@@ -61,34 +70,86 @@ class EISSubmissionConnector @Inject() (
     val messageType     = message.messageType
     val encodedMessage  = emcsUtils.encode(wrappedXml.toString)
 
-    implicit val reader: HttpReads[Either[Result, EISSubmissionResponse]] = EISHttpReader(
-      correlationId = correlationId,
-      ern = authorisedErn,
-      createDateTime = createdDateTime,
-      dateTimeService = dateTimeService,
-      messageType = messageType
-    )
-
     val eisRequest = EISSubmissionRequest(authorisedErn, messageType, encodedMessage)
 
-    httpClient
-      .post(url"${appConfig.emcsReceiverMessageUrl}")
-      .setHeader(build(correlationId, createdDateTime, appConfig.submissionBearerToken): _*)
-      .withBody(Json.toJson(eisRequest))
-      .execute[Either[Result, EISSubmissionResponse]]
-      .andThen { case _ => timer.stop() }
-      .recover { case NonFatal(ex) =>
-        logger.warn(EISErrorMessage(createdDateTime, ex.getMessage, correlationId, messageType), ex)
+    val retryCondition: PartialFunction[Exception, Boolean] = {
+      case e: UpstreamErrorResponse if is5xx(e.statusCode) => true
+    }
 
-        val error = EisErrorResponsePresentation(
-          timestamp,
-          "Internal server error",
-          "Unexpected error occurred while processing Submission request",
-          correlationId
-        )
-        Left(InternalServerError(Json.toJson(error)))
-      }
+    retryFor[EISSubmissionResponse]("label")(retryCondition) {
+      httpClient
+        .post(url"${appConfig.emcsReceiverMessageUrl}")
+        .setHeader(build(correlationId, createdDateTime, appConfig.submissionBearerToken): _*)
+        .withBody(Json.toJson(eisRequest))
+        .execute[EISSubmissionResponse]
+    }.andThen { case _ =>
+      timer.stop()
+    }.map { r =>
+      Right(r)
+    }.recover { case e: UpstreamErrorResponse =>
+      Left(handleErrorResponse(e, createdDateTime, correlationId, messageType))
+    }
+
   }
+
+  private def handleErrorResponse(
+    response: UpstreamErrorResponse,
+    createdDateTime: String,
+    correlationId: String,
+    messageType: String
+  ): Result = {
+
+    logger.warn(EISErrorMessage(createdDateTime, response.message, correlationId, messageType))
+
+    (Try(jsonAs[RimValidationErrorResponse](response.message)), Try(jsonAs[EISErrorResponse](response.message))) match {
+      case (Success(x), Failure(_)) => handleRimValidationResponse(response, x)
+      case (Failure(_), Success(y)) => handleEISErrorResponse(response, y)
+      case _                        =>
+        InternalServerError(
+          Json.toJson(
+            EisErrorResponsePresentation(
+              dateTimeService.timestamp(),
+              "Unexpected error",
+              "Error occurred while reading downstream response",
+              correlationId
+            )
+          )
+        )
+    }
+
+  }
+
+  private def handleRimValidationResponse(
+    response: UpstreamErrorResponse,
+    rimError: RimValidationErrorResponse
+  ): Result = {
+
+    val validationResponse = rimError.validatorResults.map(x =>
+      ValidationResponse(
+        x.errorCategory,
+        x.errorType,
+        x.errorReason,
+        removeControlDocumentReferences(x.errorLocation),
+        x.originalAttributeValue
+      )
+    )
+
+    Status(response.statusCode)(
+      Json.toJson(
+        EisErrorResponsePresentation(
+          dateTimeService.timestamp(),
+          "Validation error",
+          rimError.message.mkString("\n"),
+          rimError.emcsCorrelationId,
+          Some(validationResponse)
+        )
+      )
+    )
+
+  }
+
+  private def handleEISErrorResponse(response: UpstreamErrorResponse, eisError: EISErrorResponse) =
+    Status(response.statusCode)(Json.toJson(eisError.asPresentation))
 
   private def wrapXmlInControlDocument(messageIdentifier: String, innerXml: String, ern: String): NodeSeq =
     <con:Control xmlns:con="http://www.govtalk.gov.uk/taxation/InternationalTrade/Common/ControlDocument">
