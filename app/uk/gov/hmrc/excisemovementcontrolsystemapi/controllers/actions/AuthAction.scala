@@ -137,14 +137,11 @@ class AuthActionImpl @Inject() (
     }
   }
 
-  private def getAllErnsForEmcsEnrolment[A](enrolments: Enrolments): Set[String] =
-    enrolments
-      .getEnrolment(EnrolmentKey.EMCS_ENROLMENT)
-      .fold[Seq[EnrolmentIdentifier]](Seq.empty)(e =>
-        e.identifiers.filter(i => i.key.equalsIgnoreCase(EnrolmentKey.ERN))
-      )
+  private def getAllErnsForEmcsEnrolment(enrolments: Enrolments): Set[String] =
+    enrolments.enrolments
+      .filter(_.key.equalsIgnoreCase(EnrolmentKey.EMCS_ENROLMENT))
+      .flatMap(_.identifiers.filter(i => i.key.equalsIgnoreCase(EnrolmentKey.ERN)))
       .map(_.value)
-      .toSet
 }
 
 @ImplementedBy(classOf[AuthActionImpl])
