@@ -44,16 +44,18 @@ class SubscribeErnsController @Inject() (
 
   def subscribeErn(ernId: String): Action[AnyContent] = authAction.async { implicit request =>
     (for {
+      // almost certainly need to check that the provided ERN is in the enrolments
       clientId <- retrieveClientIdFromHeader(request)
-      _        <- EitherT.liftF[Future, Result, String](notificationsService.subscribeErns(clientId, Seq(ernId)))
-    } yield Ok).valueOrF(Future.successful)
+      boxId    <- EitherT.liftF[Future, Result, String](notificationsService.subscribeErns(clientId, Seq(ernId)))
+    } yield Accepted(boxId)).valueOrF(Future.successful)
   }
 
   def unsubscribeErn(ernId: String): Action[AnyContent] = authAction.async { implicit request =>
     (for {
+      // almost certainly need to check that the provided ERN is in the enrolments
       clientId <- retrieveClientIdFromHeader(request)
       _        <- EitherT.liftF[Future, Result, Done](notificationsService.unsubscribeErns(clientId, Seq(ernId)))
-    } yield Ok).valueOrF(Future.successful)
+    } yield Accepted).valueOrF(Future.successful)
   }
 
   private def retrieveClientIdFromHeader(implicit request: EnrolmentRequest[_]): EitherT[Future, Result, String] =

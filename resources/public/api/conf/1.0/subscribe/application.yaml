@@ -1010,29 +1010,109 @@ paths:
             schema:
               $ref: '#/components/schemas/SubscribeErnRequest'
             examples:
-              Successful Validation Request:
+              Subscribe ERN Request:
                 summary: Subscribe ERN Request
                 value:
                   subscribeErnRequest:
-
-
+                    exciseRegistrationNumber: GBWK002281023
 
       responses:
-        '200':
+        '202':
           description:
           content:
             application/vnd.hmrc.1.0+json:
               schema:
                 $ref: '#/components/schemas/SubscribeErnResponse'
               examples:
-                Success:
-                  summary: "Subscribed successfully"
                   value:
+                    boxId: 42c75e22-7bba-44f2-a610-4b4c3b262e3e
 
-                Failure:
-                  summary: "Subscription failed"
-                  value:
+        '400':
+          description: Invalid JSON or mandatory fields missing.
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: '2024-01-17T15:27:29.540089Z'
+                message: Not valid SubscribeErn message
+                debugMessage: "Error parsing Json: exciseRegistrationNumber missing"
 
+            text/plain:
+              example: "" #downstream 400s are empty
+
+        '401':
+          description: Authorisation errors, e.g. ERN not authorised, authorisation expired, invalid enrolment parameter.
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: "2024-01-17T15:27:29.540089Z"
+                message: Authorisation error
+                debugMessage: Unauthorised Exception with error Bearer token expired
+
+        '403':
+          description: ERN being subscribed is not in authorisation bearer token
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: '2024-01-17T16:27:41.095827Z'
+                message: Forbidden
+                debugMessage: Invalid ERN provided
+
+        '500':
+          description: Internal server error
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: "2021-12-17T09:30:47Z"
+                message: "Invalid JSON structure"
+                debugMessage: "JSON parse error: Unexpected character"
+                correlationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+            text/plain:
+              example: "" #downstream 400s are empty
+
+      security:
+        - userRestricted:
+            - excise-movement-control-system
+
+
+  /erns/{ern}/unsubscribe:
+    post:
+      tags:
+        - Unsubscribe
+      summary: Unsubscribe an ERN to no longer receive Push/Pull notifications
+      description: Unsubscribe an ERN to no longer receive Push/Pull notifications.
+      operationId: unsubscribeErn
+      parameters:
+        - $ref: "#/components/parameters/AcceptHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnsubscribeErnRequest'
+            examples:
+              Unsubscribe ERN Request:
+                summary: Unsubscribe ERN Request
+                value:
+                  unsubscribeErnRequest:
+                    exciseRegistrationNumber: GBWK002281023
+
+      responses:
+        '202':
+          description:
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/UnsubscribeErnResponse'
+              examples:
+                  value: "" #unsubscribe response will be empty
 
         '400':
           description: Invalid JSON or mandatory fields missing.
@@ -1450,7 +1530,11 @@ components:
           $ref: '#/components/schemas/ExciseReferenceNumber'
     SubscribeErnResponse:
       type: object
-
+      required:
+        - boxId
+      properties:
+        boxId:
+          $ref: '#/components/schemas/BoxId'
     UnsubscribeErnRequest:
       type: object
       required:

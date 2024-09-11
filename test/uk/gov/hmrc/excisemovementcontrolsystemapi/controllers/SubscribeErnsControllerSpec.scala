@@ -69,13 +69,13 @@ class SubscribeErnsControllerSpec
       val request = FakeRequest(routes.SubscribeErnsController.subscribeErn("ern1"))
         .withHeaders(
           HeaderNames.CONTENT_TYPE -> "application/json",
-          "X-Client-Id"            -> "clientId",
-          "X-Callback-Box-Id"      -> "clientBoxId"
+          "X-Client-Id"            -> "clientId"
         )
 
       val result = createWithSuccessfulAuth.subscribeErn("ern1")(request)
 
-      status(result) mustBe OK
+      status(result) mustBe ACCEPTED
+      contentAsString(result) mustBe "boxId"
       verify(mockNotificationsService).subscribeErns(eqTo("clientId"), eqTo(Seq("ern1")))(any)
     }
 
@@ -85,8 +85,7 @@ class SubscribeErnsControllerSpec
         val request = FakeRequest(routes.SubscribeErnsController.subscribeErn("ern1"))
           .withHeaders(
             HeaderNames.CONTENT_TYPE -> "application/json",
-            "X-Client-Id"            -> "clientId",
-            "X-Callback-Box-Id"      -> "clientBoxId"
+            "X-Client-Id"            -> "clientId"
           )
 
         val result = createWithFailingAuth.subscribeErn("ern1")(request)
@@ -105,13 +104,13 @@ class SubscribeErnsControllerSpec
       val request = FakeRequest(routes.SubscribeErnsController.subscribeErn("ern1"))
         .withHeaders(
           HeaderNames.CONTENT_TYPE -> "application/json",
-          "X-Client-Id"            -> "clientId",
-          "X-Callback-Box-Id"      -> "clientBoxId"
+          "X-Client-Id"            -> "clientId"
         )
 
       val result = createWithSuccessfulAuth.unsubscribeErn("ern1")(request)
 
-      status(result) mustBe OK
+      status(result) mustBe ACCEPTED
+      contentAsString(result) mustBe ""
       verify(mockNotificationsService).unsubscribeErns(eqTo("clientId"), eqTo(Seq("ern1")))(any)
     }
 
@@ -121,8 +120,7 @@ class SubscribeErnsControllerSpec
         val request = FakeRequest(routes.SubscribeErnsController.subscribeErn("ern1"))
           .withHeaders(
             HeaderNames.CONTENT_TYPE -> "application/json",
-            "X-Client-Id"            -> "clientId",
-            "X-Callback-Box-Id"      -> "clientBoxId"
+            "X-Client-Id"            -> "clientId"
           )
 
         val result = createWithFailingAuth.unsubscribeErn("ern1")(request)
