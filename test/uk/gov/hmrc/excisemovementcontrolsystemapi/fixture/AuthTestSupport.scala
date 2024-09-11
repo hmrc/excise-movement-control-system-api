@@ -44,6 +44,15 @@ trait AuthTestSupport extends NrsTestData {
     withAuthorization(retrieval)
   }
 
+  def withMultipleEnrolments(enrolments: Enrolments): Unit = {
+    val retrieval = enrolments and
+      Some(AffinityGroup.Organisation) and
+      Some(Credentials("testProviderId", "testProviderType")) and
+      Some("123")
+
+    withAuthorization(retrieval)
+  }
+
   def withAuthorizedTrader(enrolment: Enrolment): Unit = {
     val retrieval = Enrolments(Set(enrolment)) and
       Some(AffinityGroup.Organisation) and
