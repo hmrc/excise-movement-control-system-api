@@ -105,6 +105,29 @@ class AuthActionSpec extends PlaySpec with AuthTestSupport with BeforeAndAfterEa
       await(authenticator.invokeBlock(FakeRequest(), block))
     }
 
+    "only return active erns for an enrolment" in {
+
+      val block = (authRequest: EnrolmentRequest[_]) => {
+        authRequest.erns.toSeq mustBe Seq("963")
+        Future.successful(Results.Ok)
+      }
+
+      val activeEnrolment      = Enrolment("HMRC-EMCS-ORG", Seq(EnrolmentIdentifier("ExciseNumber", "963")), "Activated")
+      val deactivatedEnrolment =
+        Enrolment("HMRC-EMCS-ORG", Seq(EnrolmentIdentifier("ExciseNumber", "123")), "Deactivated")
+
+      val enrolments = Enrolments(
+        Set(
+          activeEnrolment,
+          deactivatedEnrolment
+        )
+      )
+
+      withMultipleEnrolments(enrolments)
+
+      await(authenticator.invokeBlock(FakeRequest(), block))
+    }
+
     "return Unauthorized error" when {
       "have no internal id" in {
         withUnAuthorizedInternalId()

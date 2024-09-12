@@ -138,7 +138,11 @@ class AuthActionImpl @Inject() (
 
   private def getAllErnsForEmcsEnrolment(enrolments: Enrolments): Set[String] =
     enrolments.enrolments
-      .filter(_.key.equalsIgnoreCase(EnrolmentKey.EMCS_ENROLMENT))
+      .filter(enrolments =>
+        enrolments.key.equalsIgnoreCase(EnrolmentKey.EMCS_ENROLMENT) && enrolments.state.equalsIgnoreCase(
+          EnrolmentKey.ACTIVATED
+        )
+      )
       .flatMap(_.identifiers.filter(i => i.key.equalsIgnoreCase(EnrolmentKey.ERN)))
       .map(_.value)
 }
