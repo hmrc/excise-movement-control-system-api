@@ -37,11 +37,11 @@ import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
 import scala.concurrent.{ExecutionContext, Future}
 
-
-class ErnSubmissionRepositoryItSpec extends PlaySpec
-  with DefaultPlayMongoRepositorySupport[ErnSubmission]
-  with IntegrationPatience
-  with GuiceOneAppPerSuite {
+class ErnSubmissionRepositoryItSpec
+    extends PlaySpec
+    with DefaultPlayMongoRepositorySupport[ErnSubmission]
+    with IntegrationPatience
+    with GuiceOneAppPerSuite {
 
   private val mockTimeService = mock[DateTimeService]
 
@@ -52,7 +52,8 @@ class ErnSubmissionRepositoryItSpec extends PlaySpec
     )
     .configure(
       "mongodb.ernSubmission.TTL" -> "5 minutes"
-    ).build()
+    )
+    .build()
 
   override protected lazy val repository: ErnSubmissionRepository = app.injector.instanceOf[ErnSubmissionRepository]
 
@@ -81,7 +82,7 @@ class ErnSubmissionRepositoryItSpec extends PlaySpec
 
     "update the lastSubmitted when there is one there already" in {
       val originalInstant = Instant.now.truncatedTo(ChronoUnit.MILLIS).minusSeconds(60)
-      val updatedInstant = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+      val updatedInstant  = Instant.now.truncatedTo(ChronoUnit.MILLIS)
       when(mockTimeService.timestamp()).thenReturn(updatedInstant)
 
       insert(ErnSubmission("testErn", originalInstant)).futureValue
@@ -101,7 +102,7 @@ class ErnSubmissionRepositoryItSpec extends PlaySpec
     }
 
     "return a map of all erns and last submitted timestamps" in {
-      val firstInstant = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+      val firstInstant  = Instant.now.truncatedTo(ChronoUnit.MILLIS)
       val secondInstant = firstInstant.minus(1, ChronoUnit.SECONDS)
 
       insert(ErnSubmission("testErn1", firstInstant)).futureValue
@@ -115,6 +116,21 @@ class ErnSubmissionRepositoryItSpec extends PlaySpec
     }
 
     mustPreserveMdc(repository.getErnsAndLastSubmitted)
+  }
+
+  "removeErns" should {
+    "remove all records with a matching ern" in {
+
+      repository.save("testErn").futureValue
+      repository.save("testErn2").futureValue
+
+      find(Filters.in("ern", Seq("testErn", "testErn2"): _*)).futureValue.length mustBe 2
+
+      repository.removeErns(Seq("testErn", "testErn2"))
+
+      find(Filters.in("ern", Seq("testErn", "testErn2"): _*)).futureValue.length mustBe 0
+
+    }
   }
 
   private def mustPreserveMdc[A](f: => Future[A])(implicit pos: Position): Unit =

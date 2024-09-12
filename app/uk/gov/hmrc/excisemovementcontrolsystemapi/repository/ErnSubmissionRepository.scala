@@ -58,6 +58,13 @@ class ErnSubmissionRepository @Inject() (
       .toFuture()
       .map(_ => Done)
   }
+
+  def removeErns(erns: Seq[String]): Future[Done] = Mdc.preservingMdc {
+    collection
+      .deleteMany(Filters.in("ern", erns: _*))
+      .toFuture()
+      .map(_ => Done)
+  }
 }
 
 object ErnSubmissionRepository {
