@@ -35,6 +35,7 @@ class AppConfigSpec extends PlaySpec {
       |microservice.services.push-pull-notifications.host="notification"
       |microservice.services.push-pull-notifications.port="1111"
       |featureFlags.pushNotificationsEnabled=false
+      |featureFlags.subscribeErnsEnabled=true
     """.stripMargin
 
   private def createAppConfig = {
@@ -60,6 +61,10 @@ class AppConfigSpec extends PlaySpec {
 
     "return feature flag for Push Pull Notifications" in {
       configService.pushNotificationsEnabled mustBe false
+    }
+
+    "return feature flag for subscribe and unsubscribe ERN endpoints" in {
+      configService.subscribeErnsEnabled mustBe true
     }
   }
 }
