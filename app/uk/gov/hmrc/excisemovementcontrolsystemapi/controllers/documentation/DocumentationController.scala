@@ -17,16 +17,24 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.documentation
 
 import controllers.Assets
+
 import javax.inject.{Inject, Singleton}
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 @Singleton
-class DocumentationController @Inject() (assets: Assets, cc: ControllerComponents) extends BackendController(cc) {
+class DocumentationController @Inject() (assets: Assets, cc: ControllerComponents, appConfig: AppConfig)
+    extends BackendController(cc) {
 
   def definition(): Action[AnyContent] =
     assets.at("/public/api", "definition.json")
 
   def specification(version: String, file: String): Action[AnyContent] =
-    assets.at(s"/public/api/conf/$version", file)
+    if (appConfig.subscribeErnsEnabled) {
+      assets.at(s"/public/api/conf/$version/subscribe/", file)
+    } else {
+      assets.at(s"/public/api/conf/$version", file)
+    }
+
 }
