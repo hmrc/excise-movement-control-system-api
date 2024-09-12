@@ -44,24 +44,24 @@ class SubscribeErnsController @Inject() (
     extends BackendController(cc)
     with Logging {
 
-  def subscribeErn(ernId: String): Action[AnyContent] = authAction.async { implicit request =>
+  def subscribeErn(ern: String): Action[AnyContent] = authAction.async { implicit request =>
     if (appConfig.subscribeErnsEnabled) {
       (for {
         // almost certainly need to check that the provided ERN is in the enrolments
         clientId <- retrieveClientIdFromHeader(request)
-        boxId    <- EitherT.liftF[Future, Result, String](notificationsService.subscribeErns(clientId, Seq(ernId)))
+        boxId    <- EitherT.liftF[Future, Result, String](notificationsService.subscribeErns(clientId, Seq(ern)))
       } yield Accepted(boxId)).valueOrF(Future.successful)
     } else {
       Future.successful(NotFound)
     }
   }
 
-  def unsubscribeErn(ernId: String): Action[AnyContent] = authAction.async { implicit request =>
+  def unsubscribeErn(ern: String): Action[AnyContent] = authAction.async { implicit request =>
     if (appConfig.subscribeErnsEnabled) {
       (for {
         // almost certainly need to check that the provided ERN is in the enrolments
         clientId <- retrieveClientIdFromHeader(request)
-        _        <- EitherT.liftF[Future, Result, Done](notificationsService.unsubscribeErns(clientId, Seq(ernId)))
+        _        <- EitherT.liftF[Future, Result, Done](notificationsService.unsubscribeErns(clientId, Seq(ern)))
       } yield Accepted).valueOrF(Future.successful)
     } else {
       Future.successful(NotFound)
