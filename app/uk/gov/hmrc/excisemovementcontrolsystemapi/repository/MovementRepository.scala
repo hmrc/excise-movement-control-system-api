@@ -21,11 +21,11 @@ import org.apache.pekko.Done
 import org.bson.conversions.Bson
 import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.{InsertManyOptions, _}
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.{JsObject, Json, OFormat}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Movement, ProblemMovement, Total}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, Mdc}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.Codecs.JsonOps
@@ -52,7 +52,9 @@ class MovementRepository @Inject() (
       indexes = mongoIndexes(appConfig.movementTTL),
       extraCodecs = Seq(
         Codecs.playFormatCodec(ErnAndLastReceived.format),
-        Codecs.playFormatCodec(MessageNotification.format)
+        Codecs.playFormatCodec(MessageNotification.format),
+        Codecs.playFormatCodec(ProblemMovement.format),
+        Codecs.playFormatCodec(Total.format)
       ),
       replaceIndexes = false
     ) {
@@ -283,6 +285,33 @@ class MovementRepository @Inject() (
       .toFuture()
       .as(Done)
   }
+
+  def getProblemMovements(): Future[Seq[ProblemMovement]] =
+    collection
+      .aggregate[ProblemMovement](
+        Seq(
+          Aggregates.project(Json.obj("messages.encodedMessage" -> 0).toDocument()),
+          Aggregates.unwind("$messages"),
+          Aggregates.`match`(Json.obj("messages.messageType" -> "IE801").toDocument()),
+          Aggregates.group("$_id", Accumulators.sum("countOfIe801s", 1)),
+          Aggregates.`match`(Filters.gt("countOfIe801s", 2))
+        )
+      )
+      .toFuture()
+
+  def getCountOfProblemMovements(): Future[Option[Total]] =
+    collection
+      .aggregate[Total](
+        Seq(
+          Aggregates.project(Json.obj("messages.encodedMessage" -> 0).toDocument()),
+          Aggregates.unwind("$messages"),
+          Aggregates.`match`(Json.obj("messages.messageType" -> "IE801").toDocument()),
+          Aggregates.group("$_id", Accumulators.sum("countOfIe801s", 1)),
+          Aggregates.`match`(Filters.gt("countOfIe801s", 2)),
+          Aggregates.count("total")
+        )
+      )
+      .headOption()
 }
 
 object MovementRepository {
