@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 import com.google.inject.Inject
 import play.api.Logging
 import play.api.libs.json._
-import play.api.mvc.{Action, ControllerComponents}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.InjectController.CsvRow
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
@@ -49,6 +49,16 @@ class InjectController @Inject() (
           .saveMovements(csvRows.map(_.toMovement))
           .map(_ => Accepted)
       }
+    }
+
+  def getMovementsWithTooMany801s(): Action[AnyContent] =
+    auth.authorizedAction(permission).async {
+      movementRepository.getProblemMovements().map(movements => Ok(Json.toJson(movements)))
+    }
+
+  def getCountOfMovementsWithTooMany801s(): Action[AnyContent] =
+    auth.authorizedAction(permission).async {
+      movementRepository.getCountOfProblemMovements().map(_.map(t => Ok(Json.toJson(t))).getOrElse(NotFound))
     }
 }
 
