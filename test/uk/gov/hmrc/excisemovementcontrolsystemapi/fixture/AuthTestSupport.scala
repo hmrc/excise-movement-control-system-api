@@ -22,7 +22,7 @@ import org.mockito.MockitoSugar.when
 import org.scalatestplus.mockito.MockitoSugar.mock
 import uk.gov.hmrc.auth.core.AffinityGroup.Organisation
 import uk.gov.hmrc.auth.core.authorise.{EmptyPredicate, Predicate}
-import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{affinityGroup, authorisedEnrolments, credentials, internalId}
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{affinityGroup, allEnrolments, credentials, internalId}
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
 import uk.gov.hmrc.auth.core.syntax.retrieved.authSyntaxForRetrieved
 import uk.gov.hmrc.auth.core.{AffinityGroup, AuthConnector, Enrolment, Enrolments}
@@ -32,11 +32,20 @@ import scala.concurrent.Future
 trait AuthTestSupport extends NrsTestData {
 
   lazy val authConnector = mock[AuthConnector]
-  private val authFetch  = authorisedEnrolments and affinityGroup and credentials and internalId
+  private val authFetch  = allEnrolments and affinityGroup and credentials and internalId
   private val enrolment  = Enrolment("HMRC-EMCS-ORG")
 
   def withAuthorizedTrader(identifier: String = "123"): Unit = {
     val retrieval = Enrolments(Set(createEnrolmentWithIdentifier(identifier))) and
+      Some(AffinityGroup.Organisation) and
+      Some(Credentials("testProviderId", "testProviderType")) and
+      Some("123")
+
+    withAuthorization(retrieval)
+  }
+
+  def withMultipleEnrolments(enrolments: Enrolments): Unit = {
+    val retrieval = enrolments and
       Some(AffinityGroup.Organisation) and
       Some(Credentials("testProviderId", "testProviderType")) and
       Some("123")

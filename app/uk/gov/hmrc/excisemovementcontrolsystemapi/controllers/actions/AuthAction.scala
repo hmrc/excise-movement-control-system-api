@@ -22,7 +22,7 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.auth.core.AffinityGroup.Organisation
 import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{affinityGroup, authorisedEnrolments, credentials, internalId}
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{affinityGroup, allEnrolments, credentials, internalId}
 import uk.gov.hmrc.auth.core.retrieve.~
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentKey, EnrolmentRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse => EMCSErrorResponse}
@@ -47,7 +47,7 @@ class AuthActionImpl @Inject() (
     with AuthAction
     with Logging {
 
-  private val fetch = authorisedEnrolments and affinityGroup and credentials and internalId
+  private val fetch = allEnrolments and affinityGroup and credentials and internalId
 
   protected def executionContext: ExecutionContext = ec
 
@@ -98,14 +98,14 @@ class AuthActionImpl @Inject() (
   ): Future[Either[ErrorResponse, EnrolmentRequest[A]]] =
     authorised(Enrolment(EnrolmentKey.EMCS_ENROLMENT))
       .retrieve(fetch) {
-        case authorisedEnrolments ~ Some(Organisation) ~ Some(credentials) ~ Some(internalId) =>
-          Future.successful(checkErns(authorisedEnrolments, internalId))
-        case _ ~ None ~ _ ~ _                                                                 => handleAuthError("Could not retrieve affinity group from Auth")
-        case _ ~ Some(affinityGroup) ~ _ ~ _ if affinityGroup != Organisation                 =>
+        case enrolments ~ Some(Organisation) ~ Some(credentials) ~ Some(internalId) =>
+          Future.successful(checkErns(enrolments, internalId))
+        case _ ~ None ~ _ ~ _                                                       => handleAuthError("Could not retrieve affinity group from Auth")
+        case _ ~ Some(affinityGroup) ~ _ ~ _ if affinityGroup != Organisation       =>
           handleAuthError(s"Invalid affinity group $affinityGroup from Auth")
-        case _ ~ _ ~ None ~ _                                                                 => handleAuthError("Could not retrieve credentials from Auth")
-        case _ ~ _ ~ _ ~ None                                                                 => handleAuthError("Could not retrieve internalId from Auth")
-        case _                                                                                => handleAuthError("Invalid enrolment parameter from Auth")
+        case _ ~ _ ~ None ~ _                                                       => handleAuthError("Could not retrieve credentials from Auth")
+        case _ ~ _ ~ _ ~ None                                                       => handleAuthError("Could not retrieve internalId from Auth")
+        case _                                                                      => handleAuthError("Invalid enrolment parameter from Auth")
       }
       .recover {
         case error: AuthorisationException =>
@@ -126,7 +126,6 @@ class AuthActionImpl @Inject() (
     enrolments: Enrolments,
     internalId: String
   )(implicit request: Request[A]): Either[ErrorResponse, EnrolmentRequest[A]] = {
-
     val erns = getAllErnsForEmcsEnrolment(enrolments)
 
     if (erns.isEmpty) {
@@ -137,14 +136,15 @@ class AuthActionImpl @Inject() (
     }
   }
 
-  private def getAllErnsForEmcsEnrolment[A](enrolments: Enrolments): Set[String] =
-    enrolments
-      .getEnrolment(EnrolmentKey.EMCS_ENROLMENT)
-      .fold[Seq[EnrolmentIdentifier]](Seq.empty)(e =>
-        e.identifiers.filter(i => i.key.equalsIgnoreCase(EnrolmentKey.ERN))
+  private def getAllErnsForEmcsEnrolment(enrolments: Enrolments): Set[String] =
+    enrolments.enrolments
+      .filter(enrolments =>
+        enrolments.key.equalsIgnoreCase(EnrolmentKey.EMCS_ENROLMENT) && enrolments.state.equalsIgnoreCase(
+          EnrolmentKey.ACTIVATED
+        )
       )
+      .flatMap(_.identifiers.filter(i => i.key.equalsIgnoreCase(EnrolmentKey.ERN)))
       .map(_.value)
-      .toSet
 }
 
 @ImplementedBy(classOf[AuthActionImpl])
