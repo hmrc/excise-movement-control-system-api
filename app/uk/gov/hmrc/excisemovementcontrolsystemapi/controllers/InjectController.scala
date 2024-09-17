@@ -17,21 +17,24 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import com.google.inject.Inject
+import org.apache.pekko.Done
 import play.api.Logging
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.InjectController.CsvRow
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MovementRepository, MovementWorkItem, ProblemMovementsWorkItemRepo}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.internalauth.client._
+import uk.gov.hmrc.mongo.workitem.WorkItem
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 class InjectController @Inject() (
   cc: ControllerComponents,
   movementRepository: MovementRepository,
+  workItemRepository: ProblemMovementsWorkItemRepo,
   auth: BackendAuthComponents
 )(implicit ec: ExecutionContext)
     extends BackendController(cc)
@@ -60,6 +63,19 @@ class InjectController @Inject() (
     auth.authorizedAction(permission).async {
       movementRepository.getCountOfProblemMovements().map(_.map(t => Ok(Json.toJson(t))).getOrElse(NotFound))
     }
+
+  def buildWorkItemQueue(): Action[AnyContent] =
+    auth
+      .authorizedAction(permission)
+      .async {
+        movementRepository.getProblemMovements().flatMap { mm =>
+          Future
+            .traverse(
+              mm.map(m => MovementWorkItem(m._id)).grouped(250)
+            )(g => workItemRepository.pushNewBatch(g))
+            .map(_ => Ok)
+        }
+      }
 }
 
 object InjectController {
@@ -88,5 +104,4 @@ object InjectController {
   object CsvRow {
     implicit val reads: Reads[CsvRow] = Json.reads[CsvRow]
   }
-
 }
