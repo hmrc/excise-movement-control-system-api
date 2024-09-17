@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
+import org.scalatest.concurrent.IntegrationPatience
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
@@ -25,6 +26,7 @@ import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, PlayMongoRepositorySupport}
 import play.api.inject.bind
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
+
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
@@ -33,6 +35,7 @@ class MessageReAlignmentITSpec extends PlaySpec
                                   with CleanMongoCollectionSupport
                                   with PlayMongoRepositorySupport[Movement]
                                   with GuiceOneAppPerSuite
+                                  with IntegrationPatience
 {
   override def fakeApplication(): Application = GuiceApplicationBuilder()
     .overrides(
