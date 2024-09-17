@@ -46,11 +46,24 @@ class SubscribeErnsController @Inject() (
 
   def subscribeErn(ern: String): Action[AnyContent] = authAction.async { implicit request =>
     if (appConfig.subscribeErnsEnabled) {
-      (for {
-        // almost certainly need to check that the provided ERN is in the enrolments
-        clientId <- retrieveClientIdFromHeader(request)
-        boxId    <- EitherT.liftF[Future, Result, String](notificationsService.subscribeErns(clientId, Seq(ern)))
-      } yield Accepted(boxId)).valueOrF(Future.successful)
+      if (request.erns.contains(ern)) {
+        (for {
+          clientId <- retrieveClientIdFromHeader(request)
+          boxId    <- EitherT.liftF[Future, Result, String](notificationsService.subscribeErns(clientId, Seq(ern)))
+        } yield Accepted(boxId)).valueOrF(Future.successful)
+      } else {
+        Future.successful(
+          Forbidden(
+            Json.toJson(
+              ErrorResponse(
+                dateTimeService.timestamp(),
+                "Forbidden",
+                "Invalid ERN provided"
+              )
+            )
+          )
+        )
+      }
     } else {
       Future.successful(NotFound)
     }
@@ -59,7 +72,6 @@ class SubscribeErnsController @Inject() (
   def unsubscribeErn(ern: String): Action[AnyContent] = authAction.async { implicit request =>
     if (appConfig.subscribeErnsEnabled) {
       (for {
-        // almost certainly need to check that the provided ERN is in the enrolments
         clientId <- retrieveClientIdFromHeader(request)
         _        <- EitherT.liftF[Future, Result, Done](notificationsService.unsubscribeErns(clientId, Seq(ern)))
       } yield Accepted).valueOrF(Future.successful)

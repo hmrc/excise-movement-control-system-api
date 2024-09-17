@@ -35,6 +35,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeAuthentication
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NotificationsService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
 class SubscribeErnsControllerSpec
@@ -46,6 +47,7 @@ class SubscribeErnsControllerSpec
   private val mockNotificationsService = mock[NotificationsService]
   private val mockDateTimeService      = mock[DateTimeService]
   private val mockAppConfig            = mock[AppConfig]
+  private val timestamp                = Instant.parse("2024-05-06T15:30:15.12345612Z")
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
@@ -65,9 +67,30 @@ class SubscribeErnsControllerSpec
   "subscribeErn" must {
     "subscribe the given ern to the clientId" in {
       when(mockAppConfig.subscribeErnsEnabled).thenReturn(true)
+      when(mockDateTimeService.timestamp()).thenReturn(timestamp)
+
       when(mockNotificationsService.subscribeErns(any, any)(any)).thenReturn(Future.successful("boxId"))
 
-      val request = FakeRequest(routes.SubscribeErnsController.subscribeErn("ern1"))
+      val request = FakeRequest(routes.SubscribeErnsController.subscribeErn(ern))
+        .withHeaders(
+          HeaderNames.CONTENT_TYPE -> "application/json",
+          "X-Client-Id"            -> "clientId"
+        )
+
+      val result = createWithSuccessfulAuth.subscribeErn(ern)(request)
+
+      status(result) mustBe ACCEPTED
+      contentAsString(result) mustBe "boxId"
+      verify(mockNotificationsService).subscribeErns(eqTo("clientId"), eqTo(Seq(ern)))(any)
+    }
+
+    "subscribe return Forbidden due to mismatch between ern in request and one passed in" in {
+      when(mockAppConfig.subscribeErnsEnabled).thenReturn(true)
+      when(mockDateTimeService.timestamp()).thenReturn(timestamp)
+
+      when(mockNotificationsService.subscribeErns(any, any)(any)).thenReturn(Future.successful("boxId"))
+
+      val request = FakeRequest(routes.SubscribeErnsController.subscribeErn(ern))
         .withHeaders(
           HeaderNames.CONTENT_TYPE -> "application/json",
           "X-Client-Id"            -> "clientId"
@@ -75,9 +98,23 @@ class SubscribeErnsControllerSpec
 
       val result = createWithSuccessfulAuth.subscribeErn("ern1")(request)
 
-      status(result) mustBe ACCEPTED
-      contentAsString(result) mustBe "boxId"
-      verify(mockNotificationsService).subscribeErns(eqTo("clientId"), eqTo(Seq("ern1")))(any)
+      status(result) mustBe FORBIDDEN
+    }
+
+    "subscribe returns BadRequest due to missing ClientId in header" in {
+      when(mockAppConfig.subscribeErnsEnabled).thenReturn(true)
+      when(mockDateTimeService.timestamp()).thenReturn(timestamp)
+
+      when(mockNotificationsService.subscribeErns(any, any)(any)).thenReturn(Future.successful("boxId"))
+
+      val request = FakeRequest(routes.SubscribeErnsController.subscribeErn(ern))
+        .withHeaders(
+          HeaderNames.CONTENT_TYPE -> "application/json"
+        )
+
+      val result = createWithSuccessfulAuth.subscribeErn(ern)(request)
+
+      status(result) mustBe BAD_REQUEST
     }
 
     "subscribe the given ern should return NotFound when feature flag is off" in {
@@ -127,6 +164,21 @@ class SubscribeErnsControllerSpec
       status(result) mustBe ACCEPTED
       contentAsString(result) mustBe ""
       verify(mockNotificationsService).unsubscribeErns(eqTo("clientId"), eqTo(Seq("ern1")))(any)
+    }
+
+    "unsubscribe returns BadRequest when ClientId is missing from header" in {
+      when(mockAppConfig.subscribeErnsEnabled).thenReturn(true)
+      when(mockNotificationsService.unsubscribeErns(any, any)(any)).thenReturn(Future.successful(Done))
+      when(mockDateTimeService.timestamp()).thenReturn(timestamp)
+
+      val request = FakeRequest(routes.SubscribeErnsController.subscribeErn("ern1"))
+        .withHeaders(
+          HeaderNames.CONTENT_TYPE -> "application/json"
+        )
+
+      val result = createWithSuccessfulAuth.unsubscribeErn("ern1")(request)
+
+      status(result) mustBe BAD_REQUEST
     }
 
     "unsubscribe the given ern returns NotFound when feature flag is off" in {
