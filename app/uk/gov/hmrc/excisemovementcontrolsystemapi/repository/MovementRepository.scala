@@ -19,9 +19,11 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 import cats.implicits.toFunctorOps
 import org.apache.pekko.Done
 import org.bson.conversions.Bson
+import org.mongodb.scala.Document
 import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.{InsertManyOptions, _}
-import play.api.libs.json.{JsObject, Json, OFormat}
+import play.api.Logging
+import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository._
@@ -36,7 +38,7 @@ import java.time.Instant
 import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.Duration
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future, TimeoutException}
 import scala.jdk.CollectionConverters.SeqHasAsJava
 
 @Singleton
@@ -57,9 +59,56 @@ class MovementRepository @Inject() (
         Codecs.playFormatCodec(Total.format)
       ),
       replaceIndexes = false
-    ) {
+    )
+    with Logging {
 
   private def byId(id: String): Bson = Filters.equal("_id", id)
+
+  override def ensureIndexes(): Future[Seq[String]] = Future.successful(Seq.empty)
+
+  def updateTTL(newTtlInSeconds: Long): Future[Done] =
+    collection.listIndexes().toFuture().flatMap { idxs: Seq[Document] =>
+      val idxMaybe = idxs.find(d => d.get("name").map(_.asString().getValue).contains("lastUpdated_ttl_idx"))
+      idxMaybe match {
+        case Some(idx) =>
+          val expiryMaybe = idx.get("expireAfterSeconds").map(_.asInt32().intValue())
+          logger.info(s"current TTL is $expiryMaybe seconds")
+          if (expiryMaybe.contains(newTtlInSeconds)) {
+            logger.info("TTL set correctly, not updating")
+            Future.successful(Done)
+          } else {
+            logger.info("TTL needs updating")
+            mongo.database
+              .runCommand(
+                Json
+                  .obj(
+                    "collMod" -> "movements",
+                    "index"   -> Json.obj(
+                      "keyPattern"         -> Json.obj("lastUpdated" -> 1),
+                      "expireAfterSeconds" -> newTtlInSeconds
+                    )
+                  )
+                  .toDocument()
+              )
+              .toFuture()
+              .andThen { case _ => logger.info("TTL updated") }
+              .map(_ => Done)
+          }
+
+        case None =>
+          logger.error("Failed to update TTL on index.  Index not found.")
+          Future.successful(Done)
+      }
+    }
+
+  try
+  // We await to ensure failures are propagated on the constructor thread, but we
+  // don't care about long running index creation.
+  Await.result(updateTTL(appConfig.movementTTL.toSeconds), Duration.apply("10 seconds"))
+  catch {
+    case _: TimeoutException => logger.warn(s"Updating the TTL timed out s")
+    case t: Throwable        => logger.error(s"Failed to update the TTL", t); throw t
+  }
 
   private def byLrnAndErns(localReferenceNumber: String, erns: List[String]): Bson =
     and(
