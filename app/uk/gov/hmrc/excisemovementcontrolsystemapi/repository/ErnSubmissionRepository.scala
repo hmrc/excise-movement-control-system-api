@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import org.apache.pekko.Done
 import org.mongodb.scala.model._
-import play.api.Configuration
+import play.api.{Configuration, Logging}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnSubmissionRepository.mongoIndexes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ErnSubmission
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, Mdc}
@@ -42,7 +42,8 @@ class ErnSubmissionRepository @Inject() (
       domainFormat = ErnSubmission.format,
       indexes = mongoIndexes(configuration.get[Duration]("mongodb.ernSubmission.TTL")),
       replaceIndexes = false
-    ) {
+    )
+    with Logging {
 
   def getErnsAndLastSubmitted: Future[Map[String, Instant]] = Mdc.preservingMdc {
     collection.find().toFuture().map(_.map(ernSubmission => ernSubmission.ern -> ernSubmission.lastSubmitted).toMap)
@@ -59,11 +60,22 @@ class ErnSubmissionRepository @Inject() (
       .map(_ => Done)
   }
 
-  def removeErns(erns: Seq[String]): Future[Done] = Mdc.preservingMdc {
+  def removeErns(erns: Seq[String]): Future[Int] = Mdc.preservingMdc {
     collection
       .deleteMany(Filters.in("ern", erns: _*))
       .toFuture()
-      .map(_ => Done)
+      .map(obs => obs.getDeletedCount.toInt)
+      .recover { e =>
+        logger.error(s"Error when removing Erns: ${e.getMessage}")
+        throw e
+      }
+  }
+
+  def findErns(erns: Seq[String]): Future[Seq[String]] = Mdc.preservingMdc {
+    collection
+      .find(Filters.in("ern", erns: _*))
+      .toFuture()
+      .map(erns => erns.map(e => e.ern))
   }
 }
 
