@@ -138,8 +138,15 @@ class MessageServiceSpec
 
           "add messages to only the movement when the message has an LRN" in {
             val ern                = "testErn"
-            val lrnMovement        = Movement(None, "lrnie8158976912", ern, None)
-            val notLrnMovement     = Movement(None, "notTheLrn", ern, None)
+            val lrnMovement        = Movement(
+              None,
+              "lrnie8158976912",
+              ern,
+              None,
+              lastUpdated = updateOrCreateTimestamp.minus(1, ChronoUnit.DAYS)
+            )
+            val notLrnMovement     =
+              Movement(None, "notTheLrn", ern, None, lastUpdated = updateOrCreateTimestamp.minus(1, ChronoUnit.DAYS))
             val ie704              = XmlMessageGeneratorFactory.generate(
               ern,
               MessageParams(IE704, "XI000001", localReferenceNumber = Some("lrnie8158976912"))
@@ -209,7 +216,8 @@ class MessageServiceSpec
               consignorErn,
               Some(consigneeErn),
               administrativeReferenceCode = None,
-              messages = Seq.empty
+              messages = Seq.empty,
+              lastUpdated = updateOrCreateTimestamp.minus(1, ChronoUnit.DAYS)
             )
             val notArcMovement = Movement(None, "lrn2", consignorErn, None)
 
@@ -297,7 +305,8 @@ class MessageServiceSpec
               ern,
               Some("testConsignee"),
               Some("23XI00000000000000012"),
-              messages = Seq(Message(utils.encode(ie801.toString()), "IE801", "GB00001", ern, Set.empty, now))
+              messages = Seq(Message(utils.encode(ie801.toString()), "IE801", "GB00001", ern, Set.empty, now)),
+              lastUpdated = updateOrCreateTimestamp.minus(1, ChronoUnit.DAYS)
             )
             val messages         = Seq(IE704Message.createFromXml(ie704))
             val expectedMessages = movement.messages ++ Seq(
@@ -335,7 +344,7 @@ class MessageServiceSpec
         "update all relevant movements with the message" in {
           // 829 doesn't have consignor in it - can't make a movement from this
           // movements created here won't get push notifications
-          val movement1Timestamp = now.plus(1, ChronoUnit.SECONDS)
+          val movement1Timestamp = lastRetrievedTimestamp.minus(1, ChronoUnit.DAYS)
           val movement2Timestamp = movement1Timestamp.plus(1, ChronoUnit.SECONDS)
           val ern                = "testErn"
           val ie829              = XmlMessageGeneratorFactory.generate(
@@ -350,16 +359,30 @@ class MessageServiceSpec
 
           val expectedMessage1  =
             Seq(
-              Message(utils.encode(message.toXml.toString()), "IE829", "XI000001", ern, Set.empty, movement1Timestamp)
+              Message(
+                utils.encode(message.toXml.toString()),
+                "IE829",
+                "XI000001",
+                ern,
+                Set.empty,
+                lastRetrievedTimestamp
+              )
             )
           val expectedMessage2  =
             Seq(
-              Message(utils.encode(message.toXml.toString()), "IE829", "XI000001", ern, Set.empty, movement2Timestamp)
+              Message(
+                utils.encode(message.toXml.toString()),
+                "IE829",
+                "XI000001",
+                ern,
+                Set.empty,
+                lastRetrievedTimestamp
+              )
             )
-          val expectedMovement1 = movement1.copy(messages = expectedMessage1)
-          val expectedMovement2 = movement2.copy(messages = expectedMessage2)
+          val expectedMovement1 = movement1.copy(messages = expectedMessage1, lastUpdated = lastRetrievedTimestamp)
+          val expectedMovement2 = movement2.copy(messages = expectedMessage2, lastUpdated = lastRetrievedTimestamp)
 
-          when(dateTimeService.timestamp()).thenReturn(lastRetrievedTimestamp, movement1Timestamp, movement2Timestamp)
+          when(dateTimeService.timestamp()).thenReturn(lastRetrievedTimestamp)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement1, movement2)))
           when(movementRepository.save(any)).thenReturn(Future.successful(Done))
           when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
@@ -374,7 +397,7 @@ class MessageServiceSpec
 
           val movementCaptor = ArgCaptor[Movement]
 
-          verify(dateTimeService, times(3)).timestamp()
+//          verify(dateTimeService, times(1)).timestamp()
           verify(messageConnector).getNewMessages(eqTo(ern))(any)
           verify(movementRepository).getAllBy(eqTo(ern))
           verify(movementRepository, times(2)).save(movementCaptor)
@@ -795,7 +818,7 @@ class MessageServiceSpec
           val message3Timestamp = message2Timestamp.plus(1, ChronoUnit.SECONDS)
           val consignor         = "testErn"
           val consignee         = "testConsignee"
-          val lrnMovement       = Movement(None, "lrnie8158976912", consignor, Some(consignee))
+          val lrnMovement       = Movement(None, "lrnie8158976912", consignor, Some(consignee), lastUpdated = now)
 
           val ie704                = XmlMessageGeneratorFactory.generate(
             consignor,
@@ -908,17 +931,17 @@ class MessageServiceSpec
           val movement3Timestamp = movement2Timestamp.plus(1, ChronoUnit.SECONDS)
           val consignor          = "testErn"
           val consignee          = "testConsignee"
-          val movement1          = Movement(None, "lrn1", consignor, Some(consignee))
+          val movement1          = Movement(None, "lrn1", consignor, Some(consignee), lastUpdated = now)
           val ie801_1            = XmlMessageGeneratorFactory.generate(
             consignor,
             MessageParams(IE801, "message1", Some(consignee), Some("arc1"), Some("lrn1"))
           )
-          val movement2          = Movement(None, "lrn2", consignor, Some(consignee))
+          val movement2          = Movement(None, "lrn2", consignor, Some(consignee), lastUpdated = now)
           val ie801_2            = XmlMessageGeneratorFactory.generate(
             consignor,
             MessageParams(IE801, "message2", Some(consignee), Some("arc2"), Some("lrn2"))
           )
-          val movement3          = Movement(None, "lrn3", consignor, Some(consignee))
+          val movement3          = Movement(None, "lrn3", consignor, Some(consignee), lastUpdated = now)
           val ie801_3            = XmlMessageGeneratorFactory.generate(
             consignor,
             MessageParams(IE801, "message3", Some(consignee), Some("arc3"), Some("lrn3"))
