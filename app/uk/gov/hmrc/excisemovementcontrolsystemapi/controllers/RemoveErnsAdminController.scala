@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import play.api.libs.json.{JsValue, Json, OFormat}
 import play.api.mvc.{Action, ControllerComponents}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.RemoveErnsAdminController.RemoveErnsRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.RemoveErnsAdminController.{RemoveErnsRequest, RemoveErnsResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnSubmissionRepository
 import uk.gov.hmrc.internalauth.client.{BackendAuthComponents, IAAction, Predicate, Resource, ResourceLocation, ResourceType, Retrieval}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -47,9 +47,10 @@ class RemoveErnsAdminController @Inject() (
   def removeErns(): Action[JsValue] =
     authorised.async(parse.json) { implicit request =>
       withJsonBody[RemoveErnsRequest] { removeRequest =>
-        ernSubmissionRepository
-          .removeErns(removeRequest.erns.toSeq)
-          .map(_ => NoContent)
+        for {
+          total      <- ernSubmissionRepository.removeErns(removeRequest.erns.toSeq)
+          persisting <- ernSubmissionRepository.findErns(removeRequest.erns.toSeq)
+        } yield Ok(Json.toJson(RemoveErnsResponse(total, persisting.toSet)))
       }
     }
 }
@@ -60,6 +61,13 @@ object RemoveErnsAdminController {
   object RemoveErnsRequest {
 
     implicit lazy val format: OFormat[RemoveErnsRequest] = Json.format
+
+  }
+
+  final case class RemoveErnsResponse(total: Int, persisting: Set[String])
+  object RemoveErnsResponse {
+
+    implicit lazy val format: OFormat[RemoveErnsResponse] = Json.format
 
   }
 }

@@ -32,7 +32,7 @@ import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.RemoveErnsAdminController.RemoveErnsRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.RemoveErnsAdminController.{RemoveErnsRequest, RemoveErnsResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubscribeErnsAdminController.SubscribeErnsRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnSubmissionRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NotificationsService
@@ -76,16 +76,19 @@ class RemoveErnsAdminControllerSpec extends PlaySpec with GuiceOneAppPerSuite wi
       when(mockStubBehaviour.stubAuth(Some(expectedPredicate), Retrieval.EmptyRetrieval))
         .thenReturn(Future.successful(()))
 
-      when(mockRepository.removeErns(any)).thenReturn(Future.successful(Done))
+      when(mockRepository.removeErns(any)).thenReturn(Future.successful(2))
+      when(mockRepository.findErns(any)).thenReturn(Future.successful(Seq.empty))
 
       val fakeRequest = FakeRequest(routes.RemoveErnsAdminController.removeErns())
         .withBody(Json.toJson(RemoveErnsRequest(Set("ern1", "ern2"))))
         .withHeaders("Authorization" -> "Token some-token")
 
       val result      = route(app, fakeRequest).value
-      status(result) mustBe NO_CONTENT
+      status(result) mustBe OK
+      contentAsJson(result) mustBe Json.toJson(RemoveErnsResponse(2, Set.empty[String]))
       verify(mockStubBehaviour).stubAuth(any(), any())
       verify(mockRepository).removeErns(eqTo(Seq("ern1", "ern2")))
+      verify(mockRepository).findErns(eqTo(Seq("ern1", "ern2")))
     }
 
     "return error" when {
