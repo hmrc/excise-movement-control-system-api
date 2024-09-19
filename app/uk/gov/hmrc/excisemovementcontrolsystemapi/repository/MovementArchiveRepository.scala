@@ -42,8 +42,7 @@ import scala.jdk.CollectionConverters.SeqHasAsJava
 @Singleton
 class MovementArchiveRepository @Inject() (
   mongo: MongoComponent,
-  appConfig: AppConfig,
-  timeService: DateTimeService
+  appConfig: AppConfig
 )(implicit ec: ExecutionContext)
     extends PlayMongoRepository[Movement](
       collectionName = "movements-archive",
@@ -55,7 +54,7 @@ class MovementArchiveRepository @Inject() (
 
   def saveMovement(movement: Movement): Future[Boolean] = Mdc.preservingMdc {
     this.collection
-      .insertOne(movement.copy(lastUpdated = timeService.timestamp()))
+      .insertOne(movement)
       .toFuture()
       .map(_ => true)
   }

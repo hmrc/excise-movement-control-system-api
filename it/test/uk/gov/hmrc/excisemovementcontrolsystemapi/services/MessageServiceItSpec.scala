@@ -37,6 +37,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalReposi
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import java.time.{Duration, Instant}
@@ -45,6 +46,8 @@ import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Promise}
 import scala.xml.{NodeSeq, Utility}
+
+
 
 class MessageServiceItSpec
   extends AnyFreeSpec
@@ -402,7 +405,7 @@ class MessageServiceItSpec
         insert(rootMovement).futureValue
         insert(thirdMovement).futureValue
 
-        service.fixProblemMovement(rootMovement._id)(hc).futureValue
+        service.archiveAndFixProblemMovement(rootMovement._id)(hc).futureValue
 
         count().futureValue mustEqual 3
         val results = findAll().futureValue
@@ -529,7 +532,7 @@ class MessageServiceItSpec
         insert(rootMovement).futureValue
         insert(thirdMovement).futureValue
 
-        service.fixProblemMovement(rootMovement._id)(hc).futureValue
+        service.archiveAndFixProblemMovement(rootMovement._id)(hc).futureValue
 
         count().futureValue mustEqual 3
         val results = findAll().futureValue
@@ -595,7 +598,7 @@ class MessageServiceItSpec
 
         insert(movement).futureValue
 
-        service.fixProblemMovement(movement._id)(hc).futureValue
+        service.archiveAndFixProblemMovement(movement._id)(hc).futureValue
 
         count().futureValue mustEqual 1
 
@@ -666,7 +669,7 @@ class MessageServiceItSpec
 
         insert(rootMovement).futureValue
 
-        service.fixProblemMovement(rootMovement._id)(hc).futureValue
+        service.archiveAndFixProblemMovement(rootMovement._id)(hc).futureValue
 
         count().futureValue mustEqual 2
         val results = findAll().futureValue
@@ -796,7 +799,7 @@ class MessageServiceItSpec
         insert(rootMovement).futureValue
         insert(thirdMovement).futureValue
 
-        service.fixProblemMovement(rootMovement._id)(hc).futureValue
+        service.archiveAndFixProblemMovement(rootMovement._id)(hc).futureValue
 
         count().futureValue mustEqual 3
         val results = findAll().futureValue

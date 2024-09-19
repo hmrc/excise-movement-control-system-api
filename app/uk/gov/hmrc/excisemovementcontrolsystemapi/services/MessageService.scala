@@ -27,16 +27,17 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, 
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnRetrievalRepository, MovementRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnRetrievalRepository, MovementArchiveRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService.{EnrichedError, UpdateOutcome}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, NotFoundException}
 import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
 
 import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 import scala.util.control.NonFatal
 import scala.xml.XML
 
@@ -44,6 +45,7 @@ import scala.xml.XML
 class MessageService @Inject() (
   configuration: Configuration,
   movementRepository: MovementRepository,
+  movementArchiveRepository: MovementArchiveRepository,
   ernRetrievalRepository: ErnRetrievalRepository,
   boxIdRepository: BoxIdRepository,
   messageConnector: MessageConnector,
@@ -104,36 +106,42 @@ class MessageService @Inject() (
       .map(_.getOrElse(UpdateOutcome.Locked))
   }
 
-  def archiveProblemMovement(id: String): Future[Done] = ???
+  private def fixProblemMovement(movement: Movement)(implicit headerCarrier: HeaderCarrier) = {
+    val movementWithNoMessages = movement.copy(messages = Seq.empty, administrativeReferenceCode = None)
+    movement.messages
+      .sortBy(_.createdOn)
+      .foldLeft(Future.successful(Seq.empty[Movement])) { (accumulated, message) =>
+        val ieMessage = messageFactory
+          .createFromXml(message.messageType, XML.loadString(emcsUtils.decode(message.encodedMessage)))
+        for {
+          accumulatedMovements <- accumulated
+          updatedMovements     <- updateOrCreateMovements(
+                                    message.recipient,
+                                    Seq(movementWithNoMessages),
+                                    accumulatedMovements,
+                                    ieMessage,
+                                    shouldNotify = false,
+                                    message.createdOn
+                                  )
+        } yield (updatedMovements ++ accumulatedMovements).distinctBy { movement =>
+          (movement.localReferenceNumber, movement.consignorId, movement.administrativeReferenceCode)
+        }
+      }
+      .flatMap {
+        _.traverse(movementRepository.save)
+      }
+      .map(_ => Done)
+  }
 
-  def fixProblemMovement(id: String)(implicit hc: HeaderCarrier): Future[Done] =
+  def archiveAndFixProblemMovement(id: String)(implicit hc: HeaderCarrier): Future[Done] =
     movementRepository.getMovementById(id).flatMap {
-      _.map { movement =>
-        val movementWithNoMessages = movement.copy(messages = Seq.empty, administrativeReferenceCode = None)
-        movement.messages
-          .sortBy(_.createdOn)
-          .foldLeft(Future.successful(Seq.empty[Movement])) { (accumulated, message) =>
-            val ieMessage = messageFactory
-              .createFromXml(message.messageType, XML.loadString(emcsUtils.decode(message.encodedMessage)))
-            for {
-              accumulatedMovements <- accumulated
-              updatedMovements     <- updateOrCreateMovements(
-                                        message.recipient,
-                                        Seq(movementWithNoMessages),
-                                        accumulatedMovements,
-                                        ieMessage,
-                                        shouldNotify = false,
-                                        message.createdOn
-                                      )
-            } yield (updatedMovements ++ accumulatedMovements).distinctBy { movement =>
-              (movement.localReferenceNumber, movement.consignorId, movement.administrativeReferenceCode)
-            }
-          }
-          .flatMap {
-            _.traverse(movementRepository.save)
-          }
-          .map(_ => Done)
-      }.getOrElse(Future.successful(Done))
+      case Some(movement) =>
+        for {
+          _ <- movementArchiveRepository.saveMovement(movement)
+          _ <- fixProblemMovement(movement)
+        } yield Done
+      case None           =>
+        Future.failed[Done](new Exception("Movement to be fixed was not found"))
     }
 
   private def shouldMigrateLastUpdated(maybeLastRetrieved: Option[Instant]): Boolean =
