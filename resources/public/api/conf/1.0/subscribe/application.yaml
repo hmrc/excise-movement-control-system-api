@@ -1,0 +1,1574 @@
+openapi: 3.0.3
+info:
+  title: Excise Movement Control System API
+  description: |-
+    Use the EMCS API to submit excise movement notifications to the Excise Movement and Control System (EMCS). You can also send and receive messages about excise movements and retrieve information about excise traders. 
+    
+    The [EMCS API service guide](/guides/emcs-api-service-guide/) contains a detailed overview of v1.0 of the API.
+
+    Testing instructions can be found in the [EMCS API testing guide](/guides/emcs-api-testing-guide/).
+  contact: { }
+  version: "1.0.0"
+servers:
+  - url: https://test-api.service.hmrc.gov.uk
+    description: Sandbox
+  - url: https://api.service.hmrc.gov.uk
+    description: Production
+tags:
+  - name: Movements
+    description: Create, amend or cancel an excise movement
+  - name: Traders
+    description: Information relating to excise traders
+paths:
+  /customs/excise/movements:
+    post:
+      tags:
+        - Movements
+      summary: Submit a new draft excise movement
+      description: Submit a new draft excise movement. </br></br>**Note:** The consignor ID in the IE815 message must match an excise reference number (ERN) in the bearer token that you use for API authentication. If it does not, a 403 Forbidden error will be thrown.
+      operationId: submitMovement
+      parameters:
+        - $ref: "#/components/parameters/AcceptHeader"
+        - $ref: "#/components/parameters/ContentTypeHeader"
+      requestBody:
+        description: |
+          The body for this request should be an XML body that conforms to the [IE815 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie815.xsd)
+          
+          An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE815.xml)
+
+        required: true
+        content:
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/IE815'
+            examples:
+              submitDraftMovement:
+                summary: Submit draft movement (IE815)
+                value: '<IE815><!-- Example IE815 message --></IE815>'
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ExciseMovement'
+              example:
+                movementId: b6ba6a73-d723-4c9f-b9b7-99e533fb614f
+                boxId: 42c75e22-7bba-44f2-a610-4b4c3b262e3e
+                localReferenceNumber: "LRNQA20230909022221"
+                consignorId: "GBWK002281023"
+                consigneeId: "GBWKQOZ8OVLYR"
+
+        '400':
+          description: The submission of the draft movement message has failed validation
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                duplicateLrn:
+                  summary: "Duplicate LRN"
+                  value:
+                    dateTime: "2024-01-17T15:21:17.170162Z"
+                    message: "Duplicate LRN error"
+                    debugMessage: "The local reference number lrnie8156540856 has already been used for another movement"
+                jsonValidation:
+                  summary: "Json validation error downstream"
+                  value:
+                    dateTime: "2021-12-17T09:30:47Z"
+                    status: "BAD_REQUEST"
+                    message: "Json validation failed"
+                    debugMessage: "user is missing but it is required"
+                    emcsCorrelationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+                invalidIE815:
+                  summary: "Invalid IE815 message / XML parsing error"
+                  value:
+                    dateTime: "2014-01-17T15:24:29.598475Z"
+                    message: "Not valid IE815 message"
+                    debugMessage: "Error while parsing: DateOfDispatch field expected"
+
+        '401':
+          description: Authorisation errors, e.g. consignor not authorised, authorisation expired, invalid enrolment parameter.
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: "2024-01-17T15:27:29.540089Z"
+                message: Authorisation error
+                debugMessage: Unauthorised Exception with error Bearer token expired
+
+        '403':
+          description: Consignor ID is not in authorisation bearer token
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ConsignorNotAuthorised:
+                  summary: Consignor not authorised
+                  value:
+                    dateTime: '2024-01-17T15:27:29.540089Z'
+                    message: Message cannot be sent
+                    debugMessage: The Consignor is not authorised to submit this message for the movement
+                TokenError:
+                  summary: "Login has no associated ERN"
+                  value:
+                    dateTime: "2024-01-17T15:27:29.540089Z"
+                    message: Authorisation error
+                    debugMessage: Could not find ExciseNumber
+
+        '404':
+          description: Downstream connection refused
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: '2021-12-17T09:31:12Z'
+                message: Received error response from server
+                debugMessage: 'Connection refused; nested exception is java.net.ConnectException: Connection refused'
+                correlationId: b47a371c-01e6-4dc0-97c1-dd524f7035d0
+
+        '422':
+          description: The draft movement message has failed validation
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: '2021-12-17T09:31:12Z'
+                message: "Validation error"
+                debugMessage: "Validation error(s) occurred"
+                validatorResults:
+                  - errorCategory: "business"
+                    errorType: 8084
+                    errorReason: "The Date of Dispatch you entered is incorrect. It must be today or later. Please amend your entry and resubmit."
+                    errorLocation: "/urn:IE815[1]/urn:Body[1]/urn:SubmittedDraftOfEADESAD[1]/urn:EadEsadDraft[1]/urn:DateOfDispatch[1]"
+                    originalAttributeValue: "2023-09-09"
+
+        '500':
+          description: Internal server error
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                downstreamError:
+                  summary: Downstream internal server error
+                  value:
+                    dateTime: "2021-12-17T09:30:47Z"
+                    message: "Invalid JSON structure"
+                    debugMessage: "JSON parse error: Unexpected character"
+                    correlationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+                databaseError:
+                  summary: Database error
+                  value:
+                    dateTime: '2024-01-17T15:27:29.540089Z'
+                    message: Database error
+                    debugMessage: Error occurred while saving movement
+
+        '503':
+          description: Downstream service is Unavailable
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: '2021-12-17T09:31:12Z'
+                message: CIRCUIT_BREAKER - 815_CB is OPEN
+                debugMessage: CircuitBreaker '815_CB' is OPEN and does not permit further calls
+                correlationId: 4afb4a1e-33ca-42a5-8117-315db02b7f3c
+
+      security:
+        - userRestricted:
+            - excise-movement-control-system
+
+    get:
+      tags:
+        - Movements
+      summary: Get excise movements
+      description: Get excise movements. </br></br>**Note:** You will only be able to retrieve movements where the consignor ID or consignee ID of the movement matches any of your excise reference numbers (ERNs) in the bearer token that you use for API authentication.
+      operationId: getAllMovements
+      parameters:
+        - $ref: "#/components/parameters/AcceptHeader"
+        - name: ern
+          in: query
+          description: Filter excise movements by excise reference number (consignor ID/consignee ID). If you do not provide an excise reference number (ERN) as a query parameter, you will get a list for all ERNs in your bearer token.
+          required: false
+          schema:
+            type: string
+        - name: arc
+          in: query
+          description: Filter excise movements by administrative reference code (ARC). This will return one movement in the list.
+          required: false
+          schema:
+            type: string
+        - name: lrn
+          in: query
+          description: Filter excise movements by local reference number (LRN)
+          required: false
+          schema:
+            type: string
+        - name: updatedSince
+          in: query
+          description: Filter excise movements modified after provided timestamp.<br/>This can be used to poll for any updated movements.<br/>For each updated movement that gets returned, you can then call the get messages endpoint and pass in the same value for its "updatedSince" query parameter to get the messages that have been received since you last polled.
+          required: false
+          schema:
+            $ref: "#/components/schemas/DateTime"
+        - name: traderType
+          in: query
+          description: Filter excise movements by trader type (consignor or consignee)
+          required: false
+          schema:
+            $ref: "#/components/schemas/QueryTraderType"
+      responses:
+        '200':
+          description: Successful operation. If there are no movements for any of your excise reference numbers (ERNs) in your bearer token or because of the filters, this will return an empty list.
+          content:
+            application/vnd.hmrc.1.0+json:
+              example:
+                - movementId: "b6ba6a73-d723-4c9f-b9b7-99e533fb614f"
+                  consignorId: "GBWK002281023"
+                  consigneeId: "GBWKQOZ8OVLYR"
+                  localReferenceNumber: "LRNQA20230909022221"
+                  lastUpdated: "2024-01-17T15:27:29.540089Z"
+                  administrativeReferenceCode: "35WE3B5EDSYSZ86STVKH8"
+                - movementId: "612d2527-c207-4ffb-9250-f4ece59a29c5"
+                  consignorId: "GBWK002281023"
+                  consigneeId: "GBWKQOZ8OVLYQ"
+                  localReferenceNumber: "LRNQA20230909022224"
+                  lastUpdated: "2024-01-17T15:25:29.540089Z"
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExciseMovement'
+
+        '400':
+          description: Bad request - either filter ERN is invalid or date filter format is invalid
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                ernParameter:
+                  summary: Filter ERN is not valid
+                  value:
+                    dateTime: '2024-01-17T16:26:18.062304Z'
+                    message: ERN parameter value error
+                    debugMessage: The ERN GBWKQOZ8OVLDD supplied in the parameter is not among the authorised ERNs GBWKQOZ8OVLYR
+                dateFormat:
+                  summary: Date filter format is not valid
+                  value:
+                    dateTime: '2024-01-17T16:27:41.095827Z'
+                    message: Invalid date format provided in the updatedSince query parameter
+                    debugMessage: Date format should be like '2020-11-15T17:02:34.00Z'
+
+        '401':
+          description: Authorisation errors, e.g. excise number not authorised, authorisation expired, invalid enrolment parameter.
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: "2024-01-17T15:27:29.540089Z"
+                message: Authorisation error
+                debugMessage: Unauthorised Exception with error Bearer token expired
+
+      security:
+        - userRestricted:
+            - excise-movement-control-system
+
+  /customs/excise/movements/{movementId}:
+    get:
+      tags:
+        - Movements
+      summary: Get excise movement
+      description: Get excise movement for the supplied movement ID. </br></br>**Note:** You will only be able to retrieve movements where the consignor ID or consignee ID of the movement matches any of your excise reference numbers (ERNs) in the bearer token that you use for API authentication.
+      operationId: getMovement
+      parameters:
+        - $ref: "#/components/parameters/AcceptHeader"
+        - name: movementId
+          in: path
+          description: Movement Id of the movement to be returned
+          required: true
+          schema:
+            $ref: '#/components/schemas/MovementId'
+
+      responses:
+        '200':
+          description: Successful operation. This will contain the details of the requested movement.
+          content:
+            application/vnd.hmrc.1.0+json:
+              example:
+                movementId: "b6ba6a73-d723-4c9f-b9b7-99e533fb614f"
+                consignorId: "GBWK002281023"
+                consigneeId: "GBWKQOZ8OVLYR"
+                localReferenceNumber: "LRNQA20230909022221"
+                administrativeReferenceCode: "35WE3B5EDSYSZ86STVKH8"
+                lastUpdated: "2024-01-17T15:27:29.540089Z"
+              schema:
+                $ref: '#/components/schemas/ExciseMovement'
+
+        '401':
+          description: Authorisation errors, e.g. excise number not authorised, authorisation expired, invalid enrolment parameter.
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: "2024-01-17T15:27:29.540089Z"
+                message: Authorisation error
+                debugMessage: Unauthorised Exception with error Bearer token expired
+
+        '404':
+          description: Movement with supplied id not found for this ERN
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                movementNotFound:
+                  summary: Movement not in database
+                  value:
+                    dateTime: '2024-01-17T16:26:18.062304Z'
+                    message: Movement not found
+                    debugMessage: Movement b6ba6a73-d723-4c9f-b9b7-99e533fb614f could not not found
+                movementNotForErn:
+                  summary: Movement not valid for ERN
+                  value:
+                    dateTime: '2024-01-17T16:27:41.095827Z'
+                    message: Movement not found
+                    debugMessage: Movement b6ba6a73-d723-4c9f-b9b7-99e533fb614f is not found within the data for ERNs GBWK002281022
+      security:
+        - userRestricted:
+            - excise-movement-control-system
+
+  /customs/excise/movements/{movementId}/messages:
+    post:
+      tags:
+        - Movements
+      summary: Submit a message for an excise movement.
+      description: |
+        Submit a message for a specific excise movement. </br></br>
+        
+        **Note:** The consignor ID or consignee ID in the message must match an excise reference number (ERN) in the bearer token that you use for API authentication. If it does not, a 403 Forbidden error will be thrown.
+      operationId: postMessage
+      parameters:
+        - $ref: '#/components/parameters/AcceptHeader'
+        - $ref: '#/components/parameters/ContentTypeHeader'
+        - name: movementId
+          in: path
+          description: The movement to submit messages for
+          required: true
+          schema:
+            $ref: '#/components/schemas/MovementId'
+      requestBody:
+        required: true
+        content:
+          application/xml:
+            schema:
+              # I tried to use a "oneOf" here but the examples didn't work so using a GenericXML object instead.
+              type: object
+              xml:
+                name: GenericXML
+            examples:
+              cancellation:
+                summary: Submit cancellation (IE810)
+                description: |
+                  The body for this request should be an XML body that conforms to the [IE810 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie810.xsd)
+                  
+                  An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE810.xml)
+                value: '<IE810><!-- Example IE810 message --></IE810>'
+              changeOfDestination:
+                summary: Submit change of destination (IE813)
+                description: |
+                  The body for this request should be an XML body that conforms to the [IE813 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie813.xsd)
+                  
+                  An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE813.xml)
+                value: '<IE813><!-- Example IE813 message --></IE813>'
+              reportOfReceipt:
+                summary: Submit report of receipt (IE818)
+                description: |
+                  The body for this request should be an XML body that conforms to the [IE818 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie818.xsd)
+                  
+                  An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE818.xml)
+                value: '<IE818><!-- Example IE818 message --></IE818>'
+              alertOrRejection:
+                summary: Submit alert or rejection (IE819)
+                description: |
+                  The body for this request should be an XML body that conforms to the [IE819 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie819.xsd)
+                  
+                  An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE819.xml)
+                value: '<IE819><!-- Example IE819 message --></IE819>'
+              #              Temporarily commented out until MVP+
+              #              split:
+              #                summary: Submit split movement (IE825)
+              #                description: The body for this request should be an XML body that conforms to the [IE825 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie825.xsd)
+              #                value: '<IE825><!-- Example IE825 message --></IE825>'
+              explainDelayToDelivery:
+                summary: Submit explain delay to delivery (IE837)
+                description: |
+                  The body for this request should be an XML body that conforms to the [IE837 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie837.xsd)
+                  
+                  An example submitted by the consignor can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE837_consignor.xml)
+                  
+                  An example submitted by the consignee can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE837_consignee.xml)
+                value: '<IE837><!-- Example IE837 message --></IE837>'
+              reasonForShortage:
+                summary: Submit reason for shortage (IE871)
+                description: |
+                  The body for this request should be an XML body that conforms to the [IE871 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie871.xsd)
+                  
+                  An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE871.xml)
+                value: '<IE871><!-- Example IE871 message --></IE871>'
+
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ExciseMovement'
+              example:
+                movementId: b6ba6a73-d723-4c9f-b9b7-99e533fb614f
+                localReferenceNumber: "LRNQA20230909022221"
+                consignorId: "GBWK002281023"
+                consigneeId: "GBWKQOZ8OVLYR"
+                administrativeReferenceCode: "23XI00000000000000013"
+
+        '400':
+          description: The submitted message has failed validation
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: "2014-01-17T15:24:29.598475Z"
+                message: "Not valid IE818 message"
+                debugMessage: "Error while parsing: TraderId field expected"
+
+
+        '401':
+          description: Authorisation errors, e.g. consignor or consignee not authorised, authorisation expired, invalid enrolment parameter.
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: "2024-01-17T15:27:29.540089Z"
+                message: Authorisation error
+                debugMessage: Unauthorised Exception with error Bearer token expired
+
+        '403':
+          description: Consignor ID or consignee ID is not in authorisation bearer token
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ConsignorNotAuthorised:
+                  summary: Consignor not authorised
+                  value:
+                    dateTime: '2024-01-17T15:27:29.540089Z'
+                    message: Message cannot be sent
+                    debugMessage: The Consignor is not authorised to submit this message for the movement
+                TokenError:
+                  summary: "Login has no associated ERN"
+                  value:
+                    dateTime: "2024-01-17T15:27:29.540089Z"
+                    message: Authorisation error
+                    debugMessage: Could not find ExciseNumber
+
+        '404':
+          description: Movement doesn't exist or downstream connection issues
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                movementDoesntExist:
+                  summary: Movement doesn't exist
+                  value:
+                    dateTime: '2021-12-17T09:31:12Z'
+                    message: Movement not found
+                    debugMessage: 'Movement 63094173-a3b7-4821-b65b-8ebcafb27f3 could not be found'
+                downstreamConnection:
+                  summary: Downstream connection error
+                  value:
+                    dateTime: '2021-12-17T09:31:12Z'
+                    message: Received error response from server
+                    debugMessage: 'Connection refused; nested exception is java.net.ConnectException: Connection refused'
+                    correlationId: b47a371c-01e6-4dc0-97c1-dd524f7035d0
+
+        '422':
+          description: The message has failed validation
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: '2021-12-17T09:31:12Z'
+                message: "Validation error"
+                debugMessage: "Validation error(s) occurred"
+                validatorResults:
+                  - errorCategory: "business"
+                    errorType: 8007
+                    errorReason: "The destination office must be valid and start with 'GB' or 'XI' followed by six numbers. Please amend your entry and resubmit."
+                    errorLocation: "/urn:IE818[1]/urn:Body[1]/urn:AcceptedOrRejectedReportOfReceiptExport[1]/urn:DestinationOffice[1]"
+                    originalAttributeValue: "83844"
+
+        '500':
+          description: Internal server error
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: "2021-12-17T09:30:47Z"
+                message: "Invalid JSON structure"
+                debugMessage: "JSON parse error: Unexpected character"
+                correlationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+
+        '503':
+          description: Downstream service is Unavailable
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: '2021-12-17T09:31:12Z'
+                message: CIRCUIT_BREAKER - 815_CB is OPEN
+                debugMessage: CircuitBreaker '815_CB' is OPEN and does not permit further calls
+                correlationId: 4afb4a1e-33ca-42a5-8117-315db02b7f3c
+
+      security:
+        - userRestricted:
+            - excise-movement-control-system
+
+    get:
+      tags:
+        - Movements
+      summary: Get all messages for an excise movement using the movementId
+      description: Get all messages for a specific excise movement. </br></br>**Note:** The consignor ID or consignee ID must match an excise reference number (ERN) in the bearer token that you use for API authentication. If it does not, a 403 Forbidden error will be thrown.
+      operationId: getAllMessages
+      parameters:
+        - $ref: "#/components/parameters/AcceptHeader"
+        - name: movementId
+          in: path
+          description: The movement to get messages for
+          required: true
+          schema:
+            type: string
+        - name: updatedSince
+          in: query
+          description: Filter messages received after provided timestamp.<br/>This can be used to poll for new messages per ERN/LRN combination.<br/>You can also poll on the get movements endpoint which allows a more efficient way to poll as that can first give you a list of movements that have new messages and then use this endpoint to retrieve the updated messages for those movements.
+          required: false
+          schema:
+            $ref: "#/components/schemas/DateTime"
+        - name: traderType
+          in: query
+          description: Filter excise movements by trader type (consignor or consignee)
+          required: false
+          schema:
+            $ref: "#/components/schemas/QueryTraderType"
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/vnd.hmrc.1.0+json:
+              example:
+                - encodedMessage: PElFODE1PjwhLS0gRXhhbXBsZSBJRTgxNSBtZXNzYWdlIC0tPjwvSUU4MTU+
+                  messageType: IE801
+                  recipient: GBWK002281024
+                  messageId: messageId1
+                  createdOn: 2023-10-30T15:36:08.985Z
+                - encodedMessage: PElFODAxPjwhLS0gRXhhbXBsZSBJRTgwMSBtZXNzYWdlIC0tPjwvSUU4MDE+
+                  messageType: IE818
+                  recipient: GBWK002281024
+                  messageId: messageId2
+                  createdOn: 2023-10-28T15:36:08.985Z
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MessageWithType'
+
+        '400':
+          description: Invalid movement Id, invalid updated since format or not allowed to access this movement
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                movementIdFormat:
+                  summary: Movement Id not valid
+                  value:
+                    dateTime: '2024-01-17T16:27:41.095827Z'
+                    message: Movement Id format error
+                    debugMessage: Movement Id should be a valid UUID
+                dateFormat:
+                  summary: Invalid updated since format
+                  value:
+                    dateTime: '2024-01-17T16:27:41.095827Z'
+                    message: Invalid date format provided in the updatedSince query parameter
+                    debugMessage: Date format should be like '2020-11-15T17:02:34.00Z'
+
+        '401':
+          description: Authorisation errors, e.g. consignor or consignee not authorised, authorisation expired, invalid enrolment parameter.
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: "2024-01-17T15:27:29.540089Z"
+                message: Authorisation error
+                debugMessage: Unauthorised Exception with error Bearer token expired
+
+        '403':
+          description: Consignor ID or Consignee ID for movement is not in authorisation bearer token
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: '2024-01-17T16:27:41.095827Z'
+                message: Forbidden
+                debugMessage: Invalid MovementID supplied for ERN
+
+        '404':
+          description: Movement with supplied id not found for this ERN
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                movementNotFound:
+                  summary: Movement not in database
+                  value:
+                    dateTime: '2024-01-17T16:26:18.062304Z'
+                    message: Movement not found
+                    debugMessage: Movement b6ba6a73-d723-4c9f-b9b7-99e533fb614f is not found
+
+      security:
+        - userRestricted:
+            - excise-movement-control-system
+
+  /customs/excise/movements/{movementId}/messages/{messageId}:
+    get:
+      tags:
+        - Movements
+      summary: Get a message for an excise movement using the movementId and messageId
+      description: Get a message for a specific excise movement. </br></br>**Note:** The consignor ID or consignee ID must match an excise reference number (ERN) in the bearer token that you use for API authentication. If it does not, a 403 Forbidden error will be thrown.
+      operationId: getMessage
+      parameters:
+        - $ref: "#/components/parameters/AcceptHeaderXml"
+        - name: movementId
+          in: path
+          description: The movement to get messages for
+          required: true
+          schema:
+            $ref: "#/components/schemas/MovementId"
+        - name: messageId
+          in: path
+          description: The message to retrieve
+          required: true
+          schema:
+            $ref: "#/components/schemas/MessageId"
+
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/vnd.hmrc.1.0+xml:
+              schema:
+                # I tried to use a "oneOf" here but the examples didn't work so using a GenericXML object instead.
+                type: object
+                xml:
+                  name: GenericXML
+              examples:
+                refusal:
+                  summary: Generic Refusal (IE704uk)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE704uk XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie704uk.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE704uk.xml)
+                  value: '<IE704><!-- Example IE704 message --></IE704>'
+                control report envelope:
+                  summary: Control Report (IE717)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE717 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie717.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE717.xml)
+                  value: '<IE717><!-- Example IE717 message --></IE717>'
+                E-AD/E-SAD :
+                  summary: Acceptance (IE801)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE801 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie801.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE801.xml)
+                  value: '<IE801><!-- Example IE801 message --></IE801>'
+                reminder:
+                  summary: Reminder (IE802)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE801 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie802.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE802.xml)
+                  value: '<IE802><!-- Example IE802 message --></IE802>'
+                notificationOfDiverted:
+                  summary: Notification of diverted E-AD/E-SAD  (IE803)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE803 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie803.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE803.xml)
+                  value: '<IE803><!-- Example IE803 message --></IE803>'
+                interruption:
+                  summary: Interruption of Movement (IE807)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE807 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie807.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE807.xml)
+                  value: '<IE807><!-- Example IE807 message --></IE807>'
+                cancellation:
+                  summary: Submit cancellation (IE810)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE810 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie810.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE810.xml)
+                  value: '<IE810><!-- Example IE810 message --></IE810>'
+                changeOfDestination:
+                  summary: Change of Destination (IE813)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE813 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie813.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE813.xml)
+                  value: '<IE813><!-- Example IE813 message --></IE813>'
+                acceptedOrRejected:
+                  summary: Accpted or Rejected Report (IE818)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE818 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie818.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE818.xml)
+                  value: '<IE818><!-- Example IE818 message --></IE818>'
+                alertOrRejection:
+                  summary: Alert or Rejection on an E-AD/E-SAD (IE819)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE819 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie819.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE819.xml)
+                  value: '<IE819><!-- Example IE819 message --></IE819>'
+                notificationOdAcceptance:
+                  summary: Notification of Acceptance Export (IE829)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE829 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie829.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE829.xml)
+                  value: '<IE829><!-- Example IE829 message --></IE829>'
+                explanationOdDelayOfDelivery:
+                  summary: Explanation of Delay for Delivery (IE837)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE837 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie837.xsd)
+
+                    An example submitted by the consignor can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE837_consignor.xml)
+
+                    An example submitted by the consignee can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE837_consignee.xml)
+                  value: '<IE837><!-- Example IE837 message --></IE837>'
+                customRejection:
+                  summary: Custom Rejection of E-AD (IE839)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE839 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie839.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE839.xml)
+                  value: '<IE839><!-- Example IE839 message --></IE839>'
+                eventReport:
+                  summary: Event Report (IE840)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE840 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie840.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE840.xml)
+                  value: '<IE840><!-- Example IE840 message --></IE840>'
+                explenationOfReasonsForShortage:
+                  summary: Explenation on Reason for Shortage (IE871)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE871 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie871.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE871.xml)
+                  value: '<IE871><!-- Example IE871 message --></IE871>'
+                manualClosureResponse:
+                  summary: Manual Closure Response (IE881)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE881 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie881.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE881.xml)
+                  value: '<IE881><!-- Example IE881 message --></IE881>'
+                statusResponse:
+                  summary: Status Response (IE905)
+                  description: |
+                    The body for this response should be an XML body that conforms to the [IE905 XML Schema](https://github.com/hmrc/excise-movement-control-system-api/blob/main/app/xsd/ie905.xsd)
+
+                    An example can be found [here](https://github.com/hmrc/excise-movement-control-system-api/blob/main/resources/public/api/conf/1.0/examples/IE905.xml)
+                  value: '<IE905><!-- Example IE905 message --></IE905>'
+
+        '400':
+          description: Invalid movement Id
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                movementIdFormat:
+                  summary: Movement Id not valid
+                  value:
+                    dateTime: '2024-01-17T16:27:41.095827Z'
+                    message: Movement Id format error
+                    debugMessage: Movement Id should be a valid UUID
+
+        '401':
+          description: Authorisation errors, e.g. consignor not authorised, authorisation expired, invalid enrolment parameter.
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: "2024-01-17T15:27:29.540089Z"
+                message: Authorisation error
+                debugMessage: Unauthorised Exception with error Bearer token expired
+
+        '403':
+          description: Consignor ID or Consignee ID for movement is not in authorisation bearer token
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: '2024-01-17T16:27:41.095827Z'
+                message: Forbidden
+                debugMessage: Invalid MovementID supplied for ERN
+
+        '404':
+          description: Movement with supplied id not found for this ERN
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                movementNotFound:
+                  summary: Movement not in database
+                  value:
+                    dateTime: '2024-01-17T16:26:18.062304Z'
+                    message: Movement not found
+                    debugMessage: Movement b6ba6a73-d723-4c9f-b9b7-99e533fb614f is not found
+
+        '406':
+          description: Accepted header is not acceptable
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                acceptHeaderNotAcceptable:
+                  summary: "Invalid Accept header"
+                  value:
+                    dateTime: '2024-01-17T16:26:18.062304Z'
+                    message: "Invalid Accept header"
+                    debugMessage: The accept header is missing or invalid
+
+      security:
+        - userRestricted:
+            - excise-movement-control-system
+
+  /customs/excise/traders/pre-validate:
+    post:
+      tags:
+        - Traders
+      summary: Get information relating to an excise trader
+      description: Get information relating to an excise trader.
+      operationId: prevalidateTrader
+      parameters:
+        - $ref: "#/components/parameters/AcceptHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreValidateTraderRequest'
+            examples:
+              Successful Validation Request:
+                summary: Pre Validate Trader Request
+                value:
+                  exciseTraderValidationRequest:
+                    exciseTraderRequest:
+                      exciseRegistrationNumber: GBWK002281023
+                      entityGroup: UK Record
+                      validateProductAuthorisationRequest:
+                        - product:
+                            exciseProductCode: W200
+                        - product:
+                            exciseProductCode: S100
+
+
+      responses:
+        '200':
+          description: Validation performed - either successfully or with a business error (invalid trader, invalid product codes)
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ExciseTraderValidationResponse'
+              examples:
+                Success:
+                  summary: "Validated successfully"
+                  value:
+                    validationTimestamp: '2001-12-17T09:30:47-05:00'
+                    exciseRegistrationNumber: GBWK002281023
+                    entityGroup: UK Record
+                    validTrader: true
+                    traderType: '1'
+                    validateProductAuthorisationResponse:
+                      valid: true
+                Invalid trader:
+                  summary: "Invalid trader"
+                  value:
+                    validationTimeStamp: '2001-12-17T09:30:47-05:00'
+                    exciseRegistrationNumber: GBWK000000000
+                    entityGroup: UK Record
+                    validTrader: false
+                    errorCode: '6'
+                    errorText: Not Found
+                Invalid product codes:
+                  summary: Invalid product codes
+                  value:
+                    validationTimeStamp: '2001-12-17T09:30:47-05:00'
+                    exciseRegistrationNumber: GBWK000000206
+                    entityGroup: UK Record
+                    validTrader: true
+                    traderType: '1'
+                    validateProductAuthorisationResponse:
+                      valid: false
+                      productError:
+                        - exciseProductCode: W300
+                          errorCode: '2'
+                          errorText: Unauthorised EPC
+                        - exciseProductCode: S200
+                          errorCode: '1'
+                          errorText: Unrecognised EPC
+
+        '400':
+          description: Invalid JSON or mandatory fields missing.
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: '2024-01-17T15:27:29.540089Z'
+                message: Not valid PreValidateTrader message
+                debugMessage: "Error parsing Json: exciseRegistrationNumber missing"
+
+            text/plain:
+              example: "" #downstream 400s are empty
+
+        '401':
+          description: Authorisation errors, e.g. ERN not authorised, authorisation expired, invalid enrolment parameter.
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: "2024-01-17T15:27:29.540089Z"
+                message: Authorisation error
+                debugMessage: Unauthorised Exception with error Bearer token expired
+
+        '500':
+          description: Internal server error
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: "2021-12-17T09:30:47Z"
+                message: "Invalid JSON structure"
+                debugMessage: "JSON parse error: Unexpected character"
+                correlationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+            text/plain:
+              example: "" #downstream 400s are empty
+
+      security:
+        - userRestricted:
+            - excise-movement-control-system
+
+  /erns/{ern}/subscribe:
+    post:
+      tags:
+        - Subscribe
+      summary: Subscribe an ERN to receive Push/Pull notifications
+      description: Subscribe an ERN to receive Push/Pull notifications.
+      operationId: subscribeErn
+      parameters:
+        - $ref: "#/components/parameters/AcceptHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscribeErnRequest'
+            examples:
+              Subscribe ERN Request:
+                summary: Subscribe ERN Request
+                value:
+                  subscribeErnRequest:
+                    exciseRegistrationNumber: GBWK002281023
+
+      responses:
+        '202':
+          description:
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/SubscribeErnResponse'
+              examples:
+                  value:
+                    boxId: 42c75e22-7bba-44f2-a610-4b4c3b262e3e
+
+        '400':
+          description: Invalid JSON or mandatory fields missing.
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: '2024-01-17T15:27:29.540089Z'
+                message: Not valid SubscribeErn message
+                debugMessage: "Error parsing Json: exciseRegistrationNumber missing"
+
+            text/plain:
+              example: "" #downstream 400s are empty
+
+        '401':
+          description: Authorisation errors, e.g. ERN not authorised, authorisation expired, invalid enrolment parameter.
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: "2024-01-17T15:27:29.540089Z"
+                message: Authorisation error
+                debugMessage: Unauthorised Exception with error Bearer token expired
+
+        '403':
+          description: ERN being subscribed is not in authorisation bearer token
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: '2024-01-17T16:27:41.095827Z'
+                message: Forbidden
+                debugMessage: Invalid ERN provided
+
+        '500':
+          description: Internal server error
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: "2021-12-17T09:30:47Z"
+                message: "Invalid JSON structure"
+                debugMessage: "JSON parse error: Unexpected character"
+                correlationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+            text/plain:
+              example: "" #downstream 400s are empty
+
+      security:
+        - userRestricted:
+            - excise-movement-control-system
+
+
+  /erns/{ern}/unsubscribe:
+    post:
+      tags:
+        - Unsubscribe
+      summary: Unsubscribe an ERN to no longer receive Push/Pull notifications
+      description: Unsubscribe an ERN to no longer receive Push/Pull notifications.
+      operationId: unsubscribeErn
+      parameters:
+        - $ref: "#/components/parameters/AcceptHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnsubscribeErnRequest'
+            examples:
+              Unsubscribe ERN Request:
+                summary: Unsubscribe ERN Request
+                value:
+                  unsubscribeErnRequest:
+                    exciseRegistrationNumber: GBWK002281023
+
+      responses:
+        '202':
+          description:
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/UnsubscribeErnResponse'
+              examples:
+                  value: "" #unsubscribe response will be empty
+
+        '400':
+          description: Invalid JSON or mandatory fields missing.
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: '2024-01-17T15:27:29.540089Z'
+                message: Not valid SubscribeErn message
+                debugMessage: "Error parsing Json: exciseRegistrationNumber missing"
+
+            text/plain:
+              example: "" #downstream 400s are empty
+
+        '401':
+          description: Authorisation errors, e.g. ERN not authorised, authorisation expired, invalid enrolment parameter.
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: "2024-01-17T15:27:29.540089Z"
+                message: Authorisation error
+                debugMessage: Unauthorised Exception with error Bearer token expired
+
+        '500':
+          description: Internal server error
+          content:
+            application/vnd.hmrc.1.0+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                dateTime: "2021-12-17T09:30:47Z"
+                message: "Invalid JSON structure"
+                debugMessage: "JSON parse error: Unexpected character"
+                correlationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
+            text/plain:
+              example: "" #downstream 400s are empty
+
+      security:
+        - userRestricted:
+            - excise-movement-control-system
+
+components:
+  parameters:
+    AcceptHeader:
+      name: Accept
+      in: header
+      description: >-
+        Specifies the response format and the
+        [version](/api-documentation/docs/reference-guide#versioning) of the API
+        to be used.
+      required: true
+      schema:
+        type: string
+        enum: [
+          "application/vnd.hmrc.1.0+json"
+        ]
+    AcceptHeaderXml:
+      name: Accept
+      in: header
+      description: >-
+        Specifies the response format and the
+        [version](/api-documentation/docs/reference-guide#versioning) of the API
+        to be used.
+      required: true
+      schema:
+        type: string
+        enum: [
+          "application/vnd.hmrc.1.0+xml"
+        ]
+    ContentTypeHeader:
+      name: Content-Type
+      in: header
+      description: The media type of the request body.
+      schema:
+        type: string
+        enum: ["application/vnd.hmrc.1.0+xml", "application/xml"]
+      required: true
+  schemas:
+    AdministrativeReferenceCode:
+      type: string
+      pattern: '[0-9]{2}[A-Z]{2}[A-Z0-9]{16}[0-9]'
+    LocalReferenceNumber:
+      type: string
+      pattern: '.{1,22}'
+    ConsigneeId:
+      type: string
+      pattern: '.{1,16}'
+    ExciseReferenceNumber:
+      type: string
+      pattern: '[A-Z]{2}[a-zA-Z0-9]{11}'
+    DateTime:
+      type: string
+      format: date-time
+      example: '2021-12-17T09:30:470Z'
+    CorrelationId:
+      type: string
+      format: uuid
+      example: 3e8dae97-b586-4cef-8511-68ac12da9028
+    MovementId:
+      type: string
+      format: uuid
+      example: b6ba6a73-d723-4c9f-b9b7-99e533fb614f
+    MessageId:
+      type: string
+      pattern: ".{1,44}"
+    BoxId:
+      type: string
+      format: uuid
+      example: 42c75e22-7bba-44f2-a610-4b4c3b262e3e
+    IE810:
+      type: object
+      description: Submit cancellation
+      xml:
+        name: IE810
+    IE813:
+      type: object
+      description: Submit change of destination
+      xml:
+        name: IE813
+    IE815:
+      type: object
+      description: Submit draft movement
+      xml:
+        name: IE815
+    IE818:
+      type: object
+      description: Submit report of receipt
+      xml:
+        name: IE818
+    IE819:
+      type: object
+      description: Submit alert or rejection
+      xml:
+        name: IE819
+    IE825:
+      type: object
+      description: Submit split movement
+      xml:
+        name: IE825
+    IE837:
+      type: object
+      description: Submit explanation for delay
+      xml:
+        name: IE837
+    IE871:
+      type: object
+      description: Submit reason for shortage
+      xml:
+        name: IE871
+    TraderType:
+      type: string
+      enum: [ "1","2","3","4","5","6","7" ]
+      description: 1 = Warehouse Keeper<br />
+        2 = Tax Warehouse<br />
+        3 = Registered Consignor<br />
+        4 = Registered Consignee<br />
+        5 = Temporary Registered Consignee<br />
+        6 = Temporary Registered Authorisation<br />
+        7 = Other
+    QueryTraderType:
+      type: string
+      description: The type of trader (consignor or consignee)
+      enum:
+        - consignor
+        - consignee
+    ExciseProductCode:
+      type: string
+      description: The excise product category code
+      maxLength: 4
+      pattern: '[A-Z][0-9]{3}'
+      example: 'W200'
+    ProductRequest:
+      type: object
+      required:
+        - exciseProductCode
+      properties:
+        exciseProductCode:
+          $ref: '#/components/schemas/ExciseProductCode'
+    ExciseMovement:
+      type: object
+      required:
+        - movementId
+        - consignorId
+        - localReferenceNumber
+      properties:
+        movementId:
+          $ref: '#/components/schemas/MovementId'
+        boxId:
+          $ref: '#/components/schemas/BoxId'
+        localReferenceNumber:
+          $ref: '#/components/schemas/LocalReferenceNumber'
+        consignorId:
+          $ref: '#/components/schemas/ExciseReferenceNumber'
+        consigneeId:
+          $ref: '#/components/schemas/ConsigneeId'
+        administrativeReferenceCode:
+          $ref: '#/components/schemas/AdministrativeReferenceCode'
+        lastUpdated:
+          $ref: '#/components/schemas/DateTime'
+      xml:
+        name: exciseMovement
+
+    ErrorResponse:
+      type: object
+      required:
+        - dateTime
+        - message
+        - debugMessage
+      properties:
+        dateTime:
+          $ref: '#/components/schemas/DateTime'
+        message:
+          type: string
+        debugMessage:
+          type: string
+        correlationId:
+          $ref: '#/components/schemas/CorrelationId'
+        validatorResults:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+
+    ValidationError:
+      type: object
+      properties:
+        errorCategory:
+          type: string
+        errorType:
+          type: integer
+        errorReason:
+          type: string
+        errorLocation:
+          type: string
+        originalAttributeValue:
+          type: string
+
+    SubmitDraftMessageType:
+      type: string
+      description: The submit draft message type
+      enum:
+        - IE815
+      xml:
+        name: type
+    IncomingMessageType:
+      type: string
+      description: The type of incoming message
+      enum:
+        - IE810
+        - IE813
+        - IE818
+        - IE819
+        #        Temporarily commented out until MVP+
+        #        - IE825
+        - IE837
+        - IE871
+      xml:
+        name: type
+    OutgoingMessageType:
+      type: string
+      description: The type of outgoing message
+      enum:
+        - IE704
+        - IE801
+        - IE802
+        - IE803
+        - IE807
+        - IE829
+        - IE839
+        - IE840
+        - IE881
+        - IE905
+      xml:
+        name: type
+    MessageType:
+      allOf:
+        - $ref: '#/components/schemas/SubmitDraftMessageType'
+        - $ref: '#/components/schemas/IncomingMessageType'
+        - $ref: '#/components/schemas/OutgoingMessageType'
+    Message:
+      required:
+        - encodedMessage
+        - createdOn
+        - messageId
+        - recipient
+      type: object
+      properties:
+        encodedMessage:
+          type: string
+          format: byte
+        createdOn:
+          $ref: "#/components/schemas/DateTime"
+        messageId:
+          type: string
+          pattern: '.{1,44}'
+        recipient:
+          $ref: "#/components/schemas/ExciseReferenceNumber"
+      xml:
+        name: message
+    MessageWithType:
+      allOf:
+        - $ref: '#/components/schemas/Message'
+        - type: object
+          required:
+            - messageType
+          properties:
+            messageType:
+              $ref: '#/components/schemas/MessageType'
+    PreValidateTraderRequest:
+      required:
+        - exciseTraderValidationRequest
+      properties:
+        exciseTraderValidationRequest:
+          $ref: '#/components/schemas/ExciseTraderValidationRequest'
+    ExciseTraderValidationRequest:
+      required:
+        - exciseTraderRequest
+      type: object
+      properties:
+        exciseTraderRequest:
+          $ref: '#/components/schemas/ExciseTraderRequest'
+    ExciseTraderRequest:
+      required:
+        - exciseRegistrationNumber
+        - entityGroup
+        - validateProductAuthorisationRequest
+      type: object
+      properties:
+        exciseRegistrationNumber:
+          $ref: '#/components/schemas/ExciseReferenceNumber'
+        entityGroup:
+          $ref: '#/components/schemas/EntityGroup'
+        validateProductAuthorisationRequest:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/ValidateProductAuthorisationRequest'
+    EntityGroup:
+      type: string
+      enum: [ 'UK Record', 'EU Trader', 'EU Warehouse', 'EU Temporary Authorisation' ]
+      example: 'UK Record'
+    ValidateProductAuthorisationRequest:
+      type: object
+      required:
+        - product
+      properties:
+        product:
+          $ref: '#/components/schemas/ProductRequest'
+    ExciseTraderValidationResponse:
+      type: object
+      required:
+        - validationTimestamp
+        - exciseRegistrationNumber
+        - entityGroup
+        - validTrader
+      properties:
+        validationTimestamp:
+          $ref: '#/components/schemas/ValidationTimestamp'
+        exciseRegistrationNumber:
+          $ref: '#/components/schemas/ExciseReferenceNumber'
+        entityGroup:
+          $ref: '#/components/schemas/EntityGroup'
+        validTrader:
+          type: boolean
+        errorCode:
+          type: string
+          enum: [ "1", "2", "3", "4", "5", "6" ]
+          description: The 'errorCode' for an invalid trader i.e., when validTrader = "false".<br /> 1 = Pending<br /> 2 = Expired<br /> 3 = Withdrawn<br /> 4 = Cancelled<br /> 5 = Used<br /> 6 = Not Found
+        errorText:
+          type: string
+        traderType:
+          $ref: '#/components/schemas/TraderType'
+        validateProductAuthorisationResponse:
+          $ref: '#/components/schemas/ValidateProductAuthorisationResponse'
+    ValidateProductAuthorisationResponse:
+      type: object
+      required:
+        - valid
+      properties:
+        valid:
+          type: boolean
+        productError:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductError'
+    ValidationTimestamp:
+      type: string
+      example: '2001-12-17T09:30:47-05:00'
+      pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?([+-][0-9]{2}:[0-9]{2})?$'
+    ProductError:
+      type: object
+      required:
+        - exciseProductCode
+        - errorCode
+        - errorText
+      properties:
+        exciseProductCode:
+          $ref: '#/components/schemas/ExciseProductCode'
+        errorCode:
+          type: string
+          enum: [ "1", "2", "3" ]
+          description: 1 = Unrecognised EPC<br /> 2 = Unauthorised EPC<br /> 3 = EPC exceeded
+        errorText:
+          type: string
+          description: "The 'errorText' will be populated with:<br /> 'Unrecognised EPC' if errorCode = 1<br />'Unauthorised EPC' if errorCode = 2<br />'EPC exceeded' if errorCode = 3"
+    SubscribeErnRequest:
+      type: object
+      required:
+        - exciseRegistrationNumber
+      properties:
+        exciseRegistrationNumber:
+          $ref: '#/components/schemas/ExciseReferenceNumber'
+    SubscribeErnResponse:
+      type: object
+      required:
+        - boxId
+      properties:
+        boxId:
+          $ref: '#/components/schemas/BoxId'
+    UnsubscribeErnRequest:
+      type: object
+      required:
+        - exciseRegistrationNumber
+      properties:
+        exciseRegistrationNumber:
+          $ref: '#/components/schemas/ExciseReferenceNumber'
+    UnsubscribeErnResponse:
+      type: object
+
+  securitySchemes:
+    userRestricted:
+      type: oauth2
+      description: HMRC supports OAuth 2.0 for authenticating user restricted API
+        requests using an OAuth 2.0 Bearer Token in the AUTHORIZATION header. See
+        https://developer.service.hmrc.gov.uk/api-documentation/docs/authorisation/user-restricted-endpoints
+        for details.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://api.service.hmrc.gov.uk/oauth/authorize
+          tokenUrl: https://api.service.hmrc.gov.uk/oauth/token
+          refreshUrl: https://api.service.hmrc.gov.uk/oauth/refresh
+          scopes:
+            excise-movement-control-system: Access all aspects of EMCS API
+    applicationRestricted:
+      type: oauth2
+      description: HMRC supports OAuth 2.0 for authenticating application restricted
+        API  requests using an OAuth 2.0 Bearer Token in the AUTHORIZATION header.
+        See https://developer.service.hmrc.gov.uk/api-documentation/docs/authorisation/application-restricted-endpoints
+        for details.
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.service.hmrc.gov.uk/oauth/token
+          scopes:
+            excise-movement-control-system: Access push-pull-notification box information
+              via the EMCS API
+

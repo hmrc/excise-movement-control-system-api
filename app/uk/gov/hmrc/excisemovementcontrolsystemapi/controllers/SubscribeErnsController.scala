@@ -21,6 +21,7 @@ import org.apache.pekko.Done
 import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
@@ -37,23 +38,46 @@ class SubscribeErnsController @Inject() (
   authAction: AuthAction,
   cc: ControllerComponents,
   notificationsService: NotificationsService,
-  dateTimeService: DateTimeService
+  dateTimeService: DateTimeService,
+  appConfig: AppConfig
 )(implicit ec: ExecutionContext)
     extends BackendController(cc)
     with Logging {
 
-  def subscribeErn(ernId: String): Action[AnyContent] = authAction.async { implicit request =>
-    (for {
-      clientId <- retrieveClientIdFromHeader(request)
-      _        <- EitherT.liftF[Future, Result, String](notificationsService.subscribeErns(clientId, Seq(ernId)))
-    } yield Ok).valueOrF(Future.successful)
+  def subscribeErn(ern: String): Action[AnyContent] = authAction.async { implicit request =>
+    if (appConfig.subscribeErnsEnabled) {
+      if (request.erns.contains(ern)) {
+        (for {
+          clientId <- retrieveClientIdFromHeader(request)
+          boxId    <- EitherT.liftF[Future, Result, String](notificationsService.subscribeErns(clientId, Seq(ern)))
+        } yield Accepted(boxId)).valueOrF(Future.successful)
+      } else {
+        Future.successful(
+          Forbidden(
+            Json.toJson(
+              ErrorResponse(
+                dateTimeService.timestamp(),
+                "Forbidden",
+                "Invalid ERN provided"
+              )
+            )
+          )
+        )
+      }
+    } else {
+      Future.successful(NotFound)
+    }
   }
 
-  def unsubscribeErn(ernId: String): Action[AnyContent] = authAction.async { implicit request =>
-    (for {
-      clientId <- retrieveClientIdFromHeader(request)
-      _        <- EitherT.liftF[Future, Result, Done](notificationsService.unsubscribeErns(clientId, Seq(ernId)))
-    } yield Ok).valueOrF(Future.successful)
+  def unsubscribeErn(ern: String): Action[AnyContent] = authAction.async { implicit request =>
+    if (appConfig.subscribeErnsEnabled) {
+      (for {
+        clientId <- retrieveClientIdFromHeader(request)
+        _        <- EitherT.liftF[Future, Result, Done](notificationsService.unsubscribeErns(clientId, Seq(ern)))
+      } yield Accepted).valueOrF(Future.successful)
+    } else {
+      Future.successful(NotFound)
+    }
   }
 
   private def retrieveClientIdFromHeader(implicit request: EnrolmentRequest[_]): EitherT[Future, Result, String] =
