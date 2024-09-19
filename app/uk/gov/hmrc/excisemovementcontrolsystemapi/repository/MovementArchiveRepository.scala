@@ -16,28 +16,18 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
-import cats.implicits.toFunctorOps
-import org.apache.pekko.Done
-import org.bson.conversions.Bson
-import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model._
-import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Movement, ProblemMovement, Total}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, Mdc}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.Mdc
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.Codecs.JsonOps
-import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
-import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
-import java.time.Instant
 import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
-import scala.jdk.CollectionConverters.SeqHasAsJava
 
 @Singleton
 class MovementArchiveRepository @Inject() (

@@ -32,7 +32,6 @@ import scala.concurrent.{ExecutionContext, Future}
 class InjectController @Inject() (
   cc: ControllerComponents,
   movementRepository: MovementRepository,
-  workItemRepository: ProblemMovementsWorkItemRepo,
   auth: BackendAuthComponents
 )(implicit ec: ExecutionContext)
     extends BackendController(cc)
@@ -51,29 +50,6 @@ class InjectController @Inject() (
           .map(_ => Accepted)
       }
     }
-
-  def getMovementsWithTooMany801s(): Action[AnyContent] =
-    auth.authorizedAction(permission).async {
-      movementRepository.getProblemMovements().map(movements => Ok(Json.toJson(movements)))
-    }
-
-  def getCountOfMovementsWithTooMany801s(): Action[AnyContent] =
-    auth.authorizedAction(permission).async {
-      movementRepository.getCountOfProblemMovements().map(_.map(t => Ok(Json.toJson(t))).getOrElse(NotFound))
-    }
-
-  def buildWorkItemQueue(): Action[AnyContent] =
-    auth
-      .authorizedAction(permission)
-      .async {
-        movementRepository.getProblemMovements().flatMap { mm =>
-          Future
-            .traverse(
-              mm.map(m => MovementWorkItem(m._id)).grouped(250)
-            )(g => workItemRepository.pushNewBatch(g))
-            .map(_ => Ok)
-        }
-      }
 }
 
 object InjectController {
