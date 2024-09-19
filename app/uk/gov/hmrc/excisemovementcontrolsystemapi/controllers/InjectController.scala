@@ -17,7 +17,6 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import com.google.inject.Inject
-import org.apache.pekko.Done
 import play.api.Logging
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
@@ -25,7 +24,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.InjectController.C
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MovementRepository, MovementWorkItem, ProblemMovementsWorkItemRepo}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.internalauth.client._
-import uk.gov.hmrc.mongo.workitem.WorkItem
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant

@@ -104,6 +104,8 @@ class MessageService @Inject() (
       .map(_.getOrElse(UpdateOutcome.Locked))
   }
 
+  def archiveProblemMovement(id: String): Future[Done] = ???
+
   def fixProblemMovement(id: String)(implicit hc: HeaderCarrier): Future[Done] =
     movementRepository.getMovementById(id).flatMap {
       _.map { movement =>
