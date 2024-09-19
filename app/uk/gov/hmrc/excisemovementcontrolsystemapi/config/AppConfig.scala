@@ -45,7 +45,8 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
 
   val pushNotificationsEnabled: Boolean = servicesConfig.getBoolean("featureFlags.pushNotificationsEnabled")
 
-  val subscribeErnsEnabled: Boolean = servicesConfig.getBoolean("featureFlags.subscribeErnsEnabled")
+  val subscribeErnsEnabled: Boolean =
+    config.getOptional[Boolean]("featureFlags.subscribeErnsEnabled").getOrElse(false)
 
   def emcsReceiverMessageUrl: String = s"$eisHost/emcs/digital-submit-new-message/v1"
   def submissionBearerToken: String  =
