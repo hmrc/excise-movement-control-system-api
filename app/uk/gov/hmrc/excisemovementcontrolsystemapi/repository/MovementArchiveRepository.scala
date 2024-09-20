@@ -17,17 +17,18 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import org.mongodb.scala.model._
+import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.Mdc
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-
 import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 @Singleton
 class MovementArchiveRepository @Inject() (
@@ -40,12 +41,17 @@ class MovementArchiveRepository @Inject() (
       domainFormat = Movement.format,
       indexes = mongoIndexes(appConfig.movementArchiveTTL),
       replaceIndexes = false
-    ) {
+    )
+    with Logging {
 
   def saveMovement(movement: Movement): Future[Boolean] = Mdc.preservingMdc {
     this.collection
       .insertOne(movement)
       .toFuture()
+      .andThen {
+        case Failure(exception) => logger.error(s"Failed to Archive movement ${movement._id}", exception)
+        case Success(_)         => logger.warn(s"Archived movement ${movement._id}")
+      }
       .map(_ => true)
   }
 }
