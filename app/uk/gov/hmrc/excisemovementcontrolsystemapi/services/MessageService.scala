@@ -128,18 +128,33 @@ class MessageService @Inject() (
         }
       }
       .flatMap {
-        _.traverse(movementRepository.save)
+        _.traverse { m =>
+          logger.warn(
+            s"Saving updated movement with id ${m._id} with messages (${messageCounts(m)}) messages as part of fix for ${movement._id}"
+          )
+          movementRepository.save(m)
+        }
       }
       .map(_ => Done)
   }
 
+  private def messageCounts(movement: Movement): String =
+    movement.messages
+      .groupBy(_.messageType)
+      .map(t => s"${t._1}:${t._2.size}")
+      .mkString(", ")
+
   def archiveAndFixProblemMovement(id: String)(implicit hc: HeaderCarrier): Future[Done] =
     movementRepository.getMovementById(id).flatMap {
       case Some(movement) =>
+        logger.warn(s"Applying fix to movement $id with messages ${messageCounts(movement)}")
         for {
           _ <- movementArchiveRepository.saveMovement(movement)
           _ <- fixProblemMovement(movement)
-        } yield Done
+        } yield {
+          logger.warn(s"fix to movement $id finished")
+          Done
+        }
       case None           =>
         Future.failed[Done](new Exception("Movement to be fixed was not found"))
     }

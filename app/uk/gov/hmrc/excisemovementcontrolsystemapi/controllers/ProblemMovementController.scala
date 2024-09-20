@@ -30,15 +30,15 @@ import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-class ProblemMovementController @Inject()(
-    cc: ControllerComponents,
-    movementRepository: MovementRepository,
-    workItemRepository: ProblemMovementsWorkItemRepo,
-    auth: BackendAuthComponents,
-    messageService: MessageService
-  )(implicit ec: ExecutionContext)
+class ProblemMovementController @Inject() (
+  cc: ControllerComponents,
+  movementRepository: MovementRepository,
+  workItemRepository: ProblemMovementsWorkItemRepo,
+  auth: BackendAuthComponents,
+  messageService: MessageService
+)(implicit ec: ExecutionContext)
     extends BackendController(cc)
-      with Logging {
+    with Logging {
 
   private val permission = Predicate.Permission(
     Resource(ResourceType("excise-movement-control-system-api"), ResourceLocation("problem-movements")),
@@ -57,18 +57,20 @@ class ProblemMovementController @Inject()(
 
   def buildWorkItemQueue(): Action[AnyContent] =
     auth.authorizedAction(permission).async {
-        movementRepository.getProblemMovements().flatMap { mm =>
-          Future
-            .traverse(
-              mm.map(m => MovementWorkItem(m._id)).grouped(250)
-            )(g => workItemRepository.pushNewBatch(g))
-            .map(_ => Ok)
-        }
+      movementRepository.getProblemMovements().flatMap { mm =>
+        Future
+          .traverse(
+            mm.map(m => MovementWorkItem(m._id)).grouped(250)
+          )(g => workItemRepository.pushNewBatch(g))
+          .map(_ => Ok)
       }
+    }
 
   def resolveProblemMovement(): Action[FixMovementRequest] =
-    auth.authorizedAction(permission, EmptyRetrieval).async(parse.json.map(_.as[FixMovementRequest])) { implicit request =>
-      messageService.archiveAndFixProblemMovement(request.body.movementId)
-        .map(_ => NoContent)
+    auth.authorizedAction(permission, EmptyRetrieval).async(parse.json[FixMovementRequest]) {
+      implicit request =>
+        messageService
+          .archiveAndFixProblemMovement(request.body.movementId)
+          .map(_ => NoContent)
     }
 }
