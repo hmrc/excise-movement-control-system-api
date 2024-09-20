@@ -22,27 +22,30 @@ import com.codahale.metrics.MetricRegistry
 import org.apache.pekko.Done
 import org.bson.BsonMaximumSizeExceededException
 import org.mongodb.scala.MongoCommandException
-import play.api.libs.json.{JsObject, JsPath, Json, OWrites, __}
 import play.api.{Configuration, Logging}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, TraderMovementConnector}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnRetrievalRepository, MovementRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnRetrievalRepository, MovementArchiveRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService.{EnrichedError, UpdateOutcome}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, NotFoundException}
 import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
 
 import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 import scala.util.control.NonFatal
+import scala.xml.XML
 
 @Singleton
 class MessageService @Inject() (
   configuration: Configuration,
   movementRepository: MovementRepository,
+  movementArchiveRepository: MovementArchiveRepository,
   ernRetrievalRepository: ErnRetrievalRepository,
   boxIdRepository: BoxIdRepository,
   messageConnector: MessageConnector,
@@ -52,7 +55,8 @@ class MessageService @Inject() (
   emcsUtils: EmcsUtils,
   auditService: AuditService,
   mongoLockRepository: MongoLockRepository,
-  metricRegistry: MetricRegistry
+  metricRegistry: MetricRegistry,
+  messageFactory: IEMessageFactory
 )(implicit executionContext: ExecutionContext)
     extends Logging {
 
@@ -101,6 +105,44 @@ class MessageService @Inject() (
       }
       .map(_.getOrElse(UpdateOutcome.Locked))
   }
+
+  private def fixProblemMovement(movement: Movement)(implicit headerCarrier: HeaderCarrier) = {
+    val movementWithNoMessages = movement.copy(messages = Seq.empty, administrativeReferenceCode = None)
+    movement.messages
+      .sortBy(_.createdOn)
+      .foldLeft(Future.successful(Seq.empty[Movement])) { (accumulated, message) =>
+        val ieMessage = messageFactory
+          .createFromXml(message.messageType, XML.loadString(emcsUtils.decode(message.encodedMessage)))
+        for {
+          accumulatedMovements <- accumulated
+          updatedMovements     <- updateOrCreateMovements(
+                                    message.recipient,
+                                    Seq(movementWithNoMessages),
+                                    accumulatedMovements,
+                                    ieMessage,
+                                    shouldNotify = false,
+                                    message.createdOn
+                                  )
+        } yield (updatedMovements ++ accumulatedMovements).distinctBy { movement =>
+          (movement.localReferenceNumber, movement.consignorId, movement.administrativeReferenceCode)
+        }
+      }
+      .flatMap {
+        _.traverse(movementRepository.save)
+      }
+      .map(_ => Done)
+  }
+
+  def archiveAndFixProblemMovement(id: String)(implicit hc: HeaderCarrier): Future[Done] =
+    movementRepository.getMovementById(id).flatMap {
+      case Some(movement) =>
+        for {
+          _ <- movementArchiveRepository.saveMovement(movement)
+          _ <- fixProblemMovement(movement)
+        } yield Done
+      case None           =>
+        Future.failed[Done](new Exception("Movement to be fixed was not found"))
+    }
 
   private def shouldMigrateLastUpdated(maybeLastRetrieved: Option[Instant]): Boolean =
     //noinspection MapGetOrElseBoolean
@@ -151,7 +193,14 @@ class MessageService @Inject() (
             .foldLeft(Future.successful(Seq.empty[Movement])) { (accumulated, message) =>
               for {
                 accumulatedMovements <- accumulated
-                updatedMovements     <- updateOrCreateMovements(ern, movements, accumulatedMovements, message)
+                updatedMovements     <- updateOrCreateMovements(
+                                          ern,
+                                          movements,
+                                          accumulatedMovements,
+                                          message,
+                                          shouldNotify = true,
+                                          dateTimeService.timestamp()
+                                        )
               } yield (updatedMovements ++ accumulatedMovements)
                 .distinctBy { movement =>
                   (movement.localReferenceNumber, movement.consignorId, movement.administrativeReferenceCode)
@@ -177,15 +226,17 @@ class MessageService @Inject() (
     ern: String,
     movements: Seq[Movement],
     updatedMovements: Seq[Movement],
-    message: IEMessage
+    message: IEMessage,
+    shouldNotify: Boolean,
+    timestamp: Instant
   )(implicit hc: HeaderCarrier): Future[Seq[Movement]] =
     findMovementsForMessage(movements, updatedMovements, message).flatMap { matchedMovements =>
       if (matchedMovements.nonEmpty) {
         matchedMovements.traverse { movement =>
-          updateMovement(movement, ern, message, shouldNotify = true)
+          updateMovement(movement, ern, message, shouldNotify = shouldNotify, timestamp)
         }
       } else {
-        createMovements(ern, message, movements, updatedMovements)
+        createMovements(ern, message, movements, updatedMovements, timestamp)
           .map(movement => (movement +: updatedMovements.map(Some(_))).flatten)
       }
     }
@@ -194,7 +245,8 @@ class MessageService @Inject() (
     movement: Movement,
     recipient: String,
     message: IEMessage,
-    shouldNotify: Boolean
+    shouldNotify: Boolean,
+    timestamp: Instant
   ): Future[Movement] =
     if (
       movement.messages.exists(m =>
@@ -204,13 +256,12 @@ class MessageService @Inject() (
     ) {
       Future.successful(movement)
     } else {
-      val timestamp = dateTimeService.timestamp()
       getUpdatedMessages(recipient, movement, message, timestamp, shouldNotify).map { updatedMessages =>
         movement.copy(
           messages = updatedMessages,
           administrativeReferenceCode = getArc(movement, message),
           consigneeId = getConsignee(movement, message),
-          lastUpdated = timestamp
+          lastUpdated = List(timestamp, movement.lastUpdated).max
         )
       }
     }
@@ -270,31 +321,33 @@ class MessageService @Inject() (
     ern: String,
     message: IEMessage,
     movements: Seq[Movement],
-    updatedMovements: Seq[Movement]
+    updatedMovements: Seq[Movement],
+    timestamp: Instant
   )(implicit
     hc: HeaderCarrier
   ): Future[Seq[Movement]] =
     message match {
       case ie704: IE704Message if ie704.localReferenceNumber.isDefined =>
-        createMovementFromIE704(ern, ie704)
+        createMovementFromIE704(ern, ie704, timestamp)
       case ie801: IE801Message                                         =>
-        createMovementFromIE801(ie801).map(Seq(_))
+        createMovementFromIE801(ie801, timestamp).map(Seq(_))
       case _                                                           =>
-        createMovementsFromTraderMovement(ern, message, movements, updatedMovements)
+        createMovementsFromTraderMovement(ern, message, movements, updatedMovements, timestamp)
     }
 
   private def createMovementsFromTraderMovement(
     ern: String,
     message: IEMessage,
     movements: Seq[Movement],
-    updatedMovements: Seq[Movement]
+    updatedMovements: Seq[Movement],
+    timestamp: Instant
   )(implicit
     hc: HeaderCarrier
   ): Future[Seq[Movement]] =
     message.administrativeReferenceCode.flatten.headOption
       .map { arc =>
         traderMovementConnector.getMovementMessages(ern, arc).flatMap { messages =>
-          buildMovementFromTraderMovement(messages, message, ern, movements, updatedMovements)
+          buildMovementFromTraderMovement(messages, message, ern, movements, updatedMovements, timestamp)
         }
       }
       .getOrElse {
@@ -308,7 +361,8 @@ class MessageService @Inject() (
     originatingMessage: IEMessage,
     originatingErn: String,
     movements: Seq[Movement],
-    updatedMovements: Seq[Movement]
+    updatedMovements: Seq[Movement],
+    timestamp: Instant
   )(implicit
     hc: HeaderCarrier
   ): Future[Seq[Movement]] =
@@ -317,22 +371,28 @@ class MessageService @Inject() (
         findMovementsForMessage(movements, updatedMovements, ie801).flatMap { movements =>
           if (movements.nonEmpty) {
             movements.traverse { movement =>
-              updateMovement(movement, ie801.consignorId, ie801, shouldNotify = false).flatMap { updatedMovement =>
-                ie801.consigneeId
-                  .map { consigneeId =>
-                    updateMovement(updatedMovement, consigneeId, ie801, shouldNotify = false)
-                  }
-                  .getOrElse(Future.successful(updatedMovement))
-                  .flatMap { updatedMovement =>
-                    updateMovement(updatedMovement, originatingErn, originatingMessage, shouldNotify = true)
-                  }
+              updateMovement(movement, ie801.consignorId, ie801, shouldNotify = false, timestamp).flatMap {
+                updatedMovement =>
+                  ie801.consigneeId
+                    .map { consigneeId =>
+                      updateMovement(updatedMovement, consigneeId, ie801, shouldNotify = false, timestamp)
+                    }
+                    .getOrElse(Future.successful(updatedMovement))
+                    .flatMap { updatedMovement =>
+                      updateMovement(
+                        updatedMovement,
+                        originatingErn,
+                        originatingMessage,
+                        shouldNotify = true,
+                        timestamp
+                      )
+                    }
               }
             }
           } else {
 
             // For a new movement from trader-movement call, add the IE801 for the consignor and consignee
             // also add the originating message all at once
-            val timestamp = dateTimeService.timestamp()
             Seq(
               Some(convertMessage(ie801.consignorId, ie801, timestamp, shouldNotify = false)),
               ie801.consigneeId.map(convertMessage(_, ie801, timestamp, shouldNotify = false)),
@@ -368,10 +428,9 @@ class MessageService @Inject() (
     logger.error(errorMessage)
   }
 
-  private def createMovementFromIE704(consignor: String, message: IE704Message)(implicit
+  private def createMovementFromIE704(consignor: String, message: IE704Message, timestamp: Instant)(implicit
     hc: HeaderCarrier
-  ): Future[Seq[Movement]] = {
-    val timestamp = dateTimeService.timestamp()
+  ): Future[Seq[Movement]] =
     convertMessage(consignor, message, timestamp, shouldNotify = true).map { convertedMessage =>
       message.localReferenceNumber
         .map { lrn =>
@@ -393,10 +452,8 @@ class MessageService @Inject() (
           Seq.empty
         }
     }
-  }
 
-  private def createMovementFromIE801(message: IE801Message): Future[Movement] = {
-    val timestamp = dateTimeService.timestamp()
+  private def createMovementFromIE801(message: IE801Message, timestamp: Instant): Future[Movement] =
     Seq(
       Some(convertMessage(message.consignorId, message, timestamp, shouldNotify = true)),
       message.consigneeId.map(convertMessage(_, message, timestamp, shouldNotify = true))
@@ -412,7 +469,6 @@ class MessageService @Inject() (
         messages = messages
       )
     }
-  }
 
   private def findByArc(movements: Seq[Movement], message: IEMessage): OptionT[Future, Seq[Movement]] = {
 
@@ -426,6 +482,15 @@ class MessageService @Inject() (
   private def findByArcInMessage(message: IEMessage): OptionT[Future, Seq[Movement]] =
     message.administrativeReferenceCode.flatten.traverse { arc =>
       OptionT(movementRepository.getByArc(arc))
+        .filter { movement =>
+          message match {
+            case ie801: IE801Message =>
+              movement.consignorId == ie801.consignorId &&
+                movement.localReferenceNumber == ie801.localReferenceNumber
+            case _                   =>
+              true
+          }
+        }
     }
 
   private def findByConsignorLrnInMessage(message: IEMessage): OptionT[Future, Seq[Movement]] =

@@ -22,20 +22,22 @@ import org.mockito.{Mockito, MockitoSugar}
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, OptionValues}
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, TraderMovementConnector}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessageGeneratorFactory}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes.{IE704, IE801, IE818}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes.{IE704, IE801, IE802, IE813, IE818}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE704Message, IE801Message, IE818Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import java.time.{Duration, Instant}
@@ -43,6 +45,9 @@ import java.time.temporal.ChronoUnit
 import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Promise}
+import scala.xml.{NodeSeq, Utility}
+
+
 
 class MessageServiceItSpec
   extends AnyFreeSpec
@@ -52,7 +57,8 @@ class MessageServiceItSpec
     with IntegrationPatience
     with BeforeAndAfterEach
     with BeforeAndAfterAll
-    with MockitoSugar {
+    with MockitoSugar
+    with OptionValues {
 
   // For some reason not all indexes are applied when running these tests
   // but we have tests for checking these indexes in the individual repository specs
@@ -292,6 +298,540 @@ class MessageServiceItSpec
 
       result.length mustBe 1
       result.head mustEqual expectedMovement
+    }
+
+    "fixProblemMovement" - {
+
+      val utils = new EmcsUtils()
+      val messageFactory = IEMessageFactory()
+
+      def formatXml(ern: String, params: MessageParams): String = {
+        utils.encode(messageFactory.createFromXml(
+          params.messageType.value,
+          XmlMessageGeneratorFactory.generate(ern, params)
+        ).toXml.toString)
+      }
+
+      "must fix the given movement" in {
+
+        val hc = HeaderCarrier()
+        val consignor = "testErn"
+        val consignee1 = "testErn2"
+        val consignee2 = "testErn3"
+        val consignee3 = "testErn4"
+
+        val rootLrn = "2"
+        val rootArc = "arc"
+        val root801 = formatXml(consignor, MessageParams(IE801, "XI000001", consigneeErn = Some(consignee1), localReferenceNumber = Some(rootLrn), administrativeReferenceCode = Some(rootArc)))
+
+        val secondLrn = "22"
+        val secondArc = "arc2"
+        val second801 = formatXml(consignor, MessageParams(IE801, "XI000002", consigneeErn = Some(consignee2), localReferenceNumber = Some(secondLrn), administrativeReferenceCode = Some(secondArc)))
+        val second818 = formatXml(consignor, MessageParams(IE818, "XI000004", consigneeErn = Some(consignee2), localReferenceNumber = None, administrativeReferenceCode = Some(secondArc)))
+
+        val thirdLrn = "23"
+        val thirdArc = "arc3"
+        val third801 = formatXml(consignor, MessageParams(IE801, "XI000003", consigneeErn = Some(consignee3), localReferenceNumber = Some(thirdLrn), administrativeReferenceCode = Some(thirdArc)))
+        val third802 = formatXml(consignor, MessageParams(IE802, "XI000006", consigneeErn = None, localReferenceNumber = None, administrativeReferenceCode = Some(thirdArc)))
+        val third818 = formatXml(consignor, MessageParams(IE818, "XI000005", consigneeErn = Some(consignee3), localReferenceNumber = None, administrativeReferenceCode = Some(thirdArc)))
+
+        val rootMovement = Movement(
+          boxId = None,
+          localReferenceNumber = rootLrn,
+          consignorId = consignor,
+          consigneeId = Some(consignee3), // note: consignee is wrong
+          administrativeReferenceCode = Some(rootArc),
+          lastUpdated = now.minus(1, ChronoUnit.DAYS),
+          messages = Seq(
+            Message(root801, "IE801", "XI000001", consignor, Set.empty, now.minus(4, ChronoUnit.DAYS)),
+            Message(root801, "IE801", "XI000001", consignee1, Set.empty, now.minus(4, ChronoUnit.DAYS)),
+            Message(second801, "IE801", "XI000002", consignor, Set.empty, now.minus(3, ChronoUnit.DAYS)),
+            Message(second801, "IE801", "XI000002", consignee2, Set.empty, now.minus(3, ChronoUnit.DAYS)),
+            Message(third801, "IE801", "XI000003", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third801, "IE801", "XI000003", consignee3, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third802, "IE802", "XI000006", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(second818, "IE818", "XI000005", consignee2, Set.empty, now.minus(1, ChronoUnit.DAYS))
+          )
+        )
+
+        val thirdMovement = Movement(
+          boxId = None,
+          localReferenceNumber = thirdLrn,
+          consignorId = consignor,
+          consigneeId = Some(consignee3),
+          administrativeReferenceCode = Some(thirdArc),
+          lastUpdated = now.minus(1, ChronoUnit.DAYS),
+          messages = Seq(
+            Message(third801, "IE801", "XI000003", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third801, "IE801", "XI000003", consignee3, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third818, "IE818", "XI000005", consignee3, Set.empty, now.minus(1, ChronoUnit.DAYS))
+          )
+        )
+
+        val expectedRootMovement = rootMovement.copy(
+          consigneeId = Some(consignee1),
+          messages = Seq(
+            Message(root801, "IE801", "XI000001", consignor, Set.empty, now.minus(4, ChronoUnit.DAYS)),
+            Message(root801, "IE801", "XI000001", consignee1, Set.empty, now.minus(4, ChronoUnit.DAYS))
+          )
+        )
+
+        val expectedSecondMovement = Movement(
+          boxId = None,
+          localReferenceNumber = secondLrn,
+          consignorId = consignor,
+          consigneeId = Some(consignee2),
+          administrativeReferenceCode = Some(secondArc),
+          lastUpdated = now.minus(1, ChronoUnit.DAYS),
+          messages = Seq(
+            Message(second801, "IE801", "XI000002", consignor, Set.empty, now.minus(3, ChronoUnit.DAYS)),
+            Message(second801, "IE801", "XI000002", consignee2, Set.empty, now.minus(3, ChronoUnit.DAYS)),
+            Message(second818, "IE818", "XI000004", consignee2, Set.empty, now.minus(1, ChronoUnit.DAYS))
+          )
+        )
+
+        val expectedThirdMovement = thirdMovement.copy(
+          consigneeId = Some(consignee3),
+          messages = Seq(
+            Message(third801, "IE801", "XI000003", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third801, "IE801", "XI000003", consignee3, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third818, "IE818", "XI000005", consignee3, Set.empty, now.minus(1, ChronoUnit.DAYS)),
+            Message(third802, "IE802", "XI000006", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+          )
+        )
+
+        when(mockDateTimeService.timestamp()).thenReturn(now)
+
+        insert(rootMovement).futureValue
+        insert(thirdMovement).futureValue
+
+        service.archiveAndFixProblemMovement(rootMovement._id)(hc).futureValue
+
+        count().futureValue mustEqual 3
+        val results = findAll().futureValue
+
+        val actualRootMovement = results.find(_.administrativeReferenceCode == expectedRootMovement.administrativeReferenceCode).value
+        val actualSecondMovement = results.find(_.administrativeReferenceCode == expectedSecondMovement.administrativeReferenceCode).value
+        val actualThirdMovement = results.find(_.administrativeReferenceCode == thirdMovement.administrativeReferenceCode).value
+
+        actualRootMovement._id mustEqual expectedRootMovement._id
+        actualRootMovement.localReferenceNumber mustEqual expectedRootMovement.localReferenceNumber
+        actualRootMovement.administrativeReferenceCode mustEqual expectedRootMovement.administrativeReferenceCode
+        actualRootMovement.consignorId mustEqual expectedRootMovement.consignorId
+        actualRootMovement.consigneeId mustEqual expectedRootMovement.consigneeId
+        actualRootMovement.lastUpdated mustEqual expectedRootMovement.lastUpdated
+        actualRootMovement.messages mustEqual expectedRootMovement.messages
+
+        actualSecondMovement.localReferenceNumber mustEqual expectedSecondMovement.localReferenceNumber
+        actualSecondMovement.administrativeReferenceCode mustEqual expectedSecondMovement.administrativeReferenceCode
+        actualSecondMovement.consignorId mustEqual expectedSecondMovement.consignorId
+        actualSecondMovement.consigneeId mustEqual expectedSecondMovement.consigneeId
+        actualSecondMovement.lastUpdated mustEqual expectedSecondMovement.lastUpdated
+        actualSecondMovement.messages.head.encodedMessage mustEqual expectedSecondMovement.messages.head.encodedMessage
+        actualSecondMovement.messages mustEqual expectedSecondMovement.messages
+
+        actualThirdMovement._id mustEqual expectedThirdMovement._id
+        actualThirdMovement.localReferenceNumber mustEqual expectedThirdMovement.localReferenceNumber
+        actualThirdMovement.administrativeReferenceCode mustEqual expectedThirdMovement.administrativeReferenceCode
+        actualThirdMovement.consignorId mustEqual expectedThirdMovement.consignorId
+        actualThirdMovement.consigneeId mustEqual expectedThirdMovement.consigneeId
+        actualThirdMovement.lastUpdated mustEqual expectedThirdMovement.lastUpdated
+        actualThirdMovement.messages mustEqual expectedThirdMovement.messages
+      }
+
+      "must correctly restore movements when the messages are in non-chronological order" in {
+
+        val hc = HeaderCarrier()
+        val consignor = "testErn"
+        val consignee1 = "testErn2"
+        val consignee2 = "testErn3"
+        val consignee3 = "testErn4"
+
+        val rootLrn = "2"
+        val rootArc = "arc"
+        val root801 = formatXml(consignor, MessageParams(IE801, "XI000001", consigneeErn = Some(consignee1), localReferenceNumber = Some(rootLrn), administrativeReferenceCode = Some(rootArc)))
+
+        val secondLrn = "22"
+        val secondArc = "arc2"
+        val second801 = formatXml(consignor, MessageParams(IE801, "XI000002", consigneeErn = Some(consignee2), localReferenceNumber = Some(secondLrn), administrativeReferenceCode = Some(secondArc)))
+        val second818 = formatXml(consignor, MessageParams(IE818, "XI000004", consigneeErn = Some(consignee2), localReferenceNumber = None, administrativeReferenceCode = Some(secondArc)))
+
+        val thirdLrn = "23"
+        val thirdArc = "arc3"
+        val third801 = formatXml(consignor, MessageParams(IE801, "XI000003", consigneeErn = Some(consignee3), localReferenceNumber = Some(thirdLrn), administrativeReferenceCode = Some(thirdArc)))
+        val third802 = formatXml(consignor, MessageParams(IE802, "XI000006", consigneeErn = None, localReferenceNumber = None, administrativeReferenceCode = Some(thirdArc)))
+        val third818 = formatXml(consignor, MessageParams(IE818, "XI000005", consigneeErn = Some(consignee3), localReferenceNumber = None, administrativeReferenceCode = Some(thirdArc)))
+
+        val rootMovement = Movement(
+          boxId = None,
+          localReferenceNumber = rootLrn,
+          consignorId = consignor,
+          consigneeId = Some(consignee3), // note: consignee is wrong
+          administrativeReferenceCode = Some(rootArc),
+          lastUpdated = now.minus(1, ChronoUnit.DAYS),
+          messages = Seq(
+            Message(root801, "IE801", "XI000001", consignor, Set.empty, now.minus(4, ChronoUnit.DAYS)),
+            Message(root801, "IE801", "XI000001", consignee1, Set.empty, now.minus(4, ChronoUnit.DAYS)),
+            Message(second801, "IE801", "XI000002", consignor, Set.empty, now.minus(3, ChronoUnit.DAYS)),
+            Message(second801, "IE801", "XI000002", consignee2, Set.empty, now.minus(3, ChronoUnit.DAYS)),
+            Message(third801, "IE801", "XI000003", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third801, "IE801", "XI000003", consignee3, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third802, "IE802", "XI000006", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(second818, "IE818", "XI000005", consignee2, Set.empty, now.minus(1, ChronoUnit.DAYS))
+          ).reverse
+        )
+
+        val thirdMovement = Movement(
+          boxId = None,
+          localReferenceNumber = thirdLrn,
+          consignorId = consignor,
+          consigneeId = Some(consignee3),
+          administrativeReferenceCode = Some(thirdArc),
+          lastUpdated = now.minus(1, ChronoUnit.DAYS),
+          messages = Seq(
+            Message(third801, "IE801", "XI000003", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third801, "IE801", "XI000003", consignee3, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third818, "IE818", "XI000005", consignee3, Set.empty, now.minus(1, ChronoUnit.DAYS))
+          )
+        )
+
+        val expectedRootMovement = rootMovement.copy(
+          consigneeId = Some(consignee1),
+          messages = Seq(
+            Message(root801, "IE801", "XI000001", consignor, Set.empty, now.minus(4, ChronoUnit.DAYS)),
+            Message(root801, "IE801", "XI000001", consignee1, Set.empty, now.minus(4, ChronoUnit.DAYS))
+          )
+        )
+
+        val expectedSecondMovement = Movement(
+          boxId = None,
+          localReferenceNumber = secondLrn,
+          consignorId = consignor,
+          consigneeId = Some(consignee2),
+          administrativeReferenceCode = Some(secondArc),
+          lastUpdated = now.minus(1, ChronoUnit.DAYS),
+          messages = Seq(
+            Message(second801, "IE801", "XI000002", consignor, Set.empty, now.minus(3, ChronoUnit.DAYS)),
+            Message(second801, "IE801", "XI000002", consignee2, Set.empty, now.minus(3, ChronoUnit.DAYS)),
+            Message(second818, "IE818", "XI000004", consignee2, Set.empty, now.minus(1, ChronoUnit.DAYS))
+          )
+        )
+
+        val expectedThirdMovement = thirdMovement.copy(
+          consigneeId = Some(consignee3),
+          messages = Seq(
+            Message(third801, "IE801", "XI000003", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third801, "IE801", "XI000003", consignee3, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third818, "IE818", "XI000005", consignee3, Set.empty, now.minus(1, ChronoUnit.DAYS)),
+            Message(third802, "IE802", "XI000006", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+          )
+        )
+
+        when(mockDateTimeService.timestamp()).thenReturn(now)
+
+        insert(rootMovement).futureValue
+        insert(thirdMovement).futureValue
+
+        service.archiveAndFixProblemMovement(rootMovement._id)(hc).futureValue
+
+        count().futureValue mustEqual 3
+        val results = findAll().futureValue
+
+        val actualRootMovement = results.find(_.administrativeReferenceCode == expectedRootMovement.administrativeReferenceCode).value
+        val actualSecondMovement = results.find(_.administrativeReferenceCode == expectedSecondMovement.administrativeReferenceCode).value
+        val actualThirdMovement = results.find(_.administrativeReferenceCode == thirdMovement.administrativeReferenceCode).value
+
+        actualRootMovement._id mustEqual expectedRootMovement._id
+        actualRootMovement.localReferenceNumber mustEqual expectedRootMovement.localReferenceNumber
+        actualRootMovement.administrativeReferenceCode mustEqual expectedRootMovement.administrativeReferenceCode
+        actualRootMovement.consignorId mustEqual expectedRootMovement.consignorId
+        actualRootMovement.consigneeId mustEqual expectedRootMovement.consigneeId
+        actualRootMovement.lastUpdated mustEqual expectedRootMovement.lastUpdated
+        actualRootMovement.messages mustEqual expectedRootMovement.messages
+
+        actualSecondMovement.localReferenceNumber mustEqual expectedSecondMovement.localReferenceNumber
+        actualSecondMovement.administrativeReferenceCode mustEqual expectedSecondMovement.administrativeReferenceCode
+        actualSecondMovement.consignorId mustEqual expectedSecondMovement.consignorId
+        actualSecondMovement.consigneeId mustEqual expectedSecondMovement.consigneeId
+        actualSecondMovement.lastUpdated mustEqual expectedSecondMovement.lastUpdated
+        actualSecondMovement.messages.head.encodedMessage mustEqual expectedSecondMovement.messages.head.encodedMessage
+        actualSecondMovement.messages mustEqual expectedSecondMovement.messages
+
+        actualThirdMovement._id mustEqual expectedThirdMovement._id
+        actualThirdMovement.localReferenceNumber mustEqual expectedThirdMovement.localReferenceNumber
+        actualThirdMovement.administrativeReferenceCode mustEqual expectedThirdMovement.administrativeReferenceCode
+        actualThirdMovement.consignorId mustEqual expectedThirdMovement.consignorId
+        actualThirdMovement.consigneeId mustEqual expectedThirdMovement.consigneeId
+        actualThirdMovement.lastUpdated mustEqual expectedThirdMovement.lastUpdated
+        actualThirdMovement.messages mustEqual expectedThirdMovement.messages
+      }
+
+      "must not amend a movement which legitimately has more than 2 801s attached to it" in {
+
+        val hc = HeaderCarrier()
+        val consignor = "testErn"
+        val consignee = "testErn2"
+        val consignee2 = "testErn3"
+
+        val rootLrn = "2"
+        val rootArc = "arc"
+        val first801 = formatXml(consignor, MessageParams(IE801, "XI000001", consigneeErn = Some(consignee), localReferenceNumber = Some(rootLrn), administrativeReferenceCode = Some(rootArc)))
+        val ie813 = formatXml(consignor, MessageParams(IE813, "XI000002", consigneeErn = Some(consignee), localReferenceNumber = None, administrativeReferenceCode = Some(rootArc)))
+        val second801 = formatXml(consignor, MessageParams(IE801, "XI000003", consigneeErn = Some(consignee2), localReferenceNumber = Some(rootLrn), administrativeReferenceCode = Some(rootArc)))
+
+        val movement = Movement(
+          boxId = None,
+          localReferenceNumber = rootLrn,
+          consignorId = consignor,
+          consigneeId = Some(consignee2),
+          administrativeReferenceCode = Some(rootArc),
+          lastUpdated = now.minus(1, ChronoUnit.DAYS),
+          messages = Seq(
+            Message(first801, "IE801", "XI000001", consignor, Set.empty, now.minus(3, ChronoUnit.DAYS)),
+            Message(first801, "IE801", "XI000001", consignee, Set.empty, now.minus(3, ChronoUnit.DAYS)),
+            Message(ie813, "IE813", "XI000002", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(ie813, "IE813", "XI000002", consignee, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(second801, "IE801", "XI000003", consignor, Set.empty, now.minus(1, ChronoUnit.DAYS)),
+            Message(second801, "IE801", "XI000003", consignee2, Set.empty, now.minus(1, ChronoUnit.DAYS))
+          )
+        )
+
+        insert(movement).futureValue
+
+        service.archiveAndFixProblemMovement(movement._id)(hc).futureValue
+
+        count().futureValue mustEqual 1
+
+        val result = findAll().futureValue.head
+        result mustEqual movement
+      }
+
+      "must fix a movement when the arc is wrong" in {
+
+        val hc = HeaderCarrier()
+        val consignor = "testErn"
+        val consignee1 = "testErn2"
+        val consignee2 = "testErn3"
+
+        val rootLrn = "2"
+        val rootArc = "arc"
+        val root801 = formatXml(consignor, MessageParams(IE801, "XI000001", consigneeErn = Some(consignee1), localReferenceNumber = Some(rootLrn), administrativeReferenceCode = Some(rootArc)))
+
+        val secondLrn = "22"
+        val secondArc = "arc2"
+        val second801 = formatXml(consignor, MessageParams(IE801, "XI000002", consigneeErn = Some(consignee2), localReferenceNumber = Some(secondLrn), administrativeReferenceCode = Some(secondArc)))
+        val second818 = formatXml(consignor, MessageParams(IE818, "XI000005", consigneeErn = Some(consignee2), localReferenceNumber = None, administrativeReferenceCode = Some(secondArc)))
+
+        val rootMovement = Movement(
+          boxId = None,
+          localReferenceNumber = rootLrn,
+          consignorId = consignor,
+          consigneeId = Some(consignee1),
+          administrativeReferenceCode = Some(secondArc), // note: arc is wrong
+          lastUpdated = now.minus(1, ChronoUnit.DAYS),
+          messages = Seq(
+            Message(second801, "IE801", "XI000002", consignor, Set.empty, now.minus(3, ChronoUnit.DAYS)),
+            Message(second801, "IE801", "XI000002", consignee2, Set.empty, now.minus(3, ChronoUnit.DAYS)),
+            Message(root801, "IE801", "XI000001", consignor, Set.empty, now.minus(4, ChronoUnit.DAYS)),
+            Message(root801, "IE801", "XI000001", consignee1, Set.empty, now.minus(4, ChronoUnit.DAYS)),
+            Message(second818, "IE818", "XI000005", consignee2, Set.empty, now.minus(1, ChronoUnit.DAYS))
+          )
+        )
+
+        val expectedRootMovement = rootMovement.copy(
+          boxId = None,
+          localReferenceNumber = rootLrn,
+          consignorId = consignor,
+          consigneeId = Some(consignee1),
+          administrativeReferenceCode = Some(rootArc),
+          lastUpdated = now.minus(1, ChronoUnit.DAYS),
+          messages = Seq(
+            Message(root801, "IE801", "XI000001", consignor, Set.empty, now.minus(4, ChronoUnit.DAYS)),
+            Message(root801, "IE801", "XI000001", consignee1, Set.empty, now.minus(4, ChronoUnit.DAYS)),
+          )
+        )
+
+        val expectedSecondMovement = Movement(
+          boxId = None,
+          localReferenceNumber = secondLrn,
+          consignorId = consignor,
+          consigneeId = Some(consignee2),
+          administrativeReferenceCode = Some(secondArc),
+          lastUpdated = now.minus(1, ChronoUnit.DAYS),
+          messages = Seq(
+            Message(second801, "IE801", "XI000002", consignor, Set.empty, now.minus(3, ChronoUnit.DAYS)),
+            Message(second801, "IE801", "XI000002", consignee2, Set.empty, now.minus(3, ChronoUnit.DAYS)),
+            Message(second818, "IE818", "XI000005", consignee2, Set.empty, now.minus(1, ChronoUnit.DAYS))
+          )
+        )
+
+        when(mockDateTimeService.timestamp()).thenReturn(now)
+
+        insert(rootMovement).futureValue
+
+        service.archiveAndFixProblemMovement(rootMovement._id)(hc).futureValue
+
+        count().futureValue mustEqual 2
+        val results = findAll().futureValue
+
+        val actualRootMovement = results.find(_.administrativeReferenceCode == expectedRootMovement.administrativeReferenceCode).value
+        val actualSecondMovement = results.find(_.administrativeReferenceCode == expectedSecondMovement.administrativeReferenceCode).value
+
+        actualRootMovement._id mustEqual expectedRootMovement._id
+        actualRootMovement.localReferenceNumber mustEqual expectedRootMovement.localReferenceNumber
+        actualRootMovement.administrativeReferenceCode mustEqual expectedRootMovement.administrativeReferenceCode
+        actualRootMovement.consignorId mustEqual expectedRootMovement.consignorId
+        actualRootMovement.consigneeId mustEqual expectedRootMovement.consigneeId
+        actualRootMovement.lastUpdated mustEqual expectedRootMovement.lastUpdated
+        actualRootMovement.messages mustEqual expectedRootMovement.messages
+
+        actualSecondMovement.localReferenceNumber mustEqual expectedSecondMovement.localReferenceNumber
+        actualSecondMovement.administrativeReferenceCode mustEqual expectedSecondMovement.administrativeReferenceCode
+        actualSecondMovement.consignorId mustEqual expectedSecondMovement.consignorId
+        actualSecondMovement.consigneeId mustEqual expectedSecondMovement.consigneeId
+        actualSecondMovement.lastUpdated mustEqual expectedSecondMovement.lastUpdated
+        actualSecondMovement.messages.head.encodedMessage mustEqual expectedSecondMovement.messages.head.encodedMessage
+        actualSecondMovement.messages mustEqual expectedSecondMovement.messages
+      }
+
+      "must correctly set consignee when there is an 813" in {
+
+        val hc = HeaderCarrier()
+        val consignor = "testErn"
+        val consignee1 = "testErn2"
+        val consignee2 = "testErn3"
+        val consignee3 = "testErn4"
+        val consignee4 = "testErn5"
+        val consignee5 = "testErn6"
+        val consignee6 = "testErn7"
+
+        val rootLrn = "2"
+        val rootArc = "arc"
+        val root801 = formatXml(consignor, MessageParams(IE801, "XI000001", consigneeErn = Some(consignee1), localReferenceNumber = Some(rootLrn), administrativeReferenceCode = Some(rootArc)))
+        val root813 = formatXml(consignor, MessageParams(IE813, "XI000007", consigneeErn = Some(consignee4), localReferenceNumber = None, administrativeReferenceCode = Some(rootArc)))
+
+        val secondLrn = "22"
+        val secondArc = "arc2"
+        val second801 = formatXml(consignor, MessageParams(IE801, "XI000002", consigneeErn = Some(consignee2), localReferenceNumber = Some(secondLrn), administrativeReferenceCode = Some(secondArc)))
+        val second818 = formatXml(consignor, MessageParams(IE818, "XI000004", consigneeErn = Some(consignee2), localReferenceNumber = None, administrativeReferenceCode = Some(secondArc)))
+        val second813 = formatXml(consignor, MessageParams(IE813, "XI000008", consigneeErn = Some(consignee5), localReferenceNumber = None, administrativeReferenceCode = Some(secondArc)))
+
+        val thirdLrn = "23"
+        val thirdArc = "arc3"
+        val third801 = formatXml(consignor, MessageParams(IE801, "XI000003", consigneeErn = Some(consignee3), localReferenceNumber = Some(thirdLrn), administrativeReferenceCode = Some(thirdArc)))
+        val third802 = formatXml(consignor, MessageParams(IE802, "XI000006", consigneeErn = None, localReferenceNumber = None, administrativeReferenceCode = Some(thirdArc)))
+        val third818 = formatXml(consignor, MessageParams(IE818, "XI000005", consigneeErn = Some(consignee3), localReferenceNumber = None, administrativeReferenceCode = Some(thirdArc)))
+        val third813 = formatXml(consignor, MessageParams(IE813, "XI000009", consigneeErn = Some(consignee6), localReferenceNumber = None, administrativeReferenceCode = Some(thirdArc)))
+
+        val rootMovement = Movement(
+          boxId = None,
+          localReferenceNumber = rootLrn,
+          consignorId = consignor,
+          consigneeId = Some(consignee3), // note: consignee is wrong
+          administrativeReferenceCode = Some(rootArc),
+          lastUpdated = now.minus(1, ChronoUnit.DAYS),
+          messages = Seq(
+            Message(root801, "IE801", "XI000001", consignor, Set.empty, now.minus(4, ChronoUnit.DAYS)),
+            Message(root801, "IE801", "XI000001", consignee1, Set.empty, now.minus(4, ChronoUnit.DAYS)),
+            Message(root813, "IE813", "XI000007", consignee4, Set.empty, now.minus(4, ChronoUnit.DAYS)),
+            Message(second801, "IE801", "XI000002", consignor, Set.empty, now.minus(3, ChronoUnit.DAYS)),
+            Message(second801, "IE801", "XI000002", consignee2, Set.empty, now.minus(3, ChronoUnit.DAYS)),
+            Message(third801, "IE801", "XI000003", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third801, "IE801", "XI000003", consignee3, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third802, "IE802", "XI000006", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third813, "IE813", "XI000009", consignee6, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(second813, "IE813", "XI000008", consignee5, Set.empty, now.minus(1, ChronoUnit.DAYS)),
+            Message(second818, "IE818", "XI000005", consignee5, Set.empty, now.minus(1, ChronoUnit.DAYS)),
+          )
+        )
+
+        val thirdMovement = Movement(
+          boxId = None,
+          localReferenceNumber = thirdLrn,
+          consignorId = consignor,
+          consigneeId = Some(consignee3),
+          administrativeReferenceCode = Some(thirdArc),
+          lastUpdated = now.minus(1, ChronoUnit.DAYS),
+          messages = Seq(
+            Message(third801, "IE801", "XI000003", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third801, "IE801", "XI000003", consignee3, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third818, "IE818", "XI000005", consignee6, Set.empty, now.minus(1, ChronoUnit.DAYS))
+          )
+        )
+
+        val expectedRootMovement = rootMovement.copy(
+          consigneeId = Some(consignee4),
+          messages = Seq(
+            Message(root801, "IE801", "XI000001", consignor, Set.empty, now.minus(4, ChronoUnit.DAYS)),
+            Message(root801, "IE801", "XI000001", consignee1, Set.empty, now.minus(4, ChronoUnit.DAYS)),
+            Message(root813, "IE813", "XI000007", consignee4, Set.empty, now.minus(4, ChronoUnit.DAYS)),
+          )
+        )
+
+        val expectedSecondMovement = Movement(
+          boxId = None,
+          localReferenceNumber = secondLrn,
+          consignorId = consignor,
+          consigneeId = Some(consignee5),
+          administrativeReferenceCode = Some(secondArc),
+          lastUpdated = now.minus(1, ChronoUnit.DAYS),
+          messages = Seq(
+            Message(second801, "IE801", "XI000002", consignor, Set.empty, now.minus(3, ChronoUnit.DAYS)),
+            Message(second801, "IE801", "XI000002", consignee2, Set.empty, now.minus(3, ChronoUnit.DAYS)),
+            Message(second813, "IE813", "XI000008", consignee5, Set.empty, now.minus(1, ChronoUnit.DAYS)),
+            Message(second818, "IE818", "XI000004", consignee5, Set.empty, now.minus(1, ChronoUnit.DAYS))
+          )
+        )
+
+        val expectedThirdMovement = thirdMovement.copy(
+          consigneeId = Some(consignee6),
+          messages = Seq(
+            Message(third801, "IE801", "XI000003", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third801, "IE801", "XI000003", consignee3, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third818, "IE818", "XI000005", consignee6, Set.empty, now.minus(1, ChronoUnit.DAYS)),
+            Message(third802, "IE802", "XI000006", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third813, "IE813", "XI000009", consignee6, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+          )
+        )
+
+        when(mockDateTimeService.timestamp()).thenReturn(now)
+
+        insert(rootMovement).futureValue
+        insert(thirdMovement).futureValue
+
+        service.archiveAndFixProblemMovement(rootMovement._id)(hc).futureValue
+
+        count().futureValue mustEqual 3
+        val results = findAll().futureValue
+
+        val actualRootMovement = results.find(_.administrativeReferenceCode == expectedRootMovement.administrativeReferenceCode).value
+        val actualSecondMovement = results.find(_.administrativeReferenceCode == expectedSecondMovement.administrativeReferenceCode).value
+        val actualThirdMovement = results.find(_.administrativeReferenceCode == thirdMovement.administrativeReferenceCode).value
+
+        actualRootMovement._id mustEqual expectedRootMovement._id
+        actualRootMovement.localReferenceNumber mustEqual expectedRootMovement.localReferenceNumber
+        actualRootMovement.administrativeReferenceCode mustEqual expectedRootMovement.administrativeReferenceCode
+        actualRootMovement.consignorId mustEqual expectedRootMovement.consignorId
+        actualRootMovement.consigneeId mustEqual expectedRootMovement.consigneeId
+        actualRootMovement.lastUpdated mustEqual expectedRootMovement.lastUpdated
+        actualRootMovement.messages mustEqual expectedRootMovement.messages
+
+        actualSecondMovement.localReferenceNumber mustEqual expectedSecondMovement.localReferenceNumber
+        actualSecondMovement.administrativeReferenceCode mustEqual expectedSecondMovement.administrativeReferenceCode
+        actualSecondMovement.consignorId mustEqual expectedSecondMovement.consignorId
+        actualSecondMovement.consigneeId mustEqual expectedSecondMovement.consigneeId
+        actualSecondMovement.lastUpdated mustEqual expectedSecondMovement.lastUpdated
+        actualSecondMovement.messages.head.encodedMessage mustEqual expectedSecondMovement.messages.head.encodedMessage
+        actualSecondMovement.messages mustEqual expectedSecondMovement.messages
+
+        actualThirdMovement._id mustEqual expectedThirdMovement._id
+        actualThirdMovement.localReferenceNumber mustEqual expectedThirdMovement.localReferenceNumber
+        actualThirdMovement.administrativeReferenceCode mustEqual expectedThirdMovement.administrativeReferenceCode
+        actualThirdMovement.consignorId mustEqual expectedThirdMovement.consignorId
+        actualThirdMovement.consigneeId mustEqual expectedThirdMovement.consigneeId
+        actualThirdMovement.lastUpdated mustEqual expectedThirdMovement.lastUpdated
+        actualThirdMovement.messages mustEqual expectedThirdMovement.messages
+      }
     }
   }
 }

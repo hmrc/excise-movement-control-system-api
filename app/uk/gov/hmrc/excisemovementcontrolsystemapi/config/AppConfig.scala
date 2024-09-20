@@ -39,6 +39,10 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
     .getOptional[String]("mongodb.movement.TTL")
     .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
 
+  lazy val movementArchiveTTL: Duration = config
+    .getOptional[String]("mongodb.movementArchive.TTL")
+    .fold(Duration.create(40, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
+
   lazy val ernRetrievalTTL: Duration = config
     .getOptional[String]("mongodb.ernRetrieval.TTL")
     .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
