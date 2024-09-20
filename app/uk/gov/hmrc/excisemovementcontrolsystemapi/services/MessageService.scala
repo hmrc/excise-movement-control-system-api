@@ -151,7 +151,10 @@ class MessageService @Inject() (
         for {
           _ <- movementArchiveRepository.saveMovement(movement)
           _ <- fixProblemMovement(movement)
-        } yield Done
+        } yield {
+          logger.warn(s"fix to movement $id finished")
+          Done
+        }
       case None           =>
         Future.failed[Done](new Exception("Movement to be fixed was not found"))
     }
