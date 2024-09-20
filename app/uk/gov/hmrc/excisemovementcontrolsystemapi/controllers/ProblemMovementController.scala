@@ -67,7 +67,7 @@ class ProblemMovementController @Inject() (
     }
 
   def resolveProblemMovement(): Action[FixMovementRequest] =
-    auth.authorizedAction(permission, EmptyRetrieval).async(parse.json.map(_.as[FixMovementRequest])) {
+    auth.authorizedAction(permission, EmptyRetrieval).async(parse.json[FixMovementRequest]) {
       implicit request =>
         messageService
           .archiveAndFixProblemMovement(request.body.movementId)
