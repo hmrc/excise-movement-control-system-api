@@ -127,12 +127,22 @@ class MessageService @Inject() (
           (movement.localReferenceNumber, movement.consignorId, movement.administrativeReferenceCode)
         }
       }
-      .flatMap {
-        _.traverse { m =>
-          logger.warn(
-            s"Saving updated movement with id ${m._id} with messages (${messageCounts(m)}) messages as part of fix for ${movement._id}"
-          )
-          movementRepository.save(m)
+      .flatMap { movements =>
+        if (movements.exists(_._id == movementWithNoMessages._id)) {
+          movements.traverse { m =>
+            logger.warn(
+              s"Saving updated movement with id ${m._id} with messages (${messageCounts(m)}) messages as part of fix for ${movement._id}"
+            )
+            movementRepository.save(m)
+          }
+        } else {
+          val correctedEmptyMovement = movementWithNoMessages.copy(consigneeId = None)
+          (movements :+ correctedEmptyMovement).traverse { m =>
+            logger.warn(
+              s"Saving updated movement with id ${m._id} with messages (${messageCounts(m)}) messages as part of fix for ${movement._id}"
+            )
+            movementRepository.save(m)
+          }
         }
       }
       .map(_ => Done)
