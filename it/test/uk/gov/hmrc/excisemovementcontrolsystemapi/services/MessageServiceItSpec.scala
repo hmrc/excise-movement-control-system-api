@@ -37,17 +37,13 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalReposi
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
-import java.time.{Duration, Instant}
 import java.time.temporal.ChronoUnit
+import java.time.{Duration, Instant}
 import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Promise}
-import scala.xml.{NodeSeq, Utility}
-
-
 
 class MessageServiceItSpec
   extends AnyFreeSpec
@@ -443,13 +439,11 @@ class MessageServiceItSpec
 
         val hc = HeaderCarrier()
         val consignor = "testErn"
-        val consignee1 = "testErn2"
         val consignee2 = "testErn3"
         val consignee3 = "testErn4"
 
         val rootLrn = "2"
         val rootArc = "arc"
-        val root801 = formatXml(consignor, MessageParams(IE801, "XI000001", consigneeErn = Some(consignee1), localReferenceNumber = Some(rootLrn), administrativeReferenceCode = Some(rootArc)))
 
         val secondLrn = "22"
         val secondArc = "arc2"
