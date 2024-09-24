@@ -994,7 +994,7 @@ paths:
         - userRestricted:
             - excise-movement-control-system
 
-  /erns/{ern}/subscribe:
+  /customs/excise/erns/{ern}/subscribe:
     post:
       tags:
         - Subscribe
@@ -1082,7 +1082,7 @@ paths:
             - excise-movement-control-system
 
 
-  /erns/{ern}/unsubscribe:
+  /customs/excise/erns/{ern}/unsubscribe:
     post:
       tags:
         - Unsubscribe
