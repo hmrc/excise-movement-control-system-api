@@ -1018,12 +1018,12 @@ paths:
 
       responses:
         '202':
-          description:
+          description: Subscribed
           content:
             application/vnd.hmrc.1.0+json:
               schema:
                 $ref: '#/components/schemas/SubscribeErnResponse'
-              examples:
+              example:
                   value:
                     boxId: 42c75e22-7bba-44f2-a610-4b4c3b262e3e
 
@@ -1106,12 +1106,12 @@ paths:
 
       responses:
         '202':
-          description:
+          description: Unsubscribed
           content:
             application/vnd.hmrc.1.0+json:
               schema:
                 $ref: '#/components/schemas/UnsubscribeErnResponse'
-              examples:
+              example:
                   value: "" #unsubscribe response will be empty
 
         '400':
@@ -1571,4 +1571,3 @@ components:
           scopes:
             excise-movement-control-system: Access push-pull-notification box information
               via the EMCS API
-
