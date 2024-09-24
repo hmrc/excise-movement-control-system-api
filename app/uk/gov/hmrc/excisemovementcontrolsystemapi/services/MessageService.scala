@@ -30,14 +30,13 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Mov
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnRetrievalRepository, MovementArchiveRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService.{EnrichedError, UpdateOutcome}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
-import uk.gov.hmrc.http.{HeaderCarrier, NotFoundException}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
 
 import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
 import scala.util.control.NonFatal
 import scala.xml.XML
 
@@ -127,10 +126,17 @@ class MessageService @Inject() (
           (movement.localReferenceNumber, movement.consignorId, movement.administrativeReferenceCode)
         }
       }
-      .flatMap {
-        _.traverse { m =>
+      .flatMap { movements =>
+        val updatedMovements = if (movements.exists(_._id == movementWithNoMessages._id)) {
+          movements
+        } else {
+          val correctedEmptyMovement = movementWithNoMessages.copy(consigneeId = None)
+          movements :+ correctedEmptyMovement
+        }
+
+        updatedMovements.traverse { m =>
           logger.warn(
-            s"Saving updated movement with id ${m._id} with messages (${messageCounts(m)}) messages as part of fix for ${movement._id}"
+            s"Saving updated movement with id ${m._id} with messages (${messageCounts(m)}) as part of fix for ${movement._id}"
           )
           movementRepository.save(m)
         }

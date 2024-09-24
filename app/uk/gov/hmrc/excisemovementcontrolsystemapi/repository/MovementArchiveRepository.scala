@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
+import com.mongodb.ErrorCategory
+import org.mongodb.scala.MongoWriteException
 import org.mongodb.scala.model._
 import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
@@ -24,11 +26,11 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.Mdc
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+
 import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
 
 @Singleton
 class MovementArchiveRepository @Inject() (
@@ -48,11 +50,15 @@ class MovementArchiveRepository @Inject() (
     this.collection
       .insertOne(movement)
       .toFuture()
-      .andThen {
-        case Failure(exception) => logger.error(s"Failed to Archive movement ${movement._id}", exception)
-        case Success(_)         => logger.warn(s"Archived movement ${movement._id}")
+      .map { _ =>
+        logger.warn(s"Archived movement ${movement._id}")
+        true
       }
-      .map(_ => true)
+      .recover {
+        case e: MongoWriteException if e.getError.getCategory == ErrorCategory.DUPLICATE_KEY =>
+          logger.warn(s"Duplicate movement with id ${movement._id} already exists in the archive.")
+          true
+      }
   }
 }
 

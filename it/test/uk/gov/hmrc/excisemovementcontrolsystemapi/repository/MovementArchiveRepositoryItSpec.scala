@@ -86,6 +86,25 @@ class MovementArchiveRepositoryItSpec
       insertedRecords.size mustBe 1
       insertedRecords.head mustBe movement
     }
+
+    "handle duplicate movement gracefully" in {
+      val uuid = UUID.randomUUID()
+      val movement = Movement(uuid.toString, Some("boxId"), "123", "345", Some("789"), None, timestamp, Seq.empty)
+
+      repository.saveMovement(movement).futureValue mustBe true
+
+      val duplicateResult = repository.saveMovement(movement).futureValue
+      duplicateResult mustBe true
+
+      val insertedRecords = find(
+        Filters.and(
+          Filters.equal("consignorId", "345"),
+          Filters.equal("localReferenceNumber", "123")
+        )
+      ).futureValue
+
+      insertedRecords.size mustBe 1
+    }
   }
 
 }
