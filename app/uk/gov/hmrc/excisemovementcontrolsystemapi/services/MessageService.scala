@@ -30,14 +30,13 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Mov
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnRetrievalRepository, MovementArchiveRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService.{EnrichedError, UpdateOutcome}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
-import uk.gov.hmrc.http.{HeaderCarrier, NotFoundException}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
 
 import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
 import scala.util.control.NonFatal
 import scala.xml.XML
 
@@ -128,21 +127,18 @@ class MessageService @Inject() (
         }
       }
       .flatMap { movements =>
-        if (movements.exists(_._id == movementWithNoMessages._id)) {
-          movements.traverse { m =>
-            logger.warn(
-              s"Saving updated movement with id ${m._id} with messages (${messageCounts(m)}) messages as part of fix for ${movement._id}"
-            )
-            movementRepository.save(m)
-          }
+        val updatedMovements = if (movements.exists(_._id == movementWithNoMessages._id)) {
+          movements
         } else {
           val correctedEmptyMovement = movementWithNoMessages.copy(consigneeId = None)
-          (movements :+ correctedEmptyMovement).traverse { m =>
-            logger.warn(
-              s"Saving updated movement with id ${m._id} with messages (${messageCounts(m)}) messages as part of fix for ${movement._id}"
-            )
-            movementRepository.save(m)
-          }
+          movements :+ correctedEmptyMovement
+        }
+
+        updatedMovements.traverse { m =>
+          logger.warn(
+            s"Saving updated movement with id ${m._id} with messages (${messageCounts(m)}) as part of fix for ${movement._id}"
+          )
+          movementRepository.save(m)
         }
       }
       .map(_ => Done)
