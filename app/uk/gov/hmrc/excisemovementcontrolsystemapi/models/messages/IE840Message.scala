@@ -61,6 +61,6 @@ object IE840Message {
 
   def createFromXml(xml: NodeSeq): IE840Message = {
     val ie840: IE840Type = scalaxb.fromXML[IE840Type](xml)
-    IE840Message(ie840, Some(xml.head.label), None, EventReport)
+    IE840Message(ie840, Some(xml.head.label), Option(xml.head.namespace), EventReport)
   }
 }

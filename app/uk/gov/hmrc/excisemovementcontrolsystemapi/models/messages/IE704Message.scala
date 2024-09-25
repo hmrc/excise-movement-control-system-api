@@ -70,6 +70,6 @@ object IE704Message {
 
   def createFromXml(xml: NodeSeq): IE704Message = {
     val ie704: IE704Type = scalaxb.fromXML[IE704Type](xml)
-    IE704Message(ie704, Some(xml.head.label), None, Refused)
+    IE704Message(ie704, Some(xml.head.label), Option(xml.head.namespace), Refused)
   }
 }
