@@ -25,7 +25,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFor
 
 import scala.xml.NodeSeq
 
-case class IE815Message(private val obj: IE815Type, auditType: AuditType) extends IEMessage with GeneratedJsonWriters {
+case class IE815Message(obj: IE815Type, auditType: AuditType) extends IEMessage with GeneratedJsonWriters {
   def localReferenceNumber: String =
     obj.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber
 

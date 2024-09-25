@@ -27,7 +27,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFor
 import scala.xml.NodeSeq
 
 case class IE829Message(
-  private val obj: IE829Type,
+  obj: IE829Type,
   key: Option[String],
   namespace: Option[String],
   auditType: AuditType
