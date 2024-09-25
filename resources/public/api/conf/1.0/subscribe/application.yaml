@@ -994,7 +994,7 @@ paths:
         - userRestricted:
             - excise-movement-control-system
 
-  /customs/excise/erns/{ern}/subscribe:
+  /erns/{ern}/subscription:
     post:
       tags:
         - Subscribe
@@ -1002,20 +1002,13 @@ paths:
       description: Subscribe an ERN to receive Push/Pull notifications.
       operationId: subscribeErn
       parameters:
+        - name: ern
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ERN to subscribe
         - $ref: "#/components/parameters/AcceptHeader"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SubscribeErnRequest'
-            examples:
-              Subscribe ERN Request:
-                summary: Subscribe ERN Request
-                value:
-                  subscribeErnRequest:
-                    exciseRegistrationNumber: GBWK002281023
-
       responses:
         '202':
           description: Subscribed
@@ -1024,9 +1017,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SubscribeErnResponse'
               example:
-                  value:
-                    boxId: 42c75e22-7bba-44f2-a610-4b4c3b262e3e
-
+                boxId: 42c75e22-7bba-44f2-a610-4b4c3b262e3e
         '400':
           description: Invalid JSON or mandatory fields missing.
           content:
@@ -1081,29 +1072,20 @@ paths:
         - userRestricted:
             - excise-movement-control-system
 
-
-  /customs/excise/erns/{ern}/unsubscribe:
-    post:
+    delete:
       tags:
         - Unsubscribe
       summary: Unsubscribe an ERN to no longer receive Push/Pull notifications
       description: Unsubscribe an ERN to no longer receive Push/Pull notifications.
       operationId: unsubscribeErn
       parameters:
+        - name: ern
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ERN to unsubscribe
         - $ref: "#/components/parameters/AcceptHeader"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UnsubscribeErnRequest'
-            examples:
-              Unsubscribe ERN Request:
-                summary: Unsubscribe ERN Request
-                value:
-                  unsubscribeErnRequest:
-                    exciseRegistrationNumber: GBWK002281023
-
       responses:
         '202':
           description: Unsubscribed
@@ -1111,9 +1093,7 @@ paths:
             application/vnd.hmrc.1.0+json:
               schema:
                 $ref: '#/components/schemas/UnsubscribeErnResponse'
-              example:
-                  value: "" #unsubscribe response will be empty
-
+              example: "" #unsubscribe response will be empty
         '400':
           description: Invalid JSON or mandatory fields missing.
           content:
@@ -1122,7 +1102,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 dateTime: '2024-01-17T15:27:29.540089Z'
-                message: Not valid SubscribeErn message
+                message: Not valid UnsubscribeErn message
                 debugMessage: "Error parsing Json: exciseRegistrationNumber missing"
 
             text/plain:
@@ -1521,13 +1501,6 @@ components:
         errorText:
           type: string
           description: "The 'errorText' will be populated with:<br /> 'Unrecognised EPC' if errorCode = 1<br />'Unauthorised EPC' if errorCode = 2<br />'EPC exceeded' if errorCode = 3"
-    SubscribeErnRequest:
-      type: object
-      required:
-        - exciseRegistrationNumber
-      properties:
-        exciseRegistrationNumber:
-          $ref: '#/components/schemas/ExciseReferenceNumber'
     SubscribeErnResponse:
       type: object
       required:
@@ -1535,13 +1508,6 @@ components:
       properties:
         boxId:
           $ref: '#/components/schemas/BoxId'
-    UnsubscribeErnRequest:
-      type: object
-      required:
-        - exciseRegistrationNumber
-      properties:
-        exciseRegistrationNumber:
-          $ref: '#/components/schemas/ExciseReferenceNumber'
     UnsubscribeErnResponse:
       type: object
 
