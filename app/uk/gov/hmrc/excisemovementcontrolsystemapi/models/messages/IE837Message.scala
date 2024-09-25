@@ -73,6 +73,6 @@ object IE837Message {
 
   def createFromXml(xml: NodeSeq): IE837Message = {
     val ie837: IE837Type = scalaxb.fromXML[IE837Type](xml)
-    IE837Message(ie837, Some(MessageTypes.IE837.value), None, Delay)
+    IE837Message(ie837, Some(xml.head.label), None, Delay)
   }
 }

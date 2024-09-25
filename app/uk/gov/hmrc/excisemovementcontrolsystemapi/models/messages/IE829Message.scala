@@ -62,6 +62,6 @@ object IE829Message {
 
   def createFromXml(xml: NodeSeq): IE829Message = {
     val ie829: IE829Type = scalaxb.fromXML[IE829Type](xml)
-    IE829Message(ie829, Some(MessageTypes.IE829.value), None, NotificationOfAcceptedExport)
+    IE829Message(ie829, Some(xml.head.label), None, NotificationOfAcceptedExport)
   }
 }

@@ -64,6 +64,6 @@ object IE813Message {
 
   def createFromXml(xml: NodeSeq): IE813Message = {
     val ie813: IE813Type = scalaxb.fromXML[IE813Type](xml)
-    IE813Message(ie813, Some(MessageTypes.IE813.value), None, ChangeOfDestination)
+    IE813Message(ie813, Some(xml.head.label), None, ChangeOfDestination)
   }
 }
