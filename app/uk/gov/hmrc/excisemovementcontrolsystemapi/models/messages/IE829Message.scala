@@ -28,8 +28,8 @@ import scala.xml.NodeSeq
 
 case class IE829Message(
   private val obj: IE829Type,
-  private val key: Option[String],
-  private val namespace: Option[String],
+  key: Option[String],
+  namespace: Option[String],
   auditType: AuditType
 ) extends IEMessage
     with GeneratedJsonWriters {
@@ -62,6 +62,6 @@ object IE829Message {
 
   def createFromXml(xml: NodeSeq): IE829Message = {
     val ie829: IE829Type = scalaxb.fromXML[IE829Type](xml)
-    IE829Message(ie829, Some(ie829.productPrefix), None, NotificationOfAcceptedExport)
+    IE829Message(ie829, Some(xml.head.label), Option(xml.head.namespace), NotificationOfAcceptedExport)
   }
 }

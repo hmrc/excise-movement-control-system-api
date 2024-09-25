@@ -28,8 +28,8 @@ import scala.xml.NodeSeq
 
 case class IE802Message(
   private val obj: IE802Type,
-  private val key: Option[String],
-  private val namespace: Option[String],
+  key: Option[String],
+  namespace: Option[String],
   auditType: AuditType
 ) extends IEMessage
     with GeneratedJsonWriters {
@@ -55,12 +55,13 @@ case class IE802Message(
 
 }
 
+//TODO: For all IE Messages - IE815 handles this differently - maybe we can standardise to that? (Potential ticket)
 object IE802Message {
   def apply(message: DataRecord[MessagesOption]): IE802Message =
     IE802Message(message.as[IE802Type], message.key, message.namespace, Reminder)
 
   def createFromXml(xml: NodeSeq): IE802Message = {
     val ie802: IE802Type = scalaxb.fromXML[IE802Type](xml)
-    IE802Message(ie802, Some(ie802.productPrefix), None, Reminder)
+    IE802Message(ie802, Some(xml.head.label), Option(xml.head.namespace), Reminder)
   }
 }

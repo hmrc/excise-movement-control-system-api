@@ -28,8 +28,8 @@ import scala.xml.NodeSeq
 
 case class IE871Message(
   private val obj: IE871Type,
-  private val key: Option[String],
-  private val namespace: Option[String],
+  key: Option[String],
+  namespace: Option[String],
   auditType: AuditType
 ) extends IEMessage
     with SubmitterTypeConverter
@@ -70,6 +70,6 @@ object IE871Message {
 
   def createFromXml(xml: NodeSeq): IE871Message = {
     val ie871: IE871Type = scalaxb.fromXML[IE871Type](xml)
-    IE871Message(ie871, Some(ie871.productPrefix), None, ShortageOrExcess)
+    IE871Message(ie871, Some(xml.head.label), Option(xml.head.namespace), ShortageOrExcess)
   }
 }
