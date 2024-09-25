@@ -27,9 +27,9 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFor
 import scala.xml.NodeSeq
 
 case class IE810Message(
-  private val obj: IE810Type,
-  private val key: Option[String],
-  private val namespace: Option[String],
+  obj: IE810Type,
+  key: Option[String],
+  namespace: Option[String],
   auditType: AuditType
 ) extends IEMessage
     with GeneratedJsonWriters {
@@ -64,6 +64,6 @@ object IE810Message {
 
   def createFromXml(xml: NodeSeq): IE810Message = {
     val ie810: IE810Type = scalaxb.fromXML[IE810Type](xml)
-    IE810Message(ie810, Some(ie810.productPrefix), None, CancelMovement)
+    IE810Message(ie810, Some(MessageTypes.IE810.value), None, CancelMovement)
   }
 }
