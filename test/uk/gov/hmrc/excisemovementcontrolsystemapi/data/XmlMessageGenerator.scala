@@ -39,6 +39,7 @@ object XmlMessageGeneratorFactory extends XmlMessageGenerator {
       case IE818 => IE818XmlMessageGenerator.generate(ern, params)
       case IE819 => IE819XmlMessageGenerator.generate(ern, params)
       case IE829 => IE829XmlMessageGenerator.generate(ern, params)
+      case IE837 => IE837XmlMessageGenerator.generate(ern, params)
       case IE839 => IE839XmlMessageGenerator.generate(ern, params)
       case IE840 => IE840XmlMessageGenerator.generate(ern, params)
       case IE871 => IE871XmlMessageGenerator.generate(ern, params)
@@ -564,6 +565,37 @@ private case object IE829XmlMessageGenerator extends XmlMessageGenerator {
         </ie829:NotificationOfAcceptedExport>
       </ie829:Body>
     </ie829:IE829>
+}
+
+private case object IE837XmlMessageGenerator extends XmlMessageGenerator {
+  override def generate(ern: String, params: MessageParams): NodeSeq =
+    <urn:IE837 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE837:V3.13"
+               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
+      <urn:Header>
+        <urn1:MessageSender>NDEA.GB</urn1:MessageSender>
+        <urn1:MessageRecipient>NDEA.EU</urn1:MessageRecipient>
+        <urn1:DateOfPreparation>2023-08-10</urn1:DateOfPreparation>
+        <urn1:TimeOfPreparation>09:56:40.695540</urn1:TimeOfPreparation>
+        <urn1:MessageIdentifier>{params.messageIdentifier}</urn1:MessageIdentifier>
+        <urn1:CorrelationIdentifier>a2f65a81-c297-4117-bea5-556129529463</urn1:CorrelationIdentifier>
+      </urn:Header>
+      <urn:Body>
+        <urn:ExplanationOnDelayForDelivery>
+          <urn:Attributes>
+            <urn:SubmitterIdentification>{ern}</urn:SubmitterIdentification>
+            <urn:SubmitterType>2</urn:SubmitterType>
+            <urn:ExplanationCode>6</urn:ExplanationCode>
+            <urn:ComplementaryInformation language="en">Accident on M5</urn:ComplementaryInformation>
+            <urn:MessageRole>1</urn:MessageRole>
+            <urn:DateAndTimeOfValidationOfExplanationOnDelay>2023-08-10T10:56:42</urn:DateAndTimeOfValidationOfExplanationOnDelay>
+          </urn:Attributes>
+          <urn:ExciseMovement>
+            <urn:AdministrativeReferenceCode>{params.administrativeReferenceCode}</urn:AdministrativeReferenceCode>
+            <urn:SequenceNumber>2</urn:SequenceNumber>
+          </urn:ExciseMovement>
+        </urn:ExplanationOnDelayForDelivery>
+      </urn:Body>
+    </urn:IE837>
 }
 
 private case object IE839XmlMessageGenerator extends XmlMessageGenerator {
