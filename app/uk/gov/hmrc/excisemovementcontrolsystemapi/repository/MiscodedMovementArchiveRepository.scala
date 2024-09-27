@@ -38,7 +38,7 @@ class MiscodedMovementArchiveRepository @Inject() (
       collectionName = "miscoded-movements-archive",
       mongoComponent = mongo,
       domainFormat = Movement.format,
-      indexes = mongoIndexes(appConfig.movementArchiveTTL),
+      indexes = mongoIndexes(appConfig.miscodedMovementArchiveTTL),
       replaceIndexes = false
     )
     with Logging {

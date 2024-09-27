@@ -40,7 +40,7 @@ class MiscodedMovementController @Inject() (
     with Logging {
 
   private val permission = Predicate.Permission(
-    Resource(ResourceType("excise-movement-control-system-api"), ResourceLocation("problem-movements")),
+    Resource(ResourceType("excise-movement-control-system-api"), ResourceLocation("miscoded-movements")),
     IAAction("ADMIN")
   )
 
