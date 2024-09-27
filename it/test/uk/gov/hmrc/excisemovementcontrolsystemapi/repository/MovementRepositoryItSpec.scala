@@ -95,20 +95,20 @@ class MovementRepositoryItSpec
 
   "saveMovements" should {
 
-    val uuid     = UUID.randomUUID()
+    val uuid      = UUID.randomUUID()
     val uuid2     = UUID.randomUUID()
-    val movement = Movement(uuid.toString, Some("boxId"), "lrn1", "345", Some("789"), None, timestamp, Seq.empty)
+    val movement  = Movement(uuid.toString, Some("boxId"), "lrn1", "345", Some("789"), None, timestamp, Seq.empty)
     val movement2 = Movement(uuid2.toString, Some("boxId"), "lrn2", "789", Some("789"), None, timestamp, Seq.empty)
 
     "return insert a movement" in {
       repository.saveMovements(List(movement, movement2)).futureValue
 
       find(
-          Filters.equal("localReferenceNumber", "lrn1")
+        Filters.equal("localReferenceNumber", "lrn1")
       ).futureValue.headOption.value mustBe movement
 
       find(
-          Filters.equal("localReferenceNumber", "lrn2")
+        Filters.equal("localReferenceNumber", "lrn2")
       ).futureValue.headOption.value mustBe movement2
     }
   }
@@ -326,11 +326,11 @@ class MovementRepositoryItSpec
   }
 
   "getByArc" should {
-    val lrn                   = "123"
-    val consignorId           = "Abc"
-    val consigneeId           = "def"
-    val arc                   = "arc1"
-    val movement              = Movement(Some("boxId"), lrn, consignorId, Some(consigneeId), Some(arc), lastUpdated = timestamp)
+    val lrn         = "123"
+    val consignorId = "Abc"
+    val consigneeId = "def"
+    val arc         = "arc1"
+    val movement    = Movement(Some("boxId"), lrn, consignorId, Some(consigneeId), Some(arc), lastUpdated = timestamp)
     "return None if no matching movement" in {
       val result = repository.getByArc(arc).futureValue
 
@@ -347,35 +347,76 @@ class MovementRepositoryItSpec
   }
 
   "migrateLastUpdated" should {
-    val ern = "consignorId"
-    val timestamp = LocalDateTime.of(2024, 4, 3, 12, 30, 45, 123123).toInstant(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS)
+    val ern               = "consignorId"
+    val timestamp         =
+      LocalDateTime.of(2024, 4, 3, 12, 30, 45, 123123).toInstant(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS)
     val message1Timestamp = timestamp.plus(1, ChronoUnit.MINUTES)
     val message2Timestamp = message1Timestamp.plus(1, ChronoUnit.MINUTES)
 
-    val emptyMovement = Movement(UUID.randomUUID().toString, Some("boxId"), "123", "consignorId", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq.empty)
-    val otherErnMovement = Movement(UUID.randomUUID().toString, Some("boxId"), "123", "notConsignor", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq.empty)
+    val emptyMovement    = Movement(
+      UUID.randomUUID().toString,
+      Some("boxId"),
+      "123",
+      "consignorId",
+      Some("789"),
+      None,
+      timestamp.truncatedTo(ChronoUnit.MILLIS),
+      Seq.empty
+    )
+    val otherErnMovement = Movement(
+      UUID.randomUUID().toString,
+      Some("boxId"),
+      "123",
+      "notConsignor",
+      Some("789"),
+      None,
+      timestamp.truncatedTo(ChronoUnit.MILLIS),
+      Seq.empty
+    )
 
-    val message1 = Message("encodedMessage", "type", "messageId", "consignorId", Set.empty, message1Timestamp)
-    val message2 = Message("encodedMessage2", "type2", "messageId2", "consignorId", Set.empty, message2Timestamp)
-    val consignorMovement = Movement(UUID.randomUUID().toString, Some("boxId"), "123", "consignorId", Some("789"), None, timestamp.truncatedTo(ChronoUnit.MILLIS), Seq(message1, message2))
+    val message1          = Message("encodedMessage", "type", "messageId", "consignorId", Set.empty, message1Timestamp)
+    val message2          = Message("encodedMessage2", "type2", "messageId2", "consignorId", Set.empty, message2Timestamp)
+    val consignorMovement = Movement(
+      UUID.randomUUID().toString,
+      Some("boxId"),
+      "123",
+      "consignorId",
+      Some("789"),
+      None,
+      timestamp.truncatedTo(ChronoUnit.MILLIS),
+      Seq(message1, message2)
+    )
 
     "not update a movement with no messages for the ERN" in {
       insertMovement(emptyMovement)
       repository.migrateLastUpdated(ern).futureValue
 
-      repository.collection.find(Filters.eq("_id", emptyMovement._id)).headOption().futureValue.value mustEqual emptyMovement
+      repository.collection
+        .find(Filters.eq("_id", emptyMovement._id))
+        .headOption()
+        .futureValue
+        .value mustEqual emptyMovement
     }
     "not update a movement for a different ERN" in {
       insertMovement(otherErnMovement)
       repository.migrateLastUpdated(ern).futureValue
 
-      repository.collection.find(Filters.eq("_id", otherErnMovement._id)).headOption().futureValue.value mustEqual otherErnMovement
+      repository.collection
+        .find(Filters.eq("_id", otherErnMovement._id))
+        .headOption()
+        .futureValue
+        .value mustEqual otherErnMovement
     }
     "update the lastUpdated to be the latest createdOn in the messages" in {
       insertMovement(consignorMovement)
       repository.migrateLastUpdated(ern).futureValue
 
-      repository.collection.find(Filters.eq("_id", consignorMovement._id)).headOption().futureValue.value.lastUpdated mustBe message2Timestamp
+      repository.collection
+        .find(Filters.eq("_id", consignorMovement._id))
+        .headOption()
+        .futureValue
+        .value
+        .lastUpdated mustBe message2Timestamp
     }
     mustPreserveMdc(repository.migrateLastUpdated(ern))
   }
@@ -445,7 +486,7 @@ class MovementRepositoryItSpec
           val consignorMovement =
             Movement(Some("boxId"), "1", "consignor", Some("ern1"), Some("arc1"), lastUpdated = timestamp)
           insertMovement(consignorMovement)
-          val result =
+          val result            =
             repository.getMovementByERN(allErns, MovementFilter.emptyFilter.copy(ern = Some("consignor"))).futureValue
           result mustBe Seq(
             consignorMovement
@@ -455,7 +496,7 @@ class MovementRepositoryItSpec
           val consigneeMovement =
             Movement(Some("boxId"), "2", "ern1", Some("consignee"), Some("arc2"), lastUpdated = timestamp)
           insertMovement(consigneeMovement)
-          val result =
+          val result            =
             repository.getMovementByERN(allErns, MovementFilter.emptyFilter.copy(ern = Some("consignee"))).futureValue
           result mustBe Seq(
             consigneeMovement
@@ -463,9 +504,17 @@ class MovementRepositoryItSpec
         }
         "ern is message recipient" in {
           val recipientMovement =
-            Movement(Some("boxId"), "3", "consignorId1", Some("ern1"), Some("arc3"), lastUpdated = timestamp, messages = Seq(Message("encoded", "IE801", "Id", "recipient", Set.empty, timestamp)))
+            Movement(
+              Some("boxId"),
+              "3",
+              "consignorId1",
+              Some("ern1"),
+              Some("arc3"),
+              lastUpdated = timestamp,
+              messages = Seq(Message("encoded", "IE801", "Id", "recipient", Set.empty, timestamp))
+            )
           insertMovement(recipientMovement)
-          val result =
+          val result            =
             repository.getMovementByERN(allErns, MovementFilter.emptyFilter.copy(ern = Some("recipient"))).futureValue
           result mustBe Seq(
             recipientMovement
@@ -633,7 +682,7 @@ class MovementRepositoryItSpec
 
     "return a movement" when {
       "the movement doesn't contain the ERN in consignee or consignor, but a message on the movement does" in {
-        val messages = Seq(Message("blah","IE801","MessageId", "Recipient", Set.empty, timestamp))
+        val messages          = Seq(Message("blah", "IE801", "MessageId", "Recipient", Set.empty, timestamp))
         val expectedMovement1 = Movement(
           Some("boxId"),
           "1",
@@ -702,8 +751,8 @@ class MovementRepositoryItSpec
     }
 
     "get all records for recipient" in {
-      val message         = Message("any, message", MessageTypes.IE801.value, "messageId", "456", Set.empty, timestamp)
-      val movementLrn1    = Movement(Some("boxId"), "1", "345", Some("789"), None, timestamp, messages = Seq(message))
+      val message      = Message("any, message", MessageTypes.IE801.value, "messageId", "456", Set.empty, timestamp)
+      val movementLrn1 = Movement(Some("boxId"), "1", "345", Some("789"), None, timestamp, messages = Seq(message))
       insertMovement(movementLrn1)
 
       val result = repository.getAllBy("456").futureValue
@@ -1005,7 +1054,8 @@ class MovementRepositoryItSpec
       )
 
       val message3  = Message("encodedMessage", "type", "messageId", "recipient3", Set("boxId1", "boxId2"), timestamp)
-      val message4  = Message("encodedMessage", "type", "messageId4", "recipient1", Set("boxId1", "boxId2", "boxId3"), timestamp)
+      val message4  =
+        Message("encodedMessage", "type", "messageId4", "recipient1", Set("boxId1", "boxId2", "boxId3"), timestamp)
       val movement2 = Movement(
         UUID.randomUUID().toString,
         None,
@@ -1019,8 +1069,8 @@ class MovementRepositoryItSpec
 
       repository.collection.insertMany(Seq(movement, movement2)).toFuture().futureValue
 
-      val updatedMessage1    = message1.copy(boxesToNotify = Set("boxId1", "boxId2", "boxId3"))
-      val updatedMovement1   = movement.copy(messages = Seq(updatedMessage1, message2))
+      val updatedMessage1   = message1.copy(boxesToNotify = Set("boxId1", "boxId2", "boxId3"))
+      val updatedMovement1  = movement.copy(messages = Seq(updatedMessage1, message2))
       val expectedMovements = Seq(updatedMovement1, movement2)
 
       repository.addBoxIdToMessages("recipient1", "boxId3").futureValue
@@ -1031,24 +1081,48 @@ class MovementRepositoryItSpec
     mustPreserveMdc(repository.addBoxIdToMessages("recipient1", "boxId3"))
   }
 
-  "getMiscodedMessages" should {
+  "getMiscodedMovements" should {
 
-    val utils = new EmcsUtils
+    val utils          = new EmcsUtils
     val messageFactory = IEMessageFactory()
 
-    def formatXmlIncorrectly[A, B <: IEMessage with ({ val obj: A })](ern: String, params: MessageParams)(implicit ev: CanWriteXML[A]): String = {
-      utils.encode(scalaxb.toXML(messageFactory.createFromXml(
-        params.messageType.value,
-        XmlMessageGeneratorFactory.generate(ern, params)
-      ).asInstanceOf[B].obj, s"${params.messageType.value}Type", generated.defaultScope).toString)
-    }
+    def formatXmlIncorrectly[A, B <: IEMessage with ({ val obj: A })](ern: String, params: MessageParams)(implicit
+      ev: CanWriteXML[A]
+    ): String =
+      utils.encode(
+        scalaxb
+          .toXML(
+            messageFactory
+              .createFromXml(
+                params.messageType.value,
+                XmlMessageGeneratorFactory.generate(ern, params)
+              )
+              .asInstanceOf[B]
+              .obj,
+            s"${params.messageType.value}Type",
+            generated.defaultScope
+          )
+          .toString
+      )
 
-    def formatXmlCorrectly[A, B <: IEMessage with ({ val obj: A })](ern: String, params: MessageParams)(implicit ev: CanWriteXML[A]): String = {
-      utils.encode(scalaxb.toXML(messageFactory.createFromXml(
-        params.messageType.value,
-        XmlMessageGeneratorFactory.generate(ern, params)
-      ).asInstanceOf[B].obj, params.messageType.value, generated.defaultScope).toString)
-    }
+    def formatXmlCorrectly[A, B <: IEMessage with ({ val obj: A })](ern: String, params: MessageParams)(implicit
+      ev: CanWriteXML[A]
+    ): String =
+      utils.encode(
+        scalaxb
+          .toXML(
+            messageFactory
+              .createFromXml(
+                params.messageType.value,
+                XmlMessageGeneratorFactory.generate(ern, params)
+              )
+              .asInstanceOf[B]
+              .obj,
+            params.messageType.value,
+            generated.defaultScope
+          )
+          .toString
+      )
 
     "return any movements where they have a message which is badly encoded" in {
 
@@ -1062,8 +1136,26 @@ class MovementRepositoryItSpec
       val consignor = "consignor"
       val consignee = "consignee"
 
-      val badIe801 = formatXmlIncorrectly[IE801Type, IE801Message](consignor, MessageParams(IE801, "XI000001", consigneeErn = Some(consignee), localReferenceNumber = Some(lrn1), administrativeReferenceCode = Some(arc1)))
-      val goodIe801 = formatXmlCorrectly[IE801Type, IE801Message](consignor, MessageParams(IE801, "XI000002", consigneeErn = Some(consignee), localReferenceNumber = Some(lrn2), administrativeReferenceCode = Some(arc2)))
+      val badIe801  = formatXmlIncorrectly[IE801Type, IE801Message](
+        consignor,
+        MessageParams(
+          IE801,
+          "XI000001",
+          consigneeErn = Some(consignee),
+          localReferenceNumber = Some(lrn1),
+          administrativeReferenceCode = Some(arc1)
+        )
+      )
+      val goodIe801 = formatXmlCorrectly[IE801Type, IE801Message](
+        consignor,
+        MessageParams(
+          IE801,
+          "XI000002",
+          consigneeErn = Some(consignee),
+          localReferenceNumber = Some(lrn2),
+          administrativeReferenceCode = Some(arc2)
+        )
+      )
 
       val movement1 = Movement(
         boxId = None,
@@ -1073,7 +1165,7 @@ class MovementRepositoryItSpec
         administrativeReferenceCode = Some(arc1),
         lastUpdated = now.minus(1, ChronoUnit.DAYS),
         messages = Seq(
-          Message(badIe801, "IE801", "XI000001", consignor, Set.empty, now.minus(4, ChronoUnit.DAYS)),
+          Message(badIe801, "IE801", "XI000001", consignor, Set.empty, now.minus(4, ChronoUnit.DAYS))
         )
       )
 
@@ -1085,7 +1177,7 @@ class MovementRepositoryItSpec
         administrativeReferenceCode = Some(arc2),
         lastUpdated = now.minus(1, ChronoUnit.DAYS),
         messages = Seq(
-          Message(goodIe801, "IE801", "XI000002", consignor, Set.empty, now.minus(4, ChronoUnit.DAYS)),
+          Message(goodIe801, "IE801", "XI000002", consignor, Set.empty, now.minus(4, ChronoUnit.DAYS))
         )
       )
 
@@ -1100,22 +1192,46 @@ class MovementRepositoryItSpec
 
   "getCountOfMiscodedMessages" should {
 
-    val utils = new EmcsUtils
+    val utils          = new EmcsUtils
     val messageFactory = IEMessageFactory()
 
-    def formatXmlIncorrectly[A, B <: IEMessage with ({ val obj: A })](ern: String, params: MessageParams)(implicit ev: CanWriteXML[A]): String = {
-      utils.encode(scalaxb.toXML(messageFactory.createFromXml(
-        params.messageType.value,
-        XmlMessageGeneratorFactory.generate(ern, params)
-      ).asInstanceOf[B].obj, s"${params.messageType.value}Type", generated.defaultScope).toString)
-    }
+    def formatXmlIncorrectly[A, B <: IEMessage with ({ val obj: A })](ern: String, params: MessageParams)(implicit
+      ev: CanWriteXML[A]
+    ): String =
+      utils.encode(
+        scalaxb
+          .toXML(
+            messageFactory
+              .createFromXml(
+                params.messageType.value,
+                XmlMessageGeneratorFactory.generate(ern, params)
+              )
+              .asInstanceOf[B]
+              .obj,
+            s"${params.messageType.value}Type",
+            generated.defaultScope
+          )
+          .toString
+      )
 
-    def formatXmlCorrectly[A, B <: IEMessage with ({ val obj: A })](ern: String, params: MessageParams)(implicit ev: CanWriteXML[A]): String = {
-      utils.encode(scalaxb.toXML(messageFactory.createFromXml(
-        params.messageType.value,
-        XmlMessageGeneratorFactory.generate(ern, params)
-      ).asInstanceOf[B].obj, params.messageType.value, generated.defaultScope).toString)
-    }
+    def formatXmlCorrectly[A, B <: IEMessage with ({ val obj: A })](ern: String, params: MessageParams)(implicit
+      ev: CanWriteXML[A]
+    ): String =
+      utils.encode(
+        scalaxb
+          .toXML(
+            messageFactory
+              .createFromXml(
+                params.messageType.value,
+                XmlMessageGeneratorFactory.generate(ern, params)
+              )
+              .asInstanceOf[B]
+              .obj,
+            params.messageType.value,
+            generated.defaultScope
+          )
+          .toString
+      )
 
     "return the count of how many movements have badly encoded messages" in {
 
@@ -1129,8 +1245,26 @@ class MovementRepositoryItSpec
       val consignor = "consignor"
       val consignee = "consignee"
 
-      val badIe801 = formatXmlIncorrectly[IE801Type, IE801Message](consignor, MessageParams(IE801, "XI000001", consigneeErn = Some(consignee), localReferenceNumber = Some(lrn1), administrativeReferenceCode = Some(arc1)))
-      val goodIe801 = formatXmlCorrectly[IE801Type, IE801Message](consignor, MessageParams(IE801, "XI000002", consigneeErn = Some(consignee), localReferenceNumber = Some(lrn2), administrativeReferenceCode = Some(arc2)))
+      val badIe801  = formatXmlIncorrectly[IE801Type, IE801Message](
+        consignor,
+        MessageParams(
+          IE801,
+          "XI000001",
+          consigneeErn = Some(consignee),
+          localReferenceNumber = Some(lrn1),
+          administrativeReferenceCode = Some(arc1)
+        )
+      )
+      val goodIe801 = formatXmlCorrectly[IE801Type, IE801Message](
+        consignor,
+        MessageParams(
+          IE801,
+          "XI000002",
+          consigneeErn = Some(consignee),
+          localReferenceNumber = Some(lrn2),
+          administrativeReferenceCode = Some(arc2)
+        )
+      )
 
       val movement1 = Movement(
         boxId = None,
@@ -1140,7 +1274,7 @@ class MovementRepositoryItSpec
         administrativeReferenceCode = Some(arc1),
         lastUpdated = now.minus(1, ChronoUnit.DAYS),
         messages = Seq(
-          Message(badIe801, "IE801", "XI000001", consignor, Set.empty, now.minus(4, ChronoUnit.DAYS)),
+          Message(badIe801, "IE801", "XI000001", consignor, Set.empty, now.minus(4, ChronoUnit.DAYS))
         )
       )
 
@@ -1152,7 +1286,7 @@ class MovementRepositoryItSpec
         administrativeReferenceCode = Some(arc2),
         lastUpdated = now.minus(1, ChronoUnit.DAYS),
         messages = Seq(
-          Message(goodIe801, "IE801", "XI000002", consignor, Set.empty, now.minus(4, ChronoUnit.DAYS)),
+          Message(goodIe801, "IE801", "XI000002", consignor, Set.empty, now.minus(4, ChronoUnit.DAYS))
         )
       )
 
