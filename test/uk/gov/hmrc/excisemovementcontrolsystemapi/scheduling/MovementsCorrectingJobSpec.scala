@@ -64,7 +64,8 @@ class MovementsCorrectingJobSpec
     .configure(
       "scheduler.movementsCorrectingJob.initialDelay"      -> "1 minutes",
       "scheduler.movementsCorrectingJob.interval"          -> "1 minute",
-      "scheduler.movementsCorrectingJob.numberOfInstances" -> "1337"
+      "scheduler.movementsCorrectingJob.numberOfInstances" -> "1337",
+      "featureFlags.movementsCorrectingEnabled"            -> true
     )
     .build()
 
@@ -98,7 +99,7 @@ class MovementsCorrectingJobSpec
   ".execute" - {
 
     "must correct movements for the movement id" - {
-      "when a movement is found" - {
+      "when a movement is found" in {
 
         val workItem = WorkItem(
           id = new ObjectId(),
@@ -125,7 +126,7 @@ class MovementsCorrectingJobSpec
     }
 
     "must not correct movements" - {
-      "when no movement is found" - {}
+      "when no movement is found" in {}
     }
 
   }

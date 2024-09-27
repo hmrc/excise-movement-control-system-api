@@ -36,8 +36,7 @@ class MovementsCorrectingJob @Inject() (
   messageService: MessageService,
   problemMovementsWorkItemRepo: ProblemMovementsWorkItemRepo,
   dateTimeService: DateTimeService
-)(implicit hc: HeaderCarrier)
-    extends ScheduledJob
+) extends ScheduledJob
     with Logging {
   override def name: String = "movements-correcting-job"
 
@@ -58,10 +57,12 @@ class MovementsCorrectingJob @Inject() (
   override val enabled: Boolean = configuration.get[Boolean]("featureFlags.movementsCorrectingEnabled")
 
   override val numberOfInstances: Int =
-    configuration.get[Int]("scheduler.movementsCorrectingEnabled.numberOfInstances")
+    configuration.get[Int]("scheduler.movementsCorrectingJob.numberOfInstances")
 
   override def initialDelay: FiniteDuration =
     configuration.get[FiniteDuration]("scheduler.movementsCorrectingJob.initialDelay")
 
   override def interval: FiniteDuration = configuration.get[FiniteDuration]("scheduler.movementsCorrectingJob.interval")
+  implicit val hc: HeaderCarrier        = HeaderCarrier()
+
 }
