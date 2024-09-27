@@ -20,7 +20,7 @@ import org.apache.pekko.Done
 import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.Mockito
-import org.mockito.MockitoSugar.{verify, when}
+import org.mockito.MockitoSugar.{times, verify, when}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.freespec.AnyFreeSpec
@@ -126,7 +126,17 @@ class MovementsCorrectingJobSpec
     }
 
     "must not correct movements" - {
-      "when no movement is found" in {}
+      "when no movement is found" in {
+
+        when(timeService.timestamp()).thenReturn(now)
+        when(problemMovementsWorkItemRepo.pullOutstanding(any[Instant], any[Instant]))
+          .thenReturn(Future.successful(None))
+
+        val result = movementsCorrectingJob.execute.futureValue
+
+        result mustBe ScheduledJob.Result.Completed
+        verify(messageService, times(0)).archiveAndFixProblemMovement(eqTo("12345"))(any)
+      }
     }
 
   }
