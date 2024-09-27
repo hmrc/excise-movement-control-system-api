@@ -23,3 +23,8 @@ GET        /admin/problem-movements                     uk.gov.hmrc.excisemoveme
 GET        /admin/count-problem-movements               uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.ProblemMovementController.getCountOfMovementsWithTooMany801s()
 GET        /admin/problem-movements/build-work-list     uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.ProblemMovementController.buildWorkItemQueue()
 POST       /admin/problem-movements/resolve             uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.ProblemMovementController.resolveProblemMovement()
+
+GET        /admin/count-miscoded-movements              uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.MiscodedMovementController.getCount()
+GET        /admin/miscoded-movements                    uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.MiscodedMovementController.getMovements()
+GET        /admin/miscoded-movements/build-work-list    uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.MiscodedMovementController.buildWorkList()
+POST       /admin/miscoded-movements/resolve            uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.MiscodedMovementController.resolve()

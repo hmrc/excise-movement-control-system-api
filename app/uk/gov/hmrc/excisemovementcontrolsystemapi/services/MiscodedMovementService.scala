@@ -21,8 +21,8 @@ import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MiscodedMovementArchiveRepository, MovementRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 
 import javax.inject.{Inject, Singleton}
@@ -32,21 +32,33 @@ import scala.xml.XML
 @Singleton
 class MiscodedMovementService @Inject() (
   movementRepository: MovementRepository,
+  miscodedMovementArchiveRepository: MiscodedMovementArchiveRepository,
   emcsUtils: EmcsUtils,
   messageFactory: IEMessageFactory
 )(implicit ec: ExecutionContext)
     extends Logging {
 
-  def recodeMessages(movementId: String): Future[Done] =
-    movementRepository.getMovementById(movementId).flatMap {
-      _.map { movement =>
-        val updatedMessages = movement.messages.map(recodeMessage)
-        movementRepository.save(movement.copy(messages = updatedMessages))
-      }.getOrElse {
-        logger.warn(s"No movement found for id: $movementId")
-        Future.successful(Done)
+  def archiveAndRecode(movementId: String): Future[Done] =
+    movementRepository
+      .getMovementById(movementId)
+      .flatMap {
+        case Some(movement) =>
+          logger.warn(s"Applying fix to miscoded movement $movementId")
+          for {
+            _ <- miscodedMovementArchiveRepository.saveMovement(movement)
+            _ <- recodeMessages(movement)
+          } yield {
+            logger.warn(s"recoding of movement $movementId finished")
+            Done
+          }
+        case None           =>
+          Future.failed[Done](new Exception("Movement to be recoded was not found"))
       }
-    }
+
+  def recodeMessages(movement: Movement): Future[Done] = {
+    val updatedMessages = movement.messages.map(recodeMessage)
+    movementRepository.save(movement.copy(messages = updatedMessages))
+  }
 
   private def recodeMessage(message: Message): Message = {
 
