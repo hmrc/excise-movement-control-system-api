@@ -40,7 +40,7 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 class MiscodedMovementServiceSpec
-  extends PlaySpec
+    extends PlaySpec
     with CleanMongoCollectionSupport
     with EitherValues
     with IntegrationPatience
@@ -50,7 +50,7 @@ class MiscodedMovementServiceSpec
     with MockitoSugar {
 
   private val dateTimeService = mock[DateTimeService]
-  private val now = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+  private val now             = Instant.now.truncatedTo(ChronoUnit.MILLIS)
 
   override def fakeApplication(): Application = GuiceApplicationBuilder()
     .overrides(
@@ -60,9 +60,9 @@ class MiscodedMovementServiceSpec
     .build()
 
   private lazy val movementRepository: MovementRepository = app.injector.instanceOf[MovementRepository]
-  private lazy val miscodedMovementService = app.injector.instanceOf[MiscodedMovementService]
+  private lazy val miscodedMovementService                = app.injector.instanceOf[MiscodedMovementService]
 
-  private val utils = new EmcsUtils
+  private val utils          = new EmcsUtils
   private val messageFactory = IEMessageFactory()
 
   override def beforeEach(): Unit = {
@@ -80,62 +80,378 @@ class MiscodedMovementServiceSpec
       val consignor = "consignor"
       val consignee = "consignee"
 
-      val badIe704 = formatXmlIncorrectly[IE704Type, IE704Message](consignor, MessageParams(IE704, "XI000000", consigneeErn = Some(consignee), localReferenceNumber = Some(lrn), administrativeReferenceCode = None))
-      val goodIe704 = formatXmlCorrectly[IE704Type, IE704Message](consignor, MessageParams(IE704, "XI000000", consigneeErn = Some(consignee), localReferenceNumber = Some(lrn), administrativeReferenceCode = None), "http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3")
+      val badIe704  = formatXmlIncorrectly[IE704Type, IE704Message](
+        consignor,
+        MessageParams(
+          IE704,
+          "XI000000",
+          consigneeErn = Some(consignee),
+          localReferenceNumber = Some(lrn),
+          administrativeReferenceCode = None
+        )
+      )
+      val goodIe704 = formatXmlCorrectly[IE704Type, IE704Message](
+        consignor,
+        MessageParams(
+          IE704,
+          "XI000000",
+          consigneeErn = Some(consignee),
+          localReferenceNumber = Some(lrn),
+          administrativeReferenceCode = None
+        ),
+        "http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3"
+      )
 
-      val badIe801 = formatXmlIncorrectly[IE801Type, IE801Message](consignor, MessageParams(IE801, "XI000001", consigneeErn = Some(consignee), localReferenceNumber = Some(lrn), administrativeReferenceCode = Some(arc)))
-      val goodIe801 = formatXmlCorrectly[IE801Type, IE801Message](consignor, MessageParams(IE801, "XI000001", consigneeErn = Some(consignee), localReferenceNumber = Some(lrn), administrativeReferenceCode = Some(arc)), "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.13")
+      val badIe801  = formatXmlIncorrectly[IE801Type, IE801Message](
+        consignor,
+        MessageParams(
+          IE801,
+          "XI000001",
+          consigneeErn = Some(consignee),
+          localReferenceNumber = Some(lrn),
+          administrativeReferenceCode = Some(arc)
+        )
+      )
+      val goodIe801 = formatXmlCorrectly[IE801Type, IE801Message](
+        consignor,
+        MessageParams(
+          IE801,
+          "XI000001",
+          consigneeErn = Some(consignee),
+          localReferenceNumber = Some(lrn),
+          administrativeReferenceCode = Some(arc)
+        ),
+        "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.13"
+      )
 
-      val badIe802 = formatXmlIncorrectly[IE802Type, IE802Message](consignor, MessageParams(IE802, "XI000002", consigneeErn = None, localReferenceNumber = None, administrativeReferenceCode = Some(arc)))
-      val goodIe802 = formatXmlCorrectly[IE802Type, IE802Message](consignor, MessageParams(IE802, "XI000002", consigneeErn = None, localReferenceNumber = None, administrativeReferenceCode = Some(arc)), "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE802:V3.13")
+      val badIe802  = formatXmlIncorrectly[IE802Type, IE802Message](
+        consignor,
+        MessageParams(
+          IE802,
+          "XI000002",
+          consigneeErn = None,
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        )
+      )
+      val goodIe802 = formatXmlCorrectly[IE802Type, IE802Message](
+        consignor,
+        MessageParams(
+          IE802,
+          "XI000002",
+          consigneeErn = None,
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        ),
+        "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE802:V3.13"
+      )
 
-      val badIe803 = formatXmlIncorrectly[IE803Type, IE803Message](consignor, MessageParams(IE803, "XI000003", consigneeErn = None, localReferenceNumber = None, administrativeReferenceCode = Some(arc)))
-      val goodIe803 = formatXmlCorrectly[IE803Type, IE803Message](consignor, MessageParams(IE803, "XI000003", consigneeErn = None, localReferenceNumber = None, administrativeReferenceCode = Some(arc)), "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE803:V3.13")
+      val badIe803  = formatXmlIncorrectly[IE803Type, IE803Message](
+        consignor,
+        MessageParams(
+          IE803,
+          "XI000003",
+          consigneeErn = None,
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        )
+      )
+      val goodIe803 = formatXmlCorrectly[IE803Type, IE803Message](
+        consignor,
+        MessageParams(
+          IE803,
+          "XI000003",
+          consigneeErn = None,
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        ),
+        "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE803:V3.13"
+      )
 
-      val badIe807 = formatXmlIncorrectly[IE807Type, IE807Message](consignor, MessageParams(IE807, "XI000004", consigneeErn = None, localReferenceNumber = None, administrativeReferenceCode = Some(arc)))
-      val goodIe807 = formatXmlCorrectly[IE807Type, IE807Message](consignor, MessageParams(IE807, "XI000004", consigneeErn = None, localReferenceNumber = None, administrativeReferenceCode = Some(arc)), "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE807:V3.13")
+      val badIe807  = formatXmlIncorrectly[IE807Type, IE807Message](
+        consignor,
+        MessageParams(
+          IE807,
+          "XI000004",
+          consigneeErn = None,
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        )
+      )
+      val goodIe807 = formatXmlCorrectly[IE807Type, IE807Message](
+        consignor,
+        MessageParams(
+          IE807,
+          "XI000004",
+          consigneeErn = None,
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        ),
+        "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE807:V3.13"
+      )
 
-      val badIe810 = formatXmlIncorrectly[IE810Type, IE810Message](consignor, MessageParams(IE810, "XI000005", consigneeErn = None, localReferenceNumber = None, administrativeReferenceCode = Some(arc)))
-      val goodIe810 = formatXmlCorrectly[IE810Type, IE810Message](consignor, MessageParams(IE810, "XI000005", consigneeErn = None, localReferenceNumber = None, administrativeReferenceCode = Some(arc)), "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE810:V3.13")
+      val badIe810  = formatXmlIncorrectly[IE810Type, IE810Message](
+        consignor,
+        MessageParams(
+          IE810,
+          "XI000005",
+          consigneeErn = None,
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        )
+      )
+      val goodIe810 = formatXmlCorrectly[IE810Type, IE810Message](
+        consignor,
+        MessageParams(
+          IE810,
+          "XI000005",
+          consigneeErn = None,
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        ),
+        "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE810:V3.13"
+      )
 
-      val badIe813 = formatXmlIncorrectly[IE813Type, IE813Message](consignor, MessageParams(IE813, "XI000006", consigneeErn = Some(consignee), localReferenceNumber = None, administrativeReferenceCode = Some(arc)))
-      val goodIe813 = formatXmlCorrectly[IE813Type, IE813Message](consignor, MessageParams(IE813, "XI000006", consigneeErn = Some(consignee), localReferenceNumber = None, administrativeReferenceCode = Some(arc)), "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE813:V3.13")
+      val badIe813  = formatXmlIncorrectly[IE813Type, IE813Message](
+        consignor,
+        MessageParams(
+          IE813,
+          "XI000006",
+          consigneeErn = Some(consignee),
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        )
+      )
+      val goodIe813 = formatXmlCorrectly[IE813Type, IE813Message](
+        consignor,
+        MessageParams(
+          IE813,
+          "XI000006",
+          consigneeErn = Some(consignee),
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        ),
+        "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE813:V3.13"
+      )
 
-      val badIe818 = formatXmlIncorrectly[IE818Type, IE818Message](consignor, MessageParams(IE818, "XI000008", consigneeErn = Some(consignee), localReferenceNumber = None, administrativeReferenceCode = Some(arc)))
-      val goodIe818 = formatXmlCorrectly[IE818Type, IE818Message](consignor, MessageParams(IE818, "XI000008", consigneeErn = Some(consignee), localReferenceNumber = None, administrativeReferenceCode = Some(arc)), "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE818:V3.13")
+      val badIe818  = formatXmlIncorrectly[IE818Type, IE818Message](
+        consignor,
+        MessageParams(
+          IE818,
+          "XI000008",
+          consigneeErn = Some(consignee),
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        )
+      )
+      val goodIe818 = formatXmlCorrectly[IE818Type, IE818Message](
+        consignor,
+        MessageParams(
+          IE818,
+          "XI000008",
+          consigneeErn = Some(consignee),
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        ),
+        "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE818:V3.13"
+      )
 
-      val badIe819 = formatXmlIncorrectly[IE819Type, IE819Message](consignor, MessageParams(IE819, "XI000009", consigneeErn = Some(consignee), localReferenceNumber = None, administrativeReferenceCode = Some(arc)))
-      val goodIe819 = formatXmlCorrectly[IE819Type, IE819Message](consignor, MessageParams(IE819, "XI000009", consigneeErn = Some(consignee), localReferenceNumber = None, administrativeReferenceCode = Some(arc)), "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE819:V3.13")
+      val badIe819  = formatXmlIncorrectly[IE819Type, IE819Message](
+        consignor,
+        MessageParams(
+          IE819,
+          "XI000009",
+          consigneeErn = Some(consignee),
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        )
+      )
+      val goodIe819 = formatXmlCorrectly[IE819Type, IE819Message](
+        consignor,
+        MessageParams(
+          IE819,
+          "XI000009",
+          consigneeErn = Some(consignee),
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        ),
+        "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE819:V3.13"
+      )
 
-      val badIe829 = formatXmlIncorrectly[IE829Type, IE829Message](consignor, MessageParams(IE829, "XI000010", consigneeErn = Some(consignee), localReferenceNumber = None, administrativeReferenceCode = Some(arc)))
-      val goodIe829 = formatXmlCorrectly[IE829Type, IE829Message](consignor, MessageParams(IE829, "XI000010", consigneeErn = Some(consignee), localReferenceNumber = None, administrativeReferenceCode = Some(arc)), "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE829:V3.13")
+      val badIe829  = formatXmlIncorrectly[IE829Type, IE829Message](
+        consignor,
+        MessageParams(
+          IE829,
+          "XI000010",
+          consigneeErn = Some(consignee),
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        )
+      )
+      val goodIe829 = formatXmlCorrectly[IE829Type, IE829Message](
+        consignor,
+        MessageParams(
+          IE829,
+          "XI000010",
+          consigneeErn = Some(consignee),
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        ),
+        "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE829:V3.13"
+      )
 
-      val badIe837 = formatXmlIncorrectly[IE837Type, IE837Message](consignor, MessageParams(IE837, "XI000011", consigneeErn = None, localReferenceNumber = None, administrativeReferenceCode = Some(arc)))
-      val goodIe837 = formatXmlCorrectly[IE837Type, IE837Message](consignor, MessageParams(IE837, "XI000011", consigneeErn = None, localReferenceNumber = None, administrativeReferenceCode = Some(arc)), "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE837:V3.13")
+      val badIe837  = formatXmlIncorrectly[IE837Type, IE837Message](
+        consignor,
+        MessageParams(
+          IE837,
+          "XI000011",
+          consigneeErn = None,
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        )
+      )
+      val goodIe837 = formatXmlCorrectly[IE837Type, IE837Message](
+        consignor,
+        MessageParams(
+          IE837,
+          "XI000011",
+          consigneeErn = None,
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        ),
+        "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE837:V3.13"
+      )
 
-      val badIe839 = formatXmlIncorrectly[IE839Type, IE839Message](consignor, MessageParams(IE839, "XI000012", consigneeErn = Some(consignee), localReferenceNumber = Some(lrn), administrativeReferenceCode = Some(arc)))
-      val goodIe839 = formatXmlCorrectly[IE839Type, IE839Message](consignor, MessageParams(IE839, "XI000012", consigneeErn = Some(consignee), localReferenceNumber = Some(lrn), administrativeReferenceCode = Some(arc)), "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.13")
+      val badIe839  = formatXmlIncorrectly[IE839Type, IE839Message](
+        consignor,
+        MessageParams(
+          IE839,
+          "XI000012",
+          consigneeErn = Some(consignee),
+          localReferenceNumber = Some(lrn),
+          administrativeReferenceCode = Some(arc)
+        )
+      )
+      val goodIe839 = formatXmlCorrectly[IE839Type, IE839Message](
+        consignor,
+        MessageParams(
+          IE839,
+          "XI000012",
+          consigneeErn = Some(consignee),
+          localReferenceNumber = Some(lrn),
+          administrativeReferenceCode = Some(arc)
+        ),
+        "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.13"
+      )
 
-      val badIe840 = formatXmlIncorrectly[IE840Type, IE840Message](consignor, MessageParams(IE840, "XI000013", consigneeErn = None, localReferenceNumber = None, administrativeReferenceCode = Some(arc)))
-      val goodIe840 = formatXmlCorrectly[IE840Type, IE840Message](consignor, MessageParams(IE840, "XI000013", consigneeErn = None, localReferenceNumber = None, administrativeReferenceCode = Some(arc)), "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE840:V3.13")
+      val badIe840  = formatXmlIncorrectly[IE840Type, IE840Message](
+        consignor,
+        MessageParams(
+          IE840,
+          "XI000013",
+          consigneeErn = None,
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        )
+      )
+      val goodIe840 = formatXmlCorrectly[IE840Type, IE840Message](
+        consignor,
+        MessageParams(
+          IE840,
+          "XI000013",
+          consigneeErn = None,
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        ),
+        "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE840:V3.13"
+      )
 
-      val badIe871 = formatXmlIncorrectly[IE871Type, IE871Message](consignor, MessageParams(IE871, "XI000014", consigneeErn = Some(consignee), localReferenceNumber = None, administrativeReferenceCode = Some(arc)))
-      val goodIe871 = formatXmlCorrectly[IE871Type, IE871Message](consignor, MessageParams(IE871, "XI000014", consigneeErn = Some(consignee), localReferenceNumber = None, administrativeReferenceCode = Some(arc)), "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE871:V3.13")
+      val badIe871  = formatXmlIncorrectly[IE871Type, IE871Message](
+        consignor,
+        MessageParams(
+          IE871,
+          "XI000014",
+          consigneeErn = Some(consignee),
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        )
+      )
+      val goodIe871 = formatXmlCorrectly[IE871Type, IE871Message](
+        consignor,
+        MessageParams(
+          IE871,
+          "XI000014",
+          consigneeErn = Some(consignee),
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        ),
+        "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE871:V3.13"
+      )
 
-      val badIe881 = formatXmlIncorrectly[IE881Type, IE881Message](consignor, MessageParams(IE881, "XI000015", consigneeErn = None, localReferenceNumber = None, administrativeReferenceCode = Some(arc)))
-      val goodIe881 = formatXmlCorrectly[IE881Type, IE881Message](consignor, MessageParams(IE881, "XI000015", consigneeErn = None, localReferenceNumber = None, administrativeReferenceCode = Some(arc)), "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE881:V3.13")
+      val badIe881  = formatXmlIncorrectly[IE881Type, IE881Message](
+        consignor,
+        MessageParams(
+          IE881,
+          "XI000015",
+          consigneeErn = None,
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        )
+      )
+      val goodIe881 = formatXmlCorrectly[IE881Type, IE881Message](
+        consignor,
+        MessageParams(
+          IE881,
+          "XI000015",
+          consigneeErn = None,
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        ),
+        "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE881:V3.13"
+      )
 
-      val badIe905 = formatXmlIncorrectly[IE905Type, IE905Message](consignor, MessageParams(IE905, "XI000016", consigneeErn = None, localReferenceNumber = None, administrativeReferenceCode = Some(arc)))
-      val goodIe905 = formatXmlCorrectly[IE905Type, IE905Message](consignor, MessageParams(IE905, "XI000016", consigneeErn = None, localReferenceNumber = None, administrativeReferenceCode = Some(arc)), "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE905:V3.13")
+      val badIe905  = formatXmlIncorrectly[IE905Type, IE905Message](
+        consignor,
+        MessageParams(
+          IE905,
+          "XI000016",
+          consigneeErn = None,
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        )
+      )
+      val goodIe905 = formatXmlCorrectly[IE905Type, IE905Message](
+        consignor,
+        MessageParams(
+          IE905,
+          "XI000016",
+          consigneeErn = None,
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        ),
+        "urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE905:V3.13"
+      )
 
       // Here we're renaming the default namespace for the IE704 to show that if the message element doesn't end in `Type` then we won't replace it
-      val ignoredMessage = {
+      val ignoredMessage =
         utils.encode(
-          utils.decode(
-            formatXmlCorrectly[IE704Type, IE704Message](consignor, MessageParams(IE704, "XI000017", consigneeErn = Some(consignee), localReferenceNumber = Some(lrn), administrativeReferenceCode = None), "http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3")
-          ).replaceAll("ie704uk:", "foo:").replace("xmlns:ie704uk=", "xmlns:foo=")
+          utils
+            .decode(
+              formatXmlCorrectly[IE704Type, IE704Message](
+                consignor,
+                MessageParams(
+                  IE704,
+                  "XI000017",
+                  consigneeErn = Some(consignee),
+                  localReferenceNumber = Some(lrn),
+                  administrativeReferenceCode = None
+                ),
+                "http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3"
+              )
+            )
+            .replaceAll("ie704uk:", "foo:")
+            .replace("xmlns:ie704uk=", "xmlns:foo=")
         )
-      }
 
       val movement = Movement(
         boxId = None,
@@ -188,7 +504,7 @@ class MiscodedMovementServiceSpec
       )
 
       movementRepository.save(movement).futureValue
-      miscodedMovementService.recodeMessages(movement._id).futureValue
+      miscodedMovementService.recodeMessages(movement).futureValue
 
       val result = movementRepository.getMovementById(movement._id).futureValue.value
 
@@ -196,17 +512,44 @@ class MiscodedMovementServiceSpec
     }
   }
 
-  private def formatXmlIncorrectly[A, B <: IEMessage with ({ val obj: A })](ern: String, params: MessageParams)(implicit ev: CanWriteXML[A]): String = {
-    utils.encode(scalaxb.toXML(messageFactory.createFromXml(
-      params.messageType.value,
-      XmlMessageGeneratorFactory.generate(ern, params)
-    ).asInstanceOf[B].obj, s"${params.messageType.value}Type", generated.defaultScope).toString)
-  }
+  private def formatXmlIncorrectly[A, B <: IEMessage with ({ val obj: A })](ern: String, params: MessageParams)(implicit
+    ev: CanWriteXML[A]
+  ): String =
+    utils.encode(
+      scalaxb
+        .toXML(
+          messageFactory
+            .createFromXml(
+              params.messageType.value,
+              XmlMessageGeneratorFactory.generate(ern, params)
+            )
+            .asInstanceOf[B]
+            .obj,
+          s"${params.messageType.value}Type",
+          generated.defaultScope
+        )
+        .toString
+    )
 
-  private def formatXmlCorrectly[A, B <: IEMessage with ({ val obj: A })](ern: String, params: MessageParams, namespace: String)(implicit ev: CanWriteXML[A]): String = {
-    utils.encode(scalaxb.toXML(messageFactory.createFromXml(
-      params.messageType.value,
-      XmlMessageGeneratorFactory.generate(ern, params)
-    ).asInstanceOf[B].obj, Some(namespace), Some(params.messageType.value), generated.defaultScope).toString)
-  }
+  private def formatXmlCorrectly[A, B <: IEMessage with ({ val obj: A })](
+    ern: String,
+    params: MessageParams,
+    namespace: String
+  )(implicit ev: CanWriteXML[A]): String =
+    utils.encode(
+      scalaxb
+        .toXML(
+          messageFactory
+            .createFromXml(
+              params.messageType.value,
+              XmlMessageGeneratorFactory.generate(ern, params)
+            )
+            .asInstanceOf[B]
+            .obj,
+          Some(namespace),
+          Some(params.messageType.value),
+          generated.defaultScope
+        )
+        .toString
+    )
 }
