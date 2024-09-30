@@ -26,13 +26,10 @@ import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, TraderMovementConnector}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessageGeneratorFactory}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes.{IE801, IE802, IE818}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MiscodedMovementArchiveRepository, MovementArchiveRepository, MovementRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MiscodedMovementArchiveRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
@@ -72,20 +69,6 @@ class MiscodedMovementArchivingItSpec
     app.injector.instanceOf[MiscodedMovementArchiveRepository]
 
   "fixProblemMovement" - {
-
-    val utils          = new EmcsUtils()
-    val messageFactory = IEMessageFactory()
-
-    def formatXml(ern: String, params: MessageParams): String =
-      utils.encode(
-        messageFactory
-          .createFromXml(
-            params.messageType.value,
-            XmlMessageGeneratorFactory.generate(ern, params)
-          )
-          .toXml
-          .toString
-      )
 
     "must archive the miscoded movement" in {
 

@@ -21,8 +21,8 @@ import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MiscodedMovementArchiveRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MiscodedMovementArchiveRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 
 import javax.inject.{Inject, Singleton}

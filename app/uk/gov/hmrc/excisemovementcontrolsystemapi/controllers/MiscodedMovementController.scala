@@ -21,7 +21,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.emcsmovementinjectorfrontend.models.FixMovementRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MiscodedMovementsWorkItemRepo, MovementRepository, MovementWorkItem}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MessageService, MiscodedMovementService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MiscodedMovementService
 import uk.gov.hmrc.internalauth.client.Retrieval.EmptyRetrieval
 import uk.gov.hmrc.internalauth.client._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController

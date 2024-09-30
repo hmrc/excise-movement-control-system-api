@@ -17,7 +17,6 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import play.api.Configuration
-import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.workitem.{WorkItemFields, WorkItemRepository}
 

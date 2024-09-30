@@ -18,28 +18,22 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import org.mockito.MockitoSugar.when
 import org.mongodb.scala.model.Filters
-import org.scalactic.source.Position
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import org.slf4j.MDC
 import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository.MessageNotification
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, DefaultPlayMongoRepositorySupport}
 
+import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.time.{Instant, LocalDateTime, ZoneOffset}
 import java.util.UUID
-import scala.concurrent.{ExecutionContext, Future}
 
 class MovementArchiveRepositoryItSpec
     extends PlaySpec
