@@ -24,10 +24,9 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 
-import java.time.Instant
 import java.time.temporal.ChronoUnit
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.duration.{DAYS, FiniteDuration}
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton

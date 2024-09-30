@@ -18,13 +18,12 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import play.api.Logging
 import play.api.libs.json.Json
-import play.api.mvc.Results.Ok
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.emcsmovementinjectorfrontend.models.FixMovementRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MovementRepository, MovementWorkItem, ProblemMovementsWorkItemRepo}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService
 import uk.gov.hmrc.internalauth.client.Retrieval.EmptyRetrieval
-import uk.gov.hmrc.internalauth.client.{AuthenticatedRequest, BackendAuthComponents, IAAction, Predicate, Resource, ResourceLocation, ResourceType}
+import uk.gov.hmrc.internalauth.client._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
