@@ -33,8 +33,8 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MiscodedMovementsWorkItemRepo, MovementWorkItem}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MiscodedMovementService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
-import uk.gov.hmrc.mongo.workitem.WorkItem
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{PermanentlyFailed, ToDo}
+import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -49,11 +49,11 @@ class MiscodedMovementsCorrectingJobSpec
     with GuiceOneAppPerSuite
     with BeforeAndAfterEach {
 
-  private val miscodedMovementsWorkItemRepo = mock[MiscodedMovementsWorkItemRepo]
-  private val miscodedMovementService       = mock[MiscodedMovementService]
-  private val timeService                   = mock[DateTimeService]
-  private val now                           = Instant.now
-  private lazy val miscodedMovementsCorrectingJob  = app.injector.instanceOf[MiscodedMovementsCorrectingJob]
+  private val miscodedMovementsWorkItemRepo       = mock[MiscodedMovementsWorkItemRepo]
+  private val miscodedMovementService             = mock[MiscodedMovementService]
+  private val timeService                         = mock[DateTimeService]
+  private val now                                 = Instant.now
+  private lazy val miscodedMovementsCorrectingJob = app.injector.instanceOf[MiscodedMovementsCorrectingJob]
 
   override def fakeApplication(): Application = GuiceApplicationBuilder()
     .overrides(
@@ -65,7 +65,8 @@ class MiscodedMovementsCorrectingJobSpec
       "scheduler.miscodedMovementsCorrectingJob.initialDelay"      -> "1 minutes",
       "scheduler.miscodedMovementsCorrectingJob.interval"          -> "1 minute",
       "scheduler.miscodedMovementsCorrectingJob.numberOfInstances" -> "1337",
-      "featureFlags.miscodedMovementsCorrectingEnabled"            -> true
+      "featureFlags.miscodedMovementsCorrectingEnabled"            -> true,
+      "scheduler.miscodedMovementsCorrectingJob.maxRetries"        -> 3
     )
     .build()
 
@@ -98,8 +99,8 @@ class MiscodedMovementsCorrectingJobSpec
 
   ".execute" - {
 
-    "must correct miscoded movements for the movement id" - {
-      "when a movement is found" in {
+    "must correct miscoded movements for the movement id and mark the work item as successful" - {
+      "when a work item and movement are found" in {
 
         val workItem = WorkItem(
           id = new ObjectId(),
@@ -116,17 +117,93 @@ class MiscodedMovementsCorrectingJobSpec
           .thenReturn(Future.successful(Some(workItem)))
         when(miscodedMovementService.archiveAndRecode(any))
           .thenReturn(Future.successful(Done))
+        when(miscodedMovementsWorkItemRepo.complete(any, any))
+          .thenReturn(Future.successful(true))
 
         val result = miscodedMovementsCorrectingJob.execute.futureValue
 
         result mustBe ScheduledJob.Result.Completed
         verify(miscodedMovementService).archiveAndRecode(eqTo("12345"))
+        verify(miscodedMovementsWorkItemRepo).complete(eqTo(workItem.id), eqTo(ProcessingStatus.Succeeded))
+      }
+
+      "when a work item is found but no movement exists" in {
+
+        val workItem = WorkItem(
+          id = new ObjectId(),
+          receivedAt = now,
+          updatedAt = now,
+          availableAt = now,
+          status = ToDo,
+          failureCount = 0,
+          item = MovementWorkItem("12345")
+        )
+
+        when(timeService.timestamp()).thenReturn(now)
+        when(miscodedMovementsWorkItemRepo.pullOutstanding(any[Instant], any[Instant]))
+          .thenReturn(Future.successful(Some(workItem)))
+        when(miscodedMovementsWorkItemRepo.markAs(any, any, any))
+          .thenReturn(Future.successful(true))
+        when(miscodedMovementService.archiveAndRecode(any))
+          .thenReturn(Future.failed(new Exception("Movement to be recoded was not found")))
+
+        val result = miscodedMovementsCorrectingJob.execute.futureValue
+
+        result mustBe ScheduledJob.Result.Completed
+        verify(miscodedMovementsWorkItemRepo).markAs(eqTo(workItem.id), eqTo(ProcessingStatus.Failed), any)
+      }
+
+      "when a work item has failed enough times to be marked, it is marked as permenantly failed" in {
+        val workItem = WorkItem(
+          id = new ObjectId(),
+          receivedAt = now,
+          updatedAt = now,
+          availableAt = now,
+          status = ToDo,
+          failureCount = 3,
+          item = MovementWorkItem("12345")
+        )
+
+        when(timeService.timestamp()).thenReturn(now)
+        when(miscodedMovementsWorkItemRepo.pullOutstanding(any[Instant], any[Instant]))
+          .thenReturn(Future.successful(Some(workItem)))
+        when(miscodedMovementService.archiveAndRecode(any))
+          .thenReturn(Future.failed(new Exception("Movement to be recoded was not found")))
+        when(miscodedMovementsWorkItemRepo.markAs(any, any, any))
+          .thenReturn(Future.successful(true))
+
+        val result = miscodedMovementsCorrectingJob.execute.futureValue
+
+        result mustBe ScheduledJob.Result.Completed
+        verify(miscodedMovementService).archiveAndRecode(eqTo("12345"))
+        verify(miscodedMovementsWorkItemRepo).markAs(eqTo(workItem.id), eqTo(ProcessingStatus.PermanentlyFailed), any)
 
       }
     }
 
     "must not correct movements" - {
-      "when no movement is found" in {
+      "when no work item is found" in {
+
+        when(timeService.timestamp()).thenReturn(now)
+        when(miscodedMovementsWorkItemRepo.pullOutstanding(any[Instant], any[Instant]))
+          .thenReturn(Future.successful(None))
+
+        val result = miscodedMovementsCorrectingJob.execute.futureValue
+
+        result mustBe ScheduledJob.Result.Completed
+        verify(miscodedMovementService, times(0)).archiveAndRecode(eqTo("12345"))
+      }
+
+      "when work item is permanently failed" in {
+        val workItem = WorkItem(
+          id = new ObjectId(),
+          receivedAt = now,
+          updatedAt = now,
+          availableAt = now,
+          status = PermanentlyFailed,
+          failureCount = 3,
+          item = MovementWorkItem("12345")
+        )
 
         when(timeService.timestamp()).thenReturn(now)
         when(miscodedMovementsWorkItemRepo.pullOutstanding(any[Instant], any[Instant]))

@@ -17,12 +17,12 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
 import cats.implicits.toFunctorOps
-import org.apache.pekko.Done
 import play.api.{Configuration, Logging}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MiscodedMovementsWorkItemRepo
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MiscodedMovementService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus
 
 import java.time.temporal.ChronoUnit
 import javax.inject.{Inject, Singleton}
@@ -30,7 +30,7 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class MiscodedMovementsCorrectingJob @Inject()(
+class MiscodedMovementsCorrectingJob @Inject() (
   configuration: Configuration,
   miscodedMovementService: MiscodedMovementService,
   miscodedMovementsWorkItemRepo: MiscodedMovementsWorkItemRepo,
@@ -39,18 +39,34 @@ class MiscodedMovementsCorrectingJob @Inject()(
     with Logging {
   override def name: String = "miscoded-movements-correcting-job"
 
+  lazy val maxRetries: Int = configuration.get[Int]("scheduler.miscodedMovementsCorrectingJob.maxRetries")
+
   override def execute(implicit ec: ExecutionContext): Future[ScheduledJob.Result] = {
     val now = dateTimeService.timestamp()
 
-    miscodedMovementsWorkItemRepo
+    val result: Future[Boolean] = miscodedMovementsWorkItemRepo
       .pullOutstanding(failedBefore = now.minus(1, ChronoUnit.DAYS), now)
-      .map {
-        case Some(value) =>
-          miscodedMovementService.archiveAndRecode(value.item.movementId)
-        case None        => Done
+      .flatMap {
+        case None     => Future.successful(true)
+        case Some(wi) =>
+          miscodedMovementService
+            .archiveAndRecode(wi.item.movementId)
+            .flatMap { _ =>
+              miscodedMovementsWorkItemRepo.complete(wi.id, ProcessingStatus.Succeeded)
+            }
+            .recoverWith {
+              case e if wi.failureCount < maxRetries =>
+                logger.warn(s"miscoded work item ${wi.id} failed - ${e.getMessage}")
+                miscodedMovementsWorkItemRepo.markAs(wi.id, ProcessingStatus.Failed)
+              case e                                 =>
+                logger.warn(s"miscoded work item ${wi.id} failed (marking permanently) - ${e.getMessage}")
+                miscodedMovementsWorkItemRepo.markAs(wi.id, ProcessingStatus.PermanentlyFailed)
+            }
 
       }
-      .as(ScheduledJob.Result.Completed)
+
+    result.as(ScheduledJob.Result.Completed)
+
   }
 
   override val enabled: Boolean = configuration.get[Boolean]("featureFlags.miscodedMovementsCorrectingEnabled")
@@ -61,7 +77,8 @@ class MiscodedMovementsCorrectingJob @Inject()(
   override def initialDelay: FiniteDuration =
     configuration.get[FiniteDuration]("scheduler.miscodedMovementsCorrectingJob.initialDelay")
 
-  override def interval: FiniteDuration = configuration.get[FiniteDuration]("scheduler.miscodedMovementsCorrectingJob.interval")
+  override def interval: FiniteDuration =
+    configuration.get[FiniteDuration]("scheduler.miscodedMovementsCorrectingJob.interval")
   implicit val hc: HeaderCarrier        = HeaderCarrier()
 
 }
