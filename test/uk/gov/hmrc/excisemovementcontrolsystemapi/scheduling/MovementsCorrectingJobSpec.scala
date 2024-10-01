@@ -34,7 +34,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MovementWorkItem, 
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
-import uk.gov.hmrc.mongo.workitem.WorkItem
+import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -65,7 +65,8 @@ class MovementsCorrectingJobSpec
       "scheduler.movementsCorrectingJob.initialDelay"      -> "1 minutes",
       "scheduler.movementsCorrectingJob.interval"          -> "1 minute",
       "scheduler.movementsCorrectingJob.numberOfInstances" -> "1337",
-      "featureFlags.movementsCorrectingEnabled"            -> true
+      "featureFlags.movementsCorrectingEnabled"            -> true,
+      "scheduler.movementsCorrectingJob.maxRetries"        -> 5
     )
     .build()
 
@@ -78,7 +79,7 @@ class MovementsCorrectingJobSpec
     )
   }
 
-  "polling new messages job must" - {
+  "movements correcting job must" - {
     "have the correct name" in {
       movementsCorrectingJob.name mustBe "movements-correcting-job"
     }
@@ -93,6 +94,9 @@ class MovementsCorrectingJobSpec
     }
     "use numberOfInstance from configuration" in {
       movementsCorrectingJob.numberOfInstances mustBe 1337
+    }
+    "use maxRetries from configuration" in {
+      movementsCorrectingJob.maxRetries mustBe 5
     }
   }
 
@@ -116,12 +120,13 @@ class MovementsCorrectingJobSpec
           .thenReturn(Future.successful(Some(workItem)))
         when(messageService.archiveAndFixProblemMovement(any)(any))
           .thenReturn(Future.successful(Done))
+        when(problemMovementsWorkItemRepo.complete(any, any)).thenReturn(Future.successful(true))
 
         val result = movementsCorrectingJob.execute.futureValue
 
         result mustBe ScheduledJob.Result.Completed
         verify(messageService).archiveAndFixProblemMovement(eqTo("12345"))(any)
-
+        verify(problemMovementsWorkItemRepo).complete(eqTo(workItem.id), eqTo(ProcessingStatus.Succeeded))
       }
     }
 
@@ -139,5 +144,61 @@ class MovementsCorrectingJobSpec
       }
     }
 
+    "must fail correcting movements for the movement id" - {
+      "when a movement is found and below max retries" in {
+
+        val workItem = WorkItem(
+          id = new ObjectId(),
+          receivedAt = now,
+          updatedAt = now,
+          availableAt = now,
+          status = ToDo,
+          failureCount = 0,
+          item = MovementWorkItem("12345")
+        )
+
+        when(timeService.timestamp()).thenReturn(now)
+        when(problemMovementsWorkItemRepo.pullOutstanding(any[Instant], any[Instant]))
+          .thenReturn(Future.successful(Some(workItem)))
+        when(messageService.archiveAndFixProblemMovement(any[String])(any))
+          .thenReturn(Future.failed(new Exception("Movement to be fixed was not found")))
+        when(problemMovementsWorkItemRepo.markAs(any, any, any)).thenReturn(Future.successful(true))
+
+        val result = movementsCorrectingJob.execute.futureValue
+
+        result mustBe ScheduledJob.Result.Completed
+
+        verify(messageService).archiveAndFixProblemMovement(eqTo("12345"))(any)
+        verify(problemMovementsWorkItemRepo).markAs(eqTo(workItem.id), eqTo(ProcessingStatus.Failed), any)
+      }
+
+      "when a movement is found and above max retries" in {
+
+        val workItem = WorkItem(
+          id = new ObjectId(),
+          receivedAt = now,
+          updatedAt = now,
+          availableAt = now,
+          status = ToDo,
+          failureCount = 10,
+          item = MovementWorkItem("12345")
+        )
+
+        when(timeService.timestamp()).thenReturn(now)
+        when(problemMovementsWorkItemRepo.pullOutstanding(any[Instant], any[Instant]))
+          .thenReturn(Future.successful(Some(workItem)))
+        when(messageService.archiveAndFixProblemMovement(any[String])(any))
+          .thenReturn(Future.failed(new Exception("Movement to be fixed was not found")))
+        when(problemMovementsWorkItemRepo.markAs(any, any, any)).thenReturn(Future.successful(true))
+
+        val result = movementsCorrectingJob.execute.futureValue
+
+        result mustBe ScheduledJob.Result.Completed
+
+        verify(messageService).archiveAndFixProblemMovement(eqTo("12345"))(any)
+        verify(problemMovementsWorkItemRepo).markAs(eqTo(workItem.id), eqTo(ProcessingStatus.PermanentlyFailed), any)
+      }
+
+    }
   }
 }
