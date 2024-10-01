@@ -30,8 +30,8 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MiscodedMovementsWorkItemRepo, MovementWorkItem, ProblemMovementsWorkItemRepo}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MessageService, MiscodedMovementService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MiscodedMovementsWorkItemRepo, MovementWorkItem}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MiscodedMovementService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.mongo.workitem.WorkItem

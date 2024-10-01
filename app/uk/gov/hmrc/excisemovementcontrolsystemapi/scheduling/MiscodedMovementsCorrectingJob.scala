@@ -19,8 +19,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 import cats.implicits.toFunctorOps
 import org.apache.pekko.Done
 import play.api.{Configuration, Logging}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MiscodedMovementsWorkItemRepo, ProblemMovementsWorkItemRepo}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MessageService, MiscodedMovementService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MiscodedMovementsWorkItemRepo
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MiscodedMovementService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 
