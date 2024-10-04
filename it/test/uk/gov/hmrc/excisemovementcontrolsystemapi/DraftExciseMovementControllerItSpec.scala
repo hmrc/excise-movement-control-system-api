@@ -50,7 +50,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 import scala.xml.NodeSeq
 
-§class DraftExciseMovementControllerItSpec
+class DraftExciseMovementControllerItSpec
     extends PlaySpec
     with GuiceOneServerPerSuite
     with ApplicationBuilderSupport
@@ -306,9 +306,8 @@ import scala.xml.NodeSeq
 
           response.status mustBe BAD_REQUEST
           withClue("must remove control document references in any paths") {
-            clean(response.body) mustBe clean(validationErrorResponse(
-              locationWithoutControlDoc,
-              "2024-12-12T14:30:23.123Z")
+            clean(response.body) mustBe clean(
+              validationErrorResponse(locationWithoutControlDoc, "2024-12-12T14:30:23.123Z")
             )
           }
         }
@@ -381,12 +380,16 @@ import scala.xml.NodeSeq
         result.status mustBe NOT_FOUND
 
         withClue("return the EIS error response") {
-          result.json mustBe Json.toJson(Json.toJson(EisErrorResponsePresentation(
-            Instant.parse("2023-12-05T12:05:06Z"),
-            "not_found",
-            "debug NOT_FOUND",
-            "123"
-          )))
+          result.json mustBe Json.toJson(
+            Json.toJson(
+              EisErrorResponsePresentation(
+                Instant.parse("2023-12-05T12:05:06Z"),
+                "not_found",
+                "debug NOT_FOUND",
+                "123"
+              )
+            )
+          )
         }
       }
     }
