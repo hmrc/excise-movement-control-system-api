@@ -32,13 +32,13 @@ import uk.gov.hmrc.http.HttpResponse
 import java.time.Instant
 import scala.reflect.runtime.universe.typeOf
 
-class EISHttpReaderSpec extends PlaySpec with EitherValues {
+class EISReaderSpec extends PlaySpec with EitherValues {
 
   private val localDateTime   = Instant.parse("2023-09-19T15:57:23.654123456Z")
   private val dateTimeService = mock[DateTimeService]
   when(dateTimeService.timestamp()).thenReturn(localDateTime)
 
-  private val eisHttpParser        = EISHttpReader("123", "GB123", "date time", dateTimeService, MessageTypes.IE815.value)
+  private val eisParser            = EISReader("123", "GB123", "date time", dateTimeService, MessageTypes.IE815.value)
   private val exampleEISError      = Json.toJson(
     EISErrorResponse(
       localDateTime,
@@ -56,9 +56,7 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
     "return EISResponse" in {
       val eisResponse = EISSubmissionResponse("ok", "Success", "123")
 
-      val result = eisHttpParser.read(
-        "ANY",
-        "/foo",
+      val result = eisParser.read(
         HttpResponse(200, Json.toJson(eisResponse).toString())
       )
 
@@ -76,9 +74,7 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
     ) { case (statusCode, expectedResult) =>
       s"return $statusCode" when {
         s"$statusCode has returned from HttpResponse" in {
-          val result = eisHttpParser.read(
-            "ANY",
-            "/foo",
+          val result = eisParser.read(
             HttpResponse(statusCode, exampleEISError.toString())
           )
           result.left.value mustBe expectedResult
@@ -88,9 +84,7 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
 
     "cleanup references to the control document in from EIS validation" when {
       "return a BAD_REQUEST" in {
-        val result = eisHttpParser.read(
-          "ANY",
-          "/foo",
+        val result = eisParser.read(
           HttpResponse(BAD_REQUEST, Json.toJson(createRimValidationResponse).toString())
         )
 
@@ -98,9 +92,7 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
       }
 
       "return a UNPROCESSABLE_ENTITY" in {
-        val result = eisHttpParser.read(
-          "ANY",
-          "/foo",
+        val result = eisParser.read(
           HttpResponse(UNPROCESSABLE_ENTITY, Json.toJson(createRimValidationResponse).toString())
         )
 
@@ -111,9 +103,7 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
     "throw if cannot parse json" in {
 
       the[RuntimeException] thrownBy {
-        eisHttpParser.read(
-          "ANY",
-          "/foo",
+        eisParser.read(
           HttpResponse(200, """{"test":"test"}""")
         )
       } must have message s"Response body could not be read as type ${typeOf[EISSubmissionResponse]}"
@@ -123,10 +113,8 @@ class EISHttpReaderSpec extends PlaySpec with EitherValues {
 
       val eisError = Json.parse("{\"status\": 500, \"message\": \"Unexpected error\"}")
 
-      val result = eisHttpParser.read(
-        "ANY",
-        "/foo",
-        HttpResponse(BAD_GATEWAY, eisError.toString())
+      val result = eisParser.read(
+        HttpResponse(INTERNAL_SERVER_ERROR, eisError.toString())
       )
 
       val error = Json.parse(s"""

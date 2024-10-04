@@ -35,6 +35,9 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   lazy val nrsRetryDelays: Seq[FiniteDuration] =
     config.get[Seq[FiniteDuration]]("microservice.services.nrs.retryDelays")
 
+  lazy val eisRetryDelays: Seq[FiniteDuration] =
+    config.get[Seq[FiniteDuration]]("microservice.services.eis.retryDelays")
+
   lazy val movementTTL: Duration = config
     .getOptional[String]("mongodb.movement.TTL")
     .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
