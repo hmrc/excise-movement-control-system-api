@@ -28,34 +28,44 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
+import javax.xml.parsers.SAXParserFactory
+import javax.xml.XMLConstants
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 import scala.xml.NodeSeq
 
 class ParseXmlActionImpl @Inject() (
-  ieMessageFactory: IEMessageFactory,
-  dateTimeService: DateTimeService,
-  cc: ControllerComponents
-)(implicit val executionContext: ExecutionContext)
-    extends BackendController(cc)
+                                     ieMessageFactory: IEMessageFactory,
+                                     dateTimeService: DateTimeService,
+                                     cc: ControllerComponents
+                                   )(implicit val executionContext: ExecutionContext)
+  extends BackendController(cc)
     with ParseXmlAction
     with Logging {
 
   override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] =
     request.body match {
       case body: NodeSeq if body.nonEmpty => parseXml(body, request)
-      case _                              =>
+      case _ =>
         logger.warn("Not valid XML or XML is empty")
         Future.successful(Left(BadRequest(Json.toJson(handleError("XML error", "Not valid XML or XML is empty")))))
     }
 
+  private def secureXmlParser(): SAXParserFactory = {
+    val factory = SAXParserFactory.newInstance()
+    factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
+    factory
+  }
+
   def parseXml[A](
-    xmlBody: NodeSeq,
-    request: EnrolmentRequest[A]
-  ): Future[Either[Result, ParsedXmlRequest[A]]] = {
+                   xmlBody: NodeSeq,
+                   request: EnrolmentRequest[A]): Future[Either[Result, ParsedXmlRequest[A]]] = {
 
     val messageType = xmlBody.head.label
-    Try(ieMessageFactory.createFromXml(messageType, xmlBody)) match {
+
+    val secureParsedXml = scala.xml.XML.withSAXParser(secureXmlParser().newSAXParser()).loadString(xmlBody.toString())
+
+    Try(ieMessageFactory.createFromXml(messageType, secureParsedXml)) match {
       case Success(value) =>
         Future.successful(Right(ParsedXmlRequest(request, value, request.erns, request.internalId)))
 
@@ -66,7 +76,10 @@ class ParseXmlActionImpl @Inject() (
           Left(
             BadRequest(
               Json.toJson(
-                handleError(s"Not valid $messageType message", getUsefulPartOfScalaxbMessage(exception.getMessage))
+                handleError(
+                  s"Not valid $messageType message",
+                  getUsefulPartOfScalaxbMessage(exception.getMessage)
+                )
               )
             )
           )
@@ -84,25 +97,27 @@ class ParseXmlActionImpl @Inject() (
         // Don't return exception message as we don't know what is in it
         Future.successful(
           Left(
-            BadRequest(Json.toJson(handleError(s"Not valid $messageType message", "Error occurred parsing message")))
+            BadRequest(
+              Json.toJson(
+                handleError(s"Not valid $messageType message", "Error occurred parsing message")
+              )
+            )
           )
         )
     }
   }
 
   private def handleError(
-    message: String,
-    debugMessage: String
-  ): ErrorResponse =
+                           message: String,
+                           debugMessage: String
+                         ): ErrorResponse =
     ErrorResponse(dateTimeService.timestamp(), message, debugMessage)
 
   private def getUsefulPartOfScalaxbMessage(message: String): String = {
     val pattern = ": parser error(.+)while parsing".r
-
     val matches = pattern.findFirstMatchIn(message)
-
     matches match {
-      case None    => message
+      case None => message
       case Some(x) => s"Parser error: ${x.group(1).strip()}"
     }
   }
