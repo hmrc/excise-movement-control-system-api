@@ -125,9 +125,11 @@ class ErnSubmissionRepositoryItSpec
 
       find(Filters.in("ern", Seq("testErn", "testErn2"): _*)).futureValue.length mustBe 2
 
-      repository.removeErns(Seq("testErn", "testErn2")).futureValue
+      val result = repository.removeErns(Seq("testErn", "testErn2"))
 
-      find(Filters.in("ern", Seq("testErn", "testErn2"): _*)).futureValue.length mustBe 0
+      whenReady(result) { r =>
+        find(Filters.in("ern", Seq("testErn", "testErn2"): _*)).futureValue.length mustBe 0
+      }
 
     }
   }

@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import org.apache.pekko.Done
-import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.{any, anyMap}
 import org.mockito.ArgumentMatchersSugar.eqTo
 import org.mockito.MockitoSugar.{reset, times, verify, when}
 import org.scalatest.BeforeAndAfterEach
@@ -32,22 +32,23 @@ import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.RemoveErnsAdminController.RemoveErnsRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubscribeErnsAdminController.SubscribeErnsRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnSubmissionRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NotificationsService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.RemoveErnsAdminController.{ErnSummary, RemoveErnsRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnRetrievalRepository, ErnSubmissionRepository, MovementRepository}
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.internalauth.client._
 import uk.gov.hmrc.internalauth.client.test.{BackendAuthComponentsStub, StubBehaviour}
 
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
 class RemoveErnsAdminControllerSpec extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterEach {
 
-  private val mockStubBehaviour = mock[StubBehaviour]
-  private val mockRepository    = mock[ErnSubmissionRepository]
-
-  private val hc = HeaderCarrier()
+  private val mockStubBehaviour       = mock[StubBehaviour]
+  private val mockRepository          = mock[ErnSubmissionRepository]
+  private val mockBoxIdRepository     = mock[BoxIdRepository]
+  private val mockMovementRepository  = mock[MovementRepository]
+  private val mockRetrievalRepository = mock[ErnRetrievalRepository]
 
   val backendAuthComponentsStub: BackendAuthComponents =
     BackendAuthComponentsStub(mockStubBehaviour)(Helpers.stubControllerComponents(), ExecutionContext.global)
@@ -56,7 +57,10 @@ class RemoveErnsAdminControllerSpec extends PlaySpec with GuiceOneAppPerSuite wi
     new GuiceApplicationBuilder()
       .overrides(
         bind[BackendAuthComponents].toInstance(backendAuthComponentsStub),
-        bind[ErnSubmissionRepository].toInstance(mockRepository)
+        bind[ErnSubmissionRepository].toInstance(mockRepository),
+        bind[BoxIdRepository].toInstance(mockBoxIdRepository),
+        bind[MovementRepository].toInstance(mockMovementRepository),
+        bind[ErnRetrievalRepository].toInstance(mockRetrievalRepository)
       )
       .build()
 
@@ -127,6 +131,54 @@ class RemoveErnsAdminControllerSpec extends PlaySpec with GuiceOneAppPerSuite wi
 
         verify(mockRepository, times(0)).removeErns(any)
       }
+    }
+  }
+
+  "findAllReferencesToErn" must {
+    "Return info filtered from the repositories" in {
+
+      when(mockStubBehaviour.stubAuth(Some(expectedPredicate), Retrieval.EmptyRetrieval))
+        .thenReturn(Future.successful(()))
+
+      val testErn   = "apples"
+      val timestamp = Instant.now()
+
+      val consignorMovement = Movement("id_1", None, "lrn", testErn, None, None, timestamp, Seq.empty)
+      val consigneeMovement = Movement("id_2", None, "lrn", "consignor", Some(testErn), None, timestamp, Seq.empty)
+      val recipientMovement = Movement(
+        "id_3",
+        None,
+        "lrn",
+        "consignor",
+        None,
+        None,
+        timestamp,
+        Seq(Message("messageCode", "IE801", "message_id", testErn, Set.empty, timestamp))
+      )
+
+      when(mockBoxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set("boxId1")))
+      when(mockMovementRepository.getMovementByERN(any, any))
+        .thenReturn(Future.successful(Seq(consigneeMovement, consignorMovement, recipientMovement)))
+      when(mockRepository.findErns(any)).thenReturn(Future.successful(Seq(testErn)))
+      when(mockRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
+
+      val fakeRequest            =
+        FakeRequest(routes.RemoveErnsAdminController.findAllReferencesToErn(testErn))
+          .withHeaders("Authorization" -> "Token some-token")
+
+      val result: Future[Result] = route(app, fakeRequest).value
+
+      contentAsJson(result) mustBe Json.toJson(
+        ErnSummary(
+          testErn,
+          Seq(consignorMovement._id),
+          Seq(consigneeMovement._id),
+          Seq((recipientMovement._id, Seq(recipientMovement.messages.head.messageId))),
+          Seq(testErn),
+          Option.empty[Instant],
+          Set("boxId1")
+        )
+      )
     }
   }
 }
