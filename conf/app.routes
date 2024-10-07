@@ -1,23 +1,23 @@
 # microservice specific routes
 
-POST       /movements                                   uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.DraftExciseMovementController.submit
-GET        /movements                                   uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.GetMovementsController.getMovements(ern: Option[String], lrn: Option[String], arc: Option[String], updatedSince: Option[String], traderType: Option[String])
+POST          /movements                                        uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.DraftExciseMovementController.submit
+GET           /movements                                        uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.GetMovementsController.getMovements(ern: Option[String], lrn: Option[String], arc: Option[String], updatedSince: Option[String], traderType: Option[String])
 
-GET        /movements/:movementId                       uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.GetMovementsController.getMovement(movementId: String)
-GET        /movements/:movementId/messages              uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.GetMessagesController.getMessagesForMovement(movementId: String, updatedSince: Option[String], traderType: Option[String])
+GET           /movements/:movementId                            uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.GetMovementsController.getMovement(movementId: String)
+GET           /movements/:movementId/messages                   uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.GetMessagesController.getMessagesForMovement(movementId: String, updatedSince: Option[String], traderType: Option[String])
 
-POST       /movements/:movementId/messages              uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubmitMessageController.submit(movementId: String)
-GET        /movements/:movementId/messages/:messageId   uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.GetMessagesController.getMessageForMovement(movementId: String, messageId: String)
+POST          /movements/:movementId/messages                   uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubmitMessageController.submit(movementId: String)
+GET           /movements/:movementId/messages/:messageId        uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.GetMessagesController.getMessageForMovement(movementId: String, messageId: String)
 
-POST       /traders/pre-validate                        uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.PreValidateTraderController.submit
+POST          /traders/pre-validate                             uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.PreValidateTraderController.submit
 
 POST       /erns/:ern/subscription                       uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubscribeErnsController.subscribeErn(ern: String)
 DELETE     /erns/:ern/subscription                       uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubscribeErnsController.unsubscribeErn(ern: String)
 
-POST       /inject/submit-batch                         uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.InjectController.submitBatch()
-POST       /admin/notifications/subscribe               uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubscribeErnsAdminController.subscribeErns()
+POST          /inject/submit-batch                              uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.InjectController.submitBatch()
+POST          /admin/notifications/subscribe                    uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubscribeErnsAdminController.subscribeErns()
 
-DELETE     /admin/erns                                  uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.RemoveErnsAdminController.removeErns()
+DELETE        /admin/erns                                       uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.RemoveErnsAdminController.removeErns()
 
 GET        /admin/problem-movements                     uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.ProblemMovementController.getMovementsWithTooMany801s()
 GET        /admin/count-problem-movements               uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.ProblemMovementController.getCountOfMovementsWithTooMany801s()
@@ -28,3 +28,5 @@ GET        /admin/count-miscoded-movements              uk.gov.hmrc.excisemoveme
 GET        /admin/miscoded-movements                    uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.MiscodedMovementController.getMovements()
 GET        /admin/miscoded-movements/build-work-list    uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.MiscodedMovementController.buildWorkList()
 POST       /admin/miscoded-movements/resolve            uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.MiscodedMovementController.resolve()
+
+GET        /admin/:ern/summary                            uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.RemoveErnsAdminController.findAllReferencesToErn(ern: String)
