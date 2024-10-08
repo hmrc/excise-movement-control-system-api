@@ -38,32 +38,33 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, Co
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisErrorResponsePresentation, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import scala.xml.Elem
 
 import java.time.Instant
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
-
-class SubmitMessageControllerItSpec extends PlaySpec
-  with GuiceOneServerPerSuite
-  with ApplicationBuilderSupport
-  with TestXml
-  with WireMockServerSpec
-  with SubmitMessageTestSupport
-  with StringSupport
-  with ErrorResponseSupport
-  with BeforeAndAfterAll
-  with BeforeAndAfterEach {
+class SubmitMessageControllerItSpec
+    extends PlaySpec
+    with GuiceOneServerPerSuite
+    with ApplicationBuilderSupport
+    with TestXml
+    with WireMockServerSpec
+    with SubmitMessageTestSupport
+    with StringSupport
+    with ErrorResponseSupport
+    with BeforeAndAfterAll
+    with BeforeAndAfterEach {
 
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
 
   private def url(movementId: String) = s"http://localhost:$port/movements/$movementId/messages"
 
-  private val eisUrl = "/emcs/digital-submit-new-message/v1"
+  private val eisUrl      = "/emcs/digital-submit-new-message/v1"
   private val consignorId = "GBWK240176600"
   private val consigneeId = "GBWK002281023"
-  private val lrn = "LRNQA20230909022221"
+  private val lrn         = "LRNQA20230909022221"
 
   //This matches the data from the IE818 test message
   private val movement = Movement(Some("boxId"), lrn, consignorId, Some(consigneeId), Some("23GB00000000000378553"))
@@ -105,7 +106,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
   "Submit IE810 Cancellation" should {
 
     "return 202 when submitted by consignor" in {
-      val arcInMessage = "23GB00000000000377161"
+      val arcInMessage     = "23GB00000000000377161"
       val movementForIE810 = movement.copy(administrativeReferenceCode = Some(arcInMessage))
       when(movementRepository.getMovementById(eqTo(movementForIE810._id)))
         .thenReturn(Future.successful(Some(movementForIE810)))
@@ -135,7 +136,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
     "return 202 when submitted by consignor" in {
 
-      val arcInMessage = "23GB00000000000378126"
+      val arcInMessage     = "23GB00000000000378126"
       val movementForIE813 = movement.copy(administrativeReferenceCode = Some(arcInMessage))
       when(movementRepository.getMovementById(eqTo(movementForIE813._id)))
         .thenReturn(Future.successful(Some(movementForIE813)))
@@ -202,7 +203,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
     }
 
     "return 202 when sent in by the consignee" in {
-      val arcInMessage = "23GB00000000000378574"
+      val arcInMessage     = "23GB00000000000378574"
       val movementForIE819 = movement.copy(administrativeReferenceCode = Some(arcInMessage))
       when(movementRepository.getMovementById(eqTo(movementForIE819._id)))
         .thenReturn(Future.successful(Some(movementForIE819)))
@@ -220,7 +221,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
   "Submit IE837 Report of Receipt Movement" should {
 
-    val arcInMessage = "16GB00000000000192223"
+    val arcInMessage     = "16GB00000000000192223"
     val movementForIE837 = movement.copy(administrativeReferenceCode = Some(arcInMessage))
 
     "return 202 when sent in by the consignor" in {
@@ -275,7 +276,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
   "Submit IE871 Explanation On Shortage" should {
 
-    val arcInMessage = "23GB00000000000377768"
+    val arcInMessage     = "23GB00000000000377768"
     val movementForIE871 = movement.copy(administrativeReferenceCode = Some(arcInMessage))
 
     "return 202 when sent in by the consignor" in {
@@ -337,12 +338,14 @@ class SubmitMessageControllerItSpec extends PlaySpec
     result.status mustBe NOT_FOUND
 
     withClue("return the EIS error response") {
-      result.json mustBe Json.toJson(EisErrorResponsePresentation(
-        Instant.parse("2024-05-05T16:12:13.123Z"),
-        "not_found",
-        "debug NOT_FOUND",
-        "123"
-      ))
+      result.json mustBe Json.toJson(
+        EisErrorResponsePresentation(
+          Instant.parse("2024-05-05T16:12:13.123Z"),
+          "not_found",
+          "debug NOT_FOUND",
+          "123"
+        )
+      )
     }
   }
 
@@ -370,10 +373,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
     val response = postRequest(movement._id, IE818)
 
-    clean(response.body) mustBe clean(validationErrorResponse(
-      locationWithoutControlDoc,
-      "2024-05-05T16:12:13.123Z")
-    )
+    clean(response.body) mustBe clean(validationErrorResponse(locationWithoutControlDoc, "2024-05-05T16:12:13.123Z"))
 
   }
 
@@ -409,6 +409,17 @@ class SubmitMessageControllerItSpec extends PlaySpec
     postRequest(movement._id, xml = <IE818></IE818>).status mustBe BAD_REQUEST
   }
 
+  "return bad request (400) when XXE injector attack is attempted" in {
+    withAuthorizedTrader("GBWK002281023")
+
+    val maliciousXml: Elem =
+      <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="300" version="1.1" height="200">
+         <image xlink:href="expect://ls"></image>
+       </svg>
+
+    postRequest(movement._id, xml = maliciousXml).status mustBe BAD_REQUEST
+  }
+
   "return Unsupported Media Type (415)" in {
     withAuthorizedTrader("GBWK002281023")
     postRequest(movement._id, contentType = """application/json""").status mustBe UNSUPPORTED_MEDIA_TYPE
@@ -418,11 +429,14 @@ class SubmitMessageControllerItSpec extends PlaySpec
     withAuthorizedTrader("GBWK002281023")
 
     //Can't use postRequest routine as test requires non-xml body
-    val result = await(wsClient.url(url("lrn"))
-      .addHttpHeaders(
-        HeaderNames.AUTHORIZATION -> "TOKEN",
-        HeaderNames.CONTENT_TYPE -> """application/vnd.hmrc.1.0+xml"""
-      ).post("test")
+    val result = await(
+      wsClient
+        .url(url("lrn"))
+        .addHttpHeaders(
+          HeaderNames.AUTHORIZATION -> "TOKEN",
+          HeaderNames.CONTENT_TYPE  -> """application/vnd.hmrc.1.0+xml"""
+        )
+        .post("test")
     )
 
     result.status mustBe BAD_REQUEST
@@ -446,9 +460,8 @@ class SubmitMessageControllerItSpec extends PlaySpec
   private def createEISErrorResponseBodyAsJson(
     message: String,
     dateTime: String = timestamp.toString
-  ): JsValue = {
-    Json.parse(
-      s"""
+  ): JsValue =
+    Json.parse(s"""
         |{
         |   "dateTime":"$dateTime",
         |   "status": "${message.toUpperCase()}",
@@ -457,20 +470,21 @@ class SubmitMessageControllerItSpec extends PlaySpec
         |   "emcsCorrelationId":"123"
         |}
         |""".stripMargin)
-  }
 
   private def postRequest(
     movementId: String,
     xml: NodeSeq = IE818,
     contentType: String = """application/vnd.hmrc.1.0+xml"""
-  ) = {
-    await(wsClient.url(url(movementId))
-      .addHttpHeaders(
-        HeaderNames.AUTHORIZATION -> "TOKEN",
-        HeaderNames.CONTENT_TYPE -> contentType
-      ).post(xml)
+  ) =
+    await(
+      wsClient
+        .url(url(movementId))
+        .addHttpHeaders(
+          HeaderNames.AUTHORIZATION -> "TOKEN",
+          HeaderNames.CONTENT_TYPE  -> contentType
+        )
+        .post(xml)
     )
-  }
 
   private def stubEISSuccessfulRequest() = {
 
@@ -481,8 +495,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
     )
   }
 
-  private def stubEISErrorResponse(status: Int, body: String): Any = {
-
+  private def stubEISErrorResponse(status: Int, body: String): Any =
     wireMock.stubFor(
       post(urlEqualTo(eisUrl))
         .willReturn(
@@ -492,9 +505,8 @@ class SubmitMessageControllerItSpec extends PlaySpec
             .withHeader("Content-Type", "application/json")
         )
     )
-  }
 
-  private def stubNrsResponse = {
+  private def stubNrsResponse =
     wireMock.stubFor(
       post(urlEqualTo("/submission"))
         .willReturn(
@@ -503,7 +515,6 @@ class SubmitMessageControllerItSpec extends PlaySpec
             .withBody(Json.toJson(NonRepudiationSubmissionAccepted("submissionId")).toString())
         )
     )
-  }
 
   private def assertResponseBody(result: WSResponse) = {
     val responseBody = Json.parse(result.body).as[ExciseMovementResponse]
