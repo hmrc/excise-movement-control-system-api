@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.requ
 
 import play.api.libs.json.{Json, OFormat}
 
-case class ValidateProductAuthorisationETDSRequest(exciseProductCode: ExciseProductCodeETDS)
+case class ValidateProductAuthorisationETDSRequest(exciseProductCode: String)
 
 object ValidateProductAuthorisationETDSRequest {
   implicit val format: OFormat[ValidateProductAuthorisationETDSRequest] =

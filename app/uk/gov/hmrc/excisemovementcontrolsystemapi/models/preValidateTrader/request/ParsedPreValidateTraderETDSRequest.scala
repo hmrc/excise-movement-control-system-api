@@ -21,5 +21,5 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 
 case class ParsedPreValidateTraderETDSRequest[A](
   request: EnrolmentRequest[A],
-  json: PreValidateTraderETDSRequest
+  json: ExciseTraderETDSRequest
 ) extends WrappedRequest[A](request)

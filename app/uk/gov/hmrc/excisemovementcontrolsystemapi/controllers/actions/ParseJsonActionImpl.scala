@@ -21,7 +21,7 @@ import play.api.Logging
 import play.api.libs.json.{JsResultException, JsValue, Json}
 import play.api.mvc.{ActionRefiner, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ParsedPreValidateTraderETDSRequest, ParsedPreValidateTraderRequest, PreValidateTraderETDSRequest, PreValidateTraderRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ExciseTraderETDSRequest, ParsedPreValidateTraderETDSRequest, ParsedPreValidateTraderRequest, PreValidateTraderRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, preValidateTrader}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -106,7 +106,7 @@ class ParseJsonActionImpl @Inject() (
     jsonBody: JsValue,
     request: EnrolmentRequest[A]
   ): Future[Either[Result, ParsedPreValidateTraderETDSRequest[A]]] =
-    Try(jsonBody.as[PreValidateTraderETDSRequest]) match {
+    Try(jsonBody.as[ExciseTraderETDSRequest]) match {
       case Success(value) =>
         Future.successful(Right(preValidateTrader.request.ParsedPreValidateTraderETDSRequest(request, value)))
 

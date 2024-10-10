@@ -26,7 +26,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTra
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTraderETDSHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{PreValidateTraderETDSRequest, PreValidateTraderRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ExciseTraderETDSRequest, PreValidateTraderRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{PreValidateTraderEISResponse, PreValidateTraderETDSEISResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.CorrelationIdService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -87,7 +87,7 @@ class PreValidateTraderConnector @Inject() (
 
   }
 
-  def submitMessageETDS(request: PreValidateTraderETDSRequest, ern: String)(implicit
+  def submitMessageETDS(request: ExciseTraderETDSRequest, ern: String)(implicit
     hc: HeaderCarrier
   ): Future[Either[Result, PreValidateTraderETDSEISResponse]] = {
 
