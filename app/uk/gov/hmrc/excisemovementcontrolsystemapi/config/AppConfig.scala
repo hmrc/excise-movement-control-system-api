@@ -51,10 +51,14 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
     .getOptional[String]("mongodb.ernRetrieval.TTL")
     .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
 
-  val pushNotificationsEnabled: Boolean = servicesConfig.getBoolean("featureFlags.pushNotificationsEnabled")
+  val pushNotificationsEnabled: Boolean =
+    servicesConfig.getBoolean("featureFlags.pushNotificationsEnabled")
 
   val subscribeErnsEnabled: Boolean =
     config.getOptional[Boolean]("featureFlags.subscribeErnsEnabled").getOrElse(false)
+
+  val etdsPreValidateTraderEnabled: Boolean =
+    servicesConfig.getBoolean("featureFlags.etdsPreValidateTraderEnabled")
 
   def emcsReceiverMessageUrl: String = s"$eisHost/emcs/digital-submit-new-message/v1"
   def submissionBearerToken: String  =
@@ -65,6 +69,10 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   def preValidateTraderUrl: String         = s"$eisHost/emcs/pre-validate-trader/v1"
   def preValidateTraderBearerToken: String =
     servicesConfig.getConfString("eis.pre-validate-trader-bearer-token", "dummyPreValidateTraderBearerToken")
+
+  def preValidateTraderETDSUrl: String         = s"$eisHost/etds/traderprevalidation/v1"
+  def preValidateTraderETDSBearerToken: String =
+    servicesConfig.getConfString("eis.pre-validate-trader-etds-bearer-token", "dummyPreValidateTraderETDSBearerToken")
 
   def pushPullNotificationsUri(boxId: String) =
     s"$pushPullNotificationsHost/box/$boxId/notifications"
