@@ -23,8 +23,8 @@ import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PreValidateTraderConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.ParsedPreValidateTraderRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{PreValidateTraderEISResponse, PreValidateTraderMessageResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ParsedPreValidateTraderETDSRequest, ParsedPreValidateTraderRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{PreValidateTraderEISResponse, PreValidateTraderETDSEISResponse, PreValidateTraderETDSMessageResponse, PreValidateTraderMessageResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -45,6 +45,16 @@ class PreValidateTraderService @Inject() (
       .submitMessage(request.json, request.request.erns.head)
       .map {
         case Right(x)    => Right(convertEISToResponseFormat(x)).flatten
+        case Left(error) => Left(error)
+      }
+
+  def submitETDSMessage[A](
+    request: ParsedPreValidateTraderETDSRequest[A]
+  )(implicit hc: HeaderCarrier): Future[Either[Result, PreValidateTraderETDSMessageResponse]] =
+    connector
+      .submitMessageETDS(request.json, request.request.erns.head)
+      .map {
+        case Right(x)    => Right(convertETDSToResponseFormat(x)).flatten
         case Left(error) => Left(error)
       }
 
@@ -85,5 +95,20 @@ class PreValidateTraderService @Inject() (
         )
       )
     }
+  }
+
+  private def convertETDSToResponseFormat(
+    eisResponse: PreValidateTraderETDSEISResponse
+  ): Either[Result, PreValidateTraderETDSMessageResponse] = {
+    val exciseTraderValidationResponse = eisResponse.exciseTraderValidationETDSResponse
+    val exciseTraderResponse           = exciseTraderValidationResponse
+    Right(
+      PreValidateTraderETDSMessageResponse(
+        exciseTraderValidationResponse.processingDateTime,
+        exciseTraderResponse.exciseId,
+        exciseTraderResponse.validationResult,
+        exciseTraderResponse.failDetails
+      )
+    )
   }
 }

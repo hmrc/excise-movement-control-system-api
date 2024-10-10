@@ -20,10 +20,12 @@ import play.api.http.HeaderNames
 
 trait Headers {
   def build(correlationId: String, createdDateTime: String, bearerToken: String): Seq[(String, String)]
+  def buildETDS(correlationId: String, createdDateTime: String, bearerToken: String): Seq[(String, String)]
 }
 
 object Headers {
   val APIPSource: String         = "APIP"
+  val MDTPSource: String         = "MDTP"
   val MDTPHost: String           = "MDTP"
   val SourceName: String         = "Source"
   val XCorrelationIdName: String = "X-Correlation-Id"

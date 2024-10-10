@@ -23,10 +23,11 @@ import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTraderHttpReader
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTraderETDSHttpReader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.PreValidateTraderRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderEISResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{PreValidateTraderETDSRequest, PreValidateTraderRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{PreValidateTraderEISResponse, PreValidateTraderETDSEISResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.CorrelationIdService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
@@ -78,6 +79,45 @@ class PreValidateTraderConnector @Inject() (
           timestamp,
           "Internal Server Error",
           "Unexpected error occurred while processing PreValidateTrader request",
+          correlationId
+        )
+
+        Left(InternalServerError(Json.toJson(error)))
+      }
+
+  }
+
+  def submitMessageETDS(request: PreValidateTraderETDSRequest, ern: String)(implicit
+    hc: HeaderCarrier
+  ): Future[Either[Result, PreValidateTraderETDSEISResponse]] = {
+
+    logger.info("[PreValidateTraderConnector]: Submitting ETDS PreValidateTrader message")
+
+    val timer = metrics.timer("etds.prevalidatetrader.connector.timer").time()
+
+    val correlationId   = correlationIdService.generateCorrelationId()
+    val timestamp       = dateTimeService.timestamp()
+    val createdDateTime = timestamp.asStringInMilliseconds
+
+    implicit val reader: HttpReads[Either[Result, PreValidateTraderETDSEISResponse]] = PreValidateTraderETDSHttpReader(
+      correlationId = correlationId,
+      ern = ern,
+      createDateTime = createdDateTime,
+      dateTimeService = dateTimeService
+    )
+    httpClient
+      .post(url"${appConfig.preValidateTraderETDSUrl}")
+      .setHeader(buildETDS(correlationId, createdDateTime, appConfig.preValidateTraderETDSBearerToken): _*)
+      .withBody(Json.toJson(request))
+      .execute[Either[Result, PreValidateTraderETDSEISResponse]]
+      .andThen { case _ => timer.stop() }
+      .recover { case NonFatal(ex) =>
+        logger.warn(EISErrorMessage(createdDateTime, ex.getMessage, correlationId, "PreValidateTrader"), ex)
+
+        val error = EisErrorResponsePresentation(
+          timestamp,
+          "Internal Server Error",
+          "Unexpected error occurred while processing ETDS PreValidateTrader request",
           correlationId
         )
 

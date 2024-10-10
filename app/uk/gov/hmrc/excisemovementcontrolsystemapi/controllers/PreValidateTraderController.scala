@@ -18,8 +18,10 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{Action, ControllerComponents}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseJsonAction}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.ParsedPreValidateTraderRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ParsedPreValidateTraderETDSRequest, ParsedPreValidateTraderRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PreValidateTraderService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -31,17 +33,34 @@ class PreValidateTraderController @Inject() (
   authAction: AuthAction,
   parseJsonAction: ParseJsonAction,
   preValidateTraderService: PreValidateTraderService,
-  cc: ControllerComponents
+  cc: ControllerComponents,
+  appConfig: AppConfig
 )(implicit ec: ExecutionContext)
     extends BackendController(cc) {
 
-  def submit: Action[JsValue] =
-    (authAction andThen parseJsonAction).async(parse.json) {
-      implicit request: ParsedPreValidateTraderRequest[JsValue] =>
-        preValidateTraderService.submitMessage(request).flatMap {
-          case Right(response) => Future.successful(Ok(Json.toJson(response)))
-          case Left(error)     => Future.successful(error)
-        }
-    }
+  def submit: Action[JsValue] = Action.async(parse.json) { implicit request =>
+    authAction.invokeBlock(
+      request,
+      { authRequest: EnrolmentRequest[JsValue] =>
+        parseJsonAction.refineDynamic(authRequest, appConfig.etdsPreValidateTraderEnabled).flatMap {
+          case Right(Left(parsedRequest: ParsedPreValidateTraderRequest[JsValue])) =>
+            // Legacy request
+            preValidateTraderService.submitMessage(parsedRequest).map {
+              case Right(response) => Ok(Json.toJson(response))
+              case Left(error)     => error
+            }
 
+          case Right(Right(parsedRequest: ParsedPreValidateTraderETDSRequest[JsValue])) =>
+            // ETDS request
+            preValidateTraderService.submitETDSMessage(parsedRequest).map {
+              case Right(response) => Ok(Json.toJson(response))
+              case Left(error)     => error
+            }
+
+          case Left(result) =>
+            Future.successful(result)
+        }
+      }
+    )
+  }
 }

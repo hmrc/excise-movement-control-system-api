@@ -21,7 +21,7 @@ import play.api.Logging
 import play.api.libs.json.{JsResultException, JsValue, Json}
 import play.api.mvc.{ActionRefiner, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ParsedPreValidateTraderRequest, PreValidateTraderRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ParsedPreValidateTraderETDSRequest, ParsedPreValidateTraderRequest, PreValidateTraderETDSRequest, PreValidateTraderRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, preValidateTrader}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -38,9 +38,35 @@ class ParseJsonActionImpl @Inject() (
     with ParseJsonAction
     with Logging {
 
+  override def refineDynamic[A](
+    request: EnrolmentRequest[A],
+    etdsEnabled: Boolean
+  ): Future[Either[Result, Either[ParsedPreValidateTraderRequest[A], ParsedPreValidateTraderETDSRequest[A]]]] =
+    if (etdsEnabled) {
+      refineETDS(request).map {
+        case Right(etdsRequest) => Right(Right(etdsRequest))
+        case Left(error)        => Left(error)
+      }
+    } else {
+      refine(request).map {
+        case Right(traderRequest) => Right(Left(traderRequest))
+        case Left(error)          => Left(error)
+      }
+    }
+
   override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedPreValidateTraderRequest[A]]] =
     request.body match {
       case body: JsValue => parseJson(body, request)
+      case _             =>
+        logger.warn("Not valid Json")
+        Future.successful(Left(BadRequest(Json.toJson(handleError("Json error", "Not valid Json or Json is empty")))))
+    }
+
+  override def refineETDS[A](
+    request: EnrolmentRequest[A]
+  ): Future[Either[Result, ParsedPreValidateTraderETDSRequest[A]]] =
+    request.body match {
+      case body: JsValue => parseETDSJson(body, request)
       case _             =>
         logger.warn("Not valid Json")
         Future.successful(Left(BadRequest(Json.toJson(handleError("Json error", "Not valid Json or Json is empty")))))
@@ -76,6 +102,36 @@ class ParseJsonActionImpl @Inject() (
         )
     }
 
+  def parseETDSJson[A](
+    jsonBody: JsValue,
+    request: EnrolmentRequest[A]
+  ): Future[Either[Result, ParsedPreValidateTraderETDSRequest[A]]] =
+    Try(jsonBody.as[PreValidateTraderETDSRequest]) match {
+      case Success(value) =>
+        Future.successful(Right(preValidateTrader.request.ParsedPreValidateTraderETDSRequest(request, value)))
+
+      case Failure(exception: JsResultException) =>
+        logger.warn(s"Not valid ETDS Pre Validate Trader message: ${exception.getMessage}", exception)
+        Future.successful(
+          Left(
+            BadRequest(
+              Json.toJson(
+                handleError(
+                  s"Not valid ETDS PreValidateTrader message",
+                  s"Error parsing Json: ${exception.errors.toString()}"
+                )
+              )
+            )
+          )
+        )
+
+      case Failure(exception) =>
+        logger.warn(s"Not valid Pre Validate Trader message: ${exception.getMessage}", exception)
+        Future.successful(
+          Left(BadRequest(Json.toJson(handleError(s"Not valid PreValidateTrader message", exception.getMessage))))
+        )
+    }
+
   private def handleError(
     message: String,
     debugMessage: String
@@ -86,4 +142,9 @@ class ParseJsonActionImpl @Inject() (
 @ImplementedBy(classOf[ParseJsonActionImpl])
 trait ParseJsonAction extends ActionRefiner[EnrolmentRequest, ParsedPreValidateTraderRequest] {
   def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedPreValidateTraderRequest[A]]]
+  def refineETDS[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedPreValidateTraderETDSRequest[A]]]
+  def refineDynamic[A](
+    request: EnrolmentRequest[A],
+    etdsEnabled: Boolean
+  ): Future[Either[Result, Either[ParsedPreValidateTraderRequest[A], ParsedPreValidateTraderETDSRequest[A]]]]
 }
