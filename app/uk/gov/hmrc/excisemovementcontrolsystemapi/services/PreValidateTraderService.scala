@@ -24,7 +24,7 @@ import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PreValidateTraderConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ParsedPreValidateTraderETDSRequest, ParsedPreValidateTraderRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{PreValidateTraderEISResponse, PreValidateTraderETDSEISResponse, PreValidateTraderETDSMessageResponse, PreValidateTraderMessageResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{ExciseTraderValidationETDSResponse, PreValidateTraderEISResponse, PreValidateTraderETDSMessageResponse, PreValidateTraderMessageResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -98,17 +98,14 @@ class PreValidateTraderService @Inject() (
   }
 
   private def convertETDSToResponseFormat(
-    eisResponse: PreValidateTraderETDSEISResponse
-  ): Either[Result, PreValidateTraderETDSMessageResponse] = {
-    val exciseTraderValidationResponse = eisResponse.exciseTraderValidationETDSResponse
-    val exciseTraderResponse           = exciseTraderValidationResponse
+    eisResponse: ExciseTraderValidationETDSResponse
+  ): Either[Result, PreValidateTraderETDSMessageResponse] =
     Right(
       PreValidateTraderETDSMessageResponse(
-        exciseTraderValidationResponse.processingDateTime,
-        exciseTraderResponse.exciseId,
-        exciseTraderResponse.validationResult,
-        exciseTraderResponse.failDetails
+        eisResponse.processingDateTime,
+        eisResponse.exciseId,
+        eisResponse.validationResult,
+        eisResponse.failDetails
       )
     )
-  }
 }

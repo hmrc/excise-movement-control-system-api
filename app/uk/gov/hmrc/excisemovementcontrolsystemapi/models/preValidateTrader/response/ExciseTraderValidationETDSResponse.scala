@@ -22,7 +22,7 @@ case class ExciseTraderValidationETDSResponse(
   processingDateTime: String,
   exciseId: String,
   validationResult: String,
-  failDetails: Option[ETDSFailDetails]
+  failDetails: Option[ETDSFailDetails] = None
 )
 
 object ExciseTraderValidationETDSResponse {
