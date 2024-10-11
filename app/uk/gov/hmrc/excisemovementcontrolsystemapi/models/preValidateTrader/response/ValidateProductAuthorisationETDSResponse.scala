@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.resp
 import play.api.libs.json.{Format, Json}
 
 case class ValidateProductAuthorisationETDSResponse(
-  productError: Seq[ProductError]
+  productError: Seq[ProductErrorETDS]
 )
 
 object ValidateProductAuthorisationETDSResponse {

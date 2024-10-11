@@ -22,7 +22,7 @@ case class PreValidateTraderETDSMessageResponse(
   processingDateTime: String,
   exciseId: String,
   validationResult: String,
-  ETDSFailDetails: Option[ETDSFailDetails]
+  failDetails: Option[ETDSFailDetails]
 )
 
 object PreValidateTraderETDSMessageResponse {
