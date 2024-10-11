@@ -22,9 +22,10 @@ import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PreValidateTraderConnector
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTraderResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ParsedPreValidateTraderETDSRequest, ParsedPreValidateTraderRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{ExciseTraderValidationETDSResponse, PreValidateTraderEISResponse, PreValidateTraderETDSMessageResponse, PreValidateTraderMessageResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{PreValidateTraderEISResponse, PreValidateTraderMessageResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -50,11 +51,11 @@ class PreValidateTraderService @Inject() (
 
   def submitETDSMessage[A](
     request: ParsedPreValidateTraderETDSRequest[A]
-  )(implicit hc: HeaderCarrier): Future[Either[Result, PreValidateTraderETDSMessageResponse]] =
+  )(implicit hc: HeaderCarrier): Future[Either[Result, PreValidateTraderResponse]] =
     connector
       .submitMessageETDS(request.json, request.request.erns.head)
       .map {
-        case Right(x)    => Right(convertETDSToResponseFormat(x)).flatten
+        case Right(x)    => Right(x)
         case Left(error) => Left(error)
       }
 
@@ -96,16 +97,4 @@ class PreValidateTraderService @Inject() (
       )
     }
   }
-
-  private def convertETDSToResponseFormat(
-    eisResponse: ExciseTraderValidationETDSResponse
-  ): Either[Result, PreValidateTraderETDSMessageResponse] =
-    Right(
-      PreValidateTraderETDSMessageResponse(
-        eisResponse.processingDateTime,
-        eisResponse.exciseId,
-        eisResponse.validationResult,
-        eisResponse.failDetails
-      )
-    )
 }

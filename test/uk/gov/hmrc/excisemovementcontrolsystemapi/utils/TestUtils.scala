@@ -17,9 +17,12 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
 
 import org.bson.types.ObjectId
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTraderETDS400ErrorMessageResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTraderETDS500ErrorMessageResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
+
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
@@ -63,6 +66,31 @@ object TestUtils {
     )
   )
 
+  def getPreValidateTraderSuccessETDSEISResponse: PreValidateTraderETDSMessageResponse =
+    PreValidateTraderETDSMessageResponse(
+      processingDateTime = "2021-12-17T09:31:123Z",
+      exciseId = "GBWK002281023",
+      validationResult = "Pass",
+      failDetails = Option(
+        ETDSFailDetails(
+          validTrader = true,
+          errorCode = Some(1),
+          errorText = Some("Expired"),
+          validateProductAuthorisationResponse = Option(
+            ValidateProductAuthorisationETDSResponse(productError =
+              Seq(
+                ProductErrorETDS(
+                  exciseProductCode = "W300",
+                  errorCode = 1,
+                  errorText = "Unrecognised EPC"
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+
   def getPreValidateTraderErrorEISResponse: PreValidateTraderEISResponse = PreValidateTraderEISResponse(
     ExciseTraderValidationResponse(
       validationTimestamp = "2021-12-17T09:31:123Z",
@@ -92,6 +120,18 @@ object TestUtils {
       )
     )
   )
+
+  def getPreValidateTraderErrorETDSEISResponse400: PreValidateTraderETDS400ErrorMessageResponse =
+    PreValidateTraderETDS400ErrorMessageResponse(
+      processingDateTime = "2021-12-17T09:31:123Z",
+      message = "Invalid message format"
+    )
+
+  def getPreValidateTraderErrorETDSEISResponse500: PreValidateTraderETDS500ErrorMessageResponse =
+    PreValidateTraderETDS500ErrorMessageResponse(
+      processingDateTime = "2021-12-17T09:31:123Z",
+      messages = Seq("Invalid message format", "Internal server error")
+    )
 
   def getPreValidateTraderSuccessResponse: PreValidateTraderMessageResponse = PreValidateTraderMessageResponse(
     validationTimeStamp = "2021-12-17T09:31:123Z",

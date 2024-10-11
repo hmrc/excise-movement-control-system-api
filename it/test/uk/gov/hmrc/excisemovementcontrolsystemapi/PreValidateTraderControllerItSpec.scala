@@ -55,13 +55,14 @@ class PreValidateTraderControllerItSpec extends PlaySpec
   override lazy val app: Application = {
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
-    applicationBuilder(configureEisService).build()
+    applicationBuilder(configureEisService).configure(
+      "featureFlags.etdsPreValidateTraderEnabled" -> false,
+    ).build()
   }
 
   override def beforeAll(): Unit = {
     super.beforeAll()
     wireMock.resetAll()
-
     when(dateTimeService.timestamp()).thenReturn(timestamp)
   }
 

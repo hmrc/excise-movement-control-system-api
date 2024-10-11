@@ -18,13 +18,12 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.resp
 
 import play.api.libs.json.{Format, Json}
 
-case class ExciseTraderValidationETDSResponse(
+case class PreValidateTraderETDS500ErrorMessageResponse(
   processingDateTime: String,
-  exciseId: String,
-  validationResult: String,
-  failDetails: Option[ETDSFailDetails] = None
+  messages: Seq[String]
 )
 
-object ExciseTraderValidationETDSResponse {
-  implicit val format: Format[ExciseTraderValidationETDSResponse] = Json.format[ExciseTraderValidationETDSResponse]
+object PreValidateTraderETDS500ErrorMessageResponse {
+  implicit val format: Format[PreValidateTraderETDS500ErrorMessageResponse] =
+    Json.format[PreValidateTraderETDS500ErrorMessageResponse]
 }
