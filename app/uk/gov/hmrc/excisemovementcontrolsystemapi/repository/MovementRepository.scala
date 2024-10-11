@@ -21,7 +21,7 @@ import org.apache.pekko.Done
 import org.bson.conversions.Bson
 import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.{InsertManyOptions, _}
-import play.api.libs.json.{JsObject, Json, OFormat}
+import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository._

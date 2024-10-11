@@ -42,23 +42,30 @@ class PreValidateTraderController @Inject() (
     authAction.invokeBlock(
       request,
       { authRequest: EnrolmentRequest[JsValue] =>
-        parseJsonAction.refineDynamic(authRequest, appConfig.etdsPreValidateTraderEnabled).flatMap {
-          case Right(Left(parsedRequest: ParsedPreValidateTraderRequest[JsValue])) =>
-            // Legacy request
-            preValidateTraderService.submitMessage(parsedRequest).map {
-              case Right(response) => Ok(Json.toJson(response))
-              case Left(error)     => error
-            }
+        if (appConfig.etdsPreValidateTraderEnabled) {
+          // ETDS request
+          parseJsonAction.refineETDS(authRequest).flatMap {
+            case Right(parsedRequest: ParsedPreValidateTraderETDSRequest[JsValue]) =>
+              preValidateTraderService.submitETDSMessage(parsedRequest).map {
+                case Right(response) => Ok(Json.toJson(response))
+                case Left(error)     => error
+              }
 
-          case Right(Right(parsedRequest: ParsedPreValidateTraderETDSRequest[JsValue])) =>
-            // ETDS request
-            preValidateTraderService.submitETDSMessage(parsedRequest).map {
-              case Right(response) => Ok(Json.toJson(response))
-              case Left(error)     => error
-            }
+            case Left(result) =>
+              Future.successful(result)
+          }
+        } else {
+          // Legacy request
+          parseJsonAction.refine(authRequest).flatMap {
+            case Right(parsedRequest: ParsedPreValidateTraderRequest[JsValue]) =>
+              preValidateTraderService.submitMessage(parsedRequest).map {
+                case Right(response) => Ok(Json.toJson(response))
+                case Left(error)     => error
+              }
 
-          case Left(result) =>
-            Future.successful(result)
+            case Left(result) =>
+              Future.successful(result)
+          }
         }
       }
     )

@@ -27,6 +27,7 @@ import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.Results.NotFound
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeJsonParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PreValidateTraderService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderErrorResponse, getPreValidateTraderRequest, getPreValidateTraderSuccessResponse}
@@ -42,6 +43,7 @@ class PreValidateTraderControllerSpec
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val sys: ActorSystem     = ActorSystem("DraftExciseMovementControllerSpec")
   private val service               = mock[PreValidateTraderService]
+  private val appConfig             = mock[AppConfig]
   private val cc                    = stubControllerComponents()
   private val request               = createRequest(Json.toJson(getPreValidateTraderRequest))
 
@@ -50,6 +52,7 @@ class PreValidateTraderControllerSpec
     reset(service)
 
     when(service.submitMessage(any)(any)).thenReturn(Future.successful(Right(getPreValidateTraderSuccessResponse)))
+    when(appConfig.etdsPreValidateTraderEnabled).thenReturn(false)
   }
 
   "submit" should {
@@ -110,7 +113,8 @@ class PreValidateTraderControllerSpec
       FakeFailingAuthentication,
       FakeSuccessJsonParser,
       service,
-      cc
+      cc,
+      appConfig
     )
 
   private def createWithFailingJsonParserAction =
@@ -118,7 +122,8 @@ class PreValidateTraderControllerSpec
       FakeSuccessAuthentication(Set(ern)),
       FakeFailureJsonParser,
       service,
-      cc
+      cc,
+      appConfig
     )
 
   private def createWithSuccessfulAuth =
@@ -126,7 +131,8 @@ class PreValidateTraderControllerSpec
       FakeSuccessAuthentication(Set(ern)),
       FakeSuccessJsonParser,
       service,
-      cc
+      cc,
+      appConfig
     )
 
   private def createRequest(body: JsValue): FakeRequest[JsValue] =

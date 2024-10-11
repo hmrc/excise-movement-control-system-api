@@ -38,22 +38,6 @@ class ParseJsonActionImpl @Inject() (
     with ParseJsonAction
     with Logging {
 
-  override def refineDynamic[A](
-    request: EnrolmentRequest[A],
-    etdsEnabled: Boolean
-  ): Future[Either[Result, Either[ParsedPreValidateTraderRequest[A], ParsedPreValidateTraderETDSRequest[A]]]] =
-    if (etdsEnabled) {
-      refineETDS(request).map {
-        case Right(etdsRequest) => Right(Right(etdsRequest))
-        case Left(error)        => Left(error)
-      }
-    } else {
-      refine(request).map {
-        case Right(traderRequest) => Right(Left(traderRequest))
-        case Left(error)          => Left(error)
-      }
-    }
-
   override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedPreValidateTraderRequest[A]]] =
     request.body match {
       case body: JsValue => parseJson(body, request)
@@ -143,8 +127,4 @@ class ParseJsonActionImpl @Inject() (
 trait ParseJsonAction extends ActionRefiner[EnrolmentRequest, ParsedPreValidateTraderRequest] {
   def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedPreValidateTraderRequest[A]]]
   def refineETDS[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedPreValidateTraderETDSRequest[A]]]
-  def refineDynamic[A](
-    request: EnrolmentRequest[A],
-    etdsEnabled: Boolean
-  ): Future[Either[Result, Either[ParsedPreValidateTraderRequest[A], ParsedPreValidateTraderETDSRequest[A]]]]
 }

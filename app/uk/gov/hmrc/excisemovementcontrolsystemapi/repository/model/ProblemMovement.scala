@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model
 
-import play.api.libs.json.{Json, OFormat, Reads}
+import play.api.libs.json.{Json, OFormat}
 
 final case class ProblemMovement(_id: String, countOfIe801s: Int)
 

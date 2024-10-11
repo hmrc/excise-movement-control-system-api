@@ -136,4 +136,10 @@ object TestUtils {
       )
     )
   )
+
+  def getPreValidateTraderETDSRequest: ExciseTraderETDSRequest = ExciseTraderETDSRequest(
+    "GBWK002281023",
+    Some("UK Record"),
+    Seq(ValidateProductAuthorisationETDSRequest("W200"))
+  )
 }
