@@ -17,11 +17,11 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util
 
 import play.api.Logging
-import play.api.libs.json.{Format, JsError, JsSuccess, Json, Writes}
+import play.api.libs.json.{JsError, JsSuccess, Json}
 import play.api.mvc.Result
 import play.api.mvc.Results.Status
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.ETDSFailDetails
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{ExciseTraderValidationETDSResponse, PreValidateTraderETDS400ErrorMessageResponse, PreValidateTraderETDS500ErrorMessageResponse, PreValidateTraderResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HttpErrorFunctions.is2xx
 import uk.gov.hmrc.http.{HttpReads, HttpResponse}
@@ -108,48 +108,4 @@ object PreValidateTraderETDSHttpReader {
       createDateTime,
       dateTimeService
     )
-}
-
-sealed trait PreValidateTraderResponse
-
-object PreValidateTraderResponse {
-  implicit val preValidateTraderResponseWrites: Writes[PreValidateTraderResponse] = Writes[PreValidateTraderResponse] {
-    case validResponse: ExciseTraderValidationETDSResponse      =>
-      Json.toJson(validResponse)
-    case error400: PreValidateTraderETDS400ErrorMessageResponse =>
-      Json.toJson(error400)
-    case error500: PreValidateTraderETDS500ErrorMessageResponse =>
-      Json.toJson(error500)
-  }
-}
-
-case class ExciseTraderValidationETDSResponse(
-  processingDateTime: String,
-  exciseId: String,
-  validationResult: String,
-  failDetails: Option[ETDSFailDetails] = None
-) extends PreValidateTraderResponse
-
-object ExciseTraderValidationETDSResponse {
-  implicit val format: Format[ExciseTraderValidationETDSResponse] = Json.format[ExciseTraderValidationETDSResponse]
-}
-
-case class PreValidateTraderETDS400ErrorMessageResponse(
-  processingDateTime: String,
-  message: String
-) extends PreValidateTraderResponse
-
-object PreValidateTraderETDS400ErrorMessageResponse {
-  implicit val format: Format[PreValidateTraderETDS400ErrorMessageResponse] =
-    Json.format[PreValidateTraderETDS400ErrorMessageResponse]
-}
-
-case class PreValidateTraderETDS500ErrorMessageResponse(
-  processingDateTime: String,
-  messages: Seq[String]
-) extends PreValidateTraderResponse
-
-object PreValidateTraderETDS500ErrorMessageResponse {
-  implicit val format: Format[PreValidateTraderETDS500ErrorMessageResponse] =
-    Json.format[PreValidateTraderETDS500ErrorMessageResponse]
 }

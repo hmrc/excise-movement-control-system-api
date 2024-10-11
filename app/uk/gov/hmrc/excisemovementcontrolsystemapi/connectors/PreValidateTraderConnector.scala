@@ -22,11 +22,11 @@ import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.{PreValidateTraderETDSHttpReader, PreValidateTraderHttpReader, PreValidateTraderResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.{PreValidateTraderETDSHttpReader, PreValidateTraderHttpReader}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ExciseTraderETDSRequest, PreValidateTraderRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderEISResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{PreValidateTraderEISResponse, PreValidateTraderResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.CorrelationIdService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat

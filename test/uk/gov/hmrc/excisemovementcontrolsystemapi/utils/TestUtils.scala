@@ -17,8 +17,6 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
 
 import org.bson.types.ObjectId
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTraderETDS400ErrorMessageResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.PreValidateTraderETDS500ErrorMessageResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
