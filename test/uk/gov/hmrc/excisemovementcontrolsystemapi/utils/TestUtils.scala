@@ -119,6 +119,31 @@ object TestUtils {
     )
   )
 
+  def getExciseTraderValidationETDSResponse: ExciseTraderValidationETDSResponse =
+    ExciseTraderValidationETDSResponse(
+      processingDateTime = "2021-12-17T09:31:123Z",
+      exciseId = "GBWK002281023",
+      validationResult = "Pass",
+      failDetails = Option(
+        ETDSFailDetails(
+          validTrader = true,
+          errorCode = Some(1),
+          errorText = Some("Expired"),
+          validateProductAuthorisationResponse = Option(
+            ValidateProductAuthorisationETDSResponse(productError =
+              Seq(
+                ProductErrorETDS(
+                  exciseProductCode = "W300",
+                  errorCode = 1,
+                  errorText = "Unrecognised EPC"
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+
   def getPreValidateTraderErrorETDSEISResponse400: PreValidateTraderETDS400ErrorMessageResponse =
     PreValidateTraderETDS400ErrorMessageResponse(
       processingDateTime = "2021-12-17T09:31:123Z",

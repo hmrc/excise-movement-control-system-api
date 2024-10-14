@@ -30,7 +30,7 @@ import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeJsonParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PreValidateTraderService
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderErrorResponse, getPreValidateTraderRequest, getPreValidateTraderSuccessResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -46,17 +46,20 @@ class PreValidateTraderControllerSpec
   private val appConfig             = mock[AppConfig]
   private val cc                    = stubControllerComponents()
   private val request               = createRequest(Json.toJson(getPreValidateTraderRequest))
+  private val ETDSrequest           = createRequest(Json.toJson(getPreValidateTraderETDSRequest))
 
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(service)
-
-    when(service.submitMessage(any)(any)).thenReturn(Future.successful(Right(getPreValidateTraderSuccessResponse)))
-    when(appConfig.etdsPreValidateTraderEnabled).thenReturn(false)
   }
 
   "submit" should {
+
     "return 200 when validated" in {
+
+      when(service.submitMessage(any)(any)).thenReturn(Future.successful(Right(getPreValidateTraderSuccessResponse)))
+      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(false)
+
       val result = createWithSuccessfulAuth.submit(request)
 
       status(result) mustBe OK
@@ -65,6 +68,9 @@ class PreValidateTraderControllerSpec
     }
 
     "return 200 when business error" in {
+
+      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(false)
+
       when(service.submitMessage(any)(any)).thenReturn(Future.successful(Right(getPreValidateTraderErrorResponse)))
 
       val result = createWithSuccessfulAuth.submit(request)
@@ -75,6 +81,10 @@ class PreValidateTraderControllerSpec
     }
 
     "send a request to EIS" in {
+
+      when(service.submitMessage(any)(any)).thenReturn(Future.successful(Right(getPreValidateTraderSuccessResponse)))
+      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(false)
+
       await(createWithSuccessfulAuth.submit(request))
 
       verify(service).submitMessage(any)(any)
@@ -82,6 +92,9 @@ class PreValidateTraderControllerSpec
     }
 
     "return an error when EIS error" in {
+
+      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(false)
+
       when(service.submitMessage(any)(any))
         .thenReturn(Future.successful(Left(NotFound("not found"))))
 
@@ -101,6 +114,77 @@ class PreValidateTraderControllerSpec
     "return authentication error" when {
       "authentication fails" in {
         val result = createWithAuthActionFailure.submit(request)
+
+        status(result) mustBe FORBIDDEN
+      }
+    }
+
+  }
+
+  "submit (ETDS)" should {
+
+    "return 200 when validated" in {
+
+      when(service.submitETDSMessage(any)(any))
+        .thenReturn(Future.successful(Right(getExciseTraderValidationETDSResponse)))
+      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(true)
+
+      val result = createWithSuccessfulAuth.submit(ETDSrequest)
+
+      status(result) mustBe OK
+      contentAsJson(result) mustBe Json.toJson(getPreValidateTraderSuccessETDSEISResponse)
+
+    }
+
+    "return 400 when business error" in {
+
+      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(true)
+
+      when(service.submitETDSMessage(any)(any))
+        .thenReturn(Future.successful(Right(getPreValidateTraderErrorETDSEISResponse400)))
+
+      val result = createWithSuccessfulAuth.submit(ETDSrequest)
+
+      status(result) mustBe OK
+      contentAsJson(result) mustBe Json.toJson(getPreValidateTraderErrorETDSEISResponse400)
+
+    }
+
+    "send a request to EIS" in {
+
+      when(service.submitETDSMessage(any)(any))
+        .thenReturn(Future.successful(Right(getExciseTraderValidationETDSResponse)))
+      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(true)
+
+      await(createWithSuccessfulAuth.submit(ETDSrequest))
+
+      verify(service).submitETDSMessage(any)(any)
+
+    }
+
+    "return an error when EIS error" in {
+
+      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(true)
+
+      when(service.submitETDSMessage(any)(any))
+        .thenReturn(Future.successful(Left(NotFound("not found"))))
+
+      val result = createWithSuccessfulAuth.submit(ETDSrequest)
+
+      status(result) mustBe NOT_FOUND
+    }
+
+    "a validation parser error" when {
+      "xml cannot be parsed" in {
+        val result = createWithFailingJsonParserAction.submit(ETDSrequest)
+
+        status(result) mustBe BAD_REQUEST
+      }
+    }
+
+    "return authentication error" when {
+      "authentication fails" in {
+        val result = createWithAuthActionFailure.submit(ETDSrequest)
 
         status(result) mustBe FORBIDDEN
       }

@@ -51,12 +51,7 @@ class PreValidateTraderService @Inject() (
   def submitETDSMessage[A](
     request: ParsedPreValidateTraderETDSRequest[A]
   )(implicit hc: HeaderCarrier): Future[Either[Result, PreValidateTraderResponse]] =
-    connector
-      .submitMessageETDS(request.json, request.request.erns.head)
-      .map {
-        case Right(x)    => Right(x)
-        case Left(error) => Left(error)
-      }
+    connector.submitMessageETDS(request.json, request.request.erns.head)
 
   private def convertEISToResponseFormat(
     eisResponse: PreValidateTraderEISResponse
