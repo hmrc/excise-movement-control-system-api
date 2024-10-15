@@ -150,6 +150,20 @@ class PreValidateTraderControllerSpec
 
     }
 
+    "return 500 when server error" in {
+
+      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(true)
+
+      when(service.submitETDSMessage(any)(any))
+        .thenReturn(Future.successful(Right(getPreValidateTraderErrorETDSEISResponse500)))
+
+      val result = createWithSuccessfulAuth.submit(ETDSrequest)
+
+      status(result) mustBe INTERNAL_SERVER_ERROR
+      contentAsJson(result) mustBe Json.toJson(getPreValidateTraderErrorETDSEISResponse500)
+
+    }
+
     "send a request to EIS" in {
 
       when(service.submitETDSMessage(any)(any))
