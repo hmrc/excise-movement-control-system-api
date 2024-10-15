@@ -20,6 +20,7 @@ import org.mockito.MockitoSugar.when
 import org.scalatest.EitherValues
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
+import play.api.http.Status.IM_A_TEAPOT
 import play.api.libs.json.Json
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{ExciseTraderValidationETDSResponse, PreValidateTraderETDS400ErrorMessageResponse, PreValidateTraderETDS500ErrorMessageResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -75,6 +76,57 @@ class PreValidateTraderETDSHttpReaderSpec extends PlaySpec with EitherValues {
           errorResponse.message mustBe businessError.message
         case _                                                                  =>
           fail("Expected a ETDSErrorResponse400")
+      }
+    }
+
+    "fail to parse 400 response when invalid JSON is returned" in {
+      val invalidJson = """{"invalidField": "invalidValue"}"""
+
+      val result = preValidateTraderETDSHttpReader.read(
+        "ANY",
+        "/foo",
+        HttpResponse(400, invalidJson)
+      )
+
+      result match {
+        case Left(errorResponse) =>
+          errorResponse.header.status mustBe 400
+        case _                   =>
+          fail("Expected an error response due to invalid JSON")
+      }
+    }
+
+    "fail to parse 500 response when invalid JSON is returned" in {
+      val invalidJson = """{"invalidField": "invalidValue"}"""
+
+      val result = preValidateTraderETDSHttpReader.read(
+        "ANY",
+        "/foo",
+        HttpResponse(500, invalidJson)
+      )
+
+      result match {
+        case Left(errorResponse) =>
+          errorResponse.header.status mustBe 500
+        case _                   =>
+          fail("Expected an error response due to invalid JSON")
+      }
+    }
+
+    "return generic error when unexpected response" in {
+      val invalidJson = """{"invalidField": "invalidValue"}"""
+
+      val result = preValidateTraderETDSHttpReader.read(
+        "ANY",
+        "/foo",
+        HttpResponse(IM_A_TEAPOT, invalidJson)
+      )
+
+      result match {
+        case Left(errorResponse) =>
+          errorResponse.header.status mustBe IM_A_TEAPOT
+        case _                   =>
+          fail("Expected an error response due to invalid JSON")
       }
     }
 
