@@ -28,9 +28,8 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PreValidateTraderConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.ParsedPreValidateTraderRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ParsedPreValidateTraderETDSRequest, ParsedPreValidateTraderRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{ExciseTraderResponse, ExciseTraderValidationResponse, PreValidateTraderEISResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PreValidateTraderService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils._
 import uk.gov.hmrc.http.HeaderCarrier
@@ -54,6 +53,11 @@ class PreValidateTraderServiceSpec extends PlaySpec with BeforeAndAfterEach with
   private val validRequest = ParsedPreValidateTraderRequest(
     EnrolmentRequest(FakeRequest(), Set("ern"), "id"),
     getPreValidateTraderRequest
+  )
+
+  private val validETDSRequest = ParsedPreValidateTraderETDSRequest(
+    EnrolmentRequest(FakeRequest(), Set("ern"), "id"),
+    getPreValidateTraderETDSRequest
   )
 
   private val getBadlyFormattedEISResponse = PreValidateTraderEISResponse(
@@ -136,6 +140,53 @@ class PreValidateTraderServiceSpec extends PlaySpec with BeforeAndAfterEach with
       when(connector.submitMessage(any, any)(any)).thenReturn(Future.successful(Left(BadRequest("broken"))))
 
       val result = await(preValidateTraderService.submitMessage(validRequest))
+
+      result.left.value mustBe BadRequest("broken")
+
+    }
+
+  }
+
+  "submitETDSMessage" should {
+
+    "return in the API response format if the Connector returns the EIS success response" in {
+
+      when(connector.submitMessageETDS(any, any)(any))
+        .thenReturn(Future.successful(Right(getExciseTraderValidationETDSResponse)))
+
+      val result = await(preValidateTraderService.submitETDSMessage(validETDSRequest))
+
+      result.value mustBe getExciseTraderValidationETDSResponse
+
+    }
+
+    "return in the API response format if the Connector returns the EIS business error response" in {
+
+      when(connector.submitMessageETDS(any, any)(any))
+        .thenReturn(Future.successful(Right(getPreValidateTraderErrorETDSEISResponse400)))
+
+      val result = await(preValidateTraderService.submitETDSMessage(validETDSRequest))
+
+      result.value mustBe getPreValidateTraderErrorETDSEISResponse400
+
+    }
+
+    "return an error result if EIS has returned an error response" in {
+
+      when(connector.submitMessageETDS(any, any)(any))
+        .thenReturn(Future.successful(Right(getPreValidateTraderErrorETDSEISResponse500)))
+
+      val result = await(preValidateTraderService.submitETDSMessage(validETDSRequest))
+
+      result.value mustBe getPreValidateTraderErrorETDSEISResponse500
+
+    }
+
+    "return an error result if the Connector does" in {
+
+      when(connector.submitMessageETDS(any, any)(any)).thenReturn(Future.successful(Left(BadRequest("broken"))))
+
+      val result = await(preValidateTraderService.submitETDSMessage(validETDSRequest))
 
       result.left.value mustBe BadRequest("broken")
 
