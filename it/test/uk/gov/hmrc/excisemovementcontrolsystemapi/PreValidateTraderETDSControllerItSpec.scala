@@ -72,7 +72,7 @@ class PreValidateTraderETDSControllerItSpec extends PlaySpec
     wireMock.stop()
   }
 
-  "PreValidateTrader" should {
+  "PreValidateTrader ETDS" should {
 
     "return 200" in {
       withAuthorizedTrader(authErn)
