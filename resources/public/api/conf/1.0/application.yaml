@@ -1501,7 +1501,7 @@ components:
           type: boolean
         errorCode:
           type: string
-          enum: [ '1', '2', '3', '4', '5', '6' ]
+          enum: [ "1", "2", "3", "4", "5", "6" ]
           description: The 'errorCode' for an invalid trader i.e., when validTrader = "false".<br /> 1 = Pending<br /> 2 = Expired<br /> 3 = Withdrawn<br /> 4 = Cancelled<br /> 5 = Used<br /> 6 = Not Found
         errorText:
           type: string
@@ -1535,7 +1535,7 @@ components:
           $ref: '#/components/schemas/ExciseProductCode'
         errorCode:
           type: string
-          enum: [ '1', '2', '3' ]
+          enum: [ "1", "2", "3" ]
           description: 1 = Unrecognised EPC<br /> 2 = Unauthorised EPC<br /> 3 = EPC exceeded
         errorText:
           type: string
