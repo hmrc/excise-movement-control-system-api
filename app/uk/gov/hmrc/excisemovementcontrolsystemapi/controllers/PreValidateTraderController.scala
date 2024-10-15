@@ -22,6 +22,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseJsonAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ParsedPreValidateTraderETDSRequest, ParsedPreValidateTraderRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{ExciseTraderValidationETDSResponse, PreValidateTraderETDS400ErrorMessageResponse, PreValidateTraderETDS500ErrorMessageResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PreValidateTraderService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -47,11 +48,18 @@ class PreValidateTraderController @Inject() (
           parseJsonAction.refineETDS(authRequest).flatMap {
             case Right(parsedRequest: ParsedPreValidateTraderETDSRequest[JsValue]) =>
               preValidateTraderService.submitETDSMessage(parsedRequest).map {
-                case Right(response) => Ok(Json.toJson(response))
-                case Left(error)     => error
+                case Right(response) =>
+                  response match {
+                    case response200: ExciseTraderValidationETDSResponse           => Ok(Json.toJson(response200))
+                    case response400: PreValidateTraderETDS400ErrorMessageResponse =>
+                      BadRequest(Json.toJson(response400))
+                    case response500: PreValidateTraderETDS500ErrorMessageResponse =>
+                      InternalServerError(Json.toJson(response500))
+                  }
+                case Left(error)     =>
+                  error
               }
-
-            case Left(result) =>
+            case Left(result)                                                      =>
               Future.successful(result)
           }
         } else {

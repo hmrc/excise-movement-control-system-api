@@ -145,7 +145,7 @@ class PreValidateTraderControllerSpec
 
       val result = createWithSuccessfulAuth.submit(ETDSrequest)
 
-      status(result) mustBe OK
+      status(result) mustBe BAD_REQUEST
       contentAsJson(result) mustBe Json.toJson(getPreValidateTraderErrorETDSEISResponse400)
 
     }
