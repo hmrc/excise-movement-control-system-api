@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2024 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.{Action, ControllerComponents}
+import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseJsonAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
@@ -41,35 +41,40 @@ class PreValidateTraderController @Inject() (
 
   def submit: Action[JsValue] = authAction(parse.json).async { implicit authRequest: EnrolmentRequest[JsValue] =>
     if (appConfig.etdsPreValidateTraderEnabled) {
-      // ETDS request
-      parseJsonAction.refineETDS(authRequest).flatMap {
-        case Right(parsedRequest: ParsedPreValidateTraderETDSRequest[JsValue]) =>
-          preValidateTraderService.submitETDSMessage(parsedRequest).map {
-            case Right(response) =>
-              response match {
-                case response200: ExciseTraderValidationETDSResponse           => Ok(Json.toJson(response200))
-                case response400: PreValidateTraderETDS400ErrorMessageResponse =>
-                  BadRequest(Json.toJson(response400))
-                case response500: PreValidateTraderETDS500ErrorMessageResponse =>
-                  InternalServerError(Json.toJson(response500))
-              }
-            case Left(error)     =>
-              error
-          }
-        case Left(result)                                                      =>
-          Future.successful(result)
-      }
+      handleETDSRequest
     } else {
-      // Legacy request
-      parseJsonAction.refine(authRequest).flatMap {
-        case Right(parsedRequest: ParsedPreValidateTraderRequest[JsValue]) =>
-          preValidateTraderService.submitMessage(parsedRequest).map {
-            case Right(response) => Ok(Json.toJson(response))
-            case Left(error)     => error
-          }
-        case Left(result)                                                  =>
-          Future.successful(result)
-      }
+      handleLegacyRequest
     }
   }
+
+  private def handleETDSRequest(implicit authRequest: EnrolmentRequest[JsValue]): Future[Result] =
+    parseJsonAction.refineETDS(authRequest).flatMap {
+      case Right(parsedRequest: ParsedPreValidateTraderETDSRequest[JsValue]) =>
+        preValidateTraderService.submitETDSMessage(parsedRequest).map {
+          case Right(response) =>
+            response match {
+              case response200: ExciseTraderValidationETDSResponse           =>
+                Ok(Json.toJson(response200))
+              case response400: PreValidateTraderETDS400ErrorMessageResponse =>
+                BadRequest(Json.toJson(response400))
+              case response500: PreValidateTraderETDS500ErrorMessageResponse =>
+                InternalServerError(Json.toJson(response500))
+            }
+          case Left(error)     =>
+            error
+        }
+      case Left(result)                                                      =>
+        Future.successful(result)
+    }
+
+  private def handleLegacyRequest(implicit authRequest: EnrolmentRequest[JsValue]): Future[Result] =
+    parseJsonAction.refine(authRequest).flatMap {
+      case Right(parsedRequest: ParsedPreValidateTraderRequest[JsValue]) =>
+        preValidateTraderService.submitMessage(parsedRequest).map {
+          case Right(response) => Ok(Json.toJson(response))
+          case Left(error)     => error
+        }
+      case Left(result)                                                  =>
+        Future.successful(result)
+    }
 }
