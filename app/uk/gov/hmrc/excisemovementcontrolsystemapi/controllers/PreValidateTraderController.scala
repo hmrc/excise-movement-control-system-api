@@ -39,43 +39,37 @@ class PreValidateTraderController @Inject() (
 )(implicit ec: ExecutionContext)
     extends BackendController(cc) {
 
-  def submit: Action[JsValue] = Action.async(parse.json) { implicit request =>
-    authAction.invokeBlock(
-      request,
-      { authRequest: EnrolmentRequest[JsValue] =>
-        if (appConfig.etdsPreValidateTraderEnabled) {
-          // ETDS request
-          parseJsonAction.refineETDS(authRequest).flatMap {
-            case Right(parsedRequest: ParsedPreValidateTraderETDSRequest[JsValue]) =>
-              preValidateTraderService.submitETDSMessage(parsedRequest).map {
-                case Right(response) =>
-                  response match {
-                    case response200: ExciseTraderValidationETDSResponse           => Ok(Json.toJson(response200))
-                    case response400: PreValidateTraderETDS400ErrorMessageResponse =>
-                      BadRequest(Json.toJson(response400))
-                    case response500: PreValidateTraderETDS500ErrorMessageResponse =>
-                      InternalServerError(Json.toJson(response500))
-                  }
-                case Left(error)     =>
-                  error
+  def submit: Action[JsValue] = authAction(parse.json).async { implicit authRequest: EnrolmentRequest[JsValue] =>
+    if (appConfig.etdsPreValidateTraderEnabled) {
+      // ETDS request
+      parseJsonAction.refineETDS(authRequest).flatMap {
+        case Right(parsedRequest: ParsedPreValidateTraderETDSRequest[JsValue]) =>
+          preValidateTraderService.submitETDSMessage(parsedRequest).map {
+            case Right(response) =>
+              response match {
+                case response200: ExciseTraderValidationETDSResponse           => Ok(Json.toJson(response200))
+                case response400: PreValidateTraderETDS400ErrorMessageResponse =>
+                  BadRequest(Json.toJson(response400))
+                case response500: PreValidateTraderETDS500ErrorMessageResponse =>
+                  InternalServerError(Json.toJson(response500))
               }
-            case Left(result)                                                      =>
-              Future.successful(result)
+            case Left(error)     =>
+              error
           }
-        } else {
-          // Legacy request
-          parseJsonAction.refine(authRequest).flatMap {
-            case Right(parsedRequest: ParsedPreValidateTraderRequest[JsValue]) =>
-              preValidateTraderService.submitMessage(parsedRequest).map {
-                case Right(response) => Ok(Json.toJson(response))
-                case Left(error)     => error
-              }
-
-            case Left(result) =>
-              Future.successful(result)
-          }
-        }
+        case Left(result)                                                      =>
+          Future.successful(result)
       }
-    )
+    } else {
+      // Legacy request
+      parseJsonAction.refine(authRequest).flatMap {
+        case Right(parsedRequest: ParsedPreValidateTraderRequest[JsValue]) =>
+          preValidateTraderService.submitMessage(parsedRequest).map {
+            case Right(response) => Ok(Json.toJson(response))
+            case Left(error)     => error
+          }
+        case Left(result)                                                  =>
+          Future.successful(result)
+      }
+    }
   }
 }

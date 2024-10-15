@@ -26,7 +26,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.{PreValidateTr
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ExciseTraderETDSRequest, PreValidateTraderRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{PreValidateTraderEISResponse, PreValidateTraderResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{PreValidateTraderEISResponse, PreValidateTraderETDSResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.CorrelationIdService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
@@ -88,7 +88,7 @@ class PreValidateTraderConnector @Inject() (
 
   def submitMessageETDS(request: ExciseTraderETDSRequest, ern: String)(implicit
     hc: HeaderCarrier
-  ): Future[Either[Result, PreValidateTraderResponse]] = {
+  ): Future[Either[Result, PreValidateTraderETDSResponse]] = {
 
     logger.info("[PreValidateTraderConnector]: Submitting ETDS PreValidateTrader message")
 
@@ -98,7 +98,7 @@ class PreValidateTraderConnector @Inject() (
     val timestamp       = dateTimeService.timestamp()
     val createdDateTime = timestamp.asStringInMilliseconds
 
-    implicit val reader: HttpReads[Either[Result, PreValidateTraderResponse]] =
+    implicit val reader: HttpReads[Either[Result, PreValidateTraderETDSResponse]] =
       PreValidateTraderETDSHttpReader(
         correlationId = correlationId,
         ern = ern,
@@ -109,7 +109,7 @@ class PreValidateTraderConnector @Inject() (
       .post(url"${appConfig.preValidateTraderETDSUrl}")
       .setHeader(buildETDS(correlationId, createdDateTime, appConfig.preValidateTraderETDSBearerToken): _*)
       .withBody(Json.toJson(request))
-      .execute[Either[Result, PreValidateTraderResponse]]
+      .execute[Either[Result, PreValidateTraderETDSResponse]]
       .andThen { case _ => timer.stop() }
       .recover { case NonFatal(ex) =>
         logger.warn(EISErrorMessage(createdDateTime, ex.getMessage, correlationId, "PreValidateTrader"), ex)

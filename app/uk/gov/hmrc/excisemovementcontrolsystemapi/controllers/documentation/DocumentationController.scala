@@ -34,8 +34,7 @@ class DocumentationController @Inject() (assets: Assets, cc: ControllerComponent
     if (appConfig.etdsPreValidateTraderEnabled) {
       //contains both ETDS and Subscribe / Unsubscribe
       assets.at(s"/public/api/conf/$version/preValidateTraders/", file)
-    }
-    else if (appConfig.subscribeErnsEnabled) {
+    } else if (appConfig.subscribeErnsEnabled) {
       assets.at(s"/public/api/conf/$version/subscribe/", file)
     } else {
       assets.at(s"/public/api/conf/$version", file)

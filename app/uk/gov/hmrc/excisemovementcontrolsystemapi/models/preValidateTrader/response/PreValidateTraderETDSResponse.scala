@@ -18,17 +18,18 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.resp
 
 import play.api.libs.json.{Format, Json, Writes}
 
-sealed trait PreValidateTraderResponse
+sealed trait PreValidateTraderETDSResponse
 
-object PreValidateTraderResponse {
-  implicit val preValidateTraderResponseWrites: Writes[PreValidateTraderResponse] = Writes[PreValidateTraderResponse] {
-    case validResponse: ExciseTraderValidationETDSResponse      =>
-      Json.toJson(validResponse)
-    case error400: PreValidateTraderETDS400ErrorMessageResponse =>
-      Json.toJson(error400)
-    case error500: PreValidateTraderETDS500ErrorMessageResponse =>
-      Json.toJson(error500)
-  }
+object PreValidateTraderETDSResponse {
+  implicit val preValidateTraderETDSResponseWrites: Writes[PreValidateTraderETDSResponse] =
+    Writes[PreValidateTraderETDSResponse] {
+      case validResponse: ExciseTraderValidationETDSResponse      =>
+        Json.toJson(validResponse)
+      case error400: PreValidateTraderETDS400ErrorMessageResponse =>
+        Json.toJson(error400)
+      case error500: PreValidateTraderETDS500ErrorMessageResponse =>
+        Json.toJson(error500)
+    }
 }
 
 case class ExciseTraderValidationETDSResponse(
@@ -36,7 +37,7 @@ case class ExciseTraderValidationETDSResponse(
   exciseId: String,
   validationResult: String,
   failDetails: Option[ETDSFailDetails] = None
-) extends PreValidateTraderResponse
+) extends PreValidateTraderETDSResponse
 
 object ExciseTraderValidationETDSResponse {
   implicit val format: Format[ExciseTraderValidationETDSResponse] = Json.format[ExciseTraderValidationETDSResponse]
@@ -45,7 +46,7 @@ object ExciseTraderValidationETDSResponse {
 case class PreValidateTraderETDS400ErrorMessageResponse(
   processingDateTime: String,
   message: String
-) extends PreValidateTraderResponse
+) extends PreValidateTraderETDSResponse
 
 object PreValidateTraderETDS400ErrorMessageResponse {
   implicit val format: Format[PreValidateTraderETDS400ErrorMessageResponse] =
@@ -55,7 +56,7 @@ object PreValidateTraderETDS400ErrorMessageResponse {
 case class PreValidateTraderETDS500ErrorMessageResponse(
   processingDateTime: String,
   messages: Seq[String]
-) extends PreValidateTraderResponse
+) extends PreValidateTraderETDSResponse
 
 object PreValidateTraderETDS500ErrorMessageResponse {
   implicit val format: Format[PreValidateTraderETDS500ErrorMessageResponse] =
