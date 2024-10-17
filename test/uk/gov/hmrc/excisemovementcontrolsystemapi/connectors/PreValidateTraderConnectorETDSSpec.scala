@@ -32,7 +32,7 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.EISHeaderTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{ExciseTraderValidationETDSResponse, PreValidateTraderETDSResponse, PreValidateTraderMessageResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{ExciseTraderValidationETDSResponse, PreValidateTraderMessageResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.CorrelationIdService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils._
@@ -66,8 +66,8 @@ class PreValidateTraderConnectorETDSSpec
   private val mockRequestBuilder           = mock[RequestBuilder]
 
   private val validRequest  = getPreValidateTraderETDSRequest
-  private val validResponse = getPreValidateTraderETDSMessageResponseAllFail
-  private val businessError = getPreValidateTraderErrorETDSEISResponse400
+  private val validResponse = getExciseTraderValidationETDSResponse
+  private val businessError = getPreValidateTraderETDSMessageResponseAllFail
 
   private val timestamp = Instant.parse("2023-09-17T09:32:50Z")
 
@@ -99,7 +99,7 @@ class PreValidateTraderConnectorETDSSpec
       when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
-      when(mockRequestBuilder.execute[Either[Result, PreValidateTraderETDSResponse]](any(), any()))
+      when(mockRequestBuilder.execute[Either[Result, ExciseTraderValidationETDSResponse]](any(), any()))
         .thenReturn(Future.successful(Right(businessError)))
 
       val result = await(submitPreValidateTrader())
@@ -129,7 +129,7 @@ class PreValidateTraderConnectorETDSSpec
       when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
-      when(mockRequestBuilder.execute[Either[Result, PreValidateTraderETDSResponse]](any(), any()))
+      when(mockRequestBuilder.execute[Either[Result, ExciseTraderValidationETDSResponse]](any(), any()))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
       val result = await(submitPreValidateTrader())
@@ -197,6 +197,6 @@ class PreValidateTraderConnectorETDSSpec
     }
   }
 
-  private def submitPreValidateTrader(): Future[Either[Result, PreValidateTraderETDSResponse]] =
+  private def submitPreValidateTrader(): Future[Either[Result, ExciseTraderValidationETDSResponse]] =
     connector.submitMessageETDS(validRequest, "ern123")
 }

@@ -25,17 +25,15 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
 import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.Results.NotFound
+import play.api.mvc.Results.{InternalServerError, NotFound}
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeJsonParsers}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PreValidateTraderService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils._
 
-import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
 class PreValidateTraderControllerSpec
@@ -173,27 +171,6 @@ class PreValidateTraderControllerSpec
       verify(service, times(0)).submitMessage(any)(any)
     }
 
-    "return 500 when server error from ETDS" in {
-
-      val dateTime = Instant.now
-        when(appConfig.etdsPreValidateTraderEnabled).thenReturn(true)
-      when(dateTimeService.timestamp()).thenReturn(dateTime)
-
-      when(service.submitETDSMessage(any)(any))
-        .thenReturn(Future.successful(Right(getPreValidateTraderErrorETDSEISResponse500)))
-
-      val result = createWithSuccessfulAuth.submit(ETDSrequest)
-
-      status(result) mustBe INTERNAL_SERVER_ERROR
-      contentAsJson(result) mustBe Json.toJson(EisErrorResponsePresentation(
-        dateTime,
-        "PreValidateTrader error",
-        "Error occurred during PreValidateTrader request",
-        "dsf"
-      ))
-
-    }
-
     "send a request to EIS" in {
 
       when(service.submitETDSMessage(any)(any))
@@ -206,7 +183,7 @@ class PreValidateTraderControllerSpec
 
     }
 
-    "return an error when EIS error" in {
+    "return a 400 error when NOT_FOUND" in {
 
       when(appConfig.etdsPreValidateTraderEnabled).thenReturn(true)
 
@@ -216,6 +193,18 @@ class PreValidateTraderControllerSpec
       val result = createWithSuccessfulAuth.submit(ETDSrequest)
 
       status(result) mustBe NOT_FOUND
+    }
+
+    "return a 500 error when INTERNAL_SERVER_ERROR" in {
+
+      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(true)
+
+      when(service.submitETDSMessage(any)(any))
+        .thenReturn(Future.successful(Left(InternalServerError("not found"))))
+
+      val result = createWithSuccessfulAuth.submit(ETDSrequest)
+
+      status(result) mustBe INTERNAL_SERVER_ERROR
     }
 
     "a validation parser error" when {

@@ -31,8 +31,8 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.InternalError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{ApplicationBuilderSupport, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderETDSMessageResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderETDSRequest, getPreValidateTraderRequest, getPreValidateTraderSuccessETDSEISResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{ExciseTraderValidationETDSResponse, PreValidateTraderMessageResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getExciseTraderValidationETDSResponse, getPreValidateTraderETDSRequest, getPreValidateTraderRequest, getPreValidateTraderSuccessResponse}
 
 import java.time.Instant
 import java.util.UUID
@@ -79,16 +79,19 @@ class PreValidateTraderETDSControllerItSpec extends PlaySpec
       stubEISSuccessfulRequest()
 
       val result = postRequest(request)
-      val expectedResult = getPreValidateTraderSuccessETDSEISResponse
+      val expectedResult = getPreValidateTraderSuccessResponse
 
       result.status mustBe OK
 
       withClue("return the json response") {
-        val responseBody = Json.parse(result.body).as[PreValidateTraderETDSMessageResponse]
-        responseBody.processingDateTime mustBe expectedResult.processingDateTime
-        responseBody.failDetails mustBe expectedResult.failDetails
-        responseBody.validationResult mustBe expectedResult.validationResult
-        responseBody.exciseId mustBe expectedResult.exciseId
+        val responseBody = Json.parse(result.body).as[PreValidateTraderMessageResponse]
+        responseBody.exciseRegistrationNumber mustBe expectedResult.exciseRegistrationNumber
+        responseBody.entityGroup mustBe expectedResult.entityGroup
+        responseBody.validTrader mustBe expectedResult.validTrader
+        responseBody.errorCode mustBe expectedResult.errorCode
+        responseBody.errorText mustBe expectedResult.errorText
+        responseBody.traderType mustBe expectedResult.traderType
+        responseBody.validateProductAuthorisationResponse mustBe expectedResult.validateProductAuthorisationResponse
       }
 
     }
@@ -105,8 +108,8 @@ class PreValidateTraderETDSControllerItSpec extends PlaySpec
       withClue("return the error response") {
         val body = Json.parse(result.body).as[EisErrorResponsePresentation]
         body.dateTime mustBe Instant.parse("2024-06-06T12:30:12.123Z")
-        body.message mustBe "ETDS PreValidateTrader error"
-        body.debugMessage mustBe "Error occurred during ETDS PreValidateTrader request with status: 404"
+        body.message mustBe "PreValidateTrader error"
+        body.debugMessage mustBe "Error occurred during PreValidateTrader request"
         UUID.fromString(body.correlationId).toString must not be empty
       }
     }
@@ -168,7 +171,7 @@ class PreValidateTraderETDSControllerItSpec extends PlaySpec
 
   private def stubEISSuccessfulRequest() = {
 
-    val response = getPreValidateTraderSuccessETDSEISResponse
+    val response = getExciseTraderValidationETDSResponse
     wireMock.stubFor(
       post(eisUrl)
         .willReturn(ok().withBody(Json.toJson(response).toString()))

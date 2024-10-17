@@ -52,7 +52,7 @@ object TestUtils {
       validationTimestamp = "2021-12-17T09:31:123Z",
       exciseTraderResponse = Array(
         ExciseTraderResponse(
-          exciseRegistrationNumber = "GBWK002281023",
+          exciseRegistrationNumber = "GBWK002281023WK",
           entityGroup = "UK Record",
           validTrader = true,
           traderType = Some("1"),
@@ -132,18 +132,6 @@ object TestUtils {
           validateProductAuthorisationResponse = None
         )
       )
-    )
-
-  def getPreValidateTraderErrorETDSEISResponse400: PreValidateTraderETDS400ErrorMessageResponse =
-    PreValidateTraderETDS400ErrorMessageResponse(
-      processingDateTime = "2021-12-17T09:31:123Z",
-      message = "Invalid message format"
-    )
-
-  def getPreValidateTraderErrorETDSEISResponse500: PreValidateTraderETDS500ErrorMessageResponse =
-    PreValidateTraderETDS500ErrorMessageResponse(
-      processingDateTime = "2021-12-17T09:31:123Z",
-      messages = Seq("Invalid message format", "Internal server error")
     )
 
   def getPreValidateTraderSuccessResponse: PreValidateTraderMessageResponse = PreValidateTraderMessageResponse(

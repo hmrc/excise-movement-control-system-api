@@ -51,26 +51,11 @@ class PreValidateTraderController @Inject() (
     parseJsonAction.refineETDS(authRequest).flatMap {
       case Right(parsedRequest: ParsedPreValidateTraderETDSRequest[JsValue]) =>
         preValidateTraderService.submitETDSMessage(parsedRequest).map {
-          case Right(response) => processETDSResponse(response, parsedRequest)
+          case Right(response) => Ok(Json.toJson(convertETDSResponse(response, parsedRequest)))
           case Left(error)     => error
         }
       case Left(result)                                                      => Future.successful(result)
     }
-
-  private def processETDSResponse(
-    response: PreValidateTraderETDSResponse,
-    parsedRequest: ParsedPreValidateTraderETDSRequest[JsValue]
-  ): Result = response match {
-    case response200: ExciseTraderValidationETDSResponse =>
-      val convertedResponseBody = convertETDSResponse(response200, parsedRequest)
-      Ok(Json.toJson(convertedResponseBody))
-
-    case response400: PreValidateTraderETDS400ErrorMessageResponse =>
-      BadRequest(Json.toJson(response400))
-
-    case response500: PreValidateTraderETDS500ErrorMessageResponse =>
-      InternalServerError(Json.toJson(response500))
-  }
 
   private def convertETDSResponse(
     response: ExciseTraderValidationETDSResponse,

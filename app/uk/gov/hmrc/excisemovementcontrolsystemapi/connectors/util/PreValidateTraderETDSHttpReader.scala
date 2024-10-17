@@ -22,7 +22,7 @@ import play.api.mvc.Result
 import play.api.mvc.Results.Status
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISErrorMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{ExciseTraderValidationETDSResponse, PreValidateTraderETDS400ErrorMessageResponse, PreValidateTraderETDS500ErrorMessageResponse, PreValidateTraderETDSResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.ExciseTraderValidationETDSResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HttpErrorFunctions.is2xx
 import uk.gov.hmrc.http.{HttpReads, HttpResponse}
@@ -32,7 +32,7 @@ class PreValidateTraderETDSHttpReader(
   val ern: String,
   val createdDateTime: String,
   val dateTimeService: DateTimeService
-) extends HttpReads[Either[Result, PreValidateTraderETDSResponse]]
+) extends HttpReads[Either[Result, ExciseTraderValidationETDSResponse]]
     with Logging
     with ResponseHandler {
 
@@ -40,7 +40,7 @@ class PreValidateTraderETDSHttpReader(
     method: String,
     url: String,
     response: HttpResponse
-  ): Either[Result, PreValidateTraderETDSResponse] = {
+  ): Either[Result, ExciseTraderValidationETDSResponse] = {
 
     val result = extractIfSuccessful(response)
     result match {
@@ -53,8 +53,8 @@ class PreValidateTraderETDSHttpReader(
   }
 
   private def handleErrorResponse(
-                                   response: HttpResponse
-                                 ): Result = {
+    response: HttpResponse
+  ): Result = {
 
     logger.warn(
       EISErrorMessage(
