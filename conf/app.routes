@@ -30,3 +30,5 @@ GET        /admin/miscoded-movements/build-work-list    uk.gov.hmrc.excisemoveme
 POST       /admin/miscoded-movements/resolve            uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.MiscodedMovementController.resolve()
 
 GET        /admin/:ern/summary                            uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.RemoveErnsAdminController.findAllReferencesToErn(ern: String)
+
+GET        /admin/:movementId/summary                   uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.AdminDetailsController.getMovementDetails(movementId: String)
