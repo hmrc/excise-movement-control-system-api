@@ -85,7 +85,7 @@ class PreValidateTraderController @Inject() (
     val errorCode = response.failDetails.flatMap(_.errorCode).map(_.toString)
     val errorText = response.failDetails.flatMap(_.errorText)
 
-    val validateProductAuthResponse = createValidateProductAuthResponse(response)
+    val validateProductAuthResponse = createValidateProductAuthResponse(response, validTrader)
 
     PreValidateTraderMessageResponse(
       validationTimeStamp = response.processingDateTime,
@@ -100,7 +100,8 @@ class PreValidateTraderController @Inject() (
   }
 
   private def createValidateProductAuthResponse(
-    response: ExciseTraderValidationETDSResponse
+    response: ExciseTraderValidationETDSResponse,
+    isTraderValid: Boolean
   ): Option[ValidateProductAuthorisationResponse] = {
     val productErrors = for {
       failDetails <- response.failDetails.toSeq
@@ -112,14 +113,18 @@ class PreValidateTraderController @Inject() (
       errorText = pe.errorText
     )
 
-    val isValid = productErrors.isEmpty
+    val productsValid = productErrors.isEmpty
+    (productsValid, isTraderValid) match {
+      case (true, false) => None
+      case (_, _)        =>
+        Some(
+          ValidateProductAuthorisationResponse(
+            valid = productsValid,
+            productError = if (!productsValid) Some(productErrors) else None
+          )
+        )
+    }
 
-    Some(
-      ValidateProductAuthorisationResponse(
-        valid = isValid,
-        productError = if (!isValid) Some(productErrors) else None
-      )
-    )
   }
 
   def determineTraderType(exciseId: String, validTrader: Boolean): Option[String] =

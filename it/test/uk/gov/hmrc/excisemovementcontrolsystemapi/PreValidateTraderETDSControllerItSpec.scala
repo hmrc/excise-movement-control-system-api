@@ -32,7 +32,7 @@ import uk.gov.hmrc.auth.core.InternalError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{ApplicationBuilderSupport, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderETDSMessageResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderETDSRequest, getPreValidateTraderSuccessETDSEISResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderETDSRequest, getPreValidateTraderRequest, getPreValidateTraderSuccessETDSEISResponse}
 
 import java.time.Instant
 import java.util.UUID
@@ -50,7 +50,7 @@ class PreValidateTraderETDSControllerItSpec extends PlaySpec
   private val authErn = "GBWK002281023"
   private val timestamp = Instant.parse("2024-06-06T12:30:12.12345678Z")
 
-  private val request = Json.toJson(getPreValidateTraderETDSRequest)
+  private val request = Json.toJson(getPreValidateTraderRequest)
 
   override lazy val app: Application = {
     wireMock.start()

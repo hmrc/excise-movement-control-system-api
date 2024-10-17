@@ -21,6 +21,7 @@ import play.api.libs.json.{JsError, JsSuccess, Json}
 import play.api.mvc.Result
 import play.api.mvc.Results.Status
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISErrorMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{ExciseTraderValidationETDSResponse, PreValidateTraderETDS400ErrorMessageResponse, PreValidateTraderETDS500ErrorMessageResponse, PreValidateTraderETDSResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HttpErrorFunctions.is2xx
@@ -47,35 +48,33 @@ class PreValidateTraderETDSHttpReader(
         Right(eisResponse) // Success case
 
       case Left(httpResponse: HttpResponse) =>
-        handleErrorResponse(httpResponse)
+        Left(handleErrorResponse(httpResponse))
     }
   }
 
   private def handleErrorResponse(
-    response: HttpResponse
-  ): Either[Result, PreValidateTraderETDSResponse] =
-    response.status match {
-      case 400 if response.body.trim.nonEmpty =>
-        Json.parse(response.body).validate[PreValidateTraderETDS400ErrorMessageResponse] match {
-          case JsSuccess(errorResponse, _) =>
-            Right(errorResponse)
-          case JsError(errors)             =>
-            logger.error(s"Failed to parse 400 response: $errors")
-            Left(defaultErrorResponse(400))
-        }
+                                   response: HttpResponse
+                                 ): Result = {
 
-      case 500 if response.body.trim.nonEmpty =>
-        Json.parse(response.body).validate[PreValidateTraderETDS500ErrorMessageResponse] match {
-          case JsSuccess(errorResponse, _) =>
-            Right(errorResponse)
-          case JsError(errors)             =>
-            logger.error(s"Failed to parse 500 response: $errors")
-            Left(defaultErrorResponse(500))
-        }
+    logger.warn(
+      EISErrorMessage(
+        createdDateTime,
+        s"status: ${response.status}, body: ${response.body}",
+        correlationId,
+        "PreValidateTrader"
+      )
+    )
 
-      case _ =>
-        Left(defaultErrorResponse(response.status))
-    }
+    //Not expecting EIS response bodies to have any payload here
+    val ourErrorResponse = EisErrorResponsePresentation(
+      dateTimeService.timestamp(),
+      "PreValidateTrader error",
+      "Error occurred during PreValidateTrader request",
+      correlationId
+    )
+
+    Status(response.status)(Json.toJson(ourErrorResponse))
+  }
 
   def extractIfSuccessful(response: HttpResponse): Either[HttpResponse, ExciseTraderValidationETDSResponse] =
     if (is2xx(response.status)) Right(extractResponse(response))

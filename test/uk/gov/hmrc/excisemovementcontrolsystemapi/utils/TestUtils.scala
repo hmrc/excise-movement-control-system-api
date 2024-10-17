@@ -64,22 +64,22 @@ object TestUtils {
     )
   )
 
-  def getPreValidateTraderSuccessETDSEISResponse: PreValidateTraderETDSMessageResponse =
-    PreValidateTraderETDSMessageResponse(
+  def getPreValidateTraderETDSMessageResponseAllFail: ExciseTraderValidationETDSResponse =
+    ExciseTraderValidationETDSResponse(
       processingDateTime = "2021-12-17T09:31:123Z",
-      exciseId = "GBWK002281023",
-      validationResult = "Pass",
+      exciseId = "GBWK000000000",
+      validationResult = "Fail",
       failDetails = Option(
         ETDSFailDetails(
-          validTrader = true,
-          errorCode = Some(1),
-          errorText = Some("Expired"),
+          validTrader = false,
+          errorCode = Some(6), //todo: need to confirm these map to the old spec
+          errorText = Some("Not Found"),
           validateProductAuthorisationResponse = Option(
             ValidateProductAuthorisationETDSResponse(productError =
               Seq(
                 ProductErrorETDS(
-                  exciseProductCode = "W300",
-                  errorCode = 1,
+                  exciseProductCode = "S200",
+                  errorCode = 1, //todo: need to confirm these map to old spec
                   errorText = "Unrecognised EPC"
                 )
               )
@@ -122,24 +122,14 @@ object TestUtils {
   def getExciseTraderValidationETDSResponse: ExciseTraderValidationETDSResponse =
     ExciseTraderValidationETDSResponse(
       processingDateTime = "2021-12-17T09:31:123Z",
-      exciseId = "GBWK002281023",
+      exciseId = "GBWK002281023WK",
       validationResult = "Pass",
       failDetails = Option(
         ETDSFailDetails(
           validTrader = true,
-          errorCode = Some(1),
-          errorText = Some("Expired"),
-          validateProductAuthorisationResponse = Option(
-            ValidateProductAuthorisationETDSResponse(productError =
-              Seq(
-                ProductErrorETDS(
-                  exciseProductCode = "W300",
-                  errorCode = 1,
-                  errorText = "Unrecognised EPC"
-                )
-              )
-            )
-          )
+          errorCode = None,
+          errorText = None,
+          validateProductAuthorisationResponse = None
         )
       )
     )
@@ -158,7 +148,7 @@ object TestUtils {
 
   def getPreValidateTraderSuccessResponse: PreValidateTraderMessageResponse = PreValidateTraderMessageResponse(
     validationTimeStamp = "2021-12-17T09:31:123Z",
-    exciseRegistrationNumber = "GBWK002281023",
+    exciseRegistrationNumber = "GBWK002281023WK",
     entityGroup = "UK Record",
     validTrader = true,
     traderType = Some("1"),

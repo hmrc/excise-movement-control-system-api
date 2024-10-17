@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import org.apache.pekko.actor.ActorSystem
 import org.mockito.ArgumentMatchersSugar.any
+import org.mockito.Mockito.times
 import org.mockito.MockitoSugar.{reset, verify, when}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
@@ -29,9 +30,12 @@ import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeJsonParsers}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PreValidateTraderService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils._
 
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
 class PreValidateTraderControllerSpec
@@ -44,6 +48,7 @@ class PreValidateTraderControllerSpec
   implicit val sys: ActorSystem     = ActorSystem("DraftExciseMovementControllerSpec")
   private val service               = mock[PreValidateTraderService]
   private val appConfig             = mock[AppConfig]
+  private val dateTimeService       = mock[DateTimeService]
   private val cc                    = stubControllerComponents()
   private val request               = createRequest(Json.toJson(getPreValidateTraderRequest))
   private val ETDSrequest           = createRequest(Json.toJson(getPreValidateTraderETDSRequest))
@@ -67,7 +72,7 @@ class PreValidateTraderControllerSpec
 
     }
 
-    "return 200 when business error" in {
+    "return 200 when validation fails downstream" in {
 
       when(appConfig.etdsPreValidateTraderEnabled).thenReturn(false)
 
@@ -137,7 +142,7 @@ class PreValidateTraderControllerSpec
 
   "submit (ETDS)" should {
 
-    "return 200 when validated" in {
+    "return 200 when validated and match original response using new service" in {
 
       when(service.submitETDSMessage(any)(any))
         .thenReturn(Future.successful(Right(getExciseTraderValidationETDSResponse)))
@@ -147,29 +152,32 @@ class PreValidateTraderControllerSpec
 
       status(result) mustBe OK
 
-      val expectedJsonString =
-        """{"validationTimeStamp":"2021-12-17T09:31:123Z","exciseRegistrationNumber":"GBWK002281023","entityGroup":"UK Record","validTrader":true,"errorCode":"1","errorText":"Expired","traderType":"1","validateProductAuthorisationResponse":{"valid":false,"productError":[{"exciseProductCode":"W300","errorCode":"1","errorText":"Unrecognised EPC"}]}}"""
-
-      contentAsString(result) mustBe expectedJsonString
+      contentAsJson(result) mustBe Json.toJson(getPreValidateTraderSuccessResponse)
+      verify(service, times(1)).submitETDSMessage(any)(any)
+      verify(service, times(0)).submitMessage(any)(any)
     }
 
-    "return 400 when business error" in {
+    "return 200 when validation fails downstream" in {
 
       when(appConfig.etdsPreValidateTraderEnabled).thenReturn(true)
 
       when(service.submitETDSMessage(any)(any))
-        .thenReturn(Future.successful(Right(getPreValidateTraderErrorETDSEISResponse400)))
+        .thenReturn(Future.successful(Right(getPreValidateTraderETDSMessageResponseAllFail)))
 
       val result = createWithSuccessfulAuth.submit(ETDSrequest)
 
-      status(result) mustBe BAD_REQUEST
-      contentAsJson(result) mustBe Json.toJson(getPreValidateTraderErrorETDSEISResponse400)
+      status(result) mustBe OK
 
+      contentAsJson(result) mustBe Json.toJson(getPreValidateTraderErrorResponse)
+      verify(service, times(1)).submitETDSMessage(any)(any)
+      verify(service, times(0)).submitMessage(any)(any)
     }
 
-    "return 500 when server error" in {
+    "return 500 when server error from ETDS" in {
 
-      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(true)
+      val dateTime = Instant.now
+        when(appConfig.etdsPreValidateTraderEnabled).thenReturn(true)
+      when(dateTimeService.timestamp()).thenReturn(dateTime)
 
       when(service.submitETDSMessage(any)(any))
         .thenReturn(Future.successful(Right(getPreValidateTraderErrorETDSEISResponse500)))
@@ -177,7 +185,12 @@ class PreValidateTraderControllerSpec
       val result = createWithSuccessfulAuth.submit(ETDSrequest)
 
       status(result) mustBe INTERNAL_SERVER_ERROR
-      contentAsJson(result) mustBe Json.toJson(getPreValidateTraderErrorETDSEISResponse500)
+      contentAsJson(result) mustBe Json.toJson(EisErrorResponsePresentation(
+        dateTime,
+        "PreValidateTrader error",
+        "Error occurred during PreValidateTrader request",
+        "dsf"
+      ))
 
     }
 

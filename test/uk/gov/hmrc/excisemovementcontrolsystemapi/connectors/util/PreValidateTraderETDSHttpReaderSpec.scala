@@ -24,14 +24,14 @@ import play.api.http.Status.IM_A_TEAPOT
 import play.api.libs.json.Json
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{ExciseTraderValidationETDSResponse, PreValidateTraderETDS400ErrorMessageResponse, PreValidateTraderETDS500ErrorMessageResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderErrorETDSEISResponse400, getPreValidateTraderErrorETDSEISResponse500, getPreValidateTraderSuccessETDSEISResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getExciseTraderValidationETDSResponse, getPreValidateTraderErrorETDSEISResponse400, getPreValidateTraderErrorETDSEISResponse500}
 import uk.gov.hmrc.http.HttpResponse
 
 import java.time.Instant
 
 class PreValidateTraderETDSHttpReaderSpec extends PlaySpec with EitherValues {
 
-  private val validResponse = getPreValidateTraderSuccessETDSEISResponse
+  private val validResponse = getExciseTraderValidationETDSResponse
   private val businessError = getPreValidateTraderErrorETDSEISResponse400
   private val serverError   = getPreValidateTraderErrorETDSEISResponse500
 
