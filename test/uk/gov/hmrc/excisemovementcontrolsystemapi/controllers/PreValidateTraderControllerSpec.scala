@@ -121,6 +121,20 @@ class PreValidateTraderControllerSpec
 
   }
 
+  "determineTraderType" should {
+    "return some TraderType when validTrader is true" in {
+      val result = createWithSuccessfulAuth.determineTraderType(ern, true)
+
+      result mustBe Some("7")
+    }
+
+    "return no TraderType when validTrader is false" in {
+      val result = createWithSuccessfulAuth.determineTraderType(ern, false)
+
+      result mustBe None
+    }
+  }
+
   "submit (ETDS)" should {
 
     "return 200 when validated" in {
@@ -132,8 +146,11 @@ class PreValidateTraderControllerSpec
       val result = createWithSuccessfulAuth.submit(ETDSrequest)
 
       status(result) mustBe OK
-      contentAsJson(result) mustBe Json.toJson(getPreValidateTraderSuccessETDSEISResponse)
 
+      val expectedJsonString =
+        """{"validationTimeStamp":"2021-12-17T09:31:123Z","exciseRegistrationNumber":"GBWK002281023","entityGroup":"UK Record","validTrader":true,"errorCode":"1","errorText":"Expired","traderType":"1","validateProductAuthorisationResponse":{"valid":false,"productError":[{"exciseProductCode":"W300","errorCode":"1","errorText":"Unrecognised EPC"}]}}"""
+
+      contentAsString(result) mustBe expectedJsonString
     }
 
     "return 400 when business error" in {

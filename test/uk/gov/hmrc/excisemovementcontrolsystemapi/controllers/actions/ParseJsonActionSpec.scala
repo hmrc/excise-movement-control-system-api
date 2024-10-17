@@ -29,7 +29,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.getPreValidateTraderETDSRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderETDSRequest, getPreValidateTraderRequest}
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext
@@ -104,7 +104,8 @@ class ParseJsonActionSpec extends PlaySpec with ScalaFutures with EitherValues {
 
   "refineETDS" should {
     "return a ParsedPreValidateTraderETDSRequest" in {
-      val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(exampleETDSJson), Set("ern"), "123")
+      val enrolmentRequest =
+        EnrolmentRequest(FakeRequest().withBody(Json.toJson(getPreValidateTraderRequest)), Set("ern"), "123")
 
       val result = parseJsonAction.refineETDS(enrolmentRequest).futureValue
 
