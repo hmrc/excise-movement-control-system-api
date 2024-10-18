@@ -125,7 +125,58 @@ class PreValidateTraderControllerSpec
   }
 
   "determineTraderType" should {
-    "return some TraderType when validTrader is true" in {
+
+    "return Some(1) when Warehouse Keeper (WK) and validTrader is true" in {
+      val result = createWithSuccessfulAuth.determineTraderType("GBWK123123123", true)
+      result mustBe Some("1")
+    }
+    "return None when Warehouse Keeper (WK) and validTrader is false" in {
+      val result = createWithSuccessfulAuth.determineTraderType("GBWK123123123", false)
+      result mustBe None
+    }
+    "return Some(2) when Tax Warehouse (00)and validTrader is true" in {
+      val result = createWithSuccessfulAuth.determineTraderType("GB00123123123", true)
+      result mustBe Some("2")
+    }
+    "return None when Tax Warehouse (00)and validTrader is false" in {
+      val result = createWithSuccessfulAuth.determineTraderType("GB00123123123", false)
+      result mustBe None
+    }
+    "return Some(3) when Registered Consignor (RC)and validTrader is true" in {
+      val result = createWithSuccessfulAuth.determineTraderType("GBRC123123123", true)
+      result mustBe Some("3")
+    }
+    "return None when Registered Consignor (RC)and validTrader is false" in {
+      val result = createWithSuccessfulAuth.determineTraderType("GBRC123123123", false)
+      result mustBe None
+    }
+    "return Some(4) when Registered Consignee (RT) and validTrader is true" in {
+      val result = createWithSuccessfulAuth.determineTraderType("GBRT123123123", true)
+      result mustBe Some("4")
+    }
+    "return None when Registered Consignee (RT) and validTrader is false" in {
+      val result = createWithSuccessfulAuth.determineTraderType("GBRT123123123", false)
+      result mustBe None
+    }
+    "return Some(5) when Temporary Registered Consignee (TC) and validTrader is true" in {
+      val result = createWithSuccessfulAuth.determineTraderType("GBTC123123123", true)
+      result mustBe Some("5")
+    }
+    "return None when Temporary Registered Consignee (TC) and validTrader is false" in {
+      val result = createWithSuccessfulAuth.determineTraderType("GBTC123123123", false)
+      result mustBe None
+    }
+    //TODO: Clarify this and correct test
+    "return Some(6) when ????? and validTrader is true" ignore {
+      val result = createWithSuccessfulAuth.determineTraderType("GB??123123123", false)
+      result mustBe Some("6")
+    }
+    "return None when ????? and validTrader is false" ignore {
+      val result = createWithSuccessfulAuth.determineTraderType("GB??123123123", false)
+      result mustBe None
+    }
+
+    "return Some(7) as TraderType when validTrader is true with test ern" in {
       val result = createWithSuccessfulAuth.determineTraderType(ern, true)
 
       result mustBe Some("7")

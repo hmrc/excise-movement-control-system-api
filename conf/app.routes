@@ -11,7 +11,7 @@ GET           /movements/:movementId/messages/:messageId        uk.gov.hmrc.exci
 
 POST          /traders/pre-validate                             uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.PreValidateTraderController.submit
 
-POST       /erns/:ern/subscription                       uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubscribeErnsController.subscribeErn(ern: String)
+    POST       /erns/:ern/subscription                       uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubscribeErnsController.subscribeErn(ern: String)
 DELETE     /erns/:ern/subscription                       uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubscribeErnsController.unsubscribeErn(ern: String)
 
 POST          /inject/submit-batch                              uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.InjectController.submitBatch()

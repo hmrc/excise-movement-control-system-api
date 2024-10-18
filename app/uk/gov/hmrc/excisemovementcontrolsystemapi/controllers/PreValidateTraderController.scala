@@ -24,6 +24,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ParsedPreValidateTraderETDSRequest, ParsedPreValidateTraderRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PreValidateTraderService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TraderTypeInterpreter
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -114,15 +115,7 @@ class PreValidateTraderController @Inject() (
 
   def determineTraderType(exciseId: String, validTrader: Boolean): Option[String] =
     if (validTrader) { //need to check we only populate this if we have a valid trader
-      exciseId.substring(2, 4) match {
-        case "WK" => Some("1") // 1 = Warehouse Keeper
-        case "??" => Some("2") // 2 = Tax Warehouse
-        case "??" => Some("3") // 3 = Registered Consignor
-        case "??" => Some("4") // 4 = Registered Consignee
-        case "??" => Some("5") // 5 = Temporary Registered Consignee
-        case "??" => Some("6") // 6 = Temporary Registered Authorisation
-        case _    => Some("7") // 7 = Other
-      }
+      Some(TraderTypeInterpreter.fromExciseId(exciseId))
     } else {
       None
     }
