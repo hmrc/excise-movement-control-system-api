@@ -114,7 +114,7 @@ class PreValidateTraderController @Inject() (
   }
 
   def determineTraderType(exciseId: String, validTrader: Boolean): Option[String] =
-    if (validTrader) { //need to check we only populate this if we have a valid trader
+    if (validTrader) {
       Some(TraderTypeInterpreter.fromExciseId(exciseId))
     } else {
       None
