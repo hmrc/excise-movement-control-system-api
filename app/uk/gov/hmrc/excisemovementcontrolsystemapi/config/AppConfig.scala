@@ -18,7 +18,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.config
 
 import play.api.Configuration
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
-
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.{DAYS, Duration, FiniteDuration}
 
@@ -31,9 +30,7 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   lazy val nrsHost: String                   = servicesConfig.baseUrl("nrs")
   lazy val pushPullNotificationsHost: String = servicesConfig.baseUrl("push-pull-notifications")
 
-  lazy val nrsApiKey: String                   = servicesConfig.getConfString("nrs.api-key", "dummyNrsApiKey")
-  lazy val nrsRetryDelays: Seq[FiniteDuration] =
-    config.get[Seq[FiniteDuration]]("microservice.services.nrs.retryDelays")
+  lazy val nrsApiKey: String = servicesConfig.getConfString("nrs.api-key", "dummyNrsApiKey")
 
   lazy val movementTTL: Duration = config
     .getOptional[String]("mongodb.movement.TTL")
@@ -60,8 +57,7 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   def submissionBearerToken: String  =
     servicesConfig.getConfString("eis.submission-bearer-token", "dummySubmissionBearerToken")
 
-  def getNrsSubmissionUrl: String = s"$nrsHost/submission"
-
+  def getNrsSubmissionUrl: String          = s"$nrsHost/submission"
   def preValidateTraderUrl: String         = s"$eisHost/emcs/pre-validate-trader/v1"
   def preValidateTraderBearerToken: String =
     servicesConfig.getConfString("eis.pre-validate-trader-bearer-token", "dummyPreValidateTraderBearerToken")

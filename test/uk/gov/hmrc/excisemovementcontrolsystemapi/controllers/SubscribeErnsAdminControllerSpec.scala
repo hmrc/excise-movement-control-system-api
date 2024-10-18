@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import org.apache.pekko.Done
-import org.apache.pekko.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchersSugar.eqTo
 import org.mockito.MockitoSugar.{reset, times, verify, when}
@@ -35,7 +33,7 @@ import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubscribeErnsAdminController.SubscribeErnsRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NotificationsService
-import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.internalauth.client._
 import uk.gov.hmrc.internalauth.client.test.{BackendAuthComponentsStub, StubBehaviour}
 
@@ -45,8 +43,6 @@ class SubscribeErnsAdminControllerSpec extends PlaySpec with GuiceOneAppPerSuite
 
   private val mockStubBehaviour        = mock[StubBehaviour]
   private val mockNotificationsService = mock[NotificationsService]
-
-  private val hc = HeaderCarrier()
 
   val backendAuthComponentsStub: BackendAuthComponents =
     BackendAuthComponentsStub(mockStubBehaviour)(Helpers.stubControllerComponents(), ExecutionContext.global)
