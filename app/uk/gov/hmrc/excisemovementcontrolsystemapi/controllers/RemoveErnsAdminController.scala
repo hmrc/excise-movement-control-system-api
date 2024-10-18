@@ -17,16 +17,16 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.RemoveErnsAdminController.{ErnSummary, RemoveErnsRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnRetrievalRepository, ErnSubmissionRepository, MovementRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository._
 import uk.gov.hmrc.internalauth.client._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 @Singleton
 class RemoveErnsAdminController @Inject() (

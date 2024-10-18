@@ -17,15 +17,10 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model
 
 import play.api.libs.json.{Json, OFormat}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NrsPayload
 
-final case class ProblemMovement(_id: String, countOfIe801s: Int)
+case class NrsSubmissionWorkItem(payload: NrsPayload)
 
-object ProblemMovement {
-  implicit val format: OFormat[ProblemMovement] = Json.format
-}
-
-final case class Total(total: Int)
-
-object Total {
-  implicit val format: OFormat[Total] = Json.format
+object NrsSubmissionWorkItem {
+  implicit val format: OFormat[NrsSubmissionWorkItem] = Json.format[NrsSubmissionWorkItem]
 }

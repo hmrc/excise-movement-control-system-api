@@ -45,8 +45,7 @@ class NrsService @Inject() (
 
   def submitNrs(
     request: ParsedXmlRequest[_],
-    authorisedErn: String,
-    correlationId: String
+    authorisedErn: String
   )(implicit headerCarrier: HeaderCarrier): Future[NonRepudiationSubmission] = {
 
     val payload        = request.body.toString
@@ -70,7 +69,7 @@ class NrsService @Inject() (
                               )
       encodedPayload        = emcsUtils.encode(payload)
       nrsPayload            = NrsPayload(encodedPayload, metaData)
-      retrievedNrsResponse <- nrsConnector.sendToNrs(nrsPayload, correlationId)
+      retrievedNrsResponse <- nrsConnector.sendToNrs(nrsPayload)
     } yield retrievedNrsResponse)
       .recover { case NonFatal(e) =>
         logger.warn(

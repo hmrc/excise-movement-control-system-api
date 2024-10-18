@@ -51,16 +51,15 @@ class SubmissionMessageServiceImpl @Inject() (
         connector.submitMessage(request.ieMessage, request.body.toString, authorisedErn, correlationId)
       isSuccess              = submitMessageResponse.isRight
       _                      = if (isSuccess) ernSubmissionRepository.save(authorisedErn)
-      _                      = if (isSuccess) sendToNrs(request, authorisedErn, correlationId)
+      _                      = if (isSuccess) sendToNrs(request, authorisedErn)
     } yield submitMessageResponse
   }
 
   private def sendToNrs(
     request: ParsedXmlRequest[_],
-    authorisedErn: String,
-    correlationId: String
+    authorisedErn: String
   )(implicit hc: HeaderCarrier): Future[Option[NonRepudiationSubmission]] =
-    nrsService.submitNrs(request, authorisedErn, correlationId).transformWith {
+    nrsService.submitNrs(request, authorisedErn).transformWith {
       case Success(value) => Future.successful(Some(value))
       case _              => Future.successful(None)
     }

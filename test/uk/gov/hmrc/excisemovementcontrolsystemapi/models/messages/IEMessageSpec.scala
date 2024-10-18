@@ -17,7 +17,6 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
 import generated.{Number1Value31, Number2Value30}
-import org.scalatest.Inspectors.forAll
 import org.scalatestplus.play.PlaySpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 

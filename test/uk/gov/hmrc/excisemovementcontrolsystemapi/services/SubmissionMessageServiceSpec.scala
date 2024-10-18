@@ -70,7 +70,7 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
     when(correlationIdService.generateCorrelationId()).thenReturn("correlationId")
     when(connector.submitMessage(any, any, any, any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "IE815", "correlationId"))))
-    when(nrsService.submitNrs(any, any, any)(any))
+    when(nrsService.submitNrs(any, any)(any))
       .thenReturn(Future.successful(NonRepudiationSubmissionAccepted("submissionId")))
     when(ernSubmissionRepository.save(any)).thenReturn(Future.successful(Done))
   }
@@ -87,7 +87,7 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
       )(any)
 
       withClue("send to NRS when submitMessage is successful") {
-        verify(nrsService).submitNrs(eqTo(request), eqTo(ern), eqTo("correlationId"))(any)
+        verify(nrsService).submitNrs(eqTo(request), eqTo(ern))(any)
       }
 
       withClue("update the last submitted time for the ern") {
@@ -120,7 +120,7 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
 
     "return submit message result" when {
       "NRS fails" in {
-        when(nrsService.submitNrs(any, any, any)(any))
+        when(nrsService.submitNrs(any, any)(any))
           .thenReturn(Future.successful(NonRepudiationSubmissionFailed(INTERNAL_SERVER_ERROR, "NRS failure")))
 
         val result = await(sut.submit(request, ern))
@@ -129,7 +129,7 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
       }
 
       "NRS throw" in {
-        when(nrsService.submitNrs(any, any, any)(any))
+        when(nrsService.submitNrs(any, any)(any))
           .thenReturn(Future.failed(new RuntimeException("NRS error")))
 
         val result = await(sut.submit(request, ern))
