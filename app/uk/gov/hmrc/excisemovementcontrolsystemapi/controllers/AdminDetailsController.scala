@@ -45,7 +45,7 @@ class AdminDetailsController @Inject() (
     retrieval = Retrieval.EmptyRetrieval
   )
 
-  def getMovementDetails(movementId: String): Action[AnyContent] = authorised.async {
+  def getMovementDetails(movementId: String): Action[AnyContent] = authorised.async { implicit request =>
     movementRepository.getMovementById(movementId).map { m =>
       m match {
         case Some(movement) => Ok(Json.toJson(MovementDetails.createFromMovement(movement)))
