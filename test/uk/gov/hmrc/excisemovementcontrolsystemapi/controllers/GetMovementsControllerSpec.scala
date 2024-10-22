@@ -67,7 +67,7 @@ class GetMovementsControllerSpec
   )
 
   private val timestamp   = Instant.parse("2020-01-01T01:01:01.123456Z")
-  private val fakeRequest = FakeRequest("POST", "/foo")
+  private val fakeRequest = FakeRequest("GET", "/foo")
 
   private def createControllerWithErnParameterError =
     new GetMovementsController(
@@ -149,15 +149,63 @@ class GetMovementsControllerSpec
 
   }
 
-  "getMovements" should {
-    "return 200 when successful" in {
-      val result = controller.getMovements(None, None, None, None, None)(fakeRequest)
+  "getMovements new" should {
+    "respond with 200" when {
+      "called with no query parameters and valid request" in {
+        val result = controller.getMovements(None, None, None, None, None)(fakeRequest)
 
-      status(result) mustBe OK
-      contentAsJson(result) mustBe Json.toJson(
-        Seq(createMovementResponse(ern, "lrn", "arc", Some("consigneeId"), Some(timestamp)))
-      )
+        status(result) mustBe OK
+        contentAsJson(result) mustBe Json.toJson(
+          Seq(createMovementResponse(ern, "lrn", "arc", Some("consigneeId"), Some(timestamp)))
+        )
+      }
+      "expecting multiple movements" in {
+        val movement1 = Movement(
+          "cfdb20c7-d0b0-4b8b-a071-737d68dede5a",
+          Some("boxId"),
+          "lrn",
+          ern,
+          Some("consigneeId"),
+          Some("arc"),
+          Instant.now(),
+          Seq.empty
+        )
+        val movement2 = Movement(
+          "cfdb20c7-d0b0-4b8b-a071-737d68dede5b",
+          Some("boxId"),
+          "lrn2",
+          ern,
+          Some("consigneeId2"),
+          Some("arc2"),
+          Instant.now(),
+          Seq.empty
+        )
+        when(movementService.getMovementByErn(any, any))
+          .thenReturn(Future.successful(Seq(movement1, movement2)))
+
+        val result = controller.getMovements(None, None, None, None, None)(fakeRequest)
+
+        status(result) mustBe OK
+        contentAsJson(result) mustBe Json.toJson(
+          Seq(
+            createMovementResponseFromMovement(movement1),
+            createMovementResponseFromMovement(movement2)
+          )
+        )
+      }
+
     }
+  }
+
+  "getMovements" should {
+//    "return 200 when successful" in {
+////      val result = controller.getMovements(None, None, None, None, None)(fakeRequest)
+////
+////      status(result) mustBe OK
+////      contentAsJson(result) mustBe Json.toJson(
+////        Seq(createMovementResponse(ern, "lrn", "arc", Some("consigneeId"), Some(timestamp)))
+////      )
+//    }
 
     "get all movement for an ERN" in {
       await(controller.getMovements(None, None, None, None, None)(FakeRequest("GET", "/foo")))
@@ -199,40 +247,40 @@ class GetMovementsControllerSpec
       verify(messageService).updateAllMessages(eqTo(Set("otherErn")))(any)
     }
 
-    "return multiple movement" in {
-      val movement1 = Movement(
-        "cfdb20c7-d0b0-4b8b-a071-737d68dede5a",
-        Some("boxId"),
-        "lrn",
-        ern,
-        Some("consigneeId"),
-        Some("arc"),
-        Instant.now(),
-        Seq.empty
-      )
-      val movement2 = Movement(
-        "cfdb20c7-d0b0-4b8b-a071-737d68dede5b",
-        Some("boxId"),
-        "lrn2",
-        ern,
-        Some("consigneeId2"),
-        Some("arc2"),
-        Instant.now(),
-        Seq.empty
-      )
-      when(movementService.getMovementByErn(any, any))
-        .thenReturn(Future.successful(Seq(movement1, movement2)))
-
-      val result = controller.getMovements(None, None, None, None, None)(fakeRequest)
-
-      status(result) mustBe OK
-      contentAsJson(result) mustBe Json.toJson(
-        Seq(
-          createMovementResponseFromMovement(movement1),
-          createMovementResponseFromMovement(movement2)
-        )
-      )
-    }
+//    "return multiple movement" in {
+//      val movement1 = Movement(
+//        "cfdb20c7-d0b0-4b8b-a071-737d68dede5a",
+//        Some("boxId"),
+//        "lrn",
+//        ern,
+//        Some("consigneeId"),
+//        Some("arc"),
+//        Instant.now(),
+//        Seq.empty
+//      )
+//      val movement2 = Movement(
+//        "cfdb20c7-d0b0-4b8b-a071-737d68dede5b",
+//        Some("boxId"),
+//        "lrn2",
+//        ern,
+//        Some("consigneeId2"),
+//        Some("arc2"),
+//        Instant.now(),
+//        Seq.empty
+//      )
+//      when(movementService.getMovementByErn(any, any))
+//        .thenReturn(Future.successful(Seq(movement1, movement2)))
+//
+//      val result = controller.getMovements(None, None, None, None, None)(fakeRequest)
+//
+//      status(result) mustBe OK
+//      contentAsJson(result) mustBe Json.toJson(
+//        Seq(
+//          createMovementResponseFromMovement(movement1),
+//          createMovementResponseFromMovement(movement2)
+//        )
+//      )
+//    }
 
     "use a filter" when {
       "traderType is consignor" in {
