@@ -27,6 +27,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NonRepudiationSubm
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NrsSubmissionWorkItemRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmissionWorkItem
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.Retrying
+import uk.gov.hmrc.http.HttpErrorFunctions.is5xx
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
@@ -53,14 +54,19 @@ class NrsConnector @Inject() (
     send(jsonObject)
       .map { response: HttpResponse =>
         response.status match {
-          case ACCEPTED =>
+          case ACCEPTED           =>
             val submissionId = response.json.as[NonRepudiationSubmissionAccepted]
             logger.info(
               s"[NrsConnector] - Non repudiation submission accepted with nrSubmissionId: ${submissionId.nrSubmissionId}"
             )
             submissionId
-          case _        =>
+          case x: Int if is5xx(x) =>
             nrsSubmissionWorkItemRepository.pushNew(NrsSubmissionWorkItem(payload))
+            logger.warn(
+              s"[NrsConnector] - Error when submitting to Non repudiation system (NRS) with status: ${response.status}, body: ${response.body}"
+            )
+            NonRepudiationSubmissionFailed(response.status, response.body)
+          case _                  =>
             logger.warn(
               s"[NrsConnector] - Error when submitting to Non repudiation system (NRS) with status: ${response.status}, body: ${response.body}"
             )

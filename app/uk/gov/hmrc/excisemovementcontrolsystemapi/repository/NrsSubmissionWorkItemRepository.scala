@@ -16,28 +16,46 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
-import play.api.Configuration
+import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmissionWorkItem
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.workitem.{WorkItemFields, WorkItemRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NrsSubmissionWorkItemRepository._
 
-import java.time.{Duration, Instant}
+import java.time.Instant
+import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.Duration
+import java.time.{Duration => javaDuration}
 
 @Singleton
 class NrsSubmissionWorkItemRepository @Inject() (
-  configuration: Configuration,
+  appConfig: AppConfig,
   mongoComponent: MongoComponent
 )(implicit ec: ExecutionContext)
     extends WorkItemRepository[NrsSubmissionWorkItem](
       collectionName = "nrsSubmissionWorkItems",
       mongoComponent = mongoComponent,
       itemFormat = NrsSubmissionWorkItem.format,
-      workItemFields = WorkItemFields.default
+      workItemFields = WorkItemFields.default,
+      extraIndexes = mongoIndexes(appConfig.nrsWorkItemRepoTTL)
     ) {
 
-  override def inProgressRetryAfter: Duration = configuration.get[Duration]("problem-movements.queue.retryAfter")
+  override def inProgressRetryAfter: javaDuration = appConfig.nrsRetryAfter
 
   override def now(): Instant = Instant.now()
+}
+
+object NrsSubmissionWorkItemRepository {
+  def mongoIndexes(ttl: Duration): Seq[IndexModel] =
+    Seq(
+      IndexModel(
+        Indexes.ascending("lastUpdated"),
+        IndexOptions()
+          .name("lastUpdated_ttl_idx")
+          .expireAfter(ttl.toSeconds, TimeUnit.SECONDS)
+      )
+    )
 }
