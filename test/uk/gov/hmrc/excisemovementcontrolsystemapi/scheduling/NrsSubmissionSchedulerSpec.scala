@@ -123,7 +123,7 @@ class NrsSubmissionSchedulerSpec
 
         when(mockNrsSubmissionWorkItemRepository.pullOutstanding(any(), any()))
           .thenReturn(Future.successful(Some(workItem)))
-        when(mockNrsConnector.sendToNrs(any())(any()))
+        when(mockNrsConnector.sendToNrs(any(), any())(any()))
           .thenReturn(Future.successful(NonRepudiationSubmissionAccepted("nrs-submission-id")))
         when(mockNrsSubmissionWorkItemRepository.complete(any(), any()))
           .thenReturn(Future.successful(true))
@@ -149,7 +149,7 @@ class NrsSubmissionSchedulerSpec
 
         when(mockNrsSubmissionWorkItemRepository.pullOutstanding(any(), any()))
           .thenReturn(Future.successful(Some(workItem)))
-        when(mockNrsConnector.sendToNrs(any())(any()))
+        when(mockNrsConnector.sendToNrs(any(), any())(any()))
           .thenReturn(Future.successful(NonRepudiationSubmissionFailed(SERVICE_UNAVAILABLE, "Service unavailable")))
         when(mockNrsSubmissionWorkItemRepository.markAs(any(), any(), any()))
           .thenReturn(Future.successful(true))

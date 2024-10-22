@@ -66,7 +66,7 @@ class NrsServiceSpec extends PlaySpec with ScalaFutures with NrsTestData with Ei
     when(dateTimeService.timestamp()).thenReturn(timeStamp)
     when(authConnector.authorise[NonRepudiationIdentityRetrievals](any, any)(any, any)) thenReturn
       Future.successful(testAuthRetrievals)
-    when(nrsConnector.sendToNrs(any)(any))
+    when(nrsConnector.sendToNrs(any, any)(any))
       .thenReturn(Future.successful(NonRepudiationSubmissionAccepted("submissionId")))
     when(message.consignorId).thenReturn("ern")
   }
@@ -82,12 +82,12 @@ class NrsServiceSpec extends PlaySpec with ScalaFutures with NrsTestData with Ei
       val encodePayload = Base64.getEncoder.encodeToString("<IE815>test</IE815>".getBytes(StandardCharsets.UTF_8))
       val nrsPayload    = NrsPayload(encodePayload, createExpectedMetadata)
 
-      verify(nrsConnector).sendToNrs(eqTo(nrsPayload))(eqTo(hc))
+      verify(nrsConnector).sendToNrs(eqTo(nrsPayload), eqTo("correlationId"))(eqTo(hc))
     }
 
     "return an error" when {
       "NRS submit request fails" in {
-        when(nrsConnector.sendToNrs(any)(any))
+        when(nrsConnector.sendToNrs(any, any)(any))
           .thenReturn(Future.successful(NonRepudiationSubmissionFailed(INTERNAL_SERVER_ERROR, "any reason")))
 
         submitNrs(hc) mustBe NonRepudiationSubmissionFailed(INTERNAL_SERVER_ERROR, "any reason")
@@ -118,7 +118,7 @@ class NrsServiceSpec extends PlaySpec with ScalaFutures with NrsTestData with Ei
 
     val request = createRequest(message)
 
-    await(service.submitNrs(request, "ern")(hc))
+    await(service.submitNrs(request, "ern", "correlationId")(hc))
   }
 
   private def createRequest(message: IEMessage): ParsedXmlRequest[_] = {
