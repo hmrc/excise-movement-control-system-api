@@ -55,7 +55,7 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
 
   val pushNotificationsEnabled: Boolean = servicesConfig.getBoolean("featureFlags.pushNotificationsEnabled")
 
-  def nrsRetryAfter = config.get[javaDuration]("problem-movements.queue.retryAfter")
+  def nrsRetryAfter = config.get[javaDuration]("nrs-submission.queue.retryAfter")
 
   val subscribeErnsEnabled: Boolean =
     config.getOptional[Boolean]("featureFlags.subscribeErnsEnabled").getOrElse(false)

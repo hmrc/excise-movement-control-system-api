@@ -44,7 +44,7 @@ class NrsConnector @Inject() (
     extends Retrying
     with Logging {
 
-  def sendToNrs(payload: NrsPayload)(implicit
+  def sendToNrs(payload: NrsPayload, correlationId: String)(implicit
     hc: HeaderCarrier
   ): Future[NonRepudiationSubmission] = {
 
@@ -63,12 +63,12 @@ class NrsConnector @Inject() (
           case x: Int if is5xx(x) =>
             nrsSubmissionWorkItemRepository.pushNew(NrsSubmissionWorkItem(payload))
             logger.warn(
-              s"[NrsConnector] - Error when submitting to Non repudiation system (NRS) with status: ${response.status}, body: ${response.body}"
+              s"[NrsConnector] - Error when submitting to Non repudiation system (NRS) with status: ${response.status}, body: ${response.body}, correlationId: $correlationId"
             )
             NonRepudiationSubmissionFailed(response.status, response.body)
           case _                  =>
             logger.warn(
-              s"[NrsConnector] - Error when submitting to Non repudiation system (NRS) with status: ${response.status}, body: ${response.body}"
+              s"[NrsConnector] - Error when submitting to Non repudiation system (NRS) with status: ${response.status}, body: ${response.body}, correlationId: $correlationId"
             )
             NonRepudiationSubmissionFailed(response.status, response.body)
         }

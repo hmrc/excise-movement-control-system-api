@@ -90,7 +90,7 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
 
   "submit" should {
     "return success" in {
-      val result = await(connector.sendToNrs(nrsPayLoad))
+      val result = await(connector.sendToNrs(nrsPayLoad, "correlationId"))
 
       result mustBe NonRepudiationSubmissionAccepted("testNesSubmissionId")
     }
@@ -103,13 +103,13 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
       when(mockRequestBuilder.execute[HttpResponse](any(), any()))
         .thenReturn(Future.successful(HttpResponse(400, "bad request")))
 
-      val result = await(connector.sendToNrs(nrsPayLoad))
+      val result = await(connector.sendToNrs(nrsPayLoad, "correlationId"))
 
       result mustBe NonRepudiationSubmissionFailed(400, "bad request")
     }
 
     "start and stop a timer" in {
-      await(connector.sendToNrs(NrsPayload("encodepayload", nrsMetadata)))
+      await(connector.sendToNrs(NrsPayload("encodepayload", nrsMetadata), "correlationId"))
 
       verify(metrics).timer(eqTo("emcs.nrs.submission.timer"))
       verify(metrics.timer(eqTo("emcs.nrs.submission.timer"))).time()

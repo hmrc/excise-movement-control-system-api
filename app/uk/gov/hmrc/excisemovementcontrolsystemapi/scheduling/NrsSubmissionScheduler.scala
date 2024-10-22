@@ -21,6 +21,7 @@ import play.api.{Configuration, Logging}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NonRepudiationSubmissionAccepted, NonRepudiationSubmissionFailed}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NrsSubmissionWorkItemRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.CorrelationIdService
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus
 
@@ -32,19 +33,21 @@ import scala.concurrent.{ExecutionContext, Future}
 class NrsSubmissionScheduler @Inject() (
   nrsSubmissionWorkItemRepository: NrsSubmissionWorkItemRepository,
   nrsConnector: NrsConnector,
-  configuration: Configuration
+  configuration: Configuration,
+  correlationIdService: CorrelationIdService
 ) extends ScheduledJob
     with Logging {
 
   override def execute(implicit ec: ExecutionContext): Future[ScheduledJob.Result] = {
     val now                     = Instant.now
+    val correlationId           = correlationIdService.generateCorrelationId()
     val result: Future[Boolean] = nrsSubmissionWorkItemRepository
       .pullOutstanding(now, now)
       .flatMap {
         case None           => Future.successful(true)
         case Some(workItem) =>
           nrsConnector
-            .sendToNrs(workItem.item.payload)(HeaderCarrier())
+            .sendToNrs(workItem.item.payload, correlationId)(HeaderCarrier())
             .flatMap {
               case NonRepudiationSubmissionAccepted(_)       =>
                 nrsSubmissionWorkItemRepository.complete(workItem.id, ProcessingStatus.Succeeded)
