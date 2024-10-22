@@ -129,6 +129,24 @@ object TestUtils {
       )
     )
 
+  def getPreValidateTraderErrorEISResponseNoProductResponse: PreValidateTraderEISResponse =
+    PreValidateTraderEISResponse(
+      ExciseTraderValidationResponse(
+        validationTimestamp = "2021-12-17T09:31:123Z",
+        exciseTraderResponse = Array(
+          ExciseTraderResponse(
+            validTrader = false,
+            exciseRegistrationNumber = "GBWK000000000",
+            traderType = None,
+            entityGroup = "UK Record",
+            errorCode = Some("6"),
+            errorText = Some("Not Found"),
+            validateProductAuthorisationResponse = None
+          )
+        )
+      )
+    )
+
   def getPreValidateTraderErrorEISResponse: PreValidateTraderEISResponse = PreValidateTraderEISResponse(
     ExciseTraderValidationResponse(
       validationTimestamp = "2021-12-17T09:31:123Z",
@@ -182,6 +200,31 @@ object TestUtils {
     traderType = Some("1"),
     validateProductAuthorisationResponse = Some(ValidateProductAuthorisationResponse(valid = true))
   )
+
+  def getPreValidateTraderErrorResponseAllFail: PreValidateTraderMessageResponse =
+    PreValidateTraderMessageResponse(
+      validationTimeStamp = "2021-12-17T09:31:123Z",
+      validTrader = false,
+      exciseRegistrationNumber = "GBWK000000000",
+      traderType = None,
+      entityGroup = "UK Record",
+      errorCode = Some("6"),
+      errorText = Some("Not Found"),
+      validateProductAuthorisationResponse = Some(
+        ValidateProductAuthorisationResponse(
+          valid = false,
+          productError = Some(
+            Seq(
+              ProductError(
+                errorCode = "1",
+                errorText = "Unrecognised EPC",
+                exciseProductCode = "S200"
+              )
+            )
+          )
+        )
+      )
+    )
 
   def getPreValidateTraderErrorResponse: PreValidateTraderMessageResponse =
     PreValidateTraderMessageResponse(

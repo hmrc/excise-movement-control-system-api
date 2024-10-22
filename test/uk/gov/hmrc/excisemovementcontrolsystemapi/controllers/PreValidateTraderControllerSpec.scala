@@ -152,7 +152,7 @@ class PreValidateTraderControllerSpec
 
       status(result) mustBe OK
 
-      contentAsJson(result) mustBe Json.toJson(getPreValidateTraderErrorResponse)
+      contentAsJson(result) mustBe Json.toJson(getPreValidateTraderErrorResponseAllFail)
       verify(service, times(1)).submitETDSMessage(any)(any)
       verify(service, times(0)).submitMessage(any)(any)
     }

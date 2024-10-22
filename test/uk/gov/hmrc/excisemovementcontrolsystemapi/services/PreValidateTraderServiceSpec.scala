@@ -108,7 +108,7 @@ class PreValidateTraderServiceSpec extends PlaySpec with BeforeAndAfterEach with
     "return in the API response format if the Connector returns the EIS business error response" in {
 
       when(connector.submitMessage(any, any)(any))
-        .thenReturn(Future.successful(Right(getPreValidateTraderErrorEISResponse)))
+        .thenReturn(Future.successful(Right(getPreValidateTraderErrorEISResponseNoProductResponse)))
 
       val result = await(preValidateTraderService.submitMessage(validRequest))
 
@@ -159,28 +159,6 @@ class PreValidateTraderServiceSpec extends PlaySpec with BeforeAndAfterEach with
       result.value mustBe getExciseTraderValidationETDSResponse
 
     }
-
-//    "return in the API response format if the Connector returns the EIS business error response" in {
-//
-//      when(connector.submitMessageETDS(any, any)(any))
-//        .thenReturn(Future.successful(Right(getPreValidateTraderETDSMessageResponseAllFail)))
-//
-//      val result = await(preValidateTraderService.submitETDSMessage(validETDSRequest))
-//
-//      result.value mustBe getPreValidateTraderETDSMessageResponseAllFail
-//
-//    }
-//
-//    "return an error result if EIS has returned an error response" in {
-//
-//      when(connector.submitMessageETDS(any, any)(any))
-//        .thenReturn(Future.successful(Right(getPreValidateTraderErrorETDSEISResponse500)))
-//
-//      val result = await(preValidateTraderService.submitETDSMessage(validETDSRequest))
-//
-//      result.value mustBe getPreValidateTraderErrorETDSEISResponse500
-//
-//    }
 
     "return an error result if the Connector does" in {
 

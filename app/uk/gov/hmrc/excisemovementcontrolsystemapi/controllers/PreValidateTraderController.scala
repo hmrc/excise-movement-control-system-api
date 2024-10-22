@@ -63,8 +63,12 @@ class PreValidateTraderController @Inject() (
   ): PreValidateTraderMessageResponse = {
     val entityGroup = parsedRequest.json.entityGroup.getOrElse(
       "N/A"
-    ) //Do we want to make this non optional in ETDS to allign with current spec? not needed but keeps us pretty
-    val validTrader = response.validationResult == "Pass"
+    )
+
+    val validTrader = response.failDetails match {
+      case Some(fd) => fd.validTrader
+      case None     => true
+    }
     val traderType  = if (validTrader) Some("1") else None //TODO: This will need updating once ETDS API changes
 
     val errorCode = response.failDetails.flatMap(_.errorCode).map(_.toString)
