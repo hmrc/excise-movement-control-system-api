@@ -18,9 +18,9 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.config
 
 import play.api.Configuration
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
-
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.{DAYS, Duration, FiniteDuration}
+import java.time.{Duration => javaDuration}
 
 @Singleton
 class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig) {
@@ -31,9 +31,7 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   lazy val nrsHost: String                   = servicesConfig.baseUrl("nrs")
   lazy val pushPullNotificationsHost: String = servicesConfig.baseUrl("push-pull-notifications")
 
-  lazy val nrsApiKey: String                   = servicesConfig.getConfString("nrs.api-key", "dummyNrsApiKey")
-  lazy val nrsRetryDelays: Seq[FiniteDuration] =
-    config.get[Seq[FiniteDuration]]("microservice.services.nrs.retryDelays")
+  lazy val nrsApiKey: String = servicesConfig.getConfString("nrs.api-key", "dummyNrsApiKey")
 
   lazy val movementTTL: Duration = config
     .getOptional[String]("mongodb.movement.TTL")
@@ -42,6 +40,10 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   lazy val movementArchiveTTL: Duration = config
     .getOptional[String]("mongodb.movementArchive.TTL")
     .fold(Duration.create(40, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
+
+  lazy val nrsWorkItemRepoTTL: Duration = config
+    .getOptional[String]("mongodb.nrsWorkItemRepo.TTL")
+    .fold(Duration.create(28, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
 
   lazy val miscodedMovementArchiveTTL: Duration = config
     .getOptional[String]("mongodb.miscodedMovementArchive.TTL")
@@ -53,6 +55,8 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
 
   val pushNotificationsEnabled: Boolean = servicesConfig.getBoolean("featureFlags.pushNotificationsEnabled")
 
+  def nrsRetryAfter = config.get[javaDuration]("nrs-submission.queue.retryAfter")
+
   val subscribeErnsEnabled: Boolean =
     config.getOptional[Boolean]("featureFlags.subscribeErnsEnabled").getOrElse(false)
 
@@ -60,8 +64,7 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   def submissionBearerToken: String  =
     servicesConfig.getConfString("eis.submission-bearer-token", "dummySubmissionBearerToken")
 
-  def getNrsSubmissionUrl: String = s"$nrsHost/submission"
-
+  def getNrsSubmissionUrl: String          = s"$nrsHost/submission"
   def preValidateTraderUrl: String         = s"$eisHost/emcs/pre-validate-trader/v1"
   def preValidateTraderBearerToken: String =
     servicesConfig.getConfString("eis.pre-validate-trader-bearer-token", "dummyPreValidateTraderBearerToken")

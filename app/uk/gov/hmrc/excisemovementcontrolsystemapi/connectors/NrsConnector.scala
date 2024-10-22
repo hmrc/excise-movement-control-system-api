@@ -23,21 +23,23 @@ import play.api.libs.concurrent.Futures
 import play.api.libs.json.JsObject
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.XApiKeyHeaderKey
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NonRepudiationSubmission, NonRepudiationSubmissionAccepted, NonRepudiationSubmissionFailed, NrsPayload}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NrsSubmissionWorkItemRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmissionWorkItem
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.Retrying
-import uk.gov.hmrc.http.HttpErrorFunctions.is2xx
+import uk.gov.hmrc.http.HttpErrorFunctions.is5xx
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Success, Try}
 
 class NrsConnector @Inject() (
   httpClient: HttpClientV2,
   appConfig: AppConfig,
-  metrics: MetricRegistry
+  metrics: MetricRegistry,
+  nrsSubmissionWorkItemRepository: NrsSubmissionWorkItemRepository
 )(implicit val ec: ExecutionContext, val futures: Futures)
     extends Retrying
     with Logging {
@@ -49,18 +51,22 @@ class NrsConnector @Inject() (
     val timer      = metrics.timer("emcs.nrs.submission.timer").time()
     val jsonObject = payload.toJsObject
 
-    retry(appConfig.nrsRetryDelays.toList, canRetry, appConfig.getNrsSubmissionUrl) {
-      send(jsonObject, correlationId)
-    }
+    send(jsonObject)
       .map { response: HttpResponse =>
         response.status match {
-          case ACCEPTED =>
+          case ACCEPTED           =>
             val submissionId = response.json.as[NonRepudiationSubmissionAccepted]
             logger.info(
               s"[NrsConnector] - Non repudiation submission accepted with nrSubmissionId: ${submissionId.nrSubmissionId}"
             )
             submissionId
-          case _        =>
+          case x: Int if is5xx(x) =>
+            nrsSubmissionWorkItemRepository.pushNew(NrsSubmissionWorkItem(payload))
+            logger.warn(
+              s"[NrsConnector] - Error when submitting to Non repudiation system (NRS) with status: ${response.status}, body: ${response.body}, correlationId: $correlationId"
+            )
+            NonRepudiationSubmissionFailed(response.status, response.body)
+          case _                  =>
             logger.warn(
               s"[NrsConnector] - Error when submitting to Non repudiation system (NRS) with status: ${response.status}, body: ${response.body}, correlationId: $correlationId"
             )
@@ -71,26 +77,16 @@ class NrsConnector @Inject() (
   }
 
   private def send(
-    jsonObject: JsObject,
-    correlationId: String
+    jsonObject: JsObject
   )(implicit hc: HeaderCarrier): Future[HttpResponse] = {
 
     val nrsSubmissionUrl = appConfig.getNrsSubmissionUrl
-    logger.info(
-      s"[NrsConnector] - NRS submission: sending POST request to $nrsSubmissionUrl. CorrelationId: $correlationId"
-    )
     httpClient
       .post(url"$nrsSubmissionUrl")
       .setHeader(createHeader: _*)
       .withBody(jsonObject)
       .execute[HttpResponse]
   }
-
-  private def canRetry(response: Try[HttpResponse]): Boolean =
-    response match {
-      case Success(r) => !is2xx(r.status)
-      case _          => true
-    }
 
   private def createHeader: Seq[(String, String)] =
     Seq(
