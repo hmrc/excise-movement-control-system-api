@@ -24,7 +24,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ParsedPreValidateTraderETDSRequest, ParsedPreValidateTraderRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PreValidateTraderService
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TraderTypeInterpreter
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -66,7 +65,7 @@ class PreValidateTraderController @Inject() (
       "N/A"
     ) //Do we want to make this non optional in ETDS to allign with current spec? not needed but keeps us pretty
     val validTrader = response.validationResult == "Pass"
-    val traderType  = determineTraderType(response.exciseId, validTrader)
+    val traderType  = if (validTrader) Some("1") else None //TODO: This will need updating once ETDS API changes
 
     val errorCode = response.failDetails.flatMap(_.errorCode).map(_.toString)
     val errorText = response.failDetails.flatMap(_.errorText)
@@ -112,13 +111,6 @@ class PreValidateTraderController @Inject() (
     }
 
   }
-
-  def determineTraderType(exciseId: String, validTrader: Boolean): Option[String] =
-    if (validTrader) {
-      Some(TraderTypeInterpreter.fromExciseId(exciseId))
-    } else {
-      None
-    }
 
   private def handleLegacyRequest()(implicit authRequest: EnrolmentRequest[JsValue]): Future[Result] =
     parseJsonAction.refine(authRequest).flatMap {

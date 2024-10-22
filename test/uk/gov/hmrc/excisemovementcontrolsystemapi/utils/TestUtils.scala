@@ -72,14 +72,54 @@ object TestUtils {
       failDetails = Option(
         ETDSFailDetails(
           validTrader = false,
-          errorCode = Some(6), //todo: need to confirm these map to the old spec
+          errorCode = Some(6),
           errorText = Some("Not Found"),
           validateProductAuthorisationResponse = Option(
             ValidateProductAuthorisationETDSResponse(productError =
               Seq(
                 ProductErrorETDS(
                   exciseProductCode = "S200",
-                  errorCode = 1, //todo: need to confirm these map to old spec
+                  errorCode = 1,
+                  errorText = "Unrecognised EPC"
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+
+  def getPreValidateTraderETDSMessageResponseTraderFail: ExciseTraderValidationETDSResponse =
+    ExciseTraderValidationETDSResponse(
+      processingDateTime = "2021-12-17T09:31:123Z",
+      exciseId = "GBWK000000000",
+      validationResult = "Fail",
+      failDetails = Option(
+        ETDSFailDetails(
+          validTrader = false,
+          errorCode = Some(6),
+          errorText = Some("Not Found"),
+          validateProductAuthorisationResponse = None
+        )
+      )
+    )
+
+  def getPreValidateTraderETDSMessageResponseProductsFail: ExciseTraderValidationETDSResponse =
+    ExciseTraderValidationETDSResponse(
+      processingDateTime = "2021-12-17T09:31:123Z",
+      exciseId = "GBWK000000000",
+      validationResult = "Pass",
+      failDetails = Option(
+        ETDSFailDetails(
+          validTrader = true,
+          errorCode = None,
+          errorText = None,
+          validateProductAuthorisationResponse = Option(
+            ValidateProductAuthorisationETDSResponse(productError =
+              Seq(
+                ProductErrorETDS(
+                  exciseProductCode = "S200",
+                  errorCode = 1,
                   errorText = "Unrecognised EPC"
                 )
               )
@@ -152,6 +192,18 @@ object TestUtils {
       entityGroup = "UK Record",
       errorCode = Some("6"),
       errorText = Some("Not Found"),
+      validateProductAuthorisationResponse = None
+    )
+
+  def getPreValidateTraderProductErrorResponse: PreValidateTraderMessageResponse =
+    PreValidateTraderMessageResponse(
+      validationTimeStamp = "2021-12-17T09:31:123Z",
+      validTrader = true,
+      exciseRegistrationNumber = "GBWK000000000",
+      traderType = Some("1"),
+      entityGroup = "UK Record",
+      errorCode = None,
+      errorText = None,
       validateProductAuthorisationResponse = Some(
         ValidateProductAuthorisationResponse(
           valid = false,

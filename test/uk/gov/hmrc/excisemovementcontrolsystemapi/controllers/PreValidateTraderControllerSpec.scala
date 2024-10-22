@@ -124,18 +124,6 @@ class PreValidateTraderControllerSpec
 
   }
 
-  "determineTraderType" should {
-
-    "return Some(x) when validTrader is true" in {
-      val result = createWithSuccessfulAuth.determineTraderType("GBWK1234567WK", true)
-      result mustBe Some("1")
-    }
-    "return None when validTrader is false" in {
-      val result = createWithSuccessfulAuth.determineTraderType("GBWK1234567WK", false)
-      result mustBe None
-    }
-  }
-
   "submit (ETDS)" should {
 
     "return 200 when validated and match original response using new service" in {
@@ -153,12 +141,44 @@ class PreValidateTraderControllerSpec
       verify(service, times(0)).submitMessage(any)(any)
     }
 
-    "return 200 when validation fails downstream" in {
+    "return 200 when validation fails downstream - product and trader errors" in {
 
       when(appConfig.etdsPreValidateTraderEnabled).thenReturn(true)
 
       when(service.submitETDSMessage(any)(any))
         .thenReturn(Future.successful(Right(getPreValidateTraderETDSMessageResponseAllFail)))
+
+      val result = createWithSuccessfulAuth.submit(ETDSrequest)
+
+      status(result) mustBe OK
+
+      contentAsJson(result) mustBe Json.toJson(getPreValidateTraderErrorResponse)
+      verify(service, times(1)).submitETDSMessage(any)(any)
+      verify(service, times(0)).submitMessage(any)(any)
+    }
+
+    "return 200 when validation fails downstream - product errors" in {
+
+      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(true)
+
+      when(service.submitETDSMessage(any)(any))
+        .thenReturn(Future.successful(Right(getPreValidateTraderETDSMessageResponseProductsFail)))
+
+      val result = createWithSuccessfulAuth.submit(ETDSrequest)
+
+      status(result) mustBe OK
+
+      contentAsJson(result) mustBe Json.toJson(getPreValidateTraderProductErrorResponse)
+      verify(service, times(1)).submitETDSMessage(any)(any)
+      verify(service, times(0)).submitMessage(any)(any)
+    }
+
+    "return 200 when validation fails downstream - trader error" in {
+
+      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(true)
+
+      when(service.submitETDSMessage(any)(any))
+        .thenReturn(Future.successful(Right(getPreValidateTraderETDSMessageResponseTraderFail)))
 
       val result = createWithSuccessfulAuth.submit(ETDSrequest)
 
