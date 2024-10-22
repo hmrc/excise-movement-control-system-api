@@ -20,6 +20,7 @@ import play.api.Configuration
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.{DAYS, Duration, FiniteDuration}
+import java.time.{Duration => javaDuration}
 
 @Singleton
 class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig) {
@@ -40,6 +41,10 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
     .getOptional[String]("mongodb.movementArchive.TTL")
     .fold(Duration.create(40, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
 
+  lazy val nrsWorkItemRepoTTL: Duration = config
+    .getOptional[String]("mongodb.nrsWorkItemRepo.TTL")
+    .fold(Duration.create(28, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
+
   lazy val miscodedMovementArchiveTTL: Duration = config
     .getOptional[String]("mongodb.miscodedMovementArchive.TTL")
     .fold(Duration.create(40, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
@@ -49,6 +54,8 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
     .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
 
   val pushNotificationsEnabled: Boolean = servicesConfig.getBoolean("featureFlags.pushNotificationsEnabled")
+
+  def nrsRetryAfter = config.get[javaDuration]("problem-movements.queue.retryAfter")
 
   val subscribeErnsEnabled: Boolean =
     config.getOptional[Boolean]("featureFlags.subscribeErnsEnabled").getOrElse(false)
