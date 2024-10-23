@@ -31,7 +31,6 @@ import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeJsonParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PreValidateTraderService
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -46,7 +45,6 @@ class PreValidateTraderControllerSpec
   implicit val sys: ActorSystem     = ActorSystem("DraftExciseMovementControllerSpec")
   private val service               = mock[PreValidateTraderService]
   private val appConfig             = mock[AppConfig]
-  private val dateTimeService       = mock[DateTimeService]
   private val cc                    = stubControllerComponents()
   private val request               = createRequest(Json.toJson(getPreValidateTraderRequest))
   private val ETDSrequest           = createRequest(Json.toJson(getPreValidateTraderETDSRequest))
