@@ -31,13 +31,9 @@ class DocumentationController @Inject() (assets: Assets, cc: ControllerComponent
     assets.at("/public/api", "definition.json")
 
   def specification(version: String, file: String): Action[AnyContent] =
-    if (appConfig.etdsPreValidateTraderEnabled) {
-      //contains both ETDS and Subscribe / Unsubscribe
-      assets.at(s"/public/api/conf/$version/preValidateTraders/", file)
-    } else if (appConfig.subscribeErnsEnabled) {
+    if (appConfig.subscribeErnsEnabled) {
       assets.at(s"/public/api/conf/$version/subscribe/", file)
     } else {
       assets.at(s"/public/api/conf/$version", file)
     }
-
 }
