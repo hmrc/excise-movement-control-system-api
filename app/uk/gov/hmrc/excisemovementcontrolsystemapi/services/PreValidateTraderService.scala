@@ -23,8 +23,8 @@ import play.api.mvc.Result
 import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PreValidateTraderConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.ParsedPreValidateTraderRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{PreValidateTraderEISResponse, PreValidateTraderMessageResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ParsedPreValidateTraderETDSRequest, ParsedPreValidateTraderRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{ExciseTraderValidationETDSResponse, PreValidateTraderEISResponse, PreValidateTraderMessageResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -47,6 +47,11 @@ class PreValidateTraderService @Inject() (
         case Right(x)    => Right(convertEISToResponseFormat(x)).flatten
         case Left(error) => Left(error)
       }
+
+  def submitETDSMessage[A](
+    request: ParsedPreValidateTraderETDSRequest[A]
+  )(implicit hc: HeaderCarrier): Future[Either[Result, ExciseTraderValidationETDSResponse]] =
+    connector.submitMessageETDS(request.json, request.request.erns.head)
 
   private def convertEISToResponseFormat(
     eisResponse: PreValidateTraderEISResponse

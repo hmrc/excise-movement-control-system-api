@@ -21,13 +21,14 @@ import play.api.mvc.Results.BadRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ParseJsonAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.ParsedPreValidateTraderRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.getPreValidateTraderRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ParsedPreValidateTraderETDSRequest, ParsedPreValidateTraderRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderETDSRequest, getPreValidateTraderRequest}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 trait FakeJsonParsers {
   object FakeSuccessJsonParser extends ParseJsonAction {
+
     override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedPreValidateTraderRequest[A]]] =
       Future.successful(
         Right(
@@ -38,14 +39,32 @@ trait FakeJsonParsers {
         )
       )
 
+    override def refineETDS[A](
+      request: EnrolmentRequest[A]
+    ): Future[Either[Result, ParsedPreValidateTraderETDSRequest[A]]] = Future.successful(
+      Right(
+        preValidateTrader.request.ParsedPreValidateTraderETDSRequest(
+          EnrolmentRequest(request, Set("ern123"), "123"),
+          getPreValidateTraderETDSRequest
+        )
+      )
+    )
+
     override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global
+
   }
 
   object FakeFailureJsonParser extends ParseJsonAction {
     override def refine[A](request: EnrolmentRequest[A]): Future[Either[Result, ParsedPreValidateTraderRequest[A]]] =
       Future.successful(Left(BadRequest("error")))
 
+    override def refineETDS[A](
+      request: EnrolmentRequest[A]
+    ): Future[Either[Result, ParsedPreValidateTraderETDSRequest[A]]] =
+      Future.successful(Left(BadRequest("error")))
+
     override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global
+
   }
 
 }

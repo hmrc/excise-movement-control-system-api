@@ -32,13 +32,13 @@ import uk.gov.hmrc.auth.core.InternalError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{ApplicationBuilderSupport, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.PreValidateTraderMessageResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderRequest, getPreValidateTraderSuccessEISResponse, getPreValidateTraderSuccessResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getExciseTraderValidationETDSResponse, getPreValidateTraderRequest, getPreValidateTraderSuccessResponse}
 
 import java.time.Instant
 import java.util.UUID
 
 
-class PreValidateTraderControllerItSpec extends PlaySpec
+class PreValidateTraderETDSControllerItSpec extends PlaySpec
   with GuiceOneServerPerSuite
   with ApplicationBuilderSupport
   with WireMockServerSpec
@@ -46,7 +46,7 @@ class PreValidateTraderControllerItSpec extends PlaySpec
 
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
   private val url = s"http://localhost:$port/traders/pre-validate"
-  private val eisUrl = "/emcs/pre-validate-trader/v1"
+  private val eisUrl = "/etds/traderprevalidation/v1"
   private val authErn = "GBWK002281023"
   private val timestamp = Instant.parse("2024-06-06T12:30:12.12345678Z")
 
@@ -56,13 +56,14 @@ class PreValidateTraderControllerItSpec extends PlaySpec
     wireMock.start()
     WireMock.configureFor(wireHost, wireMock.port())
     applicationBuilder(configureEisService).configure(
-      "featureFlags.etdsPreValidateTraderEnabled" -> false,
+      "featureFlags.etdsPreValidateTraderEnabled" -> true,
     ).build()
   }
 
   override def beforeAll(): Unit = {
     super.beforeAll()
     wireMock.resetAll()
+
     when(dateTimeService.timestamp()).thenReturn(timestamp)
   }
 
@@ -71,7 +72,7 @@ class PreValidateTraderControllerItSpec extends PlaySpec
     wireMock.stop()
   }
 
-  "Draft Excise Movement" should {
+  "PreValidateTrader ETDS" should {
 
     "return 200" in {
       withAuthorizedTrader(authErn)
@@ -170,7 +171,7 @@ class PreValidateTraderControllerItSpec extends PlaySpec
 
   private def stubEISSuccessfulRequest() = {
 
-    val response = getPreValidateTraderSuccessEISResponse
+    val response = getExciseTraderValidationETDSResponse
     wireMock.stubFor(
       post(eisUrl)
         .willReturn(ok().withBody(Json.toJson(response).toString()))

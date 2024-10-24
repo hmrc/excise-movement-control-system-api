@@ -20,6 +20,7 @@ import org.bson.types.ObjectId
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.ExciseNumberWorkItem
+
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
@@ -51,7 +52,7 @@ object TestUtils {
       validationTimestamp = "2021-12-17T09:31:123Z",
       exciseTraderResponse = Array(
         ExciseTraderResponse(
-          exciseRegistrationNumber = "GBWK002281023",
+          exciseRegistrationNumber = "GBWK002281023WK",
           entityGroup = "UK Record",
           validTrader = true,
           traderType = Some("1"),
@@ -62,6 +63,92 @@ object TestUtils {
       )
     )
   )
+
+  def getPreValidateTraderETDSMessageResponseAllFail: ExciseTraderValidationETDSResponse =
+    ExciseTraderValidationETDSResponse(
+      processingDateTime = "2021-12-17T09:31:123Z",
+      exciseId = "GBWK000000000",
+      traderType = "Not Found",
+      validationResult = "Fail",
+      failDetails = Option(
+        ETDSFailDetails(
+          validTrader = false,
+          errorCode = Some(6),
+          errorText = Some("Not Found"),
+          validateProductAuthorisationResponse = Option(
+            ValidateProductAuthorisationETDSResponse(productError =
+              Seq(
+                ProductErrorETDS(
+                  exciseProductCode = "S200",
+                  errorCode = 1,
+                  errorText = "Unrecognised EPC"
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+
+  def getPreValidateTraderETDSMessageResponseTraderFail: ExciseTraderValidationETDSResponse =
+    ExciseTraderValidationETDSResponse(
+      processingDateTime = "2021-12-17T09:31:123Z",
+      exciseId = "GBWK000000000",
+      traderType = "Not Found",
+      validationResult = "Fail",
+      failDetails = Option(
+        ETDSFailDetails(
+          validTrader = false,
+          errorCode = Some(6),
+          errorText = Some("Not Found"),
+          validateProductAuthorisationResponse = None
+        )
+      )
+    )
+
+  def getPreValidateTraderETDSMessageResponseProductsFail: ExciseTraderValidationETDSResponse =
+    ExciseTraderValidationETDSResponse(
+      processingDateTime = "2021-12-17T09:31:123Z",
+      exciseId = "GBWK000000000",
+      traderType = "Authorised Warehouse Keeper",
+      validationResult = "Pass",
+      failDetails = Option(
+        ETDSFailDetails(
+          validTrader = true,
+          errorCode = None,
+          errorText = None,
+          validateProductAuthorisationResponse = Option(
+            ValidateProductAuthorisationETDSResponse(productError =
+              Seq(
+                ProductErrorETDS(
+                  exciseProductCode = "S200",
+                  errorCode = 1,
+                  errorText = "Unrecognised EPC"
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+
+  def getPreValidateTraderErrorEISResponseNoProductResponse: PreValidateTraderEISResponse =
+    PreValidateTraderEISResponse(
+      ExciseTraderValidationResponse(
+        validationTimestamp = "2021-12-17T09:31:123Z",
+        exciseTraderResponse = Array(
+          ExciseTraderResponse(
+            validTrader = false,
+            exciseRegistrationNumber = "GBWK000000000",
+            traderType = None,
+            entityGroup = "UK Record",
+            errorCode = Some("6"),
+            errorText = Some("Not Found"),
+            validateProductAuthorisationResponse = None
+          )
+        )
+      )
+    )
 
   def getPreValidateTraderErrorEISResponse: PreValidateTraderEISResponse = PreValidateTraderEISResponse(
     ExciseTraderValidationResponse(
@@ -93,16 +180,32 @@ object TestUtils {
     )
   )
 
+  def getExciseTraderValidationETDSResponse: ExciseTraderValidationETDSResponse =
+    ExciseTraderValidationETDSResponse(
+      processingDateTime = "2021-12-17T09:31:123Z",
+      exciseId = "GBWK002281023WK",
+      traderType = "Authorised Warehouse Keeper",
+      validationResult = "Pass",
+      failDetails = Option(
+        ETDSFailDetails(
+          validTrader = true,
+          errorCode = None,
+          errorText = None,
+          validateProductAuthorisationResponse = None
+        )
+      )
+    )
+
   def getPreValidateTraderSuccessResponse: PreValidateTraderMessageResponse = PreValidateTraderMessageResponse(
     validationTimeStamp = "2021-12-17T09:31:123Z",
-    exciseRegistrationNumber = "GBWK002281023",
+    exciseRegistrationNumber = "GBWK002281023WK",
     entityGroup = "UK Record",
     validTrader = true,
     traderType = Some("1"),
     validateProductAuthorisationResponse = Some(ValidateProductAuthorisationResponse(valid = true))
   )
 
-  def getPreValidateTraderErrorResponse: PreValidateTraderMessageResponse =
+  def getPreValidateTraderErrorResponseAllFail: PreValidateTraderMessageResponse =
     PreValidateTraderMessageResponse(
       validationTimeStamp = "2021-12-17T09:31:123Z",
       validTrader = false,
@@ -127,6 +230,43 @@ object TestUtils {
       )
     )
 
+  def getPreValidateTraderErrorResponse: PreValidateTraderMessageResponse =
+    PreValidateTraderMessageResponse(
+      validationTimeStamp = "2021-12-17T09:31:123Z",
+      validTrader = false,
+      exciseRegistrationNumber = "GBWK000000000",
+      traderType = None,
+      entityGroup = "UK Record",
+      errorCode = Some("6"),
+      errorText = Some("Not Found"),
+      validateProductAuthorisationResponse = None
+    )
+
+  def getPreValidateTraderProductErrorResponse: PreValidateTraderMessageResponse =
+    PreValidateTraderMessageResponse(
+      validationTimeStamp = "2021-12-17T09:31:123Z",
+      validTrader = true,
+      exciseRegistrationNumber = "GBWK000000000",
+      traderType = Some("1"),
+      entityGroup = "UK Record",
+      errorCode = None,
+      errorText = None,
+      validateProductAuthorisationResponse = Some(
+        ValidateProductAuthorisationResponse(
+          valid = false,
+          productError = Some(
+            Seq(
+              ProductError(
+                errorCode = "1",
+                errorText = "Unrecognised EPC",
+                exciseProductCode = "S200"
+              )
+            )
+          )
+        )
+      )
+    )
+
   def getPreValidateTraderRequest: PreValidateTraderRequest = PreValidateTraderRequest(
     ExciseTraderValidationRequest(
       ExciseTraderRequest(
@@ -135,5 +275,11 @@ object TestUtils {
         Seq(ValidateProductAuthorisationRequest(ExciseProductCode("W200")))
       )
     )
+  )
+
+  def getPreValidateTraderETDSRequest: ExciseTraderETDSRequest = ExciseTraderETDSRequest(
+    "GBWK002281023",
+    Some("UK Record"),
+    Some(Seq(ValidateProductAuthorisationETDSRequest("W200")))
   )
 }
