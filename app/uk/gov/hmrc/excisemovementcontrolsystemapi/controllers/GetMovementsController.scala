@@ -54,10 +54,11 @@ class GetMovementsController @Inject() (
     arc: Option[String],
     updatedSince: Option[String],
     traderType: Option[String]
-  ): Action[AnyContent]                                   =
+  ): Action[AnyContent] =
     (authAction andThen validateErnParameterAction(ern)
       andThen validateUpdatedSinceAction(updatedSince)
       andThen validateTraderTypeAction(traderType)).async(parse.default) { implicit request =>
+
       messageService.updateAllMessages(ern.fold(request.erns)(Set(_)))
 
       val filter =
@@ -75,6 +76,7 @@ class GetMovementsController @Inject() (
           Ok(Json.toJson(movement.map(createResponseFrom)))
         }
     }
+
   def getMovement(movementId: String): Action[AnyContent] =
     authAction.async(parse.default) { implicit request =>
       val result = for {

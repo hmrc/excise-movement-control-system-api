@@ -67,7 +67,7 @@ class GetMovementsControllerSpec
   )
 
   private val timestamp   = Instant.parse("2020-01-01T01:01:01.123456Z")
-  private val fakeRequest = FakeRequest("POST", "/foo")
+  private val fakeRequest = FakeRequest("GET", "/foo")
 
   private def createControllerWithErnParameterError =
     new GetMovementsController(
@@ -150,131 +150,191 @@ class GetMovementsControllerSpec
   }
 
   "getMovements" should {
-    "return 200 when successful" in {
-      val result = controller.getMovements(None, None, None, None, None)(fakeRequest)
+    "respond with 200 OK" when {
+      "called with no query parameters and valid request" in {
+        val result = controller.getMovements(None, None, None, None, None)(fakeRequest)
 
-      status(result) mustBe OK
-      contentAsJson(result) mustBe Json.toJson(
-        Seq(createMovementResponse(ern, "lrn", "arc", Some("consigneeId"), Some(timestamp)))
-      )
-    }
-
-    "get all movement for an ERN" in {
-      await(controller.getMovements(None, None, None, None, None)(FakeRequest("GET", "/foo")))
-
-      verify(movementService).getMovementByErn(eqTo(Seq(ern)), any)
-    }
-
-    "updates messages for all authorised ERNs if ERN filter not supplied" in {
-      val controller = new GetMovementsController(
-        FakeSuccessAuthenticationMultiErn(Set(ern, "otherErn")),
-        FakeValidateErnParameterSuccessAction,
-        FakeValidateUpdatedSinceSuccessAction,
-        FakeValidateTraderTypeSuccessAction,
-        cc,
-        movementService,
-        dateTimeService,
-        messageService,
-        movementIdValidator
-      )
-      await(controller.getMovements(None, None, None, None, None)(fakeRequest))
-
-      verify(messageService).updateAllMessages(eqTo(Set(ern, "otherErn")))(any)
-    }
-
-    "only updates messages filtered ERN if filter supplied" in {
-      val controller = new GetMovementsController(
-        FakeSuccessAuthenticationMultiErn(Set(ern, "otherErn")),
-        FakeValidateErnParameterSuccessAction,
-        FakeValidateUpdatedSinceSuccessAction,
-        FakeValidateTraderTypeSuccessAction,
-        cc,
-        movementService,
-        dateTimeService,
-        messageService,
-        movementIdValidator
-      )
-      await(controller.getMovements(Some("otherErn"), None, None, None, None)(fakeRequest))
-
-      verify(messageService).updateAllMessages(eqTo(Set("otherErn")))(any)
-    }
-
-    "return multiple movement" in {
-      val movement1 = Movement(
-        "cfdb20c7-d0b0-4b8b-a071-737d68dede5a",
-        Some("boxId"),
-        "lrn",
-        ern,
-        Some("consigneeId"),
-        Some("arc"),
-        Instant.now(),
-        Seq.empty
-      )
-      val movement2 = Movement(
-        "cfdb20c7-d0b0-4b8b-a071-737d68dede5b",
-        Some("boxId"),
-        "lrn2",
-        ern,
-        Some("consigneeId2"),
-        Some("arc2"),
-        Instant.now(),
-        Seq.empty
-      )
-      when(movementService.getMovementByErn(any, any))
-        .thenReturn(Future.successful(Seq(movement1, movement2)))
-
-      val result = controller.getMovements(None, None, None, None, None)(fakeRequest)
-
-      status(result) mustBe OK
-      contentAsJson(result) mustBe Json.toJson(
-        Seq(
-          createMovementResponseFromMovement(movement1),
-          createMovementResponseFromMovement(movement2)
+        status(result) mustBe OK
+        contentAsJson(result) mustBe Json.toJson(
+          Seq(createMovementResponse(ern, "lrn", "arc", Some("consigneeId"), Some(timestamp)))
         )
-      )
-    }
-
-    "use a filter" when {
-      "traderType is consignor" in {
-        val timestampNow = Instant.now()
-        await(
-          controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString), Some("consignor"))(
-            fakeRequest
-          )
-        )
-
-        val filter = MovementFilter(
-          ern = Some(ern),
-          lrn = Some("lrn"),
-          arc = Some("arc"),
-          updatedSince = Some(timestampNow),
-          traderType = Some(TraderType(traderType = "consignor", erns = Seq(ern)))
-        )
-        verify(movementService).getMovementByErn(any, eqTo(filter))
-
       }
-
-      "traderType is consignee" in {
-        val timestampNow = Instant.now()
-        await(
-          controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString), Some("consignee"))(
-            fakeRequest
+      "there are no filter parameters" when {
+        "expecting multiple movements from one ERN" in {
+          val movement1 = Movement(
+            "cfdb20c7-d0b0-4b8b-a071-737d68dede5a",
+            Some("boxId"),
+            "lrn",
+            ern,
+            Some("consigneeId"),
+            Some("arc"),
+            Instant.now(),
+            Seq.empty
           )
-        )
+          val movement2 = Movement(
+            "cfdb20c7-d0b0-4b8b-a071-737d68dede5b",
+            Some("boxId"),
+            "lrn2",
+            ern,
+            Some("consigneeId2"),
+            Some("arc2"),
+            Instant.now(),
+            Seq.empty
+          )
+          when(movementService.getMovementByErn(any, any))
+            .thenReturn(Future.successful(Seq(movement1, movement2)))
 
-        val filter = MovementFilter(
-          ern = Some(ern),
-          lrn = Some("lrn"),
-          arc = Some("arc"),
-          updatedSince = Some(timestampNow),
-          traderType = Some(TraderType(traderType = "consignee", erns = Seq(ern)))
-        )
-        verify(movementService).getMovementByErn(any, eqTo(filter))
+          val result = controller.getMovements(None, None, None, None, None)(fakeRequest)
 
+          status(result) mustBe OK
+          contentAsJson(result) mustBe Json.toJson(
+            Seq(
+              createMovementResponseFromMovement(movement1),
+              createMovementResponseFromMovement(movement2)
+            )
+          )
+
+          verify(movementService).getMovementByErn(eqTo(Seq(ern)), any)
+
+        }
+        "expecting movements from multiple ERNs" in {
+
+          val controller = new GetMovementsController(
+            FakeSuccessAuthenticationMultiErn(Set(ern, "ern2")),
+            FakeValidateErnParameterSuccessAction,
+            FakeValidateUpdatedSinceSuccessAction,
+            FakeValidateTraderTypeSuccessAction,
+            cc,
+            movementService,
+            dateTimeService,
+            messageService,
+            movementIdValidator
+          )
+
+          val movement1 = Movement(
+            "cfdb20c7-d0b0-4b8b-a071-737d68dede5a",
+            Some("boxId"),
+            "lrn",
+            ern,
+            Some("consigneeId"),
+            Some("arc"),
+            Instant.now(),
+            Seq.empty
+          )
+          val movement2 = Movement(
+            "cfdb20c7-d0b0-4b8b-a071-737d68dede5b",
+            Some("boxId"),
+            "lrn2",
+            "ern2",
+            Some("consigneeId2"),
+            Some("arc2"),
+            Instant.now(),
+            Seq.empty
+          )
+          when(movementService.getMovementByErn(any, any))
+            .thenReturn(Future.successful(Seq(movement1, movement2)))
+
+          val result = controller.getMovements(None, None, None, None, None)(fakeRequest)
+
+          status(result) mustBe OK
+          contentAsJson(result) mustBe Json.toJson(
+            Seq(
+              createMovementResponseFromMovement(movement1),
+              createMovementResponseFromMovement(movement2)
+            )
+          )
+
+          verify(messageService).updateAllMessages(eqTo(Set(ern, "ern2")))(any)
+
+        }
+      }
+      "there are filter parameters" when {
+        "an ERN is specified in the filter" in {
+
+          val controller = new GetMovementsController(
+            FakeSuccessAuthenticationMultiErn(Set(ern, "ern2")),
+            FakeValidateErnParameterSuccessAction,
+            FakeValidateUpdatedSinceSuccessAction,
+            FakeValidateTraderTypeSuccessAction,
+            cc,
+            movementService,
+            dateTimeService,
+            messageService,
+            movementIdValidator
+          )
+
+          val movement1 = Movement(
+            "cfdb20c7-d0b0-4b8b-a071-737d68dede5a",
+            Some("boxId"),
+            "lrn",
+            ern,
+            Some("consigneeId"),
+            Some("arc"),
+            Instant.now(),
+            Seq.empty
+          )
+          val movement2 = Movement(
+            "cfdb20c7-d0b0-4b8b-a071-737d68dede5b",
+            Some("boxId"),
+            "lrn2",
+            "ern2",
+            Some("consigneeId2"),
+            Some("arc2"),
+            Instant.now(),
+            Seq.empty
+          )
+          when(movementService.getMovementByErn(any, any))
+            .thenReturn(Future.successful(Seq(movement2)))
+
+          val result = controller.getMovements(Some("ern2"), None, None, None, None)(fakeRequest)
+
+          status(result) mustBe OK
+          contentAsJson(result) mustBe Json.toJson(
+            Seq(createMovementResponseFromMovement(movement2))
+          )
+
+          verify(messageService).updateAllMessages(eqTo(Set("ern2")))(any)
+
+        }
+        "consignor is specified and multiple filter parameters are given" in {
+          val timestampNow = Instant.now()
+          await(
+            controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString), Some("consignor"))(
+              fakeRequest
+            )
+          )
+
+          val filter = MovementFilter(
+            ern = Some(ern),
+            lrn = Some("lrn"),
+            arc = Some("arc"),
+            updatedSince = Some(timestampNow),
+            traderType = Some(TraderType(traderType = "consignor", erns = Seq(ern)))
+          )
+          verify(movementService).getMovementByErn(any, eqTo(filter))
+
+        }
+        "consignee is specified and multiple filter parameters are given" in {
+          val timestampNow = Instant.now()
+          await(
+            controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString), Some("consignee"))(
+              fakeRequest
+            )
+          )
+
+          val filter = MovementFilter(
+            ern = Some(ern),
+            lrn = Some("lrn"),
+            arc = Some("arc"),
+            updatedSince = Some(timestampNow),
+            traderType = Some(TraderType(traderType = "consignee", erns = Seq(ern)))
+          )
+          verify(movementService).getMovementByErn(any, eqTo(filter))
+
+        }
       }
     }
-
-    "return a bad request" when {
+    "respond with 400 BAD_REQUEST" when {
       "the updatedSince time is provided in an invalid format" in {
 
         val result = createWithUpdateSinceActionFailure.getMovements(
@@ -292,7 +352,7 @@ class GetMovementsControllerSpec
           "Date format should be like '2020-11-15T17:02:34.00Z'"
         )
       }
-      "wrong traderType is passed in" in {
+      "the wrong traderType is passed in" in {
         val result = createWithTraderTypeActionFailure.getMovements(
           Some(ern),
           Some("lrn"),
@@ -309,8 +369,7 @@ class GetMovementsControllerSpec
         status(result) mustBe BAD_REQUEST
       }
     }
-
-    "return authentication error" when {
+    "respond with 403 FORBIDDEN" when {
       "authentication fails" in {
         val result = createWithAuthActionFailure.getMovements(None, None, None, None, None)(fakeRequest)
 
@@ -319,73 +378,61 @@ class GetMovementsControllerSpec
     }
   }
 
-  "Get movement controller" should {
-
+  "getMovement" should {
     val uuid     = "cfdb20c7-d0b0-4b8b-a071-737d68dede5b"
+    val testErn = "testErn"
     val movement =
-      Movement(uuid, Some("id123"), "lrn1", "testErn", Some("consignee"), Some("arc"), Instant.now(), Seq.empty)
+      Movement(uuid, Some("id123"), "lrn1", testErn, Some("consignee"), Some("arc"), Instant.now(), Seq.empty)
 
-    "return the movement when successful" in {
+    "respond with 200 OK" when {
+      "request is valid and the authorised ern is in the message recipients" in {
+        val movement =
+          Movement(
+            uuid,
+            Some("id123"),
+            "lrn1",
+            "consignor",
+            Some("consignee"),
+            Some("arc"),
+            Instant.now(),
+            Seq(Message("message", "IE801", "messageId", ern, Set.empty, timestamp))
+          )
 
-      when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))
-      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
+        when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))
+        when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
-      val result = controller.getMovement(uuid)(fakeRequest)
+        val result = controller.getMovement(uuid)(fakeRequest)
 
-      status(result) mustBe OK
+        status(result) mustBe OK
 
-      contentAsJson(result) mustBe Json.toJson(createMovementResponseFromMovement(movement))
+        contentAsJson(result) mustBe Json.toJson(createMovementResponseFromMovement(movement))
 
-    }
-
-    "return the movement if the ern is in the message recipients" in {
-
-      val movement =
-        Movement(
-          uuid,
-          Some("id123"),
-          "lrn1",
-          "consignor",
-          Some("consignee"),
-          Some("arc"),
-          Instant.now(),
-          Seq(Message("message", "IE801", "messageId", ern, Set.empty, timestamp))
+      }
+      "request is valid and there are multiple authorised ERNS" in {
+        val controller = new GetMovementsController(
+          FakeSuccessAuthenticationMultiErn(Set(ern, "otherErn")),
+          FakeValidateErnParameterSuccessAction,
+          FakeValidateUpdatedSinceSuccessAction,
+          FakeValidateTraderTypeSuccessAction,
+          cc,
+          movementService,
+          dateTimeService,
+          messageService,
+          movementIdValidator
         )
 
-      when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))
-      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
+        when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))
+        when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
-      val result = controller.getMovement(uuid)(fakeRequest)
+        val result = controller.getMovement(uuid)(fakeRequest)
 
-      status(result) mustBe OK
+        status(result) mustBe OK
 
-      contentAsJson(result) mustBe Json.toJson(createMovementResponseFromMovement(movement))
-
+        verify(messageService).updateAllMessages(eqTo(Set(ern, "otherErn")))(any)
+      }
     }
-
-    "updates messages for all authorised ERNs if ERN filter not supplied" in {
-      val controller = new GetMovementsController(
-        FakeSuccessAuthenticationMultiErn(Set(ern, "otherErn")),
-        FakeValidateErnParameterSuccessAction,
-        FakeValidateUpdatedSinceSuccessAction,
-        FakeValidateTraderTypeSuccessAction,
-        cc,
-        movementService,
-        dateTimeService,
-        messageService,
-        movementIdValidator
-      )
-
-      when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))
-      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
-
-      await(controller.getMovement(uuid)(fakeRequest))
-
-      verify(messageService).updateAllMessages(eqTo(Set(ern, "otherErn")))(any)
-    }
-
-    "return Not Found error" when {
-      "movement not found in database" in {
+    "respond with 404 NOT_FOUND" when {
+      "the specified movement is not found in the database" in {
         when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))
         when(movementService.getMovementById(any)).thenReturn(Future.successful(None))
 
@@ -398,8 +445,7 @@ class GetMovementsControllerSpec
           s"Movement $uuid could not be found"
         )
       }
-
-      "movement in database is for different ERNs" in {
+      "movement in database is not available for the authorised ERNs" in {
 
         when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))
         when(movementService.getMovementById(any))
@@ -412,13 +458,12 @@ class GetMovementsControllerSpec
         contentAsJson(result) mustBe expectedJsonErrorResponse(
           "2020-01-01T01:01:01.123Z",
           "Movement not found",
-          s"Movement $uuid is not found within the data for ERNs testErn"
+          s"Movement $uuid is not found within the data for ERNs $testErn"
         )
       }
     }
-
-    "return Bad Request error" when {
-      "supplied movement Id is not in correct format" in {
+    "respond with 400 BAD_REQUEST" when {
+      "supplied movement Id is not in the correct format" in {
 
         val expectedError = expectedJsonErrorResponse(
           "2020-01-01T01:01:01.123Z",
@@ -439,15 +484,12 @@ class GetMovementsControllerSpec
 
       }
     }
-
-    "return authentication error" when {
+    "respond with 403 FORBIDDEN" when {
       "authentication fails" in {
         val result = createWithAuthActionFailure.getMovement(uuid)(fakeRequest)
 
         status(result) mustBe FORBIDDEN
       }
     }
-
   }
-
 }
