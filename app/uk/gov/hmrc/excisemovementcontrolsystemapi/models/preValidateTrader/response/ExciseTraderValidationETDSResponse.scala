@@ -20,6 +20,7 @@ import play.api.libs.json.{Format, Json}
 
 case class ExciseTraderValidationETDSResponse(
   processingDateTime: String,
+  traderType: String,
   exciseId: String,
   validationResult: String,
   failDetails: Option[ETDSFailDetails] = None

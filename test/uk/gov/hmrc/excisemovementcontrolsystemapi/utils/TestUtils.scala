@@ -68,6 +68,7 @@ object TestUtils {
     ExciseTraderValidationETDSResponse(
       processingDateTime = "2021-12-17T09:31:123Z",
       exciseId = "GBWK000000000",
+      traderType = "Not Found",
       validationResult = "Fail",
       failDetails = Option(
         ETDSFailDetails(
@@ -93,6 +94,7 @@ object TestUtils {
     ExciseTraderValidationETDSResponse(
       processingDateTime = "2021-12-17T09:31:123Z",
       exciseId = "GBWK000000000",
+      traderType = "Not Found",
       validationResult = "Fail",
       failDetails = Option(
         ETDSFailDetails(
@@ -108,6 +110,7 @@ object TestUtils {
     ExciseTraderValidationETDSResponse(
       processingDateTime = "2021-12-17T09:31:123Z",
       exciseId = "GBWK000000000",
+      traderType = "Authorised Warehouse Keeper",
       validationResult = "Pass",
       failDetails = Option(
         ETDSFailDetails(
@@ -181,6 +184,7 @@ object TestUtils {
     ExciseTraderValidationETDSResponse(
       processingDateTime = "2021-12-17T09:31:123Z",
       exciseId = "GBWK002281023WK",
+      traderType = "Authorised Warehouse Keeper",
       validationResult = "Pass",
       failDetails = Option(
         ETDSFailDetails(

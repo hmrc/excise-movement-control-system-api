@@ -241,6 +241,18 @@ class PreValidateTraderControllerSpec
 
   }
 
+  "determineTraderType" should {
+
+    "return Some(x) when validTrader is true" in {
+      val result = createWithSuccessfulAuth.determineTraderType("Authorised Warehouse Keeper", validTrader = true)
+      result mustBe Some("1")
+    }
+    "return None when validTrader is false" in {
+      val result = createWithSuccessfulAuth.determineTraderType("Authorised Warehouse Keeper", validTrader = false)
+      result mustBe None
+    }
+  }
+
   private def createWithAuthActionFailure =
     new PreValidateTraderController(
       FakeFailingAuthentication,

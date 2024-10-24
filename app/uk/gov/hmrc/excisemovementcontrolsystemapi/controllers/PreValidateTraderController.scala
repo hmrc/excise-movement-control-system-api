@@ -24,6 +24,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ParsedPreValidateTraderETDSRequest, ParsedPreValidateTraderRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PreValidateTraderService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TraderTypeInterpreter
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -69,7 +70,6 @@ class PreValidateTraderController @Inject() (
       case Some(fd) => fd.validTrader
       case None     => true
     }
-    val traderType  = if (validTrader) Some("1") else None //TODO: This will need updating once ETDS API changes
 
     val errorCode = response.failDetails.flatMap(_.errorCode).map(_.toString)
     val errorText = response.failDetails.flatMap(_.errorText)
@@ -83,10 +83,17 @@ class PreValidateTraderController @Inject() (
       validTrader = validTrader,
       errorCode = errorCode,
       errorText = errorText,
-      traderType = traderType,
+      traderType = determineTraderType(response.traderType, validTrader),
       validateProductAuthorisationResponse = validateProductAuthResponse
     )
   }
+
+  def determineTraderType(traderTypeDescription: String, validTrader: Boolean): Option[String] =
+    if (validTrader) {
+      Some(TraderTypeInterpreter.fromTraderTypeDescription(traderTypeDescription))
+    } else {
+      None
+    }
 
   private def createValidateProductAuthResponse(
     response: ExciseTraderValidationETDSResponse,
