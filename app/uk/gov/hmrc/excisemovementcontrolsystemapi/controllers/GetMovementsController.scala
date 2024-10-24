@@ -54,7 +54,7 @@ class GetMovementsController @Inject() (
     arc: Option[String],
     updatedSince: Option[String],
     traderType: Option[String]
-  ): Action[AnyContent]                                   =
+  ): Action[AnyContent] =
     (authAction andThen validateErnParameterAction(ern)
       andThen validateUpdatedSinceAction(updatedSince)
       andThen validateTraderTypeAction(traderType)).async(parse.default) { implicit request =>
