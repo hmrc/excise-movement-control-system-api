@@ -75,7 +75,15 @@ class GetMovementsController @Inject() (
         } yield Ok(Json.toJson(movement.map(createResponseFrom)))
       }.recover { case NonFatal(ex) =>
         logger.warn("Error getting movements", ex)
-        InternalServerError(Json.toJson(ErrorResponse(dateTimeService.timestamp(), "Error getting movements", "Unknown error while getting movements")))
+        InternalServerError(
+          Json.toJson(
+            ErrorResponse(
+              dateTimeService.timestamp(),
+              "Error getting movements",
+              "Unknown error while getting movements"
+            )
+          )
+        )
       }
     }
 
