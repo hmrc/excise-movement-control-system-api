@@ -62,6 +62,7 @@ class PreValidateTraderController @Inject() (
     response: ExciseTraderValidationETDSResponse,
     parsedRequest: ParsedPreValidateTraderETDSRequest[JsValue]
   ): PreValidateTraderMessageResponse = {
+
     val entityGroup = parsedRequest.json.entityGroup.getOrElse(
       "N/A"
     )
