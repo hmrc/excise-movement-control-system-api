@@ -33,6 +33,7 @@ import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import java.time.Instant
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 
 class GetMovementsController @Inject() (
   authAction: AuthAction,
@@ -58,9 +59,6 @@ class GetMovementsController @Inject() (
     (authAction andThen validateErnParameterAction(ern)
       andThen validateUpdatedSinceAction(updatedSince)
       andThen validateTraderTypeAction(traderType)).async(parse.default) { implicit request =>
-
-      messageService.updateAllMessages(ern.fold(request.erns)(Set(_)))
-
       val filter =
         MovementFilter(
           ern,
@@ -70,11 +68,15 @@ class GetMovementsController @Inject() (
           traderType.map(trader => TraderType(trader, request.erns.toSeq))
         )
 
-      movementService
-        .getMovementByErn(request.erns.toSeq, filter)
-        .map { movement: Seq[Movement] =>
-          Ok(Json.toJson(movement.map(createResponseFrom)))
-        }
+      {
+        for {
+          _        <- messageService.updateAllMessages(ern.fold(request.erns)(Set(_)))
+          movement <- movementService.getMovementByErn(request.erns.toSeq, filter)
+        } yield Ok(Json.toJson(movement.map(createResponseFrom)))
+      }.recover { case NonFatal(ex) =>
+        logger.warn("Error getting movements", ex)
+        InternalServerError(Json.toJson(ErrorResponse(dateTimeService.timestamp(), "Error getting movements", "Unknown error while getting movements")))
+      }
     }
 
   def getMovement(movementId: String): Action[AnyContent] =
