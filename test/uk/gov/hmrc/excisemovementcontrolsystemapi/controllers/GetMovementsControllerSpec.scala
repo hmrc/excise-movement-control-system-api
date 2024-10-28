@@ -22,13 +22,14 @@ import org.mockito.MockitoSugar.{reset, verify, when}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.{BAD_REQUEST, FORBIDDEN, NOT_FOUND, OK}
+import play.api.http.Status.{BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, OK}
 import play.api.libs.json.Json
 import play.api.mvc.Results.BadRequest
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, TraderType}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication, FakeValidateErnParameterAction, FakeValidateTraderTypeAction, FakeValidateUpdatedSinceAction, MovementTestUtils}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MovementIdFormatInvalid, MovementIdValidation}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MessageService, MovementService}
@@ -299,9 +300,10 @@ class GetMovementsControllerSpec
         "consignor is specified and multiple filter parameters are given" in {
           val timestampNow = Instant.now()
           await(
-            controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString), Some("consignor"))(
-              fakeRequest
-            )
+            controller
+              .getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString), Some("consignor"))(
+                fakeRequest
+              )
           )
 
           val filter = MovementFilter(
@@ -317,9 +319,10 @@ class GetMovementsControllerSpec
         "consignee is specified and multiple filter parameters are given" in {
           val timestampNow = Instant.now()
           await(
-            controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString), Some("consignee"))(
-              fakeRequest
-            )
+            controller
+              .getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString), Some("consignee"))(
+                fakeRequest
+              )
           )
 
           val filter = MovementFilter(
@@ -376,11 +379,24 @@ class GetMovementsControllerSpec
         status(result) mustBe FORBIDDEN
       }
     }
+    "respond with 500 INTERNAL_SERVER_ERROR" when {
+      "anything in the updateMovements call fails" in {
+
+        when(messageService.updateAllMessages(any)(any)).thenReturn(Future.failed(new RuntimeException()))
+
+        val result = controller.getMovements(None, None, None, None, None)(fakeRequest)
+
+        status(result) mustBe INTERNAL_SERVER_ERROR
+        contentAsJson(result) mustBe Json.toJson(
+          ErrorResponse(dateTimeService.timestamp(), "Error getting movements", "Unknown error while getting movements")
+        )
+      }
+    }
   }
 
   "getMovement" should {
     val uuid     = "cfdb20c7-d0b0-4b8b-a071-737d68dede5b"
-    val testErn = "testErn"
+    val testErn  = "testErn"
     val movement =
       Movement(uuid, Some("id123"), "lrn1", testErn, Some("consignee"), Some("arc"), Instant.now(), Seq.empty)
 
