@@ -1,11 +1,4 @@
 {
-  "scopes": [
-    {
-      "key": "excise-movement-control-system",
-      "name": "Excise Movement Control System",
-      "description": "Excise Movement Control System Public API"
-    }
-  ],
   "api": {
     "name": "Excise Movement Control System",
     "description": "The public API to allow traders to submit excise movements and messages (IE) relating to those movements. ",
