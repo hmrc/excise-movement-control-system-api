@@ -214,20 +214,7 @@ object TestUtils {
       entityGroup = "UK Record",
       errorCode = Some("6"),
       errorText = Some("Not Found"),
-      validateProductAuthorisationResponse = Some(
-        ValidateProductAuthorisationResponse(
-          valid = false,
-          productError = Some(
-            Seq(
-              ProductError(
-                errorCode = "1",
-                errorText = "Unrecognised EPC",
-                exciseProductCode = "S200"
-              )
-            )
-          )
-        )
-      )
+      validateProductAuthorisationResponse = None
     )
 
   def getPreValidateTraderErrorResponse: PreValidateTraderMessageResponse =

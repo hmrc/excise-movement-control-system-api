@@ -139,7 +139,7 @@ class PreValidateTraderControllerSpec
       verify(service, times(0)).submitMessage(any)(any)
     }
 
-    "return 200 when validation fails downstream - product and trader errors" in {
+    "return 200 when validation fails downstream - product and trader errors only returns trader error in response" in {
 
       when(appConfig.etdsPreValidateTraderEnabled).thenReturn(true)
 

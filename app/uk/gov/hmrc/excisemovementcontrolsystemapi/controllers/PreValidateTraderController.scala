@@ -75,7 +75,10 @@ class PreValidateTraderController @Inject() (
     val errorCode = response.failDetails.flatMap(_.errorCode).map(_.toString)
     val errorText = response.failDetails.flatMap(_.errorText)
 
-    val validateProductAuthResponse = createValidateProductAuthResponse(response, validTrader)
+    val validateProductAuthResponse = validTrader match {
+      case true  => createValidateProductAuthResponse(response, validTrader)
+      case false => None
+    }
 
     PreValidateTraderMessageResponse(
       validationTimeStamp = response.processingDateTime,
