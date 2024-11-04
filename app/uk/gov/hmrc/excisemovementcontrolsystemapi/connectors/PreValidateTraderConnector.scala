@@ -117,7 +117,7 @@ class PreValidateTraderConnector @Inject() (
         val error = EisErrorResponsePresentation(
           timestamp,
           "Internal Server Error",
-          "Unexpected error occurred while processing ETDS PreValidateTrader request",
+          "Unexpected error occurred while processing PreValidateTrader request",
           correlationId
         )
 

@@ -82,16 +82,6 @@ class PreValidateTraderETDSHttpReader(
 
   private def extractResponse(httpResponse: HttpResponse): ExciseTraderValidationETDSResponse =
     jsonAs[ExciseTraderValidationETDSResponse](httpResponse.body)
-
-  private def defaultErrorResponse(status: Int): Result = {
-    val ourErrorResponse = EisErrorResponsePresentation(
-      dateTimeService.timestamp(),
-      "ETDS PreValidateTrader error",
-      s"Error occurred during ETDS PreValidateTrader request with status: $status",
-      correlationId
-    )
-    Status(status)(Json.toJson(ourErrorResponse))
-  }
 }
 
 object PreValidateTraderETDSHttpReader {

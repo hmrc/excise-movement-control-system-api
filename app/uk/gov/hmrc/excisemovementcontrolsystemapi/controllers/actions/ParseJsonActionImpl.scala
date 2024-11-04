@@ -112,13 +112,25 @@ class ParseJsonActionImpl @Inject() (
 
       case Failure(exception: JsResultException) =>
         logger.warn(s"Not valid Pre Validate Trader message: ${exception.getMessage}", exception)
+
+        val error: String = exception.errors
+          .map {
+            case (path, validations) if validations.exists(_.messages.contains("error.path.missing"))       =>
+              s"$path missing"
+            case (path, validations) if validations.exists(_.messages.exists(_.contains("error.expected"))) =>
+              s"$path incorrect format"
+            case (path, _)                                                                                  =>
+              s"$path unknown error"
+          }
+          .mkString(", ")
+
         Future.successful(
           Left(
             BadRequest(
               Json.toJson(
                 handleError(
                   s"Not valid PreValidateTrader message",
-                  s"Error parsing Json: ${exception.errors.toString()}"
+                  s"Error parsing Json: $error"
                 )
               )
             )
