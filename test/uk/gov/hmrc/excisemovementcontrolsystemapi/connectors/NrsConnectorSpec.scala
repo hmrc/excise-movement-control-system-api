@@ -39,6 +39,7 @@ import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
 import java.time.ZonedDateTime
+import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
 class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with BeforeAndAfterEach {
