@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import com.codahale.metrics.{MetricRegistry, Timer}
 import org.apache.pekko.Done
+import org.apache.pekko.pattern.CircuitBreaker
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchersSugar.eqTo
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
@@ -29,6 +30,7 @@ import play.api.libs.concurrent.Futures
 import play.api.libs.json.Json
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.NrsCircuitBreaker
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NrsSubmissionWorkItemRepository
@@ -50,8 +52,10 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
   val mockRequestBuilder: RequestBuilder = mock[RequestBuilder]
   private val appConfig                  = mock[AppConfig]
   private val emcsUtils                  = mock[EmcsUtils]
+  private val nrsCircuitBreaker          = mock[NrsCircuitBreaker]
+  private val circuitBreaker             = mock[CircuitBreaker]
   private val metrics                    = mock[MetricRegistry](RETURNS_DEEP_STUBS)
-  private val connector                  = new NrsConnector(httpClient, appConfig, metrics, repo)
+  private val connector                  = new NrsConnector(httpClient, appConfig, metrics, repo, nrsCircuitBreaker)
   private val timerContext               = mock[Timer.Context]
   private val timeStamp                  = ZonedDateTime.now()
   private val nrsUrl                     = "http://localhost:8080/nrs-url"
@@ -77,6 +81,7 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
     reset(httpClient, appConfig, emcsUtils, metrics, timerContext, mockRequestBuilder)
 
     when(httpClient.post(any)(any)).thenReturn(mockRequestBuilder)
+    when(nrsCircuitBreaker.breaker).thenReturn(circuitBreaker)
     when(mockRequestBuilder.setHeader(any(), any())).thenReturn(mockRequestBuilder)
     when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
     when(mockRequestBuilder.execute[HttpResponse](any(), any()))
@@ -90,6 +95,8 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
 
   "submit" should {
     "return success" in {
+      when(nrsCircuitBreaker.breaker.withCircuitBreaker(any()): Future[HttpResponse])
+        .thenReturn(Future.successful(successFulNrsResponse))
       val result = await(connector.sendToNrs(nrsPayLoad, "correlationId"))
 
       result mustBe NonRepudiationSubmissionAccepted("testNesSubmissionId")
