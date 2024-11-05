@@ -57,7 +57,7 @@ class MovementRepository @Inject() (
         Codecs.playFormatCodec(Total.format),
         Codecs.playFormatCodec(MiscodedMovement.format)
       ),
-      replaceIndexes = false
+      replaceIndexes = true
     ) {
 
   private def byId(id: String): Bson = Filters.equal("_id", id)
