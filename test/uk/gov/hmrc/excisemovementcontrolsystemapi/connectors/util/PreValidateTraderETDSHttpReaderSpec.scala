@@ -21,12 +21,10 @@ import org.scalatest.EitherValues
 import org.scalatest.Inspectors.forAll
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.{BAD_REQUEST, IM_A_TEAPOT, INTERNAL_SERVER_ERROR, NOT_FOUND, SERVICE_UNAVAILABLE}
+import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, SERVICE_UNAVAILABLE}
 import play.api.libs.json.Json
-import play.api.mvc.Result
 import play.api.mvc.Results.Status
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.ExciseTraderValidationETDSResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getExciseTraderValidationETDSResponse, getPreValidateTraderETDSMessageResponseAllFail}
 import uk.gov.hmrc.http.HttpResponse
@@ -75,7 +73,7 @@ class PreValidateTraderETDSHttpReaderSpec extends PlaySpec with EitherValues {
       responseObject.validationResult mustBe businessError.validationResult
     }
 
-    forAll(Seq(BAD_REQUEST, NOT_FOUND, INTERNAL_SERVER_ERROR, SERVICE_UNAVAILABLE)) { statusCode =>
+    forAll(Seq(BAD_REQUEST, NOT_FOUND)) { statusCode =>
       s"return $statusCode" when {
         s"$statusCode has returned from HttpResponse" in {
 
@@ -85,6 +83,35 @@ class PreValidateTraderETDSHttpReaderSpec extends PlaySpec with EitherValues {
                 now,
                 "PreValidateTrader error",
                 "Error occurred during PreValidateTrader request",
+                "123"
+              )
+            )
+          )
+
+          val result = preValidateTraderHttpReader
+            .read(
+              "ANY",
+              "/foo",
+              HttpResponse(statusCode, "")
+            )
+            .left
+            .value
+
+          result mustBe expectedResponse
+        }
+      }
+    }
+
+    forAll(Seq(INTERNAL_SERVER_ERROR, SERVICE_UNAVAILABLE)) { statusCode =>
+      s"return $statusCode" when {
+        s"$statusCode has returned from HttpResponse" in {
+
+          val expectedResponse = Status(statusCode)(
+            Json.toJson(
+              EisErrorResponsePresentation(
+                now,
+                "Internal Server Error",
+                "Unexpected error occurred while processing PreValidateTrader request",
                 "123"
               )
             )

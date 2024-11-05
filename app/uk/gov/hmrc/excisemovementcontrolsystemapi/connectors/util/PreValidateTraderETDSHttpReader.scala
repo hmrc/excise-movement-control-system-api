@@ -17,7 +17,8 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util
 
 import play.api.Logging
-import play.api.libs.json.{JsError, JsSuccess, Json}
+import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, UNAUTHORIZED}
+import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.Status
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
@@ -65,13 +66,22 @@ class PreValidateTraderETDSHttpReader(
       )
     )
 
-    //Not expecting EIS response bodies to have any payload here
-    val ourErrorResponse = EisErrorResponsePresentation(
-      dateTimeService.timestamp(),
-      "PreValidateTrader error",
-      "Error occurred during PreValidateTrader request",
-      correlationId
-    )
+    val ourErrorResponse = response.status match {
+      case BAD_REQUEST | NOT_FOUND | UNAUTHORIZED =>
+        EisErrorResponsePresentation(
+          dateTimeService.timestamp(),
+          "PreValidateTrader error",
+          "Error occurred during PreValidateTrader request",
+          correlationId
+        )
+      case _                                      =>
+        EisErrorResponsePresentation(
+          dateTimeService.timestamp(),
+          "Internal Server Error",
+          "Unexpected error occurred while processing PreValidateTrader request",
+          correlationId
+        )
+    }
 
     Status(response.status)(Json.toJson(ourErrorResponse))
   }
