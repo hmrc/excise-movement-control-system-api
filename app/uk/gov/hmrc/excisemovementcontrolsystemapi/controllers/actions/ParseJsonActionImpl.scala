@@ -86,7 +86,7 @@ class ParseJsonActionImpl @Inject() (
         )
     }
 
-  def parseETDSJson[A](
+  private def parseETDSJson[A](
     jsonBody: JsValue,
     request: EnrolmentRequest[A]
   ): Future[Either[Result, ParsedPreValidateTraderETDSRequest[A]]] =
@@ -102,7 +102,7 @@ class ParseJsonActionImpl @Inject() (
 
         val convertedRequestBody = ExciseTraderETDSRequest(
           exciseId = originalRequest.exciseRegistrationNumber,
-          entityGroup = Some(originalRequest.entityGroup),
+          entityGroup = originalRequest.entityGroup,
           products = convertedProducts
         )
 

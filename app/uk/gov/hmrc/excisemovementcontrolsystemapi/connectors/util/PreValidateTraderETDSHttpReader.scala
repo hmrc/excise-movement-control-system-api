@@ -46,7 +46,7 @@ class PreValidateTraderETDSHttpReader(
     val result = extractIfSuccessful(response)
     result match {
       case Right(eisResponse) =>
-        Right(eisResponse) // Success case
+        Right(eisResponse)
 
       case Left(httpResponse: HttpResponse) =>
         Left(handleErrorResponse(httpResponse))

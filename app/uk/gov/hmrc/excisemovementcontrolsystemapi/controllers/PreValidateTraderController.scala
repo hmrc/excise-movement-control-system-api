@@ -63,9 +63,7 @@ class PreValidateTraderController @Inject() (
     parsedRequest: ParsedPreValidateTraderETDSRequest[JsValue]
   ): PreValidateTraderMessageResponse = {
 
-    val entityGroup = parsedRequest.json.entityGroup.getOrElse(
-      "N/A"
-    )
+    val entityGroup = parsedRequest.json.entityGroup
 
     val validTrader = response.failDetails match {
       case Some(fd) => fd.validTrader
@@ -75,9 +73,10 @@ class PreValidateTraderController @Inject() (
     val errorCode = response.failDetails.flatMap(_.errorCode).map(_.toString)
     val errorText = response.failDetails.flatMap(_.errorText)
 
-    val validateProductAuthResponse = validTrader match {
-      case true  => createValidateProductAuthResponse(response, validTrader)
-      case false => None
+    val validateProductAuthResponse = if (validTrader) {
+      createValidateProductAuthResponse(response, validTrader)
+    } else {
+      None
     }
 
     PreValidateTraderMessageResponse(

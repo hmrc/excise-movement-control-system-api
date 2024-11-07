@@ -266,7 +266,7 @@ object TestUtils {
 
   def getPreValidateTraderETDSRequest: ExciseTraderETDSRequest = ExciseTraderETDSRequest(
     "GBWK002281023",
-    Some("UK Record"),
+    "UK Record",
     Some(Seq(ValidateProductAuthorisationETDSRequest("W200")))
   )
 }

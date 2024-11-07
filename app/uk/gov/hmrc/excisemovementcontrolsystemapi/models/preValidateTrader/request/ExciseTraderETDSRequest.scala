@@ -20,7 +20,7 @@ import play.api.libs.json.{Json, OFormat}
 
 case class ExciseTraderETDSRequest(
   exciseId: String,
-  entityGroup: Option[String] = None,
+  entityGroup: String,
   products: Option[Seq[ValidateProductAuthorisationETDSRequest]]
 )
 
