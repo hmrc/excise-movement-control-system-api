@@ -29,6 +29,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderETDSRequest, getPreValidateTraderRequest}
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext
@@ -57,6 +58,9 @@ class ParseJsonActionSpec extends PlaySpec with ScalaFutures with EitherValues {
       )
     )
   )
+
+  private val examplePreValidateTraderETDSRequest = getPreValidateTraderETDSRequest
+  private val exampleETDSJson                     = Json.toJson(examplePreValidateTraderETDSRequest)
 
   private val timestamp = Instant.parse("2023-05-11T01:01:01.987654Z")
   when(dateTimeService.timestamp()).thenReturn(timestamp)
@@ -93,6 +97,39 @@ class ParseJsonActionSpec extends PlaySpec with ScalaFutures with EitherValues {
           "Error parsing Json: List((/exciseTraderValidationRequest,List(JsonValidationError(List(error.expected.jsobject),List()))))"
         )
         result.left.value mustBe BadRequest(Json.toJson(expectedError))
+      }
+
+    }
+  }
+
+  "refineETDS" should {
+    "return a ParsedPreValidateTraderETDSRequest" in {
+      val enrolmentRequest =
+        EnrolmentRequest(FakeRequest().withBody(Json.toJson(getPreValidateTraderRequest)), Set("ern"), "123")
+
+      val result = parseJsonAction.refineETDS(enrolmentRequest).futureValue
+
+      result mustBe Right(ParsedPreValidateTraderETDSRequest(enrolmentRequest, examplePreValidateTraderETDSRequest))
+    }
+
+    "return an error" when {
+      "no json was sent" in {
+        val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(""), Set("ern"), "123")
+
+        val result = parseJsonAction.refineETDS(enrolmentRequest).futureValue
+
+        val expectedError = ErrorResponse(timestamp, "Json error", "Not valid Json or Json is empty")
+        result.left.value mustBe BadRequest(Json.toJson(expectedError))
+      }
+
+      "JSON parsing exception" in {
+
+        val exampleJson      = "{\"someInvalidJson\": 123 }"
+        val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(Json.parse(exampleJson)), Set("ern"), "123")
+
+        val result = parseJsonAction.refineETDS(enrolmentRequest).futureValue
+
+        result.left.value.header.status mustBe 400
       }
 
     }

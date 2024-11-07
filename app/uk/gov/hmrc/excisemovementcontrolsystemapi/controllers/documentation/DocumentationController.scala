@@ -36,5 +36,4 @@ class DocumentationController @Inject() (assets: Assets, cc: ControllerComponent
     } else {
       assets.at(s"/public/api/conf/$version", file)
     }
-
 }

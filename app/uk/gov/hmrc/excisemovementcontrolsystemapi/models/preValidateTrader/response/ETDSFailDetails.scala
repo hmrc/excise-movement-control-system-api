@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,17 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model
+package uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.{Format, Json}
 
-final case class ProblemMovement(_id: String, countOfIe801s: Int)
+case class ETDSFailDetails(
+  validTrader: Boolean,
+  errorCode: Option[Int] = None,
+  errorText: Option[String] = None,
+  validateProductAuthorisationResponse: Option[ValidateProductAuthorisationETDSResponse] = None
+)
 
-object ProblemMovement {
-  implicit val format: OFormat[ProblemMovement] = Json.format
-}
-
-final case class Total(total: Int)
-
-object Total {
-  implicit val format: OFormat[Total] = Json.format
+object ETDSFailDetails {
+  implicit val format: Format[ETDSFailDetails] = Json.format[ETDSFailDetails]
 }

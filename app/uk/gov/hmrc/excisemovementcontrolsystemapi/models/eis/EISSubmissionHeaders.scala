@@ -31,4 +31,15 @@ trait EISSubmissionHeaders extends Headers {
       SourceName               -> APIPSource,
       Authorization            -> authorizationValue(bearerToken)
     )
+
+  override def buildETDS(correlationId: String, createdDateTime: String, bearerToken: String): Seq[(String, String)] =
+    Seq(
+      HeaderNames.ACCEPT       -> ContentTypes.JSON,
+      HeaderNames.CONTENT_TYPE -> ContentTypes.JSON,
+      DateTimeName             -> createdDateTime,
+      XCorrelationIdName       -> correlationId,
+      XForwardedHostName       -> MDTPHost,
+      SourceName               -> MDTPSource,
+      Authorization            -> authorizationValue(bearerToken)
+    )
 }

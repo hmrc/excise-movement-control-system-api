@@ -18,18 +18,20 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import org.apache.pekko.actor.ActorSystem
 import org.mockito.ArgumentMatchersSugar.any
+import org.mockito.Mockito.times
 import org.mockito.MockitoSugar.{reset, verify, when}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
 import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.Results.NotFound
+import play.api.mvc.Results.{InternalServerError, NotFound}
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeJsonParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PreValidateTraderService
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils.{getPreValidateTraderErrorResponse, getPreValidateTraderRequest, getPreValidateTraderSuccessResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -42,18 +44,23 @@ class PreValidateTraderControllerSpec
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val sys: ActorSystem     = ActorSystem("DraftExciseMovementControllerSpec")
   private val service               = mock[PreValidateTraderService]
+  private val appConfig             = mock[AppConfig]
   private val cc                    = stubControllerComponents()
   private val request               = createRequest(Json.toJson(getPreValidateTraderRequest))
+  private val ETDSrequest           = createRequest(Json.toJson(getPreValidateTraderETDSRequest))
 
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(service)
-
-    when(service.submitMessage(any)(any)).thenReturn(Future.successful(Right(getPreValidateTraderSuccessResponse)))
   }
 
   "submit" should {
+
     "return 200 when validated" in {
+
+      when(service.submitMessage(any)(any)).thenReturn(Future.successful(Right(getPreValidateTraderSuccessResponse)))
+      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(false)
+
       val result = createWithSuccessfulAuth.submit(request)
 
       status(result) mustBe OK
@@ -61,7 +68,10 @@ class PreValidateTraderControllerSpec
 
     }
 
-    "return 200 when business error" in {
+    "return 200 when validation fails downstream" in {
+
+      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(false)
+
       when(service.submitMessage(any)(any)).thenReturn(Future.successful(Right(getPreValidateTraderErrorResponse)))
 
       val result = createWithSuccessfulAuth.submit(request)
@@ -72,6 +82,10 @@ class PreValidateTraderControllerSpec
     }
 
     "send a request to EIS" in {
+
+      when(service.submitMessage(any)(any)).thenReturn(Future.successful(Right(getPreValidateTraderSuccessResponse)))
+      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(false)
+
       await(createWithSuccessfulAuth.submit(request))
 
       verify(service).submitMessage(any)(any)
@@ -79,6 +93,9 @@ class PreValidateTraderControllerSpec
     }
 
     "return an error when EIS error" in {
+
+      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(false)
+
       when(service.submitMessage(any)(any))
         .thenReturn(Future.successful(Left(NotFound("not found"))))
 
@@ -105,12 +122,144 @@ class PreValidateTraderControllerSpec
 
   }
 
+  "submit (ETDS)" should {
+
+    "return 200 when validated and match original response using new service" in {
+
+      when(service.submitETDSMessage(any)(any))
+        .thenReturn(Future.successful(Right(getExciseTraderValidationETDSResponse)))
+      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(true)
+
+      val result = createWithSuccessfulAuth.submit(ETDSrequest)
+
+      status(result) mustBe OK
+
+      contentAsJson(result) mustBe Json.toJson(getPreValidateTraderSuccessResponse)
+      verify(service, times(1)).submitETDSMessage(any)(any)
+      verify(service, times(0)).submitMessage(any)(any)
+    }
+
+    "return 200 when validation fails downstream - product and trader errors only returns trader error in response" in {
+
+      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(true)
+
+      when(service.submitETDSMessage(any)(any))
+        .thenReturn(Future.successful(Right(getPreValidateTraderETDSMessageResponseAllFail)))
+
+      val result = createWithSuccessfulAuth.submit(ETDSrequest)
+
+      status(result) mustBe OK
+
+      contentAsJson(result) mustBe Json.toJson(getPreValidateTraderErrorResponseAllFail)
+      verify(service, times(1)).submitETDSMessage(any)(any)
+      verify(service, times(0)).submitMessage(any)(any)
+    }
+
+    "return 200 when validation fails downstream - product errors" in {
+
+      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(true)
+
+      when(service.submitETDSMessage(any)(any))
+        .thenReturn(Future.successful(Right(getPreValidateTraderETDSMessageResponseProductsFail)))
+
+      val result = createWithSuccessfulAuth.submit(ETDSrequest)
+
+      status(result) mustBe OK
+
+      contentAsJson(result) mustBe Json.toJson(getPreValidateTraderProductErrorResponse)
+      verify(service, times(1)).submitETDSMessage(any)(any)
+      verify(service, times(0)).submitMessage(any)(any)
+    }
+
+    "return 200 when validation fails downstream - trader error" in {
+
+      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(true)
+
+      when(service.submitETDSMessage(any)(any))
+        .thenReturn(Future.successful(Right(getPreValidateTraderETDSMessageResponseTraderFail)))
+
+      val result = createWithSuccessfulAuth.submit(ETDSrequest)
+
+      status(result) mustBe OK
+
+      contentAsJson(result) mustBe Json.toJson(getPreValidateTraderErrorResponse)
+      verify(service, times(1)).submitETDSMessage(any)(any)
+      verify(service, times(0)).submitMessage(any)(any)
+    }
+
+    "send a request to EIS" in {
+
+      when(service.submitETDSMessage(any)(any))
+        .thenReturn(Future.successful(Right(getExciseTraderValidationETDSResponse)))
+      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(true)
+
+      await(createWithSuccessfulAuth.submit(ETDSrequest))
+
+      verify(service).submitETDSMessage(any)(any)
+
+    }
+
+    "return a 400 error when NOT_FOUND" in {
+
+      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(true)
+
+      when(service.submitETDSMessage(any)(any))
+        .thenReturn(Future.successful(Left(NotFound("not found"))))
+
+      val result = createWithSuccessfulAuth.submit(ETDSrequest)
+
+      status(result) mustBe NOT_FOUND
+    }
+
+    "return a 500 error when INTERNAL_SERVER_ERROR" in {
+
+      when(appConfig.etdsPreValidateTraderEnabled).thenReturn(true)
+
+      when(service.submitETDSMessage(any)(any))
+        .thenReturn(Future.successful(Left(InternalServerError("not found"))))
+
+      val result = createWithSuccessfulAuth.submit(ETDSrequest)
+
+      status(result) mustBe INTERNAL_SERVER_ERROR
+    }
+
+    "a validation parser error" when {
+      "xml cannot be parsed" in {
+        val result = createWithFailingJsonParserAction.submit(ETDSrequest)
+
+        status(result) mustBe BAD_REQUEST
+      }
+    }
+
+    "return authentication error" when {
+      "authentication fails" in {
+        val result = createWithAuthActionFailure.submit(ETDSrequest)
+
+        status(result) mustBe FORBIDDEN
+      }
+    }
+
+  }
+
+  "determineTraderType" should {
+
+    "return Some(x) when validTrader is true" in {
+      val result = createWithSuccessfulAuth.determineTraderType("Authorised Warehouse Keeper", validTrader = true)
+      result mustBe Some("1")
+    }
+    "return None when validTrader is false" in {
+      val result = createWithSuccessfulAuth.determineTraderType("Authorised Warehouse Keeper", validTrader = false)
+      result mustBe None
+    }
+  }
+
   private def createWithAuthActionFailure =
     new PreValidateTraderController(
       FakeFailingAuthentication,
       FakeSuccessJsonParser,
       service,
-      cc
+      cc,
+      appConfig
     )
 
   private def createWithFailingJsonParserAction =
@@ -118,7 +267,8 @@ class PreValidateTraderControllerSpec
       FakeSuccessAuthentication(Set(ern)),
       FakeFailureJsonParser,
       service,
-      cc
+      cc,
+      appConfig
     )
 
   private def createWithSuccessfulAuth =
@@ -126,7 +276,8 @@ class PreValidateTraderControllerSpec
       FakeSuccessAuthentication(Set(ern)),
       FakeSuccessJsonParser,
       service,
-      cc
+      cc,
+      appConfig
     )
 
   private def createRequest(body: JsValue): FakeRequest[JsValue] =
