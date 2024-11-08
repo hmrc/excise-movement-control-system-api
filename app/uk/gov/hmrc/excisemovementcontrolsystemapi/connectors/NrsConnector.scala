@@ -60,12 +60,12 @@ class NrsConnector @Inject() (
           case ACCEPTED =>
             val submissionId = response.json \ "nrSubmissionId"
             logger.info(
-              s"[NrsConnector] - Non repudiation submission accepted with nrSubmissionId: $submissionId"
+              s"Non repudiation submission accepted with nrSubmissionId: $submissionId"
             )
             Done
           case _        =>
             logger.warn(
-              s"[NrsConnector] - Error when submitting to Non repudiation system (NRS) with status: ${response.status}, body: ${response.body}, correlationId: $correlationId"
+              s"Error when submitting to Non repudiation system (NRS) with status: ${response.status}, body: ${response.body}, correlationId: $correlationId"
             )
             Done
         }
