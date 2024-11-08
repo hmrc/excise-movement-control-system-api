@@ -40,7 +40,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{ApplicationBuilderSupport, SubmitMessageTestSupport, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionRequest, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Constants
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmissionAccepted
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisErrorResponsePresentation, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
@@ -525,8 +524,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         .willReturn(
           aResponse()
             .withStatus(ACCEPTED)
-            .withBody(Json.toJson(NonRepudiationSubmissionAccepted("submissionId")).toString())
-        )
+            .withBody(Json.obj("nrSubmissionId" -> "submissionId").toString())        )
     )
   }
 
