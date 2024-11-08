@@ -24,7 +24,6 @@ import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
-import play.api.http.Status.INTERNAL_SERVER_ERROR
 import play.api.mvc.Results.InternalServerError
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import play.api.test.{FakeHeaders, FakeRequest}
@@ -32,7 +31,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NonRepudiationSubmissionAccepted, NonRepudiationSubmissionFailed}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnSubmissionRepository
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -71,7 +69,7 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
     when(connector.submitMessage(any, any, any, any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "IE815", "correlationId"))))
     when(nrsService.submitNrs(any, any, any)(any))
-      .thenReturn(Future.successful(NonRepudiationSubmissionAccepted("submissionId")))
+      .thenReturn(Future.successful(Done))
     when(ernSubmissionRepository.save(any)).thenReturn(Future.successful(Done))
   }
 
@@ -121,7 +119,7 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
     "return submit message result" when {
       "NRS fails" in {
         when(nrsService.submitNrs(any, any, any)(any))
-          .thenReturn(Future.successful(NonRepudiationSubmissionFailed(INTERNAL_SERVER_ERROR, "NRS failure")))
+          .thenReturn(Future.successful(Done))
 
         val result = await(sut.submit(request, ern))
 

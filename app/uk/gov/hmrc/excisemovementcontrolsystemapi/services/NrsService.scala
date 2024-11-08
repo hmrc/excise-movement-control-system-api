@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
+import org.apache.pekko.Done
 import play.api.Logging
-import play.api.http.Status.INTERNAL_SERVER_ERROR
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals
@@ -47,7 +47,7 @@ class NrsService @Inject() (
     request: ParsedXmlRequest[_],
     authorisedErn: String,
     correlationId: String
-  )(implicit headerCarrier: HeaderCarrier): Future[NonRepudiationSubmission] = {
+  )(implicit headerCarrier: HeaderCarrier): Future[Done] = {
 
     val payload        = request.body.toString
     val userHeaderData = request.headersAsMap
@@ -56,28 +56,28 @@ class NrsService @Inject() (
     val notableEventId = nrsEventIdMapper.mapMessageToEventId(message)
 
     (for {
-      identityData         <- retrieveIdentityData()
-      userAuthToken         = retrieveUserAuthToken(headerCarrier)
-      metaData              = NrsMetadata.create(
-                                payload,
-                                emcsUtils,
-                                notableEventId,
-                                identityData,
-                                dateTimeService.timestamp().toString,
-                                userAuthToken,
-                                userHeaderData,
-                                exciseNumber
-                              )
-      encodedPayload        = emcsUtils.encode(payload)
-      nrsPayload            = NrsPayload(encodedPayload, metaData)
-      retrievedNrsResponse <- nrsConnector.sendToNrs(nrsPayload, correlationId)
-    } yield retrievedNrsResponse)
+      identityData  <- retrieveIdentityData()
+      userAuthToken  = retrieveUserAuthToken(headerCarrier)
+      metaData       = NrsMetadata.create(
+                         payload,
+                         emcsUtils,
+                         notableEventId,
+                         identityData,
+                         dateTimeService.timestamp().toString,
+                         userAuthToken,
+                         userHeaderData,
+                         exciseNumber
+                       )
+      encodedPayload = emcsUtils.encode(payload)
+      nrsPayload     = NrsPayload(encodedPayload, metaData)
+      _             <- nrsConnector.sendToNrs(nrsPayload, correlationId)
+    } yield Done)
       .recover { case NonFatal(e) =>
         logger.warn(
           s"[NrsService] - Error when submitting to Non repudiation system (NRS) with message: ${e.getMessage}",
           e
         )
-        NonRepudiationSubmissionFailed(INTERNAL_SERVER_ERROR, e.getMessage)
+        Done
       }
   }
 

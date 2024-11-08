@@ -16,13 +16,13 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
+import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, verify, when}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.INTERNAL_SERVER_ERROR
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -31,7 +31,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService.NonRepudiationIdentityRetrievals
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, NrsEventIdMapper}
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier}
@@ -68,13 +67,13 @@ class NrsServiceSpec extends PlaySpec with ScalaFutures with NrsTestData with Ei
     when(authConnector.authorise[NonRepudiationIdentityRetrievals](any, any)(any, any)) thenReturn
       Future.successful(testAuthRetrievals)
     when(nrsConnector.sendToNrs(any, any)(any))
-      .thenReturn(Future.successful(NonRepudiationSubmissionAccepted("submissionId")))
+      .thenReturn(Future.successful(Done))
     when(message.consignorId).thenReturn("ern")
   }
 
   "submitNrs" should {
-    "return NonRepudiationSubmissionAccepted" in {
-      submitNrs(hc) mustBe NonRepudiationSubmissionAccepted("submissionId")
+    "return Done" in {
+      submitNrs(hc) mustBe Done
     }
 
     "submit nrs payload" in {
@@ -86,18 +85,18 @@ class NrsServiceSpec extends PlaySpec with ScalaFutures with NrsTestData with Ei
       verify(nrsConnector).sendToNrs(eqTo(nrsPayload), eqTo("correlationId"))(eqTo(hc))
     }
 
-    "return an error" when {
+    "return Done when there's an error" when {
       "NRS submit request fails" in {
         when(nrsConnector.sendToNrs(any, any)(any))
-          .thenReturn(Future.successful(NonRepudiationSubmissionFailed(INTERNAL_SERVER_ERROR, "any reason")))
+          .thenReturn(Future.successful(Done))
 
-        submitNrs(hc) mustBe NonRepudiationSubmissionFailed(INTERNAL_SERVER_ERROR, "any reason")
+        submitNrs(hc) mustBe Done
       }
 
       "cannot retrieve user AuthToken" in {
         val result = submitNrs(HeaderCarrier())
 
-        result mustBe NonRepudiationSubmissionFailed(INTERNAL_SERVER_ERROR, "No auth token available for NRS")
+        result mustBe Done
       }
     }
   }
@@ -115,7 +114,7 @@ class NrsServiceSpec extends PlaySpec with ScalaFutures with NrsTestData with Ei
       searchKeys = Map("ern" -> "ern")
     )
 
-  private def submitNrs(hc: HeaderCarrier): NonRepudiationSubmission = {
+  private def submitNrs(hc: HeaderCarrier): Done = {
 
     val request = createRequest(message)
 
