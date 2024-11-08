@@ -20,8 +20,8 @@ import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NrsPayload
 
 case class NrsSubmissionWorkItem(
-                                 nrsPayload: NrsPayload
-                               )
+  payload: NrsPayload
+)
 
 object NrsSubmissionWorkItem {
   implicit val format: OFormat[NrsSubmissionWorkItem] = Json.format[NrsSubmissionWorkItem]

@@ -30,20 +30,21 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 
 @Singleton
-class NRSWorkItemRepository @Inject()(
-                                                  appConfig: AppConfig,
-                                                  mongoComponent: MongoComponent
-                                                  //configuration: Configuration
-                                                )(implicit ec: ExecutionContext)
-  extends WorkItemRepository[NrsSubmissionWorkItem](
-    collectionName = "nrsSubmissionWorkItems",
-    mongoComponent = mongoComponent,
-    itemFormat = NrsSubmissionWorkItem.format,
-    workItemFields = WorkItemFields.default,
-    extraIndexes = mongoIndexes(appConfig.nrsWorkItemRepoTTL)
-  ) {
+class NRSWorkItemRepository @Inject() (
+  appConfig: AppConfig,
+  mongoComponent: MongoComponent
+  //configuration: Configuration
+)(implicit ec: ExecutionContext)
+    extends WorkItemRepository[NrsSubmissionWorkItem](
+      collectionName = "nrsSubmissionWorkItems",
+      mongoComponent = mongoComponent,
+      itemFormat = NrsSubmissionWorkItem.format,
+      workItemFields = WorkItemFields.default,
+      extraIndexes = mongoIndexes(appConfig.nrsWorkItemRepoTTL)
+    ) {
 
-  override def inProgressRetryAfter: JavaDuration = JavaDuration.ofMinutes(10)//configuration.get[JavaDuration]("miscoded-movements.queue.retryAfter")
+  override def inProgressRetryAfter: JavaDuration =
+    JavaDuration.ofMinutes(10) //configuration.get[JavaDuration]("miscoded-movements.queue.retryAfter")
 
   override def now(): Instant = Instant.now()
 }
