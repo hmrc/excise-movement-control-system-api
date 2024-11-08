@@ -21,6 +21,7 @@ import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.{DAYS, Duration, FiniteDuration}
+import java.time.{Duration => JavaDuration}
 
 @Singleton
 class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig) {
@@ -54,6 +55,11 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   lazy val nrsWorkItemRepoTTL: Duration = config
     .getOptional[String]("mongodb.nrsSubmission.TTL")
     .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
+
+  lazy val nrsRetryAfter: JavaDuration = config
+    .getOptional[Long]("microservice.services.nrs.retryAfterMinutes")
+    .map(JavaDuration.ofMinutes)
+    .getOrElse(JavaDuration.ofMinutes(10))
 
   lazy val pushNotificationsEnabled: Boolean = servicesConfig.getBoolean("featureFlags.pushNotificationsEnabled")
 

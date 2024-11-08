@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
+import play.api.Configuration
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NRSWorkItemRepository.mongoIndexes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmissionWorkItem
@@ -33,7 +34,6 @@ import scala.concurrent.duration.Duration
 class NRSWorkItemRepository @Inject() (
   appConfig: AppConfig,
   mongoComponent: MongoComponent
-  //configuration: Configuration
 )(implicit ec: ExecutionContext)
     extends WorkItemRepository[NrsSubmissionWorkItem](
       collectionName = "nrsSubmissionWorkItems",
@@ -44,7 +44,7 @@ class NRSWorkItemRepository @Inject() (
     ) {
 
   override def inProgressRetryAfter: JavaDuration =
-    JavaDuration.ofMinutes(10) //configuration.get[JavaDuration]("miscoded-movements.queue.retryAfter")
+    appConfig.nrsRetryAfter
 
   override def now(): Instant = Instant.now()
 }

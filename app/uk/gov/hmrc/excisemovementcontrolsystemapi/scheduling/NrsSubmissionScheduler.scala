@@ -31,12 +31,12 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
 class NrsSubmissionScheduler @Inject() (
-                                         nrsWorkItemRepository: NRSWorkItemRepository,
-                                         nrsConnector: NrsConnector,
-                                         configuration: Configuration,
-                                         correlationIdService: CorrelationIdService
-                                       ) extends ScheduledJob
-  with Logging {
+  nrsWorkItemRepository: NRSWorkItemRepository,
+  nrsConnector: NrsConnector,
+  configuration: Configuration,
+  correlationIdService: CorrelationIdService
+) extends ScheduledJob
+    with Logging {
 
   override def execute(implicit ec: ExecutionContext): Future[ScheduledJob.Result] = {
     val now                     = Instant.now
