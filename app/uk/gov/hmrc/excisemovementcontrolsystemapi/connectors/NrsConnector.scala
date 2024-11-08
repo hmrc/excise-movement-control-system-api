@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import com.codahale.metrics.MetricRegistry
+import org.apache.pekko.Done
 import play.api.Logging
 import play.api.http.Status.ACCEPTED
 import play.api.libs.concurrent.Futures
@@ -44,7 +45,7 @@ class NrsConnector @Inject() (
 
   def sendToNrs(payload: NrsPayload, correlationId: String)(implicit
     hc: HeaderCarrier
-  ): Future[NonRepudiationSubmission] = {
+  ): Future[Done] = {
 
     val timer      = metrics.timer("emcs.nrs.submission.timer").time()
     val jsonObject = payload.toJsObject
@@ -53,18 +54,20 @@ class NrsConnector @Inject() (
       send(jsonObject, correlationId)
     }
       .map { response: HttpResponse =>
+        // next step will be to change this to use the workItem repo, and there should be a service that will handle the
+        // outcome from this connector. Connector will just do the call to NRS and nothing else.
         response.status match {
           case ACCEPTED =>
-            val submissionId = response.json.as[NonRepudiationSubmissionAccepted]
+            val submissionId = response.json \ "nrSubmissionId"
             logger.info(
-              s"[NrsConnector] - Non repudiation submission accepted with nrSubmissionId: ${submissionId.nrSubmissionId}"
+              s"Non repudiation submission accepted with nrSubmissionId: $submissionId"
             )
-            submissionId
+            Done
           case _        =>
             logger.warn(
-              s"[NrsConnector] - Error when submitting to Non repudiation system (NRS) with status: ${response.status}, body: ${response.body}, correlationId: $correlationId"
+              s"Error when submitting to Non repudiation system (NRS) with status: ${response.status}, body: ${response.body}, correlationId: $correlationId"
             )
-            NonRepudiationSubmissionFailed(response.status, response.body)
+            Done
         }
       }
       .andThen { case _ => timer.stop() }

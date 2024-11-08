@@ -22,13 +22,11 @@ import play.api.mvc.Result
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NonRepudiationSubmission
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnSubmissionRepository
 import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Success
 
 class SubmissionMessageServiceImpl @Inject() (
   connector: EISSubmissionConnector,
@@ -51,19 +49,9 @@ class SubmissionMessageServiceImpl @Inject() (
         connector.submitMessage(request.ieMessage, request.body.toString, authorisedErn, correlationId)
       isSuccess              = submitMessageResponse.isRight
       _                      = if (isSuccess) ernSubmissionRepository.save(authorisedErn)
-      _                      = if (isSuccess) sendToNrs(request, authorisedErn, correlationId)
+      _                      = if (isSuccess) nrsService.submitNrs(request, authorisedErn, correlationId)
     } yield submitMessageResponse
   }
-
-  private def sendToNrs(
-    request: ParsedXmlRequest[_],
-    authorisedErn: String,
-    correlationId: String
-  )(implicit hc: HeaderCarrier): Future[Option[NonRepudiationSubmission]] =
-    nrsService.submitNrs(request, authorisedErn, correlationId).transformWith {
-      case Success(value) => Future.successful(Some(value))
-      case _              => Future.successful(None)
-    }
 }
 
 @ImplementedBy(classOf[SubmissionMessageServiceImpl])

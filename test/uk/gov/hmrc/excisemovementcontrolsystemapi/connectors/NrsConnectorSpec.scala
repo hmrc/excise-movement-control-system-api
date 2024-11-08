@@ -25,7 +25,6 @@ import org.mockito.MockitoSugar.{reset, times, verify, when}
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.BAD_REQUEST
 import play.api.libs.concurrent.Futures
 import play.api.libs.json.Json
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
@@ -96,13 +95,13 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
   }
 
   "submit" should {
-    "return success" in {
+    "return Done" in {
       val result = await(connector.sendToNrs(nrsPayLoad, "correlationId"))
 
-      result mustBe NonRepudiationSubmissionAccepted("testNesSubmissionId")
+      result mustBe Done
     }
 
-    "return an error" in {
+    "return Done when there's an error" in {
 
       when(httpClient.post(any)(any)).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
@@ -112,7 +111,7 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
 
       val result = await(connector.sendToNrs(nrsPayLoad, "correlationId"))
 
-      result mustBe NonRepudiationSubmissionFailed(400, "bad request")
+      result mustBe Done
     }
 
     "retry 3 time" when {
@@ -125,7 +124,7 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
 
         val result = await(connector.sendToNrs(nrsPayLoad, "correlationId"))
 
-        result mustBe NonRepudiationSubmissionFailed(BAD_REQUEST, "bad request")
+        result mustBe Done
         verifyHttpPostCAll(3)
       }
 
@@ -154,7 +153,7 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
 
       val result = await(connector.sendToNrs(nrsPayLoad, "correlationId"))
 
-      result mustBe NonRepudiationSubmissionAccepted("testNesSubmissionId")
+      result mustBe Done
       verifyHttpPostCAll(2)
     }
 

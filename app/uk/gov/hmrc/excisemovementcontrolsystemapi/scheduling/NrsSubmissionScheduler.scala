@@ -18,12 +18,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
 import cats.implicits.toFunctorOps
 import play.api.{Configuration, Logging}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NonRepudiationSubmissionAccepted, NonRepudiationSubmissionFailed}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NRSWorkItemRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.CorrelationIdService
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus
 
 import java.time.Instant
 import javax.inject.Inject
@@ -32,29 +28,19 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class NrsSubmissionScheduler @Inject() (
   nrsWorkItemRepository: NRSWorkItemRepository,
-  nrsConnector: NrsConnector,
-  configuration: Configuration,
-  correlationIdService: CorrelationIdService
+  configuration: Configuration
 ) extends ScheduledJob
     with Logging {
 
   override def execute(implicit ec: ExecutionContext): Future[ScheduledJob.Result] = {
     val now                     = Instant.now
-    val correlationId           = correlationIdService.generateCorrelationId()
     val result: Future[Boolean] = nrsWorkItemRepository
       .pullOutstanding(now, now)
       .flatMap {
         case None           => Future.successful(true)
-        case Some(workItem) =>
-          nrsConnector
-            .sendToNrs(workItem.item.payload, correlationId)(HeaderCarrier())
-            .flatMap {
-              case NonRepudiationSubmissionAccepted(_)       =>
-                nrsWorkItemRepository.complete(workItem.id, ProcessingStatus.Succeeded)
-              case NonRepudiationSubmissionFailed(_, reason) =>
-                logger.warn(s"NRS submission work item ${workItem.id} failed. Reason: $reason")
-                nrsWorkItemRepository.markAs(workItem.id, ProcessingStatus.Failed)
-            }
+        case Some(workItem) => ???
+        // here the scheduler will call a service which will orchestrate the workitem stuff and call
+        // the connector if appropriate
       }
     result.as(ScheduledJob.Result.Completed)
   }
