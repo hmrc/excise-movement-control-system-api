@@ -74,7 +74,10 @@ class GetMovementsController @Inject() (
           movement <- movementService.getMovementByErn(request.erns.toSeq, filter)
         } yield Ok(Json.toJson(movement.map(createResponseFrom)))
       }.recover { case NonFatal(ex) =>
-        logger.warn(s"Error getting movements for erns ${request.erns} with filters ern: $ern, lrn: $lrn, arc: $arc, updatedSince: $updatedSince, traderType: $traderType", ex)
+        logger.warn(
+          s"Error getting movements for erns ${request.erns} with filters ern: $ern, lrn: $lrn, arc: $arc, updatedSince: $updatedSince, traderType: $traderType",
+          ex
+        )
         InternalServerError(
           Json.toJson(
             ErrorResponse(

@@ -25,7 +25,7 @@ import scala.concurrent.duration.{DAYS, Duration, FiniteDuration}
 @Singleton
 class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig) {
 
-  val appName: String = config.get[String]("appName")
+  lazy val appName: String = config.get[String]("appName")
 
   lazy val eisHost: String                   = servicesConfig.baseUrl("eis")
   lazy val nrsHost: String                   = servicesConfig.baseUrl("nrs")
@@ -51,10 +51,13 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
     .getOptional[String]("mongodb.ernRetrieval.TTL")
     .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
 
-  val pushNotificationsEnabled: Boolean =
-    servicesConfig.getBoolean("featureFlags.pushNotificationsEnabled")
+  lazy val nrsWorkItemRepoTTL: Duration = config
+    .getOptional[String]("mongodb.nrsSubmission.TTL")
+    .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
 
-  val subscribeErnsEnabled: Boolean =
+  lazy val pushNotificationsEnabled: Boolean = servicesConfig.getBoolean("featureFlags.pushNotificationsEnabled")
+
+  lazy val subscribeErnsEnabled: Boolean =
     config.getOptional[Boolean]("featureFlags.subscribeErnsEnabled").getOrElse(false)
 
   val etdsPreValidateTraderEnabled: Boolean =
