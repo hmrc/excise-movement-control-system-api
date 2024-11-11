@@ -44,7 +44,6 @@ class DraftExciseMovementController @Inject() (
   xmlParser: ParseXmlAction,
   movementMessageService: MovementService,
   submissionMessageService: SubmissionMessageService,
-//  nrsService: NrsService,
   notificationService: PushNotificationService,
   messageValidator: MessageValidation,
   dateTimeService: DateTimeService,
@@ -60,7 +59,6 @@ class DraftExciseMovementController @Inject() (
   def submit: Action[NodeSeq] =
     (authAction andThen xmlParser).async(parse.xml) { implicit request =>
       val result = for {
-//        _             <- nrsService.submitNrs(request, ???,???)
         ie815Message  <- getIe815Message(request.ieMessage)
         authorisedErn <- validateMessage(ie815Message, request.erns)
         clientId      <- retrieveClientIdFromHeader(request)
