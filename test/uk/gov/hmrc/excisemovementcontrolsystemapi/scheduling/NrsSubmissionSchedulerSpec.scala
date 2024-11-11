@@ -16,7 +16,12 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
+import org.apache.pekko.Done
+import org.bson.types.ObjectId
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchersSugar.eqTo
 import org.mockito.Mockito
+import org.mockito.MockitoSugar.{times, verify, when}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.freespec.AnyFreeSpec
@@ -31,8 +36,15 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NRSWorkItemRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmissionWorkItem
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{Succeeded, ToDo}
+import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
-import java.time.{Instant, ZonedDateTime}
+import java.time.{Instant, LocalDateTime, ZoneOffset, ZonedDateTime}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.FiniteDuration
 
 class NrsSubmissionSchedulerSpec
@@ -44,28 +56,19 @@ class NrsSubmissionSchedulerSpec
     with BeforeAndAfterEach
     with NrsTestData {
 
+  implicit val ec: ExecutionContext                              = ExecutionContext.global
   val mockNrsSubmissionWorkItemRepository: NRSWorkItemRepository = mock[NRSWorkItemRepository]
   val mockNrsConnector: NrsConnector                             = mock[NrsConnector]
+  val mockNrsService: NrsService                                 = mock[NrsService]
+  val mockDateTimeService: DateTimeService                       = mock[DateTimeService]
   val appConfig: AppConfig                                       = app.injector.instanceOf[AppConfig]
-  private lazy val nrsSubmissionScheduler                        = app.injector.instanceOf[NrsSubmissionScheduler]
-  private val now                                                = Instant.now
-  private val timeStamp                                          = ZonedDateTime.now()
-  private val nrsMetadata                                        = NrsMetadata(
-    businessId = "emcs",
-    notableEvent = "excise-movement-control-system",
-    payloadContentType = "application/json",
-    payloadSha256Checksum = sha256Hash("payload for NRS"),
-    userSubmissionTimestamp = timeStamp.toString,
-    identityData = testNrsIdentityData,
-    userAuthToken = testAuthToken,
-    headerData = Map(),
-    searchKeys = Map("ern" -> "123")
-  )
-  private val nrsPayLoad                                         = NrsPayload("encodepayload", nrsMetadata)
-  override def fakeApplication(): Application                    = GuiceApplicationBuilder()
+
+  override def fakeApplication(): Application = GuiceApplicationBuilder()
     .overrides(
       bind[NRSWorkItemRepository].toInstance(mockNrsSubmissionWorkItemRepository),
-      bind[NrsConnector].toInstance(mockNrsConnector)
+      bind[NrsConnector].toInstance(mockNrsConnector),
+      bind[NrsService].toInstance(mockNrsService),
+      bind[DateTimeService].toInstance(mockDateTimeService)
     )
     .configure(
       "scheduler.nrsSubmissionJob.initialDelay" -> "1 minutes",
@@ -78,9 +81,27 @@ class NrsSubmissionSchedulerSpec
     super.beforeEach()
     Mockito.reset[Any](
       mockNrsSubmissionWorkItemRepository,
-      mockNrsConnector
+      mockNrsConnector,
+      mockNrsService
     )
   }
+
+  private val timestamp = LocalDateTime.of(2024, 3, 2, 12, 30, 45, 100).toInstant(ZoneOffset.UTC)
+  when(mockDateTimeService.timestamp()).thenReturn(timestamp)
+
+  private lazy val nrsSubmissionScheduler = app.injector.instanceOf[NrsSubmissionScheduler]
+  private val nrsMetadata                 = NrsMetadata(
+    businessId = "emcs",
+    notableEvent = "excise-movement-control-system",
+    payloadContentType = "application/json",
+    payloadSha256Checksum = sha256Hash("payload for NRS"),
+    userSubmissionTimestamp = timestamp.toString,
+    identityData = testNrsIdentityData,
+    userAuthToken = testAuthToken,
+    headerData = Map(),
+    searchKeys = Map("ern" -> "123")
+  )
+  private val nrsPayLoad                  = NrsPayload("encodepayload", nrsMetadata)
 
   "nrs submission scheduler must" - {
     "have the correct name" in {
@@ -95,6 +116,39 @@ class NrsSubmissionSchedulerSpec
     "use interval from configuration" in {
       nrsSubmissionScheduler.interval mustBe FiniteDuration(1, "minute")
     }
-  }
 
+    "submit to NRS when there is an outstanding nrs workitem to process" in {
+
+      val workItem = WorkItem(
+        id = new ObjectId(),
+        receivedAt = timestamp,
+        updatedAt = timestamp,
+        availableAt = timestamp,
+        status = ToDo,
+        failureCount = 0,
+        item = NrsSubmissionWorkItem(nrsPayLoad)
+      )
+
+      when(mockNrsSubmissionWorkItemRepository.pullOutstanding(any(), any()))
+        .thenReturn(Future.successful(Some(workItem)))
+      when(mockNrsService.submitNrs(any())(any()))
+        .thenReturn(Future.successful(Done))
+
+      val result = nrsSubmissionScheduler.execute.futureValue
+
+      result mustBe ScheduledJob.Result.Completed
+      verify(mockNrsService).submitNrs(eqTo(workItem))(any())
+    }
+
+    "not call NRS when there are no outstanding nrs workitems to process" in {
+
+      when(mockNrsSubmissionWorkItemRepository.pullOutstanding(any(), any()))
+        .thenReturn(Future.successful(None))
+
+      val result = nrsSubmissionScheduler.execute.futureValue
+
+      result mustBe ScheduledJob.Result.Completed
+      verify(mockNrsService, times(0)).submitNrs(any())(any())
+    }
+  }
 }

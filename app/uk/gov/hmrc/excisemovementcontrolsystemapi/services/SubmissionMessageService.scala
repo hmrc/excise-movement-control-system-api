@@ -49,7 +49,7 @@ class SubmissionMessageServiceImpl @Inject() (
         connector.submitMessage(request.ieMessage, request.body.toString, authorisedErn, correlationId)
       isSuccess              = submitMessageResponse.isRight
       _                      = if (isSuccess) ernSubmissionRepository.save(authorisedErn)
-      _                      = if (isSuccess) nrsService.submitNrs(request, authorisedErn, correlationId)
+      _                      = if (isSuccess) nrsService.submitNrsOld(request, authorisedErn, correlationId)
     } yield submitMessageResponse
   }
 }

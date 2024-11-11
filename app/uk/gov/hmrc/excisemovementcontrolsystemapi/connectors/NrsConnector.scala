@@ -45,6 +45,11 @@ class NrsConnector @Inject() (
 
   def sendToNrs(payload: NrsPayload, correlationId: String)(implicit
     hc: HeaderCarrier
+  ): Future[Done] =
+    ???
+
+  def sendToNrsOld(payload: NrsPayload, correlationId: String)(implicit
+    hc: HeaderCarrier
   ): Future[Done] = {
 
     val timer      = metrics.timer("emcs.nrs.submission.timer").time()

@@ -19,6 +19,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 import cats.implicits.toFunctorOps
 import play.api.{Configuration, Logging}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NRSWorkItemRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.Instant
@@ -28,19 +30,20 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class NrsSubmissionScheduler @Inject() (
   nrsWorkItemRepository: NRSWorkItemRepository,
-  configuration: Configuration
+  nrsService: NrsService,
+  configuration: Configuration,
+  dateTimeService: DateTimeService
 ) extends ScheduledJob
     with Logging {
 
   override def execute(implicit ec: ExecutionContext): Future[ScheduledJob.Result] = {
-    val now                     = Instant.now
+    val now                     = dateTimeService.timestamp()
     val result: Future[Boolean] = nrsWorkItemRepository
       .pullOutstanding(now, now)
       .flatMap {
         case None           => Future.successful(true)
-        case Some(workItem) => ???
-        // here the scheduler will call a service which will orchestrate the workitem stuff and call
-        // the connector if appropriate
+        case Some(workItem) =>
+          nrsService.submitNrs(workItem).map(_ => true)
       }
     result.as(ScheduledJob.Result.Completed)
   }
