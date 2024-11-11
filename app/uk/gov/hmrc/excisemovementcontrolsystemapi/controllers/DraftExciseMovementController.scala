@@ -60,7 +60,7 @@ class DraftExciseMovementController @Inject() (
   def submit: Action[NodeSeq] =
     (authAction andThen xmlParser).async(parse.xml) { implicit request =>
       val result = for {
-        _             <- nrsService.submitNrs(request, ???,???)
+//        _             <- nrsService.submitNrs(request, ???,???)
         ie815Message  <- getIe815Message(request.ieMessage)
         authorisedErn <- validateMessage(ie815Message, request.erns)
         clientId      <- retrieveClientIdFromHeader(request)
