@@ -21,7 +21,7 @@ import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchersSugar.eqTo
 import org.mockito.Mockito
-import org.mockito.MockitoSugar.{verify, when}
+import org.mockito.MockitoSugar.{times, verify, when}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.freespec.AnyFreeSpec
@@ -77,7 +77,8 @@ class NrsSubmissionSchedulerSpec
   override def fakeApplication(): Application                    = GuiceApplicationBuilder()
     .overrides(
       bind[NRSWorkItemRepository].toInstance(mockNrsSubmissionWorkItemRepository),
-      bind[NrsConnector].toInstance(mockNrsConnector)
+      bind[NrsConnector].toInstance(mockNrsConnector),
+      bind[NrsService].toInstance(mockNrsService)
     )
     .configure(
       "scheduler.nrsSubmissionJob.initialDelay" -> "1 minutes",
@@ -126,67 +127,21 @@ class NrsSubmissionSchedulerSpec
       when(mockNrsService.submitNrs(any()))
         .thenReturn(Future.successful(Done))
 
-      nrsSubmissionScheduler.execute.futureValue
+      val result = nrsSubmissionScheduler.execute.futureValue
+
+      result mustBe ScheduledJob.Result.Completed
       verify(mockNrsService).submitNrs(workItem)
-//      result mustBe ScheduledJob.Result.Completed
-
-
     }
 
-  }
-//  ".execute" - {
-//    "must mark the work item as successful" - {
-//      "when a call to NRS is successful" in {
-//
-//        val workItem = WorkItem(
-//          id = new ObjectId(),
-//          receivedAt = now,
-//          updatedAt = now,
-//          availableAt = now,
-//          status = ToDo,
-//          failureCount = 0,
-//          item = NrsSubmissionWorkItem(nrsPayLoad)
-//        )
-//
-//        when(mockNrsSubmissionWorkItemRepository.pullOutstanding(any(), any()))
-//          .thenReturn(Future.successful(Some(workItem)))
-//        when(mockNrsConnector.sendToNrs(any(), any())(any()))
-//          .thenReturn(Future.successful(NonRepudiationSubmissionAccepted("nrs-submission-id")))
-//        when(mockNrsSubmissionWorkItemRepository.complete(any(), any()))
-//          .thenReturn(Future.successful(true))
-//
-//        val result = nrsSubmissionScheduler.execute.futureValue
-//
-//        result mustBe ScheduledJob.Result.Completed
-//        verify(mockNrsSubmissionWorkItemRepository).complete(eqTo(workItem.id), eqTo(ProcessingStatus.Succeeded))
-//
-//      }
-//    }
-//    "must mark the work item as failed" - {
-//      "when a call to NRS is not successful" in {
-//        val workItem = WorkItem(
-//          id = new ObjectId(),
-//          receivedAt = now,
-//          updatedAt = now,
-//          availableAt = now,
-//          status = ToDo,
-//          failureCount = 0,
-//          item = NrsSubmissionWorkItem(nrsPayLoad)
-//        )
-//
-//        when(mockNrsSubmissionWorkItemRepository.pullOutstanding(any(), any()))
-//          .thenReturn(Future.successful(Some(workItem)))
-//        when(mockNrsConnector.sendToNrs(any(), any())(any()))
-//          .thenReturn(Future.successful(NonRepudiationSubmissionFailed(SERVICE_UNAVAILABLE, "Service unavailable")))
-//        when(mockNrsSubmissionWorkItemRepository.markAs(any(), any(), any()))
-//          .thenReturn(Future.successful(true))
-//
-//        val result = nrsSubmissionScheduler.execute.futureValue
-//
-//        result mustBe ScheduledJob.Result.Completed
-//        verify(mockNrsSubmissionWorkItemRepository).markAs(eqTo(workItem.id), eqTo(ProcessingStatus.Failed), any)
-//      }
-//    }
-//  }
+    "not call NRS when there are no outstanding nrs workitems to process" in {
 
+      when(mockNrsSubmissionWorkItemRepository.pullOutstanding(any(), any()))
+        .thenReturn(Future.successful(None))
+
+      val result = nrsSubmissionScheduler.execute.futureValue
+
+      result mustBe ScheduledJob.Result.Completed
+      verify(mockNrsService, times(0)).submitNrs(any())
+    }
+  }
 }
