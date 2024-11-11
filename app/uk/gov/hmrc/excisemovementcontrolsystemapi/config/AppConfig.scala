@@ -26,7 +26,7 @@ import java.time.{Duration => JavaDuration}
 @Singleton
 class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig) {
 
-  lazy val appName: String = config.get[String]("appName")
+  val appName: String = config.get[String]("appName")
 
   lazy val eisHost: String                   = servicesConfig.baseUrl("eis")
   lazy val nrsHost: String                   = servicesConfig.baseUrl("nrs")
