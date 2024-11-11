@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
+import cats.implicits.toFunctorOps
 import org.apache.pekko.Done
 import play.api.Logging
 import uk.gov.hmrc.auth.core._
@@ -29,7 +30,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmission
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService.nonRepudiationIdentityRetrievals
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, NrsEventIdMapper}
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier, InternalServerException}
-import uk.gov.hmrc.mongo.workitem.WorkItem
+import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -42,16 +43,17 @@ class NrsService @Inject() (
   nrsWorkItemRepository: NRSWorkItemRepository,
   dateTimeService: DateTimeService,
   emcsUtils: EmcsUtils,
-  nrsEventIdMapper: NrsEventIdMapper
+  nrsEventIdMapper: NrsEventIdMapper,
+  correlationIdService: CorrelationIdService
 )(implicit ec: ExecutionContext)
     extends AuthorisedFunctions
     with Logging {
 
   def makeNrsWorkItemAndAddToRepository(
-                                         request: ParsedXmlRequest[_],
-                                         authorisedErn: String,
-                                         correlationId: String
-                                       )(implicit headerCarrier: HeaderCarrier): Future[Done] = {
+    request: ParsedXmlRequest[_],
+    authorisedErn: String,
+    correlationId: String
+  )(implicit headerCarrier: HeaderCarrier): Future[Done] = {
 
     val payload        = request.body.toString
     val userHeaderData = request.headersAsMap
@@ -63,21 +65,26 @@ class NrsService @Inject() (
       identityData  <- retrieveIdentityData()
       userAuthToken  = retrieveUserAuthToken(headerCarrier)
       metaData       = NrsMetadata.create(
-        payload,
-        emcsUtils,
-        notableEventId,
-        identityData,
-        dateTimeService.timestamp().toString,
-        userAuthToken,
-        userHeaderData,
-        exciseNumber
-      )
+                         payload,
+                         emcsUtils,
+                         notableEventId,
+                         identityData,
+                         dateTimeService.timestamp().toString,
+                         userAuthToken,
+                         userHeaderData,
+                         exciseNumber
+                       )
       encodedPayload = emcsUtils.encode(payload)
-      _ <- nrsWorkItemRepository.pushNew(NrsSubmissionWorkItem(NrsPayload(encodedPayload, metaData)))
+      _             <- nrsWorkItemRepository.pushNew(NrsSubmissionWorkItem(NrsPayload(encodedPayload, metaData)))
     } yield Done
   } //TODO where does the correlation id go in?
 
-  def submitNrs(workItem: WorkItem[NrsSubmissionWorkItem]): Future[Done] = Future.successful(Done)
+  def submitNrs(workItem: WorkItem[NrsSubmissionWorkItem])(implicit hc: HeaderCarrier): Future[Done] =
+    //needs to call connector, and handle marking the workitems. IN PROGRESS
+    for {
+      _ <- nrsConnector.sendToNrsOld(workItem.item.payload, correlationIdService.generateCorrelationId())
+      _ <- nrsWorkItemRepository.complete(workItem.id, ProcessingStatus.Succeeded)
+    } yield Done
 
   def submitNrsOld(
     request: ParsedXmlRequest[_],
@@ -106,7 +113,7 @@ class NrsService @Inject() (
                        )
       encodedPayload = emcsUtils.encode(payload)
       nrsPayload     = NrsPayload(encodedPayload, metaData)
-      _             <- nrsConnector.sendToNrs(nrsPayload, correlationId)
+      _             <- nrsConnector.sendToNrsOld(nrsPayload, correlationId)
     } yield Done)
       .recover { case NonFatal(e) =>
         logger.warn(

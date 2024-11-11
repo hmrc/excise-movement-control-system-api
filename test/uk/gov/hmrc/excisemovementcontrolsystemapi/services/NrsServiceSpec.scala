@@ -20,7 +20,7 @@ import org.apache.pekko.Done
 import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchersSugar.eqTo
-import org.mockito.MockitoSugar.{reset, verify, when}
+import org.mockito.MockitoSugar.{reset, times, verify, when}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
@@ -39,7 +39,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService.NonRepudia
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, NrsEventIdMapper}
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier}
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
-import uk.gov.hmrc.mongo.workitem.WorkItem
+import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
 import java.nio.charset.StandardCharsets
 import java.time.Instant
@@ -52,6 +52,7 @@ class NrsServiceSpec extends PlaySpec with ScalaFutures with NrsTestData with Ei
   implicit val hc: HeaderCarrier           = HeaderCarrier(authorization = Some(Authorization(testAuthToken)))
   private val nrsConnector                 = mock[NrsConnector]
   private val nrsWorkItemRepository        = mock[NRSWorkItemRepository]
+  private val correlationIdService         = mock[CorrelationIdService]
   private val dateTimeService              = mock[DateTimeService]
   private val authConnector: AuthConnector = mock[AuthConnector]
   private val timeStamp                    = Instant.now()
@@ -62,50 +63,88 @@ class NrsServiceSpec extends PlaySpec with ScalaFutures with NrsTestData with Ei
     nrsWorkItemRepository,
     dateTimeService,
     new EmcsUtils,
-    new NrsEventIdMapper
+    new NrsEventIdMapper,
+    correlationIdService
   )
 
-  private val message = mock[IE815Message]
+  private val message           = mock[IE815Message]
+  private val testCorrelationId = "testCorrelationId"
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(authConnector, nrsConnector, dateTimeService)
+    reset(authConnector, nrsConnector, dateTimeService, correlationIdService)
 
     when(dateTimeService.timestamp()).thenReturn(timeStamp)
+    when(correlationIdService.generateCorrelationId()).thenReturn(testCorrelationId)
     when(authConnector.authorise[NonRepudiationIdentityRetrievals](any, any)(any, any)) thenReturn
       Future.successful(testAuthRetrievals)
-    when(nrsConnector.sendToNrs(any, any)(any))
+    when(nrsConnector.sendToNrsOld(any, any)(any))
       .thenReturn(Future.successful(Done))
     when(message.consignorId).thenReturn("ern")
   }
 
-  private val testRequest = createRequest(message)
+  private val testRequest     = createRequest(message)
+  private val testNrsMetadata = NrsMetadata(
+    businessId = "emcs",
+    notableEvent = "excise-movement-control-system",
+    payloadContentType = "application/json",
+    payloadSha256Checksum = sha256Hash("payload for NRS"),
+    userSubmissionTimestamp = timeStamp.toString,
+    identityData = testNrsIdentityData,
+    userAuthToken = testAuthToken,
+    headerData = Map(),
+    searchKeys = Map("ern" -> "123")
+  )
+
+  private val encodedMessage  = Base64.getEncoder.encodeToString("<IE815>test</IE815>".getBytes(StandardCharsets.UTF_8))
+  private val testNrsPayload  = NrsPayload(encodedMessage, testNrsMetadata)
+  private val testNrsWorkItem = NrsSubmissionWorkItem(testNrsPayload)
 
   "makeNrsWorkItemAndAddToRepository" should {
     "create the NRSSubmission model and call to add it to the NRSWorkItemRepository" in {
 
-      val encodedMessage = Base64.getEncoder.encodeToString("<IE815>test</IE815>".getBytes(StandardCharsets.UTF_8))
-      val nrsMetaData =     NrsMetadata(
-        businessId = "emcs",
-        notableEvent = "emcs-create-a-movement-api",
-        payloadContentType = "application/xml",
-        payloadSha256Checksum = sha256Hash("<IE815>test</IE815>"),
-        userSubmissionTimestamp = timeStamp.toString,
-        identityData = testNrsIdentityData,
-        userAuthToken = testAuthToken,
-        headerData = userHeaderData.toMap,
-        searchKeys = Map("ern" -> "ern")
-      )
-      val expectedPayload = NrsPayload(encodedMessage, nrsMetaData)
-
       when(nrsWorkItemRepository.pushNew(any(), any(), any()))
-        .thenReturn(Future.successful(WorkItem(new ObjectId(),timeStamp,timeStamp,timeStamp,ToDo,0,NrsSubmissionWorkItem(expectedPayload))))
+        .thenReturn(
+          Future.successful(
+            WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, NrsSubmissionWorkItem(testNrsPayload))
+          )
+        )
 
       val result = await(service.makeNrsWorkItemAndAddToRepository(testRequest, "ern", "correlationId")(hc))
 
-      verify(nrsWorkItemRepository).pushNew(NrsSubmissionWorkItem(expectedPayload))
+      verify(nrsWorkItemRepository).pushNew(NrsSubmissionWorkItem(testNrsPayload))
       result mustBe Done
     }
+  }
+
+  "submitNrs" should {
+    "submit to NRS and call the repository to mark the workitem as done if it succeeds" in {
+
+      when(nrsConnector.sendToNrsOld(any(), any())(any())).thenReturn(Future.successful(Done))
+
+      when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+
+      val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
+
+      val result = await(service.submitNrs(testWorkItem))
+
+      verify(nrsConnector, times(1)).sendToNrsOld(testNrsPayload, testCorrelationId)
+
+      result mustBe Done
+      verify(nrsWorkItemRepository).complete(testWorkItem.id, ProcessingStatus.Succeeded)
+    }
+//    "mark the workItem as failed if submission fails" in {
+//      when(nrsConnector.sendToNrsOld(any(), any())(any())).thenReturn(Future.failed(new RuntimeException()))
+//
+//      val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
+//
+//      val result = await(service.submitNrs(testWorkItem))
+//
+//      verify(nrsConnector, times(1)).sendToNrsOld(testNrsPayload, testCorrelationId)
+//
+//      result mustBe Done
+//      verify(nrsWorkItemRepository).complete(testWorkItem.id, ProcessingStatus.Failed)
+//    }
   }
 
   "submitNrsOld" should {
@@ -119,12 +158,12 @@ class NrsServiceSpec extends PlaySpec with ScalaFutures with NrsTestData with Ei
       val encodePayload = Base64.getEncoder.encodeToString("<IE815>test</IE815>".getBytes(StandardCharsets.UTF_8))
       val nrsPayload    = NrsPayload(encodePayload, createExpectedMetadata)
 
-      verify(nrsConnector).sendToNrs(eqTo(nrsPayload), eqTo("correlationId"))(eqTo(hc))
+      verify(nrsConnector).sendToNrsOld(eqTo(nrsPayload), eqTo("correlationId"))(eqTo(hc))
     }
 
     "return Done when there's an error" when {
       "NRS submit request fails" in {
-        when(nrsConnector.sendToNrs(any, any)(any))
+        when(nrsConnector.sendToNrsOld(any, any)(any))
           .thenReturn(Future.successful(Done))
 
         submitNrsOld(hc) mustBe Done

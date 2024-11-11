@@ -96,7 +96,7 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
 
   "submit" should {
     "return Done" in {
-      val result = await(connector.sendToNrs(nrsPayLoad, "correlationId"))
+      val result = await(connector.sendToNrsOld(nrsPayLoad, "correlationId"))
 
       result mustBe Done
     }
@@ -109,7 +109,7 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
       when(mockRequestBuilder.execute[HttpResponse](any(), any()))
         .thenReturn(Future.successful(HttpResponse(400, "bad request")))
 
-      val result = await(connector.sendToNrs(nrsPayLoad, "correlationId"))
+      val result = await(connector.sendToNrsOld(nrsPayLoad, "correlationId"))
 
       result mustBe Done
     }
@@ -122,7 +122,7 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
         when(mockRequestBuilder.execute[HttpResponse](any(), any()))
           .thenReturn(Future.successful(HttpResponse(400, "bad request")))
 
-        val result = await(connector.sendToNrs(nrsPayLoad, "correlationId"))
+        val result = await(connector.sendToNrsOld(nrsPayLoad, "correlationId"))
 
         result mustBe Done
         verifyHttpPostCAll(3)
@@ -137,7 +137,7 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
           .thenReturn(Future.failed(new RuntimeException("error")))
 
         intercept[RuntimeException] {
-          await(connector.sendToNrs(nrsPayLoad, "correlationId"))
+          await(connector.sendToNrsOld(nrsPayLoad, "correlationId"))
           verifyHttpPostCAll(3)
         }
       }
@@ -151,14 +151,14 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
       when(mockRequestBuilder.execute[HttpResponse](any(), any()))
         .thenReturn(Future.failed(new RuntimeException("error")), Future.successful(successFulNrsResponse))
 
-      val result = await(connector.sendToNrs(nrsPayLoad, "correlationId"))
+      val result = await(connector.sendToNrsOld(nrsPayLoad, "correlationId"))
 
       result mustBe Done
       verifyHttpPostCAll(2)
     }
 
     "start and stop a timer" in {
-      await(connector.sendToNrs(NrsPayload("encodepayload", nrsMetadata), "correlationId"))
+      await(connector.sendToNrsOld(NrsPayload("encodepayload", nrsMetadata), "correlationId"))
 
       verify(metrics).timer(eqTo("emcs.nrs.submission.timer"))
       verify(metrics.timer(eqTo("emcs.nrs.submission.timer"))).time()
