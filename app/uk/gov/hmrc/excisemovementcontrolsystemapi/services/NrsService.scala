@@ -24,9 +24,12 @@ import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NRSWorkItemRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmissionWorkItem
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService.nonRepudiationIdentityRetrievals
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, NrsEventIdMapper}
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier, InternalServerException}
+import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -36,6 +39,7 @@ import scala.util.control.NonFatal
 class NrsService @Inject() (
   override val authConnector: AuthConnector,
   nrsConnector: NrsConnector,
+  nrsWorkItemRepository: NRSWorkItemRepository,
   dateTimeService: DateTimeService,
   emcsUtils: EmcsUtils,
   nrsEventIdMapper: NrsEventIdMapper
@@ -43,7 +47,39 @@ class NrsService @Inject() (
     extends AuthorisedFunctions
     with Logging {
 
-  def submitNrs(
+  def makeNrsWorkItemAndAddToRepository(
+                                         request: ParsedXmlRequest[_],
+                                         authorisedErn: String,
+                                         correlationId: String
+                                       )(implicit headerCarrier: HeaderCarrier): Future[Done] = {
+
+    val payload        = request.body.toString
+    val userHeaderData = request.headersAsMap
+    val message        = request.ieMessage
+    val exciseNumber   = authorisedErn
+    val notableEventId = nrsEventIdMapper.mapMessageToEventId(message)
+
+    for {
+      identityData  <- retrieveIdentityData()
+      userAuthToken  = retrieveUserAuthToken(headerCarrier)
+      metaData       = NrsMetadata.create(
+        payload,
+        emcsUtils,
+        notableEventId,
+        identityData,
+        dateTimeService.timestamp().toString,
+        userAuthToken,
+        userHeaderData,
+        exciseNumber
+      )
+      encodedPayload = emcsUtils.encode(payload)
+      _ <- nrsWorkItemRepository.pushNew(NrsSubmissionWorkItem(NrsPayload(encodedPayload, metaData)))
+    } yield Done
+  } //TODO where does the correlation id go in?
+
+  def submitNrs() = ???
+
+  def submitNrsOld(
     request: ParsedXmlRequest[_],
     authorisedErn: String,
     correlationId: String

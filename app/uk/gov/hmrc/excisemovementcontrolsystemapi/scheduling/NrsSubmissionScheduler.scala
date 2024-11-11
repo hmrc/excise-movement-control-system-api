@@ -42,7 +42,7 @@ class NrsSubmissionScheduler @Inject() (
         case None => Future.successful(true)
 
         case Some(workItem) =>
-          nrsService.submitNrs(workItem.item.payload,???,???)
+//          nrsService.submitNrsOld(workItem.item.payload,???,???)
 
           Future.successful(true)
 
