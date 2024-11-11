@@ -77,7 +77,7 @@ class NrsService @Inject() (
       encodedPayload = emcsUtils.encode(payload)
       _             <- nrsWorkItemRepository.pushNew(NrsSubmissionWorkItem(NrsPayload(encodedPayload, metaData)))
     } yield Done
-  } //TODO where does the correlation id go in?
+  }
 
   def submitNrs(workItem: WorkItem[NrsSubmissionWorkItem])(implicit hc: HeaderCarrier): Future[Done] =
     //needs to call connector, and handle marking the workitems. IN PROGRESS
