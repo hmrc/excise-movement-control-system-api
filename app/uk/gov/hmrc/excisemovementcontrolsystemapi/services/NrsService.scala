@@ -77,7 +77,7 @@ class NrsService @Inject() (
     } yield Done
   } //TODO where does the correlation id go in?
 
-  def submitNrs() = ???
+  def submitNrs(workItem: WorkItem[NrsSubmissionWorkItem]): Future[Done] = Future.successful(Done)
 
   def submitNrsOld(
     request: ParsedXmlRequest[_],

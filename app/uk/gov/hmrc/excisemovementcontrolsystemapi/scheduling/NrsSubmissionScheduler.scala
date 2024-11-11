@@ -39,13 +39,12 @@ class NrsSubmissionScheduler @Inject() (
     val result: Future[Boolean] = nrsWorkItemRepository
       .pullOutstanding(now, now)
       .flatMap {
-        case None => Future.successful(true)
-
-        case Some(workItem) =>
-//          nrsService.submitNrsOld(workItem.item.payload,???,???)
-
+        case None =>
+          println("&&&&&")
           Future.successful(true)
-
+        case Some(workItem) =>
+          println("****** ")
+          nrsService.submitNrs(workItem).map(_ => true)
       }
     result.as(ScheduledJob.Result.Completed)
   }
