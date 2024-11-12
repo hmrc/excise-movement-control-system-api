@@ -18,6 +18,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.config
 
 import play.api.inject.Binding
 import play.api.{Configuration, Environment}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsCircuitBreakerProvider
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.NrsCircuitBreaker
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MessageRecipientMigration, MovementMigration}
 import uk.gov.hmrc.mongo.metrix.MetricOrchestrator
 
@@ -30,8 +32,9 @@ class Module extends play.api.inject.Module {
       bind[AppConfig].toSelf.eagerly(),
       bind[JobScheduler].toSelf.eagerly(),
       bind[Clock].toInstance(Clock.systemUTC()),
-      bind[MetricOrchestrator].toProvider[MetricsProvider]
-    ) ++ migrationBindings(configuration)
+      bind[MetricOrchestrator].toProvider[MetricsProvider],
+      bind[NrsCircuitBreaker].toProvider[NrsCircuitBreakerProvider]
+  ) ++ migrationBindings(configuration)
 
   private def migrationBindings(configuration: Configuration): Seq[Binding[_]] =
     if (configuration.get[Boolean]("migrations-enabled")) {

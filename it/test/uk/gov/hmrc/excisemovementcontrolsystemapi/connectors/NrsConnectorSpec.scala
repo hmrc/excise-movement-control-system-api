@@ -33,11 +33,14 @@ class NrsConnectorSpec
     with NewMessagesXml
     with NrsTestData {
 
-  override def fakeApplication(): Application =
+  override lazy val app: Application =
     GuiceApplicationBuilder()
       .configure(
         "microservice.services.nrs.port" -> wireMockPort,
-        "microservice.services.nrs.api-key" -> "some-bearer"
+        "microservice.services.nrs.api-key" -> "some-bearer",
+        "nrs.max-failures" -> 1,
+        "nrs.reset-timeout" -> "1 second",
+        "nrs.call-timeout" -> "30 seconds"
       )
       .build()
 
