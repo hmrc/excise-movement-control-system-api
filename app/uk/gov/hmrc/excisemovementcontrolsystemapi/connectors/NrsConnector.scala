@@ -51,25 +51,25 @@ class NrsConnector @Inject() (
     logger.info(
       s"NRS submission: CorrelationId: $correlationId"
     )
-    val response = httpClient
+    val response         = httpClient
       .post(url"$nrsSubmissionUrl")
       .setHeader("Content-Type" -> "application/json")
-      .setHeader(XApiKeyHeaderKey -> appConfig.nrsApiKey)
+//      .setHeader(XApiKeyHeaderKey -> appConfig.nrsApiKey)
       .withBody(payload.toJsObject)
       .execute[HttpResponse]
 
-    response.flatMap( thing =>
-    if (thing.status == ACCEPTED) {
+    response.flatMap(thing =>
+      if (thing.status == ACCEPTED) {
 //      logging here
-      Future.successful(Done)
-    } else if (is5xx(thing.status)) {
-      // logging here too
-      // circuit breaker trip here
-      Future.failed(UnexpectedResponseException(thing.status, thing.body))
-    } else {
-      ??? // catch all for any other unexpected status inc 4xx
-      // warn log...?
-    }
+        Future.successful(Done)
+      } else if (is5xx(thing.status)) {
+        // logging here too
+        // circuit breaker trip here
+        Future.failed(UnexpectedResponseException(thing.status, thing.body))
+      } else {
+        ??? // catch all for any other unexpected status inc 4xx
+        // warn log...?
+      }
     )
   }
 
@@ -133,7 +133,7 @@ class NrsConnector @Inject() (
 object NrsConnector {
   val XApiKeyHeaderKey = "X-API-Key"
 
-  final case class UnexpectedResponseException(status: Int, body: String) extends Exception{
+  final case class UnexpectedResponseException(status: Int, body: String) extends Exception {
     override def getMessage: String = s"Unexpected response from NRS, status: $status, body: $body"
   }
 
