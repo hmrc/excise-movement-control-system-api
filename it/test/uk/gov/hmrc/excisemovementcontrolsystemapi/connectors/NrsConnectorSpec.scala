@@ -1,13 +1,13 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, post, urlEqualTo}
+import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, post, postRequestedFor, urlEqualTo, urlMatching}
 import org.apache.pekko.Done
 import org.mockito.MockitoSugar
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
-import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import org.scalatestplus.play.guice.{GuiceOneAppPerSuite, GuiceOneAppPerTest}
 import play.api.Application
 import play.api.http.Status.{ACCEPTED, BAD_REQUEST, INTERNAL_SERVER_ERROR}
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -19,21 +19,20 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.WireMockSupport
 
 import java.time.ZonedDateTime
+import scala.concurrent.Promise
 import scala.concurrent.duration.DurationInt
 
 class NrsConnectorSpec
   extends AnyFreeSpec
     with Matchers
     with WireMockSupport
-    with GuiceOneAppPerSuite
+    with GuiceOneAppPerTest
     with MockitoSugar
     with ScalaFutures
     with IntegrationPatience
-    with BeforeAndAfterEach
-    with NewMessagesXml
     with NrsTestData {
 
-  override lazy val app: Application =
+  override def fakeApplication(): Application =
     GuiceApplicationBuilder()
       .configure(
         "microservice.services.nrs.port" -> wireMockPort,
@@ -44,10 +43,7 @@ class NrsConnectorSpec
       )
       .build()
 
-  private lazy val connector = app.injector.instanceOf[NrsConnector]
-
   "sendToNrs" - {
-
     val hc = HeaderCarrier()
     val correlationId = "correlationId"
     val url = "/submission"
@@ -67,6 +63,7 @@ class NrsConnectorSpec
 
     "must return a Future.successful" - {
       "when the call to NRS succeeds" in {
+        val connector = app.injector.instanceOf[NrsConnector]
         wireMockServer.stubFor(
           post(urlEqualTo(url))
             .willReturn(
@@ -79,10 +76,50 @@ class NrsConnectorSpec
 
         result mustBe Done
       }
+      "when the call to NRS fails with a 4xx error" - {
+        "with circuit breaker present" in {
+          val connector = app.injector.instanceOf[NrsConnector]
+          wireMockServer.stubFor(
+            post(urlEqualTo(url))
+              .willReturn(
+                aResponse()
+                  .withBody("body")
+                  .withStatus(BAD_REQUEST)
+              )
+          )
+
+          val result = connector.sendToNrs(nrsPayLoad, correlationId)(hc).futureValue
+
+          result mustBe Done
+        }
+        "and NOT trip the circuit breaker" in {
+          val connector = app.injector.instanceOf[NrsConnector]
+          val circuitBreaker = app.injector.instanceOf[NrsCircuitBreaker].breaker
+
+          circuitBreaker.resetTimeout mustEqual 1.second
+
+          wireMockServer.stubFor(
+            post(urlEqualTo(url))
+              .willReturn(
+                aResponse()
+                  .withBody("body")
+                  .withStatus(BAD_REQUEST)
+              )
+          )
+
+          circuitBreaker.isOpen mustBe false
+          connector.sendToNrs(nrsPayLoad, correlationId)(hc).futureValue
+          circuitBreaker.isOpen mustBe false
+          connector.sendToNrs(nrsPayLoad, correlationId)(hc).futureValue
+
+          wireMockServer.verify(2, postRequestedFor(urlMatching(url)))
+        }
+      }
     }
     "must return a failed future" - {
-      "and trip the circuit breaker" - {
-        "when the call to NRS fails with a 5xx error" in {
+      "when the call to NRS fails with a 5xx error" - {
+        "with circuit breaker present" in {
+          val connector = app.injector.instanceOf[NrsConnector]
           val circuitBreaker = app.injector.instanceOf[NrsCircuitBreaker].breaker
 
           circuitBreaker.resetTimeout mustEqual 1.second
@@ -100,21 +137,31 @@ class NrsConnectorSpec
 
           exception mustBe UnexpectedResponseException(INTERNAL_SERVER_ERROR, "body")
         }
-      }
-      "and NOT trip the circuit breaker" - {
-        "when the call to NRS fails with a 4xx error" in {
+        "and trip the circuit breaker to fail fast" in {
+          val connector = app.injector.instanceOf[NrsConnector]
+          val circuitBreaker = app.injector.instanceOf[NrsCircuitBreaker].breaker
+
+          circuitBreaker.resetTimeout mustEqual 1.second
+
           wireMockServer.stubFor(
             post(urlEqualTo(url))
               .willReturn(
                 aResponse()
                   .withBody("body")
-                  .withStatus(BAD_REQUEST)
+                  .withStatus(INTERNAL_SERVER_ERROR)
               )
           )
 
-          val exception = connector.sendToNrs(nrsPayLoad, correlationId)(hc).failed.futureValue
+          val onOpen = Promise[Unit]
+          circuitBreaker.onOpen(onOpen.success(()))
 
-          exception mustBe UnexpectedResponseException(BAD_REQUEST, "body")
+          circuitBreaker.isOpen mustBe false
+          connector.sendToNrs(nrsPayLoad, correlationId)(hc).failed.futureValue
+          onOpen.future.futureValue
+          circuitBreaker.isOpen mustBe true
+          connector.sendToNrs(nrsPayLoad, correlationId)(hc).failed.futureValue
+
+          wireMockServer.verify(1, postRequestedFor(urlMatching(url)))
         }
       }
     }

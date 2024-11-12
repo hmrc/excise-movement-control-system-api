@@ -34,7 +34,7 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 
 class NrsConnector @Inject() (
   httpClient: HttpClientV2,
@@ -53,26 +53,26 @@ class NrsConnector @Inject() (
     logger.info(
       s"NRS submission: CorrelationId: $correlationId"
     )
-    val response         = httpClient
-      .post(url"$nrsSubmissionUrl")
-      .setHeader("Content-Type" -> "application/json")
-      .setHeader(XApiKeyHeaderKey -> appConfig.nrsApiKey)
-      .withBody(payload.toJsObject)
-      .execute[HttpResponse]
+    def responseStatusAsFailure(): Try[HttpResponse] => Boolean = {
+      case Success(n) => is5xx(n.status)
+      case Failure(_) => true
+    }
 
-    response.flatMap(thing =>
-      if (thing.status == ACCEPTED) {
-//      logging here
-        Future.successful(Done)
-      } else if (is5xx(thing.status)) {
-        // logging here too
-        // circuit breaker trip here
-        Future.failed(UnexpectedResponseException(thing.status, thing.body))
-      } else {
-        // warn log...
-        Future.failed(UnexpectedResponseException(thing.status, thing.body))
+    nrsCircuitBreaker.breaker.withCircuitBreaker({
+      httpClient
+        .post(url"$nrsSubmissionUrl")
+        .setHeader("Content-Type" -> "application/json")
+        .setHeader(XApiKeyHeaderKey -> appConfig.nrsApiKey)
+        .withBody(payload.toJsObject)
+        .execute[HttpResponse]
+    }, responseStatusAsFailure())
+      .flatMap { response =>
+        if(!is5xx(response.status)) {
+          Future.successful(Done)
+        } else {
+          Future.failed(UnexpectedResponseException(response.status, response.body))
+        }
       }
-    )
   }
 
   def sendToNrsOld(payload: NrsPayload, correlationId: String)(implicit
