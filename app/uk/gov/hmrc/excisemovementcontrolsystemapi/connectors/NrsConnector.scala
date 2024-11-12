@@ -54,7 +54,7 @@ class NrsConnector @Inject() (
     val response         = httpClient
       .post(url"$nrsSubmissionUrl")
       .setHeader("Content-Type" -> "application/json")
-//      .setHeader(XApiKeyHeaderKey -> appConfig.nrsApiKey)
+      .setHeader(XApiKeyHeaderKey -> appConfig.nrsApiKey)
       .withBody(payload.toJsObject)
       .execute[HttpResponse]
 
@@ -67,8 +67,8 @@ class NrsConnector @Inject() (
         // circuit breaker trip here
         Future.failed(UnexpectedResponseException(thing.status, thing.body))
       } else {
-        ??? // catch all for any other unexpected status inc 4xx
-        // warn log...?
+        // warn log...
+        Future.failed(UnexpectedResponseException(thing.status, thing.body))
       }
     )
   }

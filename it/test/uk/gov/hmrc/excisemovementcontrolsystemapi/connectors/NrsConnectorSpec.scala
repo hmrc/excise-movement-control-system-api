@@ -1,6 +1,6 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, equalTo, post, urlEqualTo}
+import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, post, urlEqualTo}
 import org.apache.pekko.Done
 import org.mockito.MockitoSugar
 import org.scalatest.BeforeAndAfterEach
@@ -9,10 +9,8 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
-import play.api.http.Status.{ACCEPTED, INTERNAL_SERVER_ERROR}
+import play.api.http.Status.{ACCEPTED, BAD_REQUEST, INTERNAL_SERVER_ERROR}
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.mvc.Results.InternalServerError
-import play.api.test.Helpers.await
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.UnexpectedResponseException
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.NewMessagesXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
@@ -21,7 +19,6 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.WireMockSupport
 
 import java.time.ZonedDateTime
-import scala.concurrent.Future
 
 class NrsConnectorSpec
   extends AnyFreeSpec
@@ -68,33 +65,54 @@ class NrsConnectorSpec
     )
     val nrsPayLoad                 = NrsPayload("encodepayload", nrsMetadata)
 
-    "must return Done when the call to NRS succeeds" in {
-      wireMockServer.stubFor(
-        post(urlEqualTo(url))
-          .willReturn(
-            aResponse()
-              .withStatus(ACCEPTED)
-          )
-      )
+    "must return a Future.successful" - {
+      "when the call to NRS succeeds" in {
+        wireMockServer.stubFor(
+          post(urlEqualTo(url))
+            .willReturn(
+              aResponse()
+                .withStatus(ACCEPTED)
+            )
+        )
 
-      val result = connector.sendToNrs(nrsPayLoad, correlationId)(hc).futureValue
+        val result = connector.sendToNrs(nrsPayLoad, correlationId)(hc).futureValue
 
-      result mustBe Done
+        result mustBe Done
+      }
     }
-
-    "must return a failed future when the call to NRS fails with a 5xx error" in {
-      wireMockServer.stubFor(
-        post(urlEqualTo(url))
-          .willReturn(
-            aResponse()
-              .withBody("body")
-              .withStatus(INTERNAL_SERVER_ERROR)
+    "must return a failed future" - {
+      "and trip the circuit breaker" - {
+        "when the call to NRS fails with a 5xx error" in {
+          wireMockServer.stubFor(
+            post(urlEqualTo(url))
+              .willReturn(
+                aResponse()
+                  .withBody("body")
+                  .withStatus(INTERNAL_SERVER_ERROR)
+              )
           )
-      )
 
-      val exception = connector.sendToNrs(nrsPayLoad, correlationId)(hc).failed.futureValue
+          val exception = connector.sendToNrs(nrsPayLoad, correlationId)(hc).failed.futureValue
 
-      exception mustBe UnexpectedResponseException(INTERNAL_SERVER_ERROR, "body")
+          exception mustBe UnexpectedResponseException(INTERNAL_SERVER_ERROR, "body")
+        }
+      }
+      "and NOT trip the circuit breaker" - {
+        "when the call to NRS fails with a 4xx error" in {
+          wireMockServer.stubFor(
+            post(urlEqualTo(url))
+              .willReturn(
+                aResponse()
+                  .withBody("body")
+                  .withStatus(BAD_REQUEST)
+              )
+          )
+
+          val exception = connector.sendToNrs(nrsPayLoad, correlationId)(hc).failed.futureValue
+
+          exception mustBe UnexpectedResponseException(BAD_REQUEST, "body")
+        }
+      }
     }
   }
 }
