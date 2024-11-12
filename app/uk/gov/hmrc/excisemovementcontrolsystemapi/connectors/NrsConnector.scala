@@ -18,12 +18,13 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import com.codahale.metrics.MetricRegistry
 import org.apache.pekko.Done
+import org.apache.pekko.pattern.CircuitBreaker
 import play.api.Logging
 import play.api.http.Status.ACCEPTED
 import play.api.libs.concurrent.Futures
 import play.api.libs.json.JsObject
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.{UnexpectedResponseException, XApiKeyHeaderKey}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.{NrsCircuitBreaker, UnexpectedResponseException, XApiKeyHeaderKey}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.Retrying
 import uk.gov.hmrc.http.HttpErrorFunctions.{is2xx, is5xx}
@@ -38,7 +39,8 @@ import scala.util.{Success, Try}
 class NrsConnector @Inject() (
   httpClient: HttpClientV2,
   appConfig: AppConfig,
-  metrics: MetricRegistry
+  metrics: MetricRegistry,
+  nrsCircuitBreaker: NrsCircuitBreaker
 )(implicit val ec: ExecutionContext, val futures: Futures)
     extends Retrying
     with Logging {
@@ -137,5 +139,5 @@ object NrsConnector {
     override def getMessage: String = s"Unexpected response from NRS, status: $status, body: $body"
   }
 
-//  final case class SdesCircuitBreaker(breaker: CircuitBreaker)
+  final case class NrsCircuitBreaker(breaker: CircuitBreaker)
 }

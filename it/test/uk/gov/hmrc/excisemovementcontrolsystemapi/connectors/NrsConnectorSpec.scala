@@ -11,7 +11,7 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.http.Status.{ACCEPTED, BAD_REQUEST, INTERNAL_SERVER_ERROR}
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.UnexpectedResponseException
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.{NrsCircuitBreaker, UnexpectedResponseException}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.NewMessagesXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NrsMetadata, NrsPayload}
@@ -19,6 +19,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.WireMockSupport
 
 import java.time.ZonedDateTime
+import scala.concurrent.duration.DurationInt
 
 class NrsConnectorSpec
   extends AnyFreeSpec
@@ -32,17 +33,13 @@ class NrsConnectorSpec
     with NewMessagesXml
     with NrsTestData {
 
-
-  override lazy val app: Application = {
+  override def fakeApplication(): Application =
     GuiceApplicationBuilder()
       .configure(
         "microservice.services.nrs.port" -> wireMockPort,
         "microservice.services.nrs.api-key" -> "some-bearer"
       )
-      .overrides(
-      )
       .build()
-  }
 
   private lazy val connector = app.injector.instanceOf[NrsConnector]
 
@@ -82,7 +79,35 @@ class NrsConnectorSpec
     }
     "must return a failed future" - {
       "and trip the circuit breaker" - {
+
+//        val connector = app.injector.instanceOf[SdesConnector]
+//        val circuitBreaker = app.injector.instanceOf[SdesCircuitBreaker].breaker
+//
+//        circuitBreaker.resetTimeout mustEqual 1.second
+//
+//        wireMockServer.stubFor(
+//          post(urlMatching(url))
+//            .withRequestBody(equalToJson(Json.stringify(Json.toJson(request))))
+//            .withHeader("x-client-id", equalTo("client-id"))
+//            .willReturn(aResponse().withBody("body").withStatus(INTERNAL_SERVER_ERROR))
+//        )
+//
+//        val onOpen = Promise[Unit]
+//        circuitBreaker.onOpen(onOpen.success(System.currentTimeMillis()))
+//
+//        circuitBreaker.isOpen mustBe false
+//        connector.notify(request)(using hc).failed.futureValue
+//        onOpen.future.futureValue
+//        circuitBreaker.isOpen mustBe true
+//        connector.notify(request)(using hc).failed.futureValue
+//
+//        wireMockServer.verify(1, postRequestedFor(urlMatching(url)))
+
         "when the call to NRS fails with a 5xx error" in {
+          val circuitBreaker = app.injector.instanceOf[NrsCircuitBreaker].breaker
+
+          circuitBreaker.resetTimeout mustEqual 1.second
+          
           wireMockServer.stubFor(
             post(urlEqualTo(url))
               .willReturn(
