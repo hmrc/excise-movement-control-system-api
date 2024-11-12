@@ -82,7 +82,7 @@ class NrsService @Inject() (
   def submitNrs(workItem: WorkItem[NrsSubmissionWorkItem])(implicit hc: HeaderCarrier): Future[Done] =
     //needs to call connector, and handle marking the workitems. IN PROGRESS
     for {
-      _ <- nrsConnector.sendToNrsOld(workItem.item.payload, correlationIdService.generateCorrelationId())
+      _ <- nrsConnector.sendToNrs(workItem.item.payload, correlationIdService.generateCorrelationId())
       _ <- nrsWorkItemRepository.complete(workItem.id, ProcessingStatus.Succeeded)
     } yield Done
 

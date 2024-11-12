@@ -120,7 +120,7 @@ class NrsServiceSpec extends PlaySpec with ScalaFutures with NrsTestData with Ei
   "submitNrs" should {
     "submit to NRS and call the repository to mark the workitem as done if it succeeds" in {
 
-      when(nrsConnector.sendToNrsOld(any(), any())(any())).thenReturn(Future.successful(Done))
+      when(nrsConnector.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
 
       when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
 
@@ -128,7 +128,7 @@ class NrsServiceSpec extends PlaySpec with ScalaFutures with NrsTestData with Ei
 
       val result = await(service.submitNrs(testWorkItem))
 
-      verify(nrsConnector, times(1)).sendToNrsOld(testNrsPayload, testCorrelationId)
+      verify(nrsConnector, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
 
       result mustBe Done
       verify(nrsWorkItemRepository).complete(testWorkItem.id, ProcessingStatus.Succeeded)

@@ -23,10 +23,10 @@ import play.api.http.Status.ACCEPTED
 import play.api.libs.concurrent.Futures
 import play.api.libs.json.JsObject
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.XApiKeyHeaderKey
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.{UnexpectedResponseException, XApiKeyHeaderKey}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.Retrying
-import uk.gov.hmrc.http.HttpErrorFunctions.is2xx
+import uk.gov.hmrc.http.HttpErrorFunctions.{is2xx, is5xx}
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
@@ -45,8 +45,33 @@ class NrsConnector @Inject() (
 
   def sendToNrs(payload: NrsPayload, correlationId: String)(implicit
     hc: HeaderCarrier
-  ): Future[Done] =
-    ???
+  ): Future[Done] = {
+
+    val nrsSubmissionUrl = appConfig.getNrsSubmissionUrl
+    logger.info(
+      s"NRS submission: CorrelationId: $correlationId"
+    )
+    val response = httpClient
+      .post(url"$nrsSubmissionUrl")
+      .setHeader("Content-Type" -> "application/json")
+      .setHeader(XApiKeyHeaderKey -> appConfig.nrsApiKey)
+      .withBody(payload.toJsObject)
+      .execute[HttpResponse]
+
+    response.flatMap( thing =>
+    if (thing.status == ACCEPTED) {
+//      logging here
+      Future.successful(Done)
+    } else if (is5xx(thing.status)) {
+      // logging here too
+      // circuit breaker trip here
+      Future.failed(UnexpectedResponseException(thing.status, thing.body))
+    } else {
+      ??? // catch all for any other unexpected status inc 4xx
+      // warn log...?
+    }
+    )
+  }
 
   def sendToNrsOld(payload: NrsPayload, correlationId: String)(implicit
     hc: HeaderCarrier
@@ -59,8 +84,6 @@ class NrsConnector @Inject() (
       send(jsonObject, correlationId)
     }
       .map { response: HttpResponse =>
-        // next step will be to change this to use the workItem repo, and there should be a service that will handle the
-        // outcome from this connector. Connector will just do the call to NRS and nothing else.
         response.status match {
           case ACCEPTED =>
             val submissionId = response.json \ "nrSubmissionId"
@@ -109,4 +132,10 @@ class NrsConnector @Inject() (
 
 object NrsConnector {
   val XApiKeyHeaderKey = "X-API-Key"
+
+  final case class UnexpectedResponseException(status: Int, body: String) extends Exception{
+    override def getMessage: String = s"Unexpected response from NRS, status: $status, body: $body"
+  }
+
+//  final case class SdesCircuitBreaker(breaker: CircuitBreaker)
 }
