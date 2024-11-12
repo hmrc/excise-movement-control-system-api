@@ -79,35 +79,11 @@ class NrsConnectorSpec
     }
     "must return a failed future" - {
       "and trip the circuit breaker" - {
-
-//        val connector = app.injector.instanceOf[SdesConnector]
-//        val circuitBreaker = app.injector.instanceOf[SdesCircuitBreaker].breaker
-//
-//        circuitBreaker.resetTimeout mustEqual 1.second
-//
-//        wireMockServer.stubFor(
-//          post(urlMatching(url))
-//            .withRequestBody(equalToJson(Json.stringify(Json.toJson(request))))
-//            .withHeader("x-client-id", equalTo("client-id"))
-//            .willReturn(aResponse().withBody("body").withStatus(INTERNAL_SERVER_ERROR))
-//        )
-//
-//        val onOpen = Promise[Unit]
-//        circuitBreaker.onOpen(onOpen.success(System.currentTimeMillis()))
-//
-//        circuitBreaker.isOpen mustBe false
-//        connector.notify(request)(using hc).failed.futureValue
-//        onOpen.future.futureValue
-//        circuitBreaker.isOpen mustBe true
-//        connector.notify(request)(using hc).failed.futureValue
-//
-//        wireMockServer.verify(1, postRequestedFor(urlMatching(url)))
-
         "when the call to NRS fails with a 5xx error" in {
           val circuitBreaker = app.injector.instanceOf[NrsCircuitBreaker].breaker
 
           circuitBreaker.resetTimeout mustEqual 1.second
-          
+
           wireMockServer.stubFor(
             post(urlEqualTo(url))
               .willReturn(
