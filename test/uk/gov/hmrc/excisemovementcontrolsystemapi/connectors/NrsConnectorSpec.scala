@@ -29,7 +29,6 @@ import play.api.libs.concurrent.Futures
 import play.api.libs.json.Json
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.NrsCircuitBreaker
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
@@ -51,8 +50,7 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
   private val appConfig                  = mock[AppConfig]
   private val emcsUtils                  = mock[EmcsUtils]
   private val metrics                    = mock[MetricRegistry](RETURNS_DEEP_STUBS)
-  private val nrsCircuitBreaker = mock[NrsCircuitBreaker]
-  private val connector                  = new NrsConnector(httpClient, appConfig, metrics, nrsCircuitBreaker)
+  private val connector                  = new NrsConnector(httpClient, appConfig, metrics)
   private val timerContext               = mock[Timer.Context]
   private val timeStamp                  = ZonedDateTime.now()
   private val nrsUrl                     = "http://localhost:8080/nrs-url"

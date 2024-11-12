@@ -37,15 +37,14 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NRSWorkItemRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmissionWorkItem
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsServiceNew
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{Succeeded, ToDo}
-import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
+import uk.gov.hmrc.mongo.workitem.WorkItem
 
-import java.time.{Instant, LocalDateTime, ZoneOffset, ZonedDateTime}
-import scala.concurrent.{ExecutionContext, Future}
+import java.time.{LocalDateTime, ZoneOffset}
 import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{ExecutionContext, Future}
 
 class NrsSubmissionSchedulerSpec
     extends AnyFreeSpec
@@ -59,7 +58,7 @@ class NrsSubmissionSchedulerSpec
   implicit val ec: ExecutionContext                              = ExecutionContext.global
   val mockNrsSubmissionWorkItemRepository: NRSWorkItemRepository = mock[NRSWorkItemRepository]
   val mockNrsConnector: NrsConnector                             = mock[NrsConnector]
-  val mockNrsService: NrsService                                 = mock[NrsService]
+  val mockNrsService: NrsServiceNew                              = mock[NrsServiceNew]
   val mockDateTimeService: DateTimeService                       = mock[DateTimeService]
   val appConfig: AppConfig                                       = app.injector.instanceOf[AppConfig]
 
@@ -67,7 +66,7 @@ class NrsSubmissionSchedulerSpec
     .overrides(
       bind[NRSWorkItemRepository].toInstance(mockNrsSubmissionWorkItemRepository),
       bind[NrsConnector].toInstance(mockNrsConnector),
-      bind[NrsService].toInstance(mockNrsService),
+      bind[NrsServiceNew].toInstance(mockNrsService),
       bind[DateTimeService].toInstance(mockDateTimeService)
     )
     .configure(

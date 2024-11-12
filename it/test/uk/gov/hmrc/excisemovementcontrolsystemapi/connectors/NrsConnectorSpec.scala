@@ -1,3 +1,19 @@
+/*
+ * Copyright 2024 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import com.github.tomakehurst.wiremock.client.WireMock._
@@ -10,7 +26,7 @@ import org.scalatestplus.play.guice.GuiceOneAppPerTest
 import play.api.Application
 import play.api.http.Status.{ACCEPTED, BAD_REQUEST, INTERNAL_SERVER_ERROR}
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.{NrsCircuitBreaker, UnexpectedResponseException}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnectorNew.{NrsCircuitBreaker, UnexpectedResponseException}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.{NrsMetadata, NrsPayload}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -61,7 +77,7 @@ class NrsConnectorSpec
 
     "must return a Future.successful" - {
       "when the call to NRS succeeds" in {
-        val connector = app.injector.instanceOf[NrsConnector]
+        val connector = app.injector.instanceOf[NrsConnectorNew]
         wireMockServer.stubFor(
           post(urlEqualTo(url))
             .willReturn(
@@ -76,7 +92,7 @@ class NrsConnectorSpec
       }
       "when the call to NRS fails with a 4xx error" - {
         "with circuit breaker present" in {
-          val connector = app.injector.instanceOf[NrsConnector]
+          val connector = app.injector.instanceOf[NrsConnectorNew]
           wireMockServer.stubFor(
             post(urlEqualTo(url))
               .willReturn(
@@ -91,7 +107,7 @@ class NrsConnectorSpec
           result mustBe Done
         }
         "and NOT trip the circuit breaker" in {
-          val connector = app.injector.instanceOf[NrsConnector]
+          val connector = app.injector.instanceOf[NrsConnectorNew]
           val circuitBreaker = app.injector.instanceOf[NrsCircuitBreaker].breaker
 
           circuitBreaker.resetTimeout mustEqual 1.second
@@ -117,7 +133,7 @@ class NrsConnectorSpec
     "must return a failed future" - {
       "when the call to NRS fails with a 5xx error" - {
         "with circuit breaker present" in {
-          val connector = app.injector.instanceOf[NrsConnector]
+          val connector = app.injector.instanceOf[NrsConnectorNew]
           val circuitBreaker = app.injector.instanceOf[NrsCircuitBreaker].breaker
 
           circuitBreaker.resetTimeout mustEqual 1.second
@@ -136,7 +152,7 @@ class NrsConnectorSpec
           exception mustBe UnexpectedResponseException(INTERNAL_SERVER_ERROR, "body")
         }
         "and trip the circuit breaker to fail fast" in {
-          val connector = app.injector.instanceOf[NrsConnector]
+          val connector = app.injector.instanceOf[NrsConnectorNew]
           val circuitBreaker = app.injector.instanceOf[NrsCircuitBreaker].breaker
 
           circuitBreaker.resetTimeout mustEqual 1.second
