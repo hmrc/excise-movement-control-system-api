@@ -56,9 +56,6 @@ class PushNotificationJobSpec
     .configure(
       "scheduler.pushNotificationJob.initialDelay" -> "2 minutes",
       "scheduler.pushNotificationJob.interval"     -> "1 minute"
-//      "nrs.max-failures" -> 1,
-//      "nrs.reset-timeout" -> "1 second",
-//      "nrs.call-timeout" -> "30 seconds"
     )
     .build()
 

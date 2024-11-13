@@ -33,9 +33,9 @@ class NrsCircuitBreakerProvider @Inject() (
     extends Provider[NrsCircuitBreaker]
     with Logging {
 
-  private val maxFailures: Int             = configuration.get[Int]("nrs.max-failures")
-  private val callTimeout: FiniteDuration  = configuration.get[FiniteDuration]("nrs.call-timeout")
-  private val resetTimeout: FiniteDuration = configuration.get[FiniteDuration]("nrs.reset-timeout")
+  private val maxFailures: Int             = configuration.get[Int]("microservice.services.nrs.max-failures")
+  private val callTimeout: FiniteDuration  = configuration.get[FiniteDuration]("microservice.services.nrs.call-timeout")
+  private val resetTimeout: FiniteDuration = configuration.get[FiniteDuration]("microservice.services.nrs.reset-timeout")
 
   private val breaker: CircuitBreaker =
     new CircuitBreaker(
