@@ -53,7 +53,9 @@ class NrsConnectorSpec
         "microservice.services.nrs.api-key" -> "some-bearer",
         "microservice.services.nrs.max-failures" -> 1,
         "microservice.services.nrs.reset-timeout" -> "1 second",
-        "microservice.services.nrs.call-timeout" -> "30 seconds"
+        "microservice.services.nrs.call-timeout" -> "30 seconds",
+        "microservice.services.nrs.max-reset-timeout" -> "30 seconds",
+        "microservice.services.nrs.exponential-backoff-factor" -> 2.0
       )
       .build()
 

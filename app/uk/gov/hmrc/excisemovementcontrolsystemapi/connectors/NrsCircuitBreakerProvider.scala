@@ -33,17 +33,23 @@ class NrsCircuitBreakerProvider @Inject() (
     extends Provider[NrsCircuitBreaker]
     with Logging {
 
-  private val maxFailures: Int             = configuration.get[Int]("microservice.services.nrs.max-failures")
-  private val callTimeout: FiniteDuration  = configuration.get[FiniteDuration]("microservice.services.nrs.call-timeout")
-  private val resetTimeout: FiniteDuration =
+  private val maxFailures: Int                 = configuration.get[Int]("microservice.services.nrs.max-failures")
+  private val callTimeout: FiniteDuration      = configuration.get[FiniteDuration]("microservice.services.nrs.call-timeout")
+  private val resetTimeout: FiniteDuration     =
     configuration.get[FiniteDuration]("microservice.services.nrs.reset-timeout")
+  private val maxResetTimeout: FiniteDuration  =
+    configuration.get[FiniteDuration]("microservice.services.nrs.max-reset-timeout")
+  private val exponentialBackoffFactor: Double =
+    configuration.get[Double]("microservice.services.nrs.exponential-backoff-factor")
 
   private val breaker: CircuitBreaker =
     new CircuitBreaker(
       scheduler = system.scheduler,
-      maxFailures = maxFailures,
-      callTimeout = callTimeout,
-      resetTimeout = resetTimeout
+      maxFailures = maxFailures, // how many times it fails before it trips the breaker and sets state to half-open
+      callTimeout = callTimeout, // how long it waits before it deems a call failed
+      resetTimeout = resetTimeout, // this is how long it waits before it tries another call
+      maxResetTimeout = maxResetTimeout, // maximum interval to back off to
+      exponentialBackoffFactor = exponentialBackoffFactor // factor by which to ramp the backoff
     )
       .onOpen {
         logger.warn("NRS Circuit Breaker has opened")
