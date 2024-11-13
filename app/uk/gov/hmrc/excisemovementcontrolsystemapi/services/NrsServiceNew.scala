@@ -21,14 +21,17 @@ import play.api.Logging
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnectorNew
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnectorNew.UnexpectedResponseException
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NRSWorkItemRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmissionWorkItem
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService.nonRepudiationIdentityRetrievals
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, NrsEventIdMapper}
+import uk.gov.hmrc.http.HttpErrorFunctions.{is4xx, is5xx}
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier, InternalServerException}
-import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{Failed, PermanentlyFailed, Succeeded}
+import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -75,12 +78,23 @@ class NrsServiceNew @Inject() (
     } yield Done
   }
 
-  def submitNrs(workItem: WorkItem[NrsSubmissionWorkItem])(implicit hc: HeaderCarrier): Future[Done] =
+  def submitNrs(workItem: WorkItem[NrsSubmissionWorkItem])(implicit hc: HeaderCarrier): Future[Done] = {
     //needs to call connector, and handle marking the workitems. IN PROGRESS
-    for {
-      _ <- nrsConnectorNew.sendToNrs(workItem.item.payload, correlationIdService.generateCorrelationId())
-      _ <- nrsWorkItemRepository.complete(workItem.id, ProcessingStatus.Succeeded)
-    } yield Done
+
+    nrsConnectorNew.sendToNrs(workItem.item.payload, correlationIdService.generateCorrelationId())
+      .flatMap( _ =>
+        nrsWorkItemRepository.complete(workItem.id, Succeeded)
+          .map(_ => Done)
+      )
+      .recoverWith {
+        case UnexpectedResponseException(status, _) if is4xx(status) =>
+          nrsWorkItemRepository.complete(workItem.id, PermanentlyFailed)
+            .map(_ => Done)
+        case UnexpectedResponseException(status, _) if is5xx(status) =>
+          nrsWorkItemRepository.complete(workItem.id, Failed)
+            .map(_ => Done)
+      }
+  }
 
   private def retrieveIdentityData()(implicit headerCarrier: HeaderCarrier): Future[IdentityData] =
     authorised().retrieve(nonRepudiationIdentityRetrievals) {

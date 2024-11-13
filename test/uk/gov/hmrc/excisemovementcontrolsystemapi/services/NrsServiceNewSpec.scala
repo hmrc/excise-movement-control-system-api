@@ -24,10 +24,12 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
+import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnectorNew
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnectorNew.UnexpectedResponseException
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
@@ -37,8 +39,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmission
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService.NonRepudiationIdentityRetrievals
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, NrsEventIdMapper}
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier}
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
-import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{Failed, PermanentlyFailed, Succeeded, ToDo}
+import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.nio.charset.StandardCharsets
 import java.time.Instant
@@ -70,7 +72,7 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(authConnector, nrsConnectorNew, dateTimeService, correlationIdService)
+    reset(authConnector, nrsConnectorNew, dateTimeService, correlationIdService, nrsWorkItemRepository)
 
     when(dateTimeService.timestamp()).thenReturn(timeStamp)
     when(correlationIdService.generateCorrelationId()).thenReturn(testCorrelationId)
@@ -116,7 +118,7 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
   }
 
   "submitNrs" should {
-    "submit to NRS and call the repository to mark the workitem as done if it succeeds" in {
+    "submit to NRS and call the repository to mark the workitem as done if it succeeds with ACCEPTED" in {
 
       when(nrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
 
@@ -129,20 +131,36 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
       verify(nrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
 
       result mustBe Done
-      verify(nrsWorkItemRepository).complete(testWorkItem.id, ProcessingStatus.Succeeded)
+      verify(nrsWorkItemRepository).complete(testWorkItem.id, Succeeded)
     }
-//    "mark the workItem as failed if submission fails" in {
-//      when(nrsConnector.sendToNrsOld(any(), any())(any())).thenReturn(Future.failed(new RuntimeException()))
-//
-//      val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
-//
-//      val result = await(service.submitNrs(testWorkItem))
-//
-//      verify(nrsConnector, times(1)).sendToNrsOld(testNrsPayload, testCorrelationId)
-//
-//      result mustBe Done
-//      verify(nrsWorkItemRepository).complete(testWorkItem.id, ProcessingStatus.Failed)
-//    }
+    "mark the workItem as failed if submission fails with 5xx" in {
+      when(nrsConnectorNew.sendToNrs(any(), any())(any()))
+        .thenReturn(Future.failed(UnexpectedResponseException(INTERNAL_SERVER_ERROR, "body")))
+
+      when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+
+      val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
+
+      val result = await(service.submitNrs(testWorkItem))
+
+      verify(nrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
+      result mustBe Done
+      verify(nrsWorkItemRepository).complete(testWorkItem.id, Failed)
+    }
+    "mark the workItem as PERMANENTLY failed if submission fails with 4xx" in {
+      when(nrsConnectorNew.sendToNrs(any(), any())(any()))
+        .thenReturn(Future.failed(UnexpectedResponseException(BAD_REQUEST, "body")))
+
+      when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+
+      val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
+
+      val result = await(service.submitNrs(testWorkItem))
+
+      verify(nrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
+      result mustBe Done
+      verify(nrsWorkItemRepository).complete(testWorkItem.id, PermanentlyFailed)
+    }
   }
 
   private def createRequest(message: IEMessage): ParsedXmlRequest[_] = {
