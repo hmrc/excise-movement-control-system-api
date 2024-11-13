@@ -47,10 +47,9 @@ class NrsServiceNew @Inject() (
     extends AuthorisedFunctions
     with Logging {
 
-  def makeNrsWorkItemAndAddToRepository(
+  def makeWorkItemAndQueue(
     request: ParsedXmlRequest[_],
-    authorisedErn: String,
-    correlationId: String
+    authorisedErn: String
   )(implicit headerCarrier: HeaderCarrier): Future[Done] = {
 
     val payload        = request.body.toString

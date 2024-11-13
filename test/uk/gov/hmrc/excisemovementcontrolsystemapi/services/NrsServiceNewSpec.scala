@@ -108,7 +108,7 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
           )
         )
 
-      val result = await(service.makeNrsWorkItemAndAddToRepository(testRequest, "ern", "correlationId")(hc))
+      val result = await(service.makeWorkItemAndQueue(testRequest, "ern", "correlationId")(hc))
 
       verify(nrsWorkItemRepository).pushNew(NrsSubmissionWorkItem(testNrsPayload))
       result mustBe Done
