@@ -94,7 +94,7 @@ class NrsConnectorSpec extends PlaySpec with NrsTestData with EitherValues with 
     when(metrics.timer(any).time()) thenReturn timerContext
   }
 
-  "submit" should {
+  "submit OLD" should {
     "return Done" in {
       val result = await(connector.sendToNrsOld(nrsPayLoad, "correlationId"))
 

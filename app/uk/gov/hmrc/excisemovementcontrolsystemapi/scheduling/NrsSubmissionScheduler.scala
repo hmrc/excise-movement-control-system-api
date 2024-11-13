@@ -19,18 +19,17 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 import cats.implicits.toFunctorOps
 import play.api.{Configuration, Logging}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NRSWorkItemRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsServiceNew
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 
-import java.time.Instant
 import javax.inject.Inject
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
 class NrsSubmissionScheduler @Inject() (
   nrsWorkItemRepository: NRSWorkItemRepository,
-  nrsService: NrsService,
+  nrsService: NrsServiceNew,
   configuration: Configuration,
   dateTimeService: DateTimeService
 ) extends ScheduledJob
