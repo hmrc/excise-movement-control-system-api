@@ -19,7 +19,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 import org.apache.pekko.Done
 import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchers.any
-import org.mockito.ArgumentMatchersSugar.eqTo
 import org.mockito.MockitoSugar.{reset, times, verify, when}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
@@ -28,7 +27,7 @@ import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{NrsConnector, NrsConnectorNew}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnectorNew
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
@@ -56,7 +55,6 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
   private val dateTimeService              = mock[DateTimeService]
   private val authConnector: AuthConnector = mock[AuthConnector]
   private val timeStamp                    = Instant.now()
-  private val userHeaderData               = Seq("header" -> "test")
   private val service                      = new NrsServiceNew(
     authConnector,
     nrsConnectorNew,
@@ -146,7 +144,6 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
 //      verify(nrsWorkItemRepository).complete(testWorkItem.id, ProcessingStatus.Failed)
 //    }
   }
-
 
   private def createRequest(message: IEMessage): ParsedXmlRequest[_] = {
     val fakeRequest = FakeRequest()

@@ -78,19 +78,6 @@ class NrsServiceSpec extends PlaySpec with ScalaFutures with NrsTestData with Ei
     when(message.consignorId).thenReturn("ern")
   }
 
-  private val testRequest     = createRequest(message)
-  private val testNrsMetadata = NrsMetadata(
-    businessId = "emcs",
-    notableEvent = "excise-movement-control-system",
-    payloadContentType = "application/json",
-    payloadSha256Checksum = sha256Hash("payload for NRS"),
-    userSubmissionTimestamp = timeStamp.toString,
-    identityData = testNrsIdentityData,
-    userAuthToken = testAuthToken,
-    headerData = Map(),
-    searchKeys = Map("ern" -> "123")
-  )
-
   "submitNrsOld" should {
     "return Done" in {
       submitNrsOld(hc) mustBe Done
