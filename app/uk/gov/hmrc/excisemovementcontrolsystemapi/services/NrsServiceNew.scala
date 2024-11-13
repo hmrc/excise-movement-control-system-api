@@ -82,15 +82,17 @@ class NrsServiceNew @Inject() (
     //needs to call connector, and handle marking the workitems. IN PROGRESS
 
     nrsConnectorNew.sendToNrs(workItem.item.payload, correlationIdService.generateCorrelationId())
-      .flatMap( _ =>
+      .flatMap( _ => {
         nrsWorkItemRepository.complete(workItem.id, Succeeded)
           .map(_ => Done)
-      )
+      })
       .recoverWith {
         case UnexpectedResponseException(status, _) if is4xx(status) =>
+          logger.warn(s"NRS call failed permanently with status $status - marking workitem as PermanentlyFailed")
           nrsWorkItemRepository.complete(workItem.id, PermanentlyFailed)
             .map(_ => Done)
         case UnexpectedResponseException(status, _) if is5xx(status) =>
+          logger.warn(s"NRS call failed with status $status - marking workitem as Failed for retry")
           nrsWorkItemRepository.complete(workItem.id, Failed)
             .map(_ => Done)
       }
