@@ -20,6 +20,7 @@ import com.codahale.metrics.MetricRegistry
 import org.apache.pekko.Done
 import org.apache.pekko.pattern.CircuitBreaker
 import play.api.Logging
+import play.api.http.Status.ACCEPTED
 import play.api.libs.concurrent.Futures
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnectorNew.{NrsCircuitBreaker, UnexpectedResponseException, XApiKeyHeaderKey}
@@ -67,9 +68,20 @@ class NrsConnectorNew @Inject() (
         responseStatusAsFailure()
       )
       .flatMap { response =>
-        if (!is5xx(response.status)) {
+        if (is5xx(response.status)) {
+          logger.warn(
+            s"Non repudiation submission failed with status ${response.status}"
+          )
+          Future.failed(UnexpectedResponseException(response.status, response.body))
+        } else if (response.status == ACCEPTED) {
+          logger.info(
+            s"Non repudiation submission completed with status ${response.status}"
+          )
           Future.successful(Done)
         } else {
+          logger.warn(
+            s"Non repudiation submission responded with status ${response.status}"
+          )
           Future.failed(UnexpectedResponseException(response.status, response.body))
         }
       }
