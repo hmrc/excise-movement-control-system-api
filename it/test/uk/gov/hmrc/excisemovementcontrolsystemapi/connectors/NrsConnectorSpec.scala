@@ -168,7 +168,7 @@ class NrsConnectorSpec
               )
           )
 
-          val onOpen = Promise[Unit]
+          val onOpen = Promise[Unit]()
           circuitBreaker.onOpen(onOpen.success(()))
 
           circuitBreaker.isOpen mustBe false
