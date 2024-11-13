@@ -20,7 +20,6 @@ import org.apache.pekko.Done
 import play.api.Logging
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve._
-import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnectorNew
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
