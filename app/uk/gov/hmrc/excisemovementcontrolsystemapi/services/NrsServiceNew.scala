@@ -127,30 +127,3 @@ class NrsServiceNew @Inject() (
         throw new InternalServerException("No auth token available for NRS")
     }
 }
-
-object NrsServiceNew {
-
-  type NonRepudiationIdentityRetrievals =
-    (Option[AffinityGroup] ~ Option[String]
-      ~ Option[String] ~ Option[String]
-      ~ Option[Credentials] ~ ConfidenceLevel
-      ~ Option[String] ~ Option[String]
-      ~ Option[Name]
-      ~ Option[String] ~ AgentInformation
-      ~ Option[String] ~ Option[CredentialRole]
-      ~ Option[MdtpInformation] ~ Option[ItmpName]
-      ~ Option[ItmpAddress]
-      ~ Option[String])
-
-  val nonRepudiationIdentityRetrievals: Retrieval[NonRepudiationIdentityRetrievals] =
-    Retrievals.affinityGroup and Retrievals.internalId and
-      Retrievals.externalId and Retrievals.agentCode and
-      Retrievals.credentials and Retrievals.confidenceLevel and
-      Retrievals.nino and Retrievals.saUtr and
-      Retrievals.name and
-      Retrievals.email and Retrievals.agentInformation and
-      Retrievals.groupIdentifier and Retrievals.credentialRole and
-      Retrievals.mdtpInformation and Retrievals.itmpName and
-      Retrievals.itmpAddress and
-      Retrievals.credentialStrength
-}
