@@ -70,9 +70,10 @@ class NrsSubmissionSchedulerSpec
       bind[DateTimeService].toInstance(mockDateTimeService)
     )
     .configure(
-      "scheduler.nrsSubmissionJob.initialDelay" -> "1 minutes",
-      "scheduler.nrsSubmissionJob.interval"     -> "1 minute",
-      "featureFlags.nrsSubmissionEnabled"       -> true
+      "scheduler.nrsSubmissionJob.initialDelay"      -> "1 minutes",
+      "scheduler.nrsSubmissionJob.interval"          -> "1 minute",
+      "scheduler.nrsSubmissionJob.numberOfInstances" -> 1,
+      "featureFlags.nrsSubmissionEnabled"            -> true
     )
     .build()
 
@@ -115,7 +116,9 @@ class NrsSubmissionSchedulerSpec
     "use interval from configuration" in {
       nrsSubmissionScheduler.interval mustBe FiniteDuration(1, "minute")
     }
-
+    "use the correct number of instances from configuration" in {
+      nrsSubmissionScheduler.numberOfInstances mustBe 1
+    }
     "submit to NRS when there is an outstanding nrs workitem to process" in {
 
       val workItem = WorkItem(

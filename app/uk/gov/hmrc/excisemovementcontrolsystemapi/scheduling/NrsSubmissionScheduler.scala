@@ -56,6 +56,9 @@ class NrsSubmissionScheduler @Inject() (
 
   override def interval: FiniteDuration = configuration.get[FiniteDuration]("scheduler.nrsSubmissionJob.interval")
 
+  override val numberOfInstances: Int =
+    configuration.get[Int]("scheduler.nrsSubmissionJob.numberOfInstances")
+
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
 }
