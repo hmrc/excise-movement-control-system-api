@@ -71,16 +71,16 @@ class NrsConnectorNew @Inject() (
       .flatMap { response =>
 
         response.status match {
-          case status if is5xx(status) =>
-            logger.warn(
-              s"Non repudiation submission failed with status ${response.status}"
-            )
-            Future.failed(UnexpectedResponseException(response.status, response.body))
           case ACCEPTED =>
             logger.info(
               s"Non repudiation submission completed with status ${response.status}"
             )
             Future.successful(Done)
+          case status if is5xx(status) =>
+            logger.warn(
+              s"Non repudiation submission failed with status ${response.status}"
+            )
+            Future.failed(UnexpectedResponseException(response.status, response.body))
           case _ =>
             logger.warn(
               s"Non repudiation submission responded with status ${response.status}"
