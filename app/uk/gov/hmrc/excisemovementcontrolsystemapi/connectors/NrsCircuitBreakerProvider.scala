@@ -54,7 +54,7 @@ class NrsCircuitBreakerProvider @Inject() (
       .onOpen {
         logger.warn("NRS Circuit Breaker has opened")
       }
-      .onHalfOpen{
+      .onHalfOpen {
         logger.warn("NRS Circuit Breaker set to half open")
       }
       .onClose {

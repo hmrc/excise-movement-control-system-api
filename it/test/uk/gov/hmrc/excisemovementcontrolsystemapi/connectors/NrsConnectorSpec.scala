@@ -92,6 +92,8 @@ class NrsConnectorSpec
 
         result mustBe Done
       }
+    }
+    "must return a failed future" - {
       "when the call to NRS fails with a 4xx error" - {
         "with circuit breaker present" in {
           val connector = app.injector.instanceOf[NrsConnectorNew]
@@ -104,9 +106,9 @@ class NrsConnectorSpec
               )
           )
 
-          val result = connector.sendToNrs(nrsPayLoad, correlationId)(hc).futureValue
+          val exception = connector.sendToNrs(nrsPayLoad, correlationId)(hc).failed.futureValue
 
-          result mustBe Done
+          exception mustBe UnexpectedResponseException(BAD_REQUEST, "body")
         }
         "and NOT trip the circuit breaker" in {
           val connector = app.injector.instanceOf[NrsConnectorNew]
@@ -124,15 +126,13 @@ class NrsConnectorSpec
           )
 
           circuitBreaker.isOpen mustBe false
-          connector.sendToNrs(nrsPayLoad, correlationId)(hc).futureValue
+          connector.sendToNrs(nrsPayLoad, correlationId)(hc).failed.futureValue
           circuitBreaker.isOpen mustBe false
-          connector.sendToNrs(nrsPayLoad, correlationId)(hc).futureValue
+          connector.sendToNrs(nrsPayLoad, correlationId)(hc).failed.futureValue
 
           wireMockServer.verify(2, postRequestedFor(urlMatching(url)))
         }
       }
-    }
-    "must return a failed future" - {
       "when the call to NRS fails with a 5xx error" - {
         "with circuit breaker present" in {
           val connector = app.injector.instanceOf[NrsConnectorNew]
@@ -168,7 +168,7 @@ class NrsConnectorSpec
               )
           )
 
-          val onOpen = Promise[Unit]
+          val onOpen = Promise[Unit]()
           circuitBreaker.onOpen(onOpen.success(()))
 
           circuitBreaker.isOpen mustBe false
