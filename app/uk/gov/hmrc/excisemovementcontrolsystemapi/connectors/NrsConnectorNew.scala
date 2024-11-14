@@ -52,6 +52,7 @@ class NrsConnectorNew @Inject() (
     logger.info(
       s"NRS submission: CorrelationId: $correlationId"
     )
+
     def responseStatusAsFailure(): Try[HttpResponse] => Boolean = {
       case Success(n) => is5xx(n.status)
       case Failure(_) => true
@@ -68,21 +69,23 @@ class NrsConnectorNew @Inject() (
         responseStatusAsFailure()
       )
       .flatMap { response =>
-        if (is5xx(response.status)) {
-          logger.warn(
-            s"Non repudiation submission failed with status ${response.status}"
-          )
-          Future.failed(UnexpectedResponseException(response.status, response.body))
-        } else if (response.status == ACCEPTED) {
-          logger.info(
-            s"Non repudiation submission completed with status ${response.status}"
-          )
-          Future.successful(Done)
-        } else {
-          logger.warn(
-            s"Non repudiation submission responded with status ${response.status}"
-          )
-          Future.failed(UnexpectedResponseException(response.status, response.body))
+
+        response.status match {
+          case status if is5xx(status) =>
+            logger.warn(
+              s"Non repudiation submission failed with status ${response.status}"
+            )
+            Future.failed(UnexpectedResponseException(response.status, response.body))
+          case ACCEPTED =>
+            logger.info(
+              s"Non repudiation submission completed with status ${response.status}"
+            )
+            Future.successful(Done)
+          case _ =>
+            logger.warn(
+              s"Non repudiation submission responded with status ${response.status}"
+            )
+            Future.failed(UnexpectedResponseException(response.status, response.body))
         }
       }
   }
@@ -94,7 +97,7 @@ object NrsConnectorNew {
 
   final case class UnexpectedResponseException(status: Int, body: String) extends Exception {
     override def getMessage: String = s"Unexpected response from NRS, status: $status, body: $body"
-  }
+  } //TODO: This now should belong elsewhere as is used in service as well as here.
 
   final case class NrsCircuitBreaker(breaker: CircuitBreaker)
 }

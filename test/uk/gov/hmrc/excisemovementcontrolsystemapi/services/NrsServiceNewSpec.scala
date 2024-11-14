@@ -24,7 +24,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR}
+import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, SEE_OTHER}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -150,6 +150,20 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
     "mark the workItem as PERMANENTLY failed if submission fails with 4xx" in {
       when(nrsConnectorNew.sendToNrs(any(), any())(any()))
         .thenReturn(Future.failed(UnexpectedResponseException(BAD_REQUEST, "body")))
+
+      when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+
+      val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
+
+      val result = await(service.submitNrs(testWorkItem))
+
+      verify(nrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
+      result mustBe Done
+      verify(nrsWorkItemRepository).complete(testWorkItem.id, PermanentlyFailed)
+    }
+    "mark the workItem as PERMANENTLY failed if submission fails with a different status" in {
+      when(nrsConnectorNew.sendToNrs(any(), any())(any()))
+        .thenReturn(Future.failed(UnexpectedResponseException(SEE_OTHER, "body")))
 
       when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
 
