@@ -30,10 +30,13 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService.nonRepudia
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, NrsEventIdMapper}
 import uk.gov.hmrc.http.HttpErrorFunctions.{is4xx, is5xx}
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier, InternalServerException}
+import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{Failed, PermanentlyFailed, Succeeded}
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
+import java.util.UUID
 import javax.inject.{Inject, Singleton}
+import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -44,10 +47,14 @@ class NrsServiceNew @Inject() (
   dateTimeService: DateTimeService,
   emcsUtils: EmcsUtils,
   nrsEventIdMapper: NrsEventIdMapper,
-  correlationIdService: CorrelationIdService
+  correlationIdService: CorrelationIdService,
+  mongoLockRepository: MongoLockRepository
 )(implicit ec: ExecutionContext, headerCarrier: HeaderCarrier)
     extends AuthorisedFunctions
     with Logging {
+
+  private val instanceId: String = UUID.randomUUID().toString
+  private val lockService: LockService = LockService(mongoLockRepository, lockId = instanceId, 1.hours)
 
   def makeWorkItemAndQueue(
     request: ParsedXmlRequest[_],
@@ -169,10 +176,17 @@ class NrsServiceNew @Inject() (
   }
 
   def processAll(): Future[Done] = {
-    processSingleNrs()
-      .flatMap {
-        case true => processAll()
-        case false => Future.successful(Done)
+    lockService.withLock {
+      processSingleNrs() // throttling should go here
+        .flatMap {
+          case true => processAll()
+          case false => Future.successful(Done)
+        }
+    }.map {
+      _.getOrElse {
+        logger.info(s"Could not acquire lock on nrsWorkItemRepository for $instanceId")
+        Done
       }
-  } // will have the locking, and keep calling
+    }
+  }
 }

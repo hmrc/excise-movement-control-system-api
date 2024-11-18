@@ -19,6 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 import org.apache.pekko.Done
 import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.never
 import org.mockito.MockitoSugar.{reset, times, verify, when}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
@@ -39,6 +40,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmission
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService.NonRepudiationIdentityRetrievals
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, NrsEventIdMapper}
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier}
+import uk.gov.hmrc.mongo.lock.{Lock, MongoLockRepository}
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{Failed, PermanentlyFailed, Succeeded, ToDo}
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
@@ -52,20 +54,22 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
 
   implicit val ec: ExecutionContext        = ExecutionContext.global
   implicit val hc: HeaderCarrier           = HeaderCarrier(authorization = Some(Authorization(testAuthToken)))
-  private val nrsConnectorNew              = mock[NrsConnectorNew]
-  private val nrsWorkItemRepository        = mock[NRSWorkItemRepository]
-  private val correlationIdService         = mock[CorrelationIdService]
-  private val dateTimeService              = mock[DateTimeService]
-  private val authConnector: AuthConnector = mock[AuthConnector]
+  private val mockNrsConnectorNew              = mock[NrsConnectorNew]
+  private val mockNrsWorkItemRepository        = mock[NRSWorkItemRepository]
+  private val mockCorrelationIdService         = mock[CorrelationIdService]
+  private val mockDateTimeService              = mock[DateTimeService]
+  private val mockAuthConnector: AuthConnector = mock[AuthConnector]
+  private val mockLockRepository: MongoLockRepository = mock[MongoLockRepository]
   private val timeStamp                    = Instant.now()
   private val service                      = new NrsServiceNew(
-    authConnector,
-    nrsConnectorNew,
-    nrsWorkItemRepository,
-    dateTimeService,
+    mockAuthConnector,
+    mockNrsConnectorNew,
+    mockNrsWorkItemRepository,
+    mockDateTimeService,
     new EmcsUtils,
     new NrsEventIdMapper,
-    correlationIdService
+    mockCorrelationIdService,
+    mockLockRepository
   )
 
   private val message           = mock[IE815Message]
@@ -73,13 +77,20 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(authConnector, nrsConnectorNew, dateTimeService, correlationIdService, nrsWorkItemRepository)
+    reset(
+      mockAuthConnector,
+      mockNrsConnectorNew,
+      mockDateTimeService,
+      mockCorrelationIdService,
+      mockNrsWorkItemRepository,
+      mockLockRepository
+    )
 
-    when(dateTimeService.timestamp()).thenReturn(timeStamp)
-    when(correlationIdService.generateCorrelationId()).thenReturn(testCorrelationId)
-    when(authConnector.authorise[NonRepudiationIdentityRetrievals](any, any)(any, any)) thenReturn
+    when(mockDateTimeService.timestamp()).thenReturn(timeStamp)
+    when(mockCorrelationIdService.generateCorrelationId()).thenReturn(testCorrelationId)
+    when(mockAuthConnector.authorise[NonRepudiationIdentityRetrievals](any, any)(any, any)) thenReturn
       Future.successful(testAuthRetrievals)
-    when(nrsConnectorNew.sendToNrs(any, any)(any))
+    when(mockNrsConnectorNew.sendToNrs(any, any)(any))
       .thenReturn(Future.successful(Done))
     when(message.consignorId).thenReturn("ern")
   }
@@ -105,7 +116,7 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
   "makeNrsWorkItemAndAddToRepository" should {
     "create the NRSSubmission model and call to add it to the NRSWorkItemRepository" in {
 
-      when(nrsWorkItemRepository.pushNew(any(), any(), any()))
+      when(mockNrsWorkItemRepository.pushNew(any(), any(), any()))
         .thenReturn(
           Future.successful(
             WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, NrsSubmissionWorkItem(testNrsPayload))
@@ -114,7 +125,7 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
 
       val result = await(service.makeWorkItemAndQueue(testRequest, "ern"))
 
-      verify(nrsWorkItemRepository).pushNew(NrsSubmissionWorkItem(testNrsPayload))
+      verify(mockNrsWorkItemRepository).pushNew(NrsSubmissionWorkItem(testNrsPayload))
       result mustBe Done
     }
   }
@@ -122,52 +133,52 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
   "submitNrs" should {
     "submit to NRS and call the repository to mark the workitem as done if it succeeds with ACCEPTED" in {
 
-      when(nrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
+      when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
 
-      when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+      when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
 
       val result = await(service.submitNrs(testWorkItem))
 
-      verify(nrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
+      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
 
       result mustBe Done
-      verify(nrsWorkItemRepository).complete(testWorkItem.id, Succeeded)
+      verify(mockNrsWorkItemRepository).complete(testWorkItem.id, Succeeded)
     }
     "mark the workItem as failed if submission fails with 5xx" in {
-      when(nrsConnectorNew.sendToNrs(any(), any())(any()))
+      when(mockNrsConnectorNew.sendToNrs(any(), any())(any()))
         .thenReturn(Future.failed(UnexpectedResponseException(INTERNAL_SERVER_ERROR, "body")))
 
-      when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+      when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
 
       val result = await(service.submitNrs(testWorkItem))
 
-      verify(nrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
+      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
       result mustBe Done
-      verify(nrsWorkItemRepository).complete(testWorkItem.id, Failed)
+      verify(mockNrsWorkItemRepository).complete(testWorkItem.id, Failed)
     }
     "mark the workItem as PERMANENTLY failed if submission fails with 4xx" in {
-      when(nrsConnectorNew.sendToNrs(any(), any())(any()))
+      when(mockNrsConnectorNew.sendToNrs(any(), any())(any()))
         .thenReturn(Future.failed(UnexpectedResponseException(BAD_REQUEST, "body")))
 
-      when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+      when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
 
       val result = await(service.submitNrs(testWorkItem))
 
-      verify(nrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
+      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
       result mustBe Done
-      verify(nrsWorkItemRepository).complete(testWorkItem.id, PermanentlyFailed)
+      verify(mockNrsWorkItemRepository).complete(testWorkItem.id, PermanentlyFailed)
     }
     "mark the workItem as PERMANENTLY failed if submission fails with a different status" in {
-      when(nrsConnectorNew.sendToNrs(any(), any())(any()))
+      when(mockNrsConnectorNew.sendToNrs(any(), any())(any()))
         .thenReturn(Future.failed(UnexpectedResponseException(SEE_OTHER, "body")))
 
-      when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+      when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
 
       val result = await(service.submitNrs(testWorkItem))
 
-      verify(nrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
+      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
       result mustBe Done
-      verify(nrsWorkItemRepository).complete(testWorkItem.id, PermanentlyFailed)
+      verify(mockNrsWorkItemRepository).complete(testWorkItem.id, PermanentlyFailed)
     }
   }
 
@@ -175,36 +186,36 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
     "call to submit the NRS data and return true if it processed a thing successfully" in {
 
 
-      when(nrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
+      when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
 
-      when(nrsWorkItemRepository.pullOutstanding(any(), any()))
+      when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
         .thenReturn(Future.successful(Some(testWorkItem)))
-      when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+      when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
 
       val result = await(service.processSingleNrs())
 
-      verify(nrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
-      verify(nrsWorkItemRepository).complete(testWorkItem.id, Succeeded)
+      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
+      verify(mockNrsWorkItemRepository).complete(testWorkItem.id, Succeeded)
       result mustBe true
     }
     "call to submit the NRS data and return true if it tried to process a thing but failed" in {
 
-      when(nrsConnectorNew.sendToNrs(any(), any())(any()))
+      when(mockNrsConnectorNew.sendToNrs(any(), any())(any()))
         .thenReturn(Future.failed(UnexpectedResponseException(INTERNAL_SERVER_ERROR, "body")))
 
-      when(nrsWorkItemRepository.pullOutstanding(any(), any()))
+      when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
         .thenReturn(Future.successful(Some(testWorkItem)))
-      when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+      when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
 
       val result = await(service.processSingleNrs())
 
-      verify(nrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
-      verify(nrsWorkItemRepository).complete(testWorkItem.id, Failed)
+      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
+      verify(mockNrsWorkItemRepository).complete(testWorkItem.id, Failed)
       result mustBe true
     }
     "return false if there was nothing in the repository to process" in {
 
-      when(nrsWorkItemRepository.pullOutstanding(any(), any()))
+      when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
         .thenReturn(Future.successful(None))
 
       val result = await(service.processSingleNrs())
@@ -213,32 +224,60 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
   }
 
   "processAll" should {
-    "call NRS multiple times if there are more than one submission to process" in {
+    "when a lock is available" should {
+      val lock = Lock("id", "owner", timeStamp, timeStamp.plus(1, ChronoUnit.HOURS))
 
-      when(nrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
-      when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+      "call NRS multiple times if there are more than one submission to process" in {
+        when(mockLockRepository.takeLock(any(), any(), any())).thenReturn(Future.successful(Some(lock)))
+        when(mockLockRepository.releaseLock(any(), any())).thenReturn(Future.unit)
 
-      when(nrsWorkItemRepository.pullOutstanding(any(), any())).thenReturn(
-        Future.successful(Some(testWorkItem)),
-        Future.successful(Some(testWorkItem)),
-        Future.successful(Some(testWorkItem)),
-        Future.successful(None)
-      )
+        when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
+        when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
 
-      service.processAll().futureValue
+        when(mockNrsWorkItemRepository.pullOutstanding(any(), any())).thenReturn(
+          Future.successful(Some(testWorkItem)),
+          Future.successful(Some(testWorkItem)),
+          Future.successful(Some(testWorkItem)),
+          Future.successful(None)
+        )
 
-      verify(nrsWorkItemRepository, times(4)).pullOutstanding(any(), any())
-      verify(nrsWorkItemRepository, times(3)).complete(testWorkItem.id, Succeeded)
+        service.processAll().futureValue
+
+        verify(mockNrsWorkItemRepository, times(4)).pullOutstanding(any(), any())
+        verify(mockNrsWorkItemRepository, times(3)).complete(testWorkItem.id, Succeeded)
+      }
+      "not call NRS if there is nothing to process" in {
+        when(mockLockRepository.takeLock(any(), any(), any())).thenReturn(Future.successful(Some(lock)))
+        when(mockLockRepository.releaseLock(any(), any())).thenReturn(Future.unit)
+
+        when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
+          .thenReturn(Future.successful(None))
+
+        service.processAll().futureValue
+
+        verify(mockNrsWorkItemRepository, times(1)).pullOutstanding(any(), any())
+        verify(mockNrsWorkItemRepository, never()).complete(any(), any())
+      }
     }
-    "not call NRS if there is nothing to process" in {
+    "when a lock is not available" should {
+      "not do anything" in {
+        when(mockLockRepository.takeLock(any(), any(), any())).thenReturn(Future.successful(None))
+        when(mockLockRepository.releaseLock(any(), any())).thenReturn(Future.unit)
 
-      when(nrsWorkItemRepository.pullOutstanding(any(), any()))
-        .thenReturn(Future.successful(None))
+        when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
+        when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
 
-      service.processAll().futureValue
+        when(mockNrsWorkItemRepository.pullOutstanding(any(), any())).thenReturn(
+          Future.successful(Some(testWorkItem)),
+          Future.successful(Some(testWorkItem)),
+          Future.successful(Some(testWorkItem)),
+          Future.successful(None)
+        )
 
-      verify(nrsWorkItemRepository, times(1)).pullOutstanding(any(), any())
-      verify(nrsWorkItemRepository, times(0)).complete(any(), any())
+        service.processAll().futureValue
+
+        verify(mockNrsWorkItemRepository, never()).pullOutstanding(any(), any())
+      }
     }
   }
 
