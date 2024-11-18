@@ -45,7 +45,7 @@ class NrsServiceNew @Inject() (
   emcsUtils: EmcsUtils,
   nrsEventIdMapper: NrsEventIdMapper,
   correlationIdService: CorrelationIdService
-)(implicit ec: ExecutionContext)
+)(implicit ec: ExecutionContext, headerCarrier: HeaderCarrier)
     extends AuthorisedFunctions
     with Logging {
 
@@ -62,7 +62,7 @@ class NrsServiceNew @Inject() (
 
     for {
       identityData  <- retrieveIdentityData()
-      userAuthToken  = retrieveUserAuthToken(headerCarrier)
+      userAuthToken  = retrieveUserAuthToken()
       metaData       = NrsMetadata.create(
                          payload,
                          emcsUtils,
@@ -78,7 +78,7 @@ class NrsServiceNew @Inject() (
     } yield Done
   }
 
-  def submitNrs(workItem: WorkItem[NrsSubmissionWorkItem])(implicit hc: HeaderCarrier): Future[Done] =
+  def submitNrs(workItem: WorkItem[NrsSubmissionWorkItem]): Future[Done] =
     nrsConnectorNew
       .sendToNrs(workItem.item.payload, correlationIdService.generateCorrelationId())
       .flatMap { _ =>
@@ -113,7 +113,7 @@ class NrsServiceNew @Inject() (
             .map(_ => Done)
       }
 
-  private def retrieveIdentityData()(implicit headerCarrier: HeaderCarrier): Future[IdentityData] =
+  private def retrieveIdentityData(): Future[IdentityData] =
     authorised().retrieve(nonRepudiationIdentityRetrievals) {
       case affinityGroup ~ internalId ~
           externalId ~ agentCode ~
@@ -148,8 +148,8 @@ class NrsServiceNew @Inject() (
         )
     }
 
-  private def retrieveUserAuthToken(hc: HeaderCarrier): String =
-    hc.authorization match {
+  private def retrieveUserAuthToken(): String =
+    headerCarrier.authorization match {
       case Some(Authorization(authToken)) => authToken
       case _                              =>
         logger.warn("[NrsService] - No auth token available for NRS")
@@ -157,18 +157,22 @@ class NrsServiceNew @Inject() (
     }
 
 
-  def processSingleNrs()(hc:HeaderCarrier): Future[Boolean] = {
+  def processSingleNrs(): Future[Boolean] = {
 
     val now = dateTimeService.timestamp()
 
     nrsWorkItemRepository.pullOutstanding(now, now)
-      .map {
-        case Some(wi) => submitNrs(wi)(hc).map(_.isInstanceOf[Done]) // do the submission and indicate we should go around again
-        case None => Future.successful(false) // nothing left to process - need to exit the loop here
-      }.flatten
+      .flatMap {
+        case Some(wi) => submitNrs(wi).map(_ => true)
+        case None => Future.successful(false)
+      }
   }
 
-  def processAll()(hc:HeaderCarrier): Future[Done] = {
-    ???
+  def processAll(): Future[Done] = {
+    processSingleNrs()
+      .flatMap {
+        case true => processAll()
+        case false => Future.successful(Done)
+      }
   } // will have the locking, and keep calling
 }
