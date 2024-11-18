@@ -112,7 +112,7 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
           )
         )
 
-      val result = await(service.makeWorkItemAndQueue(testRequest, "ern")(hc))
+      val result = await(service.makeWorkItemAndQueue(testRequest, "ern"))
 
       verify(nrsWorkItemRepository).pushNew(NrsSubmissionWorkItem(testNrsPayload))
       result mustBe Done
@@ -125,8 +125,6 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
       when(nrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
 
       when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
-
-//      val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
 
       val result = await(service.submitNrs(testWorkItem))
 
@@ -141,8 +139,6 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
 
       when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
 
-//      val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
-
       val result = await(service.submitNrs(testWorkItem))
 
       verify(nrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
@@ -155,8 +151,6 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
 
       when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
 
-//      val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
-
       val result = await(service.submitNrs(testWorkItem))
 
       verify(nrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
@@ -168,8 +162,6 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
         .thenReturn(Future.failed(UnexpectedResponseException(SEE_OTHER, "body")))
 
       when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
-
-//      val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
 
       val result = await(service.submitNrs(testWorkItem))
 
@@ -189,15 +181,13 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
         .thenReturn(Future.successful(Some(testWorkItem)))
       when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
 
-      val result = await(service.processSingleNrs()(hc))
+      val result = await(service.processSingleNrs())
 
       verify(nrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
       verify(nrsWorkItemRepository).complete(testWorkItem.id, Succeeded)
       result mustBe true
     }
     "call to submit the NRS data and return true if it tried to process a thing but failed" in {
-
-//      val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
 
       when(nrsConnectorNew.sendToNrs(any(), any())(any()))
         .thenReturn(Future.failed(UnexpectedResponseException(INTERNAL_SERVER_ERROR, "body")))
@@ -206,7 +196,7 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
         .thenReturn(Future.successful(Some(testWorkItem)))
       when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
 
-      val result = await(service.processSingleNrs()(hc))
+      val result = await(service.processSingleNrs())
 
       verify(nrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
       verify(nrsWorkItemRepository).complete(testWorkItem.id, Failed)
@@ -217,29 +207,40 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
       when(nrsWorkItemRepository.pullOutstanding(any(), any()))
         .thenReturn(Future.successful(None))
 
-      val result = await(service.processSingleNrs()(hc))
+      val result = await(service.processSingleNrs())
       result mustBe false
     }
   }
 
-//  "processAll" should {
-//    "call NRS multiple times if there are more than one submission to process" in {
-//
-//      val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
-//      when(nrsWorkItemRepository.pullOutstanding(any(), any())).thenReturn(
-//        Future.successful(Some(testWorkItem)),
-//        Future.successful(Some(testWorkItem)),
-//        Future.successful(Some(testWorkItem)),
-//        Future.successful(None)
-//      )
-//
-//      service.processAll().futureValue
-//
-//      verify(nrsWorkItemRepository, times(4)).pullOutstanding(timeStamp.minus(30, ChronoUnit.MINUTES), timeStamp)
-////      verify(nrsWorkItemRepository, times(3)).???(any())
-//      verify(nrsWorkItemRepository, times(3)).complete(testWorkItem.id, Succeeded)
-//    }
-//  }
+  "processAll" should {
+    "call NRS multiple times if there are more than one submission to process" in {
+
+      when(nrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
+      when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+
+      when(nrsWorkItemRepository.pullOutstanding(any(), any())).thenReturn(
+        Future.successful(Some(testWorkItem)),
+        Future.successful(Some(testWorkItem)),
+        Future.successful(Some(testWorkItem)),
+        Future.successful(None)
+      )
+
+      service.processAll().futureValue
+
+      verify(nrsWorkItemRepository, times(4)).pullOutstanding(any(), any())
+      verify(nrsWorkItemRepository, times(3)).complete(testWorkItem.id, Succeeded)
+    }
+    "not call NRS if there is nothing to process" in {
+
+      when(nrsWorkItemRepository.pullOutstanding(any(), any()))
+        .thenReturn(Future.successful(None))
+
+      service.processAll().futureValue
+
+      verify(nrsWorkItemRepository, times(1)).pullOutstanding(any(), any())
+      verify(nrsWorkItemRepository, times(0)).complete(any(), any())
+    }
+  }
 
   private def createRequest(message: IEMessage): ParsedXmlRequest[_] = {
     val fakeRequest = FakeRequest()
