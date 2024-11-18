@@ -27,7 +27,7 @@ import javax.inject.Inject
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
-class NrsSubmissionScheduler @Inject() (
+class NrsSubmissionJob @Inject()(
   nrsWorkItemRepository: NRSWorkItemRepository,
   nrsService: NrsServiceNew,
   configuration: Configuration,
@@ -36,9 +36,10 @@ class NrsSubmissionScheduler @Inject() (
     with Logging {
 
   override def execute(implicit ec: ExecutionContext): Future[ScheduledJob.Result] = {
+    // locking here. uses mongo to do it. because this then shares between instances.
     val now                     = dateTimeService.timestamp()
     val result: Future[Boolean] = nrsWorkItemRepository
-      .pullOutstanding(now, now)
+      .pullOutstanding(now, now) // currently one at a time. need to process everything it can. Probably move into service.
       .flatMap {
         case None           => Future.successful(true)
         case Some(workItem) =>

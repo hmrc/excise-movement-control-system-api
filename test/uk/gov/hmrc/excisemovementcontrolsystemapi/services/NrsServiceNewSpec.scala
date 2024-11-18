@@ -44,6 +44,7 @@ import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.nio.charset.StandardCharsets
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -99,6 +100,7 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
   private val encodedMessage  = Base64.getEncoder.encodeToString("<IE815>test</IE815>".getBytes(StandardCharsets.UTF_8))
   private val testNrsPayload  = NrsPayload(encodedMessage, testNrsMetadata)
   private val testNrsWorkItem = NrsSubmissionWorkItem(testNrsPayload)
+  private val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
 
   "makeNrsWorkItemAndAddToRepository" should {
     "create the NRSSubmission model and call to add it to the NRSWorkItemRepository" in {
@@ -124,7 +126,7 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
 
       when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
 
-      val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
+//      val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
 
       val result = await(service.submitNrs(testWorkItem))
 
@@ -139,7 +141,7 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
 
       when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
 
-      val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
+//      val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
 
       val result = await(service.submitNrs(testWorkItem))
 
@@ -153,7 +155,7 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
 
       when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
 
-      val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
+//      val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
 
       val result = await(service.submitNrs(testWorkItem))
 
@@ -167,7 +169,7 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
 
       when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
 
-      val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
+//      val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
 
       val result = await(service.submitNrs(testWorkItem))
 
@@ -176,6 +178,68 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
       verify(nrsWorkItemRepository).complete(testWorkItem.id, PermanentlyFailed)
     }
   }
+
+  "processSingleNrs" should {
+    "call to submit the NRS data and return true if it processed a thing successfully" in {
+
+
+      when(nrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
+
+      when(nrsWorkItemRepository.pullOutstanding(any(), any()))
+        .thenReturn(Future.successful(Some(testWorkItem)))
+      when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+
+      val result = await(service.processSingleNrs()(hc))
+
+      verify(nrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
+      verify(nrsWorkItemRepository).complete(testWorkItem.id, Succeeded)
+      result mustBe true
+    }
+    "call to submit the NRS data and return true if it tried to process a thing but failed" in {
+
+//      val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
+
+      when(nrsConnectorNew.sendToNrs(any(), any())(any()))
+        .thenReturn(Future.failed(UnexpectedResponseException(INTERNAL_SERVER_ERROR, "body")))
+
+      when(nrsWorkItemRepository.pullOutstanding(any(), any()))
+        .thenReturn(Future.successful(Some(testWorkItem)))
+      when(nrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+
+      val result = await(service.processSingleNrs()(hc))
+
+      verify(nrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
+      verify(nrsWorkItemRepository).complete(testWorkItem.id, Failed)
+      result mustBe true
+    }
+    "return false if there was nothing in the repository to process" in {
+
+      when(nrsWorkItemRepository.pullOutstanding(any(), any()))
+        .thenReturn(Future.successful(None))
+
+      val result = await(service.processSingleNrs()(hc))
+      result mustBe false
+    }
+  }
+
+//  "processAll" should {
+//    "call NRS multiple times if there are more than one submission to process" in {
+//
+//      val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
+//      when(nrsWorkItemRepository.pullOutstanding(any(), any())).thenReturn(
+//        Future.successful(Some(testWorkItem)),
+//        Future.successful(Some(testWorkItem)),
+//        Future.successful(Some(testWorkItem)),
+//        Future.successful(None)
+//      )
+//
+//      service.processAll().futureValue
+//
+//      verify(nrsWorkItemRepository, times(4)).pullOutstanding(timeStamp.minus(30, ChronoUnit.MINUTES), timeStamp)
+////      verify(nrsWorkItemRepository, times(3)).???(any())
+//      verify(nrsWorkItemRepository, times(3)).complete(testWorkItem.id, Succeeded)
+//    }
+//  }
 
   private def createRequest(message: IEMessage): ParsedXmlRequest[_] = {
     val fakeRequest = FakeRequest()
