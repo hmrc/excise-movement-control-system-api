@@ -155,4 +155,20 @@ class NrsServiceNew @Inject() (
         logger.warn("[NrsService] - No auth token available for NRS")
         throw new InternalServerException("No auth token available for NRS")
     }
+
+
+  def processSingleNrs()(hc:HeaderCarrier): Future[Boolean] = {
+
+    val now = dateTimeService.timestamp()
+
+    nrsWorkItemRepository.pullOutstanding(now, now)
+      .map {
+        case Some(wi) => submitNrs(wi)(hc).map(_.isInstanceOf[Done]) // do the submission and indicate we should go around again
+        case None => Future.successful(false) // nothing left to process - need to exit the loop here
+      }.flatten
+  }
+
+  def processAll()(hc:HeaderCarrier): Future[Done] = {
+    ???
+  } // will have the locking, and keep calling
 }

@@ -46,7 +46,7 @@ import scala.concurrent.duration.FiniteDuration
 import java.time.{LocalDateTime, ZoneOffset}
 import scala.concurrent.{ExecutionContext, Future}
 
-class NrsSubmissionSchedulerSpec
+class NrsSubmissionJobSpec
     extends AnyFreeSpec
     with Matchers
     with ScalaFutures
@@ -89,7 +89,7 @@ class NrsSubmissionSchedulerSpec
   private val timestamp = LocalDateTime.of(2024, 3, 2, 12, 30, 45, 100).toInstant(ZoneOffset.UTC)
   when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
-  private lazy val nrsSubmissionScheduler = app.injector.instanceOf[NrsSubmissionScheduler]
+  private lazy val nrsSubmissionScheduler = app.injector.instanceOf[NrsSubmissionJob]
   private val nrsMetadata                 = NrsMetadata(
     businessId = "emcs",
     notableEvent = "excise-movement-control-system",
