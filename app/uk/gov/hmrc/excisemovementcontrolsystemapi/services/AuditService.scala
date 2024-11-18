@@ -38,13 +38,18 @@ class AuditServiceImpl @Inject() (auditConnector: AuditConnector)(implicit ec: E
     auditMessage(message, None)
   def auditMessage(message: IEMessage, failureReason: String)(implicit
     hc: HeaderCarrier
-  ): EitherT[Future, Result, Unit]                                                                = auditMessage(message, Some(failureReason))
+  ): EitherT[Future, Result, Unit]                                                                =
+    auditMessage(message, Some(failureReason))
+
+  def messageSubmitted(message: IEMessage)(implicit hc: HeaderCarrier): Unit = {
+    auditConnector.sendExtendedEvent(AuditEventFactory.)
+  }
 
   private def auditMessage(message: IEMessage, failureOpt: Option[String])(implicit
     hc: HeaderCarrier
   ): EitherT[Future, Result, Unit] =
     EitherT {
-      auditConnector.sendExtendedEvent(AuditEventFactory.createAuditEvent(message, failureOpt)).map {
+      auditConnector.sendExtendedEvent(AuditEventFactory.createMessageAuditEvent(message, failureOpt)).map {
         case f: AuditResult.Failure => Right(logger.error(f.msg))
         case _                      => Right(())
       }

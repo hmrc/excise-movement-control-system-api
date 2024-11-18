@@ -30,7 +30,7 @@ case class IE871Message(
   obj: IE871Type,
   key: Option[String],
   namespace: Option[String],
-  auditType: AuditType
+  messageAuditType: AuditType
 ) extends IEMessage
     with SubmitterTypeConverter
     with GeneratedJsonWriters {

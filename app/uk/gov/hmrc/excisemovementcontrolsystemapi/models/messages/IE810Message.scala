@@ -30,7 +30,7 @@ case class IE810Message(
   obj: IE810Type,
   key: Option[String],
   namespace: Option[String],
-  auditType: AuditType
+  messageAuditType: AuditType
 ) extends IEMessage
     with GeneratedJsonWriters {
   def localReferenceNumber: Option[String] = None

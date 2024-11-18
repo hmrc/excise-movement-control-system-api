@@ -17,10 +17,6 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
 import play.api.libs.json.{JsObject, JsValue, Json}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
-import uk.gov.hmrc.play.audit.model.ExtendedDataEvent
 
 trait Auditing {
 
@@ -44,20 +40,4 @@ trait Auditing {
       messageInfo ++ outcomeInfo
     }
   }
-
-  object AuditEventFactory {
-
-    def createAuditEvent(input: IEMessage, failureOpt: Option[String])(implicit
-      hc: HeaderCarrier
-    ): ExtendedDataEvent = {
-      val detail = AuditDetail(input.messageType, input.toJson, failureOpt)
-      ExtendedDataEvent(
-        auditSource = auditSource,
-        auditType = input.auditType.name,
-        tags = hc.toAuditTags(),
-        detail = detail.toJsObj
-      )
-    }
-  }
-
 }

@@ -19,13 +19,15 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 import generated.IE815Type
 import play.api.libs.json.{JsValue, Json}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditType, MessageAuditType}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType.DraftMovement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
 
 import scala.xml.NodeSeq
 
-case class IE815Message(obj: IE815Type, auditType: AuditType) extends IEMessage with GeneratedJsonWriters {
+case class IE815Message(obj: IE815Type, messageAuditType: MessageAuditType)
+    extends IEMessage
+    with GeneratedJsonWriters {
   def localReferenceNumber: String =
     obj.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber
 

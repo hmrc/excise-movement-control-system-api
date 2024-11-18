@@ -30,7 +30,7 @@ case class IE829Message(
   obj: IE829Type,
   key: Option[String],
   namespace: Option[String],
-  auditType: AuditType
+  messageAuditType: AuditType
 ) extends IEMessage
     with GeneratedJsonWriters {
 

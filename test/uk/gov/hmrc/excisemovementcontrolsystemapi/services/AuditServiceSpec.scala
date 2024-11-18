@@ -61,4 +61,8 @@ class AuditServiceSpec extends PlaySpec with TestXml {
       await(result.value) equals Right(())
     }
   }
+
+  "messageSubmitted" should {
+    "post a "
+  }
 }

@@ -30,7 +30,7 @@ case class IE818Message(
   obj: IE818Type,
   key: Option[String],
   namespace: Option[String],
-  auditType: AuditType
+  messageAuditType: AuditType
 ) extends IEMessage
     with GeneratedJsonWriters {
   def consignorId: Option[String] = None

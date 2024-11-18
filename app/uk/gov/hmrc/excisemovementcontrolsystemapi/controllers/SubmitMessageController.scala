@@ -21,6 +21,7 @@ import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditEventFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
@@ -53,26 +54,38 @@ class SubmitMessageController @Inject() (
 
   def submit(movementId: String): Action[NodeSeq] =
     (authAction andThen xmlParser).async(parse.xml) { implicit request =>
-      val result = for {
+      for {
         validatedMovementId <- validateMovementId(movementId)
         movement            <- getMovement(validatedMovementId)
         authorisedErn       <- validateMessage(movement, request.ieMessage, request.erns)
-        _                   <- sendRequest(request, authorisedErn)
-      } yield Accepted(
-        Json.toJson(
-          ExciseMovementResponse(
-            movement._id,
-            None,
-            movement.localReferenceNumber,
-            movement.consignorId,
-            movement.consigneeId,
-            movement.administrativeReferenceCode,
-            None
-          )
-        )
-      )
+      } yield authorisedErn {
+        submissionMessageService.submit(request, authorisedErn).map {
+          case Left(result)    =>
+            auditService.auditMessage(request.ieMessage, "Failed to Submit")
+            auditService.auditMessage(
+              AuditEventFactory.createMessageSubmitted(request.ieMessage, movement, false)
+            )
+            result
+          case Right(response) =>
+            auditService.auditMessage(request.ieMessage)
+            auditService.auditMessage(AuditEventFactory.createMessageSubmitted())
+            Accepted(
+              Json.toJson(
+                ExciseMovementResponse(
+                  movement._id,
+                  None,
+                  movement.localReferenceNumber,
+                  movement.consignorId,
+                  movement.consigneeId,
+                  movement.administrativeReferenceCode,
+                  None
+                )
+              )
+            )
+        }
 
-      result.merge
+      }
+
     }
 
   private def validateMovementId(movementId: String): EitherT[Future, Result, String] =
@@ -114,9 +127,11 @@ class SubmitMessageController @Inject() (
       submissionMessageService.submit(request, authorisedErn).map {
         case Left(result)    =>
           auditService.auditMessage(request.ieMessage, "Failed to Submit")
+          auditService.auditMessage(AuditEventFactory.createMessageSubmitted())
           Left(result)
         case Right(response) =>
           auditService.auditMessage(request.ieMessage)
+          auditService.auditMessage(AuditEventFactory.createMessageSubmitted())
           Right(response)
       }
     }

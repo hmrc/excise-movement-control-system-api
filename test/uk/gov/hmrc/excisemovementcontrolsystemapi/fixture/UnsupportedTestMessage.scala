@@ -39,5 +39,5 @@ object UnsupportedTestMessage extends IEMessage {
 
   override def toJson: JsValue = JsObject.empty
 
-  override def auditType: AuditType = Unsupported
+  override def messageAuditType: AuditType = Unsupported
 }

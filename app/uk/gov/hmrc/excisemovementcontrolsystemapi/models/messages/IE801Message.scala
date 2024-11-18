@@ -20,7 +20,7 @@ import generated.{IE801Type, MessagesOption}
 import play.api.libs.json.{JsValue, Json}
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditType, MessageAuditType}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType.MovementGenerated
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
 
@@ -30,7 +30,7 @@ case class IE801Message(
   obj: IE801Type,
   key: Option[String],
   namespace: Option[String],
-  auditType: AuditType
+  messageAuditType: MessageAuditType
 ) extends IEMessage
     with GeneratedJsonWriters {
   def localReferenceNumber: String =
