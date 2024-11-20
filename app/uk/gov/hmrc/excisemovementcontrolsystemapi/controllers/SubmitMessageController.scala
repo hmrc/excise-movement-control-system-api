@@ -63,7 +63,13 @@ class SubmitMessageController @Inject() (
           case Left(result)    =>
             auditService.auditMessage(request.ieMessage, "Failed to Submit")
             auditService.auditMessage(
-              AuditEventFactory.createMessageSubmitted(request.ieMessage, movement, false)
+              AuditEventFactory.createMessageSubmitted(
+                request.ieMessage,
+                movement,
+                false,
+                Some(""),
+                request
+              )
             )
             result
           case Right(response) =>
