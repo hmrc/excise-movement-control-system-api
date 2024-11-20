@@ -54,7 +54,7 @@ class NrsServiceNew @Inject() (
     with Logging {
 
   private val instanceId: String = UUID.randomUUID().toString
-  private val lockService: LockService = LockService(mongoLockRepository, lockId = instanceId, 1.hours)
+  private val lockService: LockService = LockService(mongoLockRepository, lockId = instanceId, 1.hours) //TODO: put TTL in config
 
   def makeWorkItemAndQueue(
     request: ParsedXmlRequest[_],
@@ -176,6 +176,7 @@ class NrsServiceNew @Inject() (
   }
 
   def processAll(): Future[Done] = {
+
     lockService.withLock {
       processSingleNrs() // throttling should go here
         .flatMap {
