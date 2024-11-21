@@ -34,6 +34,13 @@ object EISErrorResponse {
 
   implicit class Presentation(val errorResponse: EISErrorResponse) extends AnyVal {
 
+    implicit def asDetails: EISErrorResponseDetails =
+      EISErrorResponseDetails(
+        errorResponse.dateTime,
+        errorResponse.message,
+        errorResponse.debugMessage
+      )
+
     implicit def asPresentation: EisErrorResponsePresentation =
       EisErrorResponsePresentation(
         errorResponse.dateTime,
