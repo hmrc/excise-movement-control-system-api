@@ -19,8 +19,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 import generated.IE815Type
 import play.api.libs.json.{JsValue, Json}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditType, MessageAuditType}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType.DraftMovement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType.DraftMovement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
 
 import scala.xml.NodeSeq

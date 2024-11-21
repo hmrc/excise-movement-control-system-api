@@ -17,11 +17,11 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
 import generated.{IE801Type, MessagesOption}
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsObject, JsValue, Json}
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditType, MessageAuditType}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType.MovementGenerated
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType.MovementGenerated
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
 
 import scala.xml.NodeSeq
@@ -51,6 +51,8 @@ case class IE801Message(
     scalaxb.toXML[IE801Type](obj, namespace, key, generated.defaultScope)
 
   override def toJson: JsValue = Json.toJson(obj)
+
+  override def toJsObject: JsObject = Json.toJsObject(obj)
 
   override def lrnEquals(lrn: String): Boolean = localReferenceNumber == lrn
 

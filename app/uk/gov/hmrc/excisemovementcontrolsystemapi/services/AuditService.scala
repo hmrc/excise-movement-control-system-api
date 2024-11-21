@@ -20,7 +20,7 @@ import cats.data.EitherT
 import com.google.inject.ImplementedBy
 import play.api.Logging
 import play.api.mvc.Result
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.Auditing
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, Auditing, MessageSubmittedDetails}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
@@ -41,8 +41,8 @@ class AuditServiceImpl @Inject() (auditConnector: AuditConnector)(implicit ec: E
   ): EitherT[Future, Result, Unit]                                                                =
     auditMessage(message, Some(failureReason))
 
-  def messageSubmitted(message: IEMessage)(implicit hc: HeaderCarrier): Unit = {
-    auditConnector.sendExtendedEvent(AuditEventFactory.)
+  def messageSubmitted(event: MessageSubmittedDetails)(implicit hc: HeaderCarrier): Unit = {
+//    auditConnector.sendExtendedEvent(AuditEventFactory.)
   }
 
   private def auditMessage(message: IEMessage, failureOpt: Option[String])(implicit
@@ -60,4 +60,5 @@ class AuditServiceImpl @Inject() (auditConnector: AuditConnector)(implicit ec: E
 trait AuditService {
   def auditMessage(message: IEMessage)(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit]
   def auditMessage(message: IEMessage, failureReason: String)(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit]
+  def messageSubmitted(event: MessageSubmittedDetails)(implicit hc: HeaderCarrier): Unit
 }

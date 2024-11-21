@@ -52,45 +52,33 @@ class SubmitMessageController @Inject() (
     extends BackendController(cc)
     with Logging {
 
+  def happy(response: EISSubmissionResponse): Result =
+    response.Accepted(
+      Json.toJson(
+        ExciseMovementResponse(
+          movement._id,
+          None,
+          movement.localReferenceNumber,
+          movement.consignorId,
+          movement.consigneeId,
+          movement.administrativeReferenceCode,
+          None
+        )
+      )
+    )
+
   def submit(movementId: String): Action[NodeSeq] =
     (authAction andThen xmlParser).async(parse.xml) { implicit request =>
       for {
         validatedMovementId <- validateMovementId(movementId)
         movement            <- getMovement(validatedMovementId)
         authorisedErn       <- validateMessage(movement, request.ieMessage, request.erns)
-      } yield authorisedErn {
-        submissionMessageService.submit(request, authorisedErn).map {
-          case Left(result)    =>
-            auditService.auditMessage(request.ieMessage, "Failed to Submit")
-            auditService.auditMessage(
-              AuditEventFactory.createMessageSubmitted(
-                request.ieMessage,
-                movement,
-                false,
-                Some(""),
-                request
-              )
-            )
-            result
-          case Right(response) =>
-            auditService.auditMessage(request.ieMessage)
-            auditService.auditMessage(AuditEventFactory.createMessageSubmitted())
-            Accepted(
-              Json.toJson(
-                ExciseMovementResponse(
-                  movement._id,
-                  None,
-                  movement.localReferenceNumber,
-                  movement.consignorId,
-                  movement.consigneeId,
-                  movement.administrativeReferenceCode,
-                  None
-                )
-              )
-            )
-        }
+        result              <- extra(request, authorisedErn, movement)
+      } yield happy(result)
 
-      }
+      result
+      auditService.auditMessage(request.ieMessage)
+    //            auditService.messageSubmitted(AuditEventFactory.createMessageSubmitted())
 
     }
 
@@ -116,6 +104,28 @@ class SubmitMessageController @Inject() (
           )
         )
     })
+
+  private def extra(request: ParsedXmlRequest[NodeSeq], authorisedErn: String, movement: Movement)(implicit
+    hc: HeaderCarrier
+  ): EitherT[Future, Result, EISSubmissionResponse] =
+    EitherT {
+      submissionMessageService.submit(request, authorisedErn).map {
+        case Left(error)     =>
+          auditService.auditMessage(request.ieMessage, "Failed to Submit")
+          auditService.messageSubmitted(
+            AuditEventFactory.createMessageSubmitted(
+              request.ieMessage,
+              movement,
+              false,
+              Some(""),
+              request
+            )
+          )
+          Left(InternalServerError(""))
+        case Right(response) =>
+          Right(response)
+      }
+    }
 
   private def validateMessage(
     movement: Movement,

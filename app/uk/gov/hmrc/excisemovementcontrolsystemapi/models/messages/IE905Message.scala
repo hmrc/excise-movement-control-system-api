@@ -20,8 +20,8 @@ import generated.{IE905Type, MessagesOption}
 import play.api.libs.json.{JsValue, Json}
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType.StatusResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType.StatusResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
 
 import scala.xml.NodeSeq
@@ -30,7 +30,7 @@ case class IE905Message(
   obj: IE905Type,
   key: Option[String],
   namespace: Option[String],
-  messageAuditType: AuditType
+  messageAuditType: MessageAuditType
 ) extends IEMessage
     with GeneratedJsonWriters {
 
