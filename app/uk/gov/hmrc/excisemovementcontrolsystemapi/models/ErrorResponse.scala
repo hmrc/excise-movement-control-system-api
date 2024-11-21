@@ -103,6 +103,37 @@ case class EisErrorResponsePresentation(
 
 object EisErrorResponsePresentation {
 
+  def apply(error: EISErrorResponse): EisErrorResponsePresentation =
+    EisErrorResponsePresentation(
+      DateTimeService.timestamp(),
+      "Unexpected error",
+      "Error occured while reading downstream response",
+      error.emcsCorrelationId
+    )
+
+  def apply(error: RimValidationErrorResponse): EisErrorResponsePresentation = {
+    val validationResponse = error.validatorResults.map(x =>
+      ValidationResponse(
+        x.errorCategory,
+        x.errorType,
+        x.errorReason,
+        removeControlDocumentReferences(x.errorLocation),
+        x.originalAttributeValue
+      )
+    )
+
+    EisErrorResponsePresentation(
+      DateTimeService.timestamp(),
+      "Validation error",
+      error.message.mkString("\n"),
+      error.emcsCorrelationId,
+      Some(validationResponse)
+    )
+  }
+
+  private def removeControlDocumentReferences(errorMsg: Option[String]): Option[String] =
+    errorMsg.map(x => x.replaceAll("/con:[^/]*(?=/)", ""))
+
   implicit val format: Reads[EisErrorResponsePresentation] = Json.reads[EisErrorResponsePresentation]
 
   implicit val write: Writes[EisErrorResponsePresentation] = (
