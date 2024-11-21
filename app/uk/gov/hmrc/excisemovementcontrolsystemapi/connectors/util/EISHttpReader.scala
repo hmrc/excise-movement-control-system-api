@@ -21,10 +21,11 @@ import play.api.libs.json.{Json, Reads}
 import play.api.mvc.Result
 import play.api.mvc.Results.{InternalServerError, Status}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, EISErrorResponse, EISSubmissionResponse, RimValidationErrorResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisErrorResponsePresentation, ValidationResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EISErrorResponseDetails, EisErrorResponsePresentation, ValidationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.{HttpReads, HttpResponse}
 
+import javax.inject.Inject
 import scala.reflect.runtime.universe.TypeTag
 import scala.util.{Success, Try}
 
