@@ -957,24 +957,19 @@ paths:
             application/vnd.hmrc.1.0+json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-              example:
-                dateTime: '2024-01-17T15:27:29.540089Z'
-                message: Not valid PreValidateTrader message
-                debugMessage: "Error parsing Json: exciseRegistrationNumber missing"
-
-            text/plain:
-              example: "" #downstream 400s are empty
-
-        '401':
-          description: Authorisation errors, e.g. ERN not authorised, authorisation expired, invalid enrolment parameter.
-          content:
-            application/vnd.hmrc.1.0+json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              example:
-                dateTime: "2024-01-17T15:27:29.540089Z"
-                message: Authorisation error
-                debugMessage: Unauthorised Exception with error Bearer token expired
+              examples:
+                Missing field:
+                  summary: "Missing Field"
+                  value:
+                    dateTime: '2024-01-17T15:27:29.540089Z'
+                    message: Not valid PreValidateTrader message
+                    debugMessage: "Error parsing Json: /exciseTraderValidationRequest/exciseTraderRequest/exciseRegistrationNumber missing"
+                Downstream 400:
+                  summary: "Downstream ETDS 400"
+                  value:
+                    dateTime: '2024-01-17T15:27:29.540089Z'
+                    message: PreValidateTrader error
+                    debugMessage: "Error occurred during PreValidateTrader request"
 
         '500':
           description: Internal server error
@@ -984,11 +979,11 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 dateTime: "2021-12-17T09:30:47Z"
-                message: "Invalid JSON structure"
-                debugMessage: "JSON parse error: Unexpected character"
+                message: "Internal Server Error"
+                debugMessage: "Unexpected error occurred while processing PreValidateTrader request"
                 correlationId: "3e8dae97-b586-4cef-8511-68ac12da9028"
             text/plain:
-              example: "" #downstream 400s are empty
+              example: ""
 
       security:
         - userRestricted:
@@ -1435,7 +1430,7 @@ components:
             $ref: '#/components/schemas/ValidateProductAuthorisationRequest'
     EntityGroup:
       type: string
-      enum: [ 'UK Record', 'EU Trader', 'EU Warehouse', 'EU Temporary Authorisation' ]
+      enum: [ 'UK Record', 'EU Trader', 'EU Warehouse', 'UK Temporary Authorisation', 'EU Temporary Authorisation' ]
       example: 'UK Record'
     ValidateProductAuthorisationRequest:
       type: object
