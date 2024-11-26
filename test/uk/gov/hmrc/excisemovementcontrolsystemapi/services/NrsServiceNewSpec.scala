@@ -40,6 +40,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmission
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService.NonRepudiationIdentityRetrievals
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, NrsEventIdMapper}
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier}
+import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.lock.{Lock, MongoLockRepository}
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{Failed, PermanentlyFailed, Succeeded, ToDo}
 import uk.gov.hmrc.mongo.workitem.WorkItem
@@ -60,8 +61,10 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
   private val mockDateTimeService              = mock[DateTimeService]
   private val mockAuthConnector: AuthConnector = mock[AuthConnector]
   private val mockLockRepository: MongoLockRepository = mock[MongoLockRepository]
+  private val mockTimeStampSupport: TimestampSupport = mock[TimestampSupport]
   private val timeStamp                    = Instant.now()
-  private val service                      = new NrsServiceNew(
+
+  private val service = new NrsServiceNew(
     mockAuthConnector,
     mockNrsConnectorNew,
     mockNrsWorkItemRepository,
@@ -69,7 +72,8 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
     new EmcsUtils,
     new NrsEventIdMapper,
     mockCorrelationIdService,
-    mockLockRepository
+    mockLockRepository,
+    mockTimeStampSupport
   )
 
   private val message           = mock[IE815Message]
@@ -83,7 +87,8 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
       mockDateTimeService,
       mockCorrelationIdService,
       mockNrsWorkItemRepository,
-      mockLockRepository
+      mockLockRepository,
+      mockTimeStampSupport
     )
 
     when(mockDateTimeService.timestamp()).thenReturn(timeStamp)
@@ -223,11 +228,14 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
     }
   }
 
-  "processAll" should {
+  "processAllWithLock" should {
     "when a lock is available" should {
       val lock = Lock("id", "owner", timeStamp, timeStamp.plus(1, ChronoUnit.HOURS))
 
       "call NRS multiple times if there are more than one submission to process" in {
+        when(mockTimeStampSupport.timestamp()).thenReturn(timeStamp)
+        when(mockLockRepository.refreshExpiry(any, any, any))
+          .thenReturn(Future.successful(false))
         when(mockLockRepository.takeLock(any(), any(), any())).thenReturn(Future.successful(Some(lock)))
         when(mockLockRepository.releaseLock(any(), any())).thenReturn(Future.unit)
 
@@ -241,7 +249,10 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
           Future.successful(None)
         )
 
-        service.processAll().futureValue
+        service.processAllWithLock().futureValue
+
+        verify(mockLockRepository, times(1)).refreshExpiry(any,any,any)
+        verify(mockLockRepository, times(1)).takeLock(any,any,any)
 
         verify(mockNrsWorkItemRepository, times(4)).pullOutstanding(any(), any())
         verify(mockNrsWorkItemRepository, times(3)).complete(testWorkItem.id, Succeeded)
@@ -253,7 +264,7 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
         when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
           .thenReturn(Future.successful(None))
 
-        service.processAll().futureValue
+        service.processAllWithLock().futureValue
 
         verify(mockNrsWorkItemRepository, times(1)).pullOutstanding(any(), any())
         verify(mockNrsWorkItemRepository, never()).complete(any(), any())
@@ -274,7 +285,7 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
           Future.successful(None)
         )
 
-        service.processAll().futureValue
+        service.processAllWithLock().futureValue
 
         verify(mockNrsWorkItemRepository, never()).pullOutstanding(any(), any())
       }
