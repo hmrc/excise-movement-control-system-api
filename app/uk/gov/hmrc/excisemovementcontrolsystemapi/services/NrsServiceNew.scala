@@ -51,7 +51,7 @@ class NrsServiceNew @Inject() (
   correlationIdService: CorrelationIdService,
   mongoLockRepository: MongoLockRepository,
   timestampSupport   : TimestampSupport
-)(implicit ec: ExecutionContext, headerCarrier: HeaderCarrier)
+)(implicit ec: ExecutionContext)
     extends AuthorisedFunctions
     with Logging {
 
@@ -86,11 +86,15 @@ class NrsServiceNew @Inject() (
       _             <- nrsWorkItemRepository.pushNew(NrsSubmissionWorkItem(NrsPayload(encodedPayload, metaData)))
     } yield Done
   }
+// requirements
+  // throttling: 1tps <- circuit breaker + locking
 
-  def submitNrs(workItem: WorkItem[NrsSubmissionWorkItem]): Future[Done] =
+
+  def submitNrs(workItem: WorkItem[NrsSubmissionWorkItem])(implicit headerCarrier: HeaderCarrier): Future[Done] =
     nrsConnectorNew
       .sendToNrs(workItem.item.payload, correlationIdService.generateCorrelationId())
       .flatMap { _ =>
+        println("**** moving on.................")
         nrsWorkItemRepository
           .complete(workItem.id, Succeeded)
           .map(_ => Done)
@@ -113,7 +117,7 @@ class NrsServiceNew @Inject() (
             .map(_ => Done)
       }
 
-  private def retrieveIdentityData(): Future[IdentityData] =
+  private def retrieveIdentityData()(implicit headerCarrier: HeaderCarrier): Future[IdentityData] =
     authorised().retrieve(nonRepudiationIdentityRetrievals) {
       case affinityGroup ~ internalId ~
           externalId ~ agentCode ~
@@ -148,7 +152,7 @@ class NrsServiceNew @Inject() (
         )
     }
 
-  private def retrieveUserAuthToken(): String =
+  private def retrieveUserAuthToken()(implicit headerCarrier: HeaderCarrier): String =
     headerCarrier.authorization match {
       case Some(Authorization(authToken)) => authToken
       case _                              =>
@@ -157,8 +161,9 @@ class NrsServiceNew @Inject() (
     }
 
 
-  def processAllWithLock(): Future[Done] = {
+  def processAllWithLock()(implicit headerCarrier: HeaderCarrier): Future[Done] = {
     lockService.withLock {
+      println("******* have lock - processing all")
       processAll()
     }.map {
       _.getOrElse {
@@ -168,21 +173,27 @@ class NrsServiceNew @Inject() (
     }
   }
 
-  def processAll(): Future[Done] = {
+  def processAll()(implicit headerCarrier: HeaderCarrier): Future[Done] = {
       processSingleNrs() // throttling should go here
         .flatMap {
-          case true => processAll()
+          case true => {
+            println("******** looping now")
+            processAll()
+          }
           case false => Future.successful(Done)
         }
   }
 
-  def processSingleNrs(): Future[Boolean] = {
+  def processSingleNrs()(implicit headerCarrier: HeaderCarrier): Future[Boolean] = {
 
     val now = dateTimeService.timestamp()
-
+    println("***** processing single NRS")
     nrsWorkItemRepository.pullOutstanding(now, now)
       .flatMap {
-        case Some(wi) => submitNrs(wi).map(_ => true)
+        case Some(wi) => {
+          println("******** submitting to NRS")
+          submitNrs(wi).map(_ => true)
+        }
         case None => Future.successful(false)
       }
   }
