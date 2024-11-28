@@ -23,7 +23,7 @@ import play.api.http.Status.ACCEPTED
 import play.api.libs.concurrent.Futures
 import play.api.libs.json.JsObject
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.XApiKeyHeaderKey
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnectorNew.XApiKeyHeaderKey
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.Retrying
 import uk.gov.hmrc.http.HttpErrorFunctions.is2xx
@@ -43,11 +43,6 @@ class NrsConnector @Inject() (
     extends Retrying
     with Logging {
 
-  def sendToNrs(payload: NrsPayload, correlationId: String)(implicit
-    hc: HeaderCarrier
-  ): Future[Done] =
-    ???
-
   def sendToNrsOld(payload: NrsPayload, correlationId: String)(implicit
     hc: HeaderCarrier
   ): Future[Done] = {
@@ -59,8 +54,6 @@ class NrsConnector @Inject() (
       send(jsonObject, correlationId)
     }
       .map { response: HttpResponse =>
-        // next step will be to change this to use the workItem repo, and there should be a service that will handle the
-        // outcome from this connector. Connector will just do the call to NRS and nothing else.
         response.status match {
           case ACCEPTED =>
             val submissionId = response.json \ "nrSubmissionId"
@@ -105,8 +98,4 @@ class NrsConnector @Inject() (
       "Content-Type" -> "application/json",
       (XApiKeyHeaderKey, appConfig.nrsApiKey)
     )
-}
-
-object NrsConnector {
-  val XApiKeyHeaderKey = "X-API-Key"
 }
