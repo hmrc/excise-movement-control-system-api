@@ -26,16 +26,16 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
 import play.api.libs.json.Json
-import play.api.mvc.Results.{BadRequest, Forbidden, InternalServerError, NotFound}
+import play.api.mvc.Results.{BadRequest, Forbidden, InternalServerError}
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeXmlParsers}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EISErrorResponseDetails, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IE818Message}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IE818Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MessageIdentifierIsUnauthorised, MessageValidation}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnSubmissionRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
@@ -99,9 +99,11 @@ class DraftExciseMovementControllerSpec
 
     when(appConfig.pushNotificationsEnabled).thenReturn(true)
     when(dateTimeService.timestamp()).thenReturn(timestamp)
-    when(auditService.auditMessage(any)(any)).thenReturn(EitherT.fromEither(Right(())))
+    when(auditService.auditMessage(any[IEMessage])(any)).thenReturn(EitherT.fromEither(Right(())))
     when(ernSubmissionRepository.save(any)).thenReturn(Future.successful(Done))
   }
+
+  def createTestError(status: Int) = EISErrorResponseDetails(status, timestamp, "", "", "", None)
 
   "submit" should {
 
@@ -184,11 +186,11 @@ class DraftExciseMovementControllerSpec
           Future.successful(Right(Movement(Some(defaultBoxId), "123", consignorId, Some("789"), None, Instant.now)))
         )
 
-      when(auditService.auditMessage(any)(any)).thenReturn(EitherT.fromEither(Right(())))
+      when(auditService.auditMessage(any[IEMessage])(any)).thenReturn(EitherT.fromEither(Right(())))
 
       await(createWithSuccessfulAuth.submit(request))
 
-      verify(auditService).auditMessage(any)(any)
+      verify(auditService).auditMessage(any[IEMessage])(any)
     }
 
 //    "Send a MessageSubmitted audit event" in {
@@ -198,7 +200,8 @@ class DraftExciseMovementControllerSpec
 //    }
 
     "sends a failure audit when a message isn't submitted" in {
-      when(submissionMessageService.submit(any, any)(any)).thenReturn(Future.successful(Left(BadRequest(""))))
+      when(submissionMessageService.submit(any, any)(any))
+        .thenReturn(Future.successful(Left(createTestError(BAD_REQUEST))))
 
       await(createWithSuccessfulAuth.submit(request))
 
@@ -276,7 +279,7 @@ class DraftExciseMovementControllerSpec
 
       "cannot submit a message" in {
         when(submissionMessageService.submit(any, any)(any))
-          .thenReturn(Future.successful(Left(NotFound("not found"))))
+          .thenReturn(Future.successful(Left(createTestError(NOT_FOUND))))
 
         val result = createWithSuccessfulAuth.submit(request)
 

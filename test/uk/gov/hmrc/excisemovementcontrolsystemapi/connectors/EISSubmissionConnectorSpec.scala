@@ -27,13 +27,11 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.Status._
 import play.api.libs.json.Json
-import play.api.mvc.Result
-import play.api.mvc.Results.{BadRequest, InternalServerError, ServiceUnavailable, UnprocessableEntity}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{EISHeaderTestSupport, StringSupport}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EISErrorResponseDetails
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
@@ -58,6 +56,7 @@ class EISSubmissionConnectorSpec
   private val appConfig          = mock[AppConfig]
   private val dateTimeService    = mock[DateTimeService]
   private val mockRequestBuilder = mock[RequestBuilder]
+  private val mockResponse       = mock[HttpResponse]
 
   private val metrics = mock[MetricRegistry](RETURNS_DEEP_STUBS)
 
@@ -89,15 +88,23 @@ class EISSubmissionConnectorSpec
   private val ern       = "123"
   private val timestamp = Instant.parse("2023-09-17T09:32:50.345456Z")
 
+  def createTestError(status: Int) = EISErrorResponseDetails(status, timestamp, "", "", "", None)
+
+  private val happyResponse = EISSubmissionResponse("ok", "Success", emcsCorrelationId)
+
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(mockHttpClient, appConfig, metrics, timerContext, emcsUtils)
+    reset(mockHttpClient, appConfig, metrics, timerContext, emcsUtils, mockResponse)
 
     when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
     when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
     when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
-    when(mockRequestBuilder.execute[Either[Result, EISSubmissionResponse]](any(), any()))
-      .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "Success", emcsCorrelationId))))
+    when(mockRequestBuilder.execute[HttpResponse](any(), any()))
+      .thenReturn(Future.successful(mockResponse))
+    when(mockResponse.json)
+      .thenReturn(Json.toJson(happyResponse))
+    when(mockResponse.status)
+      .thenReturn(OK)
 
     when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(appConfig.emcsReceiverMessageUrl).thenReturn("http://localhost:8080/eis/path")
@@ -112,9 +119,9 @@ class EISSubmissionConnectorSpec
 
   "post" should {
     "return successful EISResponse" in {
-      val result: Either[Result, EISSubmissionResponse] = await(submitExciseMovementForIE815)
+      val result: Either[EISErrorResponseDetails, EISSubmissionResponse] = await(submitExciseMovementForIE815)
 
-      result mustBe Right(EISSubmissionResponse("ok", "Success", emcsCorrelationId))
+      result mustBe Right(happyResponse)
     }
 
     "get URL from appConfig" in {
@@ -132,94 +139,85 @@ class EISSubmissionConnectorSpec
       clean(captor.value) mustBe clean(controlWrappedXml.toString)
     }
 
-    "return Bad request error" in {
+    "return error when a bad request response returned" in {
 
       when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
-      when(mockRequestBuilder.execute[Either[Result, EISSubmissionResponse]](any(), any()))
-        .thenReturn(Future.successful(Left(BadRequest("any error"))))
+      when(mockResponse.json).thenReturn(Json.toJson(EISErrorResponse(timestamp, "400", "", "", "")))
+      when(mockResponse.status).thenReturn(BAD_REQUEST)
 
       val result = await(submitExciseMovementForIE815)
-      result.left.value mustBe BadRequest("any error")
+      result.left.value mustBe EISErrorResponseDetails(BAD_REQUEST, timestamp, "", "", "", None)
     }
 
-    "return 500 if post request fail" in {
+    //Should this instead be a Future.failed?
+    "return EISErrorResponseDetails outlining a 500 if post request fail" in {
       when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
-      when(mockRequestBuilder.execute[Either[Result, EISSubmissionResponse]](any(), any()))
+      when(mockRequestBuilder.execute[HttpResponse](any(), any()))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
       val result = await(submitExciseMovementForIE815)
 
-      result.left.value mustBe InternalServerError(
-        Json.toJson(
-          EisErrorResponsePresentation(
-            timestamp,
-            "Internal server error",
-            "Unexpected error occurred while processing Submission request",
-            emcsCorrelationId
-          )
-        )
+      result.left.value mustBe EISErrorResponseDetails(
+        INTERNAL_SERVER_ERROR,
+        timestamp,
+        "Internal server error",
+        "Unexpected error occurred while processing Submission request",
+        emcsCorrelationId
       )
     }
 
-    "return Not found error" in {
+    //Can probably refactor a number of these to a single iterative test
+    "return Service Unavailable error" in {
 
       when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
-      when(mockRequestBuilder.execute[Either[Result, EISSubmissionResponse]](any(), any()))
-        .thenReturn(Future.successful(Left(ServiceUnavailable("any error"))))
+      when(mockResponse.json).thenReturn(Json.toJson(EISErrorResponse(timestamp, "503", "service error", "", "")))
+      when(mockResponse.status).thenReturn(SERVICE_UNAVAILABLE)
 
       val result = await(submitExciseMovementForIE815)
 
-      result.left.value mustBe ServiceUnavailable("any error")
+      result.left.value mustBe EISErrorResponseDetails(SERVICE_UNAVAILABLE, timestamp, "service error", "", "", None)
     }
 
-    "return service unavailable error" in {
+    "return Internal service error" in {
       when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
-      when(mockRequestBuilder.execute[Either[Result, EISSubmissionResponse]](any(), any()))
-        .thenReturn(Future.successful(Left(InternalServerError("any error"))))
+      when(mockResponse.json).thenReturn(Json.toJson(EISErrorResponse(timestamp, "internal server error", "", "", "")))
+      when(mockResponse.status).thenReturn(INTERNAL_SERVER_ERROR)
 
       val result = await(submitExciseMovementForIE815)
 
-      result.left.value mustBe InternalServerError("any error")
-    }
-
-    "return Internal service error error" in {
-      when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
-      when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
-      when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
-      when(mockRequestBuilder.execute[Either[Result, EISSubmissionResponse]](any(), any()))
-        .thenReturn(Future.successful(Left(InternalServerError("any error"))))
-
-      val result = await(submitExciseMovementForIE815)
-
-      result.left.value mustBe InternalServerError("any error")
+      result.left.value mustBe EISErrorResponseDetails(
+        INTERNAL_SERVER_ERROR,
+        timestamp,
+        "",
+        "",
+        "",
+        None
+      )
     }
 
     "return unprocessable entity error" in {
       when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
-      when(mockRequestBuilder.execute[Either[Result, EISSubmissionResponse]](any(), any()))
-        .thenReturn(Future.successful(Left(UnprocessableEntity("any error"))))
+      when(mockResponse.json).thenReturn(Json.toJson(EISErrorResponse(timestamp, "unprocessable", "", "", "")))
+      when(mockResponse.status).thenReturn(UNPROCESSABLE_ENTITY)
 
       val result = await(submitExciseMovementForIE815)
-
-      result.left.value mustBe UnprocessableEntity("any error")
+      result.left.value mustBe EISErrorResponseDetails(UNPROCESSABLE_ENTITY, timestamp, "", "", "", None)
     }
 
     "start and stop metrics" in {
       when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
-      when(mockRequestBuilder.execute[HttpResponse](any(), any()))
-        .thenReturn(Future.successful(HttpResponse(BAD_REQUEST, "any error")))
 
       await(submitExciseMovementForIE815)
 
@@ -229,13 +227,13 @@ class EISSubmissionConnectorSpec
     }
   }
 
-  private def submitExciseMovementForIE815: Future[Either[Result, EISSubmissionResponse]] =
+  private def submitExciseMovementForIE815: Future[Either[EISErrorResponseDetails, EISSubmissionResponse]] =
     submitExciseMovementWithParams(xml, ie815Message, ern)
 
   private def submitExciseMovementWithParams(
     xml: NodeSeq,
     message: IEMessage,
     authErn: String
-  ): Future[Either[Result, EISSubmissionResponse]] =
+  ): Future[Either[EISErrorResponseDetails, EISSubmissionResponse]] =
     connector.submitMessage(message, xml.toString(), authErn, emcsCorrelationId)
 }

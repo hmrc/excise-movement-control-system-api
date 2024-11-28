@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import cats.data.EitherT
+import generated.{HeaderType, IE818Type}
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, verify, when}
 import org.scalatest.BeforeAndAfterEach
@@ -24,17 +25,20 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
 import play.api.libs.json.Json
-import play.api.mvc.Results.{BadRequest, Forbidden, NotFound}
+import play.api.mvc.Results.{BadRequest, Forbidden}
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication, FakeXmlParsers}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EISErrorResponseDetails
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType.ReportOfReceipt
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE818Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.play.audit.model.ExtendedDataEvent
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
@@ -75,7 +79,8 @@ class SubmitMessageControllerSpec
 
     when(messageValidation.validateSubmittedMessage(any, any, any)).thenReturn(Right(consignorId))
     when(dateTimeService.timestamp()).thenReturn(timestamp)
-    when(auditService.auditMessage(any)(any)).thenReturn(EitherT.fromEither(Right(())))
+    when(auditService.auditMessage(any[IEMessage])(any)).thenReturn(EitherT.fromEither(Right(())))
+    when(auditService.messageSubmitted(any, any, any, any, any)(any)).thenReturn(EitherT.fromEither(Right(())))
   }
 
   "submit" should {
@@ -95,19 +100,22 @@ class SubmitMessageControllerSpec
     "send an audit event" in {
       await(createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request))
 
-      verify(auditService).auditMessage(any)(any)
+      verify(auditService).auditMessage(any[IEMessage])(any)
     }
 
     "sends a failure audit when a message isn't submitted" in {
-      when(submissionMessageService.submit(any, any)(any)).thenReturn(Future.successful(Left(BadRequest(""))))
+      val testError = EISErrorResponseDetails(BAD_REQUEST, timestamp, "", "", "", None)
+      when(submissionMessageService.submit(any, any)(any)).thenReturn(Future.successful(Left(testError)))
       await(createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request))
 
       verify(auditService).auditMessage(any, any)(any)
     }
 
+    //TODO: Could iterate over many statuses
     "return an error when EIS errors" in {
+      val testError = EISErrorResponseDetails(NOT_FOUND, timestamp, "", "", "", None)
       when(submissionMessageService.submit(any, any)(any))
-        .thenReturn(Future.successful(Left(NotFound("not found"))))
+        .thenReturn(Future.successful(Left(testError)))
 
       val result = createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request)
 

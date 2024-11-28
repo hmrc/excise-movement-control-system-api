@@ -17,7 +17,35 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
 import cats.data.NonEmptySeq
-import play.api.libs.json.JsObject
+import play.api.libs.json.{JsObject, Json}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.CommonFormats._
+
+trait EventAuditEvent {}
+
+case class UserDetails(
+  gatewayId: String,
+  name: String,
+  email: String,
+  affinityGroup: String,
+  credentialRole: String
+) {}
+
+object UserDetails {
+  implicit val format = Json.format[UserDetails]
+}
+
+case class ThirdPartyApplication(
+  id: String,
+  clientId: String,
+  gatewayId: String,
+  nameResponsibleIndividual: String,
+  emailResponsibleIndividual: String,
+  organisationUrl: Option[String]
+) {}
+
+object ThirdPartyApplication {
+  implicit val format = Json.format[ThirdPartyApplication]
+}
 
 case class MessageSubmittedDetails(
   messageTypeCode: String,
@@ -33,21 +61,8 @@ case class MessageSubmittedDetails(
   userDetails: UserDetails,
   authExciseNumber: NonEmptySeq[String],
   messageDetails: JsObject
-)
+) extends EventAuditEvent
 
-case class UserDetails(
-  gatewayId: String,
-  name: String,
-  email: String,
-  affinityGroup: String,
-  credentialRole: String
-) {}
-
-case class ThirdPartyApplication(
-  id: String,
-  clientId: String,
-  gatewayId: String,
-  nameResponsibleIndividual: String,
-  emailResponsibleIndividual: String,
-  organisationUrl: Option[String]
-) {}
+object MessageSubmittedDetails {
+  implicit val format = Json.format[MessageSubmittedDetails]
+}

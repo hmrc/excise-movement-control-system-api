@@ -63,6 +63,6 @@ class AuditServiceSpec extends PlaySpec with TestXml {
   }
 
   "messageSubmitted" should {
-    "post a "
+    "post a " in {}
   }
 }

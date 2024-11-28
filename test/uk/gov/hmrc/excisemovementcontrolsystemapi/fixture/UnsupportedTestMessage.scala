@@ -17,12 +17,12 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
 import play.api.libs.json.{JsObject, JsValue}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditType
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 
 import scala.xml.NodeSeq
 
-case object Unsupported extends AuditType("Unsupported")
+case object Unsupported extends MessageAuditType("Unsupported")
 
 object UnsupportedTestMessage extends IEMessage {
   override def consigneeId: Option[String] = None
@@ -39,5 +39,7 @@ object UnsupportedTestMessage extends IEMessage {
 
   override def toJson: JsValue = JsObject.empty
 
-  override def messageAuditType: AuditType = Unsupported
+  override def toJsObject: JsObject = JsObject.empty
+
+  override def messageAuditType: MessageAuditType = Unsupported
 }

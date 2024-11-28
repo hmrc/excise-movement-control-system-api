@@ -24,16 +24,19 @@ import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
-import play.api.mvc.Results.InternalServerError
+import play.api.http.Status.INTERNAL_SERVER_ERROR
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EISErrorResponseDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnSubmissionRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
 class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with EitherValues with BeforeAndAfterEach {
@@ -99,13 +102,16 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
       result mustBe Right(EISSubmissionResponse("ok", "IE815", "correlationId"))
     }
 
-    "return an error" in {
+    "return an EISErrorResponsePresentation" in {
+      val testError =
+        EISErrorResponseDetails(INTERNAL_SERVER_ERROR, Instant.now(), "message", "debug", "cId", None)
+
       when(connector.submitMessage(any, any, any, any)(any))
-        .thenReturn(Future.successful(Left(InternalServerError("error"))))
+        .thenReturn(Future.successful(Left(testError)))
 
       val result = await(sut.submit(request, ern))
 
-      result.left.value mustBe InternalServerError("error")
+      result.left.value mustBe testError
 
       withClue("not send to NRS") {
         verifyZeroInteractions(nrsService)

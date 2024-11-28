@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
 import cats.data.{NonEmptyList, NonEmptySeq}
-import play.api.libs.json.JsObject
+import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
@@ -46,10 +46,11 @@ object AuditEventFactory extends Auditing {
     message: IEMessage,
     movement: Movement,
     submittedToCore: Boolean,
-    correlationId: Option[String],
+    correlationId: String,
     request: ParsedXmlRequest[NodeSeq]
-  ): MessageSubmittedDetails =
-    MessageSubmittedDetails(
+  )(implicit hc: HeaderCarrier): ExtendedDataEvent = {
+
+    val messageSubmitted = MessageSubmittedDetails(
       message.messageType,
       message.messageAuditType.name,
       movement.localReferenceNumber,
@@ -59,9 +60,17 @@ object AuditEventFactory extends Auditing {
       movement.consigneeId,
       submittedToCore,
       message.messageIdentifier,
-      correlationId,
+      Some(correlationId),
       UserDetails("", "", "", "", ""),
       NonEmptySeq(request.erns.head, request.erns.tail.toList),
       message.toJsObject
     )
+
+    ExtendedDataEvent(
+      auditSource = auditSource,
+      auditType = "MessageSubmitted",
+      tags = hc.toAuditTags(),
+      detail = Json.toJsObject(messageSubmitted)
+    )
+  }
 }

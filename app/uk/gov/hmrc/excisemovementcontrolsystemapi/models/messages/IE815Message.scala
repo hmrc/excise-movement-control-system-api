@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
 import generated.IE815Type
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsObject, JsValue, Json}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType.DraftMovement
@@ -45,6 +45,8 @@ case class IE815Message(obj: IE815Type, messageAuditType: MessageAuditType)
     scalaxb.toXML[IE815Type](obj, MessageTypes.IE815.value, generated.defaultScope)
 
   override def toJson: JsValue = Json.toJson(obj)
+
+  override def toJsObject: JsObject = Json.toJsObject(obj)
 
   override def lrnEquals(lrn: String): Boolean = localReferenceNumber.equals(lrn)
 
