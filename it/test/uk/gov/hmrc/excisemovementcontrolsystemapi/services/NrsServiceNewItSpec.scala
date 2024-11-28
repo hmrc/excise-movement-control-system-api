@@ -3,9 +3,9 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.apache.pekko.Done
 import org.bson.types.ObjectId
-import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar
 import org.scalatest.concurrent.IntegrationPatience
+import org.scalatest.time.SpanSugar.convertIntToGrainOfTime
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
@@ -21,14 +21,13 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.test.WireMockSupport
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier}
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.lock.{Lock, MongoLockRepository}
+import uk.gov.hmrc.mongo.lock.MongoLockRepository
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, DefaultPlayMongoRepositorySupport}
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.time.Instant
-import java.time.temporal.ChronoUnit
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class NrsServiceNewItSpec extends PlaySpec
   with CleanMongoCollectionSupport
@@ -46,6 +45,8 @@ class NrsServiceNewItSpec extends PlaySpec
   implicit val hc: HeaderCarrier = HeaderCarrier(authorization = Some(Authorization("testAuthToken")))
 
   private val dateTimeService = mock[DateTimeService]
+
+  private val lockId = "nrs-lock"
 
   when(dateTimeService.timestamp()).thenReturn(Instant.now())
 
@@ -77,13 +78,10 @@ class NrsServiceNewItSpec extends PlaySpec
     failureCount = 0,
     NrsSubmissionWorkItem(nrsPayLoad))
 
-  private val mockMongoLockRepository = mock[MongoLockRepository]
-
   override def fakeApplication(): Application = GuiceApplicationBuilder()
     .overrides(
       bind[MongoComponent].toInstance(mongoComponent),
-      bind[DateTimeService].toInstance(dateTimeService),
-      bind[MongoLockRepository].toInstance(mockMongoLockRepository)
+      bind[DateTimeService].toInstance(dateTimeService)
     )
     .configure(
       "microservice.services.nrs.port" -> wireMockPort,
@@ -97,6 +95,8 @@ class NrsServiceNewItSpec extends PlaySpec
     .build()
 
   override protected val repository: NRSWorkItemRepository = app.injector.instanceOf[NRSWorkItemRepository]//  private val dateTimeService = mock[DateTimeService]
+
+  val lockRepository: MongoLockRepository = app.injector.instanceOf[MongoLockRepository]
 
   private val service = app.injector.instanceOf[NrsServiceNew]
 
@@ -113,12 +113,6 @@ class NrsServiceNewItSpec extends PlaySpec
 
     "when a lock is available" should {
       "call NRS once if there is one submission to process" in {
-        when(mockMongoLockRepository.takeLock(any, any, any))
-          .thenReturn(Future.successful(None))
-        when(mockMongoLockRepository.releaseLock(any, any))
-          .thenReturn(Future.successful(()))
-        when(mockMongoLockRepository.refreshExpiry(any,any,any))
-          .thenReturn(Future.successful(false)) // should definitely be false
 
         insert(workItem1).futureValue
 
@@ -128,12 +122,6 @@ class NrsServiceNewItSpec extends PlaySpec
 
       }
       "call NRS multiple times if there are more than one submission to process" in {
-        when(mockMongoLockRepository.takeLock(any, any, any))
-          .thenReturn(Future.successful(None))
-        when(mockMongoLockRepository.releaseLock(any, any))
-          .thenReturn(Future.successful(()))
-        when(mockMongoLockRepository.refreshExpiry(any,any,any))
-          .thenReturn(Future.successful(false))
 
         insert(workItem1).futureValue
         insert(workItem2).futureValue
@@ -143,12 +131,6 @@ class NrsServiceNewItSpec extends PlaySpec
         wireMockServer.verify(2, postRequestedFor(urlMatching(url)))
       }
       "not call NRS if there is nothing to process" in {
-        when(mockMongoLockRepository.takeLock(any, any, any))
-          .thenReturn(Future.successful(None))
-        when(mockMongoLockRepository.releaseLock(any, any))
-          .thenReturn(Future.successful(()))
-        when(mockMongoLockRepository.refreshExpiry(any,any,any))
-          .thenReturn(Future.successful(false))
 
         service.processAllWithLock().futureValue mustBe Done
 
@@ -156,15 +138,11 @@ class NrsServiceNewItSpec extends PlaySpec
       }
     }
 
-    "when a lock is not available" should {
+    "when the lock is already taken" should {
       "not do anything, and not call NRS even if there is an item to process" in {
 
-        when(mockMongoLockRepository.takeLock(any, any, any))
-          .thenReturn(Future.successful(Some(Lock("id", "owner", Instant.now(), Instant.now().plus(5, ChronoUnit.MINUTES)))))
-        when(mockMongoLockRepository.releaseLock(any, any))
-          .thenReturn(Future.successful(()))
-        when(mockMongoLockRepository.refreshExpiry(any,any,any))
-          .thenReturn(Future.successful(false))
+        // Force the lock to be taken prior to running the test
+        lockRepository.takeLock(lockId,"blah", 60.seconds)
 
         insert(workItem1).futureValue
 
@@ -172,8 +150,27 @@ class NrsServiceNewItSpec extends PlaySpec
 
         wireMockServer.verify(0, postRequestedFor(urlMatching(url)))
       }
+      "not do anything, and not call NRS even if there are many items to process" in {
+
+        // Force the lock to be taken prior to running the test
+        lockRepository.takeLock(lockId,"blah", 60.seconds)
+
+        insert(workItem1).futureValue
+        insert(workItem2).futureValue
+
+        service.processAllWithLock().futureValue mustBe Done
+
+        wireMockServer.verify(0, postRequestedFor(urlMatching(url)))
+      }
+      "not do anything, and not call NRS if there are zero items to process" in {
+
+        // Force the lock to be taken prior to running the test
+        lockRepository.takeLock(lockId,"blah", 60.seconds)
+
+        service.processAllWithLock().futureValue mustBe Done
+
+        wireMockServer.verify(0, postRequestedFor(urlMatching(url)))
+      }
     }
-
   }
-
 }

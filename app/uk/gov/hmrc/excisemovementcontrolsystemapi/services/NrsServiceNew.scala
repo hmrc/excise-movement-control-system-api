@@ -55,8 +55,8 @@ class NrsServiceNew @Inject() (
     extends AuthorisedFunctions
     with Logging {
 
-  private val instanceId: String = UUID.randomUUID().toString
-  private val lockService: ScheduledLockService = ScheduledLockService(mongoLockRepository, lockId = instanceId, timestampSupport, 10.minutes) //TODO: put TTL in config
+  private val lockId: String = "nrs-lock"
+  private val lockService: ScheduledLockService = ScheduledLockService(mongoLockRepository, lockId = lockId, timestampSupport, 10.minutes) //TODO: put TTL in config
 
   def makeWorkItemAndQueue(
     request: ParsedXmlRequest[_],
@@ -171,7 +171,7 @@ class NrsServiceNew @Inject() (
       processAll()
     }.map {
       _.getOrElse {
-        logger.info(s"Could not acquire lock on nrsWorkItemRepository for $instanceId")
+        logger.info(s"Could not acquire lock on nrsWorkItemRepository for thing") // TODO: removed instanceId here sort out
         Done
       }
     }
