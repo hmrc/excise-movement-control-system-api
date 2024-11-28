@@ -101,18 +101,19 @@ case class EisErrorResponsePresentation(
   validatorResults: Option[Seq[ValidationResponse]] = None
 ) extends GenericErrorResponse
 
-object EisErrorResponsePresentation {
-
-  def apply(error: EISErrorResponse): EisErrorResponsePresentation =
-    EisErrorResponsePresentation(
-      DateTimeService.timestamp(),
-      "Unexpected error",
-      "Error occured while reading downstream response",
+object EISErrorResponseDetails {
+  def createFromEISError(status: Int, dateTime: Instant, error: EISErrorResponse): EISErrorResponseDetails =
+    EISErrorResponseDetails(
+      status,
+      dateTime,
+      error.message,
+      error.debugMessage,
       error.emcsCorrelationId
     )
 
-  def apply(error: RimValidationErrorResponse): EisErrorResponsePresentation = {
-    val validationResponse = error.validatorResults.map(x =>
+  def createFromRIMError(status: Int, dateTime: Instant, error: RimValidationErrorResponse): EISErrorResponseDetails = {
+
+    val validationResponse = error.validatorResults.map { x =>
       ValidationResponse(
         x.errorCategory,
         x.errorType,
@@ -120,10 +121,11 @@ object EisErrorResponsePresentation {
         removeControlDocumentReferences(x.errorLocation),
         x.originalAttributeValue
       )
-    )
+    }
 
-    EisErrorResponsePresentation(
-      DateTimeService.timestamp(),
+    EISErrorResponseDetails(
+      status,
+      dateTime,
       "Validation error",
       error.message.mkString("\n"),
       error.emcsCorrelationId,
@@ -133,6 +135,18 @@ object EisErrorResponsePresentation {
 
   private def removeControlDocumentReferences(errorMsg: Option[String]): Option[String] =
     errorMsg.map(x => x.replaceAll("/con:[^/]*(?=/)", ""))
+
+}
+
+case class EisErrorResponsePresentation(
+  override val dateTime: Instant,
+  override val message: String,
+  override val debugMessage: String,
+  correlationId: String,
+  validatorResults: Option[Seq[ValidationResponse]] = None
+) extends GenericErrorResponse
+
+object EisErrorResponsePresentation {
 
   implicit val format: Reads[EisErrorResponsePresentation] = Json.reads[EisErrorResponsePresentation]
 

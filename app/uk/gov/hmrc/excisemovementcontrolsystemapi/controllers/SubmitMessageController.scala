@@ -52,21 +52,6 @@ class SubmitMessageController @Inject() (
     extends BackendController(cc)
     with Logging {
 
-  def happy(response: EISSubmissionResponse): Result =
-    response.Accepted(
-      Json.toJson(
-        ExciseMovementResponse(
-          movement._id,
-          None,
-          movement.localReferenceNumber,
-          movement.consignorId,
-          movement.consigneeId,
-          movement.administrativeReferenceCode,
-          None
-        )
-      )
-    )
-
   def submit(movementId: String): Action[NodeSeq] =
     (authAction andThen xmlParser).async(parse.xml) { implicit request =>
       implicit val hc: HeaderCarrier = correlationIdService.getOrCreateCorrelationId(request)
@@ -122,28 +107,6 @@ class SubmitMessageController @Inject() (
           )
         )
     })
-
-  private def extra(request: ParsedXmlRequest[NodeSeq], authorisedErn: String, movement: Movement)(implicit
-    hc: HeaderCarrier
-  ): EitherT[Future, Result, EISSubmissionResponse] =
-    EitherT {
-      submissionMessageService.submit(request, authorisedErn).map {
-        case Left(error)     =>
-          auditService.auditMessage(request.ieMessage, "Failed to Submit")
-          auditService.messageSubmitted(
-            AuditEventFactory.createMessageSubmitted(
-              request.ieMessage,
-              movement,
-              false,
-              Some(""),
-              request
-            )
-          )
-          Left(InternalServerError(""))
-        case Right(response) =>
-          Right(response)
-      }
-    }
 
   private def validateMessage(
     movement: Movement,
