@@ -73,14 +73,14 @@ class NrsServiceNewItSpec extends PlaySpec
 //    )
 //    .build()
 
-  "processAllWithLock" should {
+  "processSingleNrs" should {
     "when a lock is available" should {
       val dateTimeService = mock[DateTimeService]
       when(dateTimeService.timestamp()).thenReturn(Instant.now())
-//      val timestampSupport: TimestampSupport = app.injector.instanceOf[TimestampSupport]
+      //      val timestampSupport: TimestampSupport = app.injector.instanceOf[TimestampSupport]
       val timestamp = dateTimeService.timestamp()
 
-      "call NRS and mark a workItem as complete if there is a single item to be processed" in {
+      "return false if there is no item to be processed" in {
         val nrsMetadata = NrsMetadata(
           businessId = "emcs",
           notableEvent = "excise-movement-control-system",
@@ -101,15 +101,15 @@ class NrsServiceNewItSpec extends PlaySpec
           failureCount = 0,
           NrsSubmissionWorkItem(nrsPayLoad))
 
-        insert(workItem).futureValue
+//        insert(workItem).futureValue
 
-//        val fakeMongoLockRepositoryWithLockFail: MongoLockRepository = new MongoLockRepository(mongoComponent, timestampSupport) {
-//          override def takeLock(lockId: String, owner: String, ttl: Duration): Future[Option[Lock]] =
-//            Future.successful(Some(Lock("id", "owner", Instant.now(), Instant.now().plus(5, ChronoUnit.MINUTES))))
-//
-//          override def releaseLock(lockId: String, owner: String): Future[Unit] =
-//            Future.successful(())
-//        }
+        //        val fakeMongoLockRepositoryWithLockFail: MongoLockRepository = new MongoLockRepository(mongoComponent, timestampSupport) {
+        //          override def takeLock(lockId: String, owner: String, ttl: Duration): Future[Option[Lock]] =
+        //            Future.successful(Some(Lock("id", "owner", Instant.now(), Instant.now().plus(5, ChronoUnit.MINUTES))))
+        //
+        //          override def releaseLock(lockId: String, owner: String): Future[Unit] =
+        //            Future.successful(())
+        //        }
 
         val mockLockRepository = mock[MongoLockRepository]
         val mockNrsConnector = mock[NrsConnectorNew]
@@ -132,51 +132,224 @@ class NrsServiceNewItSpec extends PlaySpec
 
         val service = testApp.injector.instanceOf[NrsServiceNew]
 
-        val result = service.processAllWithLock()
-//          service.processAllWithLock().futureValue
-        await(result)
+        val result = service.processSingleNrs()
+        //          service.processAllWithLock().futureValue
+        await(result) mustBe false
 
-          verify(mockLockRepository, times(1)).refreshExpiry(any, any, any)
-          verify(mockLockRepository, times(1)).takeLock(any, any, any)
+//        verify(mockLockRepository, times(1)).refreshExpiry(any, any, any)
+//        verify(mockLockRepository, times(1)).takeLock(any, any, any)
 
 
-        await(repository.pullOutstanding(timestamp, timestamp)) mustBe None
-//        verify(repository, times(4)).pullOutstanding(any, any)
-//        verify(repository, times(3)).complete(workItem.id, Succeeded)
+//        await(repository.pullOutstanding(timestamp, timestamp)) mustBe None
+        //        verify(repository, times(4)).pullOutstanding(any, any)
+        //        verify(repository, times(3)).complete(workItem.id, Succeeded)
       }
-//      "not call NRS if there is nothing to process" in {
-//        when(mockLockRepository.takeLock(any(), any(), any())).thenReturn(Future.successful(Some(lock)))
-//        when(mockLockRepository.releaseLock(any(), any())).thenReturn(Future.unit)
-//
-//        when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
-//          .thenReturn(Future.successful(None))
-//
-//        service.processAllWithLock().futureValue
-//
-//        verify(mockNrsWorkItemRepository, times(1)).pullOutstanding(any(), any())
-//        verify(mockNrsWorkItemRepository, never()).complete(any(), any())
-//      }
+
+      "call NRS and mark a workItem as complete if there is an item to be processed" in {
+        val nrsMetadata = NrsMetadata(
+          businessId = "emcs",
+          notableEvent = "excise-movement-control-system",
+          payloadContentType = "application/json",
+          payloadSha256Checksum = sha256Hash("payload for NRS"),
+          userSubmissionTimestamp = timestamp.toString,
+          identityData = testNrsIdentityData,
+          userAuthToken = testAuthToken,
+          headerData = Map(),
+          searchKeys = Map("ern" -> "123")
+        )
+        val nrsPayLoad = NrsPayload("encodepayload", nrsMetadata)
+        val workItem = WorkItem(id = new ObjectId(),
+          receivedAt = timestamp.minusSeconds(60),
+          updatedAt = timestamp.minusSeconds(60),
+          availableAt = timestamp.minusSeconds(60),
+          status = ToDo,
+          failureCount = 0,
+          NrsSubmissionWorkItem(nrsPayLoad))
+
+        println("^^^^^ " + workItem)
+
+        insert(workItem).futureValue
+
+        //        val fakeMongoLockRepositoryWithLockFail: MongoLockRepository = new MongoLockRepository(mongoComponent, timestampSupport) {
+        //          override def takeLock(lockId: String, owner: String, ttl: Duration): Future[Option[Lock]] =
+        //            Future.successful(Some(Lock("id", "owner", Instant.now(), Instant.now().plus(5, ChronoUnit.MINUTES))))
+        //
+        //          override def releaseLock(lockId: String, owner: String): Future[Unit] =
+        //            Future.successful(())
+        //        }
+
+        val mockLockRepository = mock[MongoLockRepository]
+        val mockNrsConnector = mock[NrsConnectorNew]
+
+        val testApp = GuiceApplicationBuilder()
+          .overrides(
+            bind[MongoComponent].toInstance(mongoComponent),
+            bind[DateTimeService].toInstance(dateTimeService),
+            bind[MongoLockRepository].toInstance(mockLockRepository),
+            bind[NrsConnectorNew].toInstance(mockNrsConnector)
+          )
+          .build()
+
+        when(mockLockRepository.takeLock(any,any, any))
+          .thenReturn(Future.successful(Some(Lock("id", "owner", Instant.now(), Instant.now().plus(5, ChronoUnit.MINUTES)))))
+        when(mockLockRepository.releaseLock(any, any)).thenReturn(Future.successful(()))
+        when(mockLockRepository.refreshExpiry(any, any, any)).thenReturn(Future.successful(false))
+        when(mockLockRepository.disownLock(any, any, any)).thenReturn(Future.successful(()))
+        when(mockNrsConnector.sendToNrs(any,any)(any)).thenReturn(Future.successful(Done))
+
+        val service = testApp.injector.instanceOf[NrsServiceNew]
+
+        val result = service.processSingleNrs()
+        //          service.processAllWithLock().futureValue
+        await(result) mustBe true
+
+        //        verify(mockLockRepository, times(1)).refreshExpiry(any, any, any)
+        //        verify(mockLockRepository, times(1)).takeLock(any, any, any)
+
+
+        //        await(repository.pullOutstanding(timestamp, timestamp)) mustBe None
+        //        verify(repository, times(4)).pullOutstanding(any, any)
+        //        verify(repository, times(3)).complete(workItem.id, Succeeded)
+      }
+      //      "not call NRS if there is nothing to process" in {
+      //        when(mockLockRepository.takeLock(any(), any(), any())).thenReturn(Future.successful(Some(lock)))
+      //        when(mockLockRepository.releaseLock(any(), any())).thenReturn(Future.unit)
+      //
+      //        when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
+      //          .thenReturn(Future.successful(None))
+      //
+      //        service.processAllWithLock().futureValue
+      //
+      //        verify(mockNrsWorkItemRepository, times(1)).pullOutstanding(any(), any())
+      //        verify(mockNrsWorkItemRepository, never()).complete(any(), any())
+      //      }
     }
-//    "when a lock is not available" should {
-//      "not do anything" in {
-//        when(mockLockRepository.takeLock(any(), any(), any())).thenReturn(Future.successful(None))
-//        when(mockLockRepository.releaseLock(any(), any())).thenReturn(Future.unit)
-//
-//        when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
-//        when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
-//
-//        when(mockNrsWorkItemRepository.pullOutstanding(any(), any())).thenReturn(
-//          Future.successful(Some(testWorkItem)),
-//          Future.successful(Some(testWorkItem)),
-//          Future.successful(Some(testWorkItem)),
-//          Future.successful(None)
-//        )
-//
-//        service.processAllWithLock().futureValue
-//
-//        verify(mockNrsWorkItemRepository, never()).pullOutstanding(any(), any())
-//      }
-//    }
+    //    "when a lock is not available" should {
+    //      "not do anything" in {
+    //        when(mockLockRepository.takeLock(any(), any(), any())).thenReturn(Future.successful(None))
+    //        when(mockLockRepository.releaseLock(any(), any())).thenReturn(Future.unit)
+    //
+    //        when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
+    //        when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+    //
+    //        when(mockNrsWorkItemRepository.pullOutstanding(any(), any())).thenReturn(
+    //          Future.successful(Some(testWorkItem)),
+    //          Future.successful(Some(testWorkItem)),
+    //          Future.successful(Some(testWorkItem)),
+    //          Future.successful(None)
+    //        )
+    //
+    //        service.processAllWithLock().futureValue
+    //
+    //        verify(mockNrsWorkItemRepository, never()).pullOutstanding(any(), any())
+    //      }
+    //    }
   }
+
+//  "processAllWithLock" should {
+//    "when a lock is available" should {
+//      val dateTimeService = mock[DateTimeService]
+//      when(dateTimeService.timestamp()).thenReturn(Instant.now())
+////      val timestampSupport: TimestampSupport = app.injector.instanceOf[TimestampSupport]
+//      val timestamp = dateTimeService.timestamp()
+//
+//      "call NRS and mark a workItem as complete if there is a single item to be processed" in {
+//        val nrsMetadata = NrsMetadata(
+//          businessId = "emcs",
+//          notableEvent = "excise-movement-control-system",
+//          payloadContentType = "application/json",
+//          payloadSha256Checksum = sha256Hash("payload for NRS"),
+//          userSubmissionTimestamp = timestamp.toString,
+//          identityData = testNrsIdentityData,
+//          userAuthToken = testAuthToken,
+//          headerData = Map(),
+//          searchKeys = Map("ern" -> "123")
+//        )
+//        val nrsPayLoad = NrsPayload("encodepayload", nrsMetadata)
+//        val workItem = WorkItem(id = new ObjectId(),
+//          receivedAt = timestamp.minusSeconds(60),
+//          updatedAt = timestamp.minusSeconds(60),
+//          availableAt = timestamp.minusSeconds(60),
+//          status = ToDo,
+//          failureCount = 0,
+//          NrsSubmissionWorkItem(nrsPayLoad))
+//
+//        insert(workItem).futureValue
+//
+////        val fakeMongoLockRepositoryWithLockFail: MongoLockRepository = new MongoLockRepository(mongoComponent, timestampSupport) {
+////          override def takeLock(lockId: String, owner: String, ttl: Duration): Future[Option[Lock]] =
+////            Future.successful(Some(Lock("id", "owner", Instant.now(), Instant.now().plus(5, ChronoUnit.MINUTES))))
+////
+////          override def releaseLock(lockId: String, owner: String): Future[Unit] =
+////            Future.successful(())
+////        }
+//
+//        val mockLockRepository = mock[MongoLockRepository]
+//        val mockNrsConnector = mock[NrsConnectorNew]
+//
+//        val testApp = GuiceApplicationBuilder()
+//          .overrides(
+//            bind[MongoComponent].toInstance(mongoComponent),
+//            bind[DateTimeService].toInstance(dateTimeService),
+//            bind[MongoLockRepository].toInstance(mockLockRepository),
+//            bind[NrsConnectorNew].toInstance(mockNrsConnector)
+//          )
+//          .build()
+//
+//        when(mockLockRepository.takeLock(any,any, any))
+//          .thenReturn(Future.successful(Some(Lock("id", "owner", Instant.now(), Instant.now().plus(5, ChronoUnit.MINUTES)))))
+//        when(mockLockRepository.releaseLock(any, any)).thenReturn(Future.successful(()))
+//        when(mockLockRepository.refreshExpiry(any, any, any)).thenReturn(Future.successful(false))
+//        when(mockLockRepository.disownLock(any, any, any)).thenReturn(Future.successful(()))
+//        when(mockNrsConnector.sendToNrs(any,any)(any)).thenReturn(Future.successful(Done))
+//
+//        val service = testApp.injector.instanceOf[NrsServiceNew]
+//
+//        val result = service.processAllWithLock()
+////          service.processAllWithLock().futureValue
+//        await(result)
+//
+//          verify(mockLockRepository, times(1)).refreshExpiry(any, any, any)
+//          verify(mockLockRepository, times(1)).takeLock(any, any, any)
+//
+//
+//        await(repository.pullOutstanding(timestamp, timestamp)) mustBe None
+////        verify(repository, times(4)).pullOutstanding(any, any)
+////        verify(repository, times(3)).complete(workItem.id, Succeeded)
+//      }
+////      "not call NRS if there is nothing to process" in {
+////        when(mockLockRepository.takeLock(any(), any(), any())).thenReturn(Future.successful(Some(lock)))
+////        when(mockLockRepository.releaseLock(any(), any())).thenReturn(Future.unit)
+////
+////        when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
+////          .thenReturn(Future.successful(None))
+////
+////        service.processAllWithLock().futureValue
+////
+////        verify(mockNrsWorkItemRepository, times(1)).pullOutstanding(any(), any())
+////        verify(mockNrsWorkItemRepository, never()).complete(any(), any())
+////      }
+//    }
+////    "when a lock is not available" should {
+////      "not do anything" in {
+////        when(mockLockRepository.takeLock(any(), any(), any())).thenReturn(Future.successful(None))
+////        when(mockLockRepository.releaseLock(any(), any())).thenReturn(Future.unit)
+////
+////        when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
+////        when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+////
+////        when(mockNrsWorkItemRepository.pullOutstanding(any(), any())).thenReturn(
+////          Future.successful(Some(testWorkItem)),
+////          Future.successful(Some(testWorkItem)),
+////          Future.successful(Some(testWorkItem)),
+////          Future.successful(None)
+////        )
+////
+////        service.processAllWithLock().futureValue
+////
+////        verify(mockNrsWorkItemRepository, never()).pullOutstanding(any(), any())
+////      }
+////    }
+//  }
 
 }

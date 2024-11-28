@@ -37,6 +37,7 @@ class NrsSubmissionJob @Inject()(
 
   override def execute(implicit ec: ExecutionContext): Future[ScheduledJob.Result] = {
     // locking here. uses mongo to do it. because this then shares between instances.
+
     val now                     = dateTimeService.timestamp()
     val result: Future[Boolean] = nrsWorkItemRepository
       .pullOutstanding(now, now) // currently one at a time. need to process everything it can. Probably move into service.

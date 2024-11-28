@@ -184,10 +184,13 @@ class NrsServiceNew @Inject() (
         }
   }
 
+
+
   def processSingleNrs()(implicit headerCarrier: HeaderCarrier): Future[Boolean] = {
 
     val now = dateTimeService.timestamp()
     println("***** processing single NRS")
+    println("&&&& "+ now)
     nrsWorkItemRepository.pullOutstanding(now, now)
       .flatMap {
         case Some(wi) => {
