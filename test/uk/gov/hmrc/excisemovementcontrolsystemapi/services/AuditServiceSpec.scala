@@ -17,45 +17,80 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import org.mockito.ArgumentMatchersSugar.any
-import org.mockito.MockitoSugar.when
+import org.mockito.MockitoSugar.{reset, times, verify, when}
+import org.scalatest.BeforeAndAfterEach
+import org.scalatest.concurrent.Futures.whenReady
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.Logger
+import play.api.test.{FakeHeaders, FakeRequest}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeXmlParsers
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.AuditServiceImpl
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
 
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
+import scala.xml.{Elem, NodeSeq}
 
-class AuditServiceSpec extends PlaySpec with TestXml {
+class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach with FakeXmlParsers {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   protected implicit val hc: HeaderCarrier    = HeaderCarrier()
 
-  class Harness(auditConnector: AuditConnector) extends AuditServiceImpl(auditConnector) {
+  val auditConnector = mock[AuditConnector]
+  val appConfig      = mock[AppConfig]
+
+  val testMovement = Movement("id", None, "lrn", "consignorId", None, None, Instant.now, Seq.empty[Message])
+  val testErns     = Set("123", "456")
+
+  private def createRequest(headers: Seq[(String, String)], body: Elem = IE815): ParsedXmlRequest[NodeSeq] =
+    ParsedXmlRequest[NodeSeq](
+      EnrolmentRequest[NodeSeq](
+        FakeRequest()
+          .withHeaders(FakeHeaders(headers))
+          .withBody(body),
+        testErns,
+        ""
+      ),
+      IE815Message.createFromXml(body),
+      testErns,
+      ""
+    )
+
+  class Harness(auditConnector: AuditConnector, appConfig: AppConfig)
+      extends AuditServiceImpl(auditConnector, appConfig) {
     def getLogger(): Logger = logger
   }
 
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    reset(auditConnector, appConfig)
+
+    when(appConfig.newAuditingEnabled).thenReturn(true)
+    when(auditConnector.sendExtendedEvent(any)(any, any)).thenReturn(Future.successful(AuditResult.Success))
+  }
+
   "auditMessage" should {
+
     "silently returns right on error" in {
-      val auditConnector = mock[AuditConnector]
       when(auditConnector.sendExtendedEvent(any)(any, any))
         .thenReturn(Future.successful(AuditResult.Failure("test", None)))
 
-      val sut    = new Harness(auditConnector)
+      val sut    = new Harness(auditConnector, appConfig)
       val result = sut.auditMessage(IE815Message.createFromXml(IE815))
 
       await(result.value) equals Right(())
     }
 
     "return Right(())) on success" in {
-      val auditConnector = mock[AuditConnector]
-      when(auditConnector.sendExtendedEvent(any)(any, any)).thenReturn(Future.successful(AuditResult.Success))
 
-      val sut    = new Harness(auditConnector)
+      val sut    = new Harness(auditConnector, appConfig)
       val result = sut.auditMessage(IE815Message.createFromXml(IE815))
 
       await(result.value) equals Right(())
@@ -63,6 +98,22 @@ class AuditServiceSpec extends PlaySpec with TestXml {
   }
 
   "messageSubmitted" should {
-    "post a " in {}
+    val request = createRequest(Seq.empty[(String, String)])
+    "post an event if newAuditing feature switch is true" in {
+      val sut    = new Harness(auditConnector, appConfig)
+      val result = sut.messageSubmitted(IE815Message.createFromXml(IE815), testMovement, true, "", request)
+
+      await(result.value)
+      verify(auditConnector, times(1)).sendExtendedEvent(any)(any, any)
+    }
+
+    "post no event if newAuditing feature switch is false" in {
+      when(appConfig.newAuditingEnabled).thenReturn(false)
+      val sut    = new Harness(auditConnector, appConfig)
+      val result = sut.messageSubmitted(IE815Message.createFromXml(IE815), testMovement, true, "", request)
+
+      await(result.value)
+      verify(auditConnector, times(0)).sendExtendedEvent(any)(any, any)
+    }
   }
 }

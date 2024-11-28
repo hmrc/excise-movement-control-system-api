@@ -20,7 +20,8 @@ import cats.data.EitherT
 import com.google.inject.ImplementedBy
 import play.api.Logging
 import play.api.mvc.Result
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, Auditing, EventAuditEvent, MessageSubmittedDetails}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, Auditing}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
@@ -33,7 +34,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
 @Singleton
-class AuditServiceImpl @Inject() (auditConnector: AuditConnector)(implicit ec: ExecutionContext)
+class AuditServiceImpl @Inject() (auditConnector: AuditConnector, appConfig: AppConfig)(implicit ec: ExecutionContext)
     extends Auditing
     with AuditService
     with Logging {
@@ -51,10 +52,11 @@ class AuditServiceImpl @Inject() (auditConnector: AuditConnector)(implicit ec: E
     submittedToCore: Boolean,
     correlationId: String,
     request: ParsedXmlRequest[NodeSeq]
-  )(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit] = {
-    val event = AuditEventFactory.createMessageSubmitted(message, movement, submittedToCore, correlationId, request)
-    auditEvent(event)
-  }
+  )(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit] =
+    if (appConfig.newAuditingEnabled) {
+      val event = AuditEventFactory.createMessageSubmitted(message, movement, submittedToCore, correlationId, request)
+      auditEvent(event)
+    } else EitherT.fromEither(Right(()))
 
   private def auditEvent(event: ExtendedDataEvent)(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit] =
     EitherT {
