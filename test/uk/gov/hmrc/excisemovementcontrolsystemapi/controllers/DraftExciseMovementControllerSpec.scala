@@ -180,7 +180,7 @@ class DraftExciseMovementControllerSpec
       verify(notificationService).getBoxId(eqTo("clientId"), eqTo(Some(clientBoxId)))(any)
     }
 
-    "send an audit event" in {
+    "sends expected audit events" in {
       when(movementService.saveNewMovement(any))
         .thenReturn(
           Future.successful(Right(Movement(Some(defaultBoxId), "123", consignorId, Some("789"), None, Instant.now)))
@@ -191,13 +191,8 @@ class DraftExciseMovementControllerSpec
       await(createWithSuccessfulAuth.submit(request))
 
       verify(auditService).auditMessage(any[IEMessage])(any)
+      verify(auditService).messageSubmitted(any, any, any, any, any)(any)
     }
-
-//    "Send a MessageSubmitted audit event" in {
-//      when(auditService.messageSubmitted(any, ))
-//
-//      verify(auditService).messageSubmited()
-//    }
 
     "sends a failure audit when a message isn't submitted" in {
       when(submissionMessageService.submit(any, any)(any))
@@ -208,12 +203,14 @@ class DraftExciseMovementControllerSpec
       verify(auditService).auditMessage(any, any)(any)
     }
 
-    "sends a failure audit when a message submits but doesn't save" in {
+    "sends failure audits when a message submits but doesn't save" in {
       when(movementService.saveNewMovement(any)).thenReturn(Future.successful(Left(BadRequest(""))))
 
       await(createWithSuccessfulAuth.submit(request))
 
       verify(auditService).auditMessage(any, any)(any)
+      verify(auditService).messageSubmitted(any, any, any, any, any)(any)
+
     }
 
     "adds the boxId to the BoxIdRepository for consignor" in {

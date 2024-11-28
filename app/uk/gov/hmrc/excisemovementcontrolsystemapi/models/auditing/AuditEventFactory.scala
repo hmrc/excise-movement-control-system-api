@@ -41,7 +41,6 @@ object AuditEventFactory extends Auditing {
     )
   }
 
-  //Two needed, different resources
   def createMessageSubmitted(
     message: IEMessage,
     movement: Movement,

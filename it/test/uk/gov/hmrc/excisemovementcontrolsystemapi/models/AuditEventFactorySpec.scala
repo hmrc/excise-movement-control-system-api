@@ -77,18 +77,4 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       result.detail mustBe expectedResult.detail
     }
   }
-
-  "createMessageSubmitted" - {
-    "populates" in {}
-    "populates administrativeReferenceCode as provided" in {} //Should cover both cases
-    ""
-    "populates movementId as provided" in {} //Should cover both cases
-
-    "populates consigneeId as provided" in {}
-
-    "submittedToCore true on success" in {}
-
-    "submittedToCore false on success" in {}
-
-  }
 }
