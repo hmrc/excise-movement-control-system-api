@@ -51,7 +51,7 @@ class NrsServiceNew @Inject() (
   correlationIdService: CorrelationIdService,
   mongoLockRepository: MongoLockRepository,
   timestampSupport   : TimestampSupport
-)(implicit ec: ExecutionContext, headerCarrier: HeaderCarrier)
+)(implicit ec: ExecutionContext)
     extends AuthorisedFunctions
     with Logging {
 
@@ -87,7 +87,7 @@ class NrsServiceNew @Inject() (
     } yield Done
   }
 
-  def submitNrs(workItem: WorkItem[NrsSubmissionWorkItem]): Future[Done] =
+  def submitNrs(workItem: WorkItem[NrsSubmissionWorkItem])(implicit hc: HeaderCarrier): Future[Done] =
     nrsConnectorNew
       .sendToNrs(workItem.item.payload, correlationIdService.generateCorrelationId())
       .flatMap { _ =>
@@ -122,7 +122,7 @@ class NrsServiceNew @Inject() (
             .map(_ => Done)
       }
 
-  private def retrieveIdentityData(): Future[IdentityData] =
+  private def retrieveIdentityData()(implicit hc: HeaderCarrier): Future[IdentityData] =
     authorised().retrieve(nonRepudiationIdentityRetrievals) {
       case affinityGroup ~ internalId ~
           externalId ~ agentCode ~
@@ -157,8 +157,8 @@ class NrsServiceNew @Inject() (
         )
     }
 
-  private def retrieveUserAuthToken(): String =
-    headerCarrier.authorization match {
+  private def retrieveUserAuthToken()(implicit hc: HeaderCarrier): String =
+    hc.authorization match {
       case Some(Authorization(authToken)) => authToken
       case _                              =>
         logger.warn("[NrsService] - No auth token available for NRS")
@@ -166,7 +166,7 @@ class NrsServiceNew @Inject() (
     }
 
 
-  def processAllWithLock(): Future[Done] = {
+  def processAllWithLock()(implicit hc: HeaderCarrier): Future[Done] = {
     lockService.withLock {
       processAll()
     }.map {
@@ -177,7 +177,7 @@ class NrsServiceNew @Inject() (
     }
   }
 
-  def processAll(): Future[Done] = {
+  def processAll()(implicit hc: HeaderCarrier): Future[Done] = {
       processSingleNrs() // throttling should go here
         .flatMap {
           case true => processAll()
@@ -185,7 +185,7 @@ class NrsServiceNew @Inject() (
         }
   }
 
-  def processSingleNrs(): Future[Boolean] = {
+  def processSingleNrs()(implicit hc: HeaderCarrier): Future[Boolean] = {
 
     val now = dateTimeService.timestamp()
 

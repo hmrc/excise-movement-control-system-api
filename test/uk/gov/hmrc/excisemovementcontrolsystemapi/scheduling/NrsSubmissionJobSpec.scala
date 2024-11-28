@@ -133,13 +133,13 @@ class NrsSubmissionJobSpec
 
       when(mockNrsSubmissionWorkItemRepository.pullOutstanding(any(), any()))
         .thenReturn(Future.successful(Some(workItem)))
-      when(mockNrsService.submitNrs(any()))
+      when(mockNrsService.submitNrs(any())(any))
         .thenReturn(Future.successful(Done))
 
       val result = nrsSubmissionScheduler.execute.futureValue
 
       result mustBe ScheduledJob.Result.Completed
-      verify(mockNrsService).submitNrs(eqTo(workItem))
+      verify(mockNrsService).submitNrs(eqTo(workItem))(any)
     }
 
     "not call NRS when there are no outstanding nrs workitems to process" in {
@@ -150,7 +150,7 @@ class NrsSubmissionJobSpec
       val result = nrsSubmissionScheduler.execute.futureValue
 
       result mustBe ScheduledJob.Result.Completed
-      verify(mockNrsService, times(0)).submitNrs(any())
+      verify(mockNrsService, times(0)).submitNrs(any())(any)
     }
   }
 }
