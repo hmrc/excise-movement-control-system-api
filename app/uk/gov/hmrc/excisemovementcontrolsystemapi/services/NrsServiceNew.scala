@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import org.apache.pekko.Done
+import org.apache.pekko.actor.ActorSystem
 import play.api.Logging
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve._
@@ -37,8 +38,8 @@ import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.util.UUID
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 @Singleton
 class NrsServiceNew @Inject() (
@@ -50,7 +51,8 @@ class NrsServiceNew @Inject() (
   nrsEventIdMapper: NrsEventIdMapper,
   correlationIdService: CorrelationIdService,
   mongoLockRepository: MongoLockRepository,
-  timestampSupport   : TimestampSupport
+  timestampSupport   : TimestampSupport,
+  actorSystem: ActorSystem
 )(implicit ec: ExecutionContext)
     extends AuthorisedFunctions
     with Logging {
@@ -165,6 +167,18 @@ class NrsServiceNew @Inject() (
         throw new InternalServerException("No auth token available for NRS")
     }
 
+  def takeAtLeastXTime[A](f: => Future[A], duration: FiniteDuration): Future[A] = {
+    val promise = Promise[Unit]()
+    actorSystem.scheduler.scheduleOnce(duration)(() => promise.success(()))
+    for {
+      v <- f
+      _ <- promise.future
+    } yield v
+  }
+
+  def sendToNrsThrottled(payload: NrsPayload, correlationId: String)(implicit hc: HeaderCarrier): Future[Done] = {
+    takeAtLeastXTime(processAllWithLock(), 1.seconds)
+  }
 
   def processAllWithLock()(implicit hc: HeaderCarrier): Future[Done] = {
     lockService.withLock {
