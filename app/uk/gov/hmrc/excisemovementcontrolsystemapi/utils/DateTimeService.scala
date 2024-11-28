@@ -39,6 +39,4 @@ object DateTimeService {
         .ofInstant(dateTime, ZoneOffset.UTC)
         .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX"))
   }
-
-//  def timestamp(): Instant = new DateTimeServiceImpl().timestamp()
 }
