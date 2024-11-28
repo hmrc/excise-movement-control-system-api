@@ -176,10 +176,6 @@ class NrsServiceNew @Inject() (
     } yield v
   }
 
-  def sendToNrsThrottled(payload: NrsPayload, correlationId: String)(implicit hc: HeaderCarrier): Future[Done] = {
-    takeAtLeastXTime(processAllWithLock(), 1.seconds)
-  }
-
   def processAllWithLock()(implicit hc: HeaderCarrier): Future[Done] = {
     lockService.withLock {
       processAll()
@@ -200,6 +196,8 @@ class NrsServiceNew @Inject() (
   }
 
   def processSingleNrs()(implicit hc: HeaderCarrier): Future[Boolean] = {
+
+    //TODO: put takeAtLeastXTime in here.
 
     val now = dateTimeService.timestamp()
 
