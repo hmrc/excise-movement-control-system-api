@@ -21,6 +21,7 @@ import play.api.Configuration
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NRSWorkItemRepository.mongoIndexes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmissionWorkItem
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.workitem.{WorkItemFields, WorkItemRepository}
 
@@ -33,7 +34,8 @@ import scala.concurrent.duration.Duration
 @Singleton
 class NRSWorkItemRepository @Inject() (
   appConfig: AppConfig,
-  mongoComponent: MongoComponent
+  mongoComponent: MongoComponent,
+  timeService: DateTimeService
 )(implicit ec: ExecutionContext)
     extends WorkItemRepository[NrsSubmissionWorkItem](
       collectionName = "nrsSubmissionWorkItems",
@@ -46,7 +48,7 @@ class NRSWorkItemRepository @Inject() (
   override def inProgressRetryAfter: JavaDuration =
     appConfig.nrsRetryAfter
 
-  override def now(): Instant = Instant.now()
+  override def now(): Instant = timeService.timestamp()
 }
 
 object NRSWorkItemRepository {

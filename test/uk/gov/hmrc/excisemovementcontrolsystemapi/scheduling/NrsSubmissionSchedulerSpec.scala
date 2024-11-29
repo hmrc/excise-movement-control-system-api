@@ -37,14 +37,14 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NRSWorkItemRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmissionWorkItem
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsServiceNew
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.time.{LocalDateTime, ZoneOffset}
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{ExecutionContext, Future}
 
 class NrsSubmissionSchedulerSpec
     extends AnyFreeSpec
@@ -58,7 +58,7 @@ class NrsSubmissionSchedulerSpec
   implicit val ec: ExecutionContext                              = ExecutionContext.global
   val mockNrsSubmissionWorkItemRepository: NRSWorkItemRepository = mock[NRSWorkItemRepository]
   val mockNrsConnector: NrsConnector                             = mock[NrsConnector]
-  val mockNrsService: NrsService                                 = mock[NrsService]
+  val mockNrsService: NrsServiceNew                              = mock[NrsServiceNew]
   val mockDateTimeService: DateTimeService                       = mock[DateTimeService]
   val appConfig: AppConfig                                       = app.injector.instanceOf[AppConfig]
 
@@ -66,13 +66,14 @@ class NrsSubmissionSchedulerSpec
     .overrides(
       bind[NRSWorkItemRepository].toInstance(mockNrsSubmissionWorkItemRepository),
       bind[NrsConnector].toInstance(mockNrsConnector),
-      bind[NrsService].toInstance(mockNrsService),
+      bind[NrsServiceNew].toInstance(mockNrsService),
       bind[DateTimeService].toInstance(mockDateTimeService)
     )
     .configure(
-      "scheduler.nrsSubmissionJob.initialDelay" -> "1 minutes",
-      "scheduler.nrsSubmissionJob.interval"     -> "1 minute",
-      "featureFlags.nrsSubmissionEnabled"       -> true
+      "scheduler.nrsSubmissionJob.initialDelay"      -> "1 minutes",
+      "scheduler.nrsSubmissionJob.interval"          -> "1 minute",
+      "scheduler.nrsSubmissionJob.numberOfInstances" -> 1,
+      "featureFlags.nrsSubmissionEnabled"            -> true
     )
     .build()
 
@@ -115,7 +116,9 @@ class NrsSubmissionSchedulerSpec
     "use interval from configuration" in {
       nrsSubmissionScheduler.interval mustBe FiniteDuration(1, "minute")
     }
-
+    "use the correct number of instances from configuration" in {
+      nrsSubmissionScheduler.numberOfInstances mustBe 1
+    }
     "submit to NRS when there is an outstanding nrs workitem to process" in {
 
       val workItem = WorkItem(

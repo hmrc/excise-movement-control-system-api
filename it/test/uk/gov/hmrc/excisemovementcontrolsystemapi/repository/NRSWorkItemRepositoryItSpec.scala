@@ -19,6 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 import org.mongodb.scala.model.Indexes
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
+import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
@@ -26,6 +27,7 @@ import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmissionWorkItem
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.mongo.workitem.WorkItem
@@ -41,11 +43,16 @@ class NRSWorkItemRepositoryItSpec
     with GuiceOneAppPerSuite {
 
   def servicesConfig: Map[String, String] = Map("mongodb.nrsSubmission.TTL" -> "5 seconds")
+  private lazy val dateTimeService = mock[DateTimeService]
 
   override def fakeApplication: Application =
     new GuiceApplicationBuilder()
       .configure(servicesConfig)
-      .overrides(bind[MongoComponent].toInstance(mongoComponent))
+      .overrides(
+        bind[MongoComponent].toInstance(mongoComponent),
+        bind[DateTimeService].toInstance(dateTimeService)
+      )
+
       .build()
 
   override protected val repository: NRSWorkItemRepository = app.injector.instanceOf[NRSWorkItemRepository]
