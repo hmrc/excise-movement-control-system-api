@@ -30,6 +30,7 @@ import play.api.http.Status.{INTERNAL_SERVER_ERROR, OK}
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector.GetMessagesException
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.NewMessagesXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptSuccessResponse
@@ -45,7 +46,7 @@ import java.time.{LocalDateTime, ZoneOffset}
 import java.util.Base64
 
 class MessageConnectorSpec
-  extends AnyFreeSpec
+    extends AnyFreeSpec
     with Matchers
     with WireMockSupport
     with GuiceOneAppPerSuite
@@ -61,14 +62,14 @@ class MessageConnectorSpec
   }
 
   private val correlationIdService = mock[CorrelationIdService]
-  private val mockDateTimeService = mock[DateTimeService]
-  private val auditService = mock[AuditService]
-  private val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX")
+  private val mockDateTimeService  = mock[DateTimeService]
+  private val auditService         = mock[AuditService]
+  private val formatter            = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX")
 
-  override lazy val app: Application = {
+  override lazy val app: Application =
     GuiceApplicationBuilder()
       .configure(
-        "microservice.services.eis.port" -> wireMockPort,
+        "microservice.services.eis.port"                  -> wireMockPort,
         "microservice.services.eis.messages-bearer-token" -> "some-bearer"
       )
       .overrides(
@@ -77,18 +78,17 @@ class MessageConnectorSpec
         bind[AuditService].toInstance(auditService)
       )
       .build()
-  }
 
   private lazy val messageFactory = app.injector.instanceOf[IEMessageFactory]
-  private lazy val connector = app.injector.instanceOf[MessageConnector]
+  private lazy val connector      = app.injector.instanceOf[MessageConnector]
 
   "getMessages" - {
 
-    val hc = HeaderCarrier()
+    val hc            = HeaderCarrier()
     val correlationId = "correlationId"
-    val timestamp = LocalDateTime.of(2024, 3, 2, 12, 30, 45, 100).toInstant(ZoneOffset.UTC)
-    val ern = "someErn"
-    val url = s"/emcs/messages/v1/show-new-messages?exciseregistrationnumber=$ern"
+    val timestamp     = LocalDateTime.of(2024, 3, 2, 12, 30, 45, 100).toInstant(ZoneOffset.UTC)
+    val ern           = "someErn"
+    val url           = s"/emcs/messages/v1/show-new-messages?exciseregistrationnumber=$ern"
 
     "must return an empty list when the response from the server contains no messages" in {
 
@@ -123,8 +123,9 @@ class MessageConnectorSpec
 
     "must return messages when the response from the server contains them" in {
 
-      val newMessagesDataResponse = scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(newMessageXmlWithIE704.toString))
-      val ie704Message = messageFactory.createIEMessage(newMessagesDataResponse.Messages.messagesoption.head)
+      val newMessagesDataResponse =
+        scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(newMessageXmlWithIE704.toString))
+      val ie704Message            = messageFactory.createIEMessage(newMessagesDataResponse.Messages.messagesoption.head)
 
       val response = EISConsumptionResponse(
         dateTime = timestamp,
@@ -152,9 +153,10 @@ class MessageConnectorSpec
 
     "must audit each message received from the server" in {
 
-      val newMessagesDataResponse = scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(newMessageWith818And802.toString))
-      val ie818Message = messageFactory.createIEMessage(newMessagesDataResponse.Messages.messagesoption.head)
-      val ie802Message = messageFactory.createIEMessage(newMessagesDataResponse.Messages.messagesoption(1))
+      val newMessagesDataResponse =
+        scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(newMessageWith818And802.toString))
+      val ie818Message            = messageFactory.createIEMessage(newMessagesDataResponse.Messages.messagesoption.head)
+      val ie802Message            = messageFactory.createIEMessage(newMessagesDataResponse.Messages.messagesoption(1))
 
       val response = EISConsumptionResponse(
         dateTime = timestamp,
@@ -249,11 +251,11 @@ class MessageConnectorSpec
 
   "acknowledgeMessages" - {
 
-    val hc = HeaderCarrier()
+    val hc            = HeaderCarrier()
     val correlationId = "correlationId"
-    val timestamp = LocalDateTime.of(2024, 3, 2, 12, 30, 45, 100).toInstant(ZoneOffset.UTC)
-    val ern = "someErn"
-    val url = s"/emcs/messages/v1/message-receipt?exciseregistrationnumber=$ern"
+    val timestamp     = LocalDateTime.of(2024, 3, 2, 12, 30, 45, 100).toInstant(ZoneOffset.UTC)
+    val ern           = "someErn"
+    val url           = s"/emcs/messages/v1/message-receipt?exciseregistrationnumber=$ern"
 
     "must return `Done` when the server responds with OK" in {
 
@@ -347,6 +349,16 @@ class MessageConnectorSpec
       )
 
       connector.acknowledgeMessages(ern)(hc).failed.futureValue
+    }
+  }
+
+  "getMessageException" - {
+    "getStackTrace should return underlying cause stacktrace" in {
+      val input  = new Throwable("message")
+      val sut    = new GetMessagesException("ern", input)
+      val result = sut.getStackTrace
+
+      result mustBe input.getStackTrace
     }
   }
 

@@ -40,6 +40,7 @@ lazy val scoverageSettings: Seq[Setting[_]] = Seq(
     "Reverse.*",
     "domain\\..*",
     "models\\..*",
+    "models.auditing\\.*",
     "metrics\\..*",
     ".*(BuildInfo|Routes|Options).*",
     "generated\\..*",
