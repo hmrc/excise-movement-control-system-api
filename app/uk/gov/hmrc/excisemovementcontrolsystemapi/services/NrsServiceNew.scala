@@ -51,14 +51,15 @@ class NrsServiceNew @Inject() (
   nrsEventIdMapper: NrsEventIdMapper,
   correlationIdService: CorrelationIdService,
   mongoLockRepository: MongoLockRepository,
-  timestampSupport   : TimestampSupport,
+  timestampSupport: TimestampSupport,
   actorSystem: ActorSystem
 )(implicit ec: ExecutionContext)
     extends AuthorisedFunctions
     with Logging {
 
-  private val lockId: String = "nrs-lock"
-  private val lockService: ScheduledLockService = ScheduledLockService(mongoLockRepository, lockId = lockId, timestampSupport, 10.minutes) //TODO: put TTL in config
+  private val lockId: String                    = "nrs-lock"
+  private val lockService: ScheduledLockService =
+    ScheduledLockService(mongoLockRepository, lockId = lockId, timestampSupport, 10.minutes) //TODO: put TTL in config
 
   def makeWorkItemAndQueue(
     request: ParsedXmlRequest[_],
@@ -167,46 +168,50 @@ class NrsServiceNew @Inject() (
         throw new InternalServerException("No auth token available for NRS")
     }
 
+  def processAllWithLock()(implicit hc: HeaderCarrier): Future[Done] =
+    lockService
+      .withLock {
+        processAll()
+      }
+      .map {
+        _.getOrElse {
+          logger.info(
+            s"Could not acquire lock on nrsWorkItemRepository for thing"
+          ) // TODO: removed instanceId here sort out
+          Done
+        }
+      }
+
+  def processAll()(implicit hc: HeaderCarrier): Future[Done] =
+    processSingleNrs() // throttling should go here
+      .flatMap {
+        case true  => processAll()
+        case false => Future.successful(Done)
+      }
+
+  def processSingleNrs()(implicit hc: HeaderCarrier): Future[Boolean] = {
+
+    val now = dateTimeService.timestamp()
+
+    nrsWorkItemRepository
+      .pullOutstanding(now, now)
+      .flatMap {
+        case Some(wi) => submitNrs(wi).map(_ => true)
+        case None     => Future.successful(false)
+      }
+  }
+
+  def submitNrsThrottled(workItem: WorkItem[NrsSubmissionWorkItem])(implicit hc: HeaderCarrier): Future[Done] =
+    takeAtLeastXTime(submitNrs(workItem), 1.second)
+
   def takeAtLeastXTime[A](f: => Future[A], duration: FiniteDuration): Future[A] = {
-    val promise = Promise[Unit]()
-    actorSystem.scheduler.scheduleOnce(duration)(() => promise.success(()))
+    val promise             = Promise[Unit]()
+    lazy val succeedPromise = promise.success(())
+    actorSystem.scheduler.scheduleOnce(duration)(succeedPromise)
     for {
       v <- f
       _ <- promise.future
     } yield v
   }
-
-  def processAllWithLock()(implicit hc: HeaderCarrier): Future[Done] = {
-    lockService.withLock {
-      processAll()
-    }.map {
-      _.getOrElse {
-        logger.info(s"Could not acquire lock on nrsWorkItemRepository for thing") // TODO: removed instanceId here sort out
-        Done
-      }
-    }
-  }
-
-  def processAll()(implicit hc: HeaderCarrier): Future[Done] = {
-      processSingleNrs() // throttling should go here
-        .flatMap {
-          case true => processAll()
-          case false => Future.successful(Done)
-        }
-  }
-
-  def processSingleNrs()(implicit hc: HeaderCarrier): Future[Boolean] = {
-
-    //TODO: put takeAtLeastXTime in here.
-
-    val now = dateTimeService.timestamp()
-
-    nrsWorkItemRepository.pullOutstanding(now, now)
-      .flatMap {
-        case Some(wi) => submitNrs(wi).map(_ => true)
-        case None => Future.successful(false)
-      }
-  }
-
 
 }

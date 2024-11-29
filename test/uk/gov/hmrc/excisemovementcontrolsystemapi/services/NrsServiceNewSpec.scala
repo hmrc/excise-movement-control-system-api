@@ -16,16 +16,21 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-import org.apache.pekko.Done
+import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, post, postRequestedFor, urlEqualTo, urlMatching}
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.{Done, actor}
+import org.apache.pekko.actor.testkit.typed.scaladsl.ActorTestKit
+
+import org.apache.pekko.testkit.TestKit
 import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.never
 import org.mockito.MockitoSugar.{reset, times, verify, when}
-import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, SEE_OTHER}
+import play.api.http.Status.{ACCEPTED, BAD_REQUEST, INTERNAL_SERVER_ERROR, SEE_OTHER}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -51,18 +56,27 @@ import java.time.temporal.ChronoUnit
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
-class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with EitherValues with BeforeAndAfterEach {
+class NrsServiceNewSpec
+    extends PlaySpec
+    with ScalaFutures
+    with NrsTestData
+    with EitherValues
+    with BeforeAndAfterEach
+    with IntegrationPatience {
 
-  implicit val ec: ExecutionContext        = ExecutionContext.global
-  implicit val hc: HeaderCarrier           = HeaderCarrier(authorization = Some(Authorization(testAuthToken)))
-  private val mockNrsConnectorNew              = mock[NrsConnectorNew]
-  private val mockNrsWorkItemRepository        = mock[NRSWorkItemRepository]
-  private val mockCorrelationIdService         = mock[CorrelationIdService]
-  private val mockDateTimeService              = mock[DateTimeService]
-  private val mockAuthConnector: AuthConnector = mock[AuthConnector]
+  implicit val ec: ExecutionContext                   = ExecutionContext.global
+  implicit val hc: HeaderCarrier                      = HeaderCarrier(authorization = Some(Authorization(testAuthToken)))
+  private val mockNrsConnectorNew                     = mock[NrsConnectorNew]
+  private val mockNrsWorkItemRepository               = mock[NRSWorkItemRepository]
+  private val mockCorrelationIdService                = mock[CorrelationIdService]
+  private val mockDateTimeService                     = mock[DateTimeService]
+  private val mockAuthConnector: AuthConnector        = mock[AuthConnector]
   private val mockLockRepository: MongoLockRepository = mock[MongoLockRepository]
-  private val mockTimeStampSupport: TimestampSupport = mock[TimestampSupport]
-  private val timeStamp                    = Instant.now()
+  private val mockTimeStampSupport: TimestampSupport  = mock[TimestampSupport]
+  private val timeStamp                               = Instant.now()
+
+  lazy val testKit: ActorTestKit              = ActorTestKit()
+  lazy val testActorSystem: actor.ActorSystem = ActorSystem("DraftExciseMovementControllerSpec")
 
   private val service = new NrsServiceNew(
     mockAuthConnector,
@@ -73,7 +87,8 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
     new NrsEventIdMapper,
     mockCorrelationIdService,
     mockLockRepository,
-    mockTimeStampSupport
+    mockTimeStampSupport,
+    testActorSystem
   )
 
   private val message           = mock[IE815Message]
@@ -116,7 +131,7 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
   private val encodedMessage  = Base64.getEncoder.encodeToString("<IE815>test</IE815>".getBytes(StandardCharsets.UTF_8))
   private val testNrsPayload  = NrsPayload(encodedMessage, testNrsMetadata)
   private val testNrsWorkItem = NrsSubmissionWorkItem(testNrsPayload)
-  private val testWorkItem = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
+  private val testWorkItem    = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
 
   "makeNrsWorkItemAndAddToRepository" should {
     "create the NRSSubmission model and call to add it to the NRSWorkItemRepository" in {
@@ -190,7 +205,6 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
   "processSingleNrs" should {
     "call to submit the NRS data and return true if it processed a thing successfully" in {
 
-
       when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
 
       when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
@@ -228,67 +242,55 @@ class NrsServiceNewSpec extends PlaySpec with ScalaFutures with NrsTestData with
     }
   }
 
-  "processAllWithLock" should {
-    "when a lock is available" should {
-      val lock = Lock("id", "owner", timeStamp, timeStamp.plus(1, ChronoUnit.HOURS))
+  "submitNrsThrottled" should {
 
-      "call NRS multiple times if there are more than one submission to process" in {
-        when(mockTimeStampSupport.timestamp()).thenReturn(timeStamp)
-        when(mockLockRepository.refreshExpiry(any, any, any))
-          .thenReturn(Future.successful(false))
-        when(mockLockRepository.takeLock(any(), any(), any())).thenReturn(Future.successful(Some(lock)))
-        when(mockLockRepository.releaseLock(any(), any())).thenReturn(Future.unit)
+    val testNrsMetadata = NrsMetadata(
+      businessId = "emcs",
+      notableEvent = "excise-movement-control-system",
+      payloadContentType = "application/json",
+      payloadSha256Checksum = sha256Hash("payload for NRS"),
+      userSubmissionTimestamp = timeStamp.toString,
+      identityData = testNrsIdentityData,
+      userAuthToken = testAuthToken,
+      headerData = Map(),
+      searchKeys = Map("ern" -> "123")
+    )
 
-        when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
-        when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+    val encodedMessage  = Base64.getEncoder.encodeToString("<IE815>test</IE815>".getBytes(StandardCharsets.UTF_8))
+    val testNrsPayload  = NrsPayload(encodedMessage, testNrsMetadata)
+    val testNrsWorkItem = NrsSubmissionWorkItem(testNrsPayload)
+    val testWorkItem    = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
 
-        when(mockNrsWorkItemRepository.pullOutstanding(any(), any())).thenReturn(
-          Future.successful(Some(testWorkItem)),
-          Future.successful(Some(testWorkItem)),
-          Future.successful(Some(testWorkItem)),
-          Future.successful(None)
-        )
+    "if the connector call takes less than 1 second to finish, should take at least 1 second to finish" in {
 
-        service.processAllWithLock().futureValue
+      when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
+      when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
 
-        verify(mockLockRepository, times(1)).refreshExpiry(any,any,any)
-        verify(mockLockRepository, times(1)).takeLock(any,any,any)
+      val timeBefore = System.currentTimeMillis
+      service.submitNrsThrottled(testWorkItem).futureValue
+      val timeAfter  = System.currentTimeMillis
 
-        verify(mockNrsWorkItemRepository, times(4)).pullOutstanding(any(), any())
-        verify(mockNrsWorkItemRepository, times(3)).complete(testWorkItem.id, Succeeded)
-      }
-      "not call NRS if there is nothing to process" in {
-        when(mockLockRepository.takeLock(any(), any(), any())).thenReturn(Future.successful(Some(lock)))
-        when(mockLockRepository.releaseLock(any(), any())).thenReturn(Future.unit)
+      val timeTaken: Long = timeAfter - timeBefore
 
-        when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
-          .thenReturn(Future.successful(None))
-
-        service.processAllWithLock().futureValue
-
-        verify(mockNrsWorkItemRepository, times(1)).pullOutstanding(any(), any())
-        verify(mockNrsWorkItemRepository, never()).complete(any(), any())
-      }
+      timeTaken.toInt must be >= 1000
     }
-    "when a lock is not available" should {
-      "not do anything" in {
-        when(mockLockRepository.takeLock(any(), any(), any())).thenReturn(Future.successful(None))
-        when(mockLockRepository.releaseLock(any(), any())).thenReturn(Future.unit)
+    "if the connector call takes longer than 1 second to finish, should not take excessively long to finish" in {
 
-        when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
-        when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
-
-        when(mockNrsWorkItemRepository.pullOutstanding(any(), any())).thenReturn(
-          Future.successful(Some(testWorkItem)),
-          Future.successful(Some(testWorkItem)),
-          Future.successful(Some(testWorkItem)),
-          Future.successful(None)
-        )
-
-        service.processAllWithLock().futureValue
-
-        verify(mockNrsWorkItemRepository, never()).pullOutstanding(any(), any())
+      lazy val future = Future {
+        Thread.sleep(1500)
+        Done
       }
+      when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(future)
+      when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+
+      val timeBefore = System.currentTimeMillis
+      service.submitNrsThrottled(testWorkItem).futureValue
+      val timeAfter  = System.currentTimeMillis
+
+      val timeTaken: Long = timeAfter - timeBefore
+
+      timeTaken.toInt must be >= 1500
+      timeTaken.toInt must be < 1600
     }
   }
 
