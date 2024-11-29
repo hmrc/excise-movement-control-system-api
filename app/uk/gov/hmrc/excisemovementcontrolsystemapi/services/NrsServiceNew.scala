@@ -88,17 +88,26 @@ class NrsServiceNew @Inject() (
       }
       .recoverWith {
         case ex: UnexpectedResponseException if is4xx(ex.status) =>
-          logger.error(s"NRS call failed permanently with status ${ex.status} - marking workitem ${workItem.id} as PermanentlyFailed", ex)
+          logger.error(
+            s"NRS call failed permanently with status ${ex.status} - marking workitem ${workItem.id} as PermanentlyFailed",
+            ex
+          )
           nrsWorkItemRepository
             .complete(workItem.id, PermanentlyFailed)
             .map(_ => Done)
         case ex: UnexpectedResponseException if is5xx(ex.status) =>
-          logger.warn(s"NRS call failed with status ${ex.status} - marking workitem ${workItem.id} as Failed for retry", ex)
+          logger.warn(
+            s"NRS call failed with status ${ex.status} - marking workitem ${workItem.id} as Failed for retry",
+            ex
+          )
           nrsWorkItemRepository
             .complete(workItem.id, Failed)
             .map(_ => Done)
-        case ex: UnexpectedResponseException =>
-          logger.error(s"NRS call failed permanently with status ${ex.status} - marking workitem ${workItem.id} as PermanentlyFailed", ex)
+        case ex: UnexpectedResponseException                     =>
+          logger.error(
+            s"NRS call failed permanently with status ${ex.status} - marking workitem ${workItem.id} as PermanentlyFailed",
+            ex
+          )
           nrsWorkItemRepository
             .complete(workItem.id, PermanentlyFailed)
             .map(_ => Done)

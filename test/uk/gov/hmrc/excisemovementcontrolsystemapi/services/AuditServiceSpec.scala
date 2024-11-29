@@ -78,7 +78,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
 
   "auditMessage" should {
 
-    "silently returns right on error" in {
+    "silently returns right on error with log" in {
       when(auditConnector.sendExtendedEvent(any)(any, any))
         .thenReturn(Future.successful(AuditResult.Failure("test", None)))
 
