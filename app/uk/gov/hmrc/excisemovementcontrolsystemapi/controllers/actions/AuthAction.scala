@@ -22,9 +22,9 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.auth.core.AffinityGroup.Organisation
 import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{affinityGroup, allEnrolments, credentials, internalId}
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{affinityGroup, allEnrolments, credentials, groupIdentifier, internalId}
 import uk.gov.hmrc.auth.core.retrieve.~
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentKey, EnrolmentRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentKey, EnrolmentRequest, UserDetails}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse => EMCSErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
@@ -47,7 +47,7 @@ class AuthActionImpl @Inject() (
     with AuthAction
     with Logging {
 
-  private val fetch = allEnrolments and affinityGroup and credentials and internalId
+  private val fetch = allEnrolments and affinityGroup and credentials and internalId and groupIdentifier
 
   protected def executionContext: ExecutionContext = ec
 
@@ -98,14 +98,18 @@ class AuthActionImpl @Inject() (
   ): Future[Either[ErrorResponse, EnrolmentRequest[A]]] =
     authorised(Enrolment(EnrolmentKey.EMCS_ENROLMENT))
       .retrieve(fetch) {
-        case enrolments ~ Some(Organisation) ~ Some(credentials) ~ Some(internalId) =>
+        case enrolments ~ Some(Organisation) ~ Some(credentials) ~ Some(internalId) ~ Some(groupIdentifier) =>
+          val userDetails = UserDetails(
+            internalId,
+            groupIdentifier
+          )
           Future.successful(checkErns(enrolments, internalId))
-        case _ ~ None ~ _ ~ _                                                       => handleAuthError("Could not retrieve affinity group from Auth")
-        case _ ~ Some(affinityGroup) ~ _ ~ _ if affinityGroup != Organisation       =>
+        case _ ~ None ~ _ ~ _                                                                               => handleAuthError("Could not retrieve affinity group from Auth")
+        case _ ~ Some(affinityGroup) ~ _ ~ _ ~ _ if affinityGroup != Organisation                           =>
           handleAuthError(s"Invalid affinity group $affinityGroup from Auth")
-        case _ ~ _ ~ None ~ _                                                       => handleAuthError("Could not retrieve credentials from Auth")
-        case _ ~ _ ~ _ ~ None                                                       => handleAuthError("Could not retrieve internalId from Auth")
-        case _                                                                      => handleAuthError("Invalid enrolment parameter from Auth")
+        case _ ~ _ ~ None ~ _ ~ _                                                                           => handleAuthError("Could not retrieve credentials from Auth")
+        case _ ~ _ ~ _ ~ None ~ _                                                                           => handleAuthError("Could not retrieve internalId from Auth")
+        case _                                                                                              => handleAuthError("Invalid enrolment parameter from Auth")
       }
       .recover {
         case error: AuthorisationException =>
