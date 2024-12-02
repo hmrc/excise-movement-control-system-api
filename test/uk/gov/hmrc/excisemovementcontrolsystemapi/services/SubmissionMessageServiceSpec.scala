@@ -32,8 +32,10 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnSubmissionRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
 class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with EitherValues with BeforeAndAfterEach {
@@ -45,8 +47,14 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
   private val nrsService              = mock[NrsService]
   private val correlationIdService    = mock[CorrelationIdService]
   private val ernSubmissionRepository = mock[ErnSubmissionRepository]
+  private val dateTimeService         = mock[DateTimeService]
   private val sut                     =
-    new SubmissionMessageServiceImpl(connector, nrsService, correlationIdService, ernSubmissionRepository)
+    new SubmissionMessageServiceImpl(
+      connector,
+      nrsService,
+      correlationIdService,
+      ernSubmissionRepository
+    )
 
   private val message                  = mock[IE815Message]
   private val xmlBody                  = "<IE815>test</IE815>"
@@ -59,11 +67,13 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
   private val ern              = "ern"
   private val enrolmentRequest = EnrolmentRequest(fakeRequest, Set(ern), "123")
   private val request          = ParsedXmlRequest(enrolmentRequest, message, Set(ern), "123")
+  private val timestamp        = Instant.parse("2023-09-17T09:32:50.345456Z")
 
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(connector, nrsService, ernSubmissionRepository)
 
+    when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(message.consignorId).thenReturn("1234")
     when(correlationIdService.generateCorrelationId()).thenReturn("correlationId")
     when(connector.submitMessage(any, any, any, any)(any))

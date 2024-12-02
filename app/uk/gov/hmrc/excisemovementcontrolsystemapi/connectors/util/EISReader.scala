@@ -19,26 +19,25 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util
 import play.api.Logging
 import play.api.libs.json.{Json, Reads}
 import play.api.mvc.Result
-import play.api.mvc.Results.{InternalServerError, Status}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorMessage, EISErrorResponse, EISSubmissionResponse, RimValidationErrorResponse}
+import play.api.mvc.Results.Status
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisErrorResponsePresentation, ValidationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
-import uk.gov.hmrc.http.{HttpReads, HttpResponse}
+import uk.gov.hmrc.http.HttpResponse
 
 import scala.reflect.runtime.universe.TypeTag
 import scala.util.{Success, Try}
 
-class EISHttpReader(
+class EISReader(
   val correlationId: String,
   val ern: String,
   val createdDateTime: String,
   val dateTimeService: DateTimeService,
   val messageType: String
-) extends HttpReads[Either[Result, EISSubmissionResponse]]
-    with Logging
+) extends Logging
     with ResponseHandler {
 
-  override def read(method: String, url: String, response: HttpResponse): Either[Result, EISSubmissionResponse] = {
+  def read(response: HttpResponse): Either[Result, EISSubmissionResponse] = {
     val result = extractIfSuccessful[EISSubmissionResponse](response)
     result match {
       case Right(eisResponse)               => Right(eisResponse)
@@ -48,7 +47,7 @@ class EISHttpReader(
 
   private def handleErrorResponse(
     response: HttpResponse
-  ): Result = {
+  ) = {
 
     logger.warn(EISErrorMessage(createdDateTime, response.body, correlationId, messageType))
 
@@ -56,7 +55,7 @@ class EISHttpReader(
       case (Some(x), None) => handleRimValidationResponse(response, x)
       case (None, Some(y)) => handleEISErrorResponse(response, y)
       case _               =>
-        InternalServerError(
+        Status(response.status)(
           Json.toJson(
             EisErrorResponsePresentation(
               dateTimeService.timestamp(),
@@ -107,15 +106,15 @@ class EISHttpReader(
 
 }
 
-object EISHttpReader {
+object EISReader {
   def apply(
     correlationId: String,
     ern: String,
     createDateTime: String,
     dateTimeService: DateTimeService,
     messageType: String
-  ): EISHttpReader =
-    new EISHttpReader(
+  ): EISReader =
+    new EISReader(
       correlationId: String,
       ern: String,
       createDateTime: String,
