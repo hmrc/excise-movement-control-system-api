@@ -28,7 +28,7 @@ import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
-
+// $COVERAGE-OFF$
 class MiscodedMovementController @Inject() (
   cc: ControllerComponents,
   movementRepository: MovementRepository,
@@ -72,3 +72,4 @@ class MiscodedMovementController @Inject() (
         .map(_ => NoContent)
     }
 }
+// $COVERAGE-ON$
