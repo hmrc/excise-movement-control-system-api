@@ -23,7 +23,7 @@ import play.api.mvc.Result
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, Auditing}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
@@ -54,7 +54,20 @@ class AuditServiceImpl @Inject() (auditConnector: AuditConnector, appConfig: App
     request: ParsedXmlRequest[NodeSeq]
   )(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit] =
     if (appConfig.newAuditingEnabled) {
-      val event = AuditEventFactory.createMessageSubmitted(message, movement, submittedToCore, correlationId, request)
+      val event =
+        AuditEventFactory.createMessageSubmitted(message, movement, submittedToCore, correlationId, request)
+      auditEvent(event)
+    } else EitherT.fromEither(Right(()))
+
+  def messageSubmittedWithoutMovement(
+    message: IE815Message,
+    submittedToCore: Boolean,
+    correlationId: String,
+    request: ParsedXmlRequest[NodeSeq]
+  )(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit] =
+    if (appConfig.newAuditingEnabled) {
+      val event =
+        AuditEventFactory.createMessageSubmitted(message, submittedToCore, correlationId, request)
       auditEvent(event)
     } else EitherT.fromEither(Right(()))
 
@@ -84,6 +97,12 @@ trait AuditService {
   def messageSubmitted(
     message: IEMessage,
     movement: Movement,
+    submittedToCore: Boolean,
+    correlationId: String,
+    request: ParsedXmlRequest[NodeSeq]
+  )(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit]
+  def messageSubmittedWithoutMovement(
+    message: IE815Message,
     submittedToCore: Boolean,
     correlationId: String,
     request: ParsedXmlRequest[NodeSeq]
