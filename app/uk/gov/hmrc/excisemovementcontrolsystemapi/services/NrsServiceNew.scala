@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import org.apache.pekko.Done
 import org.apache.pekko.actor.ActorSystem
-import play.api.Logging
+import play.api.{Configuration, Logging}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnectorNew
@@ -32,13 +32,12 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUt
 import uk.gov.hmrc.http.HttpErrorFunctions.{is4xx, is5xx}
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier, InternalServerException}
 import uk.gov.hmrc.mongo.TimestampSupport
-import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository, ScheduledLockService}
+import uk.gov.hmrc.mongo.lock.{MongoLockRepository, ScheduledLockService}
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{Failed, PermanentlyFailed, Succeeded}
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
-import java.util.UUID
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
 @Singleton
@@ -52,14 +51,21 @@ class NrsServiceNew @Inject() (
   correlationIdService: CorrelationIdService,
   mongoLockRepository: MongoLockRepository,
   timestampSupport: TimestampSupport,
-  actorSystem: ActorSystem
+  actorSystem: ActorSystem,
+  configuration: Configuration
 )(implicit ec: ExecutionContext)
     extends AuthorisedFunctions
     with Logging {
 
-  private val lockId: String                    = "nrs-lock"
-  private val lockService: ScheduledLockService =
-    ScheduledLockService(mongoLockRepository, lockId = lockId, timestampSupport, 10.minutes) //TODO: put TTL in config
+  private val lockId: String                    = "nrs-lock" // TODO: check this. used to use a UUID.
+  private val nrsThrottleDuration               = configuration.get[FiniteDuration]("microservice.services.nrs.nrs-throttle-duration")
+  private val lockServiceTTL                    = configuration.get[FiniteDuration]("microservice.services.nrs.lock-service-ttl")
+  private val lockService: ScheduledLockService = ScheduledLockService(
+    mongoLockRepository,
+    lockId = lockId,
+    timestampSupport,
+    lockServiceTTL
+  )
 
   def makeWorkItemAndQueue(
     request: ParsedXmlRequest[_],
@@ -177,13 +183,13 @@ class NrsServiceNew @Inject() (
         _.getOrElse {
           logger.info(
             s"Could not acquire lock on nrsWorkItemRepository for thing"
-          ) // TODO: removed instanceId here sort out
+          )
           Done
         }
       }
 
-  def processAll()(implicit hc: HeaderCarrier): Future[Done] =
-    processSingleNrs() // throttling should go here
+  private def processAll()(implicit hc: HeaderCarrier): Future[Done] =
+    processSingleNrs()
       .flatMap {
         case true  => processAll()
         case false => Future.successful(Done)
@@ -202,9 +208,9 @@ class NrsServiceNew @Inject() (
   }
 
   def submitNrsThrottled(workItem: WorkItem[NrsSubmissionWorkItem])(implicit hc: HeaderCarrier): Future[Done] =
-    takeAtLeastXTime(submitNrs(workItem), 1.second)
+    takeAtLeastXTime(submitNrs(workItem), nrsThrottleDuration)
 
-  def takeAtLeastXTime[A](f: => Future[A], duration: FiniteDuration): Future[A] = {
+  private def takeAtLeastXTime[A](f: => Future[A], duration: FiniteDuration): Future[A] = {
     val promise             = Promise[Unit]()
     lazy val succeedPromise = promise.success(())
     actorSystem.scheduler.scheduleOnce(duration)(succeedPromise)

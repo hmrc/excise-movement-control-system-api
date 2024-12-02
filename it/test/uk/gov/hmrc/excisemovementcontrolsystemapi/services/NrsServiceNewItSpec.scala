@@ -42,9 +42,7 @@ import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, DefaultPlayMongoRepo
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
-import java.nio.charset.StandardCharsets
 import java.time.Instant
-import java.util.Base64
 import scala.concurrent.ExecutionContext
 
 class NrsServiceNewItSpec extends PlaySpec
@@ -108,7 +106,9 @@ class NrsServiceNewItSpec extends PlaySpec
       "microservice.services.nrs.reset-timeout" -> "1 second",
       "microservice.services.nrs.call-timeout" -> "30 seconds",
       "microservice.services.nrs.max-reset-timeout" -> "30 seconds",
-      "microservice.services.nrs.exponential-backoff-factor" -> 2.0
+      "microservice.services.nrs.exponential-backoff-factor" -> 2.0,
+      "microservice.services.nrs.lock-service-ttl" -> "10 minutes",
+      "microservice.services.nrs.nrs-throttle-duration" -> "1 second"
     )
     .build()
 

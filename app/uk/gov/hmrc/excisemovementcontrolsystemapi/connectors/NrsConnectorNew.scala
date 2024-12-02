@@ -18,7 +18,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import com.codahale.metrics.MetricRegistry
 import org.apache.pekko.Done
-import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.pattern.CircuitBreaker
 import play.api.Logging
 import play.api.http.Status.ACCEPTED
@@ -33,8 +32,7 @@ import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
 
 import javax.inject.Inject
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
-import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 class NrsConnectorNew @Inject() (

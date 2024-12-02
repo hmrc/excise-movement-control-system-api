@@ -17,10 +17,9 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
 import cats.implicits.toFunctorOps
+import org.apache.pekko.Done
 import play.api.{Configuration, Logging}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NRSWorkItemRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsServiceNew
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.Inject
@@ -28,26 +27,13 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
 class NrsSubmissionJob @Inject() (
-  nrsWorkItemRepository: NRSWorkItemRepository,
   nrsService: NrsServiceNew,
-  configuration: Configuration,
-  dateTimeService: DateTimeService
+  configuration: Configuration
 ) extends ScheduledJob
     with Logging {
 
   override def execute(implicit ec: ExecutionContext): Future[ScheduledJob.Result] = {
-    // locking here. uses mongo to do it. because this then shares between instances.
-    val now                     = dateTimeService.timestamp()
-    val result: Future[Boolean] = nrsWorkItemRepository
-      .pullOutstanding(
-        now,
-        now
-      ) // currently one at a time. need to process everything it can. Probably move into service.
-      .flatMap {
-        case None           => Future.successful(true)
-        case Some(workItem) =>
-          nrsService.submitNrs(workItem).map(_ => true)
-      }
+    val result: Future[Done] = nrsService.processAllWithLock()
     result.as(ScheduledJob.Result.Completed)
   }
 

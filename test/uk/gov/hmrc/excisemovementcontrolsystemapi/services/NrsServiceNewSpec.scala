@@ -16,21 +16,18 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, post, postRequestedFor, urlEqualTo, urlMatching}
 import org.apache.pekko.actor.ActorSystem
-import org.apache.pekko.{Done, actor}
 import org.apache.pekko.actor.testkit.typed.scaladsl.ActorTestKit
-
-import org.apache.pekko.testkit.TestKit
+import org.apache.pekko.{Done, actor}
 import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.never
 import org.mockito.MockitoSugar.{reset, times, verify, when}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.{ACCEPTED, BAD_REQUEST, INTERNAL_SERVER_ERROR, SEE_OTHER}
+import play.api.Configuration
+import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, SEE_OTHER}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -46,13 +43,12 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService.NonRepudia
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, NrsEventIdMapper}
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier}
 import uk.gov.hmrc.mongo.TimestampSupport
-import uk.gov.hmrc.mongo.lock.{Lock, MongoLockRepository}
+import uk.gov.hmrc.mongo.lock.MongoLockRepository
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{Failed, PermanentlyFailed, Succeeded, ToDo}
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.nio.charset.StandardCharsets
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -72,6 +68,7 @@ class NrsServiceNewSpec
   private val mockDateTimeService                     = mock[DateTimeService]
   private val mockAuthConnector: AuthConnector        = mock[AuthConnector]
   private val mockLockRepository: MongoLockRepository = mock[MongoLockRepository]
+  private val mockConfiguration                       = mock[Configuration]
   private val mockTimeStampSupport: TimestampSupport  = mock[TimestampSupport]
   private val timeStamp                               = Instant.now()
 
@@ -88,7 +85,8 @@ class NrsServiceNewSpec
     mockCorrelationIdService,
     mockLockRepository,
     mockTimeStampSupport,
-    testActorSystem
+    testActorSystem,
+    mockConfiguration
   )
 
   private val message           = mock[IE815Message]
