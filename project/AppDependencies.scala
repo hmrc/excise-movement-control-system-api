@@ -5,6 +5,7 @@ object AppDependencies {
   private val bootstrapVersion = "9.2.0"
   val dispatchVersion          = "1.2.0"
   lazy val mongoVersion        = "1.7.0"
+  val pekkoVersion = "1.0.2"
 
   val compile: Seq[ModuleID] = Seq(
     "uk.gov.hmrc"       %% "bootstrap-backend-play-30"         % bootstrapVersion,
@@ -18,7 +19,8 @@ object AppDependencies {
   val test: Seq[ModuleID]      = Seq(
     "uk.gov.hmrc"       %% "bootstrap-test-play-30"  % bootstrapVersion,
     "uk.gov.hmrc.mongo" %% "hmrc-mongo-test-play-30" % mongoVersion,
-    "org.mockito"       %% "mockito-scala"           % "1.17.31"
+    "org.mockito"       %% "mockito-scala"           % "1.17.31",
+    "org.apache.pekko"      %% "pekko-actor-testkit-typed"     % pekkoVersion
   ).map(_ % "test")
 
   val overrides: Seq[ModuleID] = Seq(
