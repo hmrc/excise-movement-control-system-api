@@ -57,7 +57,7 @@ class NrsServiceNew @Inject() (
     extends AuthorisedFunctions
     with Logging {
 
-  private val lockId: String                    = "nrs-lock" // TODO: check this. used to use a UUID.
+  private val lockId: String                    = "nrs-lock"
   private val nrsThrottleDuration               = configuration.get[FiniteDuration]("microservice.services.nrs.nrs-throttle-duration")
   private val lockServiceTTL                    = configuration.get[FiniteDuration]("microservice.services.nrs.lock-service-ttl")
   private val lockService: ScheduledLockService = ScheduledLockService(

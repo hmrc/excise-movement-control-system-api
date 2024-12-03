@@ -38,6 +38,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NRSWorkItemRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmissionWorkItem
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsServiceNew
+
+import java.time.{LocalDateTime, ZoneOffset}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.mongo.workitem.WorkItem
@@ -55,12 +57,10 @@ class NrsSubmissionJobSpec
     with BeforeAndAfterEach
     with NrsTestData {
 
-  implicit val ec: ExecutionContext                              = ExecutionContext.global
-//  val mockNrsSubmissionWorkItemRepository: NRSWorkItemRepository = mock[NRSWorkItemRepository]
-  val mockNrsConnector: NrsConnector                             = mock[NrsConnector]
-  val mockNrsService: NrsServiceNew                              = mock[NrsServiceNew]
-//  val mockDateTimeService: DateTimeService                       = mock[DateTimeService]
-  val appConfig: AppConfig                                       = app.injector.instanceOf[AppConfig]
+  implicit val ec: ExecutionContext  = ExecutionContext.global
+  val mockNrsConnector: NrsConnector = mock[NrsConnector]
+  val mockNrsService: NrsServiceNew  = mock[NrsServiceNew]
+  val appConfig: AppConfig           = app.injector.instanceOf[AppConfig]
 
   override def fakeApplication(): Application = GuiceApplicationBuilder()
     .overrides(

@@ -68,12 +68,17 @@ class NrsServiceNewSpec
   private val mockDateTimeService                     = mock[DateTimeService]
   private val mockAuthConnector: AuthConnector        = mock[AuthConnector]
   private val mockLockRepository: MongoLockRepository = mock[MongoLockRepository]
-  private val mockConfiguration                       = mock[Configuration]
   private val mockTimeStampSupport: TimestampSupport  = mock[TimestampSupport]
   private val timeStamp                               = Instant.now()
 
   lazy val testKit: ActorTestKit              = ActorTestKit()
   lazy val testActorSystem: actor.ActorSystem = ActorSystem("DraftExciseMovementControllerSpec")
+
+
+  val config = Configuration(
+    "microservice.services.nrs.nrs-throttle-duration" -> "1 second",
+    "microservice.services.nrs.lock-service-ttl" -> "10 minutes"
+  )
 
   private val service = new NrsServiceNew(
     mockAuthConnector,
@@ -86,7 +91,7 @@ class NrsServiceNewSpec
     mockLockRepository,
     mockTimeStampSupport,
     testActorSystem,
-    mockConfiguration
+    config
   )
 
   private val message           = mock[IE815Message]
