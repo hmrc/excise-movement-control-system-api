@@ -48,7 +48,7 @@ class NrsConnectorNew @Inject() (
     hc: HeaderCarrier
   ): Future[Done] = {
 
-    val nrsSubmissionUrl                                        = appConfig.getNrsSubmissionUrl
+    val nrsSubmissionUrl = appConfig.getNrsSubmissionUrl
     logger.info(
       s"NRS submission: CorrelationId: $correlationId"
     )
@@ -69,9 +69,8 @@ class NrsConnectorNew @Inject() (
         responseStatusAsFailure()
       )
       .flatMap { response =>
-
         response.status match {
-          case ACCEPTED =>
+          case ACCEPTED                =>
             logger.info(
               s"Non repudiation submission completed with status ${response.status}"
             )
@@ -81,7 +80,7 @@ class NrsConnectorNew @Inject() (
               s"Non repudiation submission failed with status ${response.status}"
             )
             Future.failed(UnexpectedResponseException(response.status, response.body))
-          case _ =>
+          case _                       =>
             logger.warn(
               s"Non repudiation submission responded with status ${response.status}"
             )

@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsPath, Json, OFormat, Reads, Writes}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, RimValidationErrorResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
 
 import java.time.Instant
@@ -43,6 +44,52 @@ object ErrorResponse {
       (JsPath \ "message").write[String] and
       (JsPath \ "debugMessage").write[String]
   )(e => (e.dateTime.asStringInMilliseconds, e.message, e.debugMessage))
+
+}
+
+case class EISErrorResponseDetails(
+  status: Int,
+  override val dateTime: Instant,
+  override val message: String,
+  override val debugMessage: String,
+  correlationId: String,
+  validatorResults: Option[Seq[ValidationResponse]] = None
+) extends GenericErrorResponse
+
+object EISErrorResponseDetails {
+  def createFromEISError(status: Int, dateTime: Instant, error: EISErrorResponse): EISErrorResponseDetails =
+    EISErrorResponseDetails(
+      status,
+      dateTime,
+      error.message,
+      error.debugMessage,
+      error.emcsCorrelationId
+    )
+
+  def createFromRIMError(status: Int, dateTime: Instant, error: RimValidationErrorResponse): EISErrorResponseDetails = {
+
+    val validationResponse = error.validatorResults.map { x =>
+      ValidationResponse(
+        x.errorCategory,
+        x.errorType,
+        x.errorReason,
+        removeControlDocumentReferences(x.errorLocation),
+        x.originalAttributeValue
+      )
+    }
+
+    EISErrorResponseDetails(
+      status,
+      dateTime,
+      "Validation error",
+      error.message.mkString("\n"),
+      error.emcsCorrelationId,
+      Some(validationResponse)
+    )
+  }
+
+  private def removeControlDocumentReferences(errorMsg: Option[String]): Option[String] =
+    errorMsg.map(x => x.replaceAll("/con:[^/]*(?=/)", ""))
 
 }
 

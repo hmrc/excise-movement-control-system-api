@@ -18,23 +18,23 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import com.codahale.metrics.MetricRegistry
 import play.api.Logging
-import play.api.libs.json.Json
-import play.api.mvc.Result
-import play.api.mvc.Results.InternalServerError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.EISHttpReader
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EISErrorResponseDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, StringContextOps}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpErrorFunctions, HttpReads, HttpResponse, StringContextOps}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.xml.NodeSeq
+import HttpReads.Implicits._
+import play.api.http.Status.INTERNAL_SERVER_ERROR
+import play.api.libs.json.{Json, Reads}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse.format
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
 
 class EISSubmissionConnector @Inject() (
   httpClient: HttpClientV2,
@@ -44,14 +44,25 @@ class EISSubmissionConnector @Inject() (
   dateTimeService: DateTimeService
 )(implicit ec: ExecutionContext)
     extends EISSubmissionHeaders
-    with Logging {
+    with Logging
+    with HttpErrorFunctions {
+
+  implicit def errorRead(status: Int): Reads[EISErrorResponseDetails] =
+    Json
+      .reads[EISErrorResponse]
+      .map(error => EISErrorResponseDetails.createFromEISError(status, dateTimeService.timestamp(), error))
+      .orElse(
+        Json
+          .reads[RimValidationErrorResponse]
+          .map(error => EISErrorResponseDetails.createFromRIMError(status, dateTimeService.timestamp(), error))
+      )
 
   def submitMessage(
     message: IEMessage,
     requestXmlAsString: String,
     authorisedErn: String,
     correlationId: String
-  )(implicit hc: HeaderCarrier): Future[Either[Result, EISSubmissionResponse]] = {
+  )(implicit hc: HeaderCarrier): Future[Either[EISErrorResponseDetails, EISSubmissionResponse]] = {
     logger.info("[EISSubmissionConnector]: Submitting a message to EIS")
 
     val timer           = metrics.timer("emcs.submission.connector.timer").time()
@@ -61,32 +72,33 @@ class EISSubmissionConnector @Inject() (
     val messageType     = message.messageType
     val encodedMessage  = emcsUtils.encode(wrappedXml.toString)
 
-    implicit val reader: HttpReads[Either[Result, EISSubmissionResponse]] = EISHttpReader(
-      correlationId = correlationId,
-      ern = authorisedErn,
-      createDateTime = createdDateTime,
-      dateTimeService = dateTimeService,
-      messageType = messageType
-    )
-
     val eisRequest = EISSubmissionRequest(authorisedErn, messageType, encodedMessage)
 
     httpClient
       .post(url"${appConfig.emcsReceiverMessageUrl}")
       .setHeader(build(correlationId, createdDateTime, appConfig.submissionBearerToken): _*)
       .withBody(Json.toJson(eisRequest))
-      .execute[Either[Result, EISSubmissionResponse]]
+      .execute[HttpResponse]
+      .map { response =>
+        if (is2xx(response.status)) {
+          Right(response.json.as[EISSubmissionResponse])
+        } else {
+          Left(response.json.as[EISErrorResponseDetails](errorRead(response.status)))
+        }
+      }
       .andThen { case _ => timer.stop() }
       .recover { case NonFatal(ex) =>
         logger.warn(EISErrorMessage(createdDateTime, ex.getMessage, correlationId, messageType), ex)
 
-        val error = EisErrorResponsePresentation(
-          timestamp,
-          "Internal server error",
-          "Unexpected error occurred while processing Submission request",
-          correlationId
+        Left(
+          EISErrorResponseDetails(
+            INTERNAL_SERVER_ERROR,
+            timestamp,
+            "Internal server error",
+            "Unexpected error occurred while processing Submission request",
+            correlationId
+          )
         )
-        Left(InternalServerError(Json.toJson(error)))
       }
   }
 

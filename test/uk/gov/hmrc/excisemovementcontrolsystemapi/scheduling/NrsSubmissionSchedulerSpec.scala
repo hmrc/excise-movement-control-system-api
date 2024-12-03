@@ -43,7 +43,6 @@ import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.time.{LocalDateTime, ZoneOffset}
-import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
 class NrsSubmissionSchedulerSpec

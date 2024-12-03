@@ -19,13 +19,15 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 import cats.data.EitherT
 import play.api.Logging
 import play.api.libs.json.Json
+import play.api.mvc.Results.InternalServerError
 import play.api.mvc.{Action, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.AuditEventFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisErrorResponsePresentation, ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -53,26 +55,34 @@ class SubmitMessageController @Inject() (
 
   def submit(movementId: String): Action[NodeSeq] =
     (authAction andThen xmlParser).async(parse.xml) { implicit request =>
-      val result = for {
+      (for {
         validatedMovementId <- validateMovementId(movementId)
         movement            <- getMovement(validatedMovementId)
         authorisedErn       <- validateMessage(movement, request.ieMessage, request.erns)
-        _                   <- sendRequest(request, authorisedErn)
-      } yield Accepted(
-        Json.toJson(
-          ExciseMovementResponse(
-            movement._id,
-            None,
-            movement.localReferenceNumber,
-            movement.consignorId,
-            movement.consigneeId,
-            movement.administrativeReferenceCode,
-            None
-          )
-        )
-      )
+        result              <- submitAndHandleError(request, authorisedErn, movement)
+      } yield (result, movement)).fold[Result](
+        failResult => failResult,
+        success => {
+          val (response, movement) = success
 
-      result.merge
+          auditService.auditMessage(request.ieMessage)
+          auditService.messageSubmitted(request.ieMessage, movement, true, response.emcsCorrelationId, request)
+
+          Accepted(
+            Json.toJson(
+              ExciseMovementResponse(
+                movement._id,
+                None,
+                movement.localReferenceNumber,
+                movement.consignorId,
+                movement.consigneeId,
+                movement.administrativeReferenceCode,
+                None
+              )
+            )
+          )
+        }
+      )
     }
 
   private def validateMovementId(movementId: String): EitherT[Future, Result, String] =
@@ -107,16 +117,28 @@ class SubmitMessageController @Inject() (
       messageValidator.convertErrorToResponse(x, dateTimeService.timestamp())
     })
 
-  private def sendRequest(request: ParsedXmlRequest[_], authorisedErn: String)(implicit
-    hc: HeaderCarrier
+  private def submitAndHandleError(request: ParsedXmlRequest[NodeSeq], authorisedErn: String, movement: Movement)(
+    implicit hc: HeaderCarrier
   ): EitherT[Future, Result, EISSubmissionResponse] =
     EitherT {
       submissionMessageService.submit(request, authorisedErn).map {
-        case Left(result)    =>
+        case Left(error)     =>
           auditService.auditMessage(request.ieMessage, "Failed to Submit")
-          Left(result)
+          auditService.messageSubmitted(request.ieMessage, movement, false, error.correlationId, request)
+          Left(
+            Status(error.status)(
+              Json.toJson(
+                EisErrorResponsePresentation(
+                  error.dateTime,
+                  error.message,
+                  error.debugMessage,
+                  error.correlationId,
+                  error.validatorResults
+                )
+              )
+            )
+          )
         case Right(response) =>
-          auditService.auditMessage(request.ieMessage)
           Right(response)
       }
     }
