@@ -26,7 +26,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Constants
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisErrorResponsePresentation, ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnSubmissionRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
@@ -86,10 +86,24 @@ class DraftExciseMovementController @Inject() (
   ): EitherT[Future, Result, Movement] =
     EitherT {
       submissionMessageService.submit(request, ern).flatMap {
-        case Left(result) =>
+        case Left(error) =>
           auditService.auditMessage(message, "Failed to Submit")
-          Future.successful(Left(result))
-        case Right(_)     => saveMovement(boxId, message).value
+          Future.successful(
+            Left(
+              Status(error.status)(
+                Json.toJson(
+                  EisErrorResponsePresentation(
+                    error.dateTime,
+                    error.message,
+                    error.debugMessage,
+                    error.correlationId,
+                    error.validatorResults
+                  )
+                )
+              )
+            )
+          )
+        case Right(_)    => saveMovement(boxId, message).value
       }
     }
 

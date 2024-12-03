@@ -16,28 +16,13 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
-import play.api.libs.json.{JsObject, JsValue, Json}
+abstract class EventAuditType(val name: String)
 
-trait Auditing {
+object EventAuditType {
 
-  val auditSource = "excise-movement-control-system-api"
+  val values: Seq[EventAuditType] = Seq(
+    MessageSubmitted
+  )
 
-  case class AuditDetail(messageCode: String, content: JsValue, failureOpt: Option[String]) {
-    def toJsObj: JsObject = {
-
-      val messageInfo = Json.obj(
-        "messageCode" -> messageCode,
-        "content"     -> content
-      )
-
-      val outcomeInfo = failureOpt match {
-        case None         =>
-          Json.obj("outcome" -> Json.obj("status" -> "SUCCESS"))
-        case Some(reason) =>
-          Json.obj("outcome" -> Json.obj("status" -> "FAILURE", "failureReason" -> reason))
-      }
-
-      messageInfo ++ outcomeInfo
-    }
-  }
+  case object MessageSubmitted extends EventAuditType("MessageSubmitted")
 }

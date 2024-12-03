@@ -49,28 +49,28 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 import scala.xml.NodeSeq
 
-
-class DraftExciseMovementControllerItSpec extends PlaySpec
-  with GuiceOneServerPerSuite
-  with ApplicationBuilderSupport
-  with TestXml
-  with WireMockServerSpec
-  with SubmitMessageTestSupport
-  with StringSupport
-  with ErrorResponseSupport
-  with Eventually
-  with IntegrationPatience
-  with BeforeAndAfterAll
-  with BeforeAndAfterEach {
+class DraftExciseMovementControllerItSpec
+    extends PlaySpec
+    with GuiceOneServerPerSuite
+    with ApplicationBuilderSupport
+    with TestXml
+    with WireMockServerSpec
+    with SubmitMessageTestSupport
+    with StringSupport
+    with ErrorResponseSupport
+    with Eventually
+    with IntegrationPatience
+    with BeforeAndAfterAll
+    with BeforeAndAfterEach {
 
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
-  private val url = s"http://localhost:$port/movements"
-  private val eisUrl = "/emcs/digital-submit-new-message/v1"
-  private val consignorId = "GBWK002281023"
-  private val consigneeId = "GBWKQOZ8OVLYR"
-  private val defaultBoxId = "testBoxId"
-  private val clientBoxId = UUID.randomUUID().toString
-  private val timeStamp = Instant.parse("2024-12-12T14:30:23.12345678Z")
+  private val url                     = s"http://localhost:$port/movements"
+  private val eisUrl                  = "/emcs/digital-submit-new-message/v1"
+  private val consignorId             = "GBWK002281023"
+  private val consigneeId             = "GBWKQOZ8OVLYR"
+  private val defaultBoxId            = "testBoxId"
+  private val clientBoxId             = UUID.randomUUID().toString
+  private val timeStamp               = Instant.parse("2024-12-12T14:30:23.12345678Z")
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
@@ -81,9 +81,8 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     applicationBuilder(configureServicesLocally).build()
   }
 
-  private def configureServicesLocally: Map[String, Any] = {
+  private def configureServicesLocally: Map[String, Any] =
     configureServices ++ Map("auditing.enabled" -> false)
-  }
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -152,9 +151,10 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         result.status mustBe ACCEPTED
 
         withClue("get the default boxId") {
-          wireMock.verify(getRequestedFor(urlMatching("^/box.*"))
-            .withQueryParam("boxName", equalTo("customs/excise##1.0##notificationUrl"))
-            .withQueryParam("clientId", matching("clientId"))
+          wireMock.verify(
+            getRequestedFor(urlMatching("^/box.*"))
+              .withQueryParam("boxName", equalTo("customs/excise##1.0##notificationUrl"))
+              .withQueryParam("clientId", matching("clientId"))
           )
         }
         withClue("should save the default box id to db") {
@@ -243,10 +243,11 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
         result.status mustBe BAD_REQUEST
         withClue("return the json response") {
-          result.json  mustBe expectedJsonErrorResponse(
+          result.json mustBe expectedJsonErrorResponse(
             "2024-12-12T14:30:23.123Z",
             "ClientId error",
-            "Request header is missing X-Client-Id")
+            "Request header is missing X-Client-Id"
+          )
         }
       }
 
@@ -268,7 +269,8 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         Json.parse(result.body) mustBe expectedJsonErrorResponse(
           "2024-12-12T14:30:23.123Z",
           "Invalid message type",
-          "Message type IE818 cannot be sent to the draft excise movement endpoint")
+          "Message type IE818 cannot be sent to the draft excise movement endpoint"
+        )
       }
 
       "xml cannot be parsed" in {
@@ -280,11 +282,14 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
       "body is not xml" in {
         withAuthorizedTrader("GBWK002281023")
 
-        val result = await(wsClient.url(url)
-          .addHttpHeaders(
-            HeaderNames.AUTHORIZATION -> "TOKEN",
-            HeaderNames.CONTENT_TYPE -> """application/vnd.hmrc.1.0+xml"""
-          ).post("test")
+        val result = await(
+          wsClient
+            .url(url)
+            .addHttpHeaders(
+              HeaderNames.AUTHORIZATION -> "TOKEN",
+              HeaderNames.CONTENT_TYPE  -> """application/vnd.hmrc.1.0+xml"""
+            )
+            .post("test")
         )
 
         result.status mustBe BAD_REQUEST
@@ -299,9 +304,8 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
           response.status mustBe BAD_REQUEST
           withClue("must remove control document references in any paths") {
-            clean(response.body) mustBe clean(validationErrorResponse(
-              locationWithoutControlDoc,
-              "2024-12-12T14:30:23.123Z")
+            clean(response.body) mustBe clean(
+              validationErrorResponse(locationWithoutControlDoc, "2024-12-12T14:30:23.123Z")
             )
           }
         }
@@ -314,8 +318,8 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
           response.status mustBe UNPROCESSABLE_ENTITY
           withClue("must remove control document references in any paths") {
-            clean(response.body) mustBe clean(validationErrorResponse(
-              locationWithoutControlDoc, "2024-12-12T14:30:23.123Z")
+            clean(response.body) mustBe clean(
+              validationErrorResponse(locationWithoutControlDoc, "2024-12-12T14:30:23.123Z")
             )
           }
         }
@@ -374,12 +378,16 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         result.status mustBe NOT_FOUND
 
         withClue("return the EIS error response") {
-          result.json mustBe Json.toJson(Json.toJson(EisErrorResponsePresentation(
-            Instant.parse("2023-12-05T12:05:06Z"),
-            "not_found",
-            "debug NOT_FOUND",
-            "123"
-          )))
+          result.json mustBe Json.toJson(
+            Json.toJson(
+              EisErrorResponsePresentation(
+                timeStamp,
+                "not_found",
+                "debug NOT_FOUND",
+                "123"
+              )
+            )
+          )
         }
       }
     }
@@ -404,7 +412,10 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     "return a 500 Internal Server Error" when {
       "EIS returns 500" in {
         withAuthorizedTrader(consignorId)
-        stubEISErrorResponse(INTERNAL_SERVER_ERROR, createEISErrorResponseBodyAsJson("INTERNAL_SERVER_ERROR").toString())
+        stubEISErrorResponse(
+          INTERNAL_SERVER_ERROR,
+          createEISErrorResponseBodyAsJson("INTERNAL_SERVER_ERROR").toString()
+        )
 
         postRequest(IE815).status mustBe INTERNAL_SERVER_ERROR
       }
@@ -452,46 +463,52 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
     responseBody.consigneeId mustBe Some("GBWKQOZ8OVLYR")
   }
 
-  private def createEISErrorResponseBodyAsJson(message: String): JsValue = {
-    Json.toJson(EISErrorResponse(
-      Instant.parse("2023-12-05T12:05:06Z"),
-      message.toUpperCase,
-      message.toLowerCase,
-      s"debug $message",
-      "123"
-    ))
-  }
-
-  private def postRequestWithClientBoxId = {
-    await(wsClient.url(url)
-      .addHttpHeaders(
-        HeaderNames.AUTHORIZATION -> "TOKEN",
-        HeaderNames.CONTENT_TYPE -> """application/vnd.hmrc.1.0+xml""",
-        "X-Client-Id" -> "clientId",
-        "X-Callback-Box-Id" -> clientBoxId
-      ).post(IE815)
+  private def createEISErrorResponseBodyAsJson(message: String): JsValue =
+    Json.toJson(
+      EISErrorResponse(
+        timeStamp,
+        message.toUpperCase,
+        message.toLowerCase,
+        s"debug $message",
+        "123"
+      )
     )
-  }
 
-  private def postRequest(xml: NodeSeq = IE815, contentType: String = """application/vnd.hmrc.1.0+xml""") = {
-    await(wsClient.url(url)
-      .addHttpHeaders(
-        HeaderNames.AUTHORIZATION -> "TOKEN",
-        HeaderNames.CONTENT_TYPE -> contentType,
-        "X-Client-Id" -> "clientId"
-      ).post(xml)
+  private def postRequestWithClientBoxId =
+    await(
+      wsClient
+        .url(url)
+        .addHttpHeaders(
+          HeaderNames.AUTHORIZATION -> "TOKEN",
+          HeaderNames.CONTENT_TYPE  -> """application/vnd.hmrc.1.0+xml""",
+          "X-Client-Id"             -> "clientId",
+          "X-Callback-Box-Id"       -> clientBoxId
+        )
+        .post(IE815)
     )
-  }
 
-
-  private def postRequestWithoutClientId = {
-    await(wsClient.url(url)
-      .addHttpHeaders(
-        HeaderNames.AUTHORIZATION -> "TOKEN",
-        HeaderNames.CONTENT_TYPE -> "application/vnd.hmrc.1.0+xml",
-      ).post(IE815)
+  private def postRequest(xml: NodeSeq = IE815, contentType: String = """application/vnd.hmrc.1.0+xml""") =
+    await(
+      wsClient
+        .url(url)
+        .addHttpHeaders(
+          HeaderNames.AUTHORIZATION -> "TOKEN",
+          HeaderNames.CONTENT_TYPE  -> contentType,
+          "X-Client-Id"             -> "clientId"
+        )
+        .post(xml)
     )
-  }
+
+  private def postRequestWithoutClientId =
+    await(
+      wsClient
+        .url(url)
+        .addHttpHeaders(
+          HeaderNames.AUTHORIZATION -> "TOKEN",
+          HeaderNames.CONTENT_TYPE  -> "application/vnd.hmrc.1.0+xml"
+        )
+        .post(IE815)
+    )
 
   private def stubEISSuccessfulRequest = {
 
@@ -505,8 +522,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
 
   }
 
-  private def stubEISErrorResponse(status: Int, body: String) = {
-
+  private def stubEISErrorResponse(status: Int, body: String) =
     wireMock.stubFor(
       post(urlEqualTo(eisUrl))
         .willReturn(
@@ -516,19 +532,18 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
             .withHeader("Content-Type", "application/json")
         )
     )
-  }
 
-  private def stubNrsResponse = {
+  private def stubNrsResponse =
     wireMock.stubFor(
       post(urlEqualTo("/submission"))
         .willReturn(
           aResponse()
             .withStatus(ACCEPTED)
-            .withBody(Json.obj("nrSubmissionId" -> "submissionId").toString())        )
+            .withBody(Json.obj("nrSubmissionId" -> "submissionId").toString())
+        )
     )
-  }
 
-  private def stubNrsErrorResponse = {
+  private def stubNrsErrorResponse =
     wireMock.stubFor(
       post(urlEqualTo("/submission"))
         .willReturn(
@@ -536,9 +551,8 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
             .withStatus(INTERNAL_SERVER_ERROR)
         )
     )
-  }
 
-  private def stubGetBoxIdSuccessRequest = {
+  private def stubGetBoxIdSuccessRequest =
     wireMock.stubFor {
       get(urlPathEqualTo(s"""/box"""))
         .withQueryParam("boxName", equalTo(Constants.BoxName))
@@ -546,8 +560,7 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         .willReturn(
           aResponse()
             .withStatus(OK)
-            .withBody(
-              s"""
+            .withBody(s"""
                 {
                   "boxId": "$defaultBoxId",
                   "boxName":"customs/excise##1.0##notificationUrl",
@@ -563,9 +576,8 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
               """)
         )
     }
-  }
 
-  private def stubGetBoxIdFailureRequest(status: Int, body: String) = {
+  private def stubGetBoxIdFailureRequest(status: Int, body: String) =
     wireMock.stubFor {
       get(urlPathEqualTo(s"""/box"""))
         .withQueryParam("boxName", equalTo(Constants.BoxName))
@@ -576,12 +588,10 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
             .withBody(body)
         )
     }
-  }
 
   private class Base64DecodedMatcher extends RequestMatcherExtension {
 
-    override def `match`(request: Request, parameters: Parameters): MatchResult = {
-
+    override def `match`(request: Request, parameters: Parameters): MatchResult =
       if (request.getUrl == eisUrl) {
         // Only want to check the base 64 body if the request is for submitting the message
 
@@ -602,8 +612,6 @@ class DraftExciseMovementControllerItSpec extends PlaySpec
         // If it is here because it is trying to match say GetBoxId then nothing to check
         MatchResult.exactMatch()
       }
-
-    }
 
   }
 

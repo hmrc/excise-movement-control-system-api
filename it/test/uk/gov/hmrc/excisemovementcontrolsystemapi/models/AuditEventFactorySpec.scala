@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.Auditing
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, Auditing}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.writes.testObjects._
 import uk.gov.hmrc.http.HeaderCarrier
@@ -29,32 +29,32 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-    "IE704Message" - TestType(IE704TestMessageType, IE704Message.createFromXml(IE704))
-    "IE801Message" - TestType(IE801TestMessageType, IE801Message.createFromXml(IE801))
-    "IE802Message" - TestType(IE802TestMessageType, IE802Message.createFromXml(IE802))
-    "IE803Message" - TestType(IE803TestMessageType, IE803Message.createFromXml(IE803))
-    "IE807Message" - TestType(IE807TestMessageType, IE807Message.createFromXml(IE807))
-    "IE810Message" - TestType(IE810TestMessageType, IE810Message.createFromXml(IE810))
-    "IE813Message" - TestType(IE813TestMessageType, IE813Message.createFromXml(IE813))
-    "IE815Message" - TestType(IE815TestMessageType, IE815Message.createFromXml(IE815))
-    "IE818Message" - TestType(IE818TestMessageType, IE818Message.createFromXml(IE818))
-    "IE819Message" - TestType(IE819TestMessageType, IE819Message.createFromXml(IE819))
-    "IE829Message" - TestType(IE829TestMessageType, IE829Message.createFromXml(IE829))
-    "IE837Message" - TestType(IE837TestMessageType, IE837Message.createFromXml(IE837WithConsignor))
-    "IE839Message" - TestType(IE839TestMessageType, IE839Message.createFromXml(IE839))
-    "IE840Message" - TestType(IE840TestMessageType, IE840Message.createFromXml(IE840))
-    "IE871Message" - TestType(IE871TestMessageType, IE871Message.createFromXml(IE871WithConsignor))
-    "IE881Message" - TestType(IE881TestMessageType, IE881Message.createFromXml(IE881))
-    "IE905Message" - TestType(IE905TestMessageType, IE905Message.createFromXml(IE905))
+  "IE704Message" - TestType(IE704TestMessageType, IE704Message.createFromXml(IE704))
+  "IE801Message" - TestType(IE801TestMessageType, IE801Message.createFromXml(IE801))
+  "IE802Message" - TestType(IE802TestMessageType, IE802Message.createFromXml(IE802))
+  "IE803Message" - TestType(IE803TestMessageType, IE803Message.createFromXml(IE803))
+  "IE807Message" - TestType(IE807TestMessageType, IE807Message.createFromXml(IE807))
+  "IE810Message" - TestType(IE810TestMessageType, IE810Message.createFromXml(IE810))
+  "IE813Message" - TestType(IE813TestMessageType, IE813Message.createFromXml(IE813))
+  "IE815Message" - TestType(IE815TestMessageType, IE815Message.createFromXml(IE815))
+  "IE818Message" - TestType(IE818TestMessageType, IE818Message.createFromXml(IE818))
+  "IE819Message" - TestType(IE819TestMessageType, IE819Message.createFromXml(IE819))
+  "IE829Message" - TestType(IE829TestMessageType, IE829Message.createFromXml(IE829))
+  "IE837Message" - TestType(IE837TestMessageType, IE837Message.createFromXml(IE837WithConsignor))
+  "IE839Message" - TestType(IE839TestMessageType, IE839Message.createFromXml(IE839))
+  "IE840Message" - TestType(IE840TestMessageType, IE840Message.createFromXml(IE840))
+  "IE871Message" - TestType(IE871TestMessageType, IE871Message.createFromXml(IE871WithConsignor))
+  "IE881Message" - TestType(IE881TestMessageType, IE881Message.createFromXml(IE881))
+  "IE905Message" - TestType(IE905TestMessageType, IE905Message.createFromXml(IE905))
 
   case class TestType(testObject: TestMessageType, message: IEMessage) {
 
     "successfully converted to success audit event" in {
 
-      val result = AuditEventFactory.createAuditEvent(message, None)
-      val expectedResult =  ExtendedDataEvent(
+      val result         = AuditEventFactory.createMessageAuditEvent(message, None)
+      val expectedResult = ExtendedDataEvent(
         auditSource = "excise-movement-control-system-api",
-        auditType = message.auditType.name,
+        auditType = message.messageAuditType.name,
         detail = testObject.auditEvent
       )
 
@@ -64,11 +64,11 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
     }
 
     "converted to failure audit event" in {
-      val testMessage = "Test Message"
-      val result = AuditEventFactory.createAuditEvent(message, Some(testMessage))
+      val testMessage    = "Test Message"
+      val result         = AuditEventFactory.createMessageAuditEvent(message, Some(testMessage))
       val expectedResult = ExtendedDataEvent(
         auditSource = "excise-movement-control-system-api",
-        auditType = message.auditType.name,
+        auditType = message.messageAuditType.name,
         detail = testObject.auditFailure(testMessage)
       )
 
@@ -77,5 +77,4 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       result.detail mustBe expectedResult.detail
     }
   }
-
 }
