@@ -20,7 +20,7 @@ import cats.data.NonEmptySeq
 import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.CommonFormats._
 
-trait EventAuditEvent {}
+trait EventAuditEvent {} //Should this be here vs using the abstract class?
 
 case class UserDetails(
   gatewayId: String,
