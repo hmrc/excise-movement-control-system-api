@@ -57,6 +57,7 @@ class DraftExciseMovementController @Inject() (
     extends BackendController(cc)
     with Logging {
 
+  //TODO: Test what happens if the audit fails
   def submit: Action[NodeSeq] =
     (authAction andThen xmlParser).async(parse.xml) { implicit request =>
       implicit val hc: HeaderCarrier = correlationIdService.getOrCreateCorrelationId(request)

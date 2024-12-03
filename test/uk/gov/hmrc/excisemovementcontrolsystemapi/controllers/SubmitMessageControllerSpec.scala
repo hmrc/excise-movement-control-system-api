@@ -84,6 +84,7 @@ class SubmitMessageControllerSpec
     when(auditService.messageSubmitted(any, any, any, any, any)(any)).thenReturn(EitherT.fromEither(Right(())))
   }
 
+  //TODO: Where are the messageSubmitted Verify Checks!
   "submit" should {
     "return 202" in {
       val result = createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request)
