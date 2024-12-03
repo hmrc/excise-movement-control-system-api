@@ -51,6 +51,7 @@ class SubmitMessageController @Inject() (
     extends BackendController(cc)
     with Logging {
 
+  //TODO: Test what happens if the audit fails
   def submit(movementId: String): Action[NodeSeq] =
     (authAction andThen xmlParser).async(parse.xml) { implicit request =>
       (for {
