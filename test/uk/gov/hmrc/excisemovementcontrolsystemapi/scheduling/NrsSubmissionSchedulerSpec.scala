@@ -41,6 +41,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsServiceNew
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.mongo.workitem.WorkItem
+import scala.concurrent.duration.FiniteDuration
 
 import java.time.{LocalDateTime, ZoneOffset}
 import scala.concurrent.{ExecutionContext, Future}
