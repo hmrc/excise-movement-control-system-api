@@ -193,7 +193,8 @@ class DraftExciseMovementControllerSpec
       await(createWithSuccessfulAuth.submit(request))
 
       verify(auditService).auditMessage(any[IEMessage])(any)
-      verify(auditService).messageSubmittedWithoutMovement(any, any, any, any)(any)
+      verify(auditService).messageSubmitted(any, any, any, any, any)(any)
+
     }
 
     "sends failed audits when a message isn't submitted" in {
@@ -203,7 +204,8 @@ class DraftExciseMovementControllerSpec
       await(createWithSuccessfulAuth.submit(request))
 
       verify(auditService).auditMessage(any, any)(any)
-      verify(auditService).messageSubmitted(any, any, any, any, any)(any)
+      verify(auditService).messageSubmittedWithoutMovement(any, any, any, any)(any)
+
     }
 
     "sends failure audits when a message submits but doesn't save" in {
@@ -212,7 +214,7 @@ class DraftExciseMovementControllerSpec
       await(createWithSuccessfulAuth.submit(request))
 
       verify(auditService).auditMessage(any, any)(any)
-      verify(auditService).messageSubmitted(any, any, any, any, any)(any)
+      verify(auditService).messageSubmittedWithoutMovement(any, any, any, any)(any)
     }
 
     "adds the boxId to the BoxIdRepository for consignor" in {
