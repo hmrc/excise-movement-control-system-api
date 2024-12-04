@@ -66,14 +66,17 @@ class DraftExciseMovementController @Inject() (
         clientId      <- retrieveClientIdFromHeader(request)
         boxId         <- getBoxId(clientId)
         result        <- submitAndHandleError(request, authorisedErn, ie815Message)
-        movement      <- saveMovement(boxId, ie815Message)
+        movement      <- saveMovement(boxId, ie815Message, result, request)
       } yield (result, movement, boxId)).fold[Result](
         failResult => failResult,
         success => {
           val (response, movement, boxId) = success
 
-          auditService.auditMessage(request.ieMessage)
-          auditService.messageSubmitted(request.ieMessage, movement, true, response.emcsCorrelationId, request)
+          //TODO: Ensure This and the Submit are running (cuz EitherT)
+          for {
+            _ <- auditService.auditMessage(request.ieMessage)
+            _ <- auditService.messageSubmitted(request.ieMessage, movement, true, response.emcsCorrelationId, request)
+          } yield ()
 
           Accepted(
             Json.toJson(
@@ -100,7 +103,7 @@ class DraftExciseMovementController @Inject() (
     EitherT {
       submissionMessageService.submit(request, ern).map {
         case Left(error)     =>
-          auditService.auditMessage(message, "Failed to sumbit")
+          auditService.auditMessage(message, "Failed to submit")
           auditService.messageSubmittedWithoutMovement(message, false, error.correlationId, request)
           Left(
             Status(error.status)(
@@ -115,33 +118,8 @@ class DraftExciseMovementController @Inject() (
               )
             )
           )
-        case Right(response) => Right(response)
-      }
-    }
-
-  private def submitSaveAudit(request: ParsedXmlRequest[_], ern: String, boxId: Option[String], message: IE815Message)(
-    implicit hc: HeaderCarrier
-  ): EitherT[Future, Result, Movement] =
-    EitherT {
-      submissionMessageService.submit(request, ern).flatMap {
-        case Left(error) =>
-          auditService.auditMessage(message, "Failed to Submit")
-          Future.successful(
-            Left(
-              Status(error.status)(
-                Json.toJson(
-                  EisErrorResponsePresentation(
-                    error.dateTime,
-                    error.message,
-                    error.debugMessage,
-                    error.correlationId,
-                    error.validatorResults
-                  )
-                )
-              )
-            )
-          )
-        case Right(_)    => saveMovement(boxId, message).value
+        case Right(response) =>
+          Right(response)
       }
     }
 
@@ -155,19 +133,22 @@ class DraftExciseMovementController @Inject() (
 
   private def saveMovement(
     boxId: Option[String],
-    message: IE815Message
-  )(implicit hc: HeaderCarrier): EitherT[Future, Result, Movement] = {
+    message: IE815Message,
+    submission: EISSubmissionResponse,
+    request: ParsedXmlRequest[NodeSeq]
+  )(implicit hc: HeaderCarrier): EitherT[Future, Result, Movement] = EitherT {
 
     val newMovement: Movement = createMovementFomMessage(message, boxId)
     boxId.map(boxIdRepository.save(newMovement.consignorId, _))
 
-    EitherT(movementMessageService.saveNewMovement(newMovement).map {
+    movementMessageService.saveNewMovement(newMovement).map {
       case Left(result)    =>
         auditService.auditMessage(message, "Failed to Save")
+        auditService.messageSubmittedWithoutMovement(message, true, submission.emcsCorrelationId, request)
         Left(result)
       case Right(movement) =>
         Right(movement)
-    })
+    }
 
   }
 
