@@ -84,7 +84,6 @@ class SubmitMessageControllerSpec
     when(auditService.messageSubmitted(any, any, any, any, any)(any)).thenReturn(EitherT.fromEither(Right(())))
   }
 
-  //TODO: Where are the messageSubmitted Verify Checks!
   "submit" should {
     "return 202" in {
       val result = createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request)
@@ -103,6 +102,7 @@ class SubmitMessageControllerSpec
       await(createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request))
 
       verify(auditService).auditMessage(any[IEMessage])(any)
+      verify(auditService).messageSubmitted(any, any, any, any, any)(any)
     }
 
     "sends a failure audit when a message isn't submitted" in {
@@ -111,17 +111,21 @@ class SubmitMessageControllerSpec
       await(createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request))
 
       verify(auditService).auditMessage(any, any)(any)
+      verify(auditService).messageSubmitted(any, any, any, any, any)(any)
     }
 
-    //TODO: Could iterate over many statuses
     "return an error when EIS errors" in {
-      val testError = EISErrorResponseDetails(NOT_FOUND, timestamp, "", "", "", None)
-      when(submissionMessageService.submit(any, any)(any))
-        .thenReturn(Future.successful(Left(testError)))
+      val codes = Seq(NOT_FOUND, NOT_ACCEPTABLE, IM_A_TEAPOT)
+      codes.foreach { code =>
+        val testError = EISErrorResponseDetails(code, timestamp, "", "", "", None)
+        when(submissionMessageService.submit(any, any)(any))
+          .thenReturn(Future.successful(Left(testError)))
 
-      val result = createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request)
+        val result = createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request)
 
-      status(result) mustBe NOT_FOUND
+        status(result) mustBe code
+      }
+
     }
 
     "return authentication error" when {

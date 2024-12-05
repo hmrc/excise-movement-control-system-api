@@ -90,7 +90,6 @@ class AuditServiceImpl @Inject() (auditConnector: AuditConnector, appConfig: App
     }
 }
 
-//TODO: Failed Submission Testing
 //TODO: Look at unwrapping the EitherT's
 @ImplementedBy(classOf[AuditServiceImpl])
 trait AuditService {

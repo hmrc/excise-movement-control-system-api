@@ -57,7 +57,6 @@ class DraftExciseMovementController @Inject() (
     extends BackendController(cc)
     with Logging {
 
-  //TODO: Test what happens if the audit fails
   def submit: Action[NodeSeq] =
     (authAction andThen xmlParser).async(parse.xml) { implicit request =>
       implicit val hc: HeaderCarrier = correlationIdService.getOrCreateCorrelationId(request)
@@ -73,11 +72,8 @@ class DraftExciseMovementController @Inject() (
         success => {
           val (response, movement, boxId) = success
 
-          //TODO: Ensure This and the Submit are running (cuz EitherT)
-          for {
-            _ <- auditService.auditMessage(request.ieMessage)
-            _ <- auditService.messageSubmitted(request.ieMessage, movement, true, response.emcsCorrelationId, request)
-          } yield ()
+          auditService.auditMessage(request.ieMessage).value
+          auditService.messageSubmitted(request.ieMessage, movement, true, response.emcsCorrelationId, request).value
 
           Accepted(
             Json.toJson(

@@ -53,7 +53,6 @@ class SubmitMessageController @Inject() (
     extends BackendController(cc)
     with Logging {
 
-  //TODO: Test what happens if the audit fails
   def submit(movementId: String): Action[NodeSeq] =
     (authAction andThen xmlParser).async(parse.xml) { implicit request =>
       implicit val hc: HeaderCarrier = correlationIdService.getOrCreateCorrelationId(request)
@@ -125,8 +124,8 @@ class SubmitMessageController @Inject() (
     EitherT {
       submissionMessageService.submit(request, authorisedErn).map {
         case Left(error)     =>
-          auditService.auditMessage(request.ieMessage, "Failed to Submit")
-          auditService.messageSubmitted(request.ieMessage, movement, false, error.correlationId, request)
+          auditService.auditMessage(request.ieMessage, "Failed to Submit").value
+          auditService.messageSubmitted(request.ieMessage, movement, false, error.correlationId, request).value
           Left(
             Status(error.status)(
               Json.toJson(
