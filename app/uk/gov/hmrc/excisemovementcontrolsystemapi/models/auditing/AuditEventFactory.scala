@@ -58,7 +58,7 @@ object AuditEventFactory extends Auditing {
       submittedToCore,
       message.messageIdentifier,
       Some(correlationId),
-      UserDetails("", "", "", "", ""),
+      request.userDetails,
       NonEmptySeq(request.erns.head, request.erns.tail.toList),
       message.toJsObject
     )
@@ -91,7 +91,7 @@ object AuditEventFactory extends Auditing {
         submittedToCore,
         message.messageIdentifier,
         Some(correlationId),
-        UserDetails("", "", "", "", ""),
+        request.userDetails,
         NonEmptySeq(request.erns.head, request.erns.tail.toList),
         message.toJsObject
       )

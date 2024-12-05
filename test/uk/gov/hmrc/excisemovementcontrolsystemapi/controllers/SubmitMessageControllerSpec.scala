@@ -81,6 +81,7 @@ class SubmitMessageControllerSpec
     when(messageValidation.validateSubmittedMessage(any, any, any)).thenReturn(Right(consignorId))
     when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(auditService.auditMessage(any[IEMessage])(any)).thenReturn(EitherT.fromEither(Right(())))
+    when(auditService.auditMessage(any[IEMessage], any)(any)).thenReturn(EitherT.fromEither(Right(())))
     when(auditService.messageSubmitted(any, any, any, any, any)(any)).thenReturn(EitherT.fromEither(Right(())))
   }
 

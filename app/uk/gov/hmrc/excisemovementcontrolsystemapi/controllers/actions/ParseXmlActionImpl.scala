@@ -57,7 +57,7 @@ class ParseXmlActionImpl @Inject() (
     val messageType = xmlBody.head.label
     Try(ieMessageFactory.createFromXml(messageType, xmlBody)) match {
       case Success(value) =>
-        Future.successful(Right(ParsedXmlRequest(request, value, request.erns, request.internalId)))
+        Future.successful(Right(ParsedXmlRequest(request, value, request.erns, request.userDetails)))
 
       case Failure(exception: ParserFailure) =>
         logger.warn(s"[ParseXmlActionImpl] - Not valid $messageType")

@@ -18,33 +18,17 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
 import cats.data.NonEmptySeq
 import play.api.libs.json.{JsObject, Json}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.CommonFormats._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.CommonFormats
 
 trait EventAuditEvent {} //Should this be here vs using the abstract class?
 
 case class UserDetails(
   gatewayId: String,
-  name: String,
-  email: String,
-  affinityGroup: String,
-  credentialRole: String
-) {}
+  groupIdentifier: String
+)
 
-object UserDetails {
+object UserDetails extends CommonFormats {
   implicit val format = Json.format[UserDetails]
-}
-
-case class ThirdPartyApplication(
-  id: String,
-  clientId: String,
-  gatewayId: String,
-  nameResponsibleIndividual: String,
-  emailResponsibleIndividual: String,
-  organisationUrl: Option[String]
-) {}
-
-object ThirdPartyApplication {
-  implicit val format = Json.format[ThirdPartyApplication]
 }
 
 case class MessageSubmittedDetails(
@@ -63,6 +47,6 @@ case class MessageSubmittedDetails(
   messageDetails: JsObject
 ) extends EventAuditEvent
 
-object MessageSubmittedDetails {
+object MessageSubmittedDetails extends CommonFormats {
   implicit val format = Json.format[MessageSubmittedDetails]
 }
