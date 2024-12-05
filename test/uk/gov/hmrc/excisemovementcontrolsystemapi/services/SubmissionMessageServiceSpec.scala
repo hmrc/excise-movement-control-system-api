@@ -133,7 +133,7 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
     }
     "submission fails"    should {
       //TODO: EISErrorResponseDetails!!!!!!
-      "return an EISErrorResponsePresentation" in {
+      "return an EISErrorResponseDetails" in {
         when(ernSubmissionRepository.save(any)).thenReturn(Future.successful(Done))
 
         val testError =
