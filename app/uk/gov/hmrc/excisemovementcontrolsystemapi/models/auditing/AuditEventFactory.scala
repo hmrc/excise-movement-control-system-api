@@ -16,10 +16,10 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
-import cats.data.{NonEmptyList, NonEmptySeq}
-import play.api.libs.json.{JsObject, Json}
+import cats.data.NonEmptySeq
+import play.api.libs.json.Json
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
@@ -42,6 +42,36 @@ object AuditEventFactory extends Auditing {
   }
 
   def createMessageSubmitted(
+    message: IE815Message,
+    submittedToCore: Boolean,
+    correlationId: String,
+    request: ParsedXmlRequest[NodeSeq]
+  )(implicit hc: HeaderCarrier): ExtendedDataEvent = {
+    val messageSubmitted = MessageSubmittedDetails(
+      message.messageType,
+      message.messageAuditType.name,
+      message.localReferenceNumber,
+      None,
+      None,
+      message.consignorId,
+      message.consigneeId,
+      submittedToCore,
+      message.messageIdentifier,
+      Some(correlationId),
+      request.userDetails,
+      NonEmptySeq(request.erns.head, request.erns.tail.toList),
+      message.toJsObject
+    )
+
+    ExtendedDataEvent(
+      auditSource = auditSource,
+      auditType = "MessageSubmitted",
+      tags = hc.toAuditTags(),
+      detail = Json.toJsObject(messageSubmitted)
+    )
+  }
+
+  def createMessageSubmitted(
     message: IEMessage,
     movement: Movement,
     submittedToCore: Boolean,
@@ -49,21 +79,22 @@ object AuditEventFactory extends Auditing {
     request: ParsedXmlRequest[NodeSeq]
   )(implicit hc: HeaderCarrier): ExtendedDataEvent = {
 
-    val messageSubmitted = MessageSubmittedDetails(
-      message.messageType,
-      message.messageAuditType.name,
-      movement.localReferenceNumber,
-      movement.administrativeReferenceCode,
-      Some(movement._id),
-      movement.consignorId,
-      movement.consigneeId,
-      submittedToCore,
-      message.messageIdentifier,
-      Some(correlationId),
-      UserDetails("", "", "", "", ""),
-      NonEmptySeq(request.erns.head, request.erns.tail.toList),
-      message.toJsObject
-    )
+    val messageSubmitted =
+      MessageSubmittedDetails(
+        message.messageType,
+        message.messageAuditType.name,
+        movement.localReferenceNumber,
+        movement.administrativeReferenceCode,
+        Some(movement._id),
+        movement.consignorId,
+        movement.consigneeId,
+        submittedToCore,
+        message.messageIdentifier,
+        Some(correlationId),
+        request.userDetails,
+        NonEmptySeq(request.erns.head, request.erns.tail.toList),
+        message.toJsObject
+      )
 
     ExtendedDataEvent(
       auditSource = auditSource,

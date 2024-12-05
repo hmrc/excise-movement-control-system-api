@@ -34,6 +34,7 @@ import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnectorNew
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnectorNew.UnexpectedResponseException
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
@@ -74,10 +75,9 @@ class NrsServiceNewSpec
   lazy val testKit: ActorTestKit              = ActorTestKit()
   lazy val testActorSystem: actor.ActorSystem = ActorSystem("DraftExciseMovementControllerSpec")
 
-
   val config = Configuration(
     "microservice.services.nrs.nrs-throttle-duration" -> "1 second",
-    "microservice.services.nrs.lock-service-ttl" -> "10 minutes"
+    "microservice.services.nrs.lock-service-ttl"      -> "10 minutes"
   )
 
   private val service = new NrsServiceNew(
@@ -304,7 +304,7 @@ class NrsServiceNewSpec
         FakeHeaders(Seq("header" -> "test"))
       )
 
-    val enrolmentRequest = EnrolmentRequest(fakeRequest, Set("ern"), "123")
-    ParsedXmlRequest(enrolmentRequest, message, Set("ern"), "123")
+    val enrolmentRequest = EnrolmentRequest(fakeRequest, Set("ern"), UserDetails("123", "abc"))
+    ParsedXmlRequest(enrolmentRequest, message, Set("ern"), UserDetails("123", "abc"))
   }
 }

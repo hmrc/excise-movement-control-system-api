@@ -100,6 +100,7 @@ class DraftExciseMovementControllerSpec
     when(appConfig.pushNotificationsEnabled).thenReturn(true)
     when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(auditService.auditMessage(any[IEMessage])(any)).thenReturn(EitherT.fromEither(Right(())))
+    when(auditService.messageSubmitted(any, any, any, any, any)(any)).thenReturn(EitherT.fromEither(Right(())))
     when(ernSubmissionRepository.save(any)).thenReturn(Future.successful(Done))
   }
 
@@ -191,15 +192,19 @@ class DraftExciseMovementControllerSpec
       await(createWithSuccessfulAuth.submit(request))
 
       verify(auditService).auditMessage(any[IEMessage])(any)
+      verify(auditService).messageSubmitted(any, any, any, any, any)(any)
+
     }
 
-    "sends a failure audit when a message isn't submitted" in {
+    "sends failed audits when a message isn't submitted" in {
       when(submissionMessageService.submit(any, any)(any))
         .thenReturn(Future.successful(Left(createTestError(BAD_REQUEST))))
 
       await(createWithSuccessfulAuth.submit(request))
 
       verify(auditService).auditMessage(any, any)(any)
+      verify(auditService).messageSubmittedWithoutMovement(any, any, any, any)(any)
+
     }
 
     "sends failure audits when a message submits but doesn't save" in {
@@ -208,7 +213,7 @@ class DraftExciseMovementControllerSpec
       await(createWithSuccessfulAuth.submit(request))
 
       verify(auditService).auditMessage(any, any)(any)
-
+      verify(auditService).messageSubmittedWithoutMovement(any, any, any, any)(any)
     }
 
     "adds the boxId to the BoxIdRepository for consignor" in {

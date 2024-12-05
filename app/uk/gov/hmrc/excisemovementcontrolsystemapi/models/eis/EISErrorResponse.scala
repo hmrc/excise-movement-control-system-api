@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
 import play.api.libs.json.{Json, OFormat}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EISErrorResponseDetails, EisErrorResponsePresentation}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 
 import java.time.Instant
 

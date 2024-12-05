@@ -26,7 +26,7 @@ import play.api.libs.json.Json
 import play.api.mvc.Results.{Forbidden, Unauthorized}
 import play.api.mvc.{BodyParsers, Results}
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{GET, await, defaultAwaitTimeout}
+import play.api.test.Helpers.{GET, await, contentAsJson, contentAsString, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.AffinityGroup.{Agent, Individual}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
@@ -133,7 +133,6 @@ class AuthActionSpec extends PlaySpec with AuthTestSupport with BeforeAndAfterEa
         withUnAuthorizedInternalId()
 
         val result = await(authenticator.invokeBlock(FakeRequest(), block))
-
         result mustBe Unauthorized(
           Json.toJson(
             ErrorResponse(
@@ -149,7 +148,6 @@ class AuthActionSpec extends PlaySpec with AuthTestSupport with BeforeAndAfterEa
         authorizeWithAffinityGroup(Some(Individual))
 
         val result = await(authenticator.invokeBlock(FakeRequest(), block))
-
         result mustBe Unauthorized(
           Json.toJson(
             ErrorResponse(
