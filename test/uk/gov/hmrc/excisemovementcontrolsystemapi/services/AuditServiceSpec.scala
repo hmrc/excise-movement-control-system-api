@@ -75,7 +75,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
     when(appConfig.newAuditingEnabled).thenReturn(true)
     when(auditConnector.sendExtendedEvent(any)(any, any)).thenReturn(Future.successful(AuditResult.Success))
   }
-  //TODO: Can we add 'Future.failed' testing?
+
   "auditMessage" should {
 
     "silently returns right on error with log" in {
