@@ -106,7 +106,6 @@ class DraftExciseMovementControllerSpec
 
   def createTestError(status: Int) = EISErrorResponseDetails(status, timestamp, "", "", "", None)
 
-  //TODO: Where are the messageSubmitted Verify Checks!!!!
   "submit" should {
 
     "return 202" when {

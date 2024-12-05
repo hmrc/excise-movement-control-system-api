@@ -101,51 +101,6 @@ case class EisErrorResponsePresentation(
   validatorResults: Option[Seq[ValidationResponse]] = None
 ) extends GenericErrorResponse
 
-object EISErrorResponseDetails {
-  def createFromEISError(status: Int, dateTime: Instant, error: EISErrorResponse): EISErrorResponseDetails =
-    EISErrorResponseDetails(
-      status,
-      dateTime,
-      error.message,
-      error.debugMessage,
-      error.emcsCorrelationId
-    )
-
-  def createFromRIMError(status: Int, dateTime: Instant, error: RimValidationErrorResponse): EISErrorResponseDetails = {
-
-    val validationResponse = error.validatorResults.map { x =>
-      ValidationResponse(
-        x.errorCategory,
-        x.errorType,
-        x.errorReason,
-        removeControlDocumentReferences(x.errorLocation),
-        x.originalAttributeValue
-      )
-    }
-
-    EISErrorResponseDetails(
-      status,
-      dateTime,
-      "Validation error",
-      error.message.mkString("\n"),
-      error.emcsCorrelationId,
-      Some(validationResponse)
-    )
-  }
-
-  private def removeControlDocumentReferences(errorMsg: Option[String]): Option[String] =
-    errorMsg.map(x => x.replaceAll("/con:[^/]*(?=/)", ""))
-
-}
-
-case class EisErrorResponsePresentation(
-  override val dateTime: Instant,
-  override val message: String,
-  override val debugMessage: String,
-  correlationId: String,
-  validatorResults: Option[Seq[ValidationResponse]] = None
-) extends GenericErrorResponse
-
 object EisErrorResponsePresentation {
 
   implicit val format: Reads[EisErrorResponsePresentation] = Json.reads[EisErrorResponsePresentation]
