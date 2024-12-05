@@ -29,6 +29,7 @@ import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{NrsConnector, NrsConnectorNew}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
@@ -135,7 +136,7 @@ class NrsServiceSpec extends PlaySpec with ScalaFutures with NrsTestData with Ei
         FakeHeaders(Seq("header" -> "test"))
       )
 
-    val enrolmentRequest = EnrolmentRequest(fakeRequest, Set("ern"), "123")
-    ParsedXmlRequest(enrolmentRequest, message, Set("ern"), "123")
+    val enrolmentRequest = EnrolmentRequest(fakeRequest, Set("ern"), UserDetails("123", "abc"))
+    ParsedXmlRequest(enrolmentRequest, message, Set("ern"), UserDetails("123", "abc"))
   }
 }

@@ -29,6 +29,7 @@ import play.api.test.Helpers.stubControllerComponents
 import scalaxb.ParserFailure
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.{IEMessageFactory, IEMessageFactoryException}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -68,16 +69,17 @@ class ParseXmlActionSpec extends PlaySpec with ScalaFutures with EitherValues wi
 
   "refine" should {
     "return a ParsedXmlRequest" in {
-      val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(xml.XML.loadString(xmlStr)), Set("ern"), "123")
+      val enrolmentRequest =
+        EnrolmentRequest(FakeRequest().withBody(xml.XML.loadString(xmlStr)), Set("ern"), UserDetails("123", "abc"))
 
       val result = parserXmlAction.refine(enrolmentRequest).futureValue
 
-      result mustBe Right(ParsedXmlRequest(enrolmentRequest, message, Set("ern"), "123"))
+      result mustBe Right(ParsedXmlRequest(enrolmentRequest, message, Set("ern"), UserDetails("123", "abc")))
     }
 
     "return an error" when {
       "no xml format was sent" in {
-        val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(xmlStr), Set("ern"), "123")
+        val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(xmlStr), Set("ern"), UserDetails("123", "abc"))
 
         val result = parserXmlAction.refine(enrolmentRequest).futureValue
 
@@ -89,7 +91,8 @@ class ParseXmlActionSpec extends PlaySpec with ScalaFutures with EitherValues wi
 
         "a parser error that can be simplified" in {
           when(messageFactory.createFromXml(any, any)).thenThrow(new ParserFailure(scalaxbExceptionMessage))
-          val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(xml.XML.loadString(xmlStr)), Set("ern"), "123")
+          val enrolmentRequest =
+            EnrolmentRequest(FakeRequest().withBody(xml.XML.loadString(xmlStr)), Set("ern"), UserDetails("123", "abc"))
 
           val result = parserXmlAction.refine(enrolmentRequest).futureValue
 
@@ -107,7 +110,8 @@ class ParseXmlActionSpec extends PlaySpec with ScalaFutures with EitherValues wi
             "Error while parsing <urn:DateOfDispatch xmlns:urn=\"urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13\" xmlns:urn1=\"urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13\">lrnGBWKQOZ8OMCWS1</urn:DateOfDispatch>: java.lang.IllegalArgumentException: lrnGBWKQOZ8OMCWS1"
 
           when(messageFactory.createFromXml(any, any)).thenThrow(new ParserFailure(parserError))
-          val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(xml.XML.loadString(xmlStr)), Set("ern"), "123")
+          val enrolmentRequest =
+            EnrolmentRequest(FakeRequest().withBody(xml.XML.loadString(xmlStr)), Set("ern"), UserDetails("123", "abc"))
 
           val result = parserXmlAction.refine(enrolmentRequest).futureValue
 
@@ -119,7 +123,8 @@ class ParseXmlActionSpec extends PlaySpec with ScalaFutures with EitherValues wi
         "IEMessageFactory exception" in {
           when(messageFactory.createFromXml(any, any))
             .thenThrow(new IEMessageFactoryException("Error doing message factory things"))
-          val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(xml.XML.loadString(xmlStr)), Set("ern"), "123")
+          val enrolmentRequest =
+            EnrolmentRequest(FakeRequest().withBody(xml.XML.loadString(xmlStr)), Set("ern"), UserDetails("123", "abc"))
 
           val result = parserXmlAction.refine(enrolmentRequest).futureValue
 
@@ -129,7 +134,8 @@ class ParseXmlActionSpec extends PlaySpec with ScalaFutures with EitherValues wi
 
         "some generic exception" in {
           when(messageFactory.createFromXml(any, any)).thenThrow(new Exception(scalaxbExceptionMessage))
-          val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(xml.XML.loadString(xmlStr)), Set("ern"), "123")
+          val enrolmentRequest =
+            EnrolmentRequest(FakeRequest().withBody(xml.XML.loadString(xmlStr)), Set("ern"), UserDetails("123", "abc"))
 
           val result = parserXmlAction.refine(enrolmentRequest).futureValue
 

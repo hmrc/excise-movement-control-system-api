@@ -101,6 +101,7 @@ class DraftExciseMovementControllerSpec
     when(appConfig.pushNotificationsEnabled).thenReturn(true)
     when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(auditService.auditMessage(any[IEMessage])(any)).thenReturn(EitherT.fromEither(Right(())))
+    when(auditService.messageSubmitted(any, any, any, any, any)(any)).thenReturn(EitherT.fromEither(Right(())))
     when(ernSubmissionRepository.save(any)).thenReturn(Future.successful(Done))
   }
 

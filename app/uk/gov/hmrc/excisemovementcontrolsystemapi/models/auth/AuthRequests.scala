@@ -17,16 +17,17 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth
 
 import play.api.mvc.{Request, WrappedRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 
-case class EnrolmentRequest[A](request: Request[A], erns: Set[String], internalId: String)
+case class EnrolmentRequest[A](request: Request[A], erns: Set[String], userDetails: UserDetails)
     extends WrappedRequest[A](request)
 
 case class ParsedXmlRequest[A](
   request: EnrolmentRequest[A],
   ieMessage: IEMessage,
   erns: Set[String],
-  internalId: String
+  userDetails: UserDetails
 ) extends WrappedRequest[A](request) {
 
   def headersAsMap: Map[String, String] =

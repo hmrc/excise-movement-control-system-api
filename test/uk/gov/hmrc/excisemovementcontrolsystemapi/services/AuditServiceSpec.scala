@@ -28,6 +28,7 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeXmlParsers
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
@@ -56,11 +57,11 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
           .withHeaders(FakeHeaders(headers))
           .withBody(body),
         testErns,
-        ""
+        UserDetails("", "")
       ),
       IE815Message.createFromXml(body),
       testErns,
-      ""
+      UserDetails("", "")
     )
 
   class Harness(auditConnector: AuditConnector, appConfig: AppConfig)
