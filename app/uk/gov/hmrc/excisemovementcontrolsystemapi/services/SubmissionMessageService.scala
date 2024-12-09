@@ -28,6 +28,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 
 class SubmissionMessageServiceImpl @Inject() (
   connector: EISSubmissionConnector,
@@ -49,12 +50,26 @@ class SubmissionMessageServiceImpl @Inject() (
       submitMessageResponse <-
         connector.submitMessage(request.ieMessage, request.body.toString, authorisedErn, correlationId)
       isSuccess              = submitMessageResponse.isRight
-      _                      = if (isSuccess) ernSubmissionRepository.save(authorisedErn)
-      _                      = if (isSuccess) nrsService.submitNrsOld(request, authorisedErn, correlationId)
+      _                      = if (isSuccess) ernSubmissionRepository.save(authorisedErn) //TODO move this down + test
+      _                      = if (isSuccess) nrsService.submitNrsOld(request, authorisedErn, correlationId) //TODO TOGGLE NRS OLD/NEW
     } yield submitMessageResponse
+
+//    for {
+//      submitMessageResponse <- connector.submitMessage(request.ieMessage, request.body.toString, authorisedErn, correlationId)
+//      _ <- if (submitMessageResponse.isRight) {
+//        ernSubmissionRepository.save(authorisedErn).recover { case NonFatal(error) =>
+//          logger.warn(s"Failed to save ERN to ERNSubmissionRepository", error)
+//        }.flatMap(_ => nrsService.submitNrsOld(request, authorisedErn, correlationId))
+//      } else {
+//        logger.warn(s"Failed to submit message")
+//        Future.successful(())
+//      }
+//    } yield submitMessageResponse
+
   }
 }
-
+// if we have failed to submit it to the backend, the user hasn't submitted. NRS isn't for the user to prove to us. No point in recording things that failed
+// Us proving that something was submitted to our HOD.
 @ImplementedBy(classOf[SubmissionMessageServiceImpl])
 trait SubmissionMessageService {
   def submit(
