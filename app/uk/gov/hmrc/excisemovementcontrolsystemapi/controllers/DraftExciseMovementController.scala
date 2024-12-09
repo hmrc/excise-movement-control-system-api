@@ -51,14 +51,16 @@ class DraftExciseMovementController @Inject() (
   boxIdRepository: BoxIdRepository,
   ernSubmissionRepository: ErnSubmissionRepository,
   appConfig: AppConfig,
-  cc: ControllerComponents
+  cc: ControllerComponents,
+  correlationIdService: CorrelationIdService
 )(implicit ec: ExecutionContext)
     extends BackendController(cc)
     with Logging {
 
   def submit: Action[NodeSeq] =
     (authAction andThen xmlParser).async(parse.xml) { implicit request =>
-      val result = for {
+      implicit val hc: HeaderCarrier = correlationIdService.getOrCreateCorrelationId(request)
+      val result                     = for {
         ie815Message  <- getIe815Message(request.ieMessage)
         authorisedErn <- validateMessage(ie815Message, request.erns)
         clientId      <- retrieveClientIdFromHeader(request)

@@ -43,7 +43,7 @@ class SubmissionMessageServiceImpl @Inject() (
     authorisedErn: String
   )(implicit hc: HeaderCarrier): Future[Either[EISErrorResponseDetails, EISSubmissionResponse]] = {
 
-    val correlationId = correlationIdService.generateCorrelationId()
+    val correlationId = hc.headers(scala.Seq(HttpHeader.xCorrelationId))(0)._2
 
     for {
       submitMessageResponse <-

@@ -25,9 +25,10 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, Trade
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MessageService, MovementService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{CorrelationIdService, MessageService, MovementService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
@@ -44,7 +45,8 @@ class GetMovementsController @Inject() (
   movementService: MovementService,
   dateTimeService: DateTimeService,
   messageService: MessageService,
-  movementIdValidator: MovementIdValidation
+  movementIdValidator: MovementIdValidation,
+  correlationIdService: CorrelationIdService
 )(implicit ec: ExecutionContext)
     extends BackendController(cc)
     with Logging {
@@ -59,6 +61,8 @@ class GetMovementsController @Inject() (
     (authAction andThen validateErnParameterAction(ern)
       andThen validateUpdatedSinceAction(updatedSince)
       andThen validateTraderTypeAction(traderType)).async(parse.default) { implicit request =>
+      implicit val hc: HeaderCarrier = correlationIdService.getOrCreateCorrelationId(request)
+
       val filter =
         MovementFilter(
           ern,
@@ -92,6 +96,8 @@ class GetMovementsController @Inject() (
 
   def getMovement(movementId: String): Action[AnyContent] =
     authAction.async(parse.default) { implicit request =>
+      implicit val hc: HeaderCarrier = correlationIdService.getOrCreateCorrelationId(request)
+
       val result = for {
         validatedMovementId <- validateMovementId(movementId)
         _                   <- EitherT.right(messageService.updateAllMessages(request.erns))

@@ -48,13 +48,15 @@ class SubmitMessageController @Inject() (
   messageValidator: MessageValidation,
   movementIdValidator: MovementIdValidation,
   dateTimeService: DateTimeService,
-  cc: ControllerComponents
+  cc: ControllerComponents,
+  correlationIdService: CorrelationIdService
 )(implicit ec: ExecutionContext)
     extends BackendController(cc)
     with Logging {
 
   def submit(movementId: String): Action[NodeSeq] =
     (authAction andThen xmlParser).async(parse.xml) { implicit request =>
+      implicit val hc: HeaderCarrier = correlationIdService.getOrCreateCorrelationId(request)
       (for {
         validatedMovementId <- validateMovementId(movementId)
         movement            <- getMovement(validatedMovementId)

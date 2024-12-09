@@ -32,7 +32,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MovementIdFormatInvalid, MovementIdValidation}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MessageService, MovementService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{CorrelationIdService, MessageService, MovementService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import java.time.Instant
@@ -49,11 +49,13 @@ class GetMovementsControllerSpec
     with BeforeAndAfterEach {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  private val cc                    = stubControllerComponents()
-  private val movementService       = mock[MovementService]
-  private val dateTimeService       = mock[DateTimeService]
-  private val messageService        = mock[MessageService]
-  private val movementIdValidator   = mock[MovementIdValidation]
+  private val correlationIdService  = mock[CorrelationIdService]
+
+  private val cc                  = stubControllerComponents()
+  private val movementService     = mock[MovementService]
+  private val dateTimeService     = mock[DateTimeService]
+  private val messageService      = mock[MessageService]
+  private val movementIdValidator = mock[MovementIdValidation]
 
   private val controller = new GetMovementsController(
     FakeSuccessAuthentication(Set(ern)),
@@ -64,7 +66,8 @@ class GetMovementsControllerSpec
     movementService,
     dateTimeService,
     messageService,
-    movementIdValidator
+    movementIdValidator,
+    correlationIdService
   )
 
   private val timestamp   = Instant.parse("2020-01-01T01:01:01.123456Z")
@@ -80,7 +83,8 @@ class GetMovementsControllerSpec
       movementService,
       dateTimeService,
       messageService,
-      movementIdValidator
+      movementIdValidator,
+      correlationIdService
     )
 
   private def createWithAuthActionFailure =
@@ -93,7 +97,8 @@ class GetMovementsControllerSpec
       movementService,
       dateTimeService,
       messageService,
-      movementIdValidator
+      movementIdValidator,
+      correlationIdService
     )
 
   private val createWithUpdateSinceActionFailure =
@@ -106,7 +111,8 @@ class GetMovementsControllerSpec
       movementService,
       dateTimeService,
       messageService,
-      movementIdValidator
+      movementIdValidator,
+      correlationIdService
     )
 
   private val createWithTraderTypeActionFailure =
@@ -119,7 +125,8 @@ class GetMovementsControllerSpec
       movementService,
       dateTimeService,
       messageService,
-      movementIdValidator
+      movementIdValidator,
+      correlationIdService
     )
 
   override def beforeEach(): Unit = {
@@ -209,7 +216,8 @@ class GetMovementsControllerSpec
             movementService,
             dateTimeService,
             messageService,
-            movementIdValidator
+            movementIdValidator,
+            correlationIdService
           )
 
           val movement1 = Movement(
@@ -261,7 +269,8 @@ class GetMovementsControllerSpec
             movementService,
             dateTimeService,
             messageService,
-            movementIdValidator
+            movementIdValidator,
+            correlationIdService
           )
 
           val movement1 = Movement(
@@ -434,7 +443,8 @@ class GetMovementsControllerSpec
           movementService,
           dateTimeService,
           messageService,
-          movementIdValidator
+          movementIdValidator,
+          correlationIdService
         )
 
         when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))

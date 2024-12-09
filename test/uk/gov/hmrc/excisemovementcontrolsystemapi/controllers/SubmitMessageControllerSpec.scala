@@ -55,6 +55,7 @@ class SubmitMessageControllerSpec
   implicit val ec: ExecutionContext    = ExecutionContext.Implicits.global
   private val cc                       = stubControllerComponents()
   private val request                  = createRequest(IE818)
+  private val correlationIdService     = mock[CorrelationIdService]
   private val submissionMessageService = mock[SubmissionMessageService]
   private val movementService          = mock[MovementService]
   private val messageValidation        = mock[MessageValidation]
@@ -254,7 +255,8 @@ class SubmitMessageControllerSpec
       messageValidation,
       movementValidation,
       dateTimeService,
-      cc
+      cc,
+      correlationIdService
     )
 
   private def createRequest(body: Elem): FakeRequest[Elem] =
@@ -272,7 +274,8 @@ class SubmitMessageControllerSpec
       messageValidation,
       movementValidation,
       dateTimeService,
-      cc
+      cc,
+      correlationIdService
     )
 
   private def createWithFailingXmlParserAction =
@@ -285,7 +288,8 @@ class SubmitMessageControllerSpec
       messageValidation,
       movementValidation,
       dateTimeService,
-      cc
+      cc,
+      correlationIdService
     )
 
 }

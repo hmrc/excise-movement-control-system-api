@@ -57,6 +57,7 @@ class DraftExciseMovementControllerSpec
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
   private val submissionMessageService = mock[SubmissionMessageService]
+  private val correlationIdService     = mock[CorrelationIdService]
   private val movementService          = mock[MovementService]
   private val cc                       = stubControllerComponents()
   private val request                  = createRequestWithClientId
@@ -346,7 +347,8 @@ class DraftExciseMovementControllerSpec
       boxIdRepository,
       ernSubmissionRepository,
       appConfig,
-      cc
+      cc,
+      correlationIdService
     )
   }
 
@@ -363,7 +365,8 @@ class DraftExciseMovementControllerSpec
       boxIdRepository,
       ernSubmissionRepository,
       appConfig,
-      cc
+      cc,
+      correlationIdService
     )
 
   private def createWithFailingXmlParserAction =
@@ -379,7 +382,8 @@ class DraftExciseMovementControllerSpec
       boxIdRepository,
       ernSubmissionRepository,
       appConfig,
-      cc
+      cc,
+      correlationIdService
     )
 
   private def createWithSuccessfulAuth =
@@ -395,7 +399,8 @@ class DraftExciseMovementControllerSpec
       boxIdRepository,
       ernSubmissionRepository,
       appConfig,
-      cc
+      cc,
+      correlationIdService
     )
 
   private def createRequestWithClientId: FakeRequest[Elem] =
