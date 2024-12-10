@@ -74,10 +74,9 @@ class NrsServiceNewSpec
   lazy val testKit: ActorTestKit              = ActorTestKit()
   lazy val testActorSystem: actor.ActorSystem = ActorSystem("DraftExciseMovementControllerSpec")
 
-
   val config = Configuration(
     "microservice.services.nrs.nrs-throttle-duration" -> "1 second",
-    "microservice.services.nrs.lock-service-ttl" -> "10 minutes"
+    "microservice.services.nrs.lock-service-ttl"      -> "10 minutes"
   )
 
   private val service = new NrsServiceNew(
