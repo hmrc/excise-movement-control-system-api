@@ -18,7 +18,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock._
-import org.mockito.ArgumentMatchersSugar.eqTo
+import org.apache.pekko.Done
+import org.mockito.ArgumentMatchersSugar.{eqTo, any => mockitoAny}
 import org.mockito.MockitoSugar.{reset, when}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatestplus.play.PlaySpec
@@ -84,12 +85,14 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(authConnector, movementRepository, dateTimeService)
+    reset(authConnector, movementRepository, dateTimeService, ernSubmissionRepository)
 
     when(movementRepository.getMovementById(eqTo(movement._id)))
       .thenReturn(Future.successful(Some(movement)))
 
     when(dateTimeService.timestamp()).thenReturn(timestamp)
+
+    when(ernSubmissionRepository.save(mockitoAny)).thenReturn(Future.successful(Done))
 
     authorizeNrsWithIdentityData
     stubNrsResponse

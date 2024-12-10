@@ -52,14 +52,14 @@ class SubmissionMessageServiceImpl @Inject() (
     for {
       submitMessageResponse <-
         connector.submitMessage(request.ieMessage, request.body.toString, authorisedErn, correlationId)
-      isSuccess = submitMessageResponse.isRight
-      _ = if (isSuccess) ernSubmissionRepository.save(authorisedErn).recover { case NonFatal(error) =>
-        logger.warn(s"Failed to save ERN to ERNSubmissionRepository", error)
-      }
-      _ = if (isSuccess) {
-        if (appConfig.nrsNewEnabled) nrsServiceNew.makeWorkItemAndQueue(request, authorisedErn)
-        else nrsService.submitNrsOld(request, authorisedErn, correlationId)
-      }
+      isSuccess              = submitMessageResponse.isRight
+      _                      = if (isSuccess) ernSubmissionRepository.save(authorisedErn).recover { case NonFatal(error) =>
+                                 logger.warn(s"Failed to save ERN to ERNSubmissionRepository", error)
+                               }
+      _                      = if (isSuccess) {
+                                 if (appConfig.nrsNewEnabled) nrsServiceNew.makeWorkItemAndQueue(request, authorisedErn)
+                                 else nrsService.submitNrsOld(request, authorisedErn, correlationId)
+                               }
     } yield submitMessageResponse
 
 //    for {

@@ -45,13 +45,13 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
   implicit val hc: HeaderCarrier    = HeaderCarrier()
   implicit val ec: ExecutionContext = ExecutionContext.global
 
-  private val connector = mock[EISSubmissionConnector]
-  private val nrsService = mock[NrsService]
-  private val nrsServiceNew = mock[NrsServiceNew]
-  private val correlationIdService = mock[CorrelationIdService]
+  private val connector               = mock[EISSubmissionConnector]
+  private val nrsService              = mock[NrsService]
+  private val nrsServiceNew           = mock[NrsServiceNew]
+  private val correlationIdService    = mock[CorrelationIdService]
   private val ernSubmissionRepository = mock[ErnSubmissionRepository]
-  private val mockAppconfig = mock[AppConfig]
-  private val sut = new SubmissionMessageServiceImpl(
+  private val mockAppconfig           = mock[AppConfig]
+  private val sut                     = new SubmissionMessageServiceImpl(
     connector,
     nrsService,
     nrsServiceNew,
@@ -131,7 +131,7 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
         }
       }
     }
-    "submission fails" should {
+    "submission fails"    should {
       "return an EISErrorResponsePresentation" in {
         when(ernSubmissionRepository.save(any)).thenReturn(Future.successful(Done))
 
@@ -204,7 +204,7 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
         }
       }
     }
-    "submission fails" should {
+    "submission fails"    should {
       "return an EISErrorResponsePresentation" in {
         when(ernSubmissionRepository.save(any)).thenReturn(Future.successful(Done))
 
