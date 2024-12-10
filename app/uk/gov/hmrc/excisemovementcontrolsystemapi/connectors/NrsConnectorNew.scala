@@ -96,7 +96,7 @@ object NrsConnectorNew {
 
   final case class UnexpectedResponseException(status: Int, body: String) extends Exception {
     override def getMessage: String = s"Unexpected response from NRS, status: $status, body: $body"
-  } //TODO: This now should belong elsewhere as is used in service as well as here.
+  }
 
   final case class NrsCircuitBreaker(breaker: CircuitBreaker)
 }
