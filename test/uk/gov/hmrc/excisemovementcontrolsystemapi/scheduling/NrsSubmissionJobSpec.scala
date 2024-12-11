@@ -17,9 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
 import org.apache.pekko.Done
-import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchers.any
-import org.mockito.ArgumentMatchersSugar.eqTo
 import org.mockito.Mockito
 import org.mockito.MockitoSugar.{times, verify, when}
 import org.scalatest.BeforeAndAfterEach
@@ -35,17 +33,10 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NRSWorkItemRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmissionWorkItem
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsServiceNew
 
 import java.time.{LocalDateTime, ZoneOffset}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
-import uk.gov.hmrc.mongo.workitem.WorkItem
 import scala.concurrent.duration.FiniteDuration
-
-import java.time.{LocalDateTime, ZoneOffset}
 import scala.concurrent.{ExecutionContext, Future}
 
 class NrsSubmissionJobSpec
@@ -78,14 +69,12 @@ class NrsSubmissionJobSpec
   override def beforeEach(): Unit = {
     super.beforeEach()
     Mockito.reset[Any](
-//      mockNrsSubmissionWorkItemRepository,
       mockNrsConnector,
       mockNrsService
     )
   }
 
   private val timestamp = LocalDateTime.of(2024, 3, 2, 12, 30, 45, 100).toInstant(ZoneOffset.UTC)
-//  when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
   private lazy val nrsSubmissionScheduler = app.injector.instanceOf[NrsSubmissionJob]
   private val nrsMetadata                 = NrsMetadata(
@@ -106,7 +95,7 @@ class NrsSubmissionJobSpec
       nrsSubmissionScheduler.name mustBe "nrs-submission-scheduler"
     }
     "be enabled" in {
-      nrsSubmissionScheduler.enabled mustBe true
+      nrsSubmissionScheduler.enabled mustBe false
     }
     "use initial delay from configuration" in {
       nrsSubmissionScheduler.initialDelay mustBe FiniteDuration(1, "minutes")

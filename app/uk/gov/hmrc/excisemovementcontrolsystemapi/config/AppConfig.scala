@@ -71,6 +71,8 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   val etdsPreValidateTraderEnabled: Boolean =
     servicesConfig.getBoolean("featureFlags.etdsPreValidateTraderEnabled")
 
+  val nrsNewEnabled: Boolean = servicesConfig.getBoolean("featureFlags.nrsNewEnabled")
+
   def emcsReceiverMessageUrl: String = s"$eisHost/emcs/digital-submit-new-message/v1"
   def submissionBearerToken: String  =
     servicesConfig.getConfString("eis.submission-bearer-token", "dummySubmissionBearerToken")

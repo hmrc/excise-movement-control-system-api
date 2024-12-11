@@ -37,6 +37,7 @@ class AppConfigSpec extends PlaySpec {
       |featureFlags.pushNotificationsEnabled=false
       |featureFlags.subscribeErnsEnabled=true
       |featureFlags.etdsPreValidateTraderEnabled=false
+      |featureFlags.nrsNewEnabled=false
     """.stripMargin
 
   private def createAppConfig = {

@@ -39,7 +39,7 @@ class NrsSubmissionJob @Inject() (
 
   override def name: String = "nrs-submission-scheduler"
 
-  override val enabled: Boolean = configuration.get[Boolean]("featureFlags.nrsSubmissionEnabled")
+  override val enabled: Boolean = configuration.get[Boolean]("featureFlags.nrsNewEnabled")
 
   override def initialDelay: FiniteDuration =
     configuration.get[FiniteDuration]("scheduler.nrsSubmissionJob.initialDelay")

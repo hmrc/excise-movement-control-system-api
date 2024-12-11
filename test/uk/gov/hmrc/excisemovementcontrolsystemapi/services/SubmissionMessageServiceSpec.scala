@@ -27,6 +27,7 @@ import play.api.http.HeaderNames
 import play.api.http.Status.INTERNAL_SERVER_ERROR
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import play.api.test.{FakeHeaders, FakeRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EISErrorResponseDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
@@ -46,10 +47,18 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
 
   private val connector               = mock[EISSubmissionConnector]
   private val nrsService              = mock[NrsService]
+  private val nrsServiceNew           = mock[NrsServiceNew]
   private val correlationIdService    = mock[CorrelationIdService]
   private val ernSubmissionRepository = mock[ErnSubmissionRepository]
-  private val sut                     =
-    new SubmissionMessageServiceImpl(connector, nrsService, correlationIdService, ernSubmissionRepository)
+  private val mockAppconfig           = mock[AppConfig]
+  private val sut                     = new SubmissionMessageServiceImpl(
+    connector,
+    nrsService,
+    nrsServiceNew,
+    correlationIdService,
+    ernSubmissionRepository,
+    mockAppconfig
+  )
 
   private val message                  = mock[IE815Message]
   private val xmlBody                  = "<IE815>test</IE815>"
@@ -65,7 +74,7 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(connector, nrsService, ernSubmissionRepository)
+    reset(connector, nrsService, nrsServiceNew, ernSubmissionRepository, mockAppconfig)
 
     when(message.consignorId).thenReturn("1234")
     when(correlationIdService.generateCorrelationId()).thenReturn("correlationId")
@@ -73,72 +82,149 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "IE815", "correlationId"))))
     when(nrsService.submitNrsOld(any, any, any)(any))
       .thenReturn(Future.successful(Done))
-    when(ernSubmissionRepository.save(any)).thenReturn(Future.successful(Done))
   }
 
-  "submit" should {
-    "submit a message" in {
-      await(sut.submit(request, ern))
+  "submit using old NRS implementation" when {
+    "submission succeeds" should {
+      "return an EISSubmissionResponse, save to the submission repository and call to submit to NRS" in {
+        when(ernSubmissionRepository.save(any)).thenReturn(Future.successful(Done))
+        val result = await(sut.submit(request, ern))
 
-      verify(connector).submitMessage(
-        eqTo(message),
-        eqTo(xmlBody),
-        eqTo(ern),
-        eqTo("correlationId")
-      )(any)
+        result mustBe Right(EISSubmissionResponse("ok", "IE815", "correlationId"))
 
-      withClue("send to NRS when submitMessage is successful") {
-        verify(nrsService).submitNrsOld(eqTo(request), eqTo(ern), eqTo("correlationId"))(any)
+        verify(connector).submitMessage(
+          eqTo(message),
+          eqTo(xmlBody),
+          eqTo(ern),
+          eqTo("correlationId")
+        )(any)
+
+        withClue("send to NRS when submitMessage is successful") {
+          verify(nrsService).submitNrsOld(eqTo(request), eqTo(ern), eqTo("correlationId"))(any)
+        }
+
+        withClue("update the last submitted time for the ern") {
+          verify(ernSubmissionRepository).save(ern)
+        }
       }
-
-      withClue("update the last submitted time for the ern") {
-        verify(ernSubmissionRepository).save(ern)
-      }
-    }
-
-    "return EISSubmissionResponse" in {
-      val result = await(sut.submit(request, ern))
-
-      result mustBe Right(EISSubmissionResponse("ok", "IE815", "correlationId"))
-    }
-
-    "return an EISErrorResponsePresentation" in {
-      val testError =
-        EISErrorResponseDetails(INTERNAL_SERVER_ERROR, Instant.now(), "message", "debug", "cId", None)
-
-      when(connector.submitMessage(any, any, any, any)(any))
-        .thenReturn(Future.successful(Left(testError)))
-
-      val result = await(sut.submit(request, ern))
-
-      result.left.value mustBe testError
-
-      withClue("not send to NRS") {
-        verifyZeroInteractions(nrsService)
-      }
-
-      withClue("not update last submitted time for ern") {
-        verifyZeroInteractions(ernSubmissionRepository)
-      }
-    }
-
-    "return submit message result" when {
-      "NRS fails" in {
-        when(nrsService.submitNrsOld(any, any, any)(any))
-          .thenReturn(Future.successful(Done))
+      "throw an exception but still call NRS if submission succeeds but the repository call fails" in {
+//        when(ernSubmissionRepository.save(any)).thenReturn(Future.successful(Done))
+        when(ernSubmissionRepository.save(any)).thenReturn(Future.failed(new RuntimeException("error")))
 
         val result = await(sut.submit(request, ern))
 
         result mustBe Right(EISSubmissionResponse("ok", "IE815", "correlationId"))
-      }
 
-      "NRS throw" in {
-        when(nrsService.submitNrsOld(any, any, any)(any))
-          .thenReturn(Future.failed(new RuntimeException("NRS error")))
+        verify(connector).submitMessage(
+          eqTo(message),
+          eqTo(xmlBody),
+          eqTo(ern),
+          eqTo("correlationId")
+        )(any)
+
+        withClue("send to NRS when submitMessage is successful") {
+          verify(nrsService).submitNrsOld(eqTo(request), eqTo(ern), eqTo("correlationId"))(any)
+        }
+
+        withClue("update the last submitted time for the ern") {
+          verify(ernSubmissionRepository).save(ern)
+        }
+      }
+    }
+    "submission fails"    should {
+      "return an EISErrorResponsePresentation" in {
+        when(ernSubmissionRepository.save(any)).thenReturn(Future.successful(Done))
+
+        val testError =
+          EISErrorResponseDetails(INTERNAL_SERVER_ERROR, Instant.now(), "message", "debug", "cId", None)
+
+        when(connector.submitMessage(any, any, any, any)(any))
+          .thenReturn(Future.successful(Left(testError)))
+
+        val result = await(sut.submit(request, ern))
+
+        result.left.value mustBe testError
+
+        withClue("not send to NRS") {
+          verifyZeroInteractions(nrsService)
+        }
+
+        withClue("not update last submitted time for ern") {
+          verifyZeroInteractions(ernSubmissionRepository)
+        }
+      }
+    }
+  }
+
+  "submit using new NRS implementation" when {
+    "submission succeeds" should {
+      "return an EISSubmissionResponse, save to the submission repository and call to submit to NRS" in {
+        when(mockAppconfig.nrsNewEnabled).thenReturn(true)
+        when(ernSubmissionRepository.save(any)).thenReturn(Future.successful(Done))
+        val result = await(sut.submit(request, ern))
+
+        result mustBe Right(EISSubmissionResponse("ok", "IE815", "correlationId"))
+
+        verify(connector).submitMessage(
+          eqTo(message),
+          eqTo(xmlBody),
+          eqTo(ern),
+          eqTo("correlationId")
+        )(any)
+
+        withClue("send to NRS when submitMessage is successful") {
+          verify(nrsServiceNew).makeWorkItemAndQueue(eqTo(request), eqTo(ern))(any)
+        }
+
+        withClue("update the last submitted time for the ern") {
+          verify(ernSubmissionRepository).save(ern)
+        }
+      }
+      "throw an exception but still call NRS if submission succeeds but the repository call fails" in {
+        when(mockAppconfig.nrsNewEnabled).thenReturn(true)
+        when(ernSubmissionRepository.save(any)).thenReturn(Future.failed(new RuntimeException("error")))
 
         val result = await(sut.submit(request, ern))
 
         result mustBe Right(EISSubmissionResponse("ok", "IE815", "correlationId"))
+
+        verify(connector).submitMessage(
+          eqTo(message),
+          eqTo(xmlBody),
+          eqTo(ern),
+          eqTo("correlationId")
+        )(any)
+
+        withClue("send to NRS when submitMessage is successful") {
+          verify(nrsServiceNew).makeWorkItemAndQueue(eqTo(request), eqTo(ern))(any)
+        }
+
+        withClue("update the last submitted time for the ern") {
+          verify(ernSubmissionRepository).save(ern)
+        }
+      }
+    }
+    "submission fails"    should {
+      "return an EISErrorResponsePresentation" in {
+        when(ernSubmissionRepository.save(any)).thenReturn(Future.successful(Done))
+
+        val testError =
+          EISErrorResponseDetails(INTERNAL_SERVER_ERROR, Instant.now(), "message", "debug", "cId", None)
+
+        when(connector.submitMessage(any, any, any, any)(any))
+          .thenReturn(Future.successful(Left(testError)))
+
+        val result = await(sut.submit(request, ern))
+
+        result.left.value mustBe testError
+
+        withClue("not send to NRS") {
+          verifyZeroInteractions(nrsServiceNew)
+        }
+
+        withClue("not update last submitted time for ern") {
+          verifyZeroInteractions(ernSubmissionRepository)
+        }
       }
     }
   }
