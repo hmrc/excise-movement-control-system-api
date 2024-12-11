@@ -96,7 +96,7 @@ class SubmitMessageControllerItSpec
 
     authorizeNrsWithIdentityData
     stubNrsResponse
-
+    wireMock.resetAll()
   }
 
   override def afterAll(): Unit = {
@@ -115,7 +115,7 @@ class SubmitMessageControllerItSpec
       withAuthorizedTrader(consignorId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movement._id, IE810)
+      val result = postRequestWithCorrelationId(movement._id, IE810)
 
       result.status mustBe ACCEPTED
       assertResponseBody(result)
@@ -126,7 +126,7 @@ class SubmitMessageControllerItSpec
       withAuthorizedTrader(consigneeId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movement._id, IE810)
+      val result = postRequestWithCorrelationId(movement._id, IE810)
 
       result.status mustBe FORBIDDEN
     }
@@ -145,7 +145,7 @@ class SubmitMessageControllerItSpec
       withAuthorizedTrader(consignorId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movementForIE813._id, IE813)
+      val result = postRequestWithCorrelationId(movementForIE813._id, IE813)
 
       result.status mustBe ACCEPTED
       assertResponseBody(result)
@@ -156,7 +156,7 @@ class SubmitMessageControllerItSpec
       withAuthorizedTrader("consignee")
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movement._id, IE813)
+      val result = postRequestWithCorrelationId(movement._id, IE813)
 
       result.status mustBe FORBIDDEN
       result.body.isEmpty mustBe false
@@ -169,7 +169,7 @@ class SubmitMessageControllerItSpec
       withAuthorizedTrader(consignorId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movement._id, IE818)
+      val result = postRequestWithCorrelationId(movement._id, IE818)
 
       result.status mustBe FORBIDDEN
       result.body.isEmpty mustBe false
@@ -183,7 +183,7 @@ class SubmitMessageControllerItSpec
       withAuthorizedTrader(consigneeId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movementForIE818._id, IE818)
+      val result = postRequestWithCorrelationId(movementForIE818._id, IE818)
 
       result.status mustBe ACCEPTED
       assertResponseBody(result)
@@ -197,7 +197,7 @@ class SubmitMessageControllerItSpec
       withAuthorizedTrader(consignorId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movement._id, IE819)
+      val result = postRequestWithCorrelationId(movement._id, IE819)
 
       result.status mustBe FORBIDDEN
       result.body.isEmpty mustBe false
@@ -212,7 +212,7 @@ class SubmitMessageControllerItSpec
       withAuthorizedTrader(consigneeId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movementForIE819._id, IE819)
+      val result = postRequestWithCorrelationId(movementForIE819._id, IE819)
 
       result.status mustBe ACCEPTED
       assertResponseBody(result)
@@ -232,7 +232,7 @@ class SubmitMessageControllerItSpec
       when(movementRepository.getMovementById(eqTo(movementForIE837._id)))
         .thenReturn(Future.successful(Some(movementForIE837)))
 
-      val result = postRequest(movementForIE837._id, IE837WithConsignor)
+      val result = postRequestWithCorrelationId(movementForIE837._id, IE837WithConsignor)
 
       result.status mustBe ACCEPTED
       assertResponseBody(result)
@@ -245,7 +245,7 @@ class SubmitMessageControllerItSpec
       when(movementRepository.getMovementById(eqTo(movementForIE837._id)))
         .thenReturn(Future.successful(Some(movementForIE837)))
 
-      val result = postRequest(movementForIE837._id, IE837WithConsignee)
+      val result = postRequestWithCorrelationId(movementForIE837._id, IE837WithConsignee)
 
       result.status mustBe ACCEPTED
       assertResponseBody(result)
@@ -256,7 +256,7 @@ class SubmitMessageControllerItSpec
       withAuthorizedTrader(consignorId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movement._id, ie837Template(Consignee, consignorId))
+      val result = postRequestWithCorrelationId(movement._id, ie837Template(Consignee, consignorId))
 
       result.status mustBe BAD_REQUEST
 
@@ -267,7 +267,7 @@ class SubmitMessageControllerItSpec
       withAuthorizedTrader(consigneeId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movement._id, ie837Template(Consignor, consigneeId))
+      val result = postRequestWithCorrelationId(movement._id, ie837Template(Consignor, consigneeId))
 
       result.status mustBe BAD_REQUEST
 
@@ -287,7 +287,7 @@ class SubmitMessageControllerItSpec
       when(movementRepository.getMovementById(eqTo(movementForIE871._id)))
         .thenReturn(Future.successful(Some(movementForIE871)))
 
-      val result = postRequest(movementForIE871._id, IE871WithConsignor)
+      val result = postRequestWithCorrelationId(movementForIE871._id, IE871WithConsignor)
 
       result.status mustBe ACCEPTED
       assertResponseBody(result)
@@ -300,7 +300,7 @@ class SubmitMessageControllerItSpec
       when(movementRepository.getMovementById(eqTo(movementForIE871._id)))
         .thenReturn(Future.successful(Some(movementForIE871)))
 
-      val result = postRequest(movementForIE871._id, IE871WithConsignee)
+      val result = postRequestWithCorrelationId(movementForIE871._id, IE871WithConsignee)
 
       result.status mustBe ACCEPTED
       assertResponseBody(result)
@@ -311,7 +311,7 @@ class SubmitMessageControllerItSpec
       withAuthorizedTrader(consignorId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movement._id, ie871ForConsignor(Consignee))
+      val result = postRequestWithCorrelationId(movement._id, ie871ForConsignor(Consignee))
 
       result.status mustBe BAD_REQUEST
 
@@ -321,7 +321,7 @@ class SubmitMessageControllerItSpec
       withAuthorizedTrader(consigneeId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movement._id, ie871ForConsignee(Consignor))
+      val result = postRequestWithCorrelationId(movement._id, ie871ForConsignee(Consignor))
 
       result.status mustBe BAD_REQUEST
 
@@ -334,7 +334,7 @@ class SubmitMessageControllerItSpec
     val eisErrorResponse = createEISErrorResponseBodyAsJson("NOT_FOUND")
     stubEISErrorResponse(NOT_FOUND, eisErrorResponse.toString())
 
-    val result = postRequest(movement._id, IE818)
+    val result = postRequestWithCorrelationId(movement._id, IE818)
 
     result.status mustBe NOT_FOUND
 
@@ -356,7 +356,7 @@ class SubmitMessageControllerItSpec
     when(movementRepository.getMovementById(eqTo(movement._id)))
       .thenReturn(Future.successful(None))
 
-    val result: WSResponse = postRequest(movement._id, IE818)
+    val result: WSResponse = postRequestWithCorrelationId(movement._id, IE818)
 
     result.status mustBe NOT_FOUND
   }
@@ -365,14 +365,14 @@ class SubmitMessageControllerItSpec
     withAuthorizedTrader(consigneeId)
     stubEISErrorResponse(BAD_REQUEST, createEISErrorResponseBodyAsJson("BAD_REQUEST").toString())
 
-    postRequest(movement._id, IE818).status mustBe BAD_REQUEST
+    postRequestWithCorrelationId(movement._id, IE818).status mustBe BAD_REQUEST
   }
 
   "remove control document references in any paths for a BAD_REQUEST" in {
     withAuthorizedTrader(consigneeId)
     stubEISErrorResponse(BAD_REQUEST, rimValidationErrorResponse(locationWithControlDoc))
 
-    val response = postRequest(movement._id, IE818)
+    val response = postRequestWithCorrelationId(movement._id, IE818)
 
     clean(response.body) mustBe clean(validationErrorResponse(locationWithoutControlDoc, "2024-05-05T16:12:13.123Z"))
 
@@ -382,37 +382,40 @@ class SubmitMessageControllerItSpec
     withAuthorizedTrader(consigneeId)
     stubEISErrorResponse(INTERNAL_SERVER_ERROR, createEISErrorResponseBodyAsJson("INTERNAL_SERVER_ERROR").toString())
 
-    postRequest(movement._id, IE818).status mustBe INTERNAL_SERVER_ERROR
+    postRequestWithCorrelationId(movement._id, IE818).status mustBe INTERNAL_SERVER_ERROR
   }
 
   "return 500 if EIS return bad json" in {
     withAuthorizedTrader(consigneeId)
     stubEISErrorResponse(INTERNAL_SERVER_ERROR, """"{"json": "is-bad"}""")
 
-    postRequest(movement._id, IE818).status mustBe INTERNAL_SERVER_ERROR
+    postRequestWithCorrelationId(movement._id, IE818).status mustBe INTERNAL_SERVER_ERROR
   }
 
   "return forbidden (403) when there are no authorized ERN" in {
     withAnEmptyERN()
 
-    postRequest(movement._id, IE818).status mustBe FORBIDDEN
+    postRequestWithCorrelationId(movement._id, IE818).status mustBe FORBIDDEN
   }
 
   "return a Unauthorized (401) when no authorized trader" in {
     withUnauthorizedTrader(InternalError("A general auth failure"))
 
-    postRequest(movement._id, IE818).status mustBe UNAUTHORIZED
+    postRequestWithCorrelationId(movement._id, IE818).status mustBe UNAUTHORIZED
   }
 
   "return bad request (400) when xml cannot be parsed" in {
     withAuthorizedTrader("GBWK002281023")
 
-    postRequest(movement._id, xml = <IE818></IE818>).status mustBe BAD_REQUEST
+    postRequestWithCorrelationId(movement._id, xml = <IE818></IE818>).status mustBe BAD_REQUEST
   }
 
   "return Unsupported Media Type (415)" in {
     withAuthorizedTrader("GBWK002281023")
-    postRequest(movement._id, contentType = """application/json""").status mustBe UNSUPPORTED_MEDIA_TYPE
+    postRequestWithCorrelationId(
+      movement._id,
+      contentType = """application/json"""
+    ).status mustBe UNSUPPORTED_MEDIA_TYPE
   }
 
   "return bad request (400) when body is not xml" in {
@@ -435,14 +438,14 @@ class SubmitMessageControllerItSpec
   "return forbidden (403) when consignor id cannot be validate" in {
     withAuthorizedTrader()
 
-    postRequest(movement._id, IE818).status mustBe FORBIDDEN
+    postRequestWithCorrelationId(movement._id, IE818).status mustBe FORBIDDEN
   }
 
   "submit to NRS" in {
     withAuthorizedTrader(consigneeId)
     stubEISSuccessfulRequest()
 
-    postRequestWithCorrelationId(movement._id, IE818, correlationId = correlationId)
+    postRequestWithCorrelationId(movement._id, IE818)
 
     verify(1, postRequestedFor(urlEqualTo("/submission")))
   }
@@ -461,25 +464,10 @@ class SubmitMessageControllerItSpec
         |}
         |""".stripMargin)
 
-  private def postRequest(
-    movementId: String,
-    xml: NodeSeq = IE818,
-    contentType: String = """application/vnd.hmrc.1.0+xml"""
-  ) =
-    await(
-      wsClient
-        .url(url(movementId))
-        .addHttpHeaders(
-          HeaderNames.AUTHORIZATION -> "TOKEN",
-          HeaderNames.CONTENT_TYPE  -> contentType
-        )
-        .post(xml)
-    )
   private def postRequestWithCorrelationId(
     movementId: String,
     xml: NodeSeq = IE818,
-    contentType: String = """application/vnd.hmrc.1.0+xml""",
-    correlationId: String
+    contentType: String = """application/vnd.hmrc.1.0+xml"""
   ) =
     await(
       wsClient

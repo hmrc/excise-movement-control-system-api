@@ -29,7 +29,7 @@ class CorrelationIdService @Inject() {
   def generateCorrelationId(): String = UUID.randomUUID().toString
 
   def getOrCreateCorrelationId(request: Request[_]): HeaderCarrier = {
-    val hcFromRequest: HeaderCarrier = HeaderCarrierConverter.fromRequestAndSession(request, request.session)
+    val hcFromRequest: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
     hcFromRequest
       .headers(scala.Seq(HttpHeader.xCorrelationId)) match {
       case Nil =>
