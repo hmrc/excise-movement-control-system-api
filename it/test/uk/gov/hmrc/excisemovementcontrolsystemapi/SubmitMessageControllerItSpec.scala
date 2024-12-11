@@ -64,7 +64,6 @@ class SubmitMessageControllerItSpec
   private val consignorId   = "GBWK240176600"
   private val consigneeId   = "GBWK002281023"
   private val lrn           = "LRNQA20230909022221"
-  val uuidRegex: String     = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
   private val correlationId = UUID.randomUUID().toString
 
   //This matches the data from the IE818 test message
