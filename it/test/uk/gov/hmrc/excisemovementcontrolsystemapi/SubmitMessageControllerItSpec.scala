@@ -95,6 +95,7 @@ class SubmitMessageControllerItSpec
 
     authorizeNrsWithIdentityData
     stubNrsResponse
+    wireMock.resetAll()
   }
 
   override def afterAll(): Unit = {
