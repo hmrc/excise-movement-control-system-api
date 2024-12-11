@@ -446,7 +446,7 @@ class SubmitMessageControllerItSpec
 
     postRequestWithCorrelationId(movement._id, IE818)
 
-    verify(1, postRequestedFor(urlEqualTo("/submission")))
+    verify(postRequestedFor(urlEqualTo("/submission")))
   }
 
   private def createEISErrorResponseBodyAsJson(
