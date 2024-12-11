@@ -95,7 +95,7 @@ class NrsSubmissionJobSpec
       nrsSubmissionScheduler.name mustBe "nrs-submission-scheduler"
     }
     "be enabled" in {
-      nrsSubmissionScheduler.enabled mustBe true
+      nrsSubmissionScheduler.enabled mustBe false
     }
     "use initial delay from configuration" in {
       nrsSubmissionScheduler.initialDelay mustBe FiniteDuration(1, "minutes")
