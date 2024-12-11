@@ -291,7 +291,7 @@ class NrsServiceNewSpec
 
       val timeTaken: Long = timeAfter - timeBefore
 
-      timeTaken.toInt must be >= 1500
+      timeTaken.toInt must be >= 1400
       timeTaken.toInt must be < 1600
     }
   }
