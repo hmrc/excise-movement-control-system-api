@@ -101,7 +101,7 @@ class NrsServiceNew @Inject() (
       .sendToNrs(workItem.item.payload, correlationIdService.generateCorrelationId())
       .flatMap { _ =>
         nrsWorkItemRepository
-          .complete(workItem.id, Succeeded)
+          .completeAndDelete(workItem.id)
           .map(_ => Done)
       }
       .recoverWith {
@@ -182,7 +182,7 @@ class NrsServiceNew @Inject() (
       .map {
         _.getOrElse {
           logger.info(
-            s"Could not acquire lock on nrsWorkItemRepository for thing"
+            s"Could not acquire lock on nrsWorkItemRepository"
           )
           Done
         }
