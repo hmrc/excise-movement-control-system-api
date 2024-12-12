@@ -48,9 +48,11 @@ class NrsConnectorNew @Inject() (
     hc: HeaderCarrier
   ): Future[Done] = {
 
+    val exciseNumber = payload.metadata.searchKeys.getOrElse("ern", "No ERN present")
+
     val nrsSubmissionUrl = appConfig.getNrsSubmissionUrl
     logger.info(
-      s"NRS submission: CorrelationId: $correlationId"
+      s"NRS submission: CorrelationId: $correlationId, for ERN: $exciseNumber"
     )
 
     def responseStatusAsFailure(): Try[HttpResponse] => Boolean = {
