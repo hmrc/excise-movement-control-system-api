@@ -72,6 +72,7 @@ class SubmitMessageControllerItSpec
   private val timestamp = Instant.parse("2024-05-05T16:12:13.12345678Z")
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
+  val uuidRegex: String                       = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
 
   override lazy val app: Application = {
     wireMock.start()
@@ -449,6 +450,17 @@ class SubmitMessageControllerItSpec
     verify(postRequestedFor(urlEqualTo("/submission")))
   }
 
+  "check if correlationID is present in header" in {
+    withAuthorizedTrader(consigneeId)
+    stubEISSuccessfulRequest()
+
+    postRequestWithCorrelationId(movement._id, IE818)
+
+    verify(
+      postRequestedFor(urlEqualTo("/emcs/digital-submit-new-message/v1"))
+        .withHeader(HttpHeader.xCorrelationId, matching(uuidRegex))
+    )
+  }
   private def createEISErrorResponseBodyAsJson(
     message: String,
     dateTime: String = timestamp.toString
