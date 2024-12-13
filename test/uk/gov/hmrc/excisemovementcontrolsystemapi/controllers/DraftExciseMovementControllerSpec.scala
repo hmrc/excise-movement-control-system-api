@@ -204,7 +204,7 @@ class DraftExciseMovementControllerSpec
       await(createWithSuccessfulAuth.submit(request))
 
       verify(auditService).auditMessage(any, any)(any)
-      verify(auditService).messageSubmittedWithoutMovement(any, any, any, any)(any)
+      verify(auditService).draftMovementSubmitted(any, any, any, any)(any)
 
     }
 
@@ -214,7 +214,7 @@ class DraftExciseMovementControllerSpec
       await(createWithSuccessfulAuth.submit(request))
 
       verify(auditService).auditMessage(any, any)(any)
-      verify(auditService).messageSubmittedWithoutMovement(any, any, any, any)(any)
+      verify(auditService).draftMovementSubmitted(any, any, any, any)(any)
     }
 
     "adds the boxId to the BoxIdRepository for consignor" in {
