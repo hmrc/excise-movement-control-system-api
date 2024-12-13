@@ -33,7 +33,7 @@ class CorrelationIdService @Inject() {
     hcFromRequest
       .headers(scala.Seq(HttpHeader.xCorrelationId)) match {
       case Nil =>
-        hcFromRequest.withExtraHeaders((HttpHeader.xCorrelationId, generateCorrelationId))
+        hcFromRequest.withExtraHeaders((HttpHeader.xCorrelationId, generateCorrelationId()))
       case _   =>
         hcFromRequest
     }

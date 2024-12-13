@@ -32,8 +32,7 @@ import scala.concurrent.ExecutionContext
 class AdminDetailsController @Inject() (
   cc: ControllerComponents,
   auth: BackendAuthComponents,
-  movementRepository: MovementRepository,
-  correlationIdService: CorrelationIdService
+  movementRepository: MovementRepository
 )(implicit
   ec: ExecutionContext
 ) extends BackendController(cc) {

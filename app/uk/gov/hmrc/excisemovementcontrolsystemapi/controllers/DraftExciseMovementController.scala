@@ -49,7 +49,6 @@ class DraftExciseMovementController @Inject() (
   dateTimeService: DateTimeService,
   auditService: AuditService,
   boxIdRepository: BoxIdRepository,
-  ernSubmissionRepository: ErnSubmissionRepository,
   appConfig: AppConfig,
   cc: ControllerComponents,
   correlationIdService: CorrelationIdService

@@ -450,11 +450,23 @@ class SubmitMessageControllerItSpec
     verify(postRequestedFor(urlEqualTo("/submission")))
   }
 
-  "check if correlationID is present in header" in {
+  "check if generated correlationID is present in header" in {
     withAuthorizedTrader(consigneeId)
     stubEISSuccessfulRequest()
 
     postRequestWithCorrelationId(movement._id, IE818)
+
+    verify(
+      postRequestedFor(urlEqualTo("/emcs/digital-submit-new-message/v1"))
+        .withHeader(HttpHeader.xCorrelationId, equalTo(correlationId))
+    )
+  }
+
+  "check if new correlationID is generated and present in header" in {
+    withAuthorizedTrader(consigneeId)
+    stubEISSuccessfulRequest()
+
+    postRequestWithoutCorrelationId(movement._id, IE818)
 
     verify(
       postRequestedFor(urlEqualTo("/emcs/digital-submit-new-message/v1"))
@@ -487,6 +499,21 @@ class SubmitMessageControllerItSpec
           HeaderNames.AUTHORIZATION -> "TOKEN",
           HeaderNames.CONTENT_TYPE  -> contentType,
           HttpHeader.xCorrelationId -> correlationId
+        )
+        .post(xml)
+    )
+
+  private def postRequestWithoutCorrelationId(
+    movementId: String,
+    xml: NodeSeq = IE818,
+    contentType: String = """application/vnd.hmrc.1.0+xml"""
+  ) =
+    await(
+      wsClient
+        .url(url(movementId))
+        .addHttpHeaders(
+          HeaderNames.AUTHORIZATION -> "TOKEN",
+          HeaderNames.CONTENT_TYPE  -> contentType
         )
         .post(xml)
     )

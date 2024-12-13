@@ -18,9 +18,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.ImplementedBy
 import play.api.Logging
-import play.api.mvc.Result
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EISErrorResponseDetails, EisErrorResponsePresentation}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EISErrorResponseDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnSubmissionRepository
@@ -48,6 +47,7 @@ class SubmissionMessageServiceImpl @Inject() (
       .find(_._1 == HttpHeader.xCorrelationId)
       .map(_._2)
       .getOrElse(correlationIdService.generateCorrelationId())
+
     for {
       submitMessageResponse <-
         connector.submitMessage(request.ieMessage, request.body.toString, authorisedErn, correlationId)

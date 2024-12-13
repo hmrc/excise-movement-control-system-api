@@ -345,7 +345,6 @@ class DraftExciseMovementControllerSpec
       dateTimeService,
       auditService,
       boxIdRepository,
-      ernSubmissionRepository,
       appConfig,
       cc,
       correlationIdService
@@ -363,7 +362,6 @@ class DraftExciseMovementControllerSpec
       dateTimeService,
       auditService,
       boxIdRepository,
-      ernSubmissionRepository,
       appConfig,
       cc,
       correlationIdService
@@ -380,7 +378,6 @@ class DraftExciseMovementControllerSpec
       dateTimeService,
       auditService,
       boxIdRepository,
-      ernSubmissionRepository,
       appConfig,
       cc,
       correlationIdService
@@ -397,7 +394,6 @@ class DraftExciseMovementControllerSpec
       dateTimeService,
       auditService,
       boxIdRepository,
-      ernSubmissionRepository,
       appConfig,
       cc,
       correlationIdService
