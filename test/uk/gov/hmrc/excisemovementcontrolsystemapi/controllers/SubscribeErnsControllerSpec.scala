@@ -32,7 +32,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeAuthentication
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NotificationsService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{CorrelationIdService, NotificationsService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import java.time.Instant
@@ -45,6 +45,7 @@ class SubscribeErnsControllerSpec
     with BeforeAndAfterEach {
 
   private val mockNotificationsService = mock[NotificationsService]
+  private val correlationIdService     = mock[CorrelationIdService]
   private val mockDateTimeService      = mock[DateTimeService]
   private val mockAppConfig            = mock[AppConfig]
   private val timestamp                = Instant.parse("2024-05-06T15:30:15.12345612Z")
@@ -219,7 +220,8 @@ class SubscribeErnsControllerSpec
       stubControllerComponents(),
       mockNotificationsService,
       mockDateTimeService,
-      mockAppConfig
+      mockAppConfig,
+      correlationIdService
     )
 
   private def createWithFailingAuth =
@@ -228,6 +230,7 @@ class SubscribeErnsControllerSpec
       stubControllerComponents(),
       mockNotificationsService,
       mockDateTimeService,
-      mockAppConfig
+      mockAppConfig,
+      correlationIdService
     )
 }

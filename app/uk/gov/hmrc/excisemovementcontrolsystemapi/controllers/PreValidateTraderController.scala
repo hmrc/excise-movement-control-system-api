@@ -23,8 +23,9 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthActio
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ParsedPreValidateTraderETDSRequest, ParsedPreValidateTraderRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PreValidateTraderService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{CorrelationIdService, PreValidateTraderService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TraderTypeInterpreter
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -36,7 +37,8 @@ class PreValidateTraderController @Inject() (
   parseJsonAction: ParseJsonAction,
   preValidateTraderService: PreValidateTraderService,
   cc: ControllerComponents,
-  appConfig: AppConfig
+  appConfig: AppConfig,
+  correlationIdService: CorrelationIdService
 )(implicit ec: ExecutionContext)
     extends BackendController(cc) {
 
@@ -48,7 +50,9 @@ class PreValidateTraderController @Inject() (
     }
   }
 
-  private def handleETDSRequest()(implicit authRequest: EnrolmentRequest[JsValue]): Future[Result] =
+  private def handleETDSRequest()(implicit authRequest: EnrolmentRequest[JsValue]): Future[Result] = {
+    implicit val hc: HeaderCarrier = correlationIdService.getOrCreateCorrelationId(authRequest)
+
     parseJsonAction.refineETDS(authRequest).flatMap {
       case Right(parsedRequest: ParsedPreValidateTraderETDSRequest[JsValue]) =>
         preValidateTraderService.submitETDSMessage(parsedRequest).map {
@@ -57,6 +61,7 @@ class PreValidateTraderController @Inject() (
         }
       case Left(result)                                                      => Future.successful(result)
     }
+  }
 
   private def convertETDSResponse(
     response: ExciseTraderValidationETDSResponse,
@@ -126,7 +131,9 @@ class PreValidateTraderController @Inject() (
 
   }
 
-  private def handleLegacyRequest()(implicit authRequest: EnrolmentRequest[JsValue]): Future[Result] =
+  private def handleLegacyRequest()(implicit authRequest: EnrolmentRequest[JsValue]): Future[Result] = {
+    implicit val hc: HeaderCarrier = correlationIdService.getOrCreateCorrelationId(authRequest)
+
     parseJsonAction.refine(authRequest).flatMap {
       case Right(parsedRequest: ParsedPreValidateTraderRequest[JsValue]) =>
         preValidateTraderService.submitMessage(parsedRequest).map {
@@ -135,4 +142,5 @@ class PreValidateTraderController @Inject() (
         }
       case Left(result)                                                  => Future.successful(result)
     }
+  }
 }

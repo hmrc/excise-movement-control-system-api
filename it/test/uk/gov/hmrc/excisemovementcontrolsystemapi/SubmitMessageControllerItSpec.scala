@@ -38,32 +38,34 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionRespon
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, Consignor}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EisErrorResponsePresentation, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
 
 import java.time.Instant
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
-
-class SubmitMessageControllerItSpec extends PlaySpec
-  with GuiceOneServerPerSuite
-  with ApplicationBuilderSupport
-  with TestXml
-  with WireMockServerSpec
-  with SubmitMessageTestSupport
-  with StringSupport
-  with ErrorResponseSupport
-  with BeforeAndAfterAll
-  with BeforeAndAfterEach {
+class SubmitMessageControllerItSpec
+    extends PlaySpec
+    with GuiceOneServerPerSuite
+    with ApplicationBuilderSupport
+    with TestXml
+    with WireMockServerSpec
+    with SubmitMessageTestSupport
+    with StringSupport
+    with ErrorResponseSupport
+    with BeforeAndAfterAll
+    with BeforeAndAfterEach {
 
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
 
   private def url(movementId: String) = s"http://localhost:$port/movements/$movementId/messages"
 
-  private val eisUrl = "/emcs/digital-submit-new-message/v1"
-  private val consignorId = "GBWK240176600"
-  private val consigneeId = "GBWK002281023"
-  private val lrn = "LRNQA20230909022221"
+  private val eisUrl        = "/emcs/digital-submit-new-message/v1"
+  private val consignorId   = "GBWK240176600"
+  private val consigneeId   = "GBWK002281023"
+  private val lrn           = "LRNQA20230909022221"
+  private val correlationId = UUID.randomUUID().toString
 
   //This matches the data from the IE818 test message
   private val movement = Movement(Some("boxId"), lrn, consignorId, Some(consigneeId), Some("23GB00000000000378553"))
@@ -71,6 +73,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
   private val timestamp = Instant.parse("2024-05-05T16:12:13.12345678Z")
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
+  val uuidRegex: String                       = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
 
   override lazy val app: Application = {
     wireMock.start()
@@ -96,7 +99,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
     authorizeNrsWithIdentityData
     stubNrsResponse
-
+    wireMock.resetAll()
   }
 
   override def afterAll(): Unit = {
@@ -107,7 +110,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
   "Submit IE810 Cancellation" should {
 
     "return 202 when submitted by consignor" in {
-      val arcInMessage = "23GB00000000000377161"
+      val arcInMessage     = "23GB00000000000377161"
       val movementForIE810 = movement.copy(administrativeReferenceCode = Some(arcInMessage))
       when(movementRepository.getMovementById(eqTo(movementForIE810._id)))
         .thenReturn(Future.successful(Some(movementForIE810)))
@@ -115,7 +118,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       withAuthorizedTrader(consignorId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movement._id, IE810)
+      val result = postRequestWithCorrelationId(movement._id, IE810)
 
       result.status mustBe ACCEPTED
       assertResponseBody(result)
@@ -126,7 +129,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       withAuthorizedTrader(consigneeId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movement._id, IE810)
+      val result = postRequestWithCorrelationId(movement._id, IE810)
 
       result.status mustBe FORBIDDEN
     }
@@ -137,7 +140,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
     "return 202 when submitted by consignor" in {
 
-      val arcInMessage = "23GB00000000000378126"
+      val arcInMessage     = "23GB00000000000378126"
       val movementForIE813 = movement.copy(administrativeReferenceCode = Some(arcInMessage))
       when(movementRepository.getMovementById(eqTo(movementForIE813._id)))
         .thenReturn(Future.successful(Some(movementForIE813)))
@@ -145,7 +148,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       withAuthorizedTrader(consignorId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movementForIE813._id, IE813)
+      val result = postRequestWithCorrelationId(movementForIE813._id, IE813)
 
       result.status mustBe ACCEPTED
       assertResponseBody(result)
@@ -156,7 +159,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       withAuthorizedTrader("consignee")
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movement._id, IE813)
+      val result = postRequestWithCorrelationId(movement._id, IE813)
 
       result.status mustBe FORBIDDEN
       result.body.isEmpty mustBe false
@@ -169,7 +172,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       withAuthorizedTrader(consignorId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movement._id, IE818)
+      val result = postRequestWithCorrelationId(movement._id, IE818)
 
       result.status mustBe FORBIDDEN
       result.body.isEmpty mustBe false
@@ -183,7 +186,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       withAuthorizedTrader(consigneeId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movementForIE818._id, IE818)
+      val result = postRequestWithCorrelationId(movementForIE818._id, IE818)
 
       result.status mustBe ACCEPTED
       assertResponseBody(result)
@@ -197,14 +200,14 @@ class SubmitMessageControllerItSpec extends PlaySpec
       withAuthorizedTrader(consignorId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movement._id, IE819)
+      val result = postRequestWithCorrelationId(movement._id, IE819)
 
       result.status mustBe FORBIDDEN
       result.body.isEmpty mustBe false
     }
 
     "return 202 when sent in by the consignee" in {
-      val arcInMessage = "23GB00000000000378574"
+      val arcInMessage     = "23GB00000000000378574"
       val movementForIE819 = movement.copy(administrativeReferenceCode = Some(arcInMessage))
       when(movementRepository.getMovementById(eqTo(movementForIE819._id)))
         .thenReturn(Future.successful(Some(movementForIE819)))
@@ -212,7 +215,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       withAuthorizedTrader(consigneeId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movementForIE819._id, IE819)
+      val result = postRequestWithCorrelationId(movementForIE819._id, IE819)
 
       result.status mustBe ACCEPTED
       assertResponseBody(result)
@@ -222,7 +225,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
   "Submit IE837 Report of Receipt Movement" should {
 
-    val arcInMessage = "16GB00000000000192223"
+    val arcInMessage     = "16GB00000000000192223"
     val movementForIE837 = movement.copy(administrativeReferenceCode = Some(arcInMessage))
 
     "return 202 when sent in by the consignor" in {
@@ -232,7 +235,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       when(movementRepository.getMovementById(eqTo(movementForIE837._id)))
         .thenReturn(Future.successful(Some(movementForIE837)))
 
-      val result = postRequest(movementForIE837._id, IE837WithConsignor)
+      val result = postRequestWithCorrelationId(movementForIE837._id, IE837WithConsignor)
 
       result.status mustBe ACCEPTED
       assertResponseBody(result)
@@ -245,7 +248,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       when(movementRepository.getMovementById(eqTo(movementForIE837._id)))
         .thenReturn(Future.successful(Some(movementForIE837)))
 
-      val result = postRequest(movementForIE837._id, IE837WithConsignee)
+      val result = postRequestWithCorrelationId(movementForIE837._id, IE837WithConsignee)
 
       result.status mustBe ACCEPTED
       assertResponseBody(result)
@@ -256,7 +259,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       withAuthorizedTrader(consignorId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movement._id, ie837Template(Consignee, consignorId))
+      val result = postRequestWithCorrelationId(movement._id, ie837Template(Consignee, consignorId))
 
       result.status mustBe BAD_REQUEST
 
@@ -267,7 +270,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       withAuthorizedTrader(consigneeId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movement._id, ie837Template(Consignor, consigneeId))
+      val result = postRequestWithCorrelationId(movement._id, ie837Template(Consignor, consigneeId))
 
       result.status mustBe BAD_REQUEST
 
@@ -277,7 +280,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
 
   "Submit IE871 Explanation On Shortage" should {
 
-    val arcInMessage = "23GB00000000000377768"
+    val arcInMessage     = "23GB00000000000377768"
     val movementForIE871 = movement.copy(administrativeReferenceCode = Some(arcInMessage))
 
     "return 202 when sent in by the consignor" in {
@@ -287,7 +290,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       when(movementRepository.getMovementById(eqTo(movementForIE871._id)))
         .thenReturn(Future.successful(Some(movementForIE871)))
 
-      val result = postRequest(movementForIE871._id, IE871WithConsignor)
+      val result = postRequestWithCorrelationId(movementForIE871._id, IE871WithConsignor)
 
       result.status mustBe ACCEPTED
       assertResponseBody(result)
@@ -300,7 +303,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       when(movementRepository.getMovementById(eqTo(movementForIE871._id)))
         .thenReturn(Future.successful(Some(movementForIE871)))
 
-      val result = postRequest(movementForIE871._id, IE871WithConsignee)
+      val result = postRequestWithCorrelationId(movementForIE871._id, IE871WithConsignee)
 
       result.status mustBe ACCEPTED
       assertResponseBody(result)
@@ -311,7 +314,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       withAuthorizedTrader(consignorId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movement._id, ie871ForConsignor(Consignee))
+      val result = postRequestWithCorrelationId(movement._id, ie871ForConsignor(Consignee))
 
       result.status mustBe BAD_REQUEST
 
@@ -321,7 +324,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
       withAuthorizedTrader(consigneeId)
       stubEISSuccessfulRequest()
 
-      val result = postRequest(movement._id, ie871ForConsignee(Consignor))
+      val result = postRequestWithCorrelationId(movement._id, ie871ForConsignee(Consignor))
 
       result.status mustBe BAD_REQUEST
 
@@ -334,17 +337,19 @@ class SubmitMessageControllerItSpec extends PlaySpec
     val eisErrorResponse = createEISErrorResponseBodyAsJson("NOT_FOUND")
     stubEISErrorResponse(NOT_FOUND, eisErrorResponse.toString())
 
-    val result = postRequest(movement._id, IE818)
+    val result = postRequestWithCorrelationId(movement._id, IE818)
 
     result.status mustBe NOT_FOUND
 
     withClue("return the EIS error response") {
-      result.json mustBe Json.toJson(EisErrorResponsePresentation(
-        Instant.parse("2024-05-05T16:12:13.123Z"),
-        "not_found",
-        "debug NOT_FOUND",
-        "123"
-      ))
+      result.json mustBe Json.toJson(
+        EisErrorResponsePresentation(
+          Instant.parse("2024-05-05T16:12:13.123Z"),
+          "not_found",
+          "debug NOT_FOUND",
+          "123"
+        )
+      )
     }
   }
 
@@ -354,7 +359,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
     when(movementRepository.getMovementById(eqTo(movement._id)))
       .thenReturn(Future.successful(None))
 
-    val result: WSResponse = postRequest(movement._id, IE818)
+    val result: WSResponse = postRequestWithCorrelationId(movement._id, IE818)
 
     result.status mustBe NOT_FOUND
   }
@@ -363,19 +368,16 @@ class SubmitMessageControllerItSpec extends PlaySpec
     withAuthorizedTrader(consigneeId)
     stubEISErrorResponse(BAD_REQUEST, createEISErrorResponseBodyAsJson("BAD_REQUEST").toString())
 
-    postRequest(movement._id, IE818).status mustBe BAD_REQUEST
+    postRequestWithCorrelationId(movement._id, IE818).status mustBe BAD_REQUEST
   }
 
   "remove control document references in any paths for a BAD_REQUEST" in {
     withAuthorizedTrader(consigneeId)
     stubEISErrorResponse(BAD_REQUEST, rimValidationErrorResponse(locationWithControlDoc))
 
-    val response = postRequest(movement._id, IE818)
+    val response = postRequestWithCorrelationId(movement._id, IE818)
 
-    clean(response.body) mustBe clean(validationErrorResponse(
-      locationWithoutControlDoc,
-      "2024-05-05T16:12:13.123Z")
-    )
+    clean(response.body) mustBe clean(validationErrorResponse(locationWithoutControlDoc, "2024-05-05T16:12:13.123Z"))
 
   }
 
@@ -383,48 +385,54 @@ class SubmitMessageControllerItSpec extends PlaySpec
     withAuthorizedTrader(consigneeId)
     stubEISErrorResponse(INTERNAL_SERVER_ERROR, createEISErrorResponseBodyAsJson("INTERNAL_SERVER_ERROR").toString())
 
-    postRequest(movement._id, IE818).status mustBe INTERNAL_SERVER_ERROR
+    postRequestWithCorrelationId(movement._id, IE818).status mustBe INTERNAL_SERVER_ERROR
   }
 
   "return 500 if EIS return bad json" in {
     withAuthorizedTrader(consigneeId)
     stubEISErrorResponse(INTERNAL_SERVER_ERROR, """"{"json": "is-bad"}""")
 
-    postRequest(movement._id, IE818).status mustBe INTERNAL_SERVER_ERROR
+    postRequestWithCorrelationId(movement._id, IE818).status mustBe INTERNAL_SERVER_ERROR
   }
 
   "return forbidden (403) when there are no authorized ERN" in {
     withAnEmptyERN()
 
-    postRequest(movement._id, IE818).status mustBe FORBIDDEN
+    postRequestWithCorrelationId(movement._id, IE818).status mustBe FORBIDDEN
   }
 
   "return a Unauthorized (401) when no authorized trader" in {
     withUnauthorizedTrader(InternalError("A general auth failure"))
 
-    postRequest(movement._id, IE818).status mustBe UNAUTHORIZED
+    postRequestWithCorrelationId(movement._id, IE818).status mustBe UNAUTHORIZED
   }
 
   "return bad request (400) when xml cannot be parsed" in {
     withAuthorizedTrader("GBWK002281023")
 
-    postRequest(movement._id, xml = <IE818></IE818>).status mustBe BAD_REQUEST
+    postRequestWithCorrelationId(movement._id, xml = <IE818></IE818>).status mustBe BAD_REQUEST
   }
 
   "return Unsupported Media Type (415)" in {
     withAuthorizedTrader("GBWK002281023")
-    postRequest(movement._id, contentType = """application/json""").status mustBe UNSUPPORTED_MEDIA_TYPE
+    postRequestWithCorrelationId(
+      movement._id,
+      contentType = """application/json"""
+    ).status mustBe UNSUPPORTED_MEDIA_TYPE
   }
 
   "return bad request (400) when body is not xml" in {
     withAuthorizedTrader("GBWK002281023")
 
     //Can't use postRequest routine as test requires non-xml body
-    val result = await(wsClient.url(url("lrn"))
-      .addHttpHeaders(
-        HeaderNames.AUTHORIZATION -> "TOKEN",
-        HeaderNames.CONTENT_TYPE -> """application/vnd.hmrc.1.0+xml"""
-      ).post("test")
+    val result = await(
+      wsClient
+        .url(url("lrn"))
+        .addHttpHeaders(
+          HeaderNames.AUTHORIZATION -> "TOKEN",
+          HeaderNames.CONTENT_TYPE  -> """application/vnd.hmrc.1.0+xml"""
+        )
+        .post("test")
     )
 
     result.status mustBe BAD_REQUEST
@@ -433,24 +441,57 @@ class SubmitMessageControllerItSpec extends PlaySpec
   "return forbidden (403) when consignor id cannot be validate" in {
     withAuthorizedTrader()
 
-    postRequest(movement._id, IE818).status mustBe FORBIDDEN
+    postRequestWithCorrelationId(movement._id, IE818).status mustBe FORBIDDEN
   }
 
   "submit to NRS" in {
     withAuthorizedTrader(consigneeId)
     stubEISSuccessfulRequest()
 
-    postRequest(movement._id, IE818)
+    postRequestWithCorrelationId(movement._id, IE818)
 
     verify(postRequestedFor(urlEqualTo("/submission")))
   }
 
+  "check if generated correlationID is present in header" in {
+    withAuthorizedTrader(consigneeId)
+    stubEISSuccessfulRequest()
+
+    postRequestWithCorrelationId(movement._id, IE818)
+
+    verify(
+      postRequestedFor(urlEqualTo("/emcs/digital-submit-new-message/v1"))
+        .withHeader(HttpHeader.xCorrelationId, equalTo(correlationId))
+    )
+  }
+
+  "check if new correlationID is generated and present in header" in {
+    withAuthorizedTrader(consigneeId)
+    stubEISSuccessfulRequest()
+
+    val xml: NodeSeq        = IE818
+    val contentType: String = """application/vnd.hmrc.1.0+xml"""
+
+    await(
+      wsClient
+        .url(url(movement._id))
+        .addHttpHeaders(
+          HeaderNames.AUTHORIZATION -> "TOKEN",
+          HeaderNames.CONTENT_TYPE  -> contentType
+        )
+        .post(xml)
+    )
+
+    verify(
+      postRequestedFor(urlEqualTo("/emcs/digital-submit-new-message/v1"))
+        .withHeader(HttpHeader.xCorrelationId, matching(uuidRegex))
+    )
+  }
   private def createEISErrorResponseBodyAsJson(
     message: String,
     dateTime: String = timestamp.toString
-  ): JsValue = {
-    Json.parse(
-      s"""
+  ): JsValue =
+    Json.parse(s"""
         |{
         |   "dateTime":"$dateTime",
         |   "status": "${message.toUpperCase()}",
@@ -459,20 +500,22 @@ class SubmitMessageControllerItSpec extends PlaySpec
         |   "emcsCorrelationId":"123"
         |}
         |""".stripMargin)
-  }
 
-  private def postRequest(
+  private def postRequestWithCorrelationId(
     movementId: String,
     xml: NodeSeq = IE818,
     contentType: String = """application/vnd.hmrc.1.0+xml"""
-  ) = {
-    await(wsClient.url(url(movementId))
-      .addHttpHeaders(
-        HeaderNames.AUTHORIZATION -> "TOKEN",
-        HeaderNames.CONTENT_TYPE -> contentType
-      ).post(xml)
+  ) =
+    await(
+      wsClient
+        .url(url(movementId))
+        .addHttpHeaders(
+          HeaderNames.AUTHORIZATION -> "TOKEN",
+          HeaderNames.CONTENT_TYPE  -> contentType,
+          HttpHeader.xCorrelationId -> correlationId
+        )
+        .post(xml)
     )
-  }
 
   private def stubEISSuccessfulRequest() = {
 
@@ -483,8 +526,7 @@ class SubmitMessageControllerItSpec extends PlaySpec
     )
   }
 
-  private def stubEISErrorResponse(status: Int, body: String): Any = {
-
+  private def stubEISErrorResponse(status: Int, body: String): Any =
     wireMock.stubFor(
       post(urlEqualTo(eisUrl))
         .willReturn(
@@ -494,9 +536,8 @@ class SubmitMessageControllerItSpec extends PlaySpec
             .withHeader("Content-Type", "application/json")
         )
     )
-  }
 
-  private def stubNrsResponse = {
+  private def stubNrsResponse =
     wireMock.stubFor(
       post(urlEqualTo("/submission"))
         .willReturn(
@@ -505,7 +546,6 @@ class SubmitMessageControllerItSpec extends PlaySpec
             .withBody(Json.obj("nrSubmissionId" -> "submissionId").toString())
         )
     )
-  }
 
   private def assertResponseBody(result: WSResponse) = {
     val responseBody = Json.parse(result.body).as[ExciseMovementResponse]

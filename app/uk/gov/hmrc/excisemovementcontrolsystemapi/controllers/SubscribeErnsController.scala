@@ -26,8 +26,9 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Constants
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NotificationsService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{CorrelationIdService, NotificationsService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -39,7 +40,8 @@ class SubscribeErnsController @Inject() (
   cc: ControllerComponents,
   notificationsService: NotificationsService,
   dateTimeService: DateTimeService,
-  appConfig: AppConfig
+  appConfig: AppConfig,
+  correlationIdService: CorrelationIdService
 )(implicit ec: ExecutionContext)
     extends BackendController(cc)
     with Logging {
@@ -47,6 +49,7 @@ class SubscribeErnsController @Inject() (
   def subscribeErn(ern: String): Action[AnyContent] = authAction.async { implicit request =>
     if (appConfig.subscribeErnsEnabled) {
       if (request.erns.contains(ern)) {
+        implicit val hc: HeaderCarrier = correlationIdService.getOrCreateCorrelationId(request)
         (for {
           clientId <- retrieveClientIdFromHeader(request)
           boxId    <- EitherT.liftF[Future, Result, String](notificationsService.subscribeErns(clientId, Seq(ern)))
@@ -71,6 +74,8 @@ class SubscribeErnsController @Inject() (
 
   def unsubscribeErn(ern: String): Action[AnyContent] = authAction.async { implicit request =>
     if (appConfig.subscribeErnsEnabled) {
+      implicit val hc: HeaderCarrier = correlationIdService.getOrCreateCorrelationId(request)
+
       (for {
         clientId <- retrieveClientIdFromHeader(request)
         _        <- EitherT.liftF[Future, Result, Done](notificationsService.unsubscribeErns(clientId, Seq(ern)))
