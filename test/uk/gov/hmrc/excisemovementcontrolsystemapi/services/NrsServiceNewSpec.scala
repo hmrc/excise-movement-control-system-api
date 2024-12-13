@@ -157,14 +157,14 @@ class NrsServiceNewSpec
 
       when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
 
-      when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+      when(mockNrsWorkItemRepository.completeAndDelete(any)).thenReturn(Future(true))
 
       val result = await(service.submitNrs(testWorkItem))
 
       verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
 
       result mustBe Done
-      verify(mockNrsWorkItemRepository).complete(testWorkItem.id, Succeeded)
+      verify(mockNrsWorkItemRepository).completeAndDelete(testWorkItem.id)
     }
     "mark the workItem as failed if submission fails with 5xx" in {
       when(mockNrsConnectorNew.sendToNrs(any(), any())(any()))
@@ -211,12 +211,12 @@ class NrsServiceNewSpec
 
       when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
         .thenReturn(Future.successful(Some(testWorkItem)))
-      when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+      when(mockNrsWorkItemRepository.completeAndDelete(any)).thenReturn(Future(true))
 
       val result = await(service.processSingleNrs())
 
       verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
-      verify(mockNrsWorkItemRepository).complete(testWorkItem.id, Succeeded)
+      verify(mockNrsWorkItemRepository).completeAndDelete(testWorkItem.id)
       result mustBe true
     }
     "call to submit the NRS data and return true if it tried to process a thing but failed" in {
@@ -266,7 +266,7 @@ class NrsServiceNewSpec
     "if the connector call takes less than 1 second to finish, should take at least 1 second to finish" in {
 
       when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
-      when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+      when(mockNrsWorkItemRepository.completeAndDelete(any)).thenReturn(Future(true))
 
       val timeBefore = System.currentTimeMillis
       service.submitNrsThrottled(testWorkItem).futureValue
@@ -283,7 +283,7 @@ class NrsServiceNewSpec
         Done
       }
       when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(future)
-      when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+      when(mockNrsWorkItemRepository.completeAndDelete(any)).thenReturn(Future(true))
 
       val timeBefore = System.currentTimeMillis
       service.submitNrsThrottled(testWorkItem).futureValue

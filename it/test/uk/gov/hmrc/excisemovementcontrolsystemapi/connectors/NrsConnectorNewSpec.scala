@@ -73,7 +73,7 @@ class NrsConnectorNewSpec
       identityData = testNrsIdentityData,
       userAuthToken = testAuthToken,
       headerData = Map(),
-      searchKeys = Map("ern" -> "123")
+      searchKeys = Map("ern" -> "ERN123")
     )
     val nrsPayLoad                 = NrsPayload("encodepayload", nrsMetadata)
 
