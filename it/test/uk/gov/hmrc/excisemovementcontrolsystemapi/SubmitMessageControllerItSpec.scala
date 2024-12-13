@@ -469,7 +469,18 @@ class SubmitMessageControllerItSpec
     withAuthorizedTrader(consigneeId)
     stubEISSuccessfulRequest()
 
-    postRequestWithoutCorrelationId(movement._id, IE818)
+    val xml: NodeSeq        = IE818
+    val contentType: String = """application/vnd.hmrc.1.0+xml"""
+
+    await(
+      wsClient
+        .url(url(movement._id))
+        .addHttpHeaders(
+          HeaderNames.AUTHORIZATION -> "TOKEN",
+          HeaderNames.CONTENT_TYPE  -> contentType
+        )
+        .post(xml)
+    )
 
     verify(
       postRequestedFor(urlEqualTo("/emcs/digital-submit-new-message/v1"))
@@ -502,21 +513,6 @@ class SubmitMessageControllerItSpec
           HeaderNames.AUTHORIZATION -> "TOKEN",
           HeaderNames.CONTENT_TYPE  -> contentType,
           HttpHeader.xCorrelationId -> correlationId
-        )
-        .post(xml)
-    )
-
-  private def postRequestWithoutCorrelationId(
-    movementId: String,
-    xml: NodeSeq = IE818,
-    contentType: String = """application/vnd.hmrc.1.0+xml"""
-  ) =
-    await(
-      wsClient
-        .url(url(movementId))
-        .addHttpHeaders(
-          HeaderNames.AUTHORIZATION -> "TOKEN",
-          HeaderNames.CONTENT_TYPE  -> contentType
         )
         .post(xml)
     )
