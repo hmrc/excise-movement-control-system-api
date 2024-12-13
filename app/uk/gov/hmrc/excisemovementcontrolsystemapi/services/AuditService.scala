@@ -59,7 +59,7 @@ class AuditServiceImpl @Inject() (auditConnector: AuditConnector, appConfig: App
       auditEvent(event)
     } else EitherT.fromEither(Right(()))
 
-  def messageSubmittedWithoutMovement(
+  def draftMovementSubmitted(
     message: IE815Message,
     submittedToCore: Boolean,
     correlationId: String,
@@ -67,7 +67,7 @@ class AuditServiceImpl @Inject() (auditConnector: AuditConnector, appConfig: App
   )(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit] =
     if (appConfig.newAuditingEnabled) {
       val event =
-        AuditEventFactory.createMessageSubmitted(message, submittedToCore, correlationId, request)
+        AuditEventFactory.createDraftMovementSubmitted(message, submittedToCore, correlationId, request)
       auditEvent(event)
     } else EitherT.fromEither(Right(()))
 
@@ -102,7 +102,7 @@ trait AuditService {
     correlationId: String,
     request: ParsedXmlRequest[NodeSeq]
   )(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit]
-  def messageSubmittedWithoutMovement(
+  def draftMovementSubmitted(
     message: IE815Message,
     submittedToCore: Boolean,
     correlationId: String,

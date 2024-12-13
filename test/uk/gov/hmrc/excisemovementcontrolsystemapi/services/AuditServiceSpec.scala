@@ -98,33 +98,64 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
     }
   }
 
-  "messageSubmitted" should {
-    val request = createRequest(Seq.empty[(String, String)])
-    "post an event if newAuditing feature switch is true" in {
-      val sut    = new Harness(auditConnector, appConfig)
-      val result = sut.messageSubmitted(IE815Message.createFromXml(IE815), testMovement, true, "", request)
+  "messageSubmitted" when {
+    "there is a movement to be audited" should {
+      val request = createRequest(Seq.empty[(String, String)])
+      "post an event if newAuditing feature switch is true" in {
+        val sut = new Harness(auditConnector, appConfig)
+        val result = sut.messageSubmitted(IE815Message.createFromXml(IE815), testMovement, true, "", request)
 
-      await(result.value)
-      verify(auditConnector, times(1)).sendExtendedEvent(any)(any, any)
+        await(result.value)
+        verify(auditConnector, times(1)).sendExtendedEvent(any)(any, any)
+      }
+
+      "silently returns right on error with log" in {
+        when(auditConnector.sendExtendedEvent(any)(any, any))
+          .thenReturn(Future.successful(AuditResult.Failure("test", None)))
+
+        val sut = new Harness(auditConnector, appConfig)
+        val result = sut.messageSubmitted(IE815Message.createFromXml(IE815), testMovement, true, "", request)
+
+        await(result.value) equals Right(())
+      }
+
+      "post no event if newAuditing feature switch is false" in {
+        when(appConfig.newAuditingEnabled).thenReturn(false)
+        val sut = new Harness(auditConnector, appConfig)
+        val result = sut.messageSubmitted(IE815Message.createFromXml(IE815), testMovement, true, "", request)
+
+        await(result.value)
+        verify(auditConnector, times(0)).sendExtendedEvent(any)(any, any)
+      }
     }
+    "there is no movement to be audited" should {
+      val request = createRequest(Seq.empty[(String, String)])
+      "post an event if newAuditing feature switch is true" in {
+        val sut = new Harness(auditConnector, appConfig)
+        val result = sut.messageSubmitted(IE815Message.createFromXml(IE815), testMovement, true, "", request)
 
-    "silently returns right on error with log" in {
-      when(auditConnector.sendExtendedEvent(any)(any, any))
-        .thenReturn(Future.successful(AuditResult.Failure("test", None)))
+        await(result.value)
+        verify(auditConnector, times(1)).sendExtendedEvent(any)(any, any)
+      }
 
-      val sut    = new Harness(auditConnector, appConfig)
-      val result = sut.messageSubmitted(IE815Message.createFromXml(IE815), testMovement, true, "", request)
+      "silently returns right on error with log" in {
+        when(auditConnector.sendExtendedEvent(any)(any, any))
+          .thenReturn(Future.successful(AuditResult.Failure("test", None)))
 
-      await(result.value) equals Right(())
-    }
+        val sut = new Harness(auditConnector, appConfig)
+        val result = sut.messageSubmitted(IE815Message.createFromXml(IE815), testMovement, true, "", request)
 
-    "post no event if newAuditing feature switch is false" in {
-      when(appConfig.newAuditingEnabled).thenReturn(false)
-      val sut    = new Harness(auditConnector, appConfig)
-      val result = sut.messageSubmitted(IE815Message.createFromXml(IE815), testMovement, true, "", request)
+        await(result.value) equals Right(())
+      }
 
-      await(result.value)
-      verify(auditConnector, times(0)).sendExtendedEvent(any)(any, any)
+      "post no event if newAuditing feature switch is false" in {
+        when(appConfig.newAuditingEnabled).thenReturn(false)
+        val sut = new Harness(auditConnector, appConfig)
+        val result = sut.messageSubmitted(IE815Message.createFromXml(IE815), testMovement, true, "", request)
+
+        await(result.value)
+        verify(auditConnector, times(0)).sendExtendedEvent(any)(any, any)
+      }
     }
   }
 }

@@ -41,7 +41,7 @@ object AuditEventFactory extends Auditing {
     )
   }
 
-  def createMessageSubmitted(
+  def createDraftMovementSubmitted(
     message: IE815Message,
     submittedToCore: Boolean,
     correlationId: String,
@@ -65,7 +65,7 @@ object AuditEventFactory extends Auditing {
 
     ExtendedDataEvent(
       auditSource = auditSource,
-      auditType = "MessageSubmitted",
+      auditType = "DraftMovementSubmitted",
       tags = hc.toAuditTags(),
       detail = Json.toJsObject(messageSubmitted)
     )

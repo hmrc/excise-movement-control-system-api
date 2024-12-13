@@ -49,7 +49,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
 
   case class TestType(testObject: TestMessageType, message: IEMessage) {
 
-    "successfully converted to success audit event" in {
+    "Old auditing should successfully converted to success audit event" in {
 
       val result         = AuditEventFactory.createMessageAuditEvent(message, None)
       val expectedResult = ExtendedDataEvent(
@@ -63,7 +63,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       result.detail mustBe expectedResult.detail
     }
 
-    "converted to failure audit event" in {
+    "Old auditing should converted to failure audit event" in {
       val testMessage    = "Test Message"
       val result         = AuditEventFactory.createMessageAuditEvent(message, Some(testMessage))
       val expectedResult = ExtendedDataEvent(
