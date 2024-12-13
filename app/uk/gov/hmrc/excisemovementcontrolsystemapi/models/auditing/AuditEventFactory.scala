@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
-import cats.data.{NonEmptyList, NonEmptySeq}
-import play.api.libs.json.{JsObject, Json}
+import cats.data.NonEmptySeq
+import play.api.libs.json.Json
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement

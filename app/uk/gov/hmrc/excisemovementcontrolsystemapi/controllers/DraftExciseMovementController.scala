@@ -122,7 +122,7 @@ class DraftExciseMovementController @Inject() (
   )(implicit hc: HeaderCarrier): EitherT[Future, Result, Movement] = {
 
     val newMovement: Movement = createMovementFomMessage(message, boxId)
-    boxId.map(boxIdRepository.save(newMovement.consignorId, _))
+    boxId.map(boxIdRepository.save(newMovement.consignorId, _)) //TODO recover future in failure case
 
     EitherT(movementMessageService.saveNewMovement(newMovement).map {
       case Left(result)    =>

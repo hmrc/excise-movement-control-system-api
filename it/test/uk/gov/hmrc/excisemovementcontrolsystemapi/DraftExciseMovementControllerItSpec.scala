@@ -21,7 +21,8 @@ import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.extension.Parameters
 import com.github.tomakehurst.wiremock.http.Request
 import com.github.tomakehurst.wiremock.matching.{MatchResult, RequestMatcherExtension}
-import org.mockito.ArgumentMatchersSugar.any
+import org.apache.pekko.Done
+import org.mockito.ArgumentMatchersSugar.{any}
 import org.mockito.MockitoSugar.{verify, when, reset => mockitoSugarReset}
 import org.mockito.captor.ArgCaptor
 import org.scalatest.concurrent.{Eventually, IntegrationPatience}
@@ -108,6 +109,7 @@ class DraftExciseMovementControllerItSpec
     authorizeNrsWithIdentityData
     stubGetBoxIdSuccessRequest
     when(dateTimeService.timestamp()).thenReturn(timeStamp)
+    when(ernSubmissionRepository.save(any)).thenReturn(Future.successful(Done))
   }
 
   "Draft Excise Movement" should {
