@@ -205,6 +205,23 @@ class NrsServiceNewSpec
   }
 
   "processSingleNrs" should {
+    val testNrsMetadata = NrsMetadata(
+      businessId = "emcs",
+      notableEvent = "excise-movement-control-system",
+      payloadContentType = "application/json",
+      payloadSha256Checksum = sha256Hash("payload for NRS"),
+      userSubmissionTimestamp = timeStamp.toString,
+      identityData = testNrsIdentityData,
+      userAuthToken = testAuthToken,
+      headerData = Map(),
+      searchKeys = Map("ern" -> "123")
+    )
+
+    val encodedMessage  = Base64.getEncoder.encodeToString("<IE815>test</IE815>".getBytes(StandardCharsets.UTF_8))
+    val testNrsPayload  = NrsPayload(encodedMessage, testNrsMetadata)
+    val testNrsWorkItem = NrsSubmissionWorkItem(testNrsPayload)
+    val testWorkItem    = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
+
     "call to submit the NRS data and return true if it processed a thing successfully" in {
 
       when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
@@ -234,42 +251,15 @@ class NrsServiceNewSpec
       verify(mockNrsWorkItemRepository).complete(testWorkItem.id, Failed)
       result mustBe true
     }
-    "return false if there was nothing in the repository to process" in {
-
-      when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
-        .thenReturn(Future.successful(None))
-
-      val result = await(service.processSingleNrs())
-      result mustBe false
-    }
-  }
-
-  "submitNrsThrottled" should {
-
-    val testNrsMetadata = NrsMetadata(
-      businessId = "emcs",
-      notableEvent = "excise-movement-control-system",
-      payloadContentType = "application/json",
-      payloadSha256Checksum = sha256Hash("payload for NRS"),
-      userSubmissionTimestamp = timeStamp.toString,
-      identityData = testNrsIdentityData,
-      userAuthToken = testAuthToken,
-      headerData = Map(),
-      searchKeys = Map("ern" -> "123")
-    )
-
-    val encodedMessage  = Base64.getEncoder.encodeToString("<IE815>test</IE815>".getBytes(StandardCharsets.UTF_8))
-    val testNrsPayload  = NrsPayload(encodedMessage, testNrsMetadata)
-    val testNrsWorkItem = NrsSubmissionWorkItem(testNrsPayload)
-    val testWorkItem    = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
-
     "if the connector call takes less than 1 second to finish, should take at least 1 second to finish" in {
 
       when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
+      when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
+        .thenReturn(Future.successful(Some(testWorkItem)))
       when(mockNrsWorkItemRepository.completeAndDelete(any)).thenReturn(Future(true))
 
       val timeBefore = System.currentTimeMillis
-      service.submitNrsThrottled(testWorkItem).futureValue
+      service.processSingleNrs().futureValue
       val timeAfter  = System.currentTimeMillis
 
       val timeTaken: Long = timeAfter - timeBefore
@@ -283,16 +273,26 @@ class NrsServiceNewSpec
         Done
       }
       when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(future)
+      when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
+        .thenReturn(Future.successful(Some(testWorkItem)))
       when(mockNrsWorkItemRepository.completeAndDelete(any)).thenReturn(Future(true))
 
       val timeBefore = System.currentTimeMillis
-      service.submitNrsThrottled(testWorkItem).futureValue
+      service.processSingleNrs().futureValue
       val timeAfter  = System.currentTimeMillis
 
       val timeTaken: Long = timeAfter - timeBefore
 
       timeTaken.toInt must be >= 1400
       timeTaken.toInt must be < 1600
+    }
+    "return false if there was nothing in the repository to process" in {
+
+      when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
+        .thenReturn(Future.successful(None))
+
+      val result = await(service.processSingleNrs())
+      result mustBe false
     }
   }
 

@@ -202,12 +202,12 @@ class NrsServiceNew @Inject() (
     nrsWorkItemRepository
       .pullOutstanding(now, now)
       .flatMap {
-        case Some(wi) => submitNrs(wi).map(_ => true)
+        case Some(wi) => submitNrsThrottled(wi).map(_ => true)
         case None     => Future.successful(false)
       }
   }
 
-  def submitNrsThrottled(workItem: WorkItem[NrsSubmissionWorkItem])(implicit hc: HeaderCarrier): Future[Done] =
+  private def submitNrsThrottled(workItem: WorkItem[NrsSubmissionWorkItem])(implicit hc: HeaderCarrier): Future[Done] =
     takeAtLeastXTime(submitNrs(workItem), nrsThrottleDuration)
 
   private def takeAtLeastXTime[A](f: => Future[A], duration: FiniteDuration): Future[A] = {

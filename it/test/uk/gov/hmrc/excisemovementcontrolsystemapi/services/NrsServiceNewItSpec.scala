@@ -160,7 +160,7 @@ class NrsServiceNewItSpec extends PlaySpec
       "not do anything, and not call NRS even if there is an item to process" in {
 
         // Force the lock to be taken prior to running the test
-        lockRepository.takeLock(lockId,"blah", 60.seconds)
+        lockRepository.takeLock(lockId, "owner", 60.seconds)
 
         insert(workItem1).futureValue
 
@@ -171,7 +171,7 @@ class NrsServiceNewItSpec extends PlaySpec
       "not do anything, and not call NRS even if there are many items to process" in {
 
         // Force the lock to be taken prior to running the test
-        lockRepository.takeLock(lockId,"blah", 60.seconds)
+        lockRepository.takeLock(lockId, "owner", 60.seconds)
 
         insert(workItem1).futureValue
         insert(workItem2).futureValue
@@ -183,7 +183,7 @@ class NrsServiceNewItSpec extends PlaySpec
       "not do anything, and not call NRS if there are zero items to process" in {
 
         // Force the lock to be taken prior to running the test
-        lockRepository.takeLock(lockId,"blah", 60.seconds)
+        lockRepository.takeLock(lockId, "owner", 60.seconds)
 
         service.processAllWithLock().futureValue mustBe Done
 
