@@ -20,7 +20,7 @@ import com.codahale.metrics.{Counter, Timer}
 import org.apache.pekko.actor.ActorSystem
 import play.api.Logging
 import play.api.inject.ApplicationLifecycle
-import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.{MetricsReportingJob, MiscodedMovementsCorrectingJob, MovementsCorrectingJob, NrsSubmissionJob, PollingNewMessagesJob, PushNotificationJob, ScheduledJob}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.{MetricsReportingJob, MovementsCorrectingJob, NrsSubmissionJob, PollingNewMessagesJob, PushNotificationJob, ScheduledJob}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.{Clock, Duration}
@@ -36,7 +36,6 @@ class JobScheduler @Inject() (
   applicationLifecycle: ApplicationLifecycle,
   metricsJob: MetricsReportingJob,
   movementsCorrectingJob: MovementsCorrectingJob,
-  miscodedMovementsCorrectingJob: MiscodedMovementsCorrectingJob,
   nrsSubmissionJob: NrsSubmissionJob,
   actorSystem: ActorSystem,
   metrics: Metrics,
@@ -49,7 +48,6 @@ class JobScheduler @Inject() (
     pushNotificationJob,
     metricsJob,
     movementsCorrectingJob,
-    miscodedMovementsCorrectingJob,
     nrsSubmissionJob
   ).filter(_.enabled)
 

@@ -20,12 +20,12 @@ import cats.implicits.toFunctorOps
 import org.apache.pekko.Done
 import org.bson.conversions.Bson
 import org.mongodb.scala.model.Filters._
-import org.mongodb.scala.model.{InsertManyOptions, _}
+import org.mongodb.scala.model._
 import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{MiscodedMovement, Movement, ProblemMovement, Total}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, Mdc}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.Codecs.JsonOps
@@ -54,8 +54,7 @@ class MovementRepository @Inject() (
         Codecs.playFormatCodec(ErnAndLastReceived.format),
         Codecs.playFormatCodec(MessageNotification.format),
         Codecs.playFormatCodec(ProblemMovement.format),
-        Codecs.playFormatCodec(Total.format),
-        Codecs.playFormatCodec(MiscodedMovement.format)
+        Codecs.playFormatCodec(Total.format)
       ),
       replaceIndexes = false
     ) {
@@ -313,27 +312,6 @@ class MovementRepository @Inject() (
         )
       )
       .headOption()
-
-  def getMiscodedMovements(): Future[Seq[MiscodedMovement]] =
-    collection
-      .find[MiscodedMovement](
-        Filters.and(
-          Filters.exists("messages.recipient", exists = true),
-          Filters.regex("messages.encodedMessage", "^PElFODAxVHlwZS")
-        )
-      )
-      .projection(Projections.fields(Projections.include("_id")))
-      .toFuture()
-
-  def getCountOfMiscodedMovements(): Future[Long] =
-    collection
-      .countDocuments(
-        Filters.and(
-          Filters.exists("messages.recipient", exists = true),
-          Filters.regex("messages.encodedMessage", "^PElFODAxVHlwZS")
-        )
-      )
-      .toFuture()
 }
 
 object MovementRepository {

@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
-import generated.IE801Type
 import org.mockito.MockitoSugar.when
 import org.mongodb.scala.model.Filters
 import org.scalactic.source.Position
@@ -29,20 +28,15 @@ import org.slf4j.MDC
 import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import scalaxb.CanWriteXML
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessageGeneratorFactory}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes.IE801
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE801Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository.MessageNotification
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, MiscodedMovement, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, DefaultPlayMongoRepositorySupport}
 
-import java.time.{Instant, LocalDateTime, ZoneOffset}
+import java.time._
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
@@ -1079,222 +1073,6 @@ class MovementRepositoryItSpec
     }
 
     mustPreserveMdc(repository.addBoxIdToMessages("recipient1", "boxId3"))
-  }
-
-  "getMiscodedMovements" should {
-
-    val utils          = new EmcsUtils
-    val messageFactory = IEMessageFactory()
-
-    def formatXmlIncorrectly[A, B <: IEMessage with ({ val obj: A })](ern: String, params: MessageParams)(implicit
-      ev: CanWriteXML[A]
-    ): String =
-      utils.encode(
-        scalaxb
-          .toXML(
-            messageFactory
-              .createFromXml(
-                params.messageType.value,
-                XmlMessageGeneratorFactory.generate(ern, params)
-              )
-              .asInstanceOf[B]
-              .obj,
-            s"${params.messageType.value}Type",
-            generated.defaultScope
-          )
-          .toString
-      )
-
-    def formatXmlCorrectly[A, B <: IEMessage with ({ val obj: A })](ern: String, params: MessageParams)(implicit
-      ev: CanWriteXML[A]
-    ): String =
-      utils.encode(
-        scalaxb
-          .toXML(
-            messageFactory
-              .createFromXml(
-                params.messageType.value,
-                XmlMessageGeneratorFactory.generate(ern, params)
-              )
-              .asInstanceOf[B]
-              .obj,
-            params.messageType.value,
-            generated.defaultScope
-          )
-          .toString
-      )
-
-    "return any movements where they have a message which is badly encoded" in {
-
-      val now = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-
-      val lrn1 = "lrn1"
-      val arc1 = "arc1"
-      val lrn2 = "lrn2"
-      val arc2 = "arc2"
-
-      val consignor = "consignor"
-      val consignee = "consignee"
-
-      val badIe801  = formatXmlIncorrectly[IE801Type, IE801Message](
-        consignor,
-        MessageParams(
-          IE801,
-          "XI000001",
-          consigneeErn = Some(consignee),
-          localReferenceNumber = Some(lrn1),
-          administrativeReferenceCode = Some(arc1)
-        )
-      )
-      val goodIe801 = formatXmlCorrectly[IE801Type, IE801Message](
-        consignor,
-        MessageParams(
-          IE801,
-          "XI000002",
-          consigneeErn = Some(consignee),
-          localReferenceNumber = Some(lrn2),
-          administrativeReferenceCode = Some(arc2)
-        )
-      )
-
-      val movement1 = Movement(
-        boxId = None,
-        localReferenceNumber = lrn1,
-        consignorId = consignor,
-        consigneeId = Some(consignee),
-        administrativeReferenceCode = Some(arc1),
-        lastUpdated = now.minus(1, ChronoUnit.DAYS),
-        messages = Seq(
-          Message(badIe801, "IE801", "XI000001", consignor, Set.empty, now.minus(4, ChronoUnit.DAYS))
-        )
-      )
-
-      val movement2 = Movement(
-        boxId = None,
-        localReferenceNumber = lrn2,
-        consignorId = consignor,
-        consigneeId = Some(consignee),
-        administrativeReferenceCode = Some(arc2),
-        lastUpdated = now.minus(1, ChronoUnit.DAYS),
-        messages = Seq(
-          Message(goodIe801, "IE801", "XI000002", consignor, Set.empty, now.minus(4, ChronoUnit.DAYS))
-        )
-      )
-
-      insert(movement1).futureValue
-      insert(movement2).futureValue
-
-      val result = repository.getMiscodedMovements().futureValue
-
-      result must contain only MiscodedMovement(movement1._id)
-    }
-  }
-
-  "getCountOfMiscodedMessages" should {
-
-    val utils          = new EmcsUtils
-    val messageFactory = IEMessageFactory()
-
-    def formatXmlIncorrectly[A, B <: IEMessage with ({ val obj: A })](ern: String, params: MessageParams)(implicit
-      ev: CanWriteXML[A]
-    ): String =
-      utils.encode(
-        scalaxb
-          .toXML(
-            messageFactory
-              .createFromXml(
-                params.messageType.value,
-                XmlMessageGeneratorFactory.generate(ern, params)
-              )
-              .asInstanceOf[B]
-              .obj,
-            s"${params.messageType.value}Type",
-            generated.defaultScope
-          )
-          .toString
-      )
-
-    def formatXmlCorrectly[A, B <: IEMessage with ({ val obj: A })](ern: String, params: MessageParams)(implicit
-      ev: CanWriteXML[A]
-    ): String =
-      utils.encode(
-        scalaxb
-          .toXML(
-            messageFactory
-              .createFromXml(
-                params.messageType.value,
-                XmlMessageGeneratorFactory.generate(ern, params)
-              )
-              .asInstanceOf[B]
-              .obj,
-            params.messageType.value,
-            generated.defaultScope
-          )
-          .toString
-      )
-
-    "return the count of how many movements have badly encoded messages" in {
-
-      val now = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-
-      val lrn1 = "lrn1"
-      val arc1 = "arc1"
-      val lrn2 = "lrn2"
-      val arc2 = "arc2"
-
-      val consignor = "consignor"
-      val consignee = "consignee"
-
-      val badIe801  = formatXmlIncorrectly[IE801Type, IE801Message](
-        consignor,
-        MessageParams(
-          IE801,
-          "XI000001",
-          consigneeErn = Some(consignee),
-          localReferenceNumber = Some(lrn1),
-          administrativeReferenceCode = Some(arc1)
-        )
-      )
-      val goodIe801 = formatXmlCorrectly[IE801Type, IE801Message](
-        consignor,
-        MessageParams(
-          IE801,
-          "XI000002",
-          consigneeErn = Some(consignee),
-          localReferenceNumber = Some(lrn2),
-          administrativeReferenceCode = Some(arc2)
-        )
-      )
-
-      val movement1 = Movement(
-        boxId = None,
-        localReferenceNumber = lrn1,
-        consignorId = consignor,
-        consigneeId = Some(consignee),
-        administrativeReferenceCode = Some(arc1),
-        lastUpdated = now.minus(1, ChronoUnit.DAYS),
-        messages = Seq(
-          Message(badIe801, "IE801", "XI000001", consignor, Set.empty, now.minus(4, ChronoUnit.DAYS))
-        )
-      )
-
-      val movement2 = Movement(
-        boxId = None,
-        localReferenceNumber = lrn2,
-        consignorId = consignor,
-        consigneeId = Some(consignee),
-        administrativeReferenceCode = Some(arc2),
-        lastUpdated = now.minus(1, ChronoUnit.DAYS),
-        messages = Seq(
-          Message(goodIe801, "IE801", "XI000002", consignor, Set.empty, now.minus(4, ChronoUnit.DAYS))
-        )
-      )
-
-      insert(movement1).futureValue
-      insert(movement2).futureValue
-
-      repository.getCountOfMiscodedMovements().futureValue mustEqual 1
-    }
   }
 
   private def insertMovement(movement: Movement) =
