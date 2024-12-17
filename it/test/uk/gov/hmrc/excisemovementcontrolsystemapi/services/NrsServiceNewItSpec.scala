@@ -19,7 +19,9 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.apache.pekko.Done
 import org.bson.types.ObjectId
+import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar
+import org.mockito.MockitoSugar.{when, reset => mockitoSugarReset}
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatest.time.SpanSugar.convertIntToGrainOfTime
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, EitherValues}
@@ -43,7 +45,7 @@ import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.time.Instant
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 class NrsServiceNewItSpec extends PlaySpec
   with CleanMongoCollectionSupport
@@ -112,23 +114,27 @@ class NrsServiceNewItSpec extends PlaySpec
     )
     .build()
 
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    wireMockServer.resetAll()
+  }
+
   override protected val repository: NRSWorkItemRepository = app.injector.instanceOf[NRSWorkItemRepository]//  private val dateTimeService = mock[DateTimeService]
 
   val lockRepository: MongoLockRepository = app.injector.instanceOf[MongoLockRepository]
 
   private val service = app.injector.instanceOf[NrsServiceNew]
 
+  val url = "/submission"
+  wireMockServer.stubFor(
+    post(urlEqualTo(url))
+      .willReturn(
+        aResponse()
+          .withStatus(ACCEPTED)
+      )
+  )
+
   "processAllWithLock" should {
-
-    val url = "/submission"
-    wireMockServer.stubFor(
-      post(urlEqualTo(url))
-        .willReturn(
-          aResponse()
-            .withStatus(ACCEPTED)
-        )
-    )
-
     "when a lock is available" should {
       "call NRS once if there is one submission to process" in {
 
@@ -191,6 +197,4 @@ class NrsServiceNewItSpec extends PlaySpec
       }
     }
   }
-
-
 }
