@@ -18,10 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.apache.pekko.Done
-import org.bson.types.ObjectId
-import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar
-import org.mockito.MockitoSugar.{when, reset => mockitoSugarReset}
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatest.time.SpanSugar.convertIntToGrainOfTime
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, EitherValues}
@@ -40,16 +37,13 @@ import uk.gov.hmrc.http.test.WireMockSupport
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
-import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, DefaultPlayMongoRepositorySupport}
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
-import uk.gov.hmrc.mongo.workitem.WorkItem
+import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
 
 import java.time.Instant
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class NrsServiceNewItSpec extends PlaySpec
   with CleanMongoCollectionSupport
-  with DefaultPlayMongoRepositorySupport[WorkItem[NrsSubmissionWorkItem]]
   with EitherValues
   with IntegrationPatience
   with BeforeAndAfterEach
@@ -66,7 +60,8 @@ class NrsServiceNewItSpec extends PlaySpec
 
   private val lockId = "nrs-lock"
 
-  when(dateTimeService.timestamp()).thenReturn(Instant.now())
+  private val now = Instant.now()
+  when(dateTimeService.timestamp()).thenReturn(now)
 
   private val timestamp = dateTimeService.timestamp()
   private val nrsMetadata = NrsMetadata(
@@ -80,21 +75,8 @@ class NrsServiceNewItSpec extends PlaySpec
     headerData = Map(),
     searchKeys = Map("ern" -> "123")
   )
-  private val nrsPayLoad = NrsPayload("encodepayload", nrsMetadata)
-  private val workItem1 = WorkItem(id = new ObjectId(),
-    receivedAt = timestamp.minusSeconds(60),
-    updatedAt = timestamp.minusSeconds(60),
-    availableAt = timestamp.minusSeconds(60),
-    status = ToDo,
-    failureCount = 0,
-    NrsSubmissionWorkItem(nrsPayLoad))
-  private val workItem2 = WorkItem(id = new ObjectId(),
-    receivedAt = timestamp.minusSeconds(60),
-    updatedAt = timestamp.minusSeconds(60),
-    availableAt = timestamp.minusSeconds(60),
-    status = ToDo,
-    failureCount = 0,
-    NrsSubmissionWorkItem(nrsPayLoad))
+  private val nrsPayLoad1 = NrsPayload("encodepayload1", nrsMetadata)
+  private val nrsPayLoad2 = NrsPayload("encodepayload2", nrsMetadata)
 
   override def fakeApplication(): Application = GuiceApplicationBuilder()
     .overrides(
@@ -110,22 +92,19 @@ class NrsServiceNewItSpec extends PlaySpec
       "microservice.services.nrs.max-reset-timeout" -> "30 seconds",
       "microservice.services.nrs.exponential-backoff-factor" -> 2.0,
       "microservice.services.nrs.lock-service-ttl" -> "10 minutes",
-      "microservice.services.nrs.nrs-throttle-duration" -> "1 second"
+      "microservice.services.nrs.nrs-throttle-duration" -> "0.01 second"
     )
     .build()
 
-  override def beforeEach(): Unit = {
-    super.beforeEach()
-    wireMockServer.resetAll()
-  }
 
-  override protected val repository: NRSWorkItemRepository = app.injector.instanceOf[NRSWorkItemRepository]//  private val dateTimeService = mock[DateTimeService]
+  val repository: NRSWorkItemRepository = app.injector.instanceOf[NRSWorkItemRepository]
 
   val lockRepository: MongoLockRepository = app.injector.instanceOf[MongoLockRepository]
 
   private val service = app.injector.instanceOf[NrsServiceNew]
 
   val url = "/submission"
+
   wireMockServer.stubFor(
     post(urlEqualTo(url))
       .willReturn(
@@ -134,21 +113,29 @@ class NrsServiceNewItSpec extends PlaySpec
       )
   )
 
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    wireMockServer.resetAll()
+    repository.initialised.futureValue
+    lockRepository.initialised.futureValue
+  }
+
   "processAllWithLock" should {
     "when a lock is available" should {
       "call NRS once if there is one submission to process" in {
 
-        insert(workItem1).futureValue
+        repository.pushNew(NrsSubmissionWorkItem(nrsPayLoad1), availableAt = now.minusSeconds(20)).futureValue
 
         service.processAllWithLock().futureValue mustBe Done
 
         wireMockServer.verify(1, postRequestedFor(urlMatching(url)))
 
       }
+
       "call NRS multiple times if there are more than one submission to process" in {
 
-        insert(workItem1).futureValue
-        insert(workItem2).futureValue
+        repository.pushNew(NrsSubmissionWorkItem(nrsPayLoad1), availableAt = now.minusSeconds(20)).futureValue
+        repository.pushNew(NrsSubmissionWorkItem(nrsPayLoad2), availableAt = now.minusSeconds(20)).futureValue
 
         service.processAllWithLock().futureValue mustBe Done
 
@@ -168,7 +155,7 @@ class NrsServiceNewItSpec extends PlaySpec
         // Force the lock to be taken prior to running the test
         lockRepository.takeLock(lockId, "owner", 60.seconds)
 
-        insert(workItem1).futureValue
+        repository.pushNew(NrsSubmissionWorkItem(nrsPayLoad1), availableAt = now.minusSeconds(20)).futureValue
 
         service.processAllWithLock().futureValue mustBe Done
 
@@ -179,8 +166,8 @@ class NrsServiceNewItSpec extends PlaySpec
         // Force the lock to be taken prior to running the test
         lockRepository.takeLock(lockId, "owner", 60.seconds)
 
-        insert(workItem1).futureValue
-        insert(workItem2).futureValue
+        repository.pushNew(NrsSubmissionWorkItem(nrsPayLoad1), availableAt = now.minusSeconds(20)).futureValue
+        repository.pushNew(NrsSubmissionWorkItem(nrsPayLoad2), availableAt = now.minusSeconds(20)).futureValue
 
         service.processAllWithLock().futureValue mustBe Done
 
