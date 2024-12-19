@@ -16,21 +16,22 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-import org.mockito.ArgumentMatchersSugar.any
+import cats.data.NonEmptySeq
+import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, times, verify, when}
 import org.scalatest.BeforeAndAfterEach
-import org.scalatest.concurrent.Futures.whenReady
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.Logger
-import play.api.test.{FakeHeaders, FakeRequest}
+import play.api.libs.json.JsObject
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeXmlParsers
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{MessageSubmittedDetails, UserDetails}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE704Message, IE815Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
@@ -98,62 +99,96 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
     }
   }
 
-  "messageSubmitted" when {
-    "there is a movement to be audited" should {
-      val request = createRequest(Seq.empty[(String, String)])
-      "post an event if newAuditing feature switch is true" in {
-        val sut = new Harness(auditConnector, appConfig)
-        val result = sut.messageSubmitted(IE815Message.createFromXml(IE815), testMovement, true, "", request)
+  val service = new AuditServiceImpl(auditConnector, appConfig)
 
-        await(result.value)
-        verify(auditConnector, times(1)).sendExtendedEvent(any)(any, any)
-      }
+  "messageSubmittedNoMovement" should {
 
-      "silently returns right on error with log" in {
-        when(auditConnector.sendExtendedEvent(any)(any, any))
-          .thenReturn(Future.successful(AuditResult.Failure("test", None)))
+    val request = createRequest(Seq.empty[(String, String)])
 
-        val sut = new Harness(auditConnector, appConfig)
-        val result = sut.messageSubmitted(IE815Message.createFromXml(IE815), testMovement, true, "", request)
+    "post an event if newAuditing feature switch is true" in {
 
-        await(result.value) equals Right(())
-      }
+      val message = IE815Message.createFromXml(IE815)
 
-      "post no event if newAuditing feature switch is false" in {
-        when(appConfig.newAuditingEnabled).thenReturn(false)
-        val sut = new Harness(auditConnector, appConfig)
-        val result = sut.messageSubmitted(IE815Message.createFromXml(IE815), testMovement, true, "", request)
+      val expectedMessageSubmittedDetails = MessageSubmittedDetails(
+        "IE815",
+        "DraftMovement",
+        "LRNQA20230909022221",
+        None,
+        None,
+        "GBWK002281023",
+        Some("GBWKQOZ8OVLYR"),
+        true,
+        "6de1b822562c43fb9220d236e487c920",
+        Some("correlationId"),
+        UserDetails("", ""),
+        NonEmptySeq.of("123", "456"),
+        message.toJsObject
+      )
 
-        await(result.value)
-        verify(auditConnector, times(0)).sendExtendedEvent(any)(any, any)
-      }
+      service.messageSubmittedNoMovement(message, true, "correlationId", request)
+
+      verify(auditConnector, times(1))
+        .sendExplicitAudit(eqTo("MessageSubmitted"), eqTo(expectedMessageSubmittedDetails))(eqTo(hc), any, any)
     }
+
+    "post no event if newAuditing feature switch is false" in {
+
+      when(appConfig.newAuditingEnabled).thenReturn(false)
+
+      service.messageSubmittedNoMovement(IE815Message.createFromXml(IE815), true, "correlationId", request)
+
+      verify(auditConnector, times(0)).sendExplicitAudit(any[String], any[JsObject])(any, any)
+    }
+
+  }
+
+  "messageSubmitted" should {
     "there is no movement to be audited" should {
       val request = createRequest(Seq.empty[(String, String)])
       "post an event if newAuditing feature switch is true" in {
-        val sut = new Harness(auditConnector, appConfig)
-        val result = sut.messageSubmitted(IE815Message.createFromXml(IE815), testMovement, true, "", request)
 
-        await(result.value)
-        verify(auditConnector, times(1)).sendExtendedEvent(any)(any, any)
-      }
+        val message    = IE704Message.createFromXml(IE704)
+        val movementId = "4bf36235-4816-464a-b3f3-71dbd3a30095"
 
-      "silently returns right on error with log" in {
-        when(auditConnector.sendExtendedEvent(any)(any, any))
-          .thenReturn(Future.successful(AuditResult.Failure("test", None)))
+        val movement = Movement(
+          movementId,
+          Some("boxId"),
+          "lrn",
+          "consignorId",
+          Some("consigneeId"),
+          Some("arc1"),
+          Instant.now(),
+          Seq.empty
+        )
 
-        val sut = new Harness(auditConnector, appConfig)
-        val result = sut.messageSubmitted(IE815Message.createFromXml(IE815), testMovement, true, "", request)
+        val expectedMessageSubmittedDetails = MessageSubmittedDetails(
+          "IE704",
+          "Refused",
+          "lrn",
+          Some("arc1"),
+          Some("4bf36235-4816-464a-b3f3-71dbd3a30095"),
+          "consignorId",
+          Some("consigneeId"),
+          true,
+          "XI000001",
+          Some("correlationId"),
+          UserDetails("", ""),
+          NonEmptySeq.of("123", "456"),
+          message.toJsObject
+        )
 
-        await(result.value) equals Right(())
+        service.messageSubmitted(message, movement, true, "correlationId", request)
+
+        verify(auditConnector, times(1))
+          .sendExplicitAudit(eqTo("MessageSubmitted"), eqTo(expectedMessageSubmittedDetails))(any, any, any)
+
       }
 
       "post no event if newAuditing feature switch is false" in {
         when(appConfig.newAuditingEnabled).thenReturn(false)
-        val sut = new Harness(auditConnector, appConfig)
-        val result = sut.messageSubmitted(IE815Message.createFromXml(IE815), testMovement, true, "", request)
 
-        await(result.value)
+        service.messageSubmitted(IE815Message.createFromXml(IE815), testMovement, true, "", request)
+
         verify(auditConnector, times(0)).sendExtendedEvent(any)(any, any)
       }
     }

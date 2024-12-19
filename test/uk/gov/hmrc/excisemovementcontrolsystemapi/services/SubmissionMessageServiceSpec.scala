@@ -35,7 +35,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnSubmissionRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.Instant

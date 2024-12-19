@@ -101,7 +101,6 @@ class DraftExciseMovementControllerSpec
     when(appConfig.pushNotificationsEnabled).thenReturn(true)
     when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(auditService.auditMessage(any[IEMessage])(any)).thenReturn(EitherT.fromEither(Right(())))
-    when(auditService.messageSubmitted(any, any, any, any, any)(any)).thenReturn(EitherT.fromEither(Right(())))
     when(ernSubmissionRepository.save(any)).thenReturn(Future.successful(Done))
   }
 
@@ -192,8 +191,8 @@ class DraftExciseMovementControllerSpec
 
       await(createWithSuccessfulAuth.submit(request))
 
-      verify(auditService).auditMessage(any[IEMessage])(any)
-      verify(auditService).messageSubmitted(any, any, any, any, any)(any)
+      verify(auditService, times(1)).auditMessage(any[IEMessage])(any)
+      verify(auditService, times(1)).messageSubmitted(any, any, any, any, any)(any)
 
     }
 
@@ -203,8 +202,8 @@ class DraftExciseMovementControllerSpec
 
       await(createWithSuccessfulAuth.submit(request))
 
-      verify(auditService).auditMessage(any, any)(any)
-      verify(auditService).draftMovementSubmitted(any, any, any, any)(any)
+      verify(auditService, times(1)).auditMessage(any, any)(any)
+      verify(auditService, times(1)).messageSubmittedNoMovement(any, any, any, any)(any)
 
     }
 
@@ -213,8 +212,8 @@ class DraftExciseMovementControllerSpec
 
       await(createWithSuccessfulAuth.submit(request))
 
-      verify(auditService).auditMessage(any, any)(any)
-      verify(auditService).draftMovementSubmitted(any, any, any, any)(any)
+      verify(auditService, times(1)).auditMessage(any, any)(any)
+      verify(auditService, times(1)).messageSubmittedNoMovement(any, any, any, any)(any)
     }
 
     "adds the boxId to the BoxIdRepository for consignor" in {
