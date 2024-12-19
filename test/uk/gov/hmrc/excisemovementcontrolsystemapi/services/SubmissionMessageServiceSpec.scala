@@ -30,11 +30,11 @@ import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EISErrorResponseDetails
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnSubmissionRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.Instant
@@ -69,8 +69,8 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
     )
 
   private val ern              = "ern"
-  private val enrolmentRequest = EnrolmentRequest(fakeRequest, Set(ern), "123")
-  private val request          = ParsedXmlRequest(enrolmentRequest, message, Set(ern), "123")
+  private val enrolmentRequest = EnrolmentRequest(fakeRequest, Set(ern), UserDetails("abc", "123"))
+  private val request          = ParsedXmlRequest(enrolmentRequest, message, Set(ern), UserDetails("abc", "123"))
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -132,7 +132,8 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
       }
     }
     "submission fails"    should {
-      "return an EISErrorResponsePresentation" in {
+      //TODO: EISErrorResponseDetails!!!!!!
+      "return an EISErrorResponseDetails" in {
         when(ernSubmissionRepository.save(any)).thenReturn(Future.successful(Done))
 
         val testError =

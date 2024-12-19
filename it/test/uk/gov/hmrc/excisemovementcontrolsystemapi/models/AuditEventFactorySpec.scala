@@ -18,12 +18,18 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
+import play.api.http.HeaderNames
+import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, Auditing}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, Auditing, UserDetails}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.writes.testObjects._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.model.ExtendedDataEvent
+
+import java.util.UUID
+import scala.xml.Elem
 
 class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with TestXml {
 
@@ -49,7 +55,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
 
   case class TestType(testObject: TestMessageType, message: IEMessage) {
 
-    "successfully converted to success audit event" in {
+    "Old auditing should successfully converted to success audit event" in {
 
       val result         = AuditEventFactory.createMessageAuditEvent(message, None)
       val expectedResult = ExtendedDataEvent(
@@ -63,7 +69,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       result.detail mustBe expectedResult.detail
     }
 
-    "converted to failure audit event" in {
+    "Old auditing should converted to failure audit event" in {
       val testMessage    = "Test Message"
       val result         = AuditEventFactory.createMessageAuditEvent(message, Some(testMessage))
       val expectedResult = ExtendedDataEvent(
@@ -77,4 +83,29 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       result.detail mustBe expectedResult.detail
     }
   }
+
+//  "new auditing factory" - {
+//    "should do stuff" in {
+//
+//      val testCorrelationid = UUID.randomUUID()
+//
+//      val result         = AuditEventFactory.createDraftMovementSubmitted(
+//        IE815Message.createFromXml(IE815),
+//        true,
+//        testCorrelationid.toString,
+//        UserDetails("gatewayID", "groupid"),
+//        Set("ern1")
+//      )
+//
+//      val expectedResult = ExtendedDataEvent(
+//        auditSource = "excise-movement-control-system-api",
+//        auditType = message.messageAuditType.name,
+//        detail = testObject.auditEvent
+//      )
+//
+//      result.auditSource mustBe "excise-movement-control-system-api"
+//      result.auditType mustBe "DraftMovementSubmitted"
+//      result.detail mustBe
+//    }
+//  }
 }

@@ -20,6 +20,7 @@ import play.api.mvc.Results.Forbidden
 import play.api.mvc.{AnyContent, BodyParser, Request, Result}
 import play.api.test.Helpers.stubBodyParser
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.AuthAction
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -33,7 +34,7 @@ trait FakeAuthentication {
     override def parser: BodyParser[AnyContent] = stubBodyParser()
 
     override def invokeBlock[A](request: Request[A], block: EnrolmentRequest[A] => Future[Result]): Future[Result] =
-      block(EnrolmentRequest(request, ern, "testInternalId"))
+      block(EnrolmentRequest(request, ern, UserDetails("testInternalId", "testGroupId")))
 
     override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global
   }
@@ -43,7 +44,7 @@ trait FakeAuthentication {
     override def parser: BodyParser[AnyContent] = stubBodyParser()
 
     override def invokeBlock[A](request: Request[A], block: EnrolmentRequest[A] => Future[Result]): Future[Result] =
-      block(EnrolmentRequest(request, erns, "testInternalId"))
+      block(EnrolmentRequest(request, erns, UserDetails("testInternalId", "testGroupId")))
 
     override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global
   }
