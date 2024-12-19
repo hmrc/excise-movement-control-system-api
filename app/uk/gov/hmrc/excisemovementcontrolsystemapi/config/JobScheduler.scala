@@ -27,6 +27,7 @@ import java.time.{Clock, Duration}
 import java.util.UUID
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
 @Singleton
@@ -77,9 +78,9 @@ class JobScheduler @Inject() (
               logger.info(s"Completed job ${job.name} with runID $runId in ${duration.toSeconds}s")
             case Success(ScheduledJob.Result.Cancelled) =>
               logger.warn(s"Cancelled job ${job.name} with runID $runId after ${duration.toSeconds}")
-            case Failure(throwable)                     =>
-              logger.error(
-                s"Exception running job ${job.name} with runID $runId after ${duration.toSeconds}s",
+            case Failure(NonFatal(throwable))           =>
+              logger.warn(
+                s"NonFatal Exception running job ${job.name} with runID $runId after ${duration.toSeconds}s",
                 throwable
               )
           }
