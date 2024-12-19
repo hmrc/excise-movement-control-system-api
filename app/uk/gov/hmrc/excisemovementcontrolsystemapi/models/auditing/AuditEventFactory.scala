@@ -41,13 +41,14 @@ object AuditEventFactory extends Auditing {
     )
   }
 
-  def createDraftMovementSubmitted(
+  def createDraftMovementAuditDetail(
     message: IE815Message,
     submittedToCore: Boolean,
     correlationId: String,
-    request: ParsedXmlRequest[NodeSeq]
-  )(implicit hc: HeaderCarrier): ExtendedDataEvent = {
-    val messageSubmitted = MessageSubmittedDetails(
+    userDetails: UserDetails,
+    erns: Set[String]
+  ): MessageSubmittedDetails =
+    MessageSubmittedDetails(
       message.messageType,
       message.messageAuditType.name,
       message.localReferenceNumber,
@@ -58,49 +59,33 @@ object AuditEventFactory extends Auditing {
       submittedToCore,
       message.messageIdentifier,
       Some(correlationId),
-      request.userDetails,
-      NonEmptySeq(request.erns.head, request.erns.tail.toList),
+      userDetails,
+      NonEmptySeq(erns.head, erns.tail.toList),
       message.toJsObject
     )
-
-    ExtendedDataEvent(
-      auditSource = auditSource,
-      auditType = "DraftMovementSubmitted",
-      tags = hc.toAuditTags(),
-      detail = Json.toJsObject(messageSubmitted)
-    )
-  }
 
   def createMessageSubmitted(
     message: IEMessage,
     movement: Movement,
     submittedToCore: Boolean,
     correlationId: String,
-    request: ParsedXmlRequest[NodeSeq]
-  )(implicit hc: HeaderCarrier): ExtendedDataEvent = {
-
-    val messageSubmitted =
-      MessageSubmittedDetails(
-        message.messageType,
-        message.messageAuditType.name,
-        movement.localReferenceNumber,
-        movement.administrativeReferenceCode,
-        Some(movement._id),
-        movement.consignorId,
-        movement.consigneeId,
-        submittedToCore,
-        message.messageIdentifier,
-        Some(correlationId),
-        request.userDetails,
-        NonEmptySeq(request.erns.head, request.erns.tail.toList),
-        message.toJsObject
-      )
-
-    ExtendedDataEvent(
-      auditSource = auditSource,
-      auditType = "MessageSubmitted",
-      tags = hc.toAuditTags(),
-      detail = Json.toJsObject(messageSubmitted)
+    userDetails: UserDetails,
+    erns: Set[String]
+  )(implicit hc: HeaderCarrier): MessageSubmittedDetails =
+    MessageSubmittedDetails(
+      message.messageType,
+      message.messageAuditType.name,
+      movement.localReferenceNumber,
+      movement.administrativeReferenceCode,
+      Some(movement._id),
+      movement.consignorId,
+      movement.consigneeId,
+      submittedToCore,
+      message.messageIdentifier,
+      Some(correlationId),
+      userDetails,
+      NonEmptySeq(erns.head, erns.tail.toList),
+      message.toJsObject
     )
-  }
+
 }

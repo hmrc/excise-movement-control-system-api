@@ -73,7 +73,7 @@ class DraftExciseMovementController @Inject() (
           val (response, movement, boxId) = success
 
           auditService.auditMessage(request.ieMessage).value
-          auditService.messageSubmitted(request.ieMessage, movement, true, response.emcsCorrelationId, request).value
+          auditService.messageSubmitted(request.ieMessage, movement, true, response.emcsCorrelationId, request)
 
           Accepted(
             Json.toJson(
@@ -101,7 +101,7 @@ class DraftExciseMovementController @Inject() (
       submissionMessageService.submit(request, ern).map {
         case Left(error)     =>
           auditService.auditMessage(message, "Failed to submit") //OLD auditing
-          auditService.draftMovementSubmitted(message, false, error.correlationId, request) //NEW auditing
+          auditService.messageSubmittedNoMovement(message, false, error.correlationId, request) //NEW auditing
           Left(
             Status(error.status)(
               Json.toJson(
@@ -141,7 +141,7 @@ class DraftExciseMovementController @Inject() (
     movementMessageService.saveNewMovement(newMovement).map {
       case Left(result)    =>
         auditService.auditMessage(message, "Failed to Save")
-        auditService.draftMovementSubmitted(message, true, submission.emcsCorrelationId, request)
+        auditService.messageSubmittedNoMovement(message, true, submission.emcsCorrelationId, request)
         Left(result)
       case Right(movement) =>
         Right(movement)

@@ -52,37 +52,45 @@ class AuditServiceImpl @Inject() (auditConnector: AuditConnector, appConfig: App
     submittedToCore: Boolean,
     correlationId: String,
     request: ParsedXmlRequest[NodeSeq]
-  )(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit] =
+  )(implicit hc: HeaderCarrier): Unit =
     if (appConfig.newAuditingEnabled) {
-      val event =
-        AuditEventFactory.createMessageSubmitted(message, movement, submittedToCore, correlationId, request)
-      auditEvent(event)
-    } else EitherT.fromEither(Right(()))
 
-  def draftMovementSubmitted(
+      val event = AuditEventFactory.createMessageSubmitted(
+        message,
+        movement,
+        submittedToCore,
+        correlationId,
+        request.userDetails,
+        request.erns
+      )
+
+      auditConnector.sendExplicitAudit("MessageSubmitted", event)
+    }
+
+  def messageSubmittedNoMovement(
     message: IE815Message,
     submittedToCore: Boolean,
     correlationId: String,
     request: ParsedXmlRequest[NodeSeq]
-  )(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit] =
+  )(implicit hc: HeaderCarrier): Unit =
     if (appConfig.newAuditingEnabled) {
-      val event =
-        AuditEventFactory.createDraftMovementSubmitted(message, submittedToCore, correlationId, request)
-      auditEvent(event)
-    } else EitherT.fromEither(Right(()))
 
-  private def auditEvent(event: ExtendedDataEvent)(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit] =
-    EitherT {
-      auditConnector.sendExtendedEvent(event).map {
-        case f: AuditResult.Failure => Right(logger.error(f.msg))
-        case _                      => Right(())
-      }
+      val event = AuditEventFactory.createDraftMovementAuditDetail(
+        message,
+        submittedToCore,
+        correlationId,
+        request.userDetails,
+        request.erns
+      )
+
+      auditConnector.sendExplicitAudit("MessageSubmitted", event)
     }
 
   private def auditMessage(message: IEMessage, failureOpt: Option[String])(implicit
     hc: HeaderCarrier
   ): EitherT[Future, Result, Unit] =
     EitherT {
+
       auditConnector.sendExtendedEvent(AuditEventFactory.createMessageAuditEvent(message, failureOpt)).map {
         case f: AuditResult.Failure => Right(logger.error(f.msg))
         case _                      => Right(())
@@ -90,7 +98,6 @@ class AuditServiceImpl @Inject() (auditConnector: AuditConnector, appConfig: App
     }
 }
 
-//TODO: Look at unwrapping the EitherT's
 @ImplementedBy(classOf[AuditServiceImpl])
 trait AuditService {
   def auditMessage(message: IEMessage)(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit]
@@ -101,11 +108,11 @@ trait AuditService {
     submittedToCore: Boolean,
     correlationId: String,
     request: ParsedXmlRequest[NodeSeq]
-  )(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit]
-  def draftMovementSubmitted(
+  )(implicit hc: HeaderCarrier): Unit
+  def messageSubmittedNoMovement(
     message: IE815Message,
     submittedToCore: Boolean,
     correlationId: String,
     request: ParsedXmlRequest[NodeSeq]
-  )(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit]
+  )(implicit hc: HeaderCarrier): Unit
 }

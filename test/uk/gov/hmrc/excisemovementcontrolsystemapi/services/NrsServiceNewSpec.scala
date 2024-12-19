@@ -45,7 +45,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUt
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier}
 import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{Failed, PermanentlyFailed, Succeeded, ToDo}
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{Failed, PermanentlyFailed, ToDo}
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.nio.charset.StandardCharsets

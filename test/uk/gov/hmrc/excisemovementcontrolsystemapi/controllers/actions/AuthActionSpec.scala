@@ -26,7 +26,7 @@ import play.api.libs.json.Json
 import play.api.mvc.Results.{Forbidden, Unauthorized}
 import play.api.mvc.{BodyParsers, Results}
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{GET, await, contentAsJson, contentAsString, defaultAwaitTimeout}
+import play.api.test.Helpers.{GET, await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.AffinityGroup.{Agent, Individual}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.AuthTestSupport
