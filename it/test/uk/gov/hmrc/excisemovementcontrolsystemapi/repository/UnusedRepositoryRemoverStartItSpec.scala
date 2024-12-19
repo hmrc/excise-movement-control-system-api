@@ -19,7 +19,6 @@ class UnusedRepositoryRemoverStartItSpec
     with BeforeAndAfterEach {
 
   implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
-  private lazy val remover: UnusedRepositoryRemover  = new UnusedRepositoryRemover(mongoComponent)
 
   override def fakeApplication(): Application = GuiceApplicationBuilder()
     .overrides(
