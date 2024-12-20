@@ -19,6 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 import play.api.mvc.Result
 import play.api.mvc.Results.BadRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ParseJsonAction
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ParsedPreValidateTraderETDSRequest, ParsedPreValidateTraderRequest}
@@ -33,7 +34,7 @@ trait FakeJsonParsers {
       Future.successful(
         Right(
           preValidateTrader.request.ParsedPreValidateTraderRequest(
-            EnrolmentRequest(request, Set("ern123"), "123"),
+            EnrolmentRequest(request, Set("ern123"), UserDetails("123", "abc")),
             getPreValidateTraderRequest
           )
         )
@@ -44,7 +45,7 @@ trait FakeJsonParsers {
     ): Future[Either[Result, ParsedPreValidateTraderETDSRequest[A]]] = Future.successful(
       Right(
         preValidateTrader.request.ParsedPreValidateTraderETDSRequest(
-          EnrolmentRequest(request, Set("ern123"), "123"),
+          EnrolmentRequest(request, Set("ern123"), UserDetails("123", "abc")),
           getPreValidateTraderETDSRequest
         )
       )

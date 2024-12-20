@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 import cats.data.NonEmptySeq
 import play.api.libs.json.Json
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
@@ -41,15 +41,38 @@ object AuditEventFactory extends Auditing {
     )
   }
 
+  def createDraftMovementAuditDetail(
+    message: IE815Message,
+    submittedToCore: Boolean,
+    correlationId: String,
+    userDetails: UserDetails,
+    erns: Set[String]
+  ): MessageSubmittedDetails =
+    MessageSubmittedDetails(
+      message.messageType,
+      message.messageAuditType.name,
+      message.localReferenceNumber,
+      None,
+      None,
+      message.consignorId,
+      message.consigneeId,
+      submittedToCore,
+      message.messageIdentifier,
+      Some(correlationId),
+      userDetails,
+      NonEmptySeq(erns.head, erns.tail.toList),
+      message.toJsObject
+    )
+
   def createMessageSubmitted(
     message: IEMessage,
     movement: Movement,
     submittedToCore: Boolean,
     correlationId: String,
-    request: ParsedXmlRequest[NodeSeq]
-  )(implicit hc: HeaderCarrier): ExtendedDataEvent = {
-
-    val messageSubmitted = MessageSubmittedDetails(
+    userDetails: UserDetails,
+    erns: Set[String]
+  )(implicit hc: HeaderCarrier): MessageSubmittedDetails =
+    MessageSubmittedDetails(
       message.messageType,
       message.messageAuditType.name,
       movement.localReferenceNumber,
@@ -60,16 +83,9 @@ object AuditEventFactory extends Auditing {
       submittedToCore,
       message.messageIdentifier,
       Some(correlationId),
-      UserDetails("", "", "", "", ""),
-      NonEmptySeq(request.erns.head, request.erns.tail.toList),
+      userDetails,
+      NonEmptySeq(erns.head, erns.tail.toList),
       message.toJsObject
     )
 
-    ExtendedDataEvent(
-      auditSource = auditSource,
-      auditType = "MessageSubmitted",
-      tags = hc.toAuditTags(),
-      detail = Json.toJsObject(messageSubmitted)
-    )
-  }
 }
