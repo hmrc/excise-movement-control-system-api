@@ -16,12 +16,13 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
+import cats.data.NonEmptySeq
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.http.HeaderNames
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, Auditing, UserDetails}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, Auditing, MessageSubmittedDetails, UserDetails}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.writes.testObjects._
@@ -84,28 +85,36 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
     }
   }
 
-//  "new auditing factory" - {
-//    "should do stuff" in {
-//
-//      val testCorrelationid = UUID.randomUUID()
-//
-//      val result         = AuditEventFactory.createDraftMovementSubmitted(
-//        IE815Message.createFromXml(IE815),
-//        true,
-//        testCorrelationid.toString,
-//        UserDetails("gatewayID", "groupid"),
-//        Set("ern1")
-//      )
-//
-//      val expectedResult = ExtendedDataEvent(
-//        auditSource = "excise-movement-control-system-api",
-//        auditType = message.messageAuditType.name,
-//        detail = testObject.auditEvent
-//      )
-//
-//      result.auditSource mustBe "excise-movement-control-system-api"
-//      result.auditType mustBe "DraftMovementSubmitted"
-//      result.detail mustBe
-//    }
-//  }
+  "createDraftMovementAuditDetail creates message submitted details object" in {
+
+    val testCorrelationid = UUID.randomUUID()
+    val message           = IE815Message.createFromXml(IE815)
+
+    val result = AuditEventFactory.createDraftMovementAuditDetail(
+      message,
+      submittedToCore = true,
+      testCorrelationid.toString,
+      UserDetails("gatewayID", "groupid"),
+      Set("ern1")
+    )
+
+    val expectedResult = MessageSubmittedDetails(
+      message.messageType,
+      message.messageAuditType.name,
+      message.localReferenceNumber,
+      None,
+      None,
+      message.consignorId,
+      message.consigneeId,
+      true,
+      message.messageIdentifier,
+      Some(testCorrelationid.toString),
+      UserDetails("gatewayID", "groupid"),
+      NonEmptySeq.one("ern1"),
+      message.toJsObject
+    )
+
+    result mustBe expectedResult
+    result.messageTypeCode mustBe "IE815"
+  }
 }
