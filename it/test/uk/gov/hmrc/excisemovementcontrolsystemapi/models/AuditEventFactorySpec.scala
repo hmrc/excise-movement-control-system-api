@@ -81,7 +81,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
     }
   }
 
-  "createDraftMovementAuditDetail creates message submitted details object" in {
+  "createMessageSubmittedNoMovement creates message submitted details object" in {
 
     val testCorrelationid = UUID.randomUUID()
     val message           = IE815Message.createFromXml(IE815)

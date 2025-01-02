@@ -20,14 +20,12 @@ import cats.data.NonEmptySeq
 import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.CommonFormats
 
-trait EventAuditEvent {} //Should this be here vs using the abstract class?
-
 case class UserDetails(
   gatewayId: String,
   groupIdentifier: String
 )
 
-object UserDetails extends CommonFormats {
+object UserDetails {
   implicit val format = Json.format[UserDetails]
 }
 
@@ -45,7 +43,7 @@ case class MessageSubmittedDetails(
   userDetails: UserDetails,
   authExciseNumber: NonEmptySeq[String],
   messageDetails: JsObject
-) extends EventAuditEvent
+)
 
 object MessageSubmittedDetails extends CommonFormats {
   implicit val format = Json.format[MessageSubmittedDetails]
