@@ -19,18 +19,14 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 import cats.data.NonEmptySeq
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
-import play.api.http.HeaderNames
-import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, Auditing, MessageSubmittedDetails, UserDetails}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.writes.testObjects._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.model.ExtendedDataEvent
 
 import java.util.UUID
-import scala.xml.Elem
 
 class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with TestXml {
 
@@ -90,7 +86,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
     val testCorrelationid = UUID.randomUUID()
     val message           = IE815Message.createFromXml(IE815)
 
-    val result = AuditEventFactory.createDraftMovementAuditDetail(
+    val result = AuditEventFactory.createMessageSubmittedNoMovement(
       message,
       submittedToCore = true,
       testCorrelationid.toString,

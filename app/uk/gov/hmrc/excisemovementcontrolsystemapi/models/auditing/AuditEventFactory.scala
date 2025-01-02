@@ -17,15 +17,11 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
 import cats.data.NonEmptySeq
-import play.api.libs.json.Json
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
 import uk.gov.hmrc.play.audit.model.ExtendedDataEvent
-
-import scala.xml.NodeSeq
 
 object AuditEventFactory extends Auditing {
 
@@ -41,7 +37,7 @@ object AuditEventFactory extends Auditing {
     )
   }
 
-  def createDraftMovementAuditDetail(
+  def createMessageSubmittedNoMovement(
     message: IE815Message,
     submittedToCore: Boolean,
     correlationId: String,
@@ -71,7 +67,7 @@ object AuditEventFactory extends Auditing {
     correlationId: String,
     userDetails: UserDetails,
     erns: Set[String]
-  )(implicit hc: HeaderCarrier): MessageSubmittedDetails =
+  ): MessageSubmittedDetails =
     MessageSubmittedDetails(
       message.messageType,
       message.messageAuditType.name,

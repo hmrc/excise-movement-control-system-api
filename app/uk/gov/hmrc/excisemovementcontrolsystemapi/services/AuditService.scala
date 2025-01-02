@@ -75,7 +75,7 @@ class AuditServiceImpl @Inject() (auditConnector: AuditConnector, appConfig: App
   )(implicit hc: HeaderCarrier): Unit =
     if (appConfig.newAuditingEnabled) {
 
-      val event = AuditEventFactory.createDraftMovementAuditDetail(
+      val event = AuditEventFactory.createMessageSubmittedNoMovement(
         message,
         submittedToCore,
         correlationId,
