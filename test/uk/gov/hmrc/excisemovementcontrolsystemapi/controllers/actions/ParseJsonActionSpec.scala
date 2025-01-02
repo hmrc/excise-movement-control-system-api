@@ -61,7 +61,6 @@ class ParseJsonActionSpec extends PlaySpec with ScalaFutures with EitherValues {
   )
 
   private val examplePreValidateTraderETDSRequest = getPreValidateTraderETDSRequest
-  private val exampleETDSJson                     = Json.toJson(examplePreValidateTraderETDSRequest)
 
   private val timestamp = Instant.parse("2023-05-11T01:01:01.987654Z")
   when(dateTimeService.timestamp()).thenReturn(timestamp)
