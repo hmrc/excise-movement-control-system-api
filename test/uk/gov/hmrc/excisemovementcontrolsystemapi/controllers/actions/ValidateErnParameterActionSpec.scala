@@ -24,6 +24,7 @@ import play.api.mvc.Results.{BadRequest, Ok}
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.play.bootstrap.tools.Stubs.stubMessagesControllerComponents
@@ -47,7 +48,7 @@ class ValidateErnParameterActionSpec extends PlaySpec {
     "filter passes successfully" when {
 
       val erns    = Set("GBWK002281023", "GBWK002181023", "GBWK002281022")
-      val request = EnrolmentRequest(FakeRequest(), erns, "123")
+      val request = EnrolmentRequest(FakeRequest(), erns, UserDetails("123", "abc"))
 
       val checkResponseMatchesRequestBlock = (actual: EnrolmentRequest[_]) => {
         actual mustBe request
@@ -73,7 +74,7 @@ class ValidateErnParameterActionSpec extends PlaySpec {
     "an error" when {
       "ERN in parameter is not supplied in the auth" in {
 
-        val request = EnrolmentRequest(FakeRequest(), Set("12356", "234567"), "123")
+        val request = EnrolmentRequest(FakeRequest(), Set("12356", "234567"), UserDetails("123", "abc"))
 
         val result = await(sut.apply(Some("GBWK002181023")).invokeBlock(request, defaultBlock))
 

@@ -133,7 +133,6 @@ class AuthActionSpec extends PlaySpec with AuthTestSupport with BeforeAndAfterEa
         withUnAuthorizedInternalId()
 
         val result = await(authenticator.invokeBlock(FakeRequest(), block))
-
         result mustBe Unauthorized(
           Json.toJson(
             ErrorResponse(
@@ -149,7 +148,6 @@ class AuthActionSpec extends PlaySpec with AuthTestSupport with BeforeAndAfterEa
         authorizeWithAffinityGroup(Some(Individual))
 
         val result = await(authenticator.invokeBlock(FakeRequest(), block))
-
         result mustBe Unauthorized(
           Json.toJson(
             ErrorResponse(

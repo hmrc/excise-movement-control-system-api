@@ -27,6 +27,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PreValidateTraderConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ParsedPreValidateTraderETDSRequest, ParsedPreValidateTraderRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{ExciseTraderResponse, ExciseTraderValidationResponse, PreValidateTraderEISResponse}
@@ -51,12 +52,12 @@ class PreValidateTraderServiceSpec extends PlaySpec with BeforeAndAfterEach with
   private val preValidateTraderService = new PreValidateTraderService(connector, dateTimeService)
 
   private val validRequest = ParsedPreValidateTraderRequest(
-    EnrolmentRequest(FakeRequest(), Set("ern"), "id"),
+    EnrolmentRequest(FakeRequest(), Set("ern"), UserDetails("id", "id")),
     getPreValidateTraderRequest
   )
 
   private val validETDSRequest = ParsedPreValidateTraderETDSRequest(
-    EnrolmentRequest(FakeRequest(), Set("ern"), "id"),
+    EnrolmentRequest(FakeRequest(), Set("ern"), UserDetails("id", "id")),
     getPreValidateTraderETDSRequest
   )
 

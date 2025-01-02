@@ -18,33 +18,15 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
 import cats.data.NonEmptySeq
 import play.api.libs.json.{JsObject, Json}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.CommonFormats._
-
-trait EventAuditEvent {}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.CommonFormats
 
 case class UserDetails(
   gatewayId: String,
-  name: String,
-  email: String,
-  affinityGroup: String,
-  credentialRole: String
-) {}
+  groupIdentifier: String
+)
 
 object UserDetails {
   implicit val format = Json.format[UserDetails]
-}
-
-case class ThirdPartyApplication(
-  id: String,
-  clientId: String,
-  gatewayId: String,
-  nameResponsibleIndividual: String,
-  emailResponsibleIndividual: String,
-  organisationUrl: Option[String]
-) {}
-
-object ThirdPartyApplication {
-  implicit val format = Json.format[ThirdPartyApplication]
 }
 
 case class MessageSubmittedDetails(
@@ -61,8 +43,8 @@ case class MessageSubmittedDetails(
   userDetails: UserDetails,
   authExciseNumber: NonEmptySeq[String],
   messageDetails: JsObject
-) extends EventAuditEvent
+)
 
-object MessageSubmittedDetails {
+object MessageSubmittedDetails extends CommonFormats {
   implicit val format = Json.format[MessageSubmittedDetails]
 }

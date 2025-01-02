@@ -16,14 +16,17 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 
+import cats.data.NonEmptySeq
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, Auditing}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, Auditing, MessageSubmittedDetails, UserDetails}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.writes.testObjects._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.model.ExtendedDataEvent
+
+import java.util.UUID
 
 class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with TestXml {
 
@@ -49,7 +52,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
 
   case class TestType(testObject: TestMessageType, message: IEMessage) {
 
-    "successfully converted to success audit event" in {
+    "Old auditing should successfully converted to success audit event" in {
 
       val result         = AuditEventFactory.createMessageAuditEvent(message, None)
       val expectedResult = ExtendedDataEvent(
@@ -63,7 +66,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       result.detail mustBe expectedResult.detail
     }
 
-    "converted to failure audit event" in {
+    "Old auditing should converted to failure audit event" in {
       val testMessage    = "Test Message"
       val result         = AuditEventFactory.createMessageAuditEvent(message, Some(testMessage))
       val expectedResult = ExtendedDataEvent(
@@ -76,5 +79,38 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       result.auditType mustBe expectedResult.auditType
       result.detail mustBe expectedResult.detail
     }
+  }
+
+  "createMessageSubmittedNoMovement creates message submitted details object" in {
+
+    val testCorrelationid = UUID.randomUUID()
+    val message           = IE815Message.createFromXml(IE815)
+
+    val result = AuditEventFactory.createMessageSubmittedNoMovement(
+      message,
+      submittedToCore = true,
+      testCorrelationid.toString,
+      UserDetails("gatewayID", "groupid"),
+      Set("ern1")
+    )
+
+    val expectedResult = MessageSubmittedDetails(
+      message.messageType,
+      message.messageAuditType.name,
+      message.localReferenceNumber,
+      None,
+      None,
+      message.consignorId,
+      message.consigneeId,
+      true,
+      message.messageIdentifier,
+      Some(testCorrelationid.toString),
+      UserDetails("gatewayID", "groupid"),
+      NonEmptySeq.one("ern1"),
+      message.toJsObject
+    )
+
+    result mustBe expectedResult
+    result.messageTypeCode mustBe "IE815"
   }
 }

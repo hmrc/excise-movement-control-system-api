@@ -26,6 +26,7 @@ import play.api.mvc.Results.BadRequest
 import play.api.test.FakeRequest
 import play.api.test.Helpers.stubControllerComponents
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -60,14 +61,14 @@ class ParseJsonActionSpec extends PlaySpec with ScalaFutures with EitherValues {
   )
 
   private val examplePreValidateTraderETDSRequest = getPreValidateTraderETDSRequest
-  private val exampleETDSJson                     = Json.toJson(examplePreValidateTraderETDSRequest)
 
   private val timestamp = Instant.parse("2023-05-11T01:01:01.987654Z")
   when(dateTimeService.timestamp()).thenReturn(timestamp)
 
   "refine" should {
     "return a ParsedPreValidateTraderRequest" in {
-      val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(Json.parse(exampleJson)), Set("ern"), "123")
+      val enrolmentRequest =
+        EnrolmentRequest(FakeRequest().withBody(Json.parse(exampleJson)), Set("ern"), UserDetails("123", "abc"))
 
       val result = parseJsonAction.refine(enrolmentRequest).futureValue
 
@@ -76,7 +77,7 @@ class ParseJsonActionSpec extends PlaySpec with ScalaFutures with EitherValues {
 
     "return an error" when {
       "no json was sent" in {
-        val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(""), Set("ern"), "123")
+        val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(""), Set("ern"), UserDetails("123", "abc"))
 
         val result = parseJsonAction.refine(enrolmentRequest).futureValue
 
@@ -87,7 +88,8 @@ class ParseJsonActionSpec extends PlaySpec with ScalaFutures with EitherValues {
       "JSON parsing exception" in {
 
         val exampleJson      = "{\"exciseTraderValidationRequest\": 123 }"
-        val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(Json.parse(exampleJson)), Set("ern"), "123")
+        val enrolmentRequest =
+          EnrolmentRequest(FakeRequest().withBody(Json.parse(exampleJson)), Set("ern"), UserDetails("123", "abc"))
 
         val result = parseJsonAction.refine(enrolmentRequest).futureValue
 
@@ -105,7 +107,11 @@ class ParseJsonActionSpec extends PlaySpec with ScalaFutures with EitherValues {
   "refineETDS" should {
     "return a ParsedPreValidateTraderETDSRequest" in {
       val enrolmentRequest =
-        EnrolmentRequest(FakeRequest().withBody(Json.toJson(getPreValidateTraderRequest)), Set("ern"), "123")
+        EnrolmentRequest(
+          FakeRequest().withBody(Json.toJson(getPreValidateTraderRequest)),
+          Set("ern"),
+          UserDetails("123", "abc")
+        )
 
       val result = parseJsonAction.refineETDS(enrolmentRequest).futureValue
 
@@ -114,7 +120,7 @@ class ParseJsonActionSpec extends PlaySpec with ScalaFutures with EitherValues {
 
     "return an error" when {
       "no json was sent" in {
-        val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(""), Set("ern"), "123")
+        val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(""), Set("ern"), UserDetails("123", "abc"))
 
         val result = parseJsonAction.refineETDS(enrolmentRequest).futureValue
 
@@ -125,7 +131,8 @@ class ParseJsonActionSpec extends PlaySpec with ScalaFutures with EitherValues {
       "JSON parsing exception" in {
 
         val exampleJson      = "{\"someInvalidJson\": 123 }"
-        val enrolmentRequest = EnrolmentRequest(FakeRequest().withBody(Json.parse(exampleJson)), Set("ern"), "123")
+        val enrolmentRequest =
+          EnrolmentRequest(FakeRequest().withBody(Json.parse(exampleJson)), Set("ern"), UserDetails("123", "abc"))
 
         val result = parseJsonAction.refineETDS(enrolmentRequest).futureValue
 

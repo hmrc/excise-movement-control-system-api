@@ -22,7 +22,7 @@ import org.mockito.MockitoSugar.when
 import org.scalatestplus.mockito.MockitoSugar.mock
 import uk.gov.hmrc.auth.core.AffinityGroup.Organisation
 import uk.gov.hmrc.auth.core.authorise.{EmptyPredicate, Predicate}
-import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{affinityGroup, allEnrolments, credentials, internalId}
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{affinityGroup, allEnrolments, credentials, groupIdentifier, internalId}
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
 import uk.gov.hmrc.auth.core.syntax.retrieved.authSyntaxForRetrieved
 import uk.gov.hmrc.auth.core.{AffinityGroup, AuthConnector, Enrolment, Enrolments}
@@ -32,14 +32,15 @@ import scala.concurrent.Future
 trait AuthTestSupport extends NrsTestData {
 
   lazy val authConnector = mock[AuthConnector]
-  private val authFetch  = allEnrolments and affinityGroup and credentials and internalId
+  private val authFetch  = allEnrolments and affinityGroup and credentials and internalId and groupIdentifier
   private val enrolment  = Enrolment("HMRC-EMCS-ORG")
 
   def withAuthorizedTrader(identifier: String = "123"): Unit = {
     val retrieval = Enrolments(Set(createEnrolmentWithIdentifier(identifier))) and
       Some(AffinityGroup.Organisation) and
       Some(Credentials("testProviderId", "testProviderType")) and
-      Some("123")
+      Some("123") and
+      Some("abc")
 
     withAuthorization(retrieval)
   }
@@ -48,7 +49,8 @@ trait AuthTestSupport extends NrsTestData {
     val retrieval = enrolments and
       Some(AffinityGroup.Organisation) and
       Some(Credentials("testProviderId", "testProviderType")) and
-      Some("123")
+      Some("123") and
+      Some("abc")
 
     withAuthorization(retrieval)
   }
@@ -57,7 +59,8 @@ trait AuthTestSupport extends NrsTestData {
     val retrieval = Enrolments(Set(enrolment)) and
       Some(AffinityGroup.Organisation) and
       Some(Credentials("testProviderId", "testProviderType")) and
-      Some("123")
+      Some("123") and
+      Some("abc")
 
     withAuthorization(retrieval)
   }
@@ -66,7 +69,8 @@ trait AuthTestSupport extends NrsTestData {
     val retrieval = Enrolments(Set(enrolment)) and
       Some(AffinityGroup.Organisation) and
       Some(Credentials("testProviderId", "testProviderType")) and
-      Some("123")
+      Some("123") and
+      Some("abc")
 
     withAuthorization(retrieval)
   }
@@ -75,6 +79,7 @@ trait AuthTestSupport extends NrsTestData {
     val retrieval = Enrolments(Set(createEnrolmentWithIdentifier())) and
       Some(AffinityGroup.Organisation) and
       Some(Credentials("testProviderId", "testProviderType")) and
+      None and
       None
 
     withAuthorization(retrieval)
@@ -84,7 +89,8 @@ trait AuthTestSupport extends NrsTestData {
     val retrieval = Enrolments(Set(createEnrolmentWithIdentifier())) and
       affinityGrp and
       Some(Credentials("testProviderId", "testProviderType")) and
-      Some("123")
+      Some("123") and
+      Some("abc")
 
     withAuthorization(retrieval)
   }
@@ -93,13 +99,14 @@ trait AuthTestSupport extends NrsTestData {
     val retrieval = Enrolments(Set(createEnrolmentWithIdentifier())) and
       Some(Organisation) and
       None and
-      Some("123")
+      Some("123") and
+      Some("abc")
 
     withAuthorization(retrieval)
   }
 
   def withAuthorization(
-    retrieval: Enrolments ~ Option[AffinityGroup] ~ Option[Credentials] ~ Option[String]
+    retrieval: Enrolments ~ Option[AffinityGroup] ~ Option[Credentials] ~ Option[String] ~ Option[String]
   ): Unit =
     when(authConnector.authorise(ArgumentMatchers.argThat((p: Predicate) => true), eqTo(authFetch))(any, any))
       .thenReturn(Future.successful(retrieval))

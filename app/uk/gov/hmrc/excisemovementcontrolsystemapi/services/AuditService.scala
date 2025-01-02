@@ -23,11 +23,10 @@ import play.api.mvc.Result
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, Auditing}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
-import uk.gov.hmrc.play.audit.model.ExtendedDataEvent
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -52,24 +51,45 @@ class AuditServiceImpl @Inject() (auditConnector: AuditConnector, appConfig: App
     submittedToCore: Boolean,
     correlationId: String,
     request: ParsedXmlRequest[NodeSeq]
-  )(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit] =
+  )(implicit hc: HeaderCarrier): Unit =
     if (appConfig.newAuditingEnabled) {
-      val event = AuditEventFactory.createMessageSubmitted(message, movement, submittedToCore, correlationId, request)
-      auditEvent(event)
-    } else EitherT.fromEither(Right(()))
 
-  private def auditEvent(event: ExtendedDataEvent)(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit] =
-    EitherT {
-      auditConnector.sendExtendedEvent(event).map {
-        case f: AuditResult.Failure => Right(logger.error(f.msg))
-        case _                      => Right(())
-      }
+      val event = AuditEventFactory.createMessageSubmitted(
+        message,
+        movement,
+        submittedToCore,
+        correlationId,
+        request.userDetails,
+        request.erns
+      )
+
+      auditConnector.sendExplicitAudit("MessageSubmitted", event)
+    }
+
+  def messageSubmittedNoMovement(
+    message: IE815Message,
+    submittedToCore: Boolean,
+    correlationId: String,
+    request: ParsedXmlRequest[NodeSeq]
+  )(implicit hc: HeaderCarrier): Unit =
+    if (appConfig.newAuditingEnabled) {
+
+      val event = AuditEventFactory.createMessageSubmittedNoMovement(
+        message,
+        submittedToCore,
+        correlationId,
+        request.userDetails,
+        request.erns
+      )
+
+      auditConnector.sendExplicitAudit("MessageSubmitted", event)
     }
 
   private def auditMessage(message: IEMessage, failureOpt: Option[String])(implicit
     hc: HeaderCarrier
   ): EitherT[Future, Result, Unit] =
     EitherT {
+
       auditConnector.sendExtendedEvent(AuditEventFactory.createMessageAuditEvent(message, failureOpt)).map {
         case f: AuditResult.Failure => Right(logger.error(f.msg))
         case _                      => Right(())
@@ -87,5 +107,11 @@ trait AuditService {
     submittedToCore: Boolean,
     correlationId: String,
     request: ParsedXmlRequest[NodeSeq]
-  )(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit]
+  )(implicit hc: HeaderCarrier): Unit
+  def messageSubmittedNoMovement(
+    message: IE815Message,
+    submittedToCore: Boolean,
+    correlationId: String,
+    request: ParsedXmlRequest[NodeSeq]
+  )(implicit hc: HeaderCarrier): Unit
 }
