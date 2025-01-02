@@ -38,6 +38,7 @@ class AppConfigSpec extends PlaySpec {
       |featureFlags.subscribeErnsEnabled=true
       |featureFlags.etdsPreValidateTraderEnabled=false
       |featureFlags.nrsNewEnabled=false
+      |featureFlags.newAuditingEnabled=true
     """.stripMargin
 
   private def createAppConfig = {
@@ -71,6 +72,10 @@ class AppConfigSpec extends PlaySpec {
 
     "return feature flag for ETDS PreValidateTrader" in {
       configService.etdsPreValidateTraderEnabled mustBe false
+    }
+
+    "return feature flag for new auditing" in {
+      configService.newAuditingEnabled mustBe true
     }
   }
 }
