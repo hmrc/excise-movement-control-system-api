@@ -78,7 +78,7 @@ class GetMovementsController @Inject() (
           movements <- movementService.getMovementByErn(request.erns.toSeq, filter)
         } yield {
           auditService.getInformation(
-            GetMovementsRequest(ern, lrn, arc, updatedSince, traderType),
+            GetMovementsRequest(ern, arc, lrn, updatedSince, traderType),
             GetMovementsResponse(movements.length)
           )
           Ok(Json.toJson(movements.map(createResponseFrom)))

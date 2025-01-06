@@ -30,6 +30,7 @@ import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, TraderType}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication, FakeValidateErnParameterAction, FakeValidateTraderTypeAction, FakeValidateUpdatedSinceAction, MovementTestUtils}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMovementsRequest, GetMovementsResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MovementIdFormatInvalid, MovementIdValidation}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, CorrelationIdService, MessageService, MovementService}
@@ -166,18 +167,22 @@ class GetMovementsControllerSpec
   "getMovements" should {
     "respond with 200 OK" when {
       "called with no query parameters and valid request" in {
-        val result = controller.getMovements(None, None, None, None, None)(fakeRequest)
+        val result   = controller.getMovements(None, None, None, None, None)(fakeRequest)
+        val request  = GetMovementsRequest(None, None, None, None, None)
+        val response = GetMovementsResponse(1)
 
         status(result) mustBe OK
         contentAsJson(result) mustBe Json.toJson(
           Seq(createMovementResponse(ern, "lrn", "arc", Some("consigneeId"), Some(timestamp)))
         )
         withClue("Submits getInformation audit event") {
-          verify(auditService, times(1)).getInformation(any, any)(any)
+          verify(auditService, times(1)).getInformation(eqTo(request), eqTo(response))(any)
         }
       }
-      "there are no filter parameters" when {
+      "there are no query parameters" when {
         "expecting multiple movements from one ERN" in {
+          val request   = GetMovementsRequest(None, None, None, None, None)
+          val response  = GetMovementsResponse(2)
           val movement1 = Movement(
             "cfdb20c7-d0b0-4b8b-a071-737d68dede5a",
             Some("boxId"),
@@ -212,9 +217,13 @@ class GetMovementsControllerSpec
           )
 
           verify(movementService).getMovementByErn(eqTo(Seq(ern)), any)
-
+          withClue("Submits getInformation audit event") {
+            verify(auditService, times(1)).getInformation(eqTo(request), eqTo(response))(any)
+          }
         }
         "expecting movements from multiple ERNs" in {
+          val request  = GetMovementsRequest(None, None, None, None, None)
+          val response = GetMovementsResponse(2)
 
           val controller = new GetMovementsController(
             FakeSuccessAuthenticationMultiErn(Set(ern, "ern2")),
@@ -265,13 +274,18 @@ class GetMovementsControllerSpec
 
           verify(messageService).updateAllMessages(eqTo(Set(ern, "ern2")))(any)
 
+          withClue("Submits getInformation audit event") {
+            verify(auditService, times(1)).getInformation(eqTo(request), eqTo(response))(any)
+          }
+
         }
       }
-      "there are filter parameters" when {
-        "an ERN is specified in the filter" in {
+      "there are query parameters" when {
+        "an ERN is specified in the query parameters" in {
+          val localErn = "ern2"
 
           val controller = new GetMovementsController(
-            FakeSuccessAuthenticationMultiErn(Set(ern, "ern2")),
+            FakeSuccessAuthenticationMultiErn(Set(ern, localErn)),
             FakeValidateErnParameterSuccessAction,
             FakeValidateUpdatedSinceSuccessAction,
             FakeValidateTraderTypeSuccessAction,
@@ -287,27 +301,38 @@ class GetMovementsControllerSpec
             "cfdb20c7-d0b0-4b8b-a071-737d68dede5b",
             Some("boxId"),
             "lrn2",
-            "ern2",
+            localErn,
             Some("consigneeId2"),
             Some("arc2"),
             Instant.now(),
             Seq.empty
           )
+
           when(movementService.getMovementByErn(any, any))
             .thenReturn(Future.successful(Seq(movement2)))
 
-          val result = controller.getMovements(Some("ern2"), None, None, None, None)(fakeRequest)
+          val result = controller.getMovements(Some(localErn), None, None, None, None)(fakeRequest)
 
           status(result) mustBe OK
           contentAsJson(result) mustBe Json.toJson(
             Seq(createMovementResponseFromMovement(movement2))
           )
 
-          verify(messageService).updateAllMessages(eqTo(Set("ern2")))(any)
+          verify(messageService).updateAllMessages(eqTo(Set(localErn)))(any)
+
+          val request  = GetMovementsRequest(Some(localErn), None, None, None, None)
+          val response = GetMovementsResponse(1)
+
+          withClue("Submits getInformation audit event") {
+            verify(auditService, times(1)).getInformation(eqTo(request), eqTo(response))(any)
+          }
 
         }
         "consignor is specified and multiple filter parameters are given" in {
           val timestampNow = Instant.now()
+          val request      =
+            GetMovementsRequest(Some(ern), Some("arc"), Some("lrn"), Some(timestampNow.toString), Some("consignor"))
+          val response     = GetMovementsResponse(1)
           await(
             controller
               .getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString), Some("consignor"))(
@@ -324,9 +349,15 @@ class GetMovementsControllerSpec
           )
           verify(movementService).getMovementByErn(any, eqTo(filter))
 
+          withClue("Submits getInformation audit event") {
+            verify(auditService, times(1)).getInformation(eqTo(request), eqTo(response))(any)
+          }
         }
         "consignee is specified and multiple filter parameters are given" in {
           val timestampNow = Instant.now()
+          val request      =
+            GetMovementsRequest(Some(ern), Some("arc"), Some("lrn"), Some(timestampNow.toString), Some("consignee"))
+          val response     = GetMovementsResponse(1)
           await(
             controller
               .getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString), Some("consignee"))(
@@ -343,6 +374,9 @@ class GetMovementsControllerSpec
           )
           verify(movementService).getMovementByErn(any, eqTo(filter))
 
+          withClue("Submits getInformation audit event") {
+            verify(auditService, times(1)).getInformation(eqTo(request), eqTo(response))(any)
+          }
         }
       }
     }
