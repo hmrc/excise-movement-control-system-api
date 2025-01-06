@@ -84,4 +84,7 @@ object AuditEventFactory extends Auditing {
       message.toJsObject
     )
 
+  def createGetMovementsDetails(request: GetMovementsRequest, response: GetMovementsResponse): GetMovementsDetails =
+    GetMovementsDetails(request = request, response = response)
+
 }

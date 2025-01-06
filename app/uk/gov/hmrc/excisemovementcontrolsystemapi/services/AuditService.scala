@@ -17,11 +17,10 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import cats.data.EitherT
-import com.google.inject.ImplementedBy
 import play.api.Logging
 import play.api.mvc.Result
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, Auditing}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
@@ -33,9 +32,8 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
 @Singleton
-class AuditServiceImpl @Inject() (auditConnector: AuditConnector, appConfig: AppConfig)(implicit ec: ExecutionContext)
+class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConfig)(implicit ec: ExecutionContext)
     extends Auditing
-    with AuditService
     with Logging {
 
   def auditMessage(message: IEMessage)(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit] =
@@ -87,7 +85,7 @@ class AuditServiceImpl @Inject() (auditConnector: AuditConnector, appConfig: App
 
   private def auditMessage(message: IEMessage, failureOpt: Option[String])(implicit
     hc: HeaderCarrier
-  ): EitherT[Future, Result, Unit] =
+  ): EitherT[Future, Result, Unit]                                                                                   =
     EitherT {
 
       auditConnector.sendExtendedEvent(AuditEventFactory.createMessageAuditEvent(message, failureOpt)).map {
@@ -95,23 +93,9 @@ class AuditServiceImpl @Inject() (auditConnector: AuditConnector, appConfig: App
         case _                      => Right(())
       }
     }
-}
-
-@ImplementedBy(classOf[AuditServiceImpl])
-trait AuditService {
-  def auditMessage(message: IEMessage)(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit]
-  def auditMessage(message: IEMessage, failureReason: String)(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit]
-  def messageSubmitted(
-    message: IEMessage,
-    movement: Movement,
-    submittedToCore: Boolean,
-    correlationId: String,
-    request: ParsedXmlRequest[NodeSeq]
-  )(implicit hc: HeaderCarrier): Unit
-  def messageSubmittedNoMovement(
-    message: IE815Message,
-    submittedToCore: Boolean,
-    correlationId: String,
-    request: ParsedXmlRequest[NodeSeq]
-  )(implicit hc: HeaderCarrier): Unit
+  def getInformation(request: GetMovementsRequest, response: GetMovementsResponse)(implicit hc: HeaderCarrier): Unit =
+    if (appConfig.newAuditingEnabled) {
+      val event = AuditEventFactory.createGetMovementsDetails(request, response)
+      auditConnector.sendExplicitAudit("GetInformation", event)
+    }
 }

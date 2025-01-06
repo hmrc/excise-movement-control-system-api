@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
-import org.mockito.MockitoSugar.{reset, verify, when}
+import org.mockito.MockitoSugar.{reset, times, verify, when}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
@@ -32,7 +32,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MovementIdFormatInvalid, MovementIdValidation}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{CorrelationIdService, MessageService, MovementService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, CorrelationIdService, MessageService, MovementService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import java.time.Instant
@@ -56,6 +56,7 @@ class GetMovementsControllerSpec
   private val dateTimeService     = mock[DateTimeService]
   private val messageService      = mock[MessageService]
   private val movementIdValidator = mock[MovementIdValidation]
+  private val auditService        = mock[AuditService]
 
   private val controller = new GetMovementsController(
     FakeSuccessAuthentication(Set(ern)),
@@ -67,7 +68,8 @@ class GetMovementsControllerSpec
     dateTimeService,
     messageService,
     movementIdValidator,
-    correlationIdService
+    correlationIdService,
+    auditService
   )
 
   private val timestamp   = Instant.parse("2020-01-01T01:01:01.123456Z")
@@ -84,7 +86,8 @@ class GetMovementsControllerSpec
       dateTimeService,
       messageService,
       movementIdValidator,
-      correlationIdService
+      correlationIdService,
+      auditService
     )
 
   private def createWithAuthActionFailure =
@@ -98,7 +101,8 @@ class GetMovementsControllerSpec
       dateTimeService,
       messageService,
       movementIdValidator,
-      correlationIdService
+      correlationIdService,
+      auditService
     )
 
   private val createWithUpdateSinceActionFailure =
@@ -112,7 +116,8 @@ class GetMovementsControllerSpec
       dateTimeService,
       messageService,
       movementIdValidator,
-      correlationIdService
+      correlationIdService,
+      auditService
     )
 
   private val createWithTraderTypeActionFailure =
@@ -126,12 +131,13 @@ class GetMovementsControllerSpec
       dateTimeService,
       messageService,
       movementIdValidator,
-      correlationIdService
+      correlationIdService,
+      auditService
     )
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(movementService, messageService)
+    reset(movementService, messageService, auditService)
 
     when(movementService.getMovementByErn(any, any))
       .thenReturn(
@@ -166,6 +172,9 @@ class GetMovementsControllerSpec
         contentAsJson(result) mustBe Json.toJson(
           Seq(createMovementResponse(ern, "lrn", "arc", Some("consigneeId"), Some(timestamp)))
         )
+        withClue("Submits getInformation audit event") {
+          verify(auditService, times(1)).getInformation(any, any)(any)
+        }
       }
       "there are no filter parameters" when {
         "expecting multiple movements from one ERN" in {
@@ -217,7 +226,8 @@ class GetMovementsControllerSpec
             dateTimeService,
             messageService,
             movementIdValidator,
-            correlationIdService
+            correlationIdService,
+            auditService
           )
 
           val movement1 = Movement(
@@ -270,20 +280,10 @@ class GetMovementsControllerSpec
             dateTimeService,
             messageService,
             movementIdValidator,
-            correlationIdService
+            correlationIdService,
+            auditService
           )
-
-          val movement1 = Movement(
-            "cfdb20c7-d0b0-4b8b-a071-737d68dede5a",
-            Some("boxId"),
-            "lrn",
-            ern,
-            Some("consigneeId"),
-            Some("arc"),
-            Instant.now(),
-            Seq.empty
-          )
-          val movement2 = Movement(
+          val movement2  = Movement(
             "cfdb20c7-d0b0-4b8b-a071-737d68dede5b",
             Some("boxId"),
             "lrn2",
@@ -444,7 +444,8 @@ class GetMovementsControllerSpec
           dateTimeService,
           messageService,
           movementIdValidator,
-          correlationIdService
+          correlationIdService,
+          auditService
         )
 
         when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))

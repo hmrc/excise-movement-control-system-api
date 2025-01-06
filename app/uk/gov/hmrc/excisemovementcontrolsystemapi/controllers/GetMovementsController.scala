@@ -25,7 +25,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, Trade
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{CorrelationIdService, MessageService, MovementService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, CorrelationIdService, MessageService, MovementService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
 import uk.gov.hmrc.http.HeaderCarrier
@@ -46,7 +46,8 @@ class GetMovementsController @Inject() (
   dateTimeService: DateTimeService,
   messageService: MessageService,
   movementIdValidator: MovementIdValidation,
-  correlationIdService: CorrelationIdService
+  correlationIdService: CorrelationIdService,
+  auditService: AuditService
 )(implicit ec: ExecutionContext)
     extends BackendController(cc)
     with Logging {
