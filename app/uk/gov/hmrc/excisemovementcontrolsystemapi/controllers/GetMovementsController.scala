@@ -22,6 +22,7 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ValidateErnParameterAction, ValidateTraderTypeAction, ValidateUpdatedSinceAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, TraderType}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMovementsRequest, GetMovementsResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
@@ -73,9 +74,15 @@ class GetMovementsController @Inject() (
 
       {
         for {
-          _        <- messageService.updateAllMessages(ern.fold(request.erns)(Set(_)))
-          movement <- movementService.getMovementByErn(request.erns.toSeq, filter)
-        } yield Ok(Json.toJson(movement.map(createResponseFrom)))
+          _         <- messageService.updateAllMessages(ern.fold(request.erns)(Set(_)))
+          movements <- movementService.getMovementByErn(request.erns.toSeq, filter)
+        } yield {
+          auditService.getInformation(
+            GetMovementsRequest(ern, lrn, arc, updatedSince, traderType),
+            GetMovementsResponse(movements.length)
+          )
+          Ok(Json.toJson(movements.map(createResponseFrom)))
+        }
       }.recover { case NonFatal(ex) =>
         logger.warn(
           s"Error getting movements for erns ${request.erns} with filters ern: $ern, lrn: $lrn, arc: $arc, updatedSince: $updatedSince, traderType: $traderType",

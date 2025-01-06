@@ -45,10 +45,10 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
   protected implicit val hc: HeaderCarrier    = HeaderCarrier()
 
   val auditConnector: AuditConnector = mock[AuditConnector]
-  val appConfig: AppConfig = mock[AppConfig]
+  val appConfig: AppConfig           = mock[AppConfig]
 
   val testMovement: Movement = Movement("id", None, "lrn", "consignorId", None, None, Instant.now, Seq.empty[Message])
-  val testErns: Set[String] = Set("123", "456")
+  val testErns: Set[String]  = Set("123", "456")
 
   private def createRequest(headers: Seq[(String, String)], body: Elem = IE815): ParsedXmlRequest[NodeSeq] =
     ParsedXmlRequest[NodeSeq](
@@ -86,8 +86,8 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
 
     "return Right(())) on success" in {
 
-      val service    = new AuditService(auditConnector, appConfig)
-      val result = service.auditMessage(IE815Message.createFromXml(IE815))
+      val service = new AuditService(auditConnector, appConfig)
+      val result  = service.auditMessage(IE815Message.createFromXml(IE815))
 
       await(result.value) equals Right(())
     }
