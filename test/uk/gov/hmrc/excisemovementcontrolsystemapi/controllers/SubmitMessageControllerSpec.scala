@@ -99,7 +99,7 @@ class SubmitMessageControllerSpec
       await(createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request))
 
       verify(auditService, times(1)).auditMessage(any[IEMessage])(any)
-      verify(auditService, times(1)).messageSubmitted(any, any, any, any, any)(any)
+      verify(auditService, times(1)).messageSubmitted(any, any, any, eqTo("testCorrelationId"), any)(any)
     }
 
     "sends a failure audit when a message isn't submitted" in {
@@ -263,7 +263,11 @@ class SubmitMessageControllerSpec
 
   private def createRequest(body: Elem): FakeRequest[Elem] =
     FakeRequest("POST", "/foo")
-      .withHeaders(FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> "application/xml")))
+      .withHeaders(
+        FakeHeaders(
+          Seq(HeaderNames.CONTENT_TYPE -> "application/xml", HttpHeader.xCorrelationId -> "testCorrelationId")
+        )
+      )
       .withBody(body)
 
   private def createWithAuthActionFailure =
