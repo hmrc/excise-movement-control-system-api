@@ -49,7 +49,7 @@ class SubscribeErnsController @Inject() (
   def subscribeErn(ern: String): Action[AnyContent] = authAction.async { implicit request =>
     if (appConfig.subscribeErnsEnabled) {
       if (request.erns.contains(ern)) {
-        implicit val hc: HeaderCarrier = correlationIdService.getOrCreateCorrelationId(request)
+        // implicit val hc: HeaderCarrier = correlationIdService.guaranteeCorrelationId(request)
         (for {
           clientId <- retrieveClientIdFromHeader(request)
           boxId    <- EitherT.liftF[Future, Result, String](notificationsService.subscribeErns(clientId, Seq(ern)))
@@ -74,7 +74,7 @@ class SubscribeErnsController @Inject() (
 
   def unsubscribeErn(ern: String): Action[AnyContent] = authAction.async { implicit request =>
     if (appConfig.subscribeErnsEnabled) {
-      implicit val hc: HeaderCarrier = correlationIdService.getOrCreateCorrelationId(request)
+      //implicit val hc: HeaderCarrier = correlationIdService.guaranteeCorrelationId(request)
 
       (for {
         clientId <- retrieveClientIdFromHeader(request)

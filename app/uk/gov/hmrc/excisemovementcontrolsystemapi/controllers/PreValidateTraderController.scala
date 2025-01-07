@@ -51,7 +51,7 @@ class PreValidateTraderController @Inject() (
   }
 
   private def handleETDSRequest()(implicit authRequest: EnrolmentRequest[JsValue]): Future[Result] = {
-    implicit val hc: HeaderCarrier = correlationIdService.getOrCreateCorrelationId(authRequest)
+    //implicit val hc: HeaderCarrier = correlationIdService.guaranteeCorrelationId(authRequest)
 
     parseJsonAction.refineETDS(authRequest).flatMap {
       case Right(parsedRequest: ParsedPreValidateTraderETDSRequest[JsValue]) =>
@@ -132,7 +132,7 @@ class PreValidateTraderController @Inject() (
   }
 
   private def handleLegacyRequest()(implicit authRequest: EnrolmentRequest[JsValue]): Future[Result] = {
-    implicit val hc: HeaderCarrier = correlationIdService.getOrCreateCorrelationId(authRequest)
+    //implicit val hc: HeaderCarrier = correlationIdService.guaranteeCorrelationId(authRequest)
 
     parseJsonAction.refine(authRequest).flatMap {
       case Right(parsedRequest: ParsedPreValidateTraderRequest[JsValue]) =>

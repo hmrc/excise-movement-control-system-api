@@ -54,8 +54,9 @@ class SubmitMessageController @Inject() (
     with Logging {
 
   def submit(movementId: String): Action[NodeSeq] =
-    (authAction andThen xmlParser).async(parse.xml) { implicit request =>
-      implicit val hc: HeaderCarrier = correlationIdService.getOrCreateCorrelationId(request)
+    (authAction andThen xmlParser).async(parse.xml) { implicit req =>
+      val request = correlationIdService.guaranteeCorrelationId(req)
+// TODO: We are in the middle of organising request types
       (for {
         validatedMovementId <- validateMovementId(movementId)
         movement            <- getMovement(validatedMovementId)

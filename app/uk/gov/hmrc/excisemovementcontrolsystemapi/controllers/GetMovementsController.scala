@@ -61,7 +61,7 @@ class GetMovementsController @Inject() (
     (authAction andThen validateErnParameterAction(ern)
       andThen validateUpdatedSinceAction(updatedSince)
       andThen validateTraderTypeAction(traderType)).async(parse.default) { implicit request =>
-      implicit val hc: HeaderCarrier = correlationIdService.getOrCreateCorrelationId(request)
+      //implicit val hc: HeaderCarrier = correlationIdService.guaranteeCorrelationId(request)
 
       val filter =
         MovementFilter(
@@ -96,7 +96,7 @@ class GetMovementsController @Inject() (
 
   def getMovement(movementId: String): Action[AnyContent] =
     authAction.async(parse.default) { implicit request =>
-      implicit val hc: HeaderCarrier = correlationIdService.getOrCreateCorrelationId(request)
+      //implicit val hc: HeaderCarrier = correlationIdService.guaranteeCorrelationId(request)
 
       val result = for {
         validatedMovementId <- validateMovementId(movementId)

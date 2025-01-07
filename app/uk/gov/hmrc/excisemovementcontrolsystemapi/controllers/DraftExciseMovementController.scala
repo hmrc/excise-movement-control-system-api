@@ -59,7 +59,7 @@ class DraftExciseMovementController @Inject() (
 
   def submit: Action[NodeSeq] =
     (authAction andThen xmlParser).async(parse.xml) { implicit request =>
-      implicit val hc: HeaderCarrier = correlationIdService.getOrCreateCorrelationId(request)
+     // implicit val hc: HeaderCarrier = correlationIdService.guaranteeCorrelationId(request)
       (for {
         ie815Message  <- getIe815Message(request.ieMessage)
         authorisedErn <- validateMessage(ie815Message, request.erns)
