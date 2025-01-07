@@ -16,8 +16,11 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
+import play.api.libs.functional.syntax.toFunctionalBuilderOps
+import play.api.libs.functional.syntax.unlift
+import play.api.libs.json.{JsObject, JsValue, Json, OWrites, Reads, Writes, __}
 import cats.data.NonEmptySeq
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.functional.syntax.unlift
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.CommonFormats
 
 case class UserDetails(
@@ -26,7 +29,7 @@ case class UserDetails(
 )
 
 object UserDetails {
-  implicit val format = Json.format[UserDetails]
+  implicit val writes = Json.writes[UserDetails]
 }
 
 case class MessageSubmittedDetails(
@@ -46,5 +49,25 @@ case class MessageSubmittedDetails(
 )
 
 object MessageSubmittedDetails extends CommonFormats {
-  implicit val format = Json.format[MessageSubmittedDetails]
+
+  implicit val commaWriter = new Writes[NonEmptySeq[String]] {
+    def writes(input: NonEmptySeq[String]): JsValue = Json.toJson(input.toSeq.mkString(","))
+  }
+
+  implicit val writes: OWrites[MessageSubmittedDetails] =
+    (
+      (__ \ "messageTypeCode").write[String] and
+        (__ \ "messageType").write[String] and
+        (__ \ "localReferenceNumber").write[String] and
+        (__ \ "administrativeReferenceCode").write[Option[String]] and
+        (__ \ "movementId").write[Option[String]] and
+        (__ \ "consignorId").write[String] and
+        (__ \ "consigneeId").write[Option[String]] and
+        (__ \ "submittedToCore").write[Boolean] and
+        (__ \ "messageId").write[String] and
+        (__ \ "correlationId").write[Option[String]] and
+        (__ \ "userDetails").write[UserDetails] and
+        (__ \ "authExciseNumber").write[NonEmptySeq[String]](commaWriter) and
+        (__ \ "messageDetails").write[JsObject]
+    )(unlift(MessageSubmittedDetails.unapply))
 }
