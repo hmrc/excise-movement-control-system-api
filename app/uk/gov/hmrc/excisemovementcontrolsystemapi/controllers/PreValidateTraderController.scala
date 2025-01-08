@@ -50,9 +50,7 @@ class PreValidateTraderController @Inject() (
     }
   }
 
-  private def handleETDSRequest()(implicit authRequest: EnrolmentRequest[JsValue]): Future[Result] = {
-    //implicit val hc: HeaderCarrier = correlationIdService.guaranteeCorrelationId(authRequest)
-
+  private def handleETDSRequest()(implicit authRequest: EnrolmentRequest[JsValue]): Future[Result] =
     parseJsonAction.refineETDS(authRequest).flatMap {
       case Right(parsedRequest: ParsedPreValidateTraderETDSRequest[JsValue]) =>
         preValidateTraderService.submitETDSMessage(parsedRequest).map {
@@ -61,7 +59,6 @@ class PreValidateTraderController @Inject() (
         }
       case Left(result)                                                      => Future.successful(result)
     }
-  }
 
   private def convertETDSResponse(
     response: ExciseTraderValidationETDSResponse,
@@ -131,9 +128,8 @@ class PreValidateTraderController @Inject() (
 
   }
 
-  private def handleLegacyRequest()(implicit authRequest: EnrolmentRequest[JsValue]): Future[Result] = {
+  private def handleLegacyRequest()(implicit authRequest: EnrolmentRequest[JsValue]): Future[Result] =
     //implicit val hc: HeaderCarrier = correlationIdService.guaranteeCorrelationId(authRequest)
-
     parseJsonAction.refine(authRequest).flatMap {
       case Right(parsedRequest: ParsedPreValidateTraderRequest[JsValue]) =>
         preValidateTraderService.submitMessage(parsedRequest).map {
@@ -142,5 +138,4 @@ class PreValidateTraderController @Inject() (
         }
       case Left(result)                                                  => Future.successful(result)
     }
-  }
 }
