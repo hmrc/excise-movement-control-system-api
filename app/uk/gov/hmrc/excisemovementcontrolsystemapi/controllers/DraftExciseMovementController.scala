@@ -58,7 +58,7 @@ class DraftExciseMovementController @Inject() (
     with Logging {
 
   def submit: Action[NodeSeq] =
-    (authAction andThen xmlParser).async(parse.xml) { implicit request =>
+    (authAction andThen xmlParser andThen correlationIdAction).async(parse.xml) { implicit request =>
       (for {
         ie815Message  <- getIe815Message(request.ieMessage)
         authorisedErn <- validateMessage(ie815Message, request.erns)
