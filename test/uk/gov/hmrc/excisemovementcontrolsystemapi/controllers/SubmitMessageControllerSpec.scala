@@ -27,6 +27,7 @@ import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, Forbidden}
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.CorrelationIdAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EISErrorResponseDetails
@@ -52,7 +53,7 @@ class SubmitMessageControllerSpec
   implicit val ec: ExecutionContext    = ExecutionContext.Implicits.global
   private val cc                       = stubControllerComponents()
   private val request                  = createRequest(IE818)
-  private val correlationIdService     = mock[CorrelationIdService]
+  private val correlationIdAction      = new CorrelationIdAction
   private val submissionMessageService = mock[SubmissionMessageService]
   private val movementService          = mock[MovementService]
   private val messageValidation        = mock[MessageValidation]
@@ -79,6 +80,7 @@ class SubmitMessageControllerSpec
     when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(auditService.auditMessage(any[IEMessage])(any)).thenReturn(EitherT.fromEither(Right(())))
     when(auditService.auditMessage(any[IEMessage], any)(any)).thenReturn(EitherT.fromEither(Right(())))
+
   }
 
   "submit" should {
@@ -258,7 +260,7 @@ class SubmitMessageControllerSpec
       movementValidation,
       dateTimeService,
       cc,
-      correlationIdService
+      correlationIdAction
     )
 
   private def createRequest(body: Elem): FakeRequest[Elem] =
@@ -281,7 +283,7 @@ class SubmitMessageControllerSpec
       movementValidation,
       dateTimeService,
       cc,
-      correlationIdService
+      correlationIdAction
     )
 
   private def createWithFailingXmlParserAction =
@@ -295,7 +297,7 @@ class SubmitMessageControllerSpec
       movementValidation,
       dateTimeService,
       cc,
-      correlationIdService
+      correlationIdAction
     )
 
 }

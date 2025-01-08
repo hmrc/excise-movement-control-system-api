@@ -21,9 +21,10 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
 
 import java.util.UUID
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-class CorrelationIdAction()(implicit val executionContext: ExecutionContext)
+class CorrelationIdAction @Inject() ()(implicit val executionContext: ExecutionContext)
     extends ActionTransformer[ParsedXmlRequest, ParsedXmlRequest] {
 
   private def generateCorrelationId(): String = UUID.randomUUID().toString

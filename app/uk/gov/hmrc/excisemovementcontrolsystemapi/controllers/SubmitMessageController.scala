@@ -19,9 +19,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 import cats.data.EitherT
 import play.api.Logging
 import play.api.libs.json.Json
-import play.api.mvc._
 import play.api.mvc.{Action, ControllerComponents, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, CorrelationIdAction, ParseXmlAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
@@ -48,14 +47,13 @@ class SubmitMessageController @Inject() (
   movementIdValidator: MovementIdValidation,
   dateTimeService: DateTimeService,
   cc: ControllerComponents,
-  correlationIdService: CorrelationIdService
+  correlationIdAction: CorrelationIdAction
 )(implicit ec: ExecutionContext)
     extends BackendController(cc)
     with Logging {
 
   def submit(movementId: String): Action[NodeSeq] =
-    (authAction andThen xmlParser).async(parse.xml) { implicit request =>
-//      val request = correlationIdService.guaranteeCorrelationId(req)
+    (authAction andThen xmlParser andThen correlationIdAction).async(parse.xml) { implicit request =>
 // TODO: We are in the middle of organising request types
       (for {
         validatedMovementId <- validateMovementId(movementId)
@@ -67,8 +65,9 @@ class SubmitMessageController @Inject() (
         success => {
           val (response, movement) = success
 
+          val correlationId = request.headers.get(HttpHeader.xCorrelationId).get
           auditService.auditMessage(request.ieMessage)
-          auditService.messageSubmitted(request.ieMessage, movement, true, response.emcsCorrelationId, request)
+          auditService.messageSubmitted(request.ieMessage, movement, true, correlationId, request)
 
           Accepted(
             Json.toJson(
@@ -125,8 +124,9 @@ class SubmitMessageController @Inject() (
     EitherT {
       submissionMessageService.submit(request, authorisedErn).map {
         case Left(error)     =>
+          val correlationId = request.headers.get(HttpHeader.xCorrelationId).get
           auditService.auditMessage(request.ieMessage, "Failed to Submit").value
-          auditService.messageSubmitted(request.ieMessage, movement, false, error.correlationId, request)
+          auditService.messageSubmitted(request.ieMessage, movement, false, correlationId, request)
           Left(
             Status(error.status)(
               Json.toJson(
