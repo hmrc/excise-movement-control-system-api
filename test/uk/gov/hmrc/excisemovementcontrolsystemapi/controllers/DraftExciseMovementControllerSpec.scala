@@ -30,6 +30,7 @@ import play.api.mvc.Results.{BadRequest, Forbidden, InternalServerError}
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.CorrelationIdAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EISErrorResponseDetails, MessageTypes}
@@ -57,7 +58,7 @@ class DraftExciseMovementControllerSpec
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
   private val submissionMessageService = mock[SubmissionMessageService]
-  private val correlationIdService     = mock[CorrelationIdService]
+  private val correlationIdAction      = new CorrelationIdAction()
   private val movementService          = mock[MovementService]
   private val cc                       = stubControllerComponents()
   private val request                  = createRequestWithClientId
@@ -192,7 +193,7 @@ class DraftExciseMovementControllerSpec
       await(createWithSuccessfulAuth.submit(request))
 
       verify(auditService, times(1)).auditMessage(any[IEMessage])(any)
-      verify(auditService, times(1)).messageSubmitted(any, any, any, any, any)(any)
+      verify(auditService, times(1)).messageSubmitted(any, any, any, eqTo("testCorrelationId"), any)(any)
 
     }
 
@@ -203,7 +204,7 @@ class DraftExciseMovementControllerSpec
       await(createWithSuccessfulAuth.submit(request))
 
       verify(auditService, times(1)).auditMessage(any, any)(any)
-      verify(auditService, times(1)).messageSubmittedNoMovement(any, any, any, any)(any)
+      verify(auditService, times(1)).messageSubmittedNoMovement(any, any, eqTo("testCorrelationId"), any)(any)
 
     }
 
@@ -213,7 +214,7 @@ class DraftExciseMovementControllerSpec
       await(createWithSuccessfulAuth.submit(request))
 
       verify(auditService, times(1)).auditMessage(any, any)(any)
-      verify(auditService, times(1)).messageSubmittedNoMovement(any, any, any, any)(any)
+      verify(auditService, times(1)).messageSubmittedNoMovement(any, any, eqTo("testCorrelationId"), any)(any)
     }
 
     "adds the boxId to the BoxIdRepository for consignor" in {
@@ -351,7 +352,7 @@ class DraftExciseMovementControllerSpec
       boxIdRepository,
       appConfig,
       cc,
-      correlationIdService
+      correlationIdAction
     )
   }
 
@@ -368,7 +369,7 @@ class DraftExciseMovementControllerSpec
       boxIdRepository,
       appConfig,
       cc,
-      correlationIdService
+      correlationIdAction
     )
 
   private def createWithFailingXmlParserAction =
@@ -384,7 +385,7 @@ class DraftExciseMovementControllerSpec
       boxIdRepository,
       appConfig,
       cc,
-      correlationIdService
+      correlationIdAction
     )
 
   private def createWithSuccessfulAuth =
@@ -400,14 +401,15 @@ class DraftExciseMovementControllerSpec
       boxIdRepository,
       appConfig,
       cc,
-      correlationIdService
+      correlationIdAction
     )
 
   private def createRequestWithClientId: FakeRequest[Elem] =
     createRequest(
       Seq(
-        HeaderNames.CONTENT_TYPE -> "application/xml",
-        "X-Client-Id"            -> "clientId"
+        HeaderNames.CONTENT_TYPE  -> "application/xml",
+        "X-Client-Id"             -> "clientId",
+        HttpHeader.xCorrelationId -> "testCorrelationId"
       )
     )
 

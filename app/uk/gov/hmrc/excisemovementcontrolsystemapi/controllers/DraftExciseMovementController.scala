@@ -21,7 +21,7 @@ import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseXmlAction}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, CorrelationIdAction, ParseXmlAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
@@ -52,7 +52,7 @@ class DraftExciseMovementController @Inject() (
   boxIdRepository: BoxIdRepository,
   appConfig: AppConfig,
   cc: ControllerComponents,
-  correlationIdService: CorrelationIdService
+  correlationIdAction: CorrelationIdAction
 )(implicit ec: ExecutionContext)
     extends BackendController(cc)
     with Logging {
@@ -71,8 +71,9 @@ class DraftExciseMovementController @Inject() (
         success => {
           val (response, movement, boxId) = success
 
+          val correlationId = request.headers.get(HttpHeader.xCorrelationId).get
           auditService.auditMessage(request.ieMessage).value
-          auditService.messageSubmitted(request.ieMessage, movement, true, response.emcsCorrelationId, request)
+          auditService.messageSubmitted(request.ieMessage, movement, true, correlationId, request)
 
           Accepted(
             Json.toJson(
@@ -99,8 +100,9 @@ class DraftExciseMovementController @Inject() (
     EitherT {
       submissionMessageService.submit(request, ern).map {
         case Left(error)     =>
+          val correlationId = request.headers.get(HttpHeader.xCorrelationId).get
           auditService.auditMessage(message, "Failed to submit") //OLD auditing
-          auditService.messageSubmittedNoMovement(message, false, error.correlationId, request) //NEW auditing
+          auditService.messageSubmittedNoMovement(message, false, correlationId, request) //NEW auditing
           Left(
             Status(error.status)(
               Json.toJson(
@@ -139,8 +141,10 @@ class DraftExciseMovementController @Inject() (
 
     movementMessageService.saveNewMovement(newMovement).map {
       case Left(result)    =>
+        val correlationId = request.headers.get(HttpHeader.xCorrelationId).get
+
         auditService.auditMessage(message, "Failed to Save")
-        auditService.messageSubmittedNoMovement(message, true, submission.emcsCorrelationId, request)
+        auditService.messageSubmittedNoMovement(message, true, correlationId, request)
         Left(result)
       case Right(movement) =>
         Right(movement)
