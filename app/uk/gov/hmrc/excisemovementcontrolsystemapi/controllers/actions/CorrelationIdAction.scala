@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 
 import play.api.mvc.ActionTransformer
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
 
 import java.util.UUID
@@ -25,15 +25,15 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class CorrelationIdAction @Inject() ()(implicit val executionContext: ExecutionContext)
-    extends ActionTransformer[ParsedXmlRequest, ParsedXmlRequest] {
+    extends ActionTransformer[EnrolmentRequest, EnrolmentRequest] {
 
   private def generateCorrelationId(): String = UUID.randomUUID().toString
 
-  override def transform[A](request: ParsedXmlRequest[A]): Future[ParsedXmlRequest[A]] =
+  override def transform[A](request: EnrolmentRequest[A]): Future[EnrolmentRequest[A]] =
     if (!request.headers.hasHeader(HttpHeader.xCorrelationId)) {
       val amendedHeaders = request.headers.add(HttpHeader.xCorrelationId -> generateCorrelationId())
       val amendedRequest = request.withHeaders(amendedHeaders)
-      val newRequest     = request.copy(request = request.request.copy(request = amendedRequest))
+      val newRequest     = request.copy(request = amendedRequest)
       Future.successful(newRequest)
     } else {
       Future.successful(request)

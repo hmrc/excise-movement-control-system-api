@@ -22,7 +22,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import java.util.UUID
 import javax.inject.{Inject, Singleton}
 
-@Singleton
+@Singleton //TODO: This is going to be removed in 820 (probably) as we source the id from the headercarriers
 class CorrelationIdService @Inject() {
 
   def generateCorrelationId(): String = UUID.randomUUID().toString

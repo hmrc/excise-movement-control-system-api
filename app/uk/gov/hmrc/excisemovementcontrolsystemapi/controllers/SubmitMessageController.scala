@@ -53,7 +53,7 @@ class SubmitMessageController @Inject() (
     with Logging {
 
   def submit(movementId: String): Action[NodeSeq] =
-    (authAction andThen xmlParser andThen correlationIdAction).async(parse.xml) { implicit request =>
+    (authAction andThen correlationIdAction andThen xmlParser).async(parse.xml) { implicit request =>
 // TODO: We are in the middle of organising request types
       (for {
         validatedMovementId <- validateMovementId(movementId)
@@ -65,9 +65,8 @@ class SubmitMessageController @Inject() (
         success => {
           val (response, movement) = success
 
-          val correlationId = request.headers.get(HttpHeader.xCorrelationId).get
           auditService.auditMessage(request.ieMessage)
-          auditService.messageSubmitted(request.ieMessage, movement, true, correlationId, request)
+          auditService.messageSubmitted(request.ieMessage, movement, true, request.request.correlationId, request)
 
           Accepted(
             Json.toJson(
@@ -126,7 +125,7 @@ class SubmitMessageController @Inject() (
         case Left(error)     =>
           val correlationId = request.headers.get(HttpHeader.xCorrelationId).get
           auditService.auditMessage(request.ieMessage, "Failed to Submit").value
-          auditService.messageSubmitted(request.ieMessage, movement, false, correlationId, request)
+          auditService.messageSubmitted(request.ieMessage, movement, false, request.request.correlationId, request)
           Left(
             Status(error.status)(
               Json.toJson(

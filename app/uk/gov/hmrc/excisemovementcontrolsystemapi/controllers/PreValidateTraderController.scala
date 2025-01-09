@@ -129,7 +129,6 @@ class PreValidateTraderController @Inject() (
   }
 
   private def handleLegacyRequest()(implicit authRequest: EnrolmentRequest[JsValue]): Future[Result] =
-    //implicit val hc: HeaderCarrier = correlationIdService.guaranteeCorrelationId(authRequest)
     parseJsonAction.refine(authRequest).flatMap {
       case Right(parsedRequest: ParsedPreValidateTraderRequest[JsValue]) =>
         preValidateTraderService.submitMessage(parsedRequest).map {

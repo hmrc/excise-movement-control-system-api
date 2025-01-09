@@ -58,7 +58,7 @@ class DraftExciseMovementController @Inject() (
     with Logging {
 
   def submit: Action[NodeSeq] =
-    (authAction andThen xmlParser andThen correlationIdAction).async(parse.xml) { implicit request =>
+    (authAction andThen correlationIdAction andThen xmlParser).async(parse.xml) { implicit request =>
       (for {
         ie815Message  <- getIe815Message(request.ieMessage)
         authorisedErn <- validateMessage(ie815Message, request.erns)
@@ -71,9 +71,8 @@ class DraftExciseMovementController @Inject() (
         success => {
           val (response, movement, boxId) = success
 
-          val correlationId = request.headers.get(HttpHeader.xCorrelationId).get
           auditService.auditMessage(request.ieMessage).value
-          auditService.messageSubmitted(request.ieMessage, movement, true, correlationId, request)
+          auditService.messageSubmitted(request.ieMessage, movement, true, request.request.correlationId, request)
 
           Accepted(
             Json.toJson(
@@ -100,9 +99,8 @@ class DraftExciseMovementController @Inject() (
     EitherT {
       submissionMessageService.submit(request, ern).map {
         case Left(error)     =>
-          val correlationId = request.headers.get(HttpHeader.xCorrelationId).get
           auditService.auditMessage(message, "Failed to submit") //OLD auditing
-          auditService.messageSubmittedNoMovement(message, false, correlationId, request) //NEW auditing
+          auditService.messageSubmittedNoMovement(message, false, request.request.correlationId, request) //NEW auditing
           Left(
             Status(error.status)(
               Json.toJson(
@@ -141,10 +139,8 @@ class DraftExciseMovementController @Inject() (
 
     movementMessageService.saveNewMovement(newMovement).map {
       case Left(result)    =>
-        val correlationId = request.headers.get(HttpHeader.xCorrelationId).get
-
         auditService.auditMessage(message, "Failed to Save")
-        auditService.messageSubmittedNoMovement(message, true, correlationId, request)
+        auditService.messageSubmittedNoMovement(message, true, request.request.correlationId, request)
         Left(result)
       case Right(movement) =>
         Right(movement)

@@ -41,7 +41,7 @@ class CorrelationIdActionSpec
   val uuidRegex: Regex              = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$".r
 
   "refine" should {
-    "return a ParsedXmlRequest with existing correlationId when one is provided" in {
+    "return an EnrolmentRequest with existing correlationId when one is provided" in {
       val xmlStr =
         """<IE815>
           | <body></body>
@@ -50,7 +50,7 @@ class CorrelationIdActionSpec
       val testCorrelationId = "testCorrelationId"
       val headers           = Seq(HttpHeader.xCorrelationId -> testCorrelationId)
 
-      val enrolmentRequest = EnrolmentRequest(
+      val inputRequest = EnrolmentRequest(
         FakeRequest()
           .withHeaders(FakeHeaders(headers))
           .withBody(xml.XML.loadString(xmlStr)),
@@ -62,20 +62,17 @@ class CorrelationIdActionSpec
 
       val correlationIdAction = new CorrelationIdAction
 
-      val inputRequest =
-        ParsedXmlRequest(enrolmentRequest, message, Set("ern"), UserDetails("123", "abc"))
-
       val result = correlationIdAction.transform(inputRequest).futureValue
 
       result mustBe inputRequest
     }
-    "return a ParsedXmlRequest with new correlationId when none is provided" in {
+    "return an EnrolmentRequest with new correlationId when none is provided" in {
       val xmlStr =
         """<IE815>
           | <body></body>
           |</IE815>""".stripMargin
 
-      val enrolmentRequest = EnrolmentRequest(
+      val inputRequest = EnrolmentRequest(
         FakeRequest()
           .withBody(xml.XML.loadString(xmlStr)),
         Set("ern"),
@@ -85,9 +82,6 @@ class CorrelationIdActionSpec
       val message = IE815Message.createFromXml(IE815)
 
       val correlationIdAction = new CorrelationIdAction
-
-      val inputRequest =
-        ParsedXmlRequest(enrolmentRequest, message, Set("ern"), UserDetails("123", "abc"))
 
       val result = correlationIdAction.transform(inputRequest).futureValue
 
