@@ -22,12 +22,38 @@ import play.api.libs.json.Json
 class GetMovementsDetailsSpec extends PlaySpec {
 
   "GetMovementsRequest.writes" should {
-    "create an json only with fields that are populated" in {
+    "create an json when only ERN is populated" in {
       val request = GetMovementsRequest(Some("ern"), None, None, None, None)
 
       val json = Json.toJson(request)
 
       val expectedJson = Json.obj("exciseRegistrationNumber" -> "ern")
+
+      json mustBe expectedJson
+    }
+
+    "create an json when only ERN and LRN are populated" in {
+      val request = GetMovementsRequest(Some("ern"), None, Some("lrn"), None, None)
+
+      val json = Json.toJson(request)
+
+      val expectedJson = Json.obj("exciseRegistrationNumber" -> "ern", "localReferenceNumber" -> "lrn")
+
+      json mustBe expectedJson
+    }
+
+    "create an json when all fields are populated" in {
+      val request = GetMovementsRequest(Some("ern"), Some("arc"), Some("lrn"), Some("us"), Some("trader"))
+
+      val json = Json.toJson(request)
+
+      val expectedJson = Json.obj(
+        "exciseRegistrationNumber"    -> "ern",
+        "administrativeReferenceCode" -> "arc",
+        "localReferenceNumber"        -> "lrn",
+        "updatedSince"                -> "us",
+        "traderType"                  -> "trader"
+      )
 
       json mustBe expectedJson
     }
