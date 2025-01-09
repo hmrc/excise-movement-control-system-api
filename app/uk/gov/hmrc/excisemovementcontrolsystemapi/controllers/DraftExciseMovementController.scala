@@ -65,11 +65,11 @@ class DraftExciseMovementController @Inject() (
         clientId      <- retrieveClientIdFromHeader(request)
         boxId         <- getBoxId(clientId)
         result        <- submitAndHandleError(request, authorisedErn, ie815Message)
-        movement      <- saveMovement(boxId, ie815Message, result, request)
-      } yield (result, movement, boxId)).fold[Result](
+        movement      <- saveMovement(boxId, ie815Message, request)
+      } yield (movement, boxId)).fold[Result](
         failResult => failResult,
         success => {
-          val (response, movement, boxId) = success
+          val (movement, boxId) = success
 
           auditService.auditMessage(request.ieMessage).value
           auditService.messageSubmitted(request.ieMessage, movement, true, request.request.correlationId, request)
@@ -130,7 +130,6 @@ class DraftExciseMovementController @Inject() (
   private def saveMovement(
     boxId: Option[String],
     message: IE815Message,
-    submission: EISSubmissionResponse,
     request: ParsedXmlRequest[NodeSeq]
   )(implicit hc: HeaderCarrier): EitherT[Future, Result, Movement] = EitherT {
 

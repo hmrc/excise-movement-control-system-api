@@ -59,10 +59,9 @@ class SubmitMessageController @Inject() (
         movement            <- getMovement(validatedMovementId)
         authorisedErn       <- validateMessage(movement, request.ieMessage, request.erns)
         result              <- submitAndHandleError(request, authorisedErn, movement)
-      } yield (result, movement)).fold[Result](
+      } yield movement).fold[Result](
         failResult => failResult,
-        success => {
-          val (response, movement) = success
+        movement => {
 
           auditService.auditMessage(request.ieMessage)
           auditService.messageSubmitted(request.ieMessage, movement, true, request.request.correlationId, request)

@@ -19,6 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play.PlaySpec
+import play.api.test.Helpers.contentAsString
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
@@ -27,7 +28,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
 
 import java.util.UUID
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex
 
 class CorrelationIdActionSpec
@@ -40,7 +41,7 @@ class CorrelationIdActionSpec
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   val uuidRegex: Regex              = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$".r
 
-  "refine" should {
+  "transform" should {
     "return an EnrolmentRequest with existing correlationId when one is provided" in {
       val xmlStr =
         """<IE815>
@@ -58,13 +59,15 @@ class CorrelationIdActionSpec
         UserDetails("123", "abc")
       )
 
-      val message = IE815Message.createFromXml(IE815)
-
       val correlationIdAction = new CorrelationIdAction
 
       val result = correlationIdAction.transform(inputRequest).futureValue
 
       result mustBe inputRequest
+
+      withClue("without modifying other parts of the request") {
+        result.body.toString mustBe xmlStr
+      }
     }
     "return an EnrolmentRequest with new correlationId when none is provided" in {
       val xmlStr =
@@ -79,15 +82,16 @@ class CorrelationIdActionSpec
         UserDetails("123", "abc")
       )
 
-      val message = IE815Message.createFromXml(IE815)
-
       val correlationIdAction = new CorrelationIdAction
 
       val result = correlationIdAction.transform(inputRequest).futureValue
 
-      //Question before merge - do we want to confirm more of the internal details are preserved?
       result.headers.get(HttpHeader.xCorrelationId).isDefined mustBe true
       uuidRegex.matches(result.headers.get(HttpHeader.xCorrelationId).get) mustBe true
+
+      withClue("without modifying other parts of the request") {
+        result.body.toString mustBe xmlStr
+      }
     }
   }
 }

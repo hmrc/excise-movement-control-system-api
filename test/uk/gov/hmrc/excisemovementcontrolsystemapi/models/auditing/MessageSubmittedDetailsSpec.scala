@@ -42,6 +42,8 @@ class MessageSubmittedDetailsSpec extends PlaySpec {
 
       val output = Json.toJson(testModel)
 
+      println(output)
+
       (output \ "authExciseNumber").get mustBe JsString("id1,id2,id3")
 
     }

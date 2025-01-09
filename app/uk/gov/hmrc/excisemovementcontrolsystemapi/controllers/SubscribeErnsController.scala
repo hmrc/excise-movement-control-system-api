@@ -39,8 +39,7 @@ class SubscribeErnsController @Inject() (
   cc: ControllerComponents,
   notificationsService: NotificationsService,
   dateTimeService: DateTimeService,
-  appConfig: AppConfig,
-  correlationIdService: CorrelationIdService
+  appConfig: AppConfig
 )(implicit ec: ExecutionContext)
     extends BackendController(cc)
     with Logging {
