@@ -26,14 +26,6 @@ import javax.inject.{Inject, Singleton}
 class CorrelationIdService @Inject() {
 
   def generateCorrelationId(): String = UUID.randomUUID().toString
-
-  def guaranteeCorrelationId(request: ParsedXmlRequest[_]): WrappedRequest[_] =
-    if (!request.headers.hasHeader(HttpHeader.xCorrelationId)) {
-      val amendedHeaders = request.headers.add(HttpHeader.xCorrelationId -> generateCorrelationId())
-      request.withHeaders(amendedHeaders)
-    } else {
-      request
-    }
 }
 
 object HttpHeader {

@@ -54,7 +54,6 @@ class SubmitMessageController @Inject() (
 
   def submit(movementId: String): Action[NodeSeq] =
     (authAction andThen correlationIdAction andThen xmlParser).async(parse.xml) { implicit request =>
-// TODO: We are in the middle of organising request types
       (for {
         validatedMovementId <- validateMovementId(movementId)
         movement            <- getMovement(validatedMovementId)

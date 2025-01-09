@@ -26,34 +26,6 @@ class CorrelationIdServiceSpec extends PlaySpec with BeforeAndAfterEach {
 
   val correlationIdService: CorrelationIdService = new CorrelationIdService()
 
-  // we are in the middle of moving this over to the action
+  // we are in the middle of removing this, so no adding tests for the generate call
 
-  "guaranteeCorrelationId" should {
-    "generate new correlationId when none is present" in {
-//      val headers = Seq.empty[(String, String)]
-//
-//      val request = FakeRequest()
-//        .withHeaders(FakeHeaders(headers))
-//
-//      val result = correlationIdService.guaranteeCorrelationId(request)
-//
-//      val correlationId = result.headers.get(HttpHeader.xCorrelationId)
-//
-//      correlationId.isDefined mustBe true
-    }
-    "use already existing correlationId" in {
-//      val testCorrelationId = UUID.randomUUID().toString
-//      val headers           = Seq(HttpHeader.xCorrelationId -> testCorrelationId)
-//
-//      val request = FakeRequest()
-//        .withHeaders(FakeHeaders(headers))
-//
-//      val result = correlationIdService.guaranteeCorrelationId(request)
-//
-//      val correlationId = result.headers.get(HttpHeader.xCorrelationId)
-//
-//      correlationId.isDefined mustBe true
-//      correlationId.get mustBe testCorrelationId
-    }
-  }
 }
