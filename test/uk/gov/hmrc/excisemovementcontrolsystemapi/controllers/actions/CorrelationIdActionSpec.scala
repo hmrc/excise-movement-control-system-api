@@ -45,7 +45,7 @@ class CorrelationIdActionSpec
     "return an EnrolmentRequest with existing correlationId when one is provided" in {
       val xmlStr =
         """<IE815>
-          | <body></body>
+          | <body>test</body>
           |</IE815>""".stripMargin
 
       val testCorrelationId = "testCorrelationId"
@@ -72,7 +72,7 @@ class CorrelationIdActionSpec
     "return an EnrolmentRequest with new correlationId when none is provided" in {
       val xmlStr =
         """<IE815>
-          | <body></body>
+          | <body>test</body>
           |</IE815>""".stripMargin
 
       val inputRequest = EnrolmentRequest(
