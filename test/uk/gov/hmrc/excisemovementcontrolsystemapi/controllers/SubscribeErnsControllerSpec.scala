@@ -220,8 +220,7 @@ class SubscribeErnsControllerSpec
       stubControllerComponents(),
       mockNotificationsService,
       mockDateTimeService,
-      mockAppConfig,
-      correlationIdService
+      mockAppConfig
     )
 
   private def createWithFailingAuth =
@@ -230,7 +229,6 @@ class SubscribeErnsControllerSpec
       stubControllerComponents(),
       mockNotificationsService,
       mockDateTimeService,
-      mockAppConfig,
-      correlationIdService
+      mockAppConfig
     )
 }

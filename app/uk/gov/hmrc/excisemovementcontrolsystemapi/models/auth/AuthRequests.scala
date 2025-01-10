@@ -19,10 +19,14 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth
 import play.api.mvc.{Request, WrappedRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
 
 case class EnrolmentRequest[A](request: Request[A], erns: Set[String], userDetails: UserDetails)
-    extends WrappedRequest[A](request)
-
+    extends WrappedRequest[A](request) {
+  def correlationId: String = request.headers
+    .get(HttpHeader.xCorrelationId)
+    .getOrElse(throw new Exception(s"${HttpHeader.xCorrelationId} not found"))
+}
 case class ParsedXmlRequest[A](
   request: EnrolmentRequest[A],
   ieMessage: IEMessage,

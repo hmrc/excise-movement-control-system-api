@@ -16,28 +16,16 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-import play.api.mvc.Request
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.http.HeaderCarrierConverter
+import play.api.mvc.WrappedRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 
 import java.util.UUID
 import javax.inject.{Inject, Singleton}
 
-@Singleton
+@Singleton //TODO: This is going to be removed in 820 (probably) as we source the id from the headercarriers
 class CorrelationIdService @Inject() {
 
   def generateCorrelationId(): String = UUID.randomUUID().toString
-
-  def getOrCreateCorrelationId(request: Request[_]): HeaderCarrier = {
-    val hcFromRequest: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
-    hcFromRequest
-      .headers(scala.Seq(HttpHeader.xCorrelationId)) match {
-      case Nil =>
-        hcFromRequest.withExtraHeaders((HttpHeader.xCorrelationId, generateCorrelationId()))
-      case _   =>
-        hcFromRequest
-    }
-  }
 }
 
 object HttpHeader {
