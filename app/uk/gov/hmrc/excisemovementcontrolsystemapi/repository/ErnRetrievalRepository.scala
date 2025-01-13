@@ -39,7 +39,7 @@ class ErnRetrievalRepository @Inject() (mongo: MongoComponent, appConfig: AppCon
       mongoComponent = mongo,
       domainFormat = ErnRetrieval.format,
       indexes = mongoIndexes(appConfig.ernRetrievalTTL),
-      replaceIndexes = false
+      replaceIndexes = true
     ) {
 
   def getErnsAndLastRetrieved: Future[Map[String, Instant]] = Mdc.preservingMdc {

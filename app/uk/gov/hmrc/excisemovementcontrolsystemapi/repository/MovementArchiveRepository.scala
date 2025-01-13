@@ -42,7 +42,7 @@ class MovementArchiveRepository @Inject() (
       mongoComponent = mongo,
       domainFormat = Movement.format,
       indexes = mongoIndexes(appConfig.movementArchiveTTL),
-      replaceIndexes = false
+      replaceIndexes = true
     )
     with Logging {
 
