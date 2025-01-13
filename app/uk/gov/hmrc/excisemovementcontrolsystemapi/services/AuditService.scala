@@ -47,7 +47,7 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
     message: IEMessage,
     movement: Movement,
     submittedToCore: Boolean,
-    correlationId: String,
+    correlationId: Option[String],
     request: ParsedXmlRequest[NodeSeq]
   )(implicit hc: HeaderCarrier): Unit =
     if (appConfig.newAuditingEnabled) {

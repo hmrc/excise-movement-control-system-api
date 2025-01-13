@@ -64,15 +64,15 @@ class DraftExciseMovementController @Inject() (
         authorisedErn <- validateMessage(ie815Message, request.erns)
         clientId      <- retrieveClientIdFromHeader(request)
         boxId         <- getBoxId(clientId)
-        result        <- submitAndHandleError(request, authorisedErn, ie815Message)
+        _             <- submitAndHandleError(request, authorisedErn, ie815Message)
         movement      <- saveMovement(boxId, ie815Message, request)
-      } yield (movement, boxId)).fold[Result](
+      } yield (movement, boxId, ie815Message)).fold[Result](
         failResult => failResult,
         success => {
-          val (movement, boxId) = success
+          val (movement, boxId, ie815Message) = success
 
           auditService.auditMessage(request.ieMessage).value
-          auditService.messageSubmitted(request.ieMessage, movement, true, request.request.correlationId, request)
+          auditService.messageSubmitted(request.ieMessage, movement, true, ie815Message.correlationId, request)
 
           Accepted(
             Json.toJson(

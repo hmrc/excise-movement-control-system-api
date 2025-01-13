@@ -171,7 +171,8 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
           message.toJsObject
         )
 
-        service.messageSubmitted(message, movement, true, "correlationId", request)
+        //TODO: Need to change this to actual correlationId from header
+        service.messageSubmitted(message, movement, true, Some("correlationId"), request)
 
         verify(auditConnector, times(1))
           .sendExplicitAudit(eqTo("MessageSubmitted"), eqTo(expectedMessageSubmittedDetails))(any, any, any)
@@ -181,7 +182,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
       "post no event if newAuditing feature switch is false" in {
         when(appConfig.newAuditingEnabled).thenReturn(false)
 
-        service.messageSubmitted(IE815Message.createFromXml(IE815), testMovement, true, "", request)
+        service.messageSubmitted(IE815Message.createFromXml(IE815), testMovement, true, Some(""), request)
 
         verify(auditConnector, times(0)).sendExtendedEvent(any)(any, any)
       }

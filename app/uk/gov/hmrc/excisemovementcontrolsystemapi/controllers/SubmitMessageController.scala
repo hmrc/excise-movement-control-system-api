@@ -58,13 +58,14 @@ class SubmitMessageController @Inject() (
         validatedMovementId <- validateMovementId(movementId)
         movement            <- getMovement(validatedMovementId)
         authorisedErn       <- validateMessage(movement, request.ieMessage, request.erns)
-        result              <- submitAndHandleError(request, authorisedErn, movement)
+        _                   <- submitAndHandleError(request, authorisedErn, movement)
       } yield movement).fold[Result](
         failResult => failResult,
         movement => {
 
           auditService.auditMessage(request.ieMessage)
-          auditService.messageSubmitted(request.ieMessage, movement, true, request.request.correlationId, request)
+          //TODO: Need to change this to actual correlationId from header
+          auditService.messageSubmitted(request.ieMessage, movement, true, Some(request.request.correlationId), request)
 
           Accepted(
             Json.toJson(
@@ -121,9 +122,10 @@ class SubmitMessageController @Inject() (
     EitherT {
       submissionMessageService.submit(request, authorisedErn).map {
         case Left(error)     =>
-          val correlationId = request.headers.get(HttpHeader.xCorrelationId).get
           auditService.auditMessage(request.ieMessage, "Failed to Submit").value
-          auditService.messageSubmitted(request.ieMessage, movement, false, request.request.correlationId, request)
+          //TODO: Need to change this to actual correlationId from header
+          auditService
+            .messageSubmitted(request.ieMessage, movement, false, Some(request.request.correlationId), request)
           Left(
             Status(error.status)(
               Json.toJson(
