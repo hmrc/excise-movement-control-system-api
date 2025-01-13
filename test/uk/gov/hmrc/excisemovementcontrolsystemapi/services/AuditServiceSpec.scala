@@ -22,14 +22,13 @@ import org.mockito.MockitoSugar.{reset, times, verify, when}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.Logger
 import play.api.libs.json.JsObject
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeXmlParsers
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{MessageSubmittedDetails, UserDetails}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMovementsAuditInfo, GetMovementsParametersAuditInfo, GetMovementsResponseAuditInfo, MessageSubmittedDetails, UserDetails}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE704Message, IE815Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
@@ -45,11 +44,11 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   protected implicit val hc: HeaderCarrier    = HeaderCarrier()
 
-  val auditConnector = mock[AuditConnector]
-  val appConfig      = mock[AppConfig]
+  val auditConnector: AuditConnector = mock[AuditConnector]
+  val appConfig: AppConfig           = mock[AppConfig]
 
-  val testMovement = Movement("id", None, "lrn", "consignorId", None, None, Instant.now, Seq.empty[Message])
-  val testErns     = Set("123", "456")
+  val testMovement: Movement = Movement("id", None, "lrn", "consignorId", None, None, Instant.now, Seq.empty[Message])
+  val testErns: Set[String]  = Set("123", "456")
 
   private def createRequest(headers: Seq[(String, String)], body: Elem = IE815): ParsedXmlRequest[NodeSeq] =
     ParsedXmlRequest[NodeSeq](
@@ -65,11 +64,6 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
       UserDetails("", "")
     )
 
-  class Harness(auditConnector: AuditConnector, appConfig: AppConfig)
-      extends AuditServiceImpl(auditConnector, appConfig) {
-    def getLogger(): Logger = logger
-  }
-
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(auditConnector, appConfig)
@@ -84,22 +78,22 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
       when(auditConnector.sendExtendedEvent(any)(any, any))
         .thenReturn(Future.successful(AuditResult.Failure("test", None)))
 
-      val sut    = new Harness(auditConnector, appConfig)
-      val result = sut.auditMessage(IE815Message.createFromXml(IE815))
+      val service = new AuditService(auditConnector, appConfig)
+      val result  = service.auditMessage(IE815Message.createFromXml(IE815))
 
       await(result.value) equals Right(())
     }
 
     "return Right(())) on success" in {
 
-      val sut    = new Harness(auditConnector, appConfig)
-      val result = sut.auditMessage(IE815Message.createFromXml(IE815))
+      val service = new AuditService(auditConnector, appConfig)
+      val result  = service.auditMessage(IE815Message.createFromXml(IE815))
 
       await(result.value) equals Right(())
     }
   }
 
-  val service = new AuditServiceImpl(auditConnector, appConfig)
+  val service = new AuditService(auditConnector, appConfig)
 
   "messageSubmittedNoMovement" should {
 
@@ -192,5 +186,27 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
         verify(auditConnector, times(0)).sendExtendedEvent(any)(any, any)
       }
     }
+  }
+
+  "getInformation" should {
+    "post an event when user calls a getMovements" in {
+      val request          = GetMovementsParametersAuditInfo(None, None, None, None, None)
+      val response         = GetMovementsResponseAuditInfo(5)
+      val userDetails      = UserDetails("gatewayId", "groupIdentifier")
+      val authExciseNumber = NonEmptySeq("ern1", Seq("ern2", "ern3"))
+
+      val expectedDetails = GetMovementsAuditInfo(
+        request = request,
+        response = response,
+        userDetails = userDetails,
+        authExciseNumber = authExciseNumber
+      )
+
+      service.getInformation(request, response, userDetails, authExciseNumber)
+
+      verify(auditConnector, times(1))
+        .sendExplicitAudit(eqTo("GetInformation"), eqTo(expectedDetails))(any, any, any)
+    }
+
   }
 }

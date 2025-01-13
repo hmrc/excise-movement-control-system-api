@@ -20,7 +20,7 @@ import cats.data.NonEmptySeq
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, Auditing, MessageSubmittedDetails, UserDetails}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.writes.testObjects._
 import uk.gov.hmrc.http.HeaderCarrier
@@ -112,5 +112,19 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
 
     result mustBe expectedResult
     result.messageTypeCode mustBe "IE815"
+  }
+
+  "getMovements creates get movements details object" in {
+    val request     = GetMovementsParametersAuditInfo(None, None, None, None, None)
+    val response    = GetMovementsResponseAuditInfo(5)
+    val userDetails = UserDetails("gatewayId", "groupIdentifier")
+    val erns        = NonEmptySeq("ern1", Seq("ern2", "ern3"))
+
+    val result = AuditEventFactory.createGetMovementsDetails(request, response, userDetails, erns)
+
+    val expectedResult =
+      GetMovementsAuditInfo(request = request, response = response, userDetails = userDetails, authExciseNumber = erns)
+
+    result mustBe expectedResult
   }
 }
