@@ -41,7 +41,7 @@ class ErnSubmissionRepository @Inject() (
       mongoComponent = mongo,
       domainFormat = ErnSubmission.format,
       indexes = mongoIndexes(configuration.get[Duration]("mongodb.ernSubmission.TTL")),
-      replaceIndexes = false
+      replaceIndexes = true
     )
     with Logging {
 
