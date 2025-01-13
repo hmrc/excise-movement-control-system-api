@@ -40,7 +40,7 @@ object GetMovementsParametersAuditInfo {
 }
 
 case class GetMovementsResponseAuditInfo(
-  GetMovementsResponseAuditInfo: Int
+  numberOfMovements: Int
 )
 object GetMovementsResponseAuditInfo {
   implicit val writes: OWrites[GetMovementsResponseAuditInfo] = Json.writes[GetMovementsResponseAuditInfo]
