@@ -16,9 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-import play.api.mvc.WrappedRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
-
 import java.util.UUID
 import javax.inject.{Inject, Singleton}
 

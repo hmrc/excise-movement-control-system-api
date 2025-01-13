@@ -16,20 +16,19 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import cats.data.{EitherT, OptionT}
+import cats.data._
 import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ValidateErnParameterAction, ValidateTraderTypeAction, ValidateUpdatedSinceAction}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, TraderType}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMovementsRequest, GetMovementsResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMovementsParametersAuditInfo, GetMovementsResponseAuditInfo}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, CorrelationIdService, MessageService, MovementService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
@@ -47,7 +46,6 @@ class GetMovementsController @Inject() (
   dateTimeService: DateTimeService,
   messageService: MessageService,
   movementIdValidator: MovementIdValidation,
-  correlationIdService: CorrelationIdService,
   auditService: AuditService
 )(implicit ec: ExecutionContext)
     extends BackendController(cc)
@@ -78,8 +76,10 @@ class GetMovementsController @Inject() (
           movements <- movementService.getMovementByErn(request.erns.toSeq, filter)
         } yield {
           auditService.getInformation(
-            GetMovementsRequest(ern, arc, lrn, updatedSince, traderType),
-            GetMovementsResponse(movements.length)
+            GetMovementsParametersAuditInfo(ern, arc, lrn, updatedSince, traderType),
+            GetMovementsResponseAuditInfo(movements.length),
+            request.userDetails,
+            NonEmptySeq(request.erns.head, request.erns.tail.toList)
           )
           Ok(Json.toJson(movements.map(createResponseFrom)))
         }

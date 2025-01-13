@@ -16,11 +16,9 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
-import play.api.libs.functional.syntax.toFunctionalBuilderOps
-import play.api.libs.functional.syntax.unlift
-import play.api.libs.json.{JsObject, JsValue, Json, OWrites, Reads, Writes, __}
 import cats.data.NonEmptySeq
-import play.api.libs.functional.syntax.unlift
+import play.api.libs.functional.syntax.{toFunctionalBuilderOps, unlift}
+import play.api.libs.json._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.CommonFormats
 
 case class UserDetails(
@@ -49,10 +47,6 @@ case class MessageSubmittedDetails(
 )
 
 object MessageSubmittedDetails extends CommonFormats {
-
-  implicit val commaWriter = new Writes[NonEmptySeq[String]] {
-    def writes(input: NonEmptySeq[String]): JsValue = Json.toJson(input.toSeq.mkString(","))
-  }
 
   implicit val writes: OWrites[MessageSubmittedDetails] =
     (

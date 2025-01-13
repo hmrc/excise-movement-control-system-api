@@ -28,7 +28,7 @@ import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeXmlParsers
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMovementsDetails, GetMovementsRequest, GetMovementsResponse, MessageSubmittedDetails, UserDetails}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMovementsAuditInfo, GetMovementsParametersAuditInfo, GetMovementsResponseAuditInfo, MessageSubmittedDetails, UserDetails}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE704Message, IE815Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
@@ -188,13 +188,21 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
     }
   }
 
-  "getMovements" should {
+  "getInformation" should {
     "post an event when user calls a getMovements" in {
-      val request         = GetMovementsRequest(None, None, None, None, None)
-      val response        = GetMovementsResponse(5)
-      val expectedDetails = GetMovementsDetails(request = request, response = response)
+      val request          = GetMovementsParametersAuditInfo(None, None, None, None, None)
+      val response         = GetMovementsResponseAuditInfo(5)
+      val userDetails      = UserDetails("gatewayId", "groupIdentifier")
+      val authExciseNumber = NonEmptySeq("ern1", Seq("ern2", "ern3"))
 
-      service.getInformation(request, response)
+      val expectedDetails = GetMovementsAuditInfo(
+        request = request,
+        response = response,
+        userDetails = userDetails,
+        authExciseNumber = authExciseNumber
+      )
+
+      service.getInformation(request, response, userDetails, authExciseNumber)
 
       verify(auditConnector, times(1))
         .sendExplicitAudit(eqTo("GetInformation"), eqTo(expectedDetails))(any, any, any)

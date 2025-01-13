@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
 
 import cats.data.{NonEmptyList, NonEmptySeq}
 import play.api.libs.functional.syntax.toInvariantFunctorOps
-import play.api.libs.json.Format
+import play.api.libs.json._
 
 object CommonFormats extends CommonFormats
 
@@ -39,4 +39,6 @@ trait CommonFormats {
         NonEmptySeq.fromSeqUnsafe,
         _.toSeq
       )
+
+  val commaWriter: Writes[NonEmptySeq[String]] = (input: NonEmptySeq[String]) => Json.toJson(input.toSeq.mkString(","))
 }

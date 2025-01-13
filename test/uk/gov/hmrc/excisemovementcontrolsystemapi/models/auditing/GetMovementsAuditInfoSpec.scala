@@ -16,14 +16,15 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
+import cats.data.NonEmptySeq
 import org.scalatestplus.play.PlaySpec
-import play.api.libs.json.Json
+import play.api.libs.json.{JsString, Json}
 
-class GetMovementsDetailsSpec extends PlaySpec {
+class GetMovementsAuditInfoSpec extends PlaySpec {
 
-  "GetMovementsRequest.writes" should {
+  "GetMovementsParametersAuditInfo.writes" should {
     "create an json when only ERN is populated" in {
-      val request = GetMovementsRequest(Some("ern"), None, None, None, None)
+      val request = GetMovementsParametersAuditInfo(Some("ern"), None, None, None, None)
 
       val json = Json.toJson(request)
 
@@ -33,7 +34,7 @@ class GetMovementsDetailsSpec extends PlaySpec {
     }
 
     "create an json when only ERN and LRN are populated" in {
-      val request = GetMovementsRequest(Some("ern"), None, Some("lrn"), None, None)
+      val request = GetMovementsParametersAuditInfo(Some("ern"), None, Some("lrn"), None, None)
 
       val json = Json.toJson(request)
 
@@ -43,7 +44,7 @@ class GetMovementsDetailsSpec extends PlaySpec {
     }
 
     "create an json when all fields are populated" in {
-      val request = GetMovementsRequest(Some("ern"), Some("arc"), Some("lrn"), Some("us"), Some("trader"))
+      val request = GetMovementsParametersAuditInfo(Some("ern"), Some("arc"), Some("lrn"), Some("us"), Some("trader"))
 
       val json = Json.toJson(request)
 
@@ -56,6 +57,28 @@ class GetMovementsDetailsSpec extends PlaySpec {
       )
 
       json mustBe expectedJson
+    }
+  }
+
+  "GetMovementsAuditInfo.writes" should {
+    "serializes the authExciseNumber sequence into a comma-seperated string" in {
+      val request          = GetMovementsParametersAuditInfo(Some("ern"), None, None, None, None)
+      val response         = GetMovementsResponseAuditInfo(5)
+      val userDetails      = UserDetails("gatewayId", "groupIdentifier")
+      val authExciseNumber = NonEmptySeq("ern1", Seq("ern2", "ern3"))
+
+      val testModel =
+        GetMovementsAuditInfo(
+          request = request,
+          response = response,
+          userDetails = userDetails,
+          authExciseNumber = authExciseNumber
+        )
+
+      val output = Json.toJson(testModel)
+
+      (output \ "authExciseNumber").get mustBe JsString("ern1,ern2,ern3")
+
     }
   }
 }

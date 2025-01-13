@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-import cats.data.EitherT
+import cats.data.{EitherT, NonEmptySeq}
 import play.api.Logging
 import play.api.mvc.Result
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
@@ -85,7 +85,7 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
 
   private def auditMessage(message: IEMessage, failureOpt: Option[String])(implicit
     hc: HeaderCarrier
-  ): EitherT[Future, Result, Unit]                                                                                   =
+  ): EitherT[Future, Result, Unit]    =
     EitherT {
 
       auditConnector.sendExtendedEvent(AuditEventFactory.createMessageAuditEvent(message, failureOpt)).map {
@@ -93,9 +93,14 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
         case _                      => Right(())
       }
     }
-  def getInformation(request: GetMovementsRequest, response: GetMovementsResponse)(implicit hc: HeaderCarrier): Unit =
+  def getInformation(
+    request: GetMovementsParametersAuditInfo,
+    response: GetMovementsResponseAuditInfo,
+    userDetails: UserDetails,
+    authExciseNumber: NonEmptySeq[String]
+  )(implicit hc: HeaderCarrier): Unit =
     if (appConfig.newAuditingEnabled) {
-      val event = AuditEventFactory.createGetMovementsDetails(request, response)
+      val event = AuditEventFactory.createGetMovementsDetails(request, response, userDetails, authExciseNumber)
       auditConnector.sendExplicitAudit("GetInformation", event)
     }
 }
