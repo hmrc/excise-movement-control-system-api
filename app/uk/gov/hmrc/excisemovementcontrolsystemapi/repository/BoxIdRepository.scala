@@ -38,7 +38,7 @@ class BoxIdRepository @Inject() (mongo: MongoComponent, configuration: Configura
       mongoComponent = mongo,
       domainFormat = BoxIdRecord.format,
       indexes = mongoIndexes(configuration.get[Duration]("mongodb.boxId.TTL")),
-      replaceIndexes = false
+      replaceIndexes = true
     ) {
 
   def getBoxIds(ern: String): Future[Set[String]] = Mdc.preservingMdc {
