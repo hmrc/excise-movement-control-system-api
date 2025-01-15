@@ -64,15 +64,15 @@ class DraftExciseMovementController @Inject() (
         authorisedErn <- validateMessage(ie815Message, request.erns)
         clientId      <- retrieveClientIdFromHeader(request)
         boxId         <- getBoxId(clientId)
-        result        <- submitAndHandleError(request, authorisedErn, ie815Message)
+        _             <- submitAndHandleError(request, authorisedErn, ie815Message)
         movement      <- saveMovement(boxId, ie815Message, request)
-      } yield (movement, boxId)).fold[Result](
+      } yield (movement, boxId, ie815Message)).fold[Result](
         failResult => failResult,
         success => {
-          val (movement, boxId) = success
+          val (movement, boxId, ie815Message) = success
 
           auditService.auditMessage(request.ieMessage).value
-          auditService.messageSubmitted(request.ieMessage, movement, true, request.request.correlationId, request)
+          auditService.messageSubmitted(request.ieMessage, movement, true, ie815Message.correlationId, request)
 
           Accepted(
             Json.toJson(
@@ -100,7 +100,8 @@ class DraftExciseMovementController @Inject() (
       submissionMessageService.submit(request, ern).map {
         case Left(error)     =>
           auditService.auditMessage(message, "Failed to submit") //OLD auditing
-          auditService.messageSubmittedNoMovement(message, false, request.request.correlationId, request) //NEW auditing
+          auditService
+            .messageSubmittedNoMovement(message, false, message.correlationId, request) //NEW auditing
           Left(
             Status(error.status)(
               Json.toJson(
@@ -139,7 +140,7 @@ class DraftExciseMovementController @Inject() (
     movementMessageService.saveNewMovement(newMovement).map {
       case Left(result)    =>
         auditService.auditMessage(message, "Failed to Save")
-        auditService.messageSubmittedNoMovement(message, true, request.request.correlationId, request)
+        auditService.messageSubmittedNoMovement(message, true, message.correlationId, request)
         Left(result)
       case Right(movement) =>
         Right(movement)

@@ -42,4 +42,5 @@ object UnsupportedTestMessage extends IEMessage {
   override def toJsObject: JsObject = JsObject.empty
 
   override def messageAuditType: MessageAuditType = Unsupported
+  override def correlationId: Option[String]      = None
 }

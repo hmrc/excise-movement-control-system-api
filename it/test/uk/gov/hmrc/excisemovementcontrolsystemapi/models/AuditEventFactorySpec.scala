@@ -89,7 +89,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
     val result = AuditEventFactory.createMessageSubmittedNoMovement(
       message,
       submittedToCore = true,
-      testCorrelationid.toString,
+      Some(testCorrelationid.toString),
       UserDetails("gatewayID", "groupid"),
       Set("ern1")
     )

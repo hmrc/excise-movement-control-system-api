@@ -47,7 +47,7 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
     message: IEMessage,
     movement: Movement,
     submittedToCore: Boolean,
-    correlationId: String,
+    correlationId: Option[String],
     request: ParsedXmlRequest[NodeSeq]
   )(implicit hc: HeaderCarrier): Unit =
     if (appConfig.newAuditingEnabled) {
@@ -67,7 +67,7 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
   def messageSubmittedNoMovement(
     message: IE815Message,
     submittedToCore: Boolean,
-    correlationId: String,
+    correlationId: Option[String],
     request: ParsedXmlRequest[NodeSeq]
   )(implicit hc: HeaderCarrier): Unit =
     if (appConfig.newAuditingEnabled) {

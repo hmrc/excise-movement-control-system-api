@@ -60,6 +60,7 @@ class SubmitMessageControllerSpec
   private val movementValidation       = mock[MovementIdValidation]
   private val dateTimeService          = mock[DateTimeService]
   private val auditService             = mock[AuditService]
+  private val mockIeMessage            = mock[IEMessage]
 
   private val consignorId = "testErn"
   private val movement    =
@@ -68,7 +69,7 @@ class SubmitMessageControllerSpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(submissionMessageService, movementService, movementValidation, auditService)
+    reset(submissionMessageService, movementService, movementValidation, auditService, mockIeMessage)
 
     when(submissionMessageService.submit(any, any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "success", "123"))))
@@ -80,7 +81,6 @@ class SubmitMessageControllerSpec
     when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(auditService.auditMessage(any[IEMessage])(any)).thenReturn(EitherT.fromEither(Right(())))
     when(auditService.auditMessage(any[IEMessage], any)(any)).thenReturn(EitherT.fromEither(Right(())))
-
   }
 
   "submit" should {
@@ -98,19 +98,24 @@ class SubmitMessageControllerSpec
     }
 
     "send an audit event" in {
+      when(mockIeMessage.correlationId).thenReturn(Some("testXMLCorrelationId"))
       await(createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request))
 
       verify(auditService, times(1)).auditMessage(any[IEMessage])(any)
-      verify(auditService, times(1)).messageSubmitted(any, any, any, eqTo("testCorrelationId"), any)(any)
+      verify(auditService, times(1))
+        .messageSubmitted(any, any, any, eqTo(Some("testXMLCorrelationId")), any)(any)
     }
 
     "sends a failure audit when a message isn't submitted" in {
+      when(mockIeMessage.correlationId).thenReturn(Some("testXMLCorrelationId"))
+
       val testError = EISErrorResponseDetails(BAD_REQUEST, timestamp, "", "", "", None)
       when(submissionMessageService.submit(any, any)(any)).thenReturn(Future.successful(Left(testError)))
       await(createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request))
 
       verify(auditService, times(1)).auditMessage(any, any)(any)
-      verify(auditService, times(1)).messageSubmitted(any, any, any, any, any)(any)
+      verify(auditService, times(1))
+        .messageSubmitted(any, any, any, eqTo(Some("testXMLCorrelationId")), any)(any)
     }
 
     "return an error when EIS errors" in {
@@ -252,7 +257,7 @@ class SubmitMessageControllerSpec
   private def createWithSuccessfulAuth =
     new SubmitMessageController(
       FakeSuccessAuthentication(Set(ern)),
-      FakeSuccessXMLParser(mock[IEMessage]),
+      FakeSuccessXMLParser(mockIeMessage),
       submissionMessageService,
       movementService,
       auditService,

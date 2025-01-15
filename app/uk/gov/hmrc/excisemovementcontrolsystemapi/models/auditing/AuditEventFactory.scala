@@ -40,7 +40,7 @@ object AuditEventFactory extends Auditing {
   def createMessageSubmittedNoMovement(
     message: IE815Message,
     submittedToCore: Boolean,
-    correlationId: String,
+    correlationId: Option[String],
     userDetails: UserDetails,
     erns: Set[String]
   ): MessageSubmittedDetails =
@@ -54,7 +54,7 @@ object AuditEventFactory extends Auditing {
       message.consigneeId,
       submittedToCore,
       message.messageIdentifier,
-      Some(correlationId),
+      correlationId,
       userDetails,
       NonEmptySeq(erns.head, erns.tail.toList),
       message.toJsObject
@@ -64,7 +64,7 @@ object AuditEventFactory extends Auditing {
     message: IEMessage,
     movement: Movement,
     submittedToCore: Boolean,
-    correlationId: String,
+    correlationId: Option[String],
     userDetails: UserDetails,
     erns: Set[String]
   ): MessageSubmittedDetails =
@@ -78,7 +78,7 @@ object AuditEventFactory extends Auditing {
       movement.consigneeId,
       submittedToCore,
       message.messageIdentifier,
-      Some(correlationId),
+      correlationId,
       userDetails,
       NonEmptySeq(erns.head, erns.tail.toList),
       message.toJsObject

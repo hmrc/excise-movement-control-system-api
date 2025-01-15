@@ -58,6 +58,7 @@ case class IE839Message(
   override def toString: String =
     s"Message type: $messageType, message identifier: $messageIdentifier, LRN: $localReferenceNumber, ARCs: $administrativeReferenceCode"
 
+  override def correlationId: Option[String] = obj.Header.CorrelationIdentifier
 }
 
 object IE839Message {

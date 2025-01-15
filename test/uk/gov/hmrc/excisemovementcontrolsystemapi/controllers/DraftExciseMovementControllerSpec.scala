@@ -98,6 +98,7 @@ class DraftExciseMovementControllerSpec
     when(mockIeMessage.consigneeId).thenReturn(Some("789"))
     when(mockIeMessage.consignorId).thenReturn(consignorId)
     when(mockIeMessage.localReferenceNumber).thenReturn("123")
+    when(mockIeMessage.correlationId).thenReturn(Some("correlationId"))
 
     when(appConfig.pushNotificationsEnabled).thenReturn(true)
     when(dateTimeService.timestamp()).thenReturn(timestamp)
@@ -193,7 +194,7 @@ class DraftExciseMovementControllerSpec
       await(createWithSuccessfulAuth.submit(request))
 
       verify(auditService, times(1)).auditMessage(any[IEMessage])(any)
-      verify(auditService, times(1)).messageSubmitted(any, any, any, eqTo("testCorrelationId"), any)(any)
+      verify(auditService, times(1)).messageSubmitted(any, any, any, eqTo(Some("correlationId")), any)(any)
 
     }
 
@@ -204,7 +205,7 @@ class DraftExciseMovementControllerSpec
       await(createWithSuccessfulAuth.submit(request))
 
       verify(auditService, times(1)).auditMessage(any, any)(any)
-      verify(auditService, times(1)).messageSubmittedNoMovement(any, any, eqTo("testCorrelationId"), any)(any)
+      verify(auditService, times(1)).messageSubmittedNoMovement(any, any, eqTo(Some("correlationId")), any)(any)
 
     }
 
@@ -214,7 +215,7 @@ class DraftExciseMovementControllerSpec
       await(createWithSuccessfulAuth.submit(request))
 
       verify(auditService, times(1)).auditMessage(any, any)(any)
-      verify(auditService, times(1)).messageSubmittedNoMovement(any, any, eqTo("testCorrelationId"), any)(any)
+      verify(auditService, times(1)).messageSubmittedNoMovement(any, any, eqTo(Some("correlationId")), any)(any)
     }
 
     "adds the boxId to the BoxIdRepository for consignor" in {
