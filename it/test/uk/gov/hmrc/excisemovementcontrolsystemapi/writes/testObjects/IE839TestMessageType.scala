@@ -19,8 +19,7 @@ import play.api.libs.json.{JsValue, Json}
 
 object IE839TestMessageType extends TestMessageType {
 
-  override def json1: JsValue = Json.parse(
-    """
+  override def json1: JsValue = Json.parse("""
       |{
       |    "Header": {
       |        "MessageSender": "NDEA.XI",
@@ -28,7 +27,7 @@ object IE839TestMessageType extends TestMessageType {
       |        "DateOfPreparation": "2024-06-26",
       |        "TimeOfPreparation": "00:18:33",
       |        "MessageIdentifier": "XI004322",
-      |        "CorrelationIdentifier": "6dddas1231ff3a678fefffff3233"
+      |        "CorrelationIdentifier": "PORTAL6de1b822562c43fb9220d236e487c920"
       |    },
       |    "Body": {
       |        "RefusalByCustoms": {
@@ -96,8 +95,7 @@ object IE839TestMessageType extends TestMessageType {
       |}
       |""".stripMargin)
 
-  override def auditEvent: JsValue = Json.parse(
-    """
+  override def auditEvent: JsValue = Json.parse("""
       |{
       |  "messageCode": "IE839",
       |  "content": {
@@ -107,7 +105,7 @@ object IE839TestMessageType extends TestMessageType {
       |      "DateOfPreparation": "2024-06-26",
       |      "TimeOfPreparation": "00:18:33",
       |      "MessageIdentifier": "XI004322",
-      |      "CorrelationIdentifier": "6dddas1231ff3a678fefffff3233"
+      |      "CorrelationIdentifier": "PORTAL6de1b822562c43fb9220d236e487c920"
       |    },
       |    "Body": {
       |      "RefusalByCustoms": {
@@ -178,8 +176,7 @@ object IE839TestMessageType extends TestMessageType {
       |  }
       |}""".stripMargin)
 
-  override def auditFailure(failureReason: String): JsValue = Json.parse(
-    s"""
+  override def auditFailure(failureReason: String): JsValue = Json.parse(s"""
        |{
        |  "messageCode": "IE839",
        |  "content": {
@@ -189,7 +186,7 @@ object IE839TestMessageType extends TestMessageType {
        |      "DateOfPreparation": "2024-06-26",
        |      "TimeOfPreparation": "00:18:33",
        |      "MessageIdentifier": "XI004322",
-       |      "CorrelationIdentifier": "6dddas1231ff3a678fefffff3233"
+       |      "CorrelationIdentifier": "PORTAL6de1b822562c43fb9220d236e487c920"
        |    },
        |    "Body": {
        |      "RefusalByCustoms": {

@@ -655,7 +655,7 @@ trait TestXml {
       <urn:MessageRecipient>CSMISE.EC</urn:MessageRecipient>
       <urn:DateOfPreparation>2008-09-29</urn:DateOfPreparation>
       <urn:TimeOfPreparation>00:18:33</urn:TimeOfPreparation>
-      <urn:MessageIdentifier>X004</urn:MessageIdentifier>
+      <urn:MessageIdentifier>X00004</urn:MessageIdentifier>
       <!--Optional:-->
       <urn:CorrelationIdentifier>PORTAL6de1b822562c43fb9220d236e487c920</urn:CorrelationIdentifier>
     </urn7:Header>
