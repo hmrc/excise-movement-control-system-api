@@ -119,7 +119,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
         message.toJsObject
       )
 
-      service.messageSubmittedNoMovement(message, true, "correlationId", request)
+      service.messageSubmittedNoMovement(message, true, Some("correlationId"), request)
 
       verify(auditConnector, times(1))
         .sendExplicitAudit(eqTo("MessageSubmitted"), eqTo(expectedMessageSubmittedDetails))(eqTo(hc), any, any)
@@ -129,7 +129,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
 
       when(appConfig.newAuditingEnabled).thenReturn(false)
 
-      service.messageSubmittedNoMovement(IE815Message.createFromXml(IE815), true, "correlationId", request)
+      service.messageSubmittedNoMovement(IE815Message.createFromXml(IE815), true, Some("correlationId"), request)
 
       verify(auditConnector, times(0)).sendExplicitAudit(any[String], any[JsObject])(any, any)
     }
