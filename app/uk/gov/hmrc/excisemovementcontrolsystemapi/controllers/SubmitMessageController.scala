@@ -122,9 +122,8 @@ class SubmitMessageController @Inject() (
       submissionMessageService.submit(request, authorisedErn).map {
         case Left(error)     =>
           auditService.auditMessage(request.ieMessage, "Failed to Submit").value
-          //TODO: Need to change this to actual correlationId from header
-          auditService
-            .messageSubmitted(request.ieMessage, movement, false, Some(request.request.correlationId), request)
+          auditService.messageSubmitted(request.ieMessage, movement, false, request.ieMessage.correlationId, request)
+
           Left(
             Status(error.status)(
               Json.toJson(
