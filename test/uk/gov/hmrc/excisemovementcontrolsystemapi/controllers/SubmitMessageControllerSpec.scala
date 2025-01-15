@@ -80,7 +80,6 @@ class SubmitMessageControllerSpec
     when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(auditService.auditMessage(any[IEMessage])(any)).thenReturn(EitherT.fromEither(Right(())))
     when(auditService.auditMessage(any[IEMessage], any)(any)).thenReturn(EitherT.fromEither(Right(())))
-
   }
 
   "submit" should {
@@ -101,8 +100,8 @@ class SubmitMessageControllerSpec
       await(createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request))
 
       verify(auditService, times(1)).auditMessage(any[IEMessage])(any)
-      //TODO: Need to change this to actual correlationId from header
-      verify(auditService, times(1)).messageSubmitted(any, any, any, eqTo(Some("testCorrelationId")), any)(any)
+      verify(auditService, times(1))
+        .messageSubmitted(any, any, any, eqTo(Some("PORTAL6de1b822562c43fb9220d236e487c920")), any)(any)
     }
 
     "sends a failure audit when a message isn't submitted" in {

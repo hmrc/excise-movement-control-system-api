@@ -64,8 +64,7 @@ class SubmitMessageController @Inject() (
         movement => {
 
           auditService.auditMessage(request.ieMessage)
-          //TODO: Need to change this to actual correlationId from header
-          auditService.messageSubmitted(request.ieMessage, movement, true, Some(request.request.correlationId), request)
+          auditService.messageSubmitted(request.ieMessage, movement, true, request.ieMessage.correlationId, request)
 
           Accepted(
             Json.toJson(

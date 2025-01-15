@@ -39,6 +39,8 @@ trait IEMessage {
   def lrnEquals(lrn: String): Boolean
 
   def messageAuditType: MessageAuditType
+
+  def correlationId: Option[String]
 }
 
 trait SubmitterTypeConverter {

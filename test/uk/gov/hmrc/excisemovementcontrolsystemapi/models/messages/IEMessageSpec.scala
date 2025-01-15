@@ -241,7 +241,91 @@ class IEMessageSpec extends PlaySpec with TestXml {
 
     }
   }
-  "IE815"        should {
+  "IE704"        should {
+    "return Some(correlationId) when populated" in {
+      val result = IE704Message.createFromXml(IE704)
+      result.correlationId mustBe Some(testCorrelationId)
+
+    }
+    "return None when it's not populated" in {
+      val result = IE704Message.createFromXml(IE704WithoutCorrelationId)
+      result.correlationId mustBe None
+    }
+  }
+
+  "IE801" should {
+    "return Some(correlationId) when populated" in {
+      val result = IE801Message.createFromXml(IE801)
+      result.correlationId mustBe Some(testCorrelationId)
+
+    }
+    "return None when it's not populated" in {
+      val result = IE801Message.createFromXml(IE801WithoutCorrelationId)
+      result.correlationId mustBe None
+    }
+  }
+
+  "IE802" should {
+    "return Some(correlationId) when populated" in {
+      val result = IE802Message.createFromXml(IE802)
+      result.correlationId mustBe Some(testCorrelationId)
+
+    }
+    "return None when it's not populated" in {
+      val result = IE802Message.createFromXml(IE802WithoutCorrelationId)
+      result.correlationId mustBe None
+    }
+  }
+
+  "IE803" should {
+    "return Some(correlationId) when populated" in {
+      val result = IE803Message.createFromXml(IE803)
+      result.correlationId mustBe Some(testCorrelationId)
+
+    }
+    "return None when it's not populated" in {
+      val result = IE803Message.createFromXml(IE803WithoutCorrelationId)
+      result.correlationId mustBe None
+    }
+  }
+
+  "IE807" should {
+    "return Some(correlationId) when populated" in {
+      val result = IE807Message.createFromXml(IE807)
+      result.correlationId mustBe Some(testCorrelationId)
+
+    }
+    "return None when it's not populated" in {
+      val result = IE807Message.createFromXml(IE807WithoutCorrelationId)
+      result.correlationId mustBe None
+    }
+  }
+
+  "IE810" should {
+    "return Some(correlationId) when populated" in {
+      val result = IE810Message.createFromXml(IE810)
+      result.correlationId mustBe Some(testCorrelationId)
+
+    }
+    "return None when it's not populated" in {
+      val result = IE810Message.createFromXml(IE810WithoutCorrelationId)
+      result.correlationId mustBe None
+    }
+  }
+
+  "IE813" should {
+    "return Some(correlationId) when populated" in {
+      val result = IE813Message.createFromXml(IE813)
+      result.correlationId mustBe Some(testCorrelationId)
+
+    }
+    "return None when it's not populated" in {
+      val result = IE813Message.createFromXml(IE813WithoutCorrelationId)
+      result.correlationId mustBe None
+    }
+  }
+
+  "IE815" should {
     "return Some(correlationId) when populated" in {
       val result = IE815Message.createFromXml(IE815)
       result.correlationId mustBe Some(testCorrelationId)
@@ -249,6 +333,114 @@ class IEMessageSpec extends PlaySpec with TestXml {
     }
     "return None when it's not populated" in {
       val result = IE815Message.createFromXml(IE815WithoutCorrelationId)
+      result.correlationId mustBe None
+    }
+  }
+
+  "IE818" should {
+    "return Some(correlationId) when populated" in {
+      val result = IE818Message.createFromXml(IE818)
+      result.correlationId mustBe Some(testCorrelationId)
+
+    }
+    "return None when it's not populated" in {
+      val result = IE818Message.createFromXml(IE818WithoutCorrelationId)
+      result.correlationId mustBe None
+    }
+  }
+
+  "IE819" should {
+    "return Some(correlationId) when populated" in {
+      val result = IE819Message.createFromXml(IE819)
+      result.correlationId mustBe Some(testCorrelationId)
+
+    }
+    "return None when it's not populated" in {
+      val result = IE819Message.createFromXml(IE819WithoutCorrelationId)
+      result.correlationId mustBe None
+    }
+  }
+
+  "IE829" should {
+    "return Some(correlationId) when populated" in {
+      val result = IE829Message.createFromXml(IE829)
+      result.correlationId mustBe Some(testCorrelationId)
+
+    }
+    "return None when it's not populated" in {
+      val result = IE829Message.createFromXml(IE829WithoutCorrelationId)
+      result.correlationId mustBe None
+    }
+  }
+
+  "IE837" should {
+    "return Some(correlationId) when populated" in {
+      val result = IE837Message.createFromXml(IE837WithConsignor)
+      result.correlationId mustBe Some(testCorrelationId)
+
+    }
+    "return None when it's not populated" in {
+      val result = IE837Message.createFromXml(IE837WithoutCorrelationId)
+      result.correlationId mustBe None
+    }
+  }
+
+  "IE839" should {
+    "return Some(correlationId) when populated" in {
+      val result = IE839Message.createFromXml(IE839)
+      result.correlationId mustBe Some(testCorrelationId)
+
+    }
+    "return None when it's not populated" in {
+      val result = IE839Message.createFromXml(IE839WithoutCorrelationId)
+      result.correlationId mustBe None
+    }
+  }
+
+  "IE840" should {
+    "return Some(correlationId) when populated" in {
+      val result = IE840Message.createFromXml(IE840)
+      result.correlationId mustBe Some(testCorrelationId)
+
+    }
+    "return None when it's not populated" in {
+      val result = IE840Message.createFromXml(IE840WithoutCorrelationId)
+      result.correlationId mustBe None
+    }
+  }
+
+  "IE871" should {
+    "return Some(correlationId) when populated" in {
+      val result = IE871Message.createFromXml(IE871WithConsignor)
+      result.correlationId mustBe Some(testCorrelationId)
+
+    }
+    "return None when it's not populated" in {
+      val result = IE871Message.createFromXml(IE871WithoutCorrelationId)
+      result.correlationId mustBe None
+    }
+  }
+
+  "IE881" should {
+    "return Some(correlationId) when populated" in {
+      val result = IE881Message.createFromXml(IE881)
+      result.correlationId mustBe Some(testCorrelationId)
+
+    }
+    "return None when it's not populated" in {
+      val result = IE881Message.createFromXml(IE881WithoutCorrelationId)
+      result.correlationId mustBe None
+    }
+  }
+
+  "IE905" should {
+    "return Some(correlationId) when populated" in {
+      val result = IE905Message.createFromXml(IE905)
+      result.correlationId mustBe Some(testCorrelationId)
+
+    }
+    "return None when it's not populated" in {
+      val result = IE905Message.createFromXml(IE905WithoutCorrelationId)
       result.correlationId mustBe None
     }
   }
