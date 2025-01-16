@@ -93,7 +93,7 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
         case _                      => Right(())
       }
     }
-  def getInformation(
+  def getInformationForGetMovements(
     request: GetMovementsParametersAuditInfo,
     response: GetMovementsResponseAuditInfo,
     userDetails: UserDetails,
@@ -104,7 +104,7 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
       auditConnector.sendExplicitAudit("GetInformation", event)
     }
 
-  def getInformation(
+  def getInformationForGetSpecificMovement(
     request: GetSpecificMovementRequestAuditInfo,
     userDetails: UserDetails,
     authExciseNumber: NonEmptySeq[String]

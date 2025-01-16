@@ -190,7 +190,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
     }
   }
 
-  "getInformation" should {
+  "getInformationForGetMovements" should {
     "post an event when user calls a getMovements" in {
       val request          = GetMovementsParametersAuditInfo(None, None, None, None, None)
       val response         = GetMovementsResponseAuditInfo(5)
@@ -204,12 +204,15 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
         authExciseNumber = authExciseNumber
       )
 
-      service.getInformation(request, response, userDetails, authExciseNumber)
+      service.getInformationForGetMovements(request, response, userDetails, authExciseNumber)
 
       verify(auditConnector, times(1))
         .sendExplicitAudit(eqTo("GetInformation"), eqTo(expectedDetails))(any, any, any)
     }
 
+  }
+
+  "getInformationForGetSpecificMovement" should {
     "post an event when user calls a GetSpecificMovement" in {
       val uuid             = UUID.randomUUID().toString
       val request          = GetSpecificMovementRequestAuditInfo(uuid)
@@ -222,11 +225,10 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
         authExciseNumber = authExciseNumber
       )
 
-      service.getInformation(request, userDetails, authExciseNumber)
+      service.getInformationForGetSpecificMovement(request, userDetails, authExciseNumber)
 
       verify(auditConnector, times(1))
         .sendExplicitAudit(eqTo("GetInformation"), eqTo(expectedDetails))(any, any, any)
     }
-
   }
 }

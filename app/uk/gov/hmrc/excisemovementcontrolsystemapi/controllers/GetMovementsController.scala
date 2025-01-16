@@ -75,7 +75,7 @@ class GetMovementsController @Inject() (
           _         <- messageService.updateAllMessages(ern.fold(request.erns)(Set(_)))
           movements <- movementService.getMovementByErn(request.erns.toSeq, filter)
         } yield {
-          auditService.getInformation(
+          auditService.getInformationForGetMovements(
             GetMovementsParametersAuditInfo(ern, arc, lrn, updatedSince, traderType),
             GetMovementsResponseAuditInfo(movements.length),
             request.userDetails,
@@ -124,7 +124,7 @@ class GetMovementsController @Inject() (
             )
           )
         } else {
-          auditService.getInformation(
+          auditService.getInformationForGetSpecificMovement(
             GetSpecificMovementRequestAuditInfo(movementId),
             request.userDetails,
             NonEmptySeq(request.erns.head, request.erns.tail.toList)
