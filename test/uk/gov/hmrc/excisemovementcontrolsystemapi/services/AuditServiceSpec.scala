@@ -28,9 +28,9 @@ import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeXmlParsers
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMovementsAuditInfo, GetMovementsParametersAuditInfo, GetMovementsResponseAuditInfo, GetSpecificMovementAuditInfo, GetSpecificMovementRequestAuditInfo, MessageSubmittedDetails, UserDetails}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMessagesAuditInfo, GetMessagesRequestAuditInfo, GetMessagesResponseAuditInfo, GetMovementsAuditInfo, GetMovementsParametersAuditInfo, GetMovementsResponseAuditInfo, GetSpecificMovementAuditInfo, GetSpecificMovementRequestAuditInfo, MessageAuditInfo, MessageSubmittedDetails, UserDetails}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE704Message, IE815Message}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, IE704Message, IE815Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
@@ -226,6 +226,31 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
       )
 
       service.getInformationForGetSpecificMovement(request, userDetails, authExciseNumber)
+
+      verify(auditConnector, times(1))
+        .sendExplicitAudit(eqTo("GetInformation"), eqTo(expectedDetails))(any, any, any)
+    }
+  }
+
+  "getInformationForGetMessages" should {
+    "post an event when user calls a getMessages" in {
+      val uuid             = UUID.randomUUID().toString
+      val messageCreateOn  = Instant.now()
+      val request          = GetMessagesRequestAuditInfo(uuid, None, Some(Consignee.name.toLowerCase))
+      val messageAuditInfo =
+        MessageAuditInfo("messageId", "testCorrelationId", "IE801", "MovementGenerated", "ern", messageCreateOn)
+      val response         = GetMessagesResponseAuditInfo(1, Seq(messageAuditInfo), "lrn", None, "testErn", "consigneeId")
+      val userDetails      = UserDetails("testInternalId", "testGroupId")
+      val authExciseNumber = NonEmptySeq("testErn", Seq().empty)
+
+      val expectedDetails = GetMessagesAuditInfo(
+        request = request,
+        response = response,
+        userDetails = userDetails,
+        authExciseNumber = authExciseNumber
+      )
+
+      service.getInformationForGetMessages(request, response, userDetails, authExciseNumber)
 
       verify(auditConnector, times(1))
         .sendExplicitAudit(eqTo("GetInformation"), eqTo(expectedDetails))(any, any, any)

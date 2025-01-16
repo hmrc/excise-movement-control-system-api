@@ -16,10 +16,11 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
+import cats.data.NonEmptySeq
 import org.apache.pekko.Done
 import org.apache.pekko.actor.ActorSystem
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
-import org.mockito.MockitoSugar.{reset, verify, when}
+import org.mockito.MockitoSugar.{reset, times, verify, when}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
@@ -31,9 +32,11 @@ import play.api.test.Helpers.{await, contentAsJson, contentAsString, defaultAwai
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateAcceptHeaderAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMessagesRequestAuditInfo, GetMessagesResponseAuditInfo, MessageAuditInfo, UserDetails}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.Consignee
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MessageService, MovementService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, MessageService, MovementService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 
 import java.nio.charset.StandardCharsets
@@ -59,6 +62,7 @@ class GetMessagesControllerSpec
   private val timeStamp       = Instant.parse("2020-01-01T01:01:01.123456Z")
   private val messageService  = mock[MessageService]
   private val messageCreateOn = Instant.now()
+  private val auditService    = mock[AuditService]
 
   private val MovementIdFormatError = Json.parse("""
       |{
@@ -106,7 +110,25 @@ class GetMessagesControllerSpec
       )
       await(controller.getMessagesForMovement(validUUID, None, None)(createRequest()))
 
+      val request          = GetMessagesRequestAuditInfo(validUUID, None, Some(Consignee.name.toLowerCase))
+      val messageAuditInfo =
+        MessageAuditInfo("messageId", "testCorrelationId", "IE801", "MovementGenerated", "ern", messageCreateOn)
+      val response         = GetMessagesResponseAuditInfo(1, Seq(messageAuditInfo), "lrn", None, "testErn", "consigneeId")
+      val userDetails      = UserDetails("testInternalId", "testGroupId")
+      val authExciseNumber = NonEmptySeq("testErn", Seq().empty)
+
       verify(messageService).updateAllMessages(eqTo(Set(ern, "otherErn")))(any)
+      withClue("Submits getInformation audit event") {
+        verify(auditService, times(1))
+          .getInformationForGetMessages(
+            eqTo(request),
+            eqTo(response),
+            eqTo(userDetails),
+            eqTo(authExciseNumber)
+          )(
+            any
+          )
+      }
     }
 
     "return 200 when consignee is valid" in {
