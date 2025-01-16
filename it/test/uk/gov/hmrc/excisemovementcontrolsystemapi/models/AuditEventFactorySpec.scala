@@ -127,4 +127,18 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
 
     result mustBe expectedResult
   }
+
+  "createGetSpecificMovementDetails creates GetSpecificMovementAuditInfo object" in {
+    val uuid        = UUID.randomUUID().toString
+    val request     = GetSpecificMovementRequestAuditInfo(uuid)
+    val userDetails = UserDetails("gatewayId", "groupIdentifier")
+    val erns        = NonEmptySeq("ern1", Seq("ern2", "ern3"))
+
+    val result = AuditEventFactory.createGetSpecificMovementDetails(request, userDetails, erns)
+
+    val expectedResult =
+      GetSpecificMovementAuditInfo(request = request, userDetails = userDetails, authExciseNumber = erns)
+
+    result mustBe expectedResult
+  }
 }

@@ -31,7 +31,7 @@ import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, TraderType}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication, FakeValidateErnParameterAction, FakeValidateTraderTypeAction, FakeValidateUpdatedSinceAction, MovementTestUtils}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMovementsParametersAuditInfo, GetMovementsResponseAuditInfo, UserDetails}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMovementsParametersAuditInfo, GetMovementsResponseAuditInfo, GetSpecificMovementAuditInfo, GetSpecificMovementRequestAuditInfo, UserDetails}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MovementIdFormatInvalid, MovementIdValidation}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, CorrelationIdService, MessageService, MovementService}
@@ -173,9 +173,11 @@ class GetMovementsControllerSpec
         contentAsJson(result) mustBe Json.toJson(
           Seq(createMovementResponse(ern, "lrn", "arc", Some("consigneeId"), Some(timestamp)))
         )
-        withClue("Submits getInformation audit event") {
+        withClue("Submits GetInformation (GetMovements) audit event") {
           verify(auditService, times(1))
-            .getInformation(eqTo(request), eqTo(response), eqTo(userDetails), eqTo(authExciseNumber))(any)
+            .getInformationForGetMovements(eqTo(request), eqTo(response), eqTo(userDetails), eqTo(authExciseNumber))(
+              any
+            )
         }
       }
       "there are no query parameters" when {
@@ -218,9 +220,11 @@ class GetMovementsControllerSpec
           )
 
           verify(movementService).getMovementByErn(eqTo(Seq(ern)), any)
-          withClue("Submits getInformation audit event") {
+          withClue("Submits GetInformation (GetMovements) audit event") {
             verify(auditService, times(1))
-              .getInformation(eqTo(request), eqTo(response), eqTo(userDetails), eqTo(authExciseNumber))(any)
+              .getInformationForGetMovements(eqTo(request), eqTo(response), eqTo(userDetails), eqTo(authExciseNumber))(
+                any
+              )
           }
         }
         "expecting movements from multiple ERNs" in {
@@ -277,9 +281,11 @@ class GetMovementsControllerSpec
 
           verify(messageService).updateAllMessages(eqTo(Set(ern, "ern2")))(any)
 
-          withClue("Submits getInformation audit event") {
+          withClue("Submits GetInformation (GetMovements) audit event") {
             verify(auditService, times(1))
-              .getInformation(eqTo(request), eqTo(response), eqTo(userDetails), eqTo(authExciseNumber))(any)
+              .getInformationForGetMovements(eqTo(request), eqTo(response), eqTo(userDetails), eqTo(authExciseNumber))(
+                any
+              )
           }
 
         }
@@ -328,9 +334,11 @@ class GetMovementsControllerSpec
           val request  = GetMovementsParametersAuditInfo(Some(localErn), None, None, None, None)
           val response = GetMovementsResponseAuditInfo(1)
 
-          withClue("Submits getInformation audit event") {
+          withClue("Submits GetInformation (GetMovements) audit event") {
             verify(auditService, times(1))
-              .getInformation(eqTo(request), eqTo(response), eqTo(userDetails), eqTo(authExciseNumber))(any)
+              .getInformationForGetMovements(eqTo(request), eqTo(response), eqTo(userDetails), eqTo(authExciseNumber))(
+                any
+              )
           }
 
         }
@@ -364,9 +372,11 @@ class GetMovementsControllerSpec
 
           verify(movementService).getMovementByErn(any, eqTo(filter))
 
-          withClue("Submits getInformation audit event") {
+          withClue("Submits GetInformation (GetMovements) audit event") {
             verify(auditService, times(1))
-              .getInformation(eqTo(request), eqTo(response), eqTo(userDetails), eqTo(authExciseNumber))(any)
+              .getInformationForGetMovements(eqTo(request), eqTo(response), eqTo(userDetails), eqTo(authExciseNumber))(
+                any
+              )
           }
         }
         "consignee is specified and multiple filter parameters are given" in {
@@ -398,9 +408,11 @@ class GetMovementsControllerSpec
           val authExciseNumber = NonEmptySeq("testErn", Seq().empty)
           verify(movementService).getMovementByErn(any, eqTo(filter))
 
-          withClue("Submits getInformation audit event") {
+          withClue("Submits GetInformation (GetMovements) audit event") {
             verify(auditService, times(1))
-              .getInformation(eqTo(request), eqTo(response), eqTo(userDetails), eqTo(authExciseNumber))(any)
+              .getInformationForGetMovements(eqTo(request), eqTo(response), eqTo(userDetails), eqTo(authExciseNumber))(
+                any
+              )
           }
         }
       }
@@ -470,6 +482,10 @@ class GetMovementsControllerSpec
 
     "respond with 200 OK" when {
       "request is valid and the authorised ern is in the message recipients" in {
+        val request          = GetSpecificMovementRequestAuditInfo(uuid)
+        val userDetails      = UserDetails("testInternalId", "testGroupId")
+        val authExciseNumber = NonEmptySeq("testErn", Seq().empty)
+
         val movement =
           Movement(
             uuid,
@@ -490,7 +506,10 @@ class GetMovementsControllerSpec
         status(result) mustBe OK
 
         contentAsJson(result) mustBe Json.toJson(createMovementResponseFromMovement(movement))
-
+        withClue("Submits GetInformation (SpecificMovement) audit event") {
+          verify(auditService, times(1))
+            .getInformationForGetSpecificMovement(eqTo(request), eqTo(userDetails), eqTo(authExciseNumber))(any)
+        }
       }
       "request is valid and there are multiple authorised ERNS" in {
         val controller = new GetMovementsController(

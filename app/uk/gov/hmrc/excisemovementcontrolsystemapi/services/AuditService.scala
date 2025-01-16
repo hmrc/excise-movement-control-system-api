@@ -93,7 +93,7 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
         case _                      => Right(())
       }
     }
-  def getInformation(
+  def getInformationForGetMovements(
     request: GetMovementsParametersAuditInfo,
     response: GetMovementsResponseAuditInfo,
     userDetails: UserDetails,
@@ -101,6 +101,16 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
   )(implicit hc: HeaderCarrier): Unit =
     if (appConfig.newAuditingEnabled) {
       val event = AuditEventFactory.createGetMovementsDetails(request, response, userDetails, authExciseNumber)
+      auditConnector.sendExplicitAudit("GetInformation", event)
+    }
+
+  def getInformationForGetSpecificMovement(
+    request: GetSpecificMovementRequestAuditInfo,
+    userDetails: UserDetails,
+    authExciseNumber: NonEmptySeq[String]
+  )(implicit hc: HeaderCarrier): Unit =
+    if (appConfig.newAuditingEnabled) {
+      val event = AuditEventFactory.createGetSpecificMovementDetails(request, userDetails, authExciseNumber)
       auditConnector.sendExplicitAudit("GetInformation", event)
     }
 }
