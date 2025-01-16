@@ -31,7 +31,7 @@ import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, TraderType}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication, FakeValidateErnParameterAction, FakeValidateTraderTypeAction, FakeValidateUpdatedSinceAction, MovementTestUtils}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMovementsParametersAuditInfo, GetMovementsResponseAuditInfo, UserDetails}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMovementsParametersAuditInfo, GetMovementsResponseAuditInfo, GetSpecificMovementAuditInfo, GetSpecificMovementRequestAuditInfo, UserDetails}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MovementIdFormatInvalid, MovementIdValidation}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, CorrelationIdService, MessageService, MovementService}
@@ -470,6 +470,10 @@ class GetMovementsControllerSpec
 
     "respond with 200 OK" when {
       "request is valid and the authorised ern is in the message recipients" in {
+        val request          = GetSpecificMovementRequestAuditInfo(uuid)
+        val userDetails      = UserDetails("testInternalId", "testGroupId")
+        val authExciseNumber = NonEmptySeq("testErn", Seq().empty)
+
         val movement =
           Movement(
             uuid,
@@ -490,7 +494,10 @@ class GetMovementsControllerSpec
         status(result) mustBe OK
 
         contentAsJson(result) mustBe Json.toJson(createMovementResponseFromMovement(movement))
-
+        withClue("Submits getInformation audit event") {
+          verify(auditService, times(1))
+            .getInformation(eqTo(request), eqTo(userDetails), eqTo(authExciseNumber))(any)
+        }
       }
       "request is valid and there are multiple authorised ERNS" in {
         val controller = new GetMovementsController(

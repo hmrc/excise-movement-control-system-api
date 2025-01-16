@@ -97,4 +97,15 @@ object AuditEventFactory extends Auditing {
       authExciseNumber = authExciseNumber
     )
 
+  def createGetSpecificMovementDetails(
+    request: GetSpecificMovementRequestAuditInfo,
+    userDetails: UserDetails,
+    authExciseNumber: NonEmptySeq[String]
+  ): GetSpecificMovementAuditInfo =
+    GetSpecificMovementAuditInfo(
+      request = request,
+      userDetails = userDetails,
+      authExciseNumber = authExciseNumber
+    )
+
 }

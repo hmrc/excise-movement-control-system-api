@@ -28,7 +28,7 @@ import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeXmlParsers
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMovementsAuditInfo, GetMovementsParametersAuditInfo, GetMovementsResponseAuditInfo, MessageSubmittedDetails, UserDetails}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMovementsAuditInfo, GetMovementsParametersAuditInfo, GetMovementsResponseAuditInfo, GetSpecificMovementAuditInfo, GetSpecificMovementRequestAuditInfo, MessageSubmittedDetails, UserDetails}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE704Message, IE815Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
@@ -36,6 +36,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
 
 import java.time.Instant
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.{Elem, NodeSeq}
 
@@ -204,6 +205,24 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
       )
 
       service.getInformation(request, response, userDetails, authExciseNumber)
+
+      verify(auditConnector, times(1))
+        .sendExplicitAudit(eqTo("GetInformation"), eqTo(expectedDetails))(any, any, any)
+    }
+
+    "post an event when user calls a GetSpecificMovement" in {
+      val uuid             = UUID.randomUUID().toString
+      val request          = GetSpecificMovementRequestAuditInfo(uuid)
+      val userDetails      = UserDetails("gatewayId", "groupIdentifier")
+      val authExciseNumber = NonEmptySeq("ern1", Seq("ern2", "ern3"))
+
+      val expectedDetails = GetSpecificMovementAuditInfo(
+        request = request,
+        userDetails = userDetails,
+        authExciseNumber = authExciseNumber
+      )
+
+      service.getInformation(request, userDetails, authExciseNumber)
 
       verify(auditConnector, times(1))
         .sendExplicitAudit(eqTo("GetInformation"), eqTo(expectedDetails))(any, any, any)
