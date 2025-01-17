@@ -17,6 +17,8 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
 import cats.data.NonEmptySeq
+import play.api.libs.functional.syntax.{toFunctionalBuilderOps, unlift}
+import play.api.libs.json.{JsPath, OWrites}
 
 import java.time.Instant
 
@@ -28,7 +30,12 @@ case class GetMessagesRequestAuditInfo(
 
 object GetMessagesRequestAuditInfo {
 
-
+  implicit val write: OWrites[GetMessagesRequestAuditInfo] =
+    (
+      (JsPath \ "movementId").write[String] and
+        (JsPath \ "updatedSince").writeNullable[String] and
+        (JsPath \ "traderType").writeNullable[String]
+      )(unlift(GetMessagesRequestAuditInfo.unapply))
 }
 
 case class GetMessagesResponseAuditInfo(
@@ -37,14 +44,14 @@ case class GetMessagesResponseAuditInfo(
   localReferenceNumber: String,
   administrativeReferenceCode: Option[String],
   consignorId: String,
-  consigneeId: Option[String] // TODO: Discuss with Kara a change to Option
+  consigneeId: Option[String]
 )
 
 object GetMessagesResponseAuditInfo {}
 
 case class MessageAuditInfo(
   messageId: String,
-  correlationId: Option[String], // TODO: Discuss with Kara a change to Option
+  correlationId: Option[String],
   messageTypeCode: String,
   messageType: String,
   recipient: String,
