@@ -121,6 +121,7 @@ class GetMessagesController @Inject() (
 
     }
 
+  //TODO: We could avoid the encoding in our tests if we moved this sort of work into the AuditEventFactory so it could be mocked away
   private def buildMessageAuditInfo(messages: Seq[Message]) =
     messages.map { msg =>
       val decodedXml         = emcsUtil.decode(msg.encodedMessage)

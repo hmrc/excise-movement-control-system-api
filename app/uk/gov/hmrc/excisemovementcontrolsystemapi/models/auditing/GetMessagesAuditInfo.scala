@@ -18,7 +18,9 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
 import cats.data.NonEmptySeq
 import play.api.libs.functional.syntax.{toFunctionalBuilderOps, unlift}
-import play.api.libs.json.{JsPath, OWrites}
+import play.api.libs.json.{JsPath, Json, OWrites}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.CommonFormats
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.CommonFormats.commaWriter
 
 import java.time.Instant
 
@@ -35,7 +37,21 @@ object GetMessagesRequestAuditInfo {
       (JsPath \ "movementId").write[String] and
         (JsPath \ "updatedSince").writeNullable[String] and
         (JsPath \ "traderType").writeNullable[String]
-      )(unlift(GetMessagesRequestAuditInfo.unapply))
+    )(unlift(GetMessagesRequestAuditInfo.unapply))
+}
+
+case class MessageAuditInfo(
+  messageId: String,
+  correlationId: Option[String],
+  messageTypeCode: String,
+  messageType: String,
+  recipient: String,
+  createdOn: Instant
+)
+
+object MessageAuditInfo {
+  implicit val writes = Json.writes[MessageAuditInfo]
+
 }
 
 case class GetMessagesResponseAuditInfo(
@@ -47,18 +63,9 @@ case class GetMessagesResponseAuditInfo(
   consigneeId: Option[String]
 )
 
-object GetMessagesResponseAuditInfo {}
-
-case class MessageAuditInfo(
-  messageId: String,
-  correlationId: Option[String],
-  messageTypeCode: String,
-  messageType: String,
-  recipient: String,
-  createdOn: Instant
-)
-
-object MessageAuditInfo {}
+object GetMessagesResponseAuditInfo {
+  implicit val writes = Json.writes[GetMessagesResponseAuditInfo]
+}
 
 case class GetMessagesAuditInfo(
   requestType: String = "MovementMessages",
@@ -68,4 +75,13 @@ case class GetMessagesAuditInfo(
   authExciseNumber: NonEmptySeq[String]
 )
 
-object GetMessagesAuditInfo {}
+object GetMessagesAuditInfo extends CommonFormats {
+  implicit val write: OWrites[GetMessagesAuditInfo] =
+    (
+      (JsPath \ "requestType").write[String] and
+        (JsPath \ "request").write[GetMessagesRequestAuditInfo] and
+        (JsPath \ "response").write[GetMessagesResponseAuditInfo] and
+        (JsPath \ "userDetails").write[UserDetails] and
+        (JsPath \ "authExciseNumber").write[NonEmptySeq[String]](commaWriter)
+    )(unlift(GetMessagesAuditInfo.unapply))
+}
