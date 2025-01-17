@@ -26,6 +26,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.writes.testObjects._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.model.ExtendedDataEvent
 
+import java.time.Instant
 import java.util.UUID
 
 class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with TestXml {
@@ -138,6 +139,31 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
 
     val expectedResult =
       GetSpecificMovementAuditInfo(request = request, userDetails = userDetails, authExciseNumber = erns)
+
+    result mustBe expectedResult
+  }
+
+  "createGetMessagesAuditInfo creates GetMessagesAuditInfo object" in {
+
+    val request     =
+      GetMessagesRequestAuditInfo(UUID.randomUUID().toString, Some(Instant.now().toString), Some(Consignor.name))
+    val messages    = MessageAuditInfo(
+      UUID.randomUUID().toString,
+      Some("correlationId"),
+      "IE815",
+      "DraftMovement",
+      "recipient",
+      Instant.now()
+    )
+    val response    =
+      GetMessagesResponseAuditInfo(1, Seq(messages), "lrn", Some("arc"), "consignorId", Some("consigneeId"))
+    val userDetails = UserDetails("gatewayId", "groupIdentifier")
+    val erns        = NonEmptySeq("ern1", Seq("ern2", "ern3"))
+
+    val expectedResult =
+      GetMessagesAuditInfo(request = request, response = response, userDetails = userDetails, authExciseNumber = erns)
+
+    val result = AuditEventFactory.createGetMessagesAuditInfo(request, response, userDetails, erns)
 
     result mustBe expectedResult
   }

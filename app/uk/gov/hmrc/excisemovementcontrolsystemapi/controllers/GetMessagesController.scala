@@ -96,30 +96,11 @@ class GetMessagesController @Inject() (
             )
           )
         } else {
-          val messages: Seq[Message] = movement.messages
-          val decodedMessageList     = messages.map { msg =>
-            val decodedXml = emcsUtil.decode(msg.encodedMessage)
-            val a          = xml.XML.loadString(decodedXml).toList
-
-            val thing = messageFactory.createFromXml(msg.messageType, NodeSeq.fromSeq(a))
-
-            val messageAuditInfo = MessageAuditInfo(
-              msg.messageId,
-              thing.correlationId,
-              thing.messageType,
-              thing.messageAuditType.name,
-              msg.recipient,
-              msg.createdOn
-            )
-            println(messageAuditInfo)
-            messageAuditInfo
-          }
-
           auditService.getInformationForGetMessages(
             GetMessagesRequestAuditInfo(movementId, updatedSince, traderType),
             GetMessagesResponseAuditInfo(
               movement.messages.length,
-              decodedMessageList,
+              buildMessageAuditInfo(movement.messages),
               movement.localReferenceNumber,
               movement.administrativeReferenceCode,
               movement.consignorId,
@@ -128,6 +109,7 @@ class GetMessagesController @Inject() (
             request.userDetails,
             NonEmptySeq(request.erns.head, request.erns.tail.toList)
           )
+
           Ok(
             Json.toJson(
               filterMessages(request.erns.toSeq, movement, validatedUpdatedSince, validatedTraderType)
@@ -137,6 +119,22 @@ class GetMessagesController @Inject() (
 
       result.merge
 
+    }
+
+  private def buildMessageAuditInfo(messages: Seq[Message]) =
+    messages.map { msg =>
+      val decodedXml         = emcsUtil.decode(msg.encodedMessage)
+      val decodedXmlNodeList = xml.XML.loadString(decodedXml).toList
+
+      val ieMessage = messageFactory.createFromXml(msg.messageType, NodeSeq.fromSeq(decodedXmlNodeList))
+      MessageAuditInfo(
+        msg.messageId,
+        ieMessage.correlationId,
+        ieMessage.messageType,
+        ieMessage.messageAuditType.name,
+        msg.recipient,
+        msg.createdOn
+      )
     }
 
   private def filterMessages(

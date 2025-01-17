@@ -26,7 +26,10 @@ case class GetMessagesRequestAuditInfo(
   traderType: Option[String]
 )
 
-object GetMessagesRequestAuditInfo {}
+object GetMessagesRequestAuditInfo {
+
+
+}
 
 case class GetMessagesResponseAuditInfo(
   numberOfMessages: Int,
