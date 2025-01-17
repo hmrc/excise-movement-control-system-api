@@ -22,11 +22,13 @@ import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ValidateAcceptHeaderAction}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMessagesRequestAuditInfo, GetMessagesResponseAuditInfo, MessageAuditInfo}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MessageResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MessageService, MovementService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, MessageService, MovementService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -34,6 +36,7 @@ import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
+import scala.xml.NodeSeq
 
 @Singleton
 class GetMessagesController @Inject() (
@@ -44,7 +47,9 @@ class GetMessagesController @Inject() (
   movementIdValidator: MovementIdValidation,
   cc: ControllerComponents,
   emcsUtil: EmcsUtils,
-  dateTimeService: DateTimeService
+  dateTimeService: DateTimeService,
+  auditService: AuditService,
+  messageFactory: IEMessageFactory
 )(implicit ec: ExecutionContext)
     extends BackendController(cc)
     with Logging {
@@ -74,8 +79,8 @@ class GetMessagesController @Inject() (
     authAction.async(parse.default) { implicit request: EnrolmentRequest[AnyContent] =>
       val result: EitherT[Future, Result, Result] = for {
         validatedMovementId <- validateMovementId(movementId)
-        updatedSince        <- validateUpdatedSince(updatedSince)
-        traderType          <- validateTraderType(traderType)
+        validatedUpdatedSince        <- validateUpdatedSince(updatedSince)
+        validatedTraderType          <- validateTraderType(traderType)
         _                   <- EitherT.right(messageService.updateAllMessages(request.erns))
         movement            <- getMovement(validatedMovementId)
       } yield
@@ -91,9 +96,25 @@ class GetMessagesController @Inject() (
             )
           )
         } else {
+          val messages: Seq[Message] = movement.messages
+          val decodedMessageList = messages.map( msg => {
+            val decodedXml = emcsUtil.decode(msg.encodedMessage)
+
+            val a = xml.XML.loadString(decodedXml).toList
+
+
+            val thing = messageFactory.createFromXml(msg.messageType, NodeSeq.fromSeq(a))
+
+            MessageAuditInfo(msg.messageId, thing.correlationId, msg.messageType, msg.messageType, )
+          })
+
+          auditService.getInformationForGetMessages(
+            GetMessagesRequestAuditInfo(movementId, updatedSince, traderType),
+            GetMessagesResponseAuditInfo(movement.messages.length, )
+          )
           Ok(
             Json.toJson(
-              filterMessages(request.erns.toSeq, movement, updatedSince, traderType)
+              filterMessages(request.erns.toSeq, movement, validatedUpdatedSince, validatedTraderType)
             )
           )
         }
