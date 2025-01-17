@@ -238,8 +238,8 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
       val messageCreateOn  = Instant.now()
       val request          = GetMessagesRequestAuditInfo(uuid, None, Some(Consignee.name.toLowerCase))
       val messageAuditInfo =
-        MessageAuditInfo("messageId", "testCorrelationId", "IE801", "MovementGenerated", "ern", messageCreateOn)
-      val response         = GetMessagesResponseAuditInfo(1, Seq(messageAuditInfo), "lrn", None, "testErn", "consigneeId")
+        MessageAuditInfo("messageId", Some("testCorrelationId"), "IE801", "MovementGenerated", "ern", messageCreateOn)
+      val response         = GetMessagesResponseAuditInfo(1, Seq(messageAuditInfo), "lrn", None, "testErn", Some("consigneeId"))
       val userDetails      = UserDetails("testInternalId", "testGroupId")
       val authExciseNumber = NonEmptySeq("testErn", Seq().empty)
 

@@ -31,9 +31,11 @@ import play.api.mvc.{AnyContent, Result}
 import play.api.test.Helpers.{await, contentAsJson, contentAsString, defaultAwaitTimeout, status, stubControllerComponents}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateAcceptHeaderAction
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
+import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMessagesRequestAuditInfo, GetMessagesResponseAuditInfo, MessageAuditInfo, UserDetails}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.Consignee
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, IE801Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, MessageService, MovementService}
@@ -50,20 +52,22 @@ class GetMessagesControllerSpec
     extends PlaySpec
     with FakeAuthentication
     with ErrorResponseSupport
-    with BeforeAndAfterEach {
+    with BeforeAndAfterEach
+    with TestXml {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val sys: ActorSystem     = ActorSystem("GetMessagesControllerSpec")
 
-  private val movementService = mock[MovementService]
-  private val cc              = stubControllerComponents()
-  private val validUUID       = "cfdb20c7-d0b0-4b8b-a071-737d68dede5e"
-  private val dateTimeService = mock[DateTimeService]
-  private val timeStamp       = Instant.parse("2020-01-01T01:01:01.123456Z")
-  private val messageService  = mock[MessageService]
-  private val messageCreateOn = Instant.now()
-  private val auditService    = mock[AuditService]
-
+  private val movementService       = mock[MovementService]
+  private val cc                    = stubControllerComponents()
+  private val validUUID             = "cfdb20c7-d0b0-4b8b-a071-737d68dede5e"
+  private val dateTimeService       = mock[DateTimeService]
+  private val timeStamp             = Instant.parse("2020-01-01T01:01:01.123456Z")
+  private val messageService        = mock[MessageService]
+  private val messageCreateOn       = Instant.now()
+  private val auditService          = mock[AuditService]
+  private val messageFactory        = mock[IEMessageFactory]
+  private val emcsUtils: EmcsUtils  = new EmcsUtils
   private val MovementIdFormatError = Json.parse("""
       |{
       | "dateTime":"2020-01-01T01:01:01.123Z",
@@ -95,9 +99,9 @@ class GetMessagesControllerSpec
     }
 
     "return 200 when consignor is valid" in {
-      val message    = Message(123, "message", "IE801", "messageId", "ern", Set.empty, messageCreateOn)
+      val message    =
+        Message(123, emcsUtils.encode(IE801.toString()), "IE801", "messageId", "ern", Set.empty, messageCreateOn)
       val movement   = createMovementWithMessages(Seq(message))
-      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
       val controller = new GetMessagesController(
         FakeSuccessAuthenticationMultiErn(Set(ern, "otherErn")),
         new ValidateAcceptHeaderAction(dateTimeService),
@@ -106,16 +110,30 @@ class GetMessagesControllerSpec
         new MovementIdValidation,
         cc,
         new EmcsUtils,
-        dateTimeService
+        dateTimeService,
+        auditService,
+        messageFactory
       )
-      await(controller.getMessagesForMovement(validUUID, None, None)(createRequest()))
 
       val request          = GetMessagesRequestAuditInfo(validUUID, None, Some(Consignee.name.toLowerCase))
       val messageAuditInfo =
-        MessageAuditInfo("messageId", "testCorrelationId", "IE801", "MovementGenerated", "ern", messageCreateOn)
-      val response         = GetMessagesResponseAuditInfo(1, Seq(messageAuditInfo), "lrn", None, "testErn", "consigneeId")
+        MessageAuditInfo(
+          "messageId",
+          Some("PORTAL6de1b822562c43fb9220d236e487c920"),
+          "IE801",
+          "MovementGenerated",
+          "ern",
+          messageCreateOn
+        )
+      val response         =
+        GetMessagesResponseAuditInfo(1, Seq(messageAuditInfo), "lrn", Some("arc"), "testErn", Some("consigneeId"))
       val userDetails      = UserDetails("testInternalId", "testGroupId")
-      val authExciseNumber = NonEmptySeq("testErn", Seq().empty)
+      val authExciseNumber = NonEmptySeq("testErn", Seq("otherErn"))
+
+      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
+      when(messageFactory.createFromXml(any, any)).thenReturn(IE801Message.createFromXml(IE801))
+
+      await(controller.getMessagesForMovement(validUUID, None, Some(Consignee.name.toLowerCase))(createRequest()))
 
       verify(messageService).updateAllMessages(eqTo(Set(ern, "otherErn")))(any)
       withClue("Submits getInformation audit event") {
@@ -528,7 +546,9 @@ class GetMessagesControllerSpec
       new MovementIdValidation,
       cc,
       new EmcsUtils,
-      dateTimeService
+      dateTimeService,
+      auditService,
+      messageFactory
     )
 
   private def createWithFailedAuth =
@@ -540,7 +560,9 @@ class GetMessagesControllerSpec
       new MovementIdValidation,
       cc,
       new EmcsUtils,
-      dateTimeService
+      dateTimeService,
+      auditService,
+      messageFactory
     )
 
   private def createRequest(

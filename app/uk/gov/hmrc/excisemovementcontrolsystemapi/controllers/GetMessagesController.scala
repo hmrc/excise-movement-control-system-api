@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import cats.data.{EitherT, OptionT}
+import cats.data.{EitherT, NonEmptySeq, OptionT}
 import cats.implicits._
 import play.api.Logging
 import play.api.libs.json.Json
@@ -78,11 +78,11 @@ class GetMessagesController @Inject() (
   ): Action[AnyContent] =
     authAction.async(parse.default) { implicit request: EnrolmentRequest[AnyContent] =>
       val result: EitherT[Future, Result, Result] = for {
-        validatedMovementId <- validateMovementId(movementId)
-        validatedUpdatedSince        <- validateUpdatedSince(updatedSince)
-        validatedTraderType          <- validateTraderType(traderType)
-        _                   <- EitherT.right(messageService.updateAllMessages(request.erns))
-        movement            <- getMovement(validatedMovementId)
+        validatedMovementId   <- validateMovementId(movementId)
+        validatedUpdatedSince <- validateUpdatedSince(updatedSince)
+        validatedTraderType   <- validateTraderType(traderType)
+        _                     <- EitherT.right(messageService.updateAllMessages(request.erns))
+        movement              <- getMovement(validatedMovementId)
       } yield
         if (getErnsForMovement(movement).intersect(request.erns).isEmpty) {
           logger.warn(s"[GetMessagesController] - Invalid MovementID supplied for ERN")
@@ -97,20 +97,36 @@ class GetMessagesController @Inject() (
           )
         } else {
           val messages: Seq[Message] = movement.messages
-          val decodedMessageList = messages.map( msg => {
+          val decodedMessageList     = messages.map { msg =>
             val decodedXml = emcsUtil.decode(msg.encodedMessage)
-
-            val a = xml.XML.loadString(decodedXml).toList
-
+            val a          = xml.XML.loadString(decodedXml).toList
 
             val thing = messageFactory.createFromXml(msg.messageType, NodeSeq.fromSeq(a))
 
-            MessageAuditInfo(msg.messageId, thing.correlationId, msg.messageType, msg.messageType, )
-          })
+            val messageAuditInfo = MessageAuditInfo(
+              msg.messageId,
+              thing.correlationId,
+              thing.messageType,
+              thing.messageAuditType.name,
+              msg.recipient,
+              msg.createdOn
+            )
+            println(messageAuditInfo)
+            messageAuditInfo
+          }
 
           auditService.getInformationForGetMessages(
             GetMessagesRequestAuditInfo(movementId, updatedSince, traderType),
-            GetMessagesResponseAuditInfo(movement.messages.length, )
+            GetMessagesResponseAuditInfo(
+              movement.messages.length,
+              decodedMessageList,
+              movement.localReferenceNumber,
+              movement.administrativeReferenceCode,
+              movement.consignorId,
+              movement.consigneeId
+            ),
+            request.userDetails,
+            NonEmptySeq(request.erns.head, request.erns.tail.toList)
           )
           Ok(
             Json.toJson(

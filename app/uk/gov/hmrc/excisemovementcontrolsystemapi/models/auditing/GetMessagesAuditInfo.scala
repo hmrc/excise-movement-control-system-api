@@ -34,14 +34,14 @@ case class GetMessagesResponseAuditInfo(
   localReferenceNumber: String,
   administrativeReferenceCode: Option[String],
   consignorId: String,
-  consigneeId: String
+  consigneeId: Option[String] // TODO: Discuss with Kara a change to Option
 )
 
 object GetMessagesResponseAuditInfo {}
 
 case class MessageAuditInfo(
   messageId: String,
-  correlationId: String,
+  correlationId: Option[String], // TODO: Discuss with Kara a change to Option
   messageTypeCode: String,
   messageType: String,
   recipient: String,
