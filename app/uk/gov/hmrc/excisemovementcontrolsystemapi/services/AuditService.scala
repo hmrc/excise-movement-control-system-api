@@ -125,4 +125,15 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
       auditConnector.sendExplicitAudit("GetInformation", event)
     }
 
+  def getInformationForSpecificMessage(
+    request: GetSpecificMessageRequestAuditInfo,
+    response: GetSpecificMessageResponseAuditInfo,
+    userDetails: UserDetails,
+    authExciseNumber: NonEmptySeq[String]
+  )(implicit hc: HeaderCarrier): Unit =
+    if (appConfig.newAuditingEnabled) {
+      val event = AuditEventFactory.createGetSpecificMessageAuditInfo(request, response, userDetails, authExciseNumber)
+      auditConnector.sendExplicitAudit("GetInformation", event)
+    }
+
 }

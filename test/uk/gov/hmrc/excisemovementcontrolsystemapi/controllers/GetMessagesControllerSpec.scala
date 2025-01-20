@@ -492,6 +492,18 @@ class GetMessagesControllerSpec
       val result = createWithSuccessfulAuth().getMessageForMovement(validUUID, messageId)(createRequest())
 
       status(result) mustBe OK
+
+      withClue("Submits getInformation audit event") {
+        verify(auditService, times(1))
+          .getInformationForGetSpecificMessage(
+            eqTo(request),
+            eqTo(response),
+            eqTo(userDetails),
+            eqTo(authExciseNumber)
+          )(
+            any
+          )
+      }
     }
 
     "return the message as xml for that movement and messageId" in {

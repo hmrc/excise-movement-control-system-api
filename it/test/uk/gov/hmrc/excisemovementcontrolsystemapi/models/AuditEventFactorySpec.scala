@@ -167,4 +167,39 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
 
     result mustBe expectedResult
   }
+
+  "createGetSpecificMessageAuditInfo creates GetSpecificMessageAuditInfo object" in {
+    val movementId = UUID.randomUUID().toString
+    val messageId  = UUID.randomUUID().toString
+
+    val request     = GetSpecificMessageRequestAuditInfo(movementId, messageId)
+    val response    = GetSpecificMessageResponseAuditInfo(
+      Some("correlationId"),
+      "IE801",
+      "MovementGenerated",
+      "lrn",
+      "arc",
+      "consignorId",
+      "consigneeId"
+    )
+    val messages    = MessageAuditInfo(
+      UUID.randomUUID().toString,
+      Some("correlationId"),
+      "IE815",
+      "DraftMovement",
+      "recipient",
+      Instant.now()
+    )
+    val response    =
+      GetMessagesResponseAuditInfo(1, Seq(messages), "lrn", Some("arc"), "consignorId", Some("consigneeId"))
+    val userDetails = UserDetails("gatewayId", "groupIdentifier")
+    val erns        = NonEmptySeq("ern1", Seq("ern2", "ern3"))
+
+    val expectedResult =
+      GetMessagesAuditInfo(request = request, response = response, userDetails = userDetails, authExciseNumber = erns)
+
+    val result = AuditEventFactory.createGetMessagesAuditInfo(request, response, userDetails, erns)
+
+    result mustBe expectedResult
+  }
 }
