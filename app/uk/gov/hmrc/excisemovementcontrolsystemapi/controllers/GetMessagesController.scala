@@ -125,9 +125,9 @@ class GetMessagesController @Inject() (
   private def buildMessageAuditInfo(messages: Seq[Message]) =
     messages.map { msg =>
       val decodedXml         = emcsUtil.decode(msg.encodedMessage)
-      val decodedXmlNodeList = xml.XML.loadString(decodedXml).toList
+      val decodedXmlNodeList = xml.XML.loadString(decodedXml)
 
-      val ieMessage = messageFactory.createFromXml(msg.messageType, NodeSeq.fromSeq(decodedXmlNodeList))
+      val ieMessage = messageFactory.createFromXml(msg.messageType, decodedXmlNodeList)
       MessageAuditInfo(
         msg.messageId,
         ieMessage.correlationId,
