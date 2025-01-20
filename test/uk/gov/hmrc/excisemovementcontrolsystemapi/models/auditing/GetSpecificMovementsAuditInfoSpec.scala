@@ -26,14 +26,26 @@ class GetSpecificMovementsAuditInfoSpec extends PlaySpec {
 
   "GetSpecificMovementsAuditInfo.writes" should {
     "serializes the authExciseNumber sequence into a comma-seperated string" in {
-      val uuid             = UUID.randomUUID().toString
-      val request          = GetSpecificMovementRequestAuditInfo(uuid)
+      val movementId = UUID.randomUUID().toString
+      val messageId  = UUID.randomUUID().toString
+
+      val request          = GetSpecificMessageRequestAuditInfo(movementId, messageId)
+      val response         = GetSpecificMessageResponseAuditInfo(
+        Some("testCorrelationId"),
+        "IE801",
+        "MovementGenerated",
+        "lrn",
+        Some("arc"),
+        "consignorId",
+        Some("consigneeId")
+      )
       val userDetails      = UserDetails("gatewayId", "groupIdentifier")
       val authExciseNumber = NonEmptySeq("ern1", Seq("ern2", "ern3"))
 
       val testModel =
-        GetSpecificMovementAuditInfo(
+        GetSpecificMessageAuditInfo(
           request = request,
+          response = response,
           userDetails = userDetails,
           authExciseNumber = authExciseNumber
         )
@@ -43,5 +55,35 @@ class GetSpecificMovementsAuditInfoSpec extends PlaySpec {
       (output \ "authExciseNumber").get mustBe JsString("ern1,ern2,ern3")
 
     }
+
   }
+
+  "GetSpecificMessageResponseAuditInfo.writes" should {
+    "does not include the administrativeReferenceCode if not populated" in {
+      val response = GetSpecificMessageResponseAuditInfo(
+        Some("testCorrelationId"),
+        "IE801",
+        "MovementGenerated",
+        "lrn",
+        None,
+        "consignorId",
+        Some("consigneeId")
+      )
+
+      val expectedResult = Json.obj(
+        "correlationId"        -> "testCorrelationId",
+        "messageTypeCode"      -> "IE801",
+        "messageType"          -> "MovementGenerated",
+        "localReferenceNumber" -> "lrn",
+        "consignorId"          -> "consignorId",
+        "consigneeId"          -> "consigneeId"
+      )
+
+      val result = Json.toJson(response)
+      result mustBe expectedResult
+
+    }
+
+  }
+
 }

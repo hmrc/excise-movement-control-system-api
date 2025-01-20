@@ -190,15 +190,18 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       "recipient",
       Instant.now()
     )
-    val response    =
-      GetMessagesResponseAuditInfo(1, Seq(messages), "lrn", Some("arc"), "consignorId", Some("consigneeId"))
     val userDetails = UserDetails("gatewayId", "groupIdentifier")
     val erns        = NonEmptySeq("ern1", Seq("ern2", "ern3"))
 
     val expectedResult =
-      GetMessagesAuditInfo(request = request, response = response, userDetails = userDetails, authExciseNumber = erns)
+      GetSpecificMessageAuditInfo(
+        request = request,
+        response = response,
+        userDetails = userDetails,
+        authExciseNumber = erns
+      )
 
-    val result = AuditEventFactory.createGetMessagesAuditInfo(request, response, userDetails, erns)
+    val result = AuditEventFactory.createGetSpecificMessageAuditInfo(request, response, userDetails, erns)
 
     result mustBe expectedResult
   }
