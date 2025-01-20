@@ -113,4 +113,16 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
       val event = AuditEventFactory.createGetSpecificMovementDetails(request, userDetails, authExciseNumber)
       auditConnector.sendExplicitAudit("GetInformation", event)
     }
+
+  def getInformationForGetMessages(
+    request: GetMessagesRequestAuditInfo,
+    response: GetMessagesResponseAuditInfo,
+    userDetails: UserDetails,
+    authExciseNumber: NonEmptySeq[String]
+  )(implicit hc: HeaderCarrier): Unit =
+    if (appConfig.newAuditingEnabled) {
+      val event = AuditEventFactory.createGetMessagesAuditInfo(request, response, userDetails, authExciseNumber)
+      auditConnector.sendExplicitAudit("GetInformation", event)
+    }
+
 }

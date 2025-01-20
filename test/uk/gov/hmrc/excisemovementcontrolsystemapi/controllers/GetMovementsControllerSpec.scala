@@ -51,14 +51,12 @@ class GetMovementsControllerSpec
     with BeforeAndAfterEach {
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  private val correlationIdService  = mock[CorrelationIdService]
-
-  private val cc                  = stubControllerComponents()
-  private val movementService     = mock[MovementService]
-  private val dateTimeService     = mock[DateTimeService]
-  private val messageService      = mock[MessageService]
-  private val movementIdValidator = mock[MovementIdValidation]
-  private val auditService        = mock[AuditService]
+  private val cc                    = stubControllerComponents()
+  private val movementService       = mock[MovementService]
+  private val dateTimeService       = mock[DateTimeService]
+  private val messageService        = mock[MessageService]
+  private val movementIdValidator   = mock[MovementIdValidation]
+  private val auditService          = mock[AuditService]
 
   private val controller = new GetMovementsController(
     FakeSuccessAuthentication(Set(ern)),

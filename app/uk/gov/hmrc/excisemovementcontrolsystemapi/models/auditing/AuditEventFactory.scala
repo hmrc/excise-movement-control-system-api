@@ -108,4 +108,17 @@ object AuditEventFactory extends Auditing {
       authExciseNumber = authExciseNumber
     )
 
+  def createGetMessagesAuditInfo(
+    request: GetMessagesRequestAuditInfo,
+    response: GetMessagesResponseAuditInfo,
+    userDetails: UserDetails,
+    authExciseNumber: NonEmptySeq[String]
+  ): GetMessagesAuditInfo =
+    GetMessagesAuditInfo(
+      request = request,
+      response = response,
+      userDetails = userDetails,
+      authExciseNumber = authExciseNumber
+    )
+
 }

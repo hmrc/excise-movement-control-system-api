@@ -16,17 +16,19 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import cats.data.{EitherT, OptionT}
+import cats.data.{EitherT, NonEmptySeq, OptionT}
 import cats.implicits._
 import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ValidateAcceptHeaderAction}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMessagesRequestAuditInfo, GetMessagesResponseAuditInfo, MessageAuditInfo}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MessageResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{MessageService, MovementService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, MessageService, MovementService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -34,6 +36,7 @@ import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
+import scala.xml.NodeSeq
 
 @Singleton
 class GetMessagesController @Inject() (
@@ -44,7 +47,9 @@ class GetMessagesController @Inject() (
   movementIdValidator: MovementIdValidation,
   cc: ControllerComponents,
   emcsUtil: EmcsUtils,
-  dateTimeService: DateTimeService
+  dateTimeService: DateTimeService,
+  auditService: AuditService,
+  messageFactory: IEMessageFactory
 )(implicit ec: ExecutionContext)
     extends BackendController(cc)
     with Logging {
@@ -73,11 +78,11 @@ class GetMessagesController @Inject() (
   ): Action[AnyContent] =
     authAction.async(parse.default) { implicit request: EnrolmentRequest[AnyContent] =>
       val result: EitherT[Future, Result, Result] = for {
-        validatedMovementId <- validateMovementId(movementId)
-        updatedSince        <- validateUpdatedSince(updatedSince)
-        traderType          <- validateTraderType(traderType)
-        _                   <- EitherT.right(messageService.updateAllMessages(request.erns))
-        movement            <- getMovement(validatedMovementId)
+        validatedMovementId   <- validateMovementId(movementId)
+        validatedUpdatedSince <- validateUpdatedSince(updatedSince)
+        validatedTraderType   <- validateTraderType(traderType)
+        _                     <- EitherT.right(messageService.updateAllMessages(request.erns))
+        movement              <- getMovement(validatedMovementId)
       } yield
         if (getErnsForMovement(movement).intersect(request.erns).isEmpty) {
           logger.warn(s"[GetMessagesController] - Invalid MovementID supplied for ERN")
@@ -91,15 +96,46 @@ class GetMessagesController @Inject() (
             )
           )
         } else {
+          auditService.getInformationForGetMessages(
+            GetMessagesRequestAuditInfo(movementId, updatedSince, traderType),
+            GetMessagesResponseAuditInfo(
+              movement.messages.length,
+              buildMessageAuditInfo(movement.messages),
+              movement.localReferenceNumber,
+              movement.administrativeReferenceCode,
+              movement.consignorId,
+              movement.consigneeId
+            ),
+            request.userDetails,
+            NonEmptySeq(request.erns.head, request.erns.tail.toList)
+          )
+
           Ok(
             Json.toJson(
-              filterMessages(request.erns.toSeq, movement, updatedSince, traderType)
+              filterMessages(request.erns.toSeq, movement, validatedUpdatedSince, validatedTraderType)
             )
           )
         }
 
       result.merge
 
+    }
+
+  //TODO: We could avoid the encoding in our tests if we moved this sort of work into the AuditEventFactory so it could be mocked away
+  private def buildMessageAuditInfo(messages: Seq[Message]) =
+    messages.map { msg =>
+      val decodedXml         = emcsUtil.decode(msg.encodedMessage)
+      val decodedXmlNodeList = xml.XML.loadString(decodedXml)
+
+      val ieMessage = messageFactory.createFromXml(msg.messageType, decodedXmlNodeList)
+      MessageAuditInfo(
+        msg.messageId,
+        ieMessage.correlationId,
+        ieMessage.messageType,
+        ieMessage.messageAuditType.name,
+        msg.recipient,
+        msg.createdOn
+      )
     }
 
   private def filterMessages(
