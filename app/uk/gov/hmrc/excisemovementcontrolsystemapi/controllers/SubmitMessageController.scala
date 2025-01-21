@@ -65,11 +65,7 @@ class SubmitMessageController @Inject() (
 
           auditService.auditMessage(request.ieMessage)
           auditService.messageSubmitted(movement, true, request.ieMessage.correlationId, request)
-          println(request.ieMessage)
-          println(request.request.userDetails)
-          println(request.request.erns)
-          println(request.request.headers)
-          println(request)
+
           Accepted(
             Json.toJson(
               ExciseMovementResponse(
