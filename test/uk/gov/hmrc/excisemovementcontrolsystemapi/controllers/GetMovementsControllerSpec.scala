@@ -25,6 +25,7 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.Status.{BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, OK}
 import play.api.libs.json.Json
+import play.api.mvc.AnyContent
 import play.api.mvc.Results.BadRequest
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
@@ -32,6 +33,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, Trade
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication, FakeValidateErnParameterAction, FakeValidateTraderTypeAction, FakeValidateUpdatedSinceAction, MovementTestUtils}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMovementsParametersAuditInfo, GetMovementsResponseAuditInfo, GetSpecificMovementAuditInfo, GetSpecificMovementRequestAuditInfo, UserDetails}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MovementIdFormatInvalid, MovementIdValidation}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, CorrelationIdService, MessageService, MovementService}
@@ -39,6 +41,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
+import scala.xml.NodeSeq
 
 class GetMovementsControllerSpec
     extends PlaySpec
@@ -130,6 +133,9 @@ class GetMovementsControllerSpec
       auditService
     )
 
+  val enrolmentRequest: EnrolmentRequest[AnyContent] =
+    EnrolmentRequest(FakeRequest(), Set(ern), fakeUserDetails)
+
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(movementService, messageService, auditService)
@@ -161,19 +167,18 @@ class GetMovementsControllerSpec
   "getMovements" should {
     "respond with 200 OK" when {
       "called with no query parameters and valid request" in {
-        val result           = controller.getMovements(None, None, None, None, None)(fakeRequest)
-        val request          = GetMovementsParametersAuditInfo(None, None, None, None, None)
-        val response         = GetMovementsResponseAuditInfo(1)
-        val userDetails      = UserDetails("testInternalId", "testGroupId")
-        val authExciseNumber = NonEmptySeq("testErn", Seq().empty)
+        val result   = controller.getMovements(None, None, None, None, None)(enrolmentRequest)
+        val request  = GetMovementsParametersAuditInfo(None, None, None, None, None)
+        val response = GetMovementsResponseAuditInfo(1)
 
         status(result) mustBe OK
         contentAsJson(result) mustBe Json.toJson(
           Seq(createMovementResponse(ern, "lrn", "arc", Some("consigneeId"), Some(timestamp)))
         )
         withClue("Submits GetInformation (GetMovements) audit event") {
+          //TODO: Cannot figure out how to use eqTo on the request, despite checking all values match. Potential improvement on tests to use some sort of eqTo check across file.
           verify(auditService, times(1))
-            .getInformationForGetMovements(eqTo(request), eqTo(response), eqTo(userDetails), eqTo(authExciseNumber))(
+            .getInformationForGetMovements(eqTo(request), eqTo(response), any[EnrolmentRequest[AnyContent]])(
               any
             )
         }
@@ -207,7 +212,7 @@ class GetMovementsControllerSpec
           when(movementService.getMovementByErn(any, any))
             .thenReturn(Future.successful(Seq(movement1, movement2)))
 
-          val result = controller.getMovements(None, None, None, None, None)(fakeRequest)
+          val result = controller.getMovements(None, None, None, None, None)(enrolmentRequest)
 
           status(result) mustBe OK
           contentAsJson(result) mustBe Json.toJson(
@@ -220,16 +225,14 @@ class GetMovementsControllerSpec
           verify(movementService).getMovementByErn(eqTo(Seq(ern)), any)
           withClue("Submits GetInformation (GetMovements) audit event") {
             verify(auditService, times(1))
-              .getInformationForGetMovements(eqTo(request), eqTo(response), eqTo(userDetails), eqTo(authExciseNumber))(
+              .getInformationForGetMovements(eqTo(request), eqTo(response), any[EnrolmentRequest[AnyContent]])(
                 any
               )
           }
         }
         "expecting movements from multiple ERNs" in {
-          val request          = GetMovementsParametersAuditInfo(None, None, None, None, None)
-          val response         = GetMovementsResponseAuditInfo(2)
-          val userDetails      = UserDetails("testInternalId", "testGroupId")
-          val authExciseNumber = NonEmptySeq(ern, Seq("ern2"))
+          val request  = GetMovementsParametersAuditInfo(None, None, None, None, None)
+          val response = GetMovementsResponseAuditInfo(2)
 
           val controller = new GetMovementsController(
             FakeSuccessAuthenticationMultiErn(Set(ern, "ern2")),
@@ -267,7 +270,7 @@ class GetMovementsControllerSpec
           when(movementService.getMovementByErn(any, any))
             .thenReturn(Future.successful(Seq(movement1, movement2)))
 
-          val result = controller.getMovements(None, None, None, None, None)(fakeRequest)
+          val result = controller.getMovements(None, None, None, None, None)(enrolmentRequest)
 
           status(result) mustBe OK
           contentAsJson(result) mustBe Json.toJson(
@@ -281,7 +284,7 @@ class GetMovementsControllerSpec
 
           withClue("Submits GetInformation (GetMovements) audit event") {
             verify(auditService, times(1))
-              .getInformationForGetMovements(eqTo(request), eqTo(response), eqTo(userDetails), eqTo(authExciseNumber))(
+              .getInformationForGetMovements(eqTo(request), eqTo(response), any[EnrolmentRequest[AnyContent]])(
                 any
               )
           }
@@ -290,9 +293,7 @@ class GetMovementsControllerSpec
       }
       "there are query parameters" when {
         "an ERN is specified in the query parameters" in {
-          val localErn         = "ern2"
-          val userDetails      = UserDetails("testInternalId", "testGroupId")
-          val authExciseNumber = NonEmptySeq(ern, Seq(localErn))
+          val localErn = "ern2"
 
           val controller = new GetMovementsController(
             FakeSuccessAuthenticationMultiErn(Set(ern, localErn)),
@@ -320,7 +321,7 @@ class GetMovementsControllerSpec
           when(movementService.getMovementByErn(any, any))
             .thenReturn(Future.successful(Seq(movement2)))
 
-          val result = controller.getMovements(Some(localErn), None, None, None, None)(fakeRequest)
+          val result = controller.getMovements(Some(localErn), None, None, None, None)(enrolmentRequest)
 
           status(result) mustBe OK
           contentAsJson(result) mustBe Json.toJson(
@@ -334,7 +335,7 @@ class GetMovementsControllerSpec
 
           withClue("Submits GetInformation (GetMovements) audit event") {
             verify(auditService, times(1))
-              .getInformationForGetMovements(eqTo(request), eqTo(response), eqTo(userDetails), eqTo(authExciseNumber))(
+              .getInformationForGetMovements(eqTo(request), eqTo(response), any[EnrolmentRequest[AnyContent]])(
                 any
               )
           }
@@ -354,25 +355,23 @@ class GetMovementsControllerSpec
           await(
             controller
               .getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString), Some("consignor"))(
-                fakeRequest
+                enrolmentRequest
               )
           )
 
-          val filter           = MovementFilter(
+          val filter = MovementFilter(
             ern = Some(ern),
             lrn = Some("lrn"),
             arc = Some("arc"),
             updatedSince = Some(timestampNow),
             traderType = Some(TraderType(traderType = "consignor", erns = Seq(ern)))
           )
-          val userDetails      = UserDetails("testInternalId", "testGroupId")
-          val authExciseNumber = NonEmptySeq("testErn", Seq().empty)
 
           verify(movementService).getMovementByErn(any, eqTo(filter))
 
           withClue("Submits GetInformation (GetMovements) audit event") {
             verify(auditService, times(1))
-              .getInformationForGetMovements(eqTo(request), eqTo(response), eqTo(userDetails), eqTo(authExciseNumber))(
+              .getInformationForGetMovements(eqTo(request), eqTo(response), any[EnrolmentRequest[AnyContent]])(
                 any
               )
           }
@@ -391,24 +390,22 @@ class GetMovementsControllerSpec
           await(
             controller
               .getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestampNow.toString), Some("consignee"))(
-                fakeRequest
+                enrolmentRequest
               )
           )
 
-          val filter           = MovementFilter(
+          val filter = MovementFilter(
             ern = Some(ern),
             lrn = Some("lrn"),
             arc = Some("arc"),
             updatedSince = Some(timestampNow),
             traderType = Some(TraderType(traderType = "consignee", erns = Seq(ern)))
           )
-          val userDetails      = UserDetails("testInternalId", "testGroupId")
-          val authExciseNumber = NonEmptySeq("testErn", Seq().empty)
           verify(movementService).getMovementByErn(any, eqTo(filter))
 
           withClue("Submits GetInformation (GetMovements) audit event") {
             verify(auditService, times(1))
-              .getInformationForGetMovements(eqTo(request), eqTo(response), eqTo(userDetails), eqTo(authExciseNumber))(
+              .getInformationForGetMovements(eqTo(request), eqTo(response), any[EnrolmentRequest[AnyContent]])(
                 any
               )
           }

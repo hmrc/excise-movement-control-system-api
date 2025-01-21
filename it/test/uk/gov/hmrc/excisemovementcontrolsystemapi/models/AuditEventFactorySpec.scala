@@ -19,8 +19,10 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 import cats.data.NonEmptySeq
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
+import play.api.test.FakeRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.writes.testObjects._
 import uk.gov.hmrc.http.HeaderCarrier
@@ -28,6 +30,7 @@ import uk.gov.hmrc.play.audit.model.ExtendedDataEvent
 
 import java.time.Instant
 import java.util.UUID
+import scala.xml.NodeSeq
 
 class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with TestXml {
 
@@ -86,13 +89,20 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
 
     val testCorrelationid = UUID.randomUUID()
     val message           = IE815Message.createFromXml(IE815)
+    val userDetails       = UserDetails("gatewayID", "groupid")
+    val erns              = Set("ern1")
+    val parsedXmlRequest  = ParsedXmlRequest[NodeSeq](
+      EnrolmentRequest[NodeSeq](FakeRequest().withBody[NodeSeq](IE815), Set("ern"), UserDetails("id", "id")),
+      message,
+      erns,
+      userDetails
+    )
 
     val result = AuditEventFactory.createMessageSubmittedNoMovement(
       message,
       submittedToCore = true,
       Some(testCorrelationid.toString),
-      UserDetails("gatewayID", "groupid"),
-      Set("ern1")
+      parsedXmlRequest
     )
 
     val expectedResult = MessageSubmittedDetails(
@@ -167,4 +177,40 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
 
     result mustBe expectedResult
   }
+
+  "createGetSpecificMessageAuditInfo creates GetSpecificMessageAuditInfo object" ignore {
+    val movementId = UUID.randomUUID().toString
+    val messageId  = UUID.randomUUID().toString
+
+    val request     = GetSpecificMessageRequestAuditInfo(movementId, messageId)
+    val response    = GetSpecificMessageResponseAuditInfo(
+      Some("correlationId"),
+      "IE801",
+      "MovementGenerated",
+      "lrn",
+      Some("arc"),
+      "consignorId",
+      Some("consigneeId")
+    )
+    val messages    = MessageAuditInfo(
+      UUID.randomUUID().toString,
+      Some("correlationId"),
+      "IE815",
+      "DraftMovement",
+      "recipient",
+      Instant.now()
+    )
+    val userDetails = UserDetails("gatewayId", "groupIdentifier")
+    val erns        = NonEmptySeq("ern1", Seq("ern2", "ern3"))
+
+    val expectedResult =
+      GetSpecificMessageAuditInfo(
+        request = request,
+        response = response,
+        userDetails = userDetails,
+        authExciseNumber = erns
+      )
+
+  }
+
 }

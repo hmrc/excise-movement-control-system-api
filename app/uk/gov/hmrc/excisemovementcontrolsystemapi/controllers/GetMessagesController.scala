@@ -23,7 +23,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ValidateAcceptHeaderAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMessagesRequestAuditInfo, GetMessagesResponseAuditInfo, MessageAuditInfo}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMessagesRequestAuditInfo, GetMessagesResponseAuditInfo, GetSpecificMessageRequestAuditInfo, GetSpecificMessageResponseAuditInfo, GetSpecificMovementRequestAuditInfo, MessageAuditInfo}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MessageResponse}
@@ -65,7 +65,30 @@ class GetMessagesController @Inject() (
       } yield movement.messages.filter(o => o.messageId.equals(messageId)).toList match {
         case Nil       => messageNotFoundError(messageId)
         case head :: _ =>
-          val decodedXml = emcsUtil.decode(head.encodedMessage)
+          val decodedXml         = emcsUtil.decode(head.encodedMessage)
+          val decodedXmlNodeList = xml.XML.loadString(decodedXml)
+
+          val ieMessage = messageFactory.createFromXml(head.messageType, decodedXmlNodeList)
+
+          val requestInfo      = GetSpecificMessageRequestAuditInfo(movementId, messageId)
+          val response         = GetSpecificMessageResponseAuditInfo(
+            ieMessage.correlationId,
+            ieMessage.messageType,
+            ieMessage.messageAuditType.name,
+            movement.localReferenceNumber,
+            movement.administrativeReferenceCode,
+            consignorId = movement.consignorId,
+            consigneeId = movement.consigneeId
+          )
+          val userDetails      = request.userDetails
+          val authExciseNumber = request.erns
+
+          auditService.getInformationForGetSpecificMessage(
+            requestInfo,
+            response,
+            userDetails,
+            NonEmptySeq(authExciseNumber.head, authExciseNumber.tail.toSeq)
+          )
           Ok(xml.XML.loadString(decodedXml))
       }
       result.merge

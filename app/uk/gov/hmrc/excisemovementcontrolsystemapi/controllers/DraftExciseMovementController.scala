@@ -72,7 +72,7 @@ class DraftExciseMovementController @Inject() (
           val (movement, boxId, ie815Message) = success
 
           auditService.auditMessage(request.ieMessage).value
-          auditService.messageSubmitted(request.ieMessage, movement, true, ie815Message.correlationId, request)
+          auditService.messageSubmitted(movement, true, ie815Message.correlationId, request)
 
           Accepted(
             Json.toJson(

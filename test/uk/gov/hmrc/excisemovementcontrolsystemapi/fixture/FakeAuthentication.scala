@@ -27,14 +27,15 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait FakeAuthentication {
 
-  val ern = "testErn"
+  val ern             = "testErn"
+  val fakeUserDetails = UserDetails("testInternalId", "testGroupId")
 
   case class FakeSuccessAuthentication(ern: Set[String]) extends AuthAction {
 
     override def parser: BodyParser[AnyContent] = stubBodyParser()
 
     override def invokeBlock[A](request: Request[A], block: EnrolmentRequest[A] => Future[Result]): Future[Result] =
-      block(EnrolmentRequest(request, ern, UserDetails("testInternalId", "testGroupId")))
+      block(EnrolmentRequest(request, ern, fakeUserDetails))
 
     override protected def executionContext: ExecutionContext = ExecutionContext.Implicits.global
   }

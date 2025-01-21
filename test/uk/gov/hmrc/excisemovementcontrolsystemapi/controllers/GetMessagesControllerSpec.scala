@@ -34,7 +34,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateAc
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMessagesRequestAuditInfo, GetMessagesResponseAuditInfo, MessageAuditInfo, UserDetails}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMessagesRequestAuditInfo, GetMessagesResponseAuditInfo, GetSpecificMessageRequestAuditInfo, GetSpecificMessageResponseAuditInfo, MessageAuditInfo, UserDetails}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, IE801Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
@@ -160,7 +160,6 @@ class GetMessagesControllerSpec
       val result = createWithSuccessfulAuth().getMessagesForMovement(validUUID, None, None)(createRequest())
 
       status(result) mustBe OK
-      println(contentAsJson(result))
       contentAsJson(result) mustBe JsArray(
         Seq(
           expectedMessageResponseAsJson(
@@ -492,6 +491,33 @@ class GetMessagesControllerSpec
       val result = createWithSuccessfulAuth().getMessageForMovement(validUUID, messageId)(createRequest())
 
       status(result) mustBe OK
+
+      withClue("Submits getInformation audit event") {
+
+        val request          = GetSpecificMessageRequestAuditInfo(validUUID, messageId)
+        val response         =
+          GetSpecificMessageResponseAuditInfo(
+            Some("PORTAL6de1b822562c43fb9220d236e487c920"),
+            "IE801",
+            "MovementGenerated",
+            "lrn",
+            Some("arc"),
+            movementWithMessage.consignorId,
+            movementWithMessage.consigneeId
+          )
+        val userDetails      = UserDetails("testInternalId", "testGroupId")
+        val authExciseNumber = NonEmptySeq("testErn", Seq.empty[String])
+
+        verify(auditService, times(1))
+          .getInformationForGetSpecificMessage(
+            eqTo(request),
+            eqTo(response),
+            eqTo(userDetails),
+            eqTo(authExciseNumber)
+          )(
+            any
+          )
+      }
     }
 
     "return the message as xml for that movement and messageId" in {
