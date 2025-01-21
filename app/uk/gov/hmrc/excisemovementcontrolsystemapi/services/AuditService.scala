@@ -18,10 +18,10 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import cats.data.{EitherT, NonEmptySeq}
 import play.api.Logging
-import play.api.mvc.Result
+import play.api.mvc.{AnyContent, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.http.HeaderCarrier
@@ -44,7 +44,6 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
     auditMessage(message, Some(failureReason))
 
   def messageSubmitted(
-    message: IEMessage,
     movement: Movement,
     submittedToCore: Boolean,
     correlationId: Option[String],
@@ -52,14 +51,7 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
   )(implicit hc: HeaderCarrier): Unit =
     if (appConfig.newAuditingEnabled) {
 
-      val event = AuditEventFactory.createMessageSubmitted(
-        message,
-        movement,
-        submittedToCore,
-        correlationId,
-        request.userDetails,
-        request.erns
-      )
+      val event = AuditEventFactory.createMessageSubmitted(movement, submittedToCore, correlationId, request)
 
       auditConnector.sendExplicitAudit("MessageSubmitted", event)
     }
@@ -76,8 +68,7 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
         message,
         submittedToCore,
         correlationId,
-        request.userDetails,
-        request.erns
+        request
       )
 
       auditConnector.sendExplicitAudit("MessageSubmitted", event)
@@ -96,11 +87,15 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
   def getInformationForGetMovements(
     request: GetMovementsParametersAuditInfo,
     response: GetMovementsResponseAuditInfo,
-    userDetails: UserDetails,
-    authExciseNumber: NonEmptySeq[String]
+    enrolmentRequest: EnrolmentRequest[AnyContent]
   )(implicit hc: HeaderCarrier): Unit =
     if (appConfig.newAuditingEnabled) {
-      val event = AuditEventFactory.createGetMovementsDetails(request, response, userDetails, authExciseNumber)
+      val event = AuditEventFactory.createGetMovementsDetails(
+        request,
+        response,
+        enrolmentRequest.userDetails,
+        NonEmptySeq(enrolmentRequest.erns.head, enrolmentRequest.erns.tail.toList)
+      )
       auditConnector.sendExplicitAudit("GetInformation", event)
     }
 

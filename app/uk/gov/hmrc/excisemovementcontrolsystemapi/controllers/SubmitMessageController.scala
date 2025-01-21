@@ -64,7 +64,7 @@ class SubmitMessageController @Inject() (
         movement => {
 
           auditService.auditMessage(request.ieMessage)
-          auditService.messageSubmitted(request.ieMessage, movement, true, request.ieMessage.correlationId, request)
+          auditService.messageSubmitted(movement, true, request.ieMessage.correlationId, request)
 
           Accepted(
             Json.toJson(
@@ -122,7 +122,7 @@ class SubmitMessageController @Inject() (
       submissionMessageService.submit(request, authorisedErn).map {
         case Left(error)     =>
           auditService.auditMessage(request.ieMessage, "Failed to Submit").value
-          auditService.messageSubmitted(request.ieMessage, movement, false, request.ieMessage.correlationId, request)
+          auditService.messageSubmitted(movement, false, request.ieMessage.correlationId, request)
 
           Left(
             Status(error.status)(

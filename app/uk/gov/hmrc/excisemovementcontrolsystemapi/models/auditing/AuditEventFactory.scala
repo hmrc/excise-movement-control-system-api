@@ -17,11 +17,14 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
 import cats.data.NonEmptySeq
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
 import uk.gov.hmrc.play.audit.model.ExtendedDataEvent
+
+import scala.xml.NodeSeq
 
 object AuditEventFactory extends Auditing {
 
@@ -41,8 +44,7 @@ object AuditEventFactory extends Auditing {
     message: IE815Message,
     submittedToCore: Boolean,
     correlationId: Option[String],
-    userDetails: UserDetails,
-    erns: Set[String]
+    request: ParsedXmlRequest[NodeSeq]
   ): MessageSubmittedDetails =
     MessageSubmittedDetails(
       message.messageType,
@@ -55,33 +57,31 @@ object AuditEventFactory extends Auditing {
       submittedToCore,
       message.messageIdentifier,
       correlationId,
-      userDetails,
-      NonEmptySeq(erns.head, erns.tail.toList),
+      request.userDetails,
+      NonEmptySeq(request.erns.head, request.erns.tail.toList),
       message.toJsObject
     )
 
   def createMessageSubmitted(
-    message: IEMessage,
     movement: Movement,
     submittedToCore: Boolean,
     correlationId: Option[String],
-    userDetails: UserDetails,
-    erns: Set[String]
+    request: ParsedXmlRequest[NodeSeq]
   ): MessageSubmittedDetails =
     MessageSubmittedDetails(
-      message.messageType,
-      message.messageAuditType.name,
+      request.ieMessage.messageType,
+      request.ieMessage.messageAuditType.name,
       movement.localReferenceNumber,
       movement.administrativeReferenceCode,
       Some(movement._id),
       movement.consignorId,
       movement.consigneeId,
       submittedToCore,
-      message.messageIdentifier,
+      request.ieMessage.messageIdentifier,
       correlationId,
-      userDetails,
-      NonEmptySeq(erns.head, erns.tail.toList),
-      message.toJsObject
+      request.userDetails,
+      NonEmptySeq(request.erns.head, request.erns.tail.toList),
+      request.ieMessage.toJsObject
     )
 
   def createGetMovementsDetails(

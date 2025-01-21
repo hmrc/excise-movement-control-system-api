@@ -24,6 +24,7 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
 import play.api.libs.json.Json
+import play.api.mvc.AnyContent
 import play.api.mvc.Results.{BadRequest, Forbidden}
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
@@ -31,8 +32,10 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.Correlatio
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EISErrorResponseDetails
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
@@ -40,7 +43,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
-import scala.xml.Elem
+import scala.xml.{Elem, NodeSeq}
 
 class SubmitMessageControllerSpec
     extends PlaySpec
@@ -67,6 +70,12 @@ class SubmitMessageControllerSpec
     Movement(Some("boxId"), "LRNQA20230909022221", consignorId, Some("GBWK002281023"), Some("23GB00000000000377161"))
   private val timestamp   = Instant.parse("2024-06-12T14:13:15.1234567Z")
 
+  val parsedXmlRequest: ParsedXmlRequest[NodeSeq] = ParsedXmlRequest(
+    EnrolmentRequest(FakeRequest().withBody(IE801), Set("ern"), UserDetails("id", "id")),
+    IE815Message.createFromXml(IE815),
+    Set("ern"),
+    UserDetails("id", "id")
+  )
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(submissionMessageService, movementService, movementValidation, auditService, mockIeMessage)
@@ -99,11 +108,11 @@ class SubmitMessageControllerSpec
 
     "send an audit event" in {
       when(mockIeMessage.correlationId).thenReturn(Some("testXMLCorrelationId"))
-      await(createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request))
+      await(createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(parsedXmlRequest))
 
       verify(auditService, times(1)).auditMessage(any[IEMessage])(any)
       verify(auditService, times(1))
-        .messageSubmitted(any, any, any, eqTo(Some("testXMLCorrelationId")), any)(any)
+        .messageSubmitted(any, any, eqTo(Some("testXMLCorrelationId")), eqTo(parsedXmlRequest))(any)
     }
 
     "sends a failure audit when a message isn't submitted" in {
@@ -111,11 +120,11 @@ class SubmitMessageControllerSpec
 
       val testError = EISErrorResponseDetails(BAD_REQUEST, timestamp, "", "", "", None)
       when(submissionMessageService.submit(any, any)(any)).thenReturn(Future.successful(Left(testError)))
-      await(createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(request))
+      await(createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(parsedXmlRequest))
 
       verify(auditService, times(1)).auditMessage(any, any)(any)
       verify(auditService, times(1))
-        .messageSubmitted(any, any, any, eqTo(Some("testXMLCorrelationId")), any)(any)
+        .messageSubmitted(any, any, eqTo(Some("testXMLCorrelationId")), eqTo(parsedXmlRequest))(any)
     }
 
     "return an error when EIS errors" in {

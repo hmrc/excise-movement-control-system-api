@@ -78,8 +78,7 @@ class GetMovementsController @Inject() (
           auditService.getInformationForGetMovements(
             GetMovementsParametersAuditInfo(ern, arc, lrn, updatedSince, traderType),
             GetMovementsResponseAuditInfo(movements.length),
-            request.userDetails,
-            NonEmptySeq(request.erns.head, request.erns.tail.toList)
+            request
           )
           Ok(Json.toJson(movements.map(createResponseFrom)))
         }

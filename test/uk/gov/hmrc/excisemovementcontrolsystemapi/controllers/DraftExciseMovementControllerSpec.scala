@@ -194,7 +194,7 @@ class DraftExciseMovementControllerSpec
       await(createWithSuccessfulAuth.submit(request))
 
       verify(auditService, times(1)).auditMessage(any[IEMessage])(any)
-      verify(auditService, times(1)).messageSubmitted(any, any, any, eqTo(Some("correlationId")), any)(any)
+      verify(auditService, times(1)).messageSubmitted(any, any, eqTo(Some("correlationId")), any)(any)
 
     }
 

@@ -23,6 +23,7 @@ import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.JsObject
+import play.api.mvc.AnyContent
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
@@ -64,6 +65,9 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
       testErns,
       UserDetails("", "")
     )
+
+  val enrolmentRequest: EnrolmentRequest[AnyContent] =
+    EnrolmentRequest(FakeRequest(), Set("ern"), UserDetails("id", "id"))
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -141,6 +145,19 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
     "there is no movement to be audited" should {
       val request = createRequest(Seq.empty[(String, String)])
       "post an event if newAuditing feature switch is true" in {
+        val requestWithIE704 =
+          ParsedXmlRequest[NodeSeq](
+            EnrolmentRequest[NodeSeq](
+              FakeRequest()
+                .withHeaders(FakeHeaders(Seq.empty[(String, String)]))
+                .withBody(IE704),
+              testErns,
+              UserDetails("", "")
+            ),
+            IE704Message.createFromXml(IE704),
+            testErns,
+            UserDetails("", "")
+          )
 
         val message    = IE704Message.createFromXml(IE704)
         val movementId = "4bf36235-4816-464a-b3f3-71dbd3a30095"
@@ -173,7 +190,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
         )
 
         //TODO: Need to change this to actual correlationId from header
-        service.messageSubmitted(message, movement, true, Some("correlationId"), request)
+        service.messageSubmitted(movement, true, Some("correlationId"), requestWithIE704)
 
         verify(auditConnector, times(1))
           .sendExplicitAudit(eqTo("MessageSubmitted"), eqTo(expectedMessageSubmittedDetails))(any, any, any)
@@ -183,7 +200,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
       "post no event if newAuditing feature switch is false" in {
         when(appConfig.newAuditingEnabled).thenReturn(false)
 
-        service.messageSubmitted(IE815Message.createFromXml(IE815), testMovement, true, Some(""), request)
+        service.messageSubmitted(testMovement, true, Some(""), request)
 
         verify(auditConnector, times(0)).sendExtendedEvent(any)(any, any)
       }
@@ -204,7 +221,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
         authExciseNumber = authExciseNumber
       )
 
-      service.getInformationForGetMovements(request, response, userDetails, authExciseNumber)
+      service.getInformationForGetMovements(request, response, enrolmentRequest)
 
       verify(auditConnector, times(1))
         .sendExplicitAudit(eqTo("GetInformation"), eqTo(expectedDetails))(any, any, any)
