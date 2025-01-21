@@ -66,8 +66,8 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
       UserDetails("", "")
     )
 
-  val erns: Seq[String] = Seq("ern")
-  val userDetails: UserDetails = UserDetails("id", "id")
+  val erns: Seq[String]                              = Seq("ern")
+  val userDetails: UserDetails                       = UserDetails("id", "id")
   val enrolmentRequest: EnrolmentRequest[AnyContent] =
     EnrolmentRequest(FakeRequest(), erns.toSet, userDetails)
 
@@ -213,7 +213,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
     "post an event when user calls a getMovements" in {
       val request          = GetMovementsParametersAuditInfo(None, None, None, None, None)
       val response         = GetMovementsResponseAuditInfo(5)
-      val authExciseNumber = NonEmptySeq.fromSeq(erns)
+      val authExciseNumber = NonEmptySeq(erns.head, erns.tail)
 
       val expectedDetails = GetMovementsAuditInfo(
         request = request,

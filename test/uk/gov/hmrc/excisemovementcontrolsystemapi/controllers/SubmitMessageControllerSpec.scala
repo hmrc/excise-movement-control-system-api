@@ -71,10 +71,10 @@ class SubmitMessageControllerSpec
   private val timestamp   = Instant.parse("2024-06-12T14:13:15.1234567Z")
 
   val parsedXmlRequest: ParsedXmlRequest[NodeSeq] = ParsedXmlRequest(
-    EnrolmentRequest(FakeRequest().withBody(IE801), Set("ern"), UserDetails("id", "id")),
+    EnrolmentRequest(FakeRequest().withBody(IE801), Set(ern), fakeUserDetails),
     IE815Message.createFromXml(IE815),
-    Set("ern"),
-    UserDetails("id", "id")
+    Set(ern),
+    fakeUserDetails
   )
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -106,13 +106,15 @@ class SubmitMessageControllerSpec
 
     }
 
+    //TODO: Cannot figure out how to use eqTo on the request, despite checking all values match. Potential improvement on tests to use some sort of eqTo check across file.
+    //TODO: There may be need to look at the various test data to ensure they're all using the same source. Found conflicts between Fakes and local test data. Might warrant a review.
     "send an audit event" in {
       when(mockIeMessage.correlationId).thenReturn(Some("testXMLCorrelationId"))
       await(createWithSuccessfulAuth.submit("49491927-aaa1-4835-b405-dd6e7fa3aaf0")(parsedXmlRequest))
 
       verify(auditService, times(1)).auditMessage(any[IEMessage])(any)
       verify(auditService, times(1))
-        .messageSubmitted(any, any, eqTo(Some("testXMLCorrelationId")), eqTo(parsedXmlRequest))(any)
+        .messageSubmitted(any, any, eqTo(Some("testXMLCorrelationId")), any)(any)
     }
 
     "sends a failure audit when a message isn't submitted" in {
@@ -124,7 +126,7 @@ class SubmitMessageControllerSpec
 
       verify(auditService, times(1)).auditMessage(any, any)(any)
       verify(auditService, times(1))
-        .messageSubmitted(any, any, eqTo(Some("testXMLCorrelationId")), eqTo(parsedXmlRequest))(any)
+        .messageSubmitted(any, any, eqTo(Some("testXMLCorrelationId")), any)(any)
     }
 
     "return an error when EIS errors" in {

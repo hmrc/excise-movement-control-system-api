@@ -31,10 +31,10 @@ trait FakeXmlParsers {
       Future.successful(
         Right(
           ParsedXmlRequest(
-            EnrolmentRequest(request, Set.empty, UserDetails("123", "abc")),
+            request,
             mockIeMessage,
-            Set.empty,
-            UserDetails("123", "abc")
+            request.erns,
+            request.userDetails
           )
         )
       )

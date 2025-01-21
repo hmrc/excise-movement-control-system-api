@@ -91,8 +91,8 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
     val message           = IE815Message.createFromXml(IE815)
     val userDetails       = UserDetails("gatewayID", "groupid")
     val erns              = Set("ern1")
-    val parsedXmlRequest  = ParsedXmlRequest(
-      EnrolmentRequest(FakeRequest(), Set("ern"), UserDetails("id", "id")),
+    val parsedXmlRequest  = ParsedXmlRequest[NodeSeq](
+      EnrolmentRequest[NodeSeq](FakeRequest().withBody[NodeSeq](IE815), Set("ern"), UserDetails("id", "id")),
       message,
       erns,
       userDetails
@@ -102,7 +102,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       message,
       submittedToCore = true,
       Some(testCorrelationid.toString),
-      parsedXmlRequest[NodeSeq]
+      parsedXmlRequest
     )
 
     val expectedResult = MessageSubmittedDetails(
