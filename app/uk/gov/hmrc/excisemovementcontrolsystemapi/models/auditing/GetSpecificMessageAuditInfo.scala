@@ -28,20 +28,6 @@ object GetSpecificMessageRequestAuditInfo {
   implicit val writes = Json.writes[GetSpecificMessageRequestAuditInfo]
 }
 
-//[info] auditService.getInformationForGetSpecificMessage(
-//[info]     GetSpecificMessageRequestAuditInfo("cfdb20c7-d0b0-4b8b-a071-737d68dede5e", "1123e1aa-cbb0-4edc-a63c-768d1e19703d"),
-//[info]     GetSpecificMessageResponseAuditInfo(Some("PORTAL6de1b822562c43fb9220d236e487c920"), "IE801", "MovementGenerated", "lrn", Some("arc"), "ern", Some("consigneeId")),
-//[info]     UserDetails("testInternalId", "testGroupId"),
-//[info]     NonEmptySeq(testErn, otherErn),
-//[info]     <any>
-
-//[info] auditService.getInformationForGetSpecificMessage(
-//[info]     GetSpecificMessageRequestAuditInfo(cfdb20c7-d0b0-4b8b-a071-737d68dede5e,1123e1aa-cbb0-4edc-a63c-768d1e19703d),
-//[info]     GetSpecificMessageResponseAuditInfo(Some(PORTAL6de1b822562c43fb9220d236e487c920),IE801,MovementGenerated,lrn,Some(arc),testErn,Some(consigneeId)),
-//[info]     UserDetails(testInternalId,testGroupId),
-//[info]     List(testErn),
-//[info]     HeaderCarrier(None,None,None,None,RequestChain(aa4b),235091704135833,List(),None,None,None,None,None,None,List((Accept,application/vnd.hmrc.1.0+xml), (path,/)))
-
 case class GetSpecificMessageResponseAuditInfo(
   correlationId: Option[String],
   messageTypeCode: String,

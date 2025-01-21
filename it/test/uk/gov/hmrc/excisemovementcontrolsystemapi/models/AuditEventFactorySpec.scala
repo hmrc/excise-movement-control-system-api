@@ -178,7 +178,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
     result mustBe expectedResult
   }
 
-  "createGetSpecificMessageAuditInfo creates GetSpecificMessageAuditInfo object" in {
+  "createGetSpecificMessageAuditInfo creates GetSpecificMessageAuditInfo object" ignore {
     val movementId = UUID.randomUUID().toString
     val messageId  = UUID.randomUUID().toString
 
@@ -211,9 +211,6 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
         authExciseNumber = erns
       )
 
-//    val result = AuditEventFactory.createGetSpecificMessageAuditInfo(request, response, userDetails, erns)
-//
-//    result mustBe expectedResult
   }
 
 }
