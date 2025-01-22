@@ -120,7 +120,8 @@ class GetMessagesController @Inject() (
           )
         } else {
 
-          val filteredMessages = filterMessages(request.erns.toSeq, movement, validatedUpdatedSince, validatedTraderType)
+          val filteredMessages =
+            filterMessages(request.erns.toSeq, movement, validatedUpdatedSince, validatedTraderType)
 
           auditService.getInformationForGetMessages(
             GetMessagesRequestAuditInfo(movementId, updatedSince, traderType),
@@ -139,14 +140,14 @@ class GetMessagesController @Inject() (
           Ok(
             Json.toJson(
               filteredMessages.map { filteredMessage =>
-                  MessageResponse(
-                    encodedMessage = filteredMessage.encodedMessage,
-                    messageType = filteredMessage.messageType,
-                    recipient = filteredMessage.recipient,
-                    messageId = filteredMessage.messageId,
-                    createdOn = filteredMessage.createdOn
-                  )
-                }
+                MessageResponse(
+                  encodedMessage = filteredMessage.encodedMessage,
+                  messageType = filteredMessage.messageType,
+                  recipient = filteredMessage.recipient,
+                  messageId = filteredMessage.messageId,
+                  createdOn = filteredMessage.createdOn
+                )
+              }
             )
           )
         }
@@ -177,7 +178,7 @@ class GetMessagesController @Inject() (
     movement: Movement,
     updatedSince: Option[Instant],
     traderType: Option[String]
-  ):Seq[Message] = {
+  ): Seq[Message] = {
 
     val byRecipient = filterMessagesByRecipient(ern, movement)
 
