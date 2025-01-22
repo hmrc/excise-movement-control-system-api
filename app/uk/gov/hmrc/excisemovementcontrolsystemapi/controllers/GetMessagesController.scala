@@ -119,11 +119,15 @@ class GetMessagesController @Inject() (
             )
           )
         } else {
+
+          val filteredMessages =
+            filterMessages(request.erns.toSeq, movement, validatedUpdatedSince, validatedTraderType)
+
           auditService.getInformationForGetMessages(
             GetMessagesRequestAuditInfo(movementId, updatedSince, traderType),
             GetMessagesResponseAuditInfo(
-              movement.messages.length,
-              buildMessageAuditInfo(movement.messages),
+              filteredMessages.length,
+              buildMessageAuditInfo(filteredMessages),
               movement.localReferenceNumber,
               movement.administrativeReferenceCode,
               movement.consignorId,
@@ -135,7 +139,15 @@ class GetMessagesController @Inject() (
 
           Ok(
             Json.toJson(
-              filterMessages(request.erns.toSeq, movement, validatedUpdatedSince, validatedTraderType)
+              filteredMessages.map { filteredMessage =>
+                MessageResponse(
+                  encodedMessage = filteredMessage.encodedMessage,
+                  messageType = filteredMessage.messageType,
+                  recipient = filteredMessage.recipient,
+                  messageId = filteredMessage.messageId,
+                  createdOn = filteredMessage.createdOn
+                )
+              }
             )
           )
         }
@@ -166,21 +178,13 @@ class GetMessagesController @Inject() (
     movement: Movement,
     updatedSince: Option[Instant],
     traderType: Option[String]
-  ) = {
+  ): Seq[Message] = {
 
     val byRecipient = filterMessagesByRecipient(ern, movement)
 
     val filteredByTraderType = filterMessagesByTraderType(byRecipient, movement, traderType)
 
-    filterMessagesByTime(filteredByTraderType, updatedSince).map { filteredMessage =>
-      MessageResponse(
-        encodedMessage = filteredMessage.encodedMessage,
-        messageType = filteredMessage.messageType,
-        recipient = filteredMessage.recipient,
-        messageId = filteredMessage.messageId,
-        createdOn = filteredMessage.createdOn
-      )
-    }
+    filterMessagesByTime(filteredByTraderType, updatedSince)
   }
 
   private def messageNotFoundError(messageId: String) = {

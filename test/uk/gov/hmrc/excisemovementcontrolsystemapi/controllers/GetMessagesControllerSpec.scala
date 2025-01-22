@@ -35,7 +35,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMessagesRequestAuditInfo, GetMessagesResponseAuditInfo, GetSpecificMessageRequestAuditInfo, GetSpecificMessageResponseAuditInfo, MessageAuditInfo, UserDetails}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, IE801Message}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, Consignor, IE801Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, MessageService, MovementService}
@@ -64,7 +64,7 @@ class GetMessagesControllerSpec
   private val dateTimeService       = mock[DateTimeService]
   private val timeStamp             = Instant.parse("2020-01-01T01:01:01.123456Z")
   private val messageService        = mock[MessageService]
-  private val messageCreateOn       = Instant.now()
+  private val messageCreatedOn      = Instant.now()
   private val auditService          = mock[AuditService]
   private val messageFactory        = mock[IEMessageFactory]
   private val emcsUtils: EmcsUtils  = new EmcsUtils
@@ -86,351 +86,367 @@ class GetMessagesControllerSpec
   }
 
   "getMessagesForMovement" should {
-    "respond with BAD_REQUEST when the MovementID is an invalid UUID" in {
-      val result = createWithSuccessfulAuth().getMessagesForMovement("invalidUUID", None, None)(createRequest())
+    "respond with 200 OK" when {
+      "return an empty array when no messages" in {
+        val movement =
+          Movement(validUUID, Some("boxId"), "lrn", "testErn", Some("consigneeId"), Some("arc"), Instant.now, Seq.empty)
+        when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
-      status(result) mustBe BAD_REQUEST
-      contentAsJson(result) mustBe MovementIdFormatError
-    }
+        val result = createWithSuccessfulAuth().getMessagesForMovement(validUUID, None, None)(createRequest())
 
-    "respond with BAD_REQUEST when invalid traderType has passed" in {
-      val result = createWithSuccessfulAuth()
-        .getMessagesForMovement(UUID.randomUUID().toString, None, Some("invalidTraderType"))(createRequest())
-
-      status(result) mustBe BAD_REQUEST
-    }
-
-    "return 200 when consignor is valid" in {
-      val message    =
-        Message(123, emcsUtils.encode(IE801.toString()), "IE801", "messageId", "ern", Set.empty, messageCreateOn)
-      val movement   = createMovementWithMessages(Seq(message))
-      val controller = new GetMessagesController(
-        FakeSuccessAuthenticationMultiErn(Set(ern, "otherErn")),
-        new ValidateAcceptHeaderAction(dateTimeService),
-        movementService,
-        messageService,
-        new MovementIdValidation,
-        cc,
-        new EmcsUtils,
-        dateTimeService,
-        auditService,
-        messageFactory
-      )
-
-      val request          = GetMessagesRequestAuditInfo(validUUID, None, Some(Consignee.name.toLowerCase))
-      val messageAuditInfo =
-        MessageAuditInfo(
-          "messageId",
-          Some("PORTAL6de1b822562c43fb9220d236e487c920"),
-          "IE801",
-          "MovementGenerated",
-          "ern",
-          messageCreateOn
+        status(result) mustBe OK
+        contentAsJson(result) mustBe JsArray()
+      }
+      "get all messages when there are multiple available for a movementID" in {
+        val ern1     = "testErn"
+        val message1 =
+          Message(123, emcsUtils.encode(IE801.toString()), "IE801", "messageId1", ern1, Set.empty, messageCreatedOn)
+        val message2 =
+          Message(345, emcsUtils.encode(IE801.toString()), "IE801", "messageId2", ern1, Set.empty, messageCreatedOn)
+        val movement = Movement(
+          validUUID,
+          Some("boxId"),
+          "lrn",
+          "testErn",
+          Some("consigneeId"),
+          Some("arc"),
+          Instant.now,
+          Seq(message1, message2)
         )
-      val response         =
-        GetMessagesResponseAuditInfo(1, Seq(messageAuditInfo), "lrn", Some("arc"), "testErn", Some("consigneeId"))
-      val userDetails      = UserDetails("testInternalId", "testGroupId")
-      val authExciseNumber = NonEmptySeq("testErn", Seq("otherErn"))
+        when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
-      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
+        val result = createWithSuccessfulAuth().getMessagesForMovement(validUUID, None, None)(createRequest())
 
-      await(controller.getMessagesForMovement(validUUID, None, Some(Consignee.name.toLowerCase))(createRequest()))
+        status(result) mustBe OK
 
-      verify(messageService).updateAllMessages(eqTo(Set(ern, "otherErn")))(any)
-      withClue("Submits getInformation audit event") {
-        verify(auditService, times(1))
-          .getInformationForGetMessages(
-            eqTo(request),
-            eqTo(response),
-            eqTo(userDetails),
-            eqTo(authExciseNumber)
-          )(
-            any
+        val expectedJson = Seq(
+          expectedMessageResponseAsJson(
+            emcsUtils.encode(IE801.toString()),
+            message1.messageType,
+            message1.recipient,
+            message1.messageId,
+            message1.createdOn
+          ),
+          expectedMessageResponseAsJson(
+            emcsUtils.encode(IE801.toString()),
+            message2.messageType,
+            message2.recipient,
+            message2.messageId,
+            message2.createdOn
           )
+        )
+        contentAsJson(result) mustBe JsArray(expectedJson)
+      }
+      "get only messages that match erns from request" in {
+        val ern1     = "testErn1"
+        val ern2     = "testErn2"
+        val message1 =
+          Message(123, emcsUtils.encode(IE801.toString()), "IE801", "messageId1", ern1, Set.empty, messageCreatedOn)
+        val message2 =
+          Message(345, emcsUtils.encode(IE801.toString()), "IE801", "messageId2", ern2, Set.empty, messageCreatedOn)
+        val movement = Movement(
+          validUUID,
+          Some("boxId"),
+          "lrn",
+          "testErn",
+          Some("consigneeId"),
+          Some("arc"),
+          Instant.now,
+          Seq(message1, message2)
+        )
+        when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
+
+        val result = createWithSuccessfulAuth(Set(ern1)).getMessagesForMovement(validUUID, None, None)(createRequest())
+
+        status(result) mustBe OK
+
+        val expectedJson = Seq(
+          expectedMessageResponseAsJson(
+            emcsUtils.encode(IE801.toString()),
+            message1.messageType,
+            message1.recipient,
+            message1.messageId,
+            message1.createdOn
+          )
+        )
+        contentAsJson(result) mustBe JsArray(expectedJson)
+      }
+      "filter messages and audit correctly when query parameters are provided" when {
+        "traderType parameter is valid - consignor" in {
+          val ern1     = "testErn1"
+          val ern2     = "testErn2"
+          val message1 =
+            Message(123, emcsUtils.encode(IE801.toString()), "IE801", "messageId1", ern1, Set.empty, messageCreatedOn)
+          val message2 =
+            Message(345, emcsUtils.encode(IE801.toString()), "IE801", "messageId2", ern2, Set.empty, messageCreatedOn)
+          val movement = Movement(
+            validUUID,
+            Some("boxId"),
+            "lrn",
+            ern1,
+            Some(ern2),
+            Some("arc"),
+            Instant.now,
+            Seq(message1, message2)
+          )
+
+          when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
+
+          val result = createWithSuccessfulAuth(Set(ern1, ern2))
+            .getMessagesForMovement(validUUID, None, Some(Consignor.name.toLowerCase))(createRequest())
+          status(result) mustBe OK
+
+          verify(messageService).updateAllMessages(eqTo(Set(ern1, ern2)))(any)
+
+          val expectedJson = Seq(
+            expectedMessageResponseAsJson(
+              emcsUtils.encode(IE801.toString()),
+              message1.messageType,
+              message1.recipient,
+              message1.messageId,
+              message1.createdOn
+            )
+          )
+          contentAsJson(result) mustBe JsArray(expectedJson)
+
+          withClue("Submits correct getInformation audit event") {
+            val requestAuditInfo  = GetMessagesRequestAuditInfo(validUUID, None, Some(Consignor.name.toLowerCase))
+            val messageAuditInfo  = MessageAuditInfo(
+              message1.messageId,
+              Some("PORTAL6de1b822562c43fb9220d236e487c920"),
+              message1.messageType,
+              "MovementGenerated",
+              message1.recipient,
+              message1.createdOn
+            )
+            val responseAuditInfo = GetMessagesResponseAuditInfo(
+              1,
+              Seq(messageAuditInfo),
+              movement.localReferenceNumber,
+              movement.administrativeReferenceCode,
+              movement.consignorId,
+              movement.consigneeId
+            )
+            val userDetails       = UserDetails("testInternalId", "testGroupId")
+            val authExciseNumber  = NonEmptySeq(ern1, Seq(ern2))
+
+            verify(auditService, times(1))
+              .getInformationForGetMessages(
+                eqTo(requestAuditInfo),
+                eqTo(responseAuditInfo),
+                eqTo(userDetails),
+                eqTo(authExciseNumber)
+              )(
+                any
+              )
+          }
+        }
+        "traderType parameter is valid - consignee" in {
+          val ern1     = "testErn1"
+          val ern2     = "testErn2"
+          val message1 =
+            Message(123, emcsUtils.encode(IE801.toString()), "IE801", "messageId1", ern1, Set.empty, messageCreatedOn)
+          val message2 =
+            Message(345, emcsUtils.encode(IE801.toString()), "IE801", "messageId2", ern2, Set.empty, messageCreatedOn)
+          val movement = Movement(
+            validUUID,
+            Some("boxId"),
+            "lrn",
+            ern1,
+            Some(ern2),
+            Some("arc"),
+            Instant.now,
+            Seq(message1, message2)
+          )
+
+          when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
+
+          val result = createWithSuccessfulAuth(Set(ern1, ern2))
+            .getMessagesForMovement(validUUID, None, Some(Consignee.name.toLowerCase))(createRequest())
+          status(result) mustBe OK
+
+          verify(messageService).updateAllMessages(eqTo(Set(ern1, ern2)))(any)
+
+          val expectedJson = Seq(
+            expectedMessageResponseAsJson(
+              emcsUtils.encode(IE801.toString()),
+              message2.messageType,
+              message2.recipient,
+              message2.messageId,
+              message2.createdOn
+            )
+          )
+          contentAsJson(result) mustBe JsArray(expectedJson)
+
+          withClue("Submits correct getInformation audit event") {
+            val requestAuditInfo  = GetMessagesRequestAuditInfo(validUUID, None, Some(Consignee.name.toLowerCase))
+            val messageAuditInfo  = MessageAuditInfo(
+              message2.messageId,
+              Some("PORTAL6de1b822562c43fb9220d236e487c920"),
+              message2.messageType,
+              "MovementGenerated",
+              message2.recipient,
+              message2.createdOn
+            )
+            val responseAuditInfo = GetMessagesResponseAuditInfo(
+              1,
+              Seq(messageAuditInfo),
+              movement.localReferenceNumber,
+              movement.administrativeReferenceCode,
+              movement.consignorId,
+              movement.consigneeId
+            )
+            val userDetails       = UserDetails("testInternalId", "testGroupId")
+            val authExciseNumber  = NonEmptySeq(ern1, Seq(ern2))
+
+            verify(auditService, times(1))
+              .getInformationForGetMessages(
+                eqTo(requestAuditInfo),
+                eqTo(responseAuditInfo),
+                eqTo(userDetails),
+                eqTo(authExciseNumber)
+              )(
+                any
+              )
+          }
+        }
+        "there is a valid time query parameter provided" in {
+          val timeInFuture = Instant.now.plusSeconds(1000)
+          val timeNow      = Instant.now
+          val timeInPast   = Instant.now.minusSeconds(1000)
+          val ern1         = "testErn1"
+          val ern2         = "testErn2"
+          val message1     =
+            Message(emcsUtils.encode(IE801.toString()), "IE801", "messageId1", ern1, Set.empty, timeInFuture)
+          val message2     = Message(emcsUtils.encode(IE801.toString()), "IE801", "messageId2", ern1, Set.empty, timeInPast)
+          val movement     =
+            Movement(validUUID, Some("boxId"), "lrn", ern1, Some(ern2), Some("arc"), timeNow, Seq(message1, message2))
+          when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
+
+          val result = createWithSuccessfulAuth(Set(ern1, ern2))
+            .getMessagesForMovement(validUUID, Some(timeNow.toString), None)(createRequest())
+
+          status(result) mustBe OK
+
+          val jsonResponse = expectedMessageResponseAsJson(
+            emcsUtils.encode(IE801.toString()),
+            message1.messageType,
+            message1.recipient,
+            message1.messageId,
+            message1.createdOn
+          )
+          contentAsJson(result) mustBe JsArray(Seq(jsonResponse))
+        }
+        "there is a valid time query parameter provided and include messages where createdOn is exactly the same as the time provided" in {
+          val timeNow       = Instant.now
+          val timeNowString = timeNow.toString
+          val timeInFuture  = Instant.now.plusSeconds(1000)
+          val timeInPast    = Instant.now.minusSeconds(1000)
+          val ern1          = "ern1"
+          val ern2          = "ern2"
+          val message1      =
+            Message(emcsUtils.encode(IE801.toString()), "IE801", "messageId1", ern1, Set.empty, timeInFuture)
+          val message2      = Message(emcsUtils.encode(IE801.toString()), "IE801", "messageId2", ern1, Set.empty, timeInPast)
+          val message3      =
+            Message(emcsUtils.encode(IE801.toString()), "IE801", "messageId3", ern1, Set.empty, timeNow)
+          val movement      = Movement(
+            validUUID,
+            Some("boxId"),
+            "lrn",
+            ern1,
+            Some(ern2),
+            Some("arc"),
+            Instant.now,
+            Seq(message1, message2, message3)
+          )
+          when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
+
+          val result =
+            createWithSuccessfulAuth((Set(ern1, ern2))).getMessagesForMovement(validUUID, Some(timeNowString), None)(
+              createRequest()
+            )
+
+          status(result) mustBe OK
+
+          val expectedJson = Seq(
+            expectedMessageResponseAsJson(
+              emcsUtils.encode(IE801.toString()),
+              message1.messageType,
+              message1.recipient,
+              message1.messageId,
+              message1.createdOn
+            ),
+            expectedMessageResponseAsJson(
+              emcsUtils.encode(IE801.toString()),
+              message3.messageType,
+              message3.recipient,
+              message3.messageId,
+              message3.createdOn
+            )
+          )
+          contentAsJson(result) mustBe JsArray(expectedJson)
+        }
+        "a valid date format is provided for the time query parameter" in {
+          val timeInFuture = Instant.now.plusSeconds(1000)
+          val message      =
+            Message(emcsUtils.encode(IE801.toString()), "IE801", "messageId", "testErn", Set.empty, timeInFuture)
+          val movement     = Movement(
+            validUUID,
+            Some("boxId"),
+            "lrn",
+            "testErn",
+            Some("consigneeId"),
+            Some("arc"),
+            Instant.now,
+            Seq(message)
+          )
+          when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
+
+          val result =
+            createWithSuccessfulAuth().getMessagesForMovement(validUUID, Some("2020-11-15T17:02:34.00Z"), None)(
+              createRequest()
+            )
+
+          status(result) mustBe OK
+
+          val expectedJson = expectedMessageResponseAsJson(
+            emcsUtils.encode(IE801.toString()),
+            "IE801",
+            "testErn",
+            "messageId",
+            timeInFuture
+          )
+          contentAsJson(result) mustBe JsArray(Seq(expectedJson))
+        }
       }
     }
+    "respond with 400 BAD_REQUEST" when {
+      "the MovementID is an invalid UUID" in {
+        val result = createWithSuccessfulAuth().getMessagesForMovement("invalidUUID", None, None)(createRequest())
 
-    "return 200 when consignee is valid" in {
-      val message  =
-        Message(123, emcsUtils.encode(IE801.toString()), "IE801", "messageId", "testErn", Set.empty, messageCreateOn)
-      val movement =
-        Movement(validUUID, Some("boxId"), "lrn", "consignor", Some("testErn"), Some("arc"), Instant.now, Seq(message))
-      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
+        status(result) mustBe BAD_REQUEST
+        contentAsJson(result) mustBe MovementIdFormatError
+      }
+      "the traderType is invalid" in {
+        val result = createWithSuccessfulAuth()
+          .getMessagesForMovement(UUID.randomUUID().toString, None, Some("invalidTraderType"))(createRequest())
 
-      val result = createWithSuccessfulAuth().getMessagesForMovement(validUUID, None, None)(createRequest())
+        status(result) mustBe BAD_REQUEST
+      }
+      "date format is invalid" in {
+        val result = createWithSuccessfulAuth()
+          .getMessagesForMovement(validUUID, Some("invalid date"), None)(createRequest())
 
-      status(result) mustBe OK
-      contentAsJson(result) mustBe JsArray(
-        Seq(
-          expectedMessageResponseAsJson(
-            emcsUtils.encode(IE801.toString()),
-            "IE801",
-            "testErn",
-            "messageId",
-            messageCreateOn
-          )
+        status(result) mustBe BAD_REQUEST
+
+        contentAsJson(result) mustBe expectedJsonErrorResponse(
+          "2020-01-01T01:01:01.123Z",
+          "Invalid date format provided in the updatedSince query parameter",
+          "Date format should be like '2020-11-15T17:02:34.00Z'"
         )
-      )
+      }
     }
-
-    "return 200 when message recipient is valid" in {
-      val message  =
-        Message(123, emcsUtils.encode(IE801.toString()), "IE801", "messageId", "testErn", Set.empty, messageCreateOn)
-      val movement = Movement(
-        validUUID,
-        Some("boxId"),
-        "lrn",
-        "consignor",
-        Some("consigneeId"),
-        Some("arc"),
-        Instant.now,
-        Seq(message)
-      )
-      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
-
-      val result = createWithSuccessfulAuth().getMessagesForMovement(validUUID, None, None)(createRequest())
-
-      status(result) mustBe OK
-      contentAsJson(result) mustBe JsArray(
-        Seq(
-          expectedMessageResponseAsJson(
-            emcsUtils.encode(IE801.toString()),
-            "IE801",
-            "testErn",
-            "messageId",
-            messageCreateOn
-          )
-        )
-      )
-    }
-
-    "get all the new messages" in {
-      val message  =
-        Message(123, emcsUtils.encode(IE801.toString()), "IE801", "messageId1", "testErn", Set.empty, messageCreateOn)
-      val message2 =
-        Message(345, emcsUtils.encode(IE801.toString()), "IE801", "messageId2", "testErn", Set.empty, messageCreateOn)
-      val movement = createMovementWithMessages(Seq(message, message2))
-      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
-
-      val result = createWithSuccessfulAuth().getMessagesForMovement(validUUID, None, None)(createRequest())
-
-      status(result) mustBe OK
-
-      val expectedJson = Seq(
-        expectedMessageResponseAsJson(
-          emcsUtils.encode(IE801.toString()),
-          "IE801",
-          "testErn",
-          "messageId1",
-          messageCreateOn
-        ),
-        expectedMessageResponseAsJson(
-          emcsUtils.encode(IE801.toString()),
-          "IE801",
-          "testErn",
-          "messageId2",
-          messageCreateOn
-        )
-      )
-      contentAsJson(result) mustBe JsArray(expectedJson)
-    }
-
-    "get only messages that match erns from request" in {
-      val message  =
-        Message(123, emcsUtils.encode(IE801.toString()), "IE801", "messageId1", "testErn", Set.empty, messageCreateOn)
-      val message2 =
-        Message(345, emcsUtils.encode(IE801.toString()), "IE801", "messageId2", "ern", Set.empty, messageCreateOn)
-      val movement = createMovementWithMessages(Seq(message, message2))
-      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
-
-      val result = createWithSuccessfulAuth().getMessagesForMovement(validUUID, None, None)(createRequest())
-
-      status(result) mustBe OK
-
-      val expectedJson = Seq(
-        expectedMessageResponseAsJson(
-          emcsUtils.encode(IE801.toString()),
-          "IE801",
-          "testErn",
-          "messageId1",
-          messageCreateOn
-        )
-      )
-      contentAsJson(result) mustBe JsArray(expectedJson)
-    }
-
-    "get all the new messages when there is a time query parameter provided" in {
-      val timeInFuture = Instant.now.plusSeconds(1000)
-      val timeInPast   = Instant.now.minusSeconds(1000)
-      val message      =
-        Message(emcsUtils.encode(IE801.toString()), "IE801", "messageId1", "testErn", Set.empty, timeInFuture)
-      val message2     = Message(emcsUtils.encode(IE801.toString()), "IE801", "messageId2", "ern", Set.empty, timeInPast)
-      val movement     = createMovementWithMessages(Seq(message, message2))
-      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
-
-      val result = createWithSuccessfulAuth().getMessagesForMovement(validUUID, Some(messageCreateOn.toString), None)(
-        createRequest()
-      )
-
-      status(result) mustBe OK
-
-      val jsonResponse = expectedMessageResponseAsJson(
-        emcsUtils.encode(IE801.toString()),
-        "IE801",
-        "testErn",
-        "messageId1",
-        timeInFuture
-      )
-      contentAsJson(result) mustBe JsArray(Seq(jsonResponse))
-    }
-
-    "get all the new messages including messages with a createdOn time of NOW when there is a time query parameter provided" in {
-      val timeNowString = messageCreateOn.toString
-      val timeInFuture  = Instant.now.plusSeconds(1000)
-      val timeInPast    = Instant.now.minusSeconds(1000)
-      val message       =
-        Message(emcsUtils.encode(IE801.toString()), "IE801", "messageId1", "testErn", Set.empty, timeInFuture)
-      val message2      = Message(emcsUtils.encode(IE801.toString()), "IE801", "messageId2", "ern", Set.empty, timeInPast)
-      val message3      =
-        Message(emcsUtils.encode(IE801.toString()), "IE801", "messageId3", "testErn", Set.empty, messageCreateOn)
-      val movement      = createMovementWithMessages(Seq(message, message2, message3))
-      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
-
-      val result =
-        createWithSuccessfulAuth().getMessagesForMovement(validUUID, Some(timeNowString), None)(createRequest())
-
-      status(result) mustBe OK
-
-      val expectedJson = Seq(
-        expectedMessageResponseAsJson(
-          emcsUtils.encode(IE801.toString()),
-          "IE801",
-          "testErn",
-          "messageId1",
-          timeInFuture
-        ),
-        expectedMessageResponseAsJson(
-          emcsUtils.encode(IE801.toString()),
-          "IE801",
-          "testErn",
-          "messageId3",
-          messageCreateOn
-        )
-      )
-      contentAsJson(result) mustBe JsArray(expectedJson)
-    }
-
-    "succeed when a valid date format is provided" in {
-      val timeInFuture = Instant.now.plusSeconds(1000)
-      val message      =
-        Message(emcsUtils.encode(IE801.toString()), "IE801", "messageId", "testErn", Set.empty, timeInFuture)
-      val movement     = createMovementWithMessages(Seq(message))
-      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
-
-      val result = createWithSuccessfulAuth().getMessagesForMovement(validUUID, Some("2020-11-15T17:02:34.00Z"), None)(
-        createRequest()
-      )
-
-      status(result) mustBe OK
-
-      val expectedJson = expectedMessageResponseAsJson(
-        emcsUtils.encode(IE801.toString()),
-        "IE801",
-        "testErn",
-        "messageId",
-        timeInFuture
-      )
-      contentAsJson(result) mustBe JsArray(Seq(expectedJson))
-    }
-
-    "return only messages that match consignorId" in {
-      val timeInFuture = Instant.now.plusSeconds(1000)
-
-      val message1 = Message(emcsUtils.encode(IE801.toString()), "IE801", "messageId", ern, Set.empty, timeInFuture)
-      val message2 = Message(emcsUtils.encode(IE801.toString()), "IE801", "messageId", ern, Set.empty, timeInFuture)
-      val message3 =
-        Message(emcsUtils.encode(IE801.toString()), "IE801", "messageId", "otherErn", Set.empty, timeInFuture)
-      val movement = createMovementWithMessages(Seq(message1, message2, message3))
-      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
-
-      val result =
-        createWithSuccessfulAuth().getMessagesForMovement(validUUID, None, Some("consignor"))(createRequest())
-
-      status(result) mustBe OK
-
-      val expectedJson1 = expectedMessageResponseAsJson(
-        emcsUtils.encode(IE801.toString()),
-        "IE801",
-        ern,
-        "messageId",
-        timeInFuture
-      )
-      val expectedJson2 = expectedMessageResponseAsJson(
-        emcsUtils.encode(IE801.toString()),
-        "IE801",
-        ern,
-        "messageId",
-        timeInFuture
-      )
-      contentAsJson(result) mustBe JsArray(Seq(expectedJson1, expectedJson2))
-
-    }
-
-    "return only messages that match consigneeId" in {
-      val timeInFuture = Instant.now.plusSeconds(1000)
-
-      val message1 =
-        Message(emcsUtils.encode(IE801.toString()), "IE801", "messageId", "consigneeId", Set.empty, timeInFuture)
-      val message2 = Message(emcsUtils.encode(IE801.toString()), "IE801", "messageId", ern, Set.empty, timeInFuture)
-      val message3 =
-        Message(emcsUtils.encode(IE801.toString()), "IE801", "messageId", "otherErn", Set.empty, timeInFuture)
-      val movement = createMovementWithMessages(Seq(message1, message2, message3))
-      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
-
-      val result = createWithSuccessfulAuth(Set("other_ern", "consigneeId"))
-        .getMessagesForMovement(validUUID, None, Some("consignee"))(createRequest())
-
-      status(result) mustBe OK
-
-      val expectedJson1 = expectedMessageResponseAsJson(
-        emcsUtils.encode(IE801.toString()),
-        "IE801",
-        "consigneeId",
-        "messageId",
-        timeInFuture
-      )
-      contentAsJson(result) mustBe JsArray(Seq(expectedJson1))
-
-    }
-    "fail when an invalid date format is provided" in {
-      val timeInFuture = Instant.now.plusSeconds(1000)
-      val message      = Message("message", "IE801", "messageId", "ern", Set.empty, timeInFuture)
-      val movement     = createMovementWithMessages(Seq(message))
-      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
-
-      val result =
-        createWithSuccessfulAuth().getMessagesForMovement(validUUID, Some("invalid date"), None)(createRequest())
-
-      status(result) mustBe BAD_REQUEST
-
-      contentAsJson(result) mustBe expectedJsonErrorResponse(
-        "2020-01-01T01:01:01.123Z",
-        "Invalid date format provided in the updatedSince query parameter",
-        "Date format should be like '2020-11-15T17:02:34.00Z'"
-      )
-    }
-
-    "return an empty array when no messages" in {
-      val movement = createMovementWithMessages(Seq.empty)
-      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
-
-      val result = createWithSuccessfulAuth().getMessagesForMovement(validUUID, None, None)(createRequest())
-
-      status(result) mustBe OK
-      contentAsJson(result) mustBe JsArray()
-    }
-
-    "return NOT_FOUND when no movement exists for given movementID" in {
+    "respond with 404 NOT_FOUND when no movement exists for given movementID" in {
       when(movementService.getMovementById(any)).thenReturn(Future.successful(None))
 
       val result = createWithSuccessfulAuth().getMessagesForMovement(validUUID, None, None)(createRequest())
@@ -442,22 +458,22 @@ class GetMessagesControllerSpec
         s"Movement $validUUID could not be found"
       )
     }
-
-    "return FORBIDDEN when movement is for a different ern " in {
+    "respond with 403 FORBIDDEN when movement is for a different ern " in {
       val message  = Message("message", "IE801", "messageId", "ern", Set.empty, Instant.now)
       val movement = Movement(
         validUUID,
         Some("boxId"),
         "lrn",
-        "consignor",
-        Some("consigneeId"),
+        "consignorErn",
+        Some("consigneeErn"),
         Some("arc"),
         Instant.now,
         Seq(message)
       )
       when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
 
-      val result = createWithSuccessfulAuth().getMessagesForMovement(validUUID, None, None)(createRequest())
+      val result =
+        createWithSuccessfulAuth(Set("authorisedErn")).getMessagesForMovement(validUUID, None, None)(createRequest())
 
       status(result) mustBe FORBIDDEN
       contentAsJson(result) mustBe expectedJsonErrorResponse(
@@ -482,7 +498,8 @@ class GetMessagesControllerSpec
 
     val messageId           = UUID.randomUUID().toString
     val message             = Message(encodeMessage, "IE801", messageId, "ern", Set.empty, timeStamp)
-    val movementWithMessage = createMovementWithMessages(Seq(message))
+    val movementWithMessage =
+      Movement(validUUID, Some("boxId"), "lrn", "testErn", Some("consigneeId"), Some("arc"), Instant.now, Seq(message))
 
     "return 200" in {
       when(movementService.getMovementById(any))
@@ -610,9 +627,6 @@ class GetMessagesControllerSpec
 
   private def contentAsXml(result: Future[Result]): Elem =
     xml.XML.loadString(contentAsString(result))
-
-  private def createMovementWithMessages(messages: Seq[Message]): Movement =
-    Movement(validUUID, Some("boxId"), "lrn", "testErn", Some("consigneeId"), Some("arc"), Instant.now, messages)
 
   private def createWithSuccessfulAuth(erns: Set[String] = Set(ern)) =
     new GetMessagesController(
