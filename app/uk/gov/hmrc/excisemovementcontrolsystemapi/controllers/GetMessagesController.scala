@@ -58,6 +58,7 @@ class GetMessagesController @Inject() (
       val result = for {
         mvtId    <- validateMovementId(movementId)
         movement <- getMovement(mvtId)
+        _        <- movementErnCheck(request.erns, movement)
       } yield movement.messages.filter(o => o.messageId.equals(messageId)).toList match {
         case Nil       => messageNotFoundError(messageId)
         case head :: _ =>
@@ -79,43 +80,32 @@ class GetMessagesController @Inject() (
     traderType: Option[String]
   ): Action[AnyContent] =
     authAction.async(parse.default) { implicit request: EnrolmentRequest[AnyContent] =>
-      val result: EitherT[Future, Result, Result] = for {
+      val result = for {
         validatedMovementId   <- validateMovementId(movementId)
         validatedUpdatedSince <- validateUpdatedSince(updatedSince)
         validatedTraderType   <- validateTraderType(traderType)
         _                     <- EitherT.right(messageService.updateAllMessages(request.erns))
         movement              <- getMovement(validatedMovementId)
-      } yield
-        if (getErnsForMovement(movement).intersect(request.erns).isEmpty) {
-          logger.warn(s"[GetMessagesController] - Invalid MovementID supplied for ERN")
-          Forbidden(
-            Json.toJson(
-              ErrorResponse(
-                dateTimeService.timestamp(),
-                "Forbidden",
-                "Invalid MovementID supplied for ERN"
-              )
-            )
-          )
-        } else {
-          val filteredMessages =
-            filterMessages(request.erns.toSeq, movement, validatedUpdatedSince, validatedTraderType)
-          auditService.getInformationForGetMessages(filteredMessages, movement, updatedSince, traderType, request)
+        _                     <- movementErnCheck(request.erns, movement)
+      } yield {
+        val filteredMessages =
+          filterMessages(request.erns.toSeq, movement, validatedUpdatedSince, validatedTraderType)
+        auditService.getInformationForGetMessages(filteredMessages, movement, updatedSince, traderType, request)
 
-          Ok(
-            Json.toJson(
-              filteredMessages.map { filteredMessage =>
-                MessageResponse(
-                  encodedMessage = filteredMessage.encodedMessage,
-                  messageType = filteredMessage.messageType,
-                  recipient = filteredMessage.recipient,
-                  messageId = filteredMessage.messageId,
-                  createdOn = filteredMessage.createdOn
-                )
-              }
-            )
+        Ok(
+          Json.toJson(
+            filteredMessages.map { filteredMessage =>
+              MessageResponse(
+                encodedMessage = filteredMessage.encodedMessage,
+                messageType = filteredMessage.messageType,
+                recipient = filteredMessage.recipient,
+                messageId = filteredMessage.messageId,
+                createdOn = filteredMessage.createdOn
+              )
+            }
           )
-        }
+        )
+      }
 
       result.merge
 
@@ -147,6 +137,27 @@ class GetMessagesController @Inject() (
       )
     )
   }
+
+  private def movementErnCheck(erns: Set[String], movement: Movement): EitherT[Future, Result, Unit] =
+    EitherT.fromEither {
+      if (getErnsForMovement(movement).intersect(erns).isEmpty) {
+        logger.warn(s"[GetMessagesController] - Invalid MovementID supplied for ERN")
+        Left(
+          Forbidden(
+            Json.toJson(
+              ErrorResponse(
+                dateTimeService.timestamp(),
+                "Forbidden",
+                "Invalid MovementID supplied for ERN"
+              )
+            )
+          )
+        )
+      } else {
+        Right(())
+      }
+
+    }
 
   private def validateMovementId(movementId: String): EitherT[Future, Result, String] =
     EitherT.fromEither[Future](movementIdValidator.validateMovementId(movementId)).leftMap { x =>
