@@ -19,11 +19,16 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models
 import cats.data.NonEmptySeq
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
+import play.api.mvc.AnyContent
 import play.api.test.FakeRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
+import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{MessageAuditInfo, _}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.writes.testObjects._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.model.ExtendedDataEvent
@@ -54,11 +59,15 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
   "IE881Message" - TestType(IE881TestMessageType, IE881Message.createFromXml(IE881))
   "IE905Message" - TestType(IE905TestMessageType, IE905Message.createFromXml(IE905))
 
+  val emcsUtils           = new EmcsUtils
+  val service             = new AuditEventFactory(emcsUtils, new IEMessageFactory)
+  private val fakeRequest = FakeRequest("GET", "/foo")
+
   case class TestType(testObject: TestMessageType, message: IEMessage) {
 
     "Old auditing should successfully converted to success audit event" in {
 
-      val result         = AuditEventFactory.createMessageAuditEvent(message, None)
+      val result         = service.createMessageAuditEvent(message, None)
       val expectedResult = ExtendedDataEvent(
         auditSource = "excise-movement-control-system-api",
         auditType = message.messageAuditType.name,
@@ -72,7 +81,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
 
     "Old auditing should converted to failure audit event" in {
       val testMessage    = "Test Message"
-      val result         = AuditEventFactory.createMessageAuditEvent(message, Some(testMessage))
+      val result         = service.createMessageAuditEvent(message, Some(testMessage))
       val expectedResult = ExtendedDataEvent(
         auditSource = "excise-movement-control-system-api",
         auditType = message.messageAuditType.name,
@@ -98,7 +107,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       userDetails
     )
 
-    val result = AuditEventFactory.createMessageSubmittedNoMovement(
+    val result = service.createMessageSubmittedNoMovement(
       message,
       submittedToCore = true,
       Some(testCorrelationid.toString),
@@ -113,7 +122,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       None,
       message.consignorId,
       message.consigneeId,
-      true,
+      submittedToCore = true,
       message.messageIdentifier,
       Some(testCorrelationid.toString),
       UserDetails("gatewayID", "groupid"),
@@ -127,12 +136,37 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
 
   "getMovements creates get movements details object" in {
     val request     = GetMovementsParametersAuditInfo(None, None, None, None, None)
-    val response    = GetMovementsResponseAuditInfo(5)
+    val response    = GetMovementsResponseAuditInfo(1)
     val userDetails = UserDetails("gatewayId", "groupIdentifier")
-    val erns        = NonEmptySeq("ern1", Seq("ern2", "ern3"))
+    val ernsSet     = Set("ern1", "ern2", "ern3")
 
-    val result = AuditEventFactory.createGetMovementsDetails(request, response, userDetails, erns)
+    val messageId    = UUID.randomUUID().toString
+    val createdOn    = Instant.now()
+    val movementId   = UUID.randomUUID().toString
+    val updatedSince = Instant.now
 
+    val encodedXml = emcsUtils.encode(IE801.toString)
+
+    val message = Message(encodedXml, "IE801", messageId, "recipient", Set.empty[String], createdOn)
+
+    val movement = Movement(
+      movementId,
+      None,
+      "lrn",
+      "consignorId",
+      Some("consigneeId"),
+      Some("arc"),
+      updatedSince,
+      Seq(message)
+    )
+
+    val result = service.createGetMovementsDetails(
+      MovementFilter(None, None, None, None, None),
+      Seq(movement),
+      EnrolmentRequest(fakeRequest, ernsSet, userDetails)
+    )
+
+    val erns           = NonEmptySeq("ern1", Seq("ern2", "ern3"))
     val expectedResult =
       GetMovementsAuditInfo(request = request, response = response, userDetails = userDetails, authExciseNumber = erns)
 
@@ -143,10 +177,11 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
     val uuid        = UUID.randomUUID().toString
     val request     = GetSpecificMovementRequestAuditInfo(uuid)
     val userDetails = UserDetails("gatewayId", "groupIdentifier")
-    val erns        = NonEmptySeq("ern1", Seq("ern2", "ern3"))
+    val ernsSet     = Set("ern1", "ern2", "ern3")
 
-    val result = AuditEventFactory.createGetSpecificMovementDetails(request, userDetails, erns)
+    val result = service.createGetSpecificMovementDetails(uuid, EnrolmentRequest(fakeRequest, ernsSet, userDetails))
 
+    val erns           = NonEmptySeq("ern1", Seq("ern2", "ern3"))
     val expectedResult =
       GetSpecificMovementAuditInfo(request = request, userDetails = userDetails, authExciseNumber = erns)
 
@@ -155,36 +190,88 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
 
   "createGetMessagesAuditInfo creates GetMessagesAuditInfo object" in {
 
-    val request     =
-      GetMessagesRequestAuditInfo(UUID.randomUUID().toString, Some(Instant.now().toString), Some(Consignor.name))
-    val messages    = MessageAuditInfo(
-      UUID.randomUUID().toString,
-      Some("correlationId"),
-      "IE815",
-      "DraftMovement",
-      "recipient",
-      Instant.now()
+    val messageId    = UUID.randomUUID().toString
+    val createdOn    = Instant.now()
+    val movementId   = UUID.randomUUID().toString
+    val updatedSince = Instant.now
+
+    val encodedXml = emcsUtils.encode(IE801.toString)
+    val message    = Message(encodedXml, "IE801", messageId, "recipient", Set.empty[String], createdOn)
+
+    val movement = Movement(
+      movementId,
+      None,
+      "lrn",
+      "consignorId",
+      Some("consigneeId"),
+      Some("arc"),
+      updatedSince,
+      Seq(message)
     )
+
+    val messageAuditInfo = MessageAuditInfo(
+      messageId,
+      Some("PORTAL6de1b822562c43fb9220d236e487c920"),
+      "IE801",
+      "MovementGenerated",
+      "recipient",
+      createdOn
+    )
+
+    val request     =
+      GetMessagesRequestAuditInfo(movementId, Some(updatedSince.toString), Some(Consignor.name))
     val response    =
-      GetMessagesResponseAuditInfo(1, Seq(messages), "lrn", Some("arc"), "consignorId", Some("consigneeId"))
+      GetMessagesResponseAuditInfo(1, Seq(messageAuditInfo), "lrn", Some("arc"), "consignorId", Some("consigneeId"))
     val userDetails = UserDetails("gatewayId", "groupIdentifier")
-    val erns        = NonEmptySeq("ern1", Seq("ern2", "ern3"))
+    val erns        = Set("ern1", "ern2", "ern3")
+
+    val enrolmentRequest = EnrolmentRequest[AnyContent](FakeRequest(), erns, userDetails)
 
     val expectedResult =
-      GetMessagesAuditInfo(request = request, response = response, userDetails = userDetails, authExciseNumber = erns)
+      GetMessagesAuditInfo(
+        request = request,
+        response = response,
+        userDetails = userDetails,
+        authExciseNumber = NonEmptySeq(erns.head, erns.tail.toSeq)
+      )
 
-    val result = AuditEventFactory.createGetMessagesAuditInfo(request, response, userDetails, erns)
+    val result =
+      service.createGetMessagesAuditInfo(
+        Seq(message),
+        movement,
+        Some(updatedSince.toString),
+        Some(Consignor.name),
+        enrolmentRequest
+      )
 
     result mustBe expectedResult
   }
 
-  "createGetSpecificMessageAuditInfo creates GetSpecificMessageAuditInfo object" ignore {
+  "createGetSpecificMessageAuditInfo creates GetSpecificMessageAuditInfo object" in {
+
     val movementId = UUID.randomUUID().toString
     val messageId  = UUID.randomUUID().toString
 
-    val request     = GetSpecificMessageRequestAuditInfo(movementId, messageId)
-    val response    = GetSpecificMessageResponseAuditInfo(
-      Some("correlationId"),
+    val encodedXml  = emcsUtils.encode(IE801.toString)
+    val message     = Message(encodedXml, "IE801", messageId, "recipient", Set.empty[String], Instant.now)
+    val movement    = Movement(
+      movementId,
+      None,
+      "lrn",
+      "consignorId",
+      Some("consigneeId"),
+      Some("arc"),
+      Instant.now,
+      Seq(message)
+    )
+    val userDetails = UserDetails("gatewayId", "groupIdentifier")
+    val erns        = Set("ern1", "ern2", "ern3")
+
+    val request = EnrolmentRequest[AnyContent](FakeRequest(), erns, userDetails)
+
+    val requestAuditInfo = GetSpecificMessageRequestAuditInfo(movementId, messageId)
+    val response         = GetSpecificMessageResponseAuditInfo(
+      Some("PORTAL6de1b822562c43fb9220d236e487c920"),
       "IE801",
       "MovementGenerated",
       "lrn",
@@ -192,24 +279,18 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       "consignorId",
       Some("consigneeId")
     )
-    val messages    = MessageAuditInfo(
-      UUID.randomUUID().toString,
-      Some("correlationId"),
-      "IE815",
-      "DraftMovement",
-      "recipient",
-      Instant.now()
-    )
-    val userDetails = UserDetails("gatewayId", "groupIdentifier")
-    val erns        = NonEmptySeq("ern1", Seq("ern2", "ern3"))
 
     val expectedResult =
       GetSpecificMessageAuditInfo(
-        request = request,
+        request = requestAuditInfo,
         response = response,
         userDetails = userDetails,
-        authExciseNumber = erns
+        authExciseNumber = NonEmptySeq(erns.head, erns.tail.toSeq)
       )
+
+    val result = service.createGetSpecificMessageAuditInfo(movement, message, request)
+
+    result mustBe expectedResult
 
   }
 

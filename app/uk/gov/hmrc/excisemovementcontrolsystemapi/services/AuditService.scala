@@ -16,14 +16,15 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-import cats.data.{EitherT, NonEmptySeq}
+import cats.data.EitherT
 import play.api.Logging
 import play.api.mvc.{AnyContent, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
+import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
 
@@ -32,8 +33,9 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
 @Singleton
-class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConfig)(implicit ec: ExecutionContext)
-    extends Auditing
+class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConfig, factory: AuditEventFactory)(implicit
+  ec: ExecutionContext
+) extends Auditing
     with Logging {
 
   def auditMessage(message: IEMessage)(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit] =
@@ -51,7 +53,7 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
   )(implicit hc: HeaderCarrier): Unit =
     if (appConfig.newAuditingEnabled) {
 
-      val event = AuditEventFactory.createMessageSubmitted(movement, submittedToCore, correlationId, request)
+      val event = factory.createMessageSubmitted(movement, submittedToCore, correlationId, request)
 
       auditConnector.sendExplicitAudit("MessageSubmitted", event)
     }
@@ -64,7 +66,7 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
   )(implicit hc: HeaderCarrier): Unit =
     if (appConfig.newAuditingEnabled) {
 
-      val event = AuditEventFactory.createMessageSubmittedNoMovement(
+      val event = factory.createMessageSubmittedNoMovement(
         message,
         submittedToCore,
         correlationId,
@@ -76,64 +78,57 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
 
   private def auditMessage(message: IEMessage, failureOpt: Option[String])(implicit
     hc: HeaderCarrier
-  ): EitherT[Future, Result, Unit]    =
+  ): EitherT[Future, Result, Unit] =
     EitherT {
 
-      auditConnector.sendExtendedEvent(AuditEventFactory.createMessageAuditEvent(message, failureOpt)).map {
+      auditConnector.sendExtendedEvent(factory.createMessageAuditEvent(message, failureOpt)).map {
         case f: AuditResult.Failure => Right(logger.error(f.msg))
         case _                      => Right(())
       }
     }
+
   def getInformationForGetMovements(
-    request: GetMovementsParametersAuditInfo,
-    response: GetMovementsResponseAuditInfo,
-    enrolmentRequest: EnrolmentRequest[AnyContent]
+    movementFilter: MovementFilter,
+    movements: Seq[Movement],
+    request: EnrolmentRequest[AnyContent]
   )(implicit hc: HeaderCarrier): Unit =
     if (appConfig.newAuditingEnabled) {
-      val event = AuditEventFactory.createGetMovementsDetails(
-        request,
-        response,
-        enrolmentRequest.userDetails,
-        NonEmptySeq(enrolmentRequest.erns.head, enrolmentRequest.erns.tail.toList)
+      val event = factory.createGetMovementsDetails(
+        movementFilter,
+        movements,
+        request
       )
       auditConnector.sendExplicitAudit("GetInformation", event)
     }
 
   def getInformationForGetSpecificMovement(
-    request: GetSpecificMovementRequestAuditInfo,
-    userDetails: UserDetails,
-    authExciseNumber: NonEmptySeq[String]
+    movementId: String,
+    request: EnrolmentRequest[AnyContent]
   )(implicit hc: HeaderCarrier): Unit =
     if (appConfig.newAuditingEnabled) {
-      val event = AuditEventFactory.createGetSpecificMovementDetails(request, userDetails, authExciseNumber)
+      val event = factory.createGetSpecificMovementDetails(movementId, request)
       auditConnector.sendExplicitAudit("GetInformation", event)
     }
 
   def getInformationForGetMessages(
-    request: GetMessagesRequestAuditInfo,
-    response: GetMessagesResponseAuditInfo,
-    userDetails: UserDetails,
-    authExciseNumber: NonEmptySeq[String]
+    messages: Seq[Message],
+    movement: Movement,
+    updatedSince: Option[String],
+    traderType: Option[String],
+    request: EnrolmentRequest[AnyContent]
   )(implicit hc: HeaderCarrier): Unit =
     if (appConfig.newAuditingEnabled) {
-      val event = AuditEventFactory.createGetMessagesAuditInfo(request, response, userDetails, authExciseNumber)
+      val event = factory.createGetMessagesAuditInfo(messages, movement, updatedSince, traderType, request)
       auditConnector.sendExplicitAudit("GetInformation", event)
     }
 
   def getInformationForGetSpecificMessage(
-    request: GetSpecificMessageRequestAuditInfo,
-    response: GetSpecificMessageResponseAuditInfo,
-    userDetails: UserDetails,
-    authExciseNumber: NonEmptySeq[String]
+    movement: Movement,
+    message: Message,
+    request: EnrolmentRequest[AnyContent]
   )(implicit hc: HeaderCarrier): Unit =
     if (appConfig.newAuditingEnabled) {
-      //TODO: Lets revisit the getInformationFor... to use the AuditFactory, but in a way that removes the complex construction out of the controlllers (see the submittedMessage methods)
-      val event = GetSpecificMessageAuditInfo(
-        request = request,
-        response = response,
-        userDetails = userDetails,
-        authExciseNumber = authExciseNumber
-      )
+      val event = factory.createGetSpecificMessageAuditInfo(movement, message, request)
       auditConnector.sendExplicitAudit("GetInformation", event)
     }
 
