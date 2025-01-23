@@ -50,7 +50,15 @@ case class MessageAuditInfo(
 )
 
 object MessageAuditInfo {
-  implicit val writes = Json.writes[MessageAuditInfo]
+  implicit val write: OWrites[MessageAuditInfo] =
+    (
+      (JsPath \ "messageId").write[String] and
+        (JsPath \ "correlationId").write[Option[String]] and
+        (JsPath \ "messageTypeCode").write[String] and
+        (JsPath \ "messageType").write[String] and
+        (JsPath \ "recipient").write[String] and
+        (JsPath \ "createdOn").write[Instant]
+    )(unlift(MessageAuditInfo.unapply))
 
 }
 
@@ -64,7 +72,15 @@ case class GetMessagesResponseAuditInfo(
 )
 
 object GetMessagesResponseAuditInfo {
-  implicit val writes = Json.writes[GetMessagesResponseAuditInfo]
+  implicit val write: OWrites[GetMessagesResponseAuditInfo] =
+    (
+      (JsPath \ "numberOfMessages").write[Int] and
+        (JsPath \ "message").write[Seq[MessageAuditInfo]] and
+        (JsPath \ "localReferenceNumber").write[String] and
+        (JsPath \ "administrativeReferenceCode").write[Option[String]] and
+        (JsPath \ "consignorId").write[String] and
+        (JsPath \ "consigneeId").write[Option[String]]
+    )(unlift(GetMessagesResponseAuditInfo.unapply))
 }
 
 case class GetMessagesAuditInfo(

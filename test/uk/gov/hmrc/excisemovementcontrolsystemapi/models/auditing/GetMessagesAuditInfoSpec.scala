@@ -18,7 +18,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
 import cats.data.NonEmptySeq
 import org.scalatestplus.play.PlaySpec
-import play.api.libs.json.{JsString, Json}
+import play.api.libs.json.{JsArray, JsNull, JsString, Json}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 
 import java.time.Instant
 import java.util.UUID
@@ -58,6 +59,27 @@ class GetMessagesAuditInfoSpec extends PlaySpec {
       )
 
       json mustBe expectedJson
+    }
+  }
+
+  "GetMessagesResponseAuditInfo.writes" should {
+    "serialize administrativeReferenceCode as a null if None provided" in {
+      val getMessagesResponseAuditInfo =
+        GetMessagesResponseAuditInfo(1, Seq.empty[MessageAuditInfo], "lrn", None, "consignorId", Some("consigneeId"))
+      val expectedResult               = Json.obj(
+        "numberOfMessages"            -> 1,
+        "message"                     -> JsArray.empty,
+        "localReferenceNumber"        -> "lrn",
+        "administrativeReferenceCode" -> JsNull,
+        "consignorId"                 -> "consignorId",
+        "consigneeId"                 -> "consigneeId"
+      )
+
+      val output = Json.toJson(getMessagesResponseAuditInfo)
+
+      output mustBe expectedResult
+      (output \ "administrativeReferenceCode").get mustBe JsNull
+
     }
   }
 
