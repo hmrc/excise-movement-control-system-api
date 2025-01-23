@@ -75,11 +75,7 @@ class GetMovementsController @Inject() (
           _         <- messageService.updateAllMessages(ern.fold(request.erns)(Set(_)))
           movements <- movementService.getMovementByErn(request.erns.toSeq, filter)
         } yield {
-          auditService.getInformationForGetMovements(
-            GetMovementsParametersAuditInfo(ern, arc, lrn, updatedSince, traderType),
-            GetMovementsResponseAuditInfo(movements.length),
-            request
-          )
+          auditService.getInformationForGetMovements(filter, movements, request)
           Ok(Json.toJson(movements.map(createResponseFrom)))
         }
       }.recover { case NonFatal(ex) =>
@@ -123,11 +119,7 @@ class GetMovementsController @Inject() (
             )
           )
         } else {
-          auditService.getInformationForGetSpecificMovement(
-            GetSpecificMovementRequestAuditInfo(movementId),
-            request.userDetails,
-            NonEmptySeq(request.erns.head, request.erns.tail.toList)
-          )
+          auditService.getInformationForGetSpecificMovement(movementId, request)
           Ok(Json.toJson(createResponseFrom(movement)))
         }
 

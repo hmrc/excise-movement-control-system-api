@@ -35,6 +35,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMessagesRequestAuditInfo, GetMessagesResponseAuditInfo, GetSpecificMessageRequestAuditInfo, GetSpecificMessageResponseAuditInfo, MessageAuditInfo, UserDetails}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, Consignor, IE801Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
@@ -210,32 +211,14 @@ class GetMessagesControllerSpec
           contentAsJson(result) mustBe JsArray(expectedJson)
 
           withClue("Submits correct getInformation audit event") {
-            val requestAuditInfo  = GetMessagesRequestAuditInfo(validUUID, None, Some(Consignor.name.toLowerCase))
-            val messageAuditInfo  = MessageAuditInfo(
-              message1.messageId,
-              Some("PORTAL6de1b822562c43fb9220d236e487c920"),
-              message1.messageType,
-              "MovementGenerated",
-              message1.recipient,
-              message1.createdOn
-            )
-            val responseAuditInfo = GetMessagesResponseAuditInfo(
-              1,
-              Seq(messageAuditInfo),
-              movement.localReferenceNumber,
-              movement.administrativeReferenceCode,
-              movement.consignorId,
-              movement.consigneeId
-            )
-            val userDetails       = UserDetails("testInternalId", "testGroupId")
-            val authExciseNumber  = NonEmptySeq(ern1, Seq(ern2))
 
             verify(auditService, times(1))
               .getInformationForGetMessages(
-                eqTo(requestAuditInfo),
-                eqTo(responseAuditInfo),
-                eqTo(userDetails),
-                eqTo(authExciseNumber)
+                eqTo(Seq(message1)),
+                eqTo(movement),
+                eqTo(None),
+                eqTo(Some(Consignor.name.toLowerCase)),
+                any[EnrolmentRequest[AnyContent]]
               )(
                 any
               )
@@ -279,8 +262,7 @@ class GetMessagesControllerSpec
           contentAsJson(result) mustBe JsArray(expectedJson)
 
           withClue("Submits correct getInformation audit event") {
-            val requestAuditInfo  = GetMessagesRequestAuditInfo(validUUID, None, Some(Consignee.name.toLowerCase))
-            val messageAuditInfo  = MessageAuditInfo(
+            val messageAuditInfo = MessageAuditInfo(
               message2.messageId,
               Some("PORTAL6de1b822562c43fb9220d236e487c920"),
               message2.messageType,
@@ -288,23 +270,13 @@ class GetMessagesControllerSpec
               message2.recipient,
               message2.createdOn
             )
-            val responseAuditInfo = GetMessagesResponseAuditInfo(
-              1,
-              Seq(messageAuditInfo),
-              movement.localReferenceNumber,
-              movement.administrativeReferenceCode,
-              movement.consignorId,
-              movement.consigneeId
-            )
-            val userDetails       = UserDetails("testInternalId", "testGroupId")
-            val authExciseNumber  = NonEmptySeq(ern1, Seq(ern2))
-
             verify(auditService, times(1))
               .getInformationForGetMessages(
-                eqTo(requestAuditInfo),
-                eqTo(responseAuditInfo),
-                eqTo(userDetails),
-                eqTo(authExciseNumber)
+                eqTo(Seq(message2)),
+                eqTo(movement),
+                eqTo(None),
+                eqTo(Some(Consignee.name.toLowerCase)),
+                any[EnrolmentRequest[AnyContent]]
               )(
                 any
               )
@@ -527,10 +499,9 @@ class GetMessagesControllerSpec
 
         verify(auditService, times(1))
           .getInformationForGetSpecificMessage(
-            eqTo(request),
-            eqTo(response),
-            eqTo(userDetails),
-            eqTo(authExciseNumber)
+            eqTo(movementWithMessage),
+            eqTo(message),
+            any[EnrolmentRequest[AnyContent]]
           )(
             any
           )
@@ -636,10 +607,9 @@ class GetMessagesControllerSpec
       messageService,
       new MovementIdValidation,
       cc,
-      new EmcsUtils,
       dateTimeService,
       auditService,
-      messageFactory
+      emcsUtils
     )
 
   private def createWithFailedAuth =
@@ -650,10 +620,9 @@ class GetMessagesControllerSpec
       messageService,
       new MovementIdValidation,
       cc,
-      new EmcsUtils,
       dateTimeService,
       auditService,
-      messageFactory
+      emcsUtils
     )
 
   private def createRequest(

@@ -28,11 +28,14 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
+import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
+import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeXmlParsers
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMessagesAuditInfo, GetMessagesAuditInfoSpec, GetMessagesRequestAuditInfo, GetMessagesResponseAuditInfo, GetMovementsAuditInfo, GetMovementsParametersAuditInfo, GetMovementsResponseAuditInfo, GetSpecificMessageAuditInfo, GetSpecificMessageRequestAuditInfo, GetSpecificMessageResponseAuditInfo, GetSpecificMovementAuditInfo, GetSpecificMovementRequestAuditInfo, MessageAuditInfo, MessageSubmittedDetails, UserDetails}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, GetMessagesAuditInfo, GetMessagesRequestAuditInfo, GetMessagesResponseAuditInfo, GetMovementsAuditInfo, GetMovementsParametersAuditInfo, GetMovementsResponseAuditInfo, GetSpecificMessageAuditInfo, GetSpecificMessageRequestAuditInfo, GetSpecificMessageResponseAuditInfo, GetSpecificMovementAuditInfo, GetSpecificMovementRequestAuditInfo, MessageAuditInfo, MessageSubmittedDetails, UserDetails}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, IE704Message, IE815Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
 
@@ -48,6 +51,8 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
 
   val auditConnector: AuditConnector = mock[AuditConnector]
   val appConfig: AppConfig           = mock[AppConfig]
+  val utils                          = new EmcsUtils
+  val factory: AuditEventFactory     = new AuditEventFactory(utils, new IEMessageFactory)
 
   val testMovement: Movement = Movement("id", None, "lrn", "consignorId", None, None, Instant.now, Seq.empty[Message])
   val testErns: Set[String]  = Set("123", "456")
@@ -85,7 +90,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
       when(auditConnector.sendExtendedEvent(any)(any, any))
         .thenReturn(Future.successful(AuditResult.Failure("test", None)))
 
-      val service = new AuditService(auditConnector, appConfig)
+      val service = new AuditService(auditConnector, appConfig, factory)
       val result  = service.auditMessage(IE815Message.createFromXml(IE815))
 
       await(result.value) equals Right(())
@@ -93,14 +98,14 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
 
     "return Right(())) on success" in {
 
-      val service = new AuditService(auditConnector, appConfig)
+      val service = new AuditService(auditConnector, appConfig, factory)
       val result  = service.auditMessage(IE815Message.createFromXml(IE815))
 
       await(result.value) equals Right(())
     }
   }
 
-  val service = new AuditService(auditConnector, appConfig)
+  val service = new AuditService(auditConnector, appConfig, factory)
 
   "messageSubmittedNoMovement" should {
 
@@ -118,7 +123,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
         None,
         "GBWK002281023",
         Some("GBWKQOZ8OVLYR"),
-        true,
+        submittedToCore = true,
         "6de1b822562c43fb9220d236e487c920",
         Some("correlationId"),
         UserDetails("", ""),
@@ -126,7 +131,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
         message.toJsObject
       )
 
-      service.messageSubmittedNoMovement(message, true, Some("correlationId"), request)
+      service.messageSubmittedNoMovement(message, submittedToCore = true, Some("correlationId"), request)
 
       verify(auditConnector, times(1))
         .sendExplicitAudit(eqTo("MessageSubmitted"), eqTo(expectedMessageSubmittedDetails))(eqTo(hc), any, any)
@@ -136,7 +141,12 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
 
       when(appConfig.newAuditingEnabled).thenReturn(false)
 
-      service.messageSubmittedNoMovement(IE815Message.createFromXml(IE815), true, Some("correlationId"), request)
+      service.messageSubmittedNoMovement(
+        IE815Message.createFromXml(IE815),
+        submittedToCore = true,
+        Some("correlationId"),
+        request
+      )
 
       verify(auditConnector, times(0)).sendExplicitAudit(any[String], any[JsObject])(any, any)
     }
@@ -183,7 +193,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
           Some("4bf36235-4816-464a-b3f3-71dbd3a30095"),
           "consignorId",
           Some("consigneeId"),
-          true,
+          submittedToCore = true,
           "XI000001",
           Some("correlationId"),
           UserDetails("", ""),
@@ -192,7 +202,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
         )
 
         //TODO: Need to change this to actual correlationId from header
-        service.messageSubmitted(movement, true, Some("correlationId"), requestWithIE704)
+        service.messageSubmitted(movement, submittedToCore = true, Some("correlationId"), requestWithIE704)
 
         verify(auditConnector, times(1))
           .sendExplicitAudit(eqTo("MessageSubmitted"), eqTo(expectedMessageSubmittedDetails))(any, any, any)
@@ -202,7 +212,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
       "post no event if newAuditing feature switch is false" in {
         when(appConfig.newAuditingEnabled).thenReturn(false)
 
-        service.messageSubmitted(testMovement, true, Some(""), request)
+        service.messageSubmitted(testMovement, submittedToCore = true, Some(""), request)
 
         verify(auditConnector, times(0)).sendExtendedEvent(any)(any, any)
       }
@@ -211,18 +221,17 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
 
   "getInformationForGetMovements" should {
     "post an event when user calls a getMovements" in {
-      val request          = GetMovementsParametersAuditInfo(None, None, None, None, None)
-      val response         = GetMovementsResponseAuditInfo(5)
-      val authExciseNumber = NonEmptySeq(erns.head, erns.tail)
+      val filter    = MovementFilter(None, None, None, None, None)
+      val movements = Seq(testMovement)
 
       val expectedDetails = GetMovementsAuditInfo(
-        request = request,
-        response = response,
+        request = GetMovementsParametersAuditInfo(None, None, None, None, None),
+        response = GetMovementsResponseAuditInfo(1),
         userDetails = userDetails,
-        authExciseNumber = authExciseNumber
+        authExciseNumber = NonEmptySeq(enrolmentRequest.erns.head, enrolmentRequest.erns.tail.toSeq)
       )
 
-      service.getInformationForGetMovements(request, response, enrolmentRequest)
+      service.getInformationForGetMovements(filter, movements, enrolmentRequest)
 
       verify(auditConnector, times(1))
         .sendExplicitAudit(eqTo("GetInformation"), eqTo(expectedDetails))(any, any, any)
@@ -232,18 +241,16 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
 
   "getInformationForGetSpecificMovement" should {
     "post an event when user calls a GetSpecificMovement" in {
-      val uuid             = UUID.randomUUID().toString
-      val request          = GetSpecificMovementRequestAuditInfo(uuid)
-      val userDetails      = UserDetails("gatewayId", "groupIdentifier")
-      val authExciseNumber = NonEmptySeq("ern1", Seq("ern2", "ern3"))
+      val movementId = UUID.randomUUID().toString
+      val request    = GetSpecificMovementRequestAuditInfo(movementId)
 
       val expectedDetails = GetSpecificMovementAuditInfo(
         request = request,
         userDetails = userDetails,
-        authExciseNumber = authExciseNumber
+        authExciseNumber = NonEmptySeq(enrolmentRequest.erns.head, enrolmentRequest.erns.tail.toSeq)
       )
 
-      service.getInformationForGetSpecificMovement(request, userDetails, authExciseNumber)
+      service.getInformationForGetSpecificMovement(movementId, enrolmentRequest)
 
       verify(auditConnector, times(1))
         .sendExplicitAudit(eqTo("GetInformation"), eqTo(expectedDetails))(any, any, any)
@@ -252,14 +259,28 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
 
   "getInformationForGetMessages" should {
     "post an event when user calls a getMessages" in {
-      val uuid             = UUID.randomUUID().toString
-      val messageCreateOn  = Instant.now()
-      val request          = GetMessagesRequestAuditInfo(uuid, None, Some(Consignee.name.toLowerCase))
+      val movementId      = UUID.randomUUID().toString
+      val messageId       = UUID.randomUUID().toString
+      val messageCreateOn = Instant.now()
+
+      val messages = Seq(
+        Message(utils.encode(IE801.toString), "IE801", messageId, erns.head, Set.empty[String], messageCreateOn)
+      )
+      val movement =
+        Movement(movementId, None, "lrn", erns.head, Some("consigneeId"), None, messageCreateOn, messages)
+
+      val request          = GetMessagesRequestAuditInfo(movementId, None, Some(Consignee.name.toLowerCase))
       val messageAuditInfo =
-        MessageAuditInfo("messageId", Some("testCorrelationId"), "IE801", "MovementGenerated", "ern", messageCreateOn)
-      val response         = GetMessagesResponseAuditInfo(1, Seq(messageAuditInfo), "lrn", None, "testErn", Some("consigneeId"))
-      val userDetails      = UserDetails("testInternalId", "testGroupId")
-      val authExciseNumber = NonEmptySeq("testErn", Seq().empty)
+        MessageAuditInfo(
+          messageId,
+          Some("PORTAL6de1b822562c43fb9220d236e487c920"),
+          "IE801",
+          "MovementGenerated",
+          erns.head,
+          messageCreateOn
+        )
+      val response         = GetMessagesResponseAuditInfo(1, Seq(messageAuditInfo), "lrn", None, erns.head, Some("consigneeId"))
+      val authExciseNumber = NonEmptySeq(erns.head, Seq().empty)
 
       val expectedDetails = GetMessagesAuditInfo(
         request = request,
@@ -268,7 +289,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
         authExciseNumber = authExciseNumber
       )
 
-      service.getInformationForGetMessages(request, response, userDetails, authExciseNumber)
+      service.getInformationForGetMessages(messages, movement, None, Some(Consignee.name.toLowerCase), enrolmentRequest)
 
       verify(auditConnector, times(1))
         .sendExplicitAudit(eqTo("GetInformation"), eqTo(expectedDetails))(any, any, any)
@@ -279,9 +300,21 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
     "post an event when user calls a getSpecificMessage" in {
       val movementId       = UUID.randomUUID().toString
       val messageId        = UUID.randomUUID().toString
+      val encodedMessage   = utils.encode(IE801.toString)
+      val message          = Message(encodedMessage, "IE801", messageId, "recipient", Set.empty[String], Instant.now)
+      val movement         = Movement(
+        movementId,
+        None,
+        "lrn",
+        "consignorId",
+        Some("consigneeId"),
+        Some("arc"),
+        Instant.now,
+        Seq(message)
+      )
       val request          = GetSpecificMessageRequestAuditInfo(movementId, messageId)
       val response         = GetSpecificMessageResponseAuditInfo(
-        Some("testCorrelationId"),
+        Some("PORTAL6de1b822562c43fb9220d236e487c920"),
         "IE801",
         "MovementGenerated",
         "lrn",
@@ -289,8 +322,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
         "consignorId",
         Some("consigneeId")
       )
-      val userDetails      = UserDetails("testInternalId", "testGroupId")
-      val authExciseNumber = NonEmptySeq("testErn", Seq().empty)
+      val authExciseNumber = NonEmptySeq(erns.head, Seq().empty)
 
       val expectedDetails = GetSpecificMessageAuditInfo(
         request = request,
@@ -299,7 +331,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
         authExciseNumber = authExciseNumber
       )
 
-      service.getInformationForGetSpecificMessage(request, response, userDetails, authExciseNumber)
+      service.getInformationForGetSpecificMessage(movement, message, enrolmentRequest)
 
       verify(auditConnector, times(1))
         .sendExplicitAudit(eqTo("GetInformation"), eqTo(expectedDetails))(any, any, any)

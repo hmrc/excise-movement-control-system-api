@@ -17,16 +17,22 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
 import cats.data.NonEmptySeq
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
+import play.api.mvc.AnyContent
+import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
+import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
 import uk.gov.hmrc.play.audit.model.ExtendedDataEvent
 
+import javax.inject.{Inject, Singleton}
 import scala.xml.NodeSeq
 
-object AuditEventFactory extends Auditing {
+@Singleton
+class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMessageFactory) extends Auditing {
 
   def createMessageAuditEvent(input: IEMessage, failureOpt: Option[String])(implicit
     hc: HeaderCarrier
@@ -85,40 +91,103 @@ object AuditEventFactory extends Auditing {
     )
 
   def createGetMovementsDetails(
-    request: GetMovementsParametersAuditInfo,
-    response: GetMovementsResponseAuditInfo,
-    userDetails: UserDetails,
-    authExciseNumber: NonEmptySeq[String]
-  ): GetMovementsAuditInfo =
+    movementFilter: MovementFilter,
+    movements: Seq[Movement],
+    request: EnrolmentRequest[AnyContent]
+  ): GetMovementsAuditInfo = {
+    val parameters = GetMovementsParametersAuditInfo(
+      movementFilter.ern,
+      movementFilter.arc,
+      movementFilter.lrn,
+      movementFilter.updatedSince.map(x => x.toString),
+      movementFilter.traderType.map(x => x.traderType)
+    )
+    val response   = GetMovementsResponseAuditInfo(
+      movements.length
+    )
     GetMovementsAuditInfo(
-      request = request,
+      request = parameters,
       response = response,
-      userDetails = userDetails,
-      authExciseNumber = authExciseNumber
+      userDetails = request.userDetails,
+      authExciseNumber = convertErns(request.erns)
     )
 
+  }
+
   def createGetSpecificMovementDetails(
-    request: GetSpecificMovementRequestAuditInfo,
-    userDetails: UserDetails,
-    authExciseNumber: NonEmptySeq[String]
+    movementId: String,
+    request: EnrolmentRequest[AnyContent]
   ): GetSpecificMovementAuditInfo =
     GetSpecificMovementAuditInfo(
-      request = request,
-      userDetails = userDetails,
-      authExciseNumber = authExciseNumber
+      request = GetSpecificMovementRequestAuditInfo(movementId),
+      userDetails = request.userDetails,
+      authExciseNumber = convertErns(request.erns)
     )
 
   def createGetMessagesAuditInfo(
-    request: GetMessagesRequestAuditInfo,
-    response: GetMessagesResponseAuditInfo,
-    userDetails: UserDetails,
-    authExciseNumber: NonEmptySeq[String]
-  ): GetMessagesAuditInfo =
-    GetMessagesAuditInfo(
-      request = request,
-      response = response,
-      userDetails = userDetails,
-      authExciseNumber = authExciseNumber
-    )
+    messages: Seq[Message],
+    movement: Movement,
+    updatedSince: Option[String],
+    traderType: Option[String],
+    request: EnrolmentRequest[AnyContent]
+  ): GetMessagesAuditInfo = {
+    val requestAuditInfo  = GetMessagesRequestAuditInfo(movement._id, updatedSince, traderType)
+    val messagesAuditInfo = messages.map { msg =>
+      val decodedXml         = emcsUtils.decode(msg.encodedMessage)
+      val decodedXmlNodeList = xml.XML.loadString(decodedXml)
 
+      val ieMessage = ieMessageFactory.createFromXml(msg.messageType, decodedXmlNodeList)
+      MessageAuditInfo(
+        msg.messageId,
+        ieMessage.correlationId,
+        ieMessage.messageType,
+        ieMessage.messageAuditType.name,
+        msg.recipient,
+        msg.createdOn
+      )
+    }
+    val response          = GetMessagesResponseAuditInfo(
+      messages.length,
+      messagesAuditInfo,
+      movement.localReferenceNumber,
+      movement.administrativeReferenceCode,
+      movement.consignorId,
+      movement.consigneeId
+    )
+    GetMessagesAuditInfo(
+      request = requestAuditInfo,
+      response = response,
+      userDetails = request.userDetails,
+      authExciseNumber = convertErns(request.erns)
+    )
+  }
+
+  def createGetSpecificMessageAuditInfo(
+    movement: Movement,
+    message: Message,
+    request: EnrolmentRequest[AnyContent]
+  ): GetSpecificMessageAuditInfo = {
+    val requestAuditInfo   = GetSpecificMessageRequestAuditInfo(movement._id, message.messageId)
+    val decodedXml         = emcsUtils.decode(message.encodedMessage)
+    val decodedXmlNodeList = xml.XML.loadString(decodedXml)
+
+    val ieMessage = ieMessageFactory.createFromXml(message.messageType, decodedXmlNodeList)
+    val response  = GetSpecificMessageResponseAuditInfo(
+      ieMessage.correlationId,
+      ieMessage.messageType,
+      ieMessage.messageAuditType.name,
+      movement.localReferenceNumber,
+      movement.administrativeReferenceCode,
+      movement.consignorId,
+      movement.consigneeId
+    )
+    GetSpecificMessageAuditInfo(
+      request = requestAuditInfo,
+      response = response,
+      userDetails = request.userDetails,
+      authExciseNumber = convertErns(request.erns)
+    )
+  }
+
+  private def convertErns(erns: Set[String]): NonEmptySeq[String] = NonEmptySeq(erns.head, erns.tail.toSeq)
 }
