@@ -62,8 +62,6 @@ object MessageProcessingSuccessAuditInfo {
 
 case class MessageProcessingFailureAuditInfo(
   exciseRegistrationNumber: String,
-  messagesAvailable: Int, // TODO: remove if information is not available
-  messagesInBatch: Int, // TODO: remove if information is not available
   processingStatus: String = "Failure",
   failureReason: String,
   batchId: String,
@@ -74,16 +72,12 @@ object MessageProcessingFailureAuditInfo {
 
   def apply(
     exciseRegistrationNumber: String,
-    messagesAvailable: Int,
-    messagesInBatch: Int,
     failureReason: String,
     batchId: String,
     jobId: Option[String]
   ): MessageProcessingFailureAuditInfo                           =
     MessageProcessingFailureAuditInfo(
       exciseRegistrationNumber,
-      messagesAvailable,
-      messagesInBatch,
       "Failure",
       failureReason,
       batchId,
@@ -92,8 +86,6 @@ object MessageProcessingFailureAuditInfo {
   implicit val write: OWrites[MessageProcessingFailureAuditInfo] =
     (
       (JsPath \ "exciseRegistrationNumber").write[String] and
-        (JsPath \ "messagesAvailable").write[Int] and
-        (JsPath \ "messagesInBatch").write[Int] and
         (JsPath \ "processingStatus").write[String] and
         (JsPath \ "failureReason").write[String] and
         (JsPath \ "batchId").write[String] and
