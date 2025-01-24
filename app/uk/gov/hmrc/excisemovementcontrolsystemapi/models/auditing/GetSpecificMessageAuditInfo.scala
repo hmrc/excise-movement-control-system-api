@@ -21,7 +21,6 @@ import play.api.libs.functional.syntax.{toFunctionalBuilderOps, unlift}
 import play.api.libs.json.{JsPath, Json, OWrites}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.GetSpecificMovementAuditInfo.commaWriter
 
-//TODO: Re-review with kara
 case class GetSpecificMessageRequestAuditInfo(movementId: String, messageId: String)
 
 object GetSpecificMessageRequestAuditInfo {
@@ -45,7 +44,7 @@ object GetSpecificMessageResponseAuditInfo {
         (JsPath \ "messageTypeCode").write[String] and
         (JsPath \ "messageType").write[String] and
         (JsPath \ "localReferenceNumber").write[String] and
-        (JsPath \ "administrativeReferenceCode").writeNullable[String] and
+        (JsPath \ "administrativeReferenceCode").write[Option[String]] and
         (JsPath \ "consignorId").write[String] and
         (JsPath \ "consigneeId").write[Option[String]]
     )(unlift(GetSpecificMessageResponseAuditInfo.unapply))
