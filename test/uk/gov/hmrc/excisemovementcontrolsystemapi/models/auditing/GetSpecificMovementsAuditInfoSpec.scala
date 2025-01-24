@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
 import cats.data.NonEmptySeq
 import org.scalatestplus.play.PlaySpec
-import play.api.libs.json.{JsString, Json}
+import play.api.libs.json.{JsNull, JsString, Json}
 
 import java.util.UUID
 
@@ -27,25 +27,14 @@ class GetSpecificMovementsAuditInfoSpec extends PlaySpec {
   "GetSpecificMovementsAuditInfo.writes" should {
     "serializes the authExciseNumber sequence into a comma-seperated string" in {
       val movementId = UUID.randomUUID().toString
-      val messageId  = UUID.randomUUID().toString
 
-      val request          = GetSpecificMessageRequestAuditInfo(movementId, messageId)
-      val response         = GetSpecificMessageResponseAuditInfo(
-        Some("testCorrelationId"),
-        "IE801",
-        "MovementGenerated",
-        "lrn",
-        Some("arc"),
-        "consignorId",
-        Some("consigneeId")
-      )
+      val request          = GetSpecificMovementRequestAuditInfo(movementId)
       val userDetails      = UserDetails("gatewayId", "groupIdentifier")
       val authExciseNumber = NonEmptySeq("ern1", Seq("ern2", "ern3"))
 
       val testModel =
-        GetSpecificMessageAuditInfo(
+        GetSpecificMovementAuditInfo(
           request = request,
-          response = response,
           userDetails = userDetails,
           authExciseNumber = authExciseNumber
         )
@@ -59,7 +48,7 @@ class GetSpecificMovementsAuditInfoSpec extends PlaySpec {
   }
 
   "GetSpecificMessageResponseAuditInfo.writes" should {
-    "does not include the administrativeReferenceCode if not populated" in {
+    "serialize administrativeReferenceCode as a null if None provided" in {
       val response = GetSpecificMessageResponseAuditInfo(
         Some("testCorrelationId"),
         "IE801",
@@ -71,16 +60,19 @@ class GetSpecificMovementsAuditInfoSpec extends PlaySpec {
       )
 
       val expectedResult = Json.obj(
-        "correlationId"        -> "testCorrelationId",
-        "messageTypeCode"      -> "IE801",
-        "messageType"          -> "MovementGenerated",
-        "localReferenceNumber" -> "lrn",
-        "consignorId"          -> "consignorId",
-        "consigneeId"          -> "consigneeId"
+        "correlationId"               -> "testCorrelationId",
+        "messageTypeCode"             -> "IE801",
+        "messageType"                 -> "MovementGenerated",
+        "localReferenceNumber"        -> "lrn",
+        "administrativeReferenceCode" -> JsNull,
+        "consignorId"                 -> "consignorId",
+        "consigneeId"                 -> "consigneeId"
       )
 
       val result = Json.toJson(response)
       result mustBe expectedResult
+
+      (result \ "administrativeReferenceCode").get mustBe JsNull
 
     }
 

@@ -44,7 +44,7 @@ object GetSpecificMessageResponseAuditInfo {
         (JsPath \ "messageTypeCode").write[String] and
         (JsPath \ "messageType").write[String] and
         (JsPath \ "localReferenceNumber").write[String] and
-        (JsPath \ "administrativeReferenceCode").writeNullable[String] and
+        (JsPath \ "administrativeReferenceCode").write[Option[String]] and
         (JsPath \ "consignorId").write[String] and
         (JsPath \ "consigneeId").write[Option[String]]
     )(unlift(GetSpecificMessageResponseAuditInfo.unapply))
