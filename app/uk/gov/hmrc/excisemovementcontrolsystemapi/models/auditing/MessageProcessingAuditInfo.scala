@@ -62,8 +62,8 @@ object MessageProcessingSuccessAuditInfo {
 
 case class MessageProcessingFailureAuditInfo(
   exciseRegistrationNumber: String,
-  messagesAvailable: Int, // remove if information is not available
-  messagesInBatch: Int, // remove if information is not available
+  messagesAvailable: Int, // TODO: remove if information is not available
+  messagesInBatch: Int, // TODO: remove if information is not available
   processingStatus: String = "Failure",
   failureReason: String,
   batchId: String,

@@ -37,6 +37,7 @@ import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 import scala.util.control.NonFatal
 import scala.xml.XML
 
@@ -180,9 +181,17 @@ class MessageService @Inject() (
 
   private def processNewMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] = {
     logger.info(s"[MessageService]: Processing new messages")
+
+    val getNewMessages = messageConnector.getNewMessages(ern)
+    getNewMessages.onComplete {
+      case Success(response)  => ??? // call messageProcessing success. We do not know LRN until
+      // we request a movement. Need movement and message to use getArc().
+      case Failure(exception) => ??? // call messageProcessing failure
+    }
     for {
+      //TODO: Generate batchId - UUID
       response <- messageConnector.getNewMessages(ern)
-      _        <- updateMovements(ern, response.messages)
+      _        <- updateMovements(ern, response.messages) // call getMovements first then provide result to this method
       _        <- acknowledgeAndContinue(response, ern)
     } yield Done
   }
@@ -231,6 +240,11 @@ class MessageService @Inject() (
               _.traverse { movement =>
                 messageCount.update(movement.messages.length)
                 totalMessageSize.update(movement.messages.map(_.encodedMessage.length).sum)
+
+                /**
+                 * call audit service which in turn calls factory.
+                 * Factory assembles
+                 */
                 movementRepository.save(movement).recoverWith { case NonFatal(e) =>
                   createEnrichedError(e, ern, movements, movement)
                 }
