@@ -483,8 +483,8 @@ class GetMessagesControllerSpec
 
       withClue("Submits getInformation audit event") {
 
-        val request          = GetSpecificMessageRequestAuditInfo(validUUID, messageId)
-        val response         =
+        val request  = GetSpecificMessageRequestAuditInfo(validUUID, messageId)
+        val response =
           GetSpecificMessageResponseAuditInfo(
             Some("PORTAL6de1b822562c43fb9220d236e487c920"),
             "IE801",
@@ -494,8 +494,6 @@ class GetMessagesControllerSpec
             movementWithMessage.consignorId,
             movementWithMessage.consigneeId
           )
-        val userDetails      = UserDetails("testInternalId", "testGroupId")
-        val authExciseNumber = NonEmptySeq("testErn", Seq.empty[String])
 
         verify(auditService, times(1))
           .getInformationForGetSpecificMessage(
@@ -544,6 +542,20 @@ class GetMessagesControllerSpec
 
         status(result) mustBe BAD_REQUEST
         contentAsJson(result) mustBe MovementIdFormatError
+      }
+
+      "respond with 403 FORBIDDEN when movement is for a different ern" in {
+        when(movementService.getMovementById(any))
+          .thenReturn(
+            Future.successful(
+              Some(movementWithMessage.copy(consignorId = "notTheTestErn", consigneeId = Some("alsoNotTheTestErn")))
+            )
+          )
+
+        val result = createWithSuccessfulAuth().getMessageForMovement(validUUID, messageId)(createRequest())
+
+        status(result) mustBe FORBIDDEN
+
       }
 
       "return a 404 if movement is not found" in {
