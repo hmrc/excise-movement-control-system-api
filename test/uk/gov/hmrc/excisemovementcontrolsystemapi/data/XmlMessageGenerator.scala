@@ -26,6 +26,7 @@ trait XmlMessageGenerator {
   def generate(ern: String, params: MessageParams): NodeSeq
 }
 
+
 object XmlMessageGeneratorFactory extends XmlMessageGenerator {
   override def generate(ern: String, params: MessageParams): NodeSeq =
     params.messageType match {

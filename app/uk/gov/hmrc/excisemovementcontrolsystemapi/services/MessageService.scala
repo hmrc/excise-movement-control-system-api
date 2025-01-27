@@ -38,6 +38,7 @@ import java.util.UUID
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 import scala.util.control.NonFatal
 import scala.xml.XML
 
@@ -183,7 +184,12 @@ class MessageService @Inject() (
 
   private def processNewMessages(ern: String, jobId: Option[String])(implicit hc: HeaderCarrier): Future[Done] = {
     logger.info(s"[MessageService]: Processing new messages")
-    val batchId = UUID.randomUUID()
+    val batchId     = UUID.randomUUID()
+    val getMessages = messageConnector.getNewMessages(ern).onComplete {
+      case Success(value)     => ???
+      case Failure(exception) => ???
+    }
+
     for {
       response <- messageConnector.getNewMessages(ern)
       _        <- updateMovements(ern, response.messages)
