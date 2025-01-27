@@ -294,4 +294,18 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
 
   }
 
+  "createMessageProcessingSuccessAuditInfo creates MessageProcessingSuccessAuditInfo object" in {
+
+    val expectedResult = ???
+    val result         = service.createMessageProcessingSuccessAuditInfo(???)
+
+    result mustBe expectedResult
+  }
+  "createMessageProcessingFailureAuditInfo creates MessageProcessingFailureAuditInfo object" in {
+
+    val expectedResult = ???
+    val result         = service.createMessageProcessingFailureAuditInfo(???)
+
+    result mustBe expectedResult
+  }
 }
