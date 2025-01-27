@@ -1,3 +1,19 @@
+/*
+ * Copyright 2025 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
 import org.scalatestplus.play.PlaySpec
@@ -35,12 +51,10 @@ class MessageProcessingAuditInfoSpec extends PlaySpec {
     "serialize jobId as a null if None provided" in {
       val batchId                           = UUID.randomUUID().toString
       val messageProcessingSuccessAuditInfo =
-        MessageProcessingFailureAuditInfo("ern", 10, 10, "Reason", batchId, None)
+        MessageProcessingFailureAuditInfo("ern", "Reason", batchId, None)
 
       val expectedResult = Json.obj(
         "exciseRegistrationNumber" -> "ern",
-        "messagesAvailable"        -> 10,
-        "messagesInBatch"          -> 10,
         "processingStatus"         -> "Failure",
         "failureReason"            -> "Reason",
         "batchId"                  -> batchId,

@@ -21,7 +21,7 @@ import play.api.mvc.AnyContent
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.http.HeaderCarrier
@@ -188,6 +188,20 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
       authExciseNumber = convertErns(request.erns)
     )
   }
+
+  def createMessageProcessingSuccessAuditInfo(
+    ern: String,
+    response: GetMessagesResponse,
+    batchId: String,
+    jobId: Option[String]
+  ): MessageProcessingSuccessAuditInfo = ???
+
+  def createMessageProcessingFailureAuditInfo(
+    ern: String,
+    failureReason: String,
+    batchId: String,
+    jobId: Option[String]
+  ): MessageProcessingFailureAuditInfo = ???
 
   private def convertErns(erns: Set[String]): NonEmptySeq[String] = NonEmptySeq(erns.head, erns.tail.toSeq)
 }
