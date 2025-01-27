@@ -117,13 +117,14 @@ class PollingNewMessagesJobSpec
           when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
           when(ernRetrievalRepository.getLastRetrieved(any))
             .thenReturn(Future.successful(Some(now.minus(31, ChronoUnit.MINUTES))))
-          when(messageService.updateMessages(any, any)(any))
+          when(messageService.updateMessages(any, any, any)(any))
             .thenReturn(Future.successful(MessageService.UpdateOutcome.Updated))
 
           val result = pollingNewMessagesJob.execute.futureValue
 
           result mustBe ScheduledJob.Result.Completed
-          verify(messageService).updateMessages(eqTo("testErn"), eqTo(Some(now.minus(31, ChronoUnit.MINUTES))))(any)
+          verify(messageService)
+            .updateMessages(eqTo("testErn"), eqTo(Some(now.minus(31, ChronoUnit.MINUTES))), any)(any)
         }
       }
 
@@ -138,13 +139,13 @@ class PollingNewMessagesJobSpec
           when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
           when(ernRetrievalRepository.getLastRetrieved(any))
             .thenReturn(Future.successful(Some(now.minus(6, ChronoUnit.MINUTES))))
-          when(messageService.updateMessages(any, any)(any))
+          when(messageService.updateMessages(any, any, any)(any))
             .thenReturn(Future.successful(MessageService.UpdateOutcome.Updated))
 
           val result = pollingNewMessagesJob.execute.futureValue
 
           result mustBe ScheduledJob.Result.Completed
-          verify(messageService).updateMessages(eqTo("testErn"), eqTo(Some(now.minus(6, ChronoUnit.MINUTES))))(any)
+          verify(messageService).updateMessages(eqTo("testErn"), eqTo(Some(now.minus(6, ChronoUnit.MINUTES))), any)(any)
         }
       }
 
@@ -159,13 +160,14 @@ class PollingNewMessagesJobSpec
           when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
           when(ernRetrievalRepository.getLastRetrieved(any))
             .thenReturn(Future.successful(Some(now.minus(31, ChronoUnit.MINUTES))))
-          when(messageService.updateMessages(any, any)(any))
+          when(messageService.updateMessages(any, any, any)(any))
             .thenReturn(Future.successful(MessageService.UpdateOutcome.Updated))
 
           val result = pollingNewMessagesJob.execute.futureValue
 
           result mustBe ScheduledJob.Result.Completed
-          verify(messageService).updateMessages(eqTo("testErn"), eqTo(Some(now.minus(31, ChronoUnit.MINUTES))))(any)
+          verify(messageService)
+            .updateMessages(eqTo("testErn"), eqTo(Some(now.minus(31, ChronoUnit.MINUTES))), any)(any)
         }
       }
 
@@ -180,13 +182,13 @@ class PollingNewMessagesJobSpec
           when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
           when(ernRetrievalRepository.getLastRetrieved(any))
             .thenReturn(Future.successful(Some(now.minus(6, ChronoUnit.MINUTES))))
-          when(messageService.updateMessages(any, any)(any))
+          when(messageService.updateMessages(any, any, any)(any))
             .thenReturn(Future.successful(MessageService.UpdateOutcome.Updated))
 
           val result = pollingNewMessagesJob.execute.futureValue
 
           result mustBe ScheduledJob.Result.Completed
-          verify(messageService).updateMessages(eqTo("testErn"), eqTo(Some(now.minus(6, ChronoUnit.MINUTES))))(any)
+          verify(messageService).updateMessages(eqTo("testErn"), eqTo(Some(now.minus(6, ChronoUnit.MINUTES))), any)(any)
         }
       }
     }
@@ -203,13 +205,13 @@ class PollingNewMessagesJobSpec
         )
         when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
         when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
-        when(messageService.updateMessages(any, any)(any))
+        when(messageService.updateMessages(any, any, any)(any))
           .thenReturn(Future.successful(MessageService.UpdateOutcome.Updated))
 
         val result = pollingNewMessagesJob.execute.futureValue
 
         result mustBe ScheduledJob.Result.Cancelled
-        verify(messageService, never()).updateMessages(any, any)(any)
+        verify(messageService, never()).updateMessages(any, any, any)(any)
       }
 
       "when the last submission for the ern is outside of the fast polling cutoff" - {
@@ -223,13 +225,13 @@ class PollingNewMessagesJobSpec
           when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
           when(ernRetrievalRepository.getLastRetrieved(any))
             .thenReturn(Future.successful(Some(now.minus(30, ChronoUnit.MINUTES))))
-          when(messageService.updateMessages(any, any)(any))
+          when(messageService.updateMessages(any, any, any)(any))
             .thenReturn(Future.successful(MessageService.UpdateOutcome.Updated))
 
           val result = pollingNewMessagesJob.execute.futureValue
 
           result mustBe ScheduledJob.Result.Completed
-          verify(messageService, never).updateMessages(any, any)(any)
+          verify(messageService, never).updateMessages(any, any, any)(any)
         }
       }
 
@@ -244,13 +246,13 @@ class PollingNewMessagesJobSpec
           when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
           when(ernRetrievalRepository.getLastRetrieved(any))
             .thenReturn(Future.successful(Some(now.minus(5, ChronoUnit.MINUTES))))
-          when(messageService.updateMessages(any, any)(any))
+          when(messageService.updateMessages(any, any, any)(any))
             .thenReturn(Future.successful(MessageService.UpdateOutcome.Updated))
 
           val result = pollingNewMessagesJob.execute.futureValue
 
           result mustBe ScheduledJob.Result.Completed
-          verify(messageService, never).updateMessages(any, any)(any)
+          verify(messageService, never).updateMessages(any, any, any)(any)
         }
       }
 
@@ -265,13 +267,13 @@ class PollingNewMessagesJobSpec
           when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
           when(ernRetrievalRepository.getLastRetrieved(any))
             .thenReturn(Future.successful(Some(now.minus(30, ChronoUnit.MINUTES))))
-          when(messageService.updateMessages(any, any)(any))
+          when(messageService.updateMessages(any, any, any)(any))
             .thenReturn(Future.successful(MessageService.UpdateOutcome.Updated))
 
           val result = pollingNewMessagesJob.execute.futureValue
 
           result mustBe ScheduledJob.Result.Completed
-          verify(messageService, never).updateMessages(any, any)(any)
+          verify(messageService, never).updateMessages(any, any, any)(any)
         }
       }
 
@@ -286,13 +288,13 @@ class PollingNewMessagesJobSpec
           when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
           when(ernRetrievalRepository.getLastRetrieved(any))
             .thenReturn(Future.successful(Some(now.minus(5, ChronoUnit.MINUTES))))
-          when(messageService.updateMessages(any, any)(any))
+          when(messageService.updateMessages(any, any, any)(any))
             .thenReturn(Future.successful(MessageService.UpdateOutcome.Updated))
 
           val result = pollingNewMessagesJob.execute.futureValue
 
           result mustBe ScheduledJob.Result.Completed
-          verify(messageService, never).updateMessages(any, any)(any)
+          verify(messageService, never).updateMessages(any, any, any)(any)
         }
       }
     }

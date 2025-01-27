@@ -34,6 +34,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
 
 import java.time.Instant
+import java.util.UUID
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
@@ -81,7 +82,9 @@ class MessageService @Inject() (
       }
       .as(Done)
 
-  def updateMessages(ern: String, lastRetrieved: Option[Instant])(implicit hc: HeaderCarrier): Future[UpdateOutcome] = {
+  def updateMessages(ern: String, lastRetrieved: Option[Instant], jobId: Option[String] = None)(implicit
+    hc: HeaderCarrier
+  ): Future[UpdateOutcome] = {
     val lockService = LockService(mongoLockRepository, ern, throttleCutoff)
     lockService
       .withLock {
@@ -95,7 +98,7 @@ class MessageService @Inject() (
         }
         if (shouldProcessNewMessages(lastRetrieved, now)) {
           for {
-            _ <- processNewMessages(ern)
+            _ <- processNewMessages(ern, jobId)
             _ <- ernRetrievalRepository.setLastRetrieved(ern, now)
           } yield UpdateOutcome.Updated
         } else {
@@ -178,16 +181,17 @@ class MessageService @Inject() (
   private def getBoxIds(ern: String): Future[Set[String]] =
     boxIdRepository.getBoxIds(ern)
 
-  private def processNewMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] = {
+  private def processNewMessages(ern: String, jobId: Option[String])(implicit hc: HeaderCarrier): Future[Done] = {
     logger.info(s"[MessageService]: Processing new messages")
+    val batchId = UUID.randomUUID()
     for {
       response <- messageConnector.getNewMessages(ern)
       _        <- updateMovements(ern, response.messages)
-      _        <- acknowledgeAndContinue(response, ern)
+      _        <- acknowledgeAndContinue(response, ern, jobId)
     } yield Done
   }
 
-  private def acknowledgeAndContinue(response: GetMessagesResponse, ern: String)(implicit
+  private def acknowledgeAndContinue(response: GetMessagesResponse, ern: String, jobId: Option[String])(implicit
     hc: HeaderCarrier
   ): Future[Done] =
     if (response.messageCount == 0) {
@@ -195,7 +199,7 @@ class MessageService @Inject() (
     } else {
       messageConnector.acknowledgeMessages(ern).flatMap { _ =>
         if (response.messageCount > response.messages.size) {
-          processNewMessages(ern)
+          processNewMessages(ern, jobId)
         } else {
           Future.successful(Done)
         }
