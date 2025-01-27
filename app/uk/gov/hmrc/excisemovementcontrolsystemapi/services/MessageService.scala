@@ -186,7 +186,7 @@ class MessageService @Inject() (
     logger.info(s"[MessageService]: Processing new messages")
     val batchId     = UUID.randomUUID()
     val getMessages = messageConnector.getNewMessages(ern).onComplete {
-      case Success(value)     => ???
+      case Success(response)  => ???
       case Failure(exception) => ???
     }
 
