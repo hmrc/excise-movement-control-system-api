@@ -26,6 +26,7 @@ import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.{Duration, Instant}
 import java.time.temporal.ChronoUnit
+import java.util.UUID
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
@@ -50,6 +51,7 @@ class PollingNewMessagesJob @Inject() (
 
   override def execute(implicit ec: ExecutionContext): Future[ScheduledJob.Result] = {
     val deadline = dateTimeService.timestamp().plus(interval.toMillis, ChronoUnit.MILLIS)
+    val jobId    = UUID.randomUUID().toString
     getLastActivity
       .flatMap { lastActivityMap =>
         Random.shuffle(lastActivityMap.toSeq).traverse { case (ern, lastActivity) =>
@@ -57,7 +59,7 @@ class PollingNewMessagesJob @Inject() (
           if (now.isBefore(deadline)) {
             ernRetrievalRepository.getLastRetrieved(ern).flatMap { lastRetrieved =>
               if (shouldUpdateMessages(now, lastActivity, lastRetrieved)) {
-                messageService.updateMessages(ern, lastRetrieved).map { r =>
+                messageService.updateMessages(ern, lastRetrieved, Some(jobId)).map { r =>
                   r match {
                     case MessageService.UpdateOutcome.Updated             => updatedMeter.mark()
                     case MessageService.UpdateOutcome.NotUpdatedThrottled => throttledMeter.mark()
