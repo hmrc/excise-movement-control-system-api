@@ -196,8 +196,8 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
     jobId: Option[String]
   ): MessageProcessingSuccessAuditInfo = {
 
-    val messages = {
-      response.messages.map( thing =>
+    val messages =
+      response.messages.map(thing =>
         MessageProcessingMessageAuditInfo(
           thing.messageIdentifier,
           thing.correlationId,
@@ -207,7 +207,6 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
           thing.administrativeReferenceCode.head
         )
       )
-    }
 
     MessageProcessingSuccessAuditInfo(
       ern,
@@ -224,7 +223,7 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
     failureReason: String,
     batchId: String,
     jobId: Option[String]
-  ): MessageProcessingFailureAuditInfo = ???
+  ): MessageProcessingFailureAuditInfo = MessageProcessingFailureAuditInfo(ern, failureReason, batchId, jobId)
 
   private def convertErns(erns: Set[String]): NonEmptySeq[String] = NonEmptySeq(erns.head, erns.tail.toSeq)
 }

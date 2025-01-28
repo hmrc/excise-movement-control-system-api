@@ -133,17 +133,27 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
     }
 
   def messageProcessingSuccess(
-                                ern:String,
-                                response: GetMessagesResponse,
-                                batchId: String,
-                                jobId: Option[String]
-                              )(implicit hc: HeaderCarrier): Unit = {
-    val info = factory.createMessageProcessingSuccessAuditInfo(
-      ern, response, batchId, jobId
+    ern: String,
+    response: GetMessagesResponse,
+    batchId: String,
+    jobId: Option[String]
+  )(implicit hc: HeaderCarrier): Unit = {
+    val messageProcessingSuccessAuditInfo = factory.createMessageProcessingSuccessAuditInfo(
+      ern,
+      response,
+      batchId,
+      jobId
     )
-
-    auditConnector.sendExplicitAudit("MessageProcessing", info)
-
+    auditConnector.sendExplicitAudit("MessageProcessing", messageProcessingSuccessAuditInfo)
   }
 
+  def messageProcessingFailure(ern: String, failureReason: String, batchId: String, jobId: Option[String])(implicit
+    hc: HeaderCarrier
+  ): Unit = {
+    val messageProcessingFailureAuditInfo =
+      factory.createMessageProcessingFailureAuditInfo(ern, failureReason, batchId, jobId)
+
+    auditConnector.sendExplicitAudit("MessageProcessing", messageProcessingFailureAuditInfo)
+
+  }
 }
