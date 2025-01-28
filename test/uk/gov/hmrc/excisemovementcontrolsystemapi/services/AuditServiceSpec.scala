@@ -31,9 +31,9 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeXmlParsers
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, GetMessagesAuditInfo, GetMessagesRequestAuditInfo, GetMessagesResponseAuditInfo, GetMovementsAuditInfo, GetMovementsParametersAuditInfo, GetMovementsResponseAuditInfo, GetSpecificMessageAuditInfo, GetSpecificMessageRequestAuditInfo, GetSpecificMessageResponseAuditInfo, GetSpecificMovementAuditInfo, GetSpecificMovementRequestAuditInfo, MessageAuditInfo, MessageProcessingSuccessAuditInfo, MessageSubmittedDetails, UserDetails}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, GetMessagesAuditInfo, GetMessagesRequestAuditInfo, GetMessagesResponseAuditInfo, GetMovementsAuditInfo, GetMovementsParametersAuditInfo, GetMovementsResponseAuditInfo, GetSpecificMessageAuditInfo, GetSpecificMessageRequestAuditInfo, GetSpecificMessageResponseAuditInfo, GetSpecificMovementAuditInfo, GetSpecificMovementRequestAuditInfo, MessageAuditInfo, MessageProcessingFailureAuditInfo, MessageProcessingMessageAuditInfo, MessageProcessingSuccessAuditInfo, MessageSubmittedDetails, UserDetails}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, IE704Message, IE815Message}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, GetMessagesResponse, IE704Message, IE801Message, IE815Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.http.HeaderCarrier
@@ -339,25 +339,62 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
     }
   }
 
-//  "messageProcessingSuccess" should {
-//    "post a MessageProcessingSuccessAuditInfo event when called" in {
-//
-//      val expectedDetails = MessageProcessingSuccessAuditInfo(
-//
-//      )
-//
-//      service.messageProcessingSuccess()
-//
-//      verify(auditConnector, times(1))
-//        .sendExplicitAudit(eqTo("MessageProcessing"), eqTo(???))(any, any, any)
-//    }
-//  }
-//
-//  "messageProcessingFailure" should {
-//    "post a MessageProcessingFailureAuditInfo event when called" in {
-//      service.messageProcessingFailure(???)
-//      verify(auditConnector, times(1))
-//        .sendExplicitAudit(eqTo("MessageProcessing"), eqTo(???))(any, any, any)
-//    }
-//  }
+  "messageProcessingSuccess" should {
+    "post a MessageProcessingSuccessAuditInfo event when called" in {
+      val ern              = "testErn"
+      val messageAvailable = 10
+      val messageInBatch   = 1
+
+      val messageId            = "token"
+      val correlationId        = "PORTAL6de1b822562c43fb9220d236e487c920"
+      val messageTypeCode      = "IE801"
+      val messageType          = "MovementGenerated"
+      val localReferenceNumber = "token"
+      val arc                  = "tokentokentokentokent"
+
+      val messageProcessingMessageAuditInfo = MessageProcessingMessageAuditInfo(
+        messageId,
+        Some(correlationId),
+        messageTypeCode,
+        messageType,
+        Some(localReferenceNumber),
+        Some(arc)
+      )
+
+      val batchId = UUID.randomUUID().toString
+      val jobId   = UUID.randomUUID().toString
+
+      val messageProcessingSuccessAuditInfo = MessageProcessingSuccessAuditInfo(
+        ern,
+        messageAvailable,
+        messageInBatch,
+        Seq(messageProcessingMessageAuditInfo),
+        batchId,
+        Some(jobId)
+      )
+
+      val getMessagesResponse = GetMessagesResponse(Seq(IE801Message.createFromXml(IE801)), 10)
+      service.messageProcessingSuccess(ern, getMessagesResponse, batchId, Some(jobId))
+
+      verify(auditConnector, times(1))
+        .sendExplicitAudit(eqTo("MessageProcessing"), eqTo(messageProcessingSuccessAuditInfo))(any, any, any)
+    }
+  }
+
+  "messageProcessingFailure" should {
+    "post a MessageProcessingFailureAuditInfo event when called" in {
+      val ern           = "testErn"
+      val failureReason = "Failure reason"
+      val batchId       = UUID.randomUUID().toString
+      val jobId         = UUID.randomUUID().toString
+
+      val messageProcessingFailureAuditInfo =
+        MessageProcessingFailureAuditInfo(ern, failureReason, batchId, Some(jobId))
+
+      service.messageProcessingFailure(ern, failureReason, batchId, Some(jobId))
+
+      verify(auditConnector, times(1))
+        .sendExplicitAudit(eqTo("MessageProcessing"), eqTo(messageProcessingFailureAuditInfo))(any, any, any)
+    }
+  }
 }

@@ -1797,6 +1797,8 @@ class MessageServiceSpec
 
       }
     }
+
+    "WIP: Write a test when connector getMessages call fails" in ???
   }
 
   "update all messages" when {
