@@ -62,7 +62,7 @@ class NotificationsServiceSpec
 
   "subscribeErns" - {
 
-    "must add a relationship between the boxId for the given clientId and the given ERNs and update movements to add notifications for the relevant box id" in {
+    "must add a relationship between the boxId for the given clientId and the given ERNs" in {
 
       val clientId = "clientId"
       val boxId    = "testBox"
@@ -79,8 +79,6 @@ class NotificationsServiceSpec
       verify(pushNotificationService).getBoxId(eqTo(clientId), eqTo(None))(any)
       verify(boxIdRepository).save(ern1, boxId)
       verify(boxIdRepository).save(ern2, boxId)
-      verify(movementRepository).addBoxIdToMessages(ern1, boxId)
-      verify(movementRepository).addBoxIdToMessages(ern2, boxId)
     }
 
     "must fail with a NoBoxIdError when there is no box id for the client" in {
