@@ -1804,13 +1804,8 @@ class MessageServiceSpec
     "the call to getMessages fails" should {
       "return a GetMessagesException" in {
         val ern      = "testErn"
-        val movement = Movement(None, "LRN", "Consignor", None)
-        when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
-        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
         when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
         when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
-        when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
-        when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
 
         val exception = GetMessagesException("ern", new Throwable("exception"))
         when(messageConnector.getNewMessages(any)(any))
