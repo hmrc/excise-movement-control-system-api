@@ -55,7 +55,6 @@ class NotificationsService @Inject() (
       .traverse { ern =>
         for {
           _ <- boxIdRepository.save(ern, boxId)
-          _ <- movementRepository.addBoxIdToMessages(ern, boxId)
         } yield Done
       }
       .as(Done)
