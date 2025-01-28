@@ -317,8 +317,8 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
 
     val expectedResult                            = MessageProcessingSuccessAuditInfo(
       ern,
-      response.messages.length,
       response.messageCount,
+      response.messages.length,
       messageProcessingMessageAuditInfos,
       batchId,
       Some(jobId)
