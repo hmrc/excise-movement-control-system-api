@@ -23,7 +23,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
@@ -131,5 +131,19 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
       val event = factory.createGetSpecificMessageAuditInfo(movement, message, request)
       auditConnector.sendExplicitAudit("GetInformation", event)
     }
+
+  def messageProcessingSuccess(
+                                ern:String,
+                                response: GetMessagesResponse,
+                                batchId: String,
+                                jobId: Option[String]
+                              )(implicit hc: HeaderCarrier): Unit = {
+    val info = factory.createMessageProcessingSuccessAuditInfo(
+      ern, response, batchId, jobId
+    )
+
+    auditConnector.sendExplicitAudit("MessageProcessing", info)
+
+  }
 
 }
