@@ -42,7 +42,7 @@ trait IEMessage {
 
   def correlationId: Option[String]
 
-  //TODO: localReferenceNumber: Option[String], and tests first !
+  def localReferenceNumber: Option[String]
 }
 
 trait SubmitterTypeConverter {

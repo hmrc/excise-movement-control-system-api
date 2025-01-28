@@ -310,7 +310,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
         message.correlationId,
         "IE801",
         "MovementGenerated",
-        ???,
+        message.localReferenceNumber,
         message.administrativeReferenceCode.head
       )
     }

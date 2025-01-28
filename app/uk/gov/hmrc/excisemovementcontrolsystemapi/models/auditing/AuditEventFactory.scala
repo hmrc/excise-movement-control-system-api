@@ -77,7 +77,7 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
     MessageSubmittedDetails(
       request.ieMessage.messageType,
       request.ieMessage.messageAuditType.name,
-      movement.localReferenceNumber,
+      Some(movement.localReferenceNumber),
       movement.administrativeReferenceCode,
       Some(movement._id),
       movement.consignorId,

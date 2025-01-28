@@ -28,8 +28,8 @@ import scala.xml.NodeSeq
 case class IE815Message(obj: IE815Type, messageAuditType: MessageAuditType)
     extends IEMessage
     with GeneratedJsonWriters {
-  def localReferenceNumber: String =
-    obj.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber
+  def localReferenceNumber: Option[String] =
+    Some(obj.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber)
 
   def consignorId: String =
     obj.Body.SubmittedDraftOfEADESAD.ConsignorTrader.TraderExciseNumber

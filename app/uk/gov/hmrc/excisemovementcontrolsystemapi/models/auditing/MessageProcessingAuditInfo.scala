@@ -24,10 +24,8 @@ case class MessageProcessingMessageAuditInfo(
   correlationId: Option[String],
   messageTypeCode: String,
   messageType: String,
-  localReferenceNumber: String,
-  administrativeReferenceCode: String,
-  consignorId: String,
-  consigneeId: String
+  localReferenceNumber: Option[String],
+  administrativeReferenceCode: Option[String]
 )
 object MessageProcessingMessageAuditInfo {
   implicit val writes = Json.writes[MessageProcessingMessageAuditInfo]
