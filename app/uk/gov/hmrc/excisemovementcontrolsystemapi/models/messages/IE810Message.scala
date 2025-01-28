@@ -33,7 +33,6 @@ case class IE810Message(
   messageAuditType: MessageAuditType
 ) extends IEMessage
     with GeneratedJsonWriters {
-  def localReferenceNumber: Option[String] = None
 
   def consignorId: Option[String] = None
 
@@ -59,6 +58,8 @@ case class IE810Message(
     s"Message type: $messageType, message identifier: $messageIdentifier, ARC: $administrativeReferenceCode"
 
   override def correlationId: Option[String] = obj.Header.CorrelationIdentifier
+
+  def optionalLocalReferenceNumber: Option[String] = None
 }
 
 object IE810Message {

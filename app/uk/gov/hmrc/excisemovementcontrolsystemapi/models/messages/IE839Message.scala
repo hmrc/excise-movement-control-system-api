@@ -37,6 +37,8 @@ case class IE839Message(
   def localReferenceNumber: Option[String] =
     obj.Body.RefusalByCustoms.NEadSub.map(_.LocalReferenceNumber)
 
+  def optionalLocalReferenceNumber: Option[String] = localReferenceNumber
+
   override def consigneeId: Option[String] =
     obj.Body.RefusalByCustoms.ConsigneeTrader.Traderid
 

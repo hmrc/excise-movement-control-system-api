@@ -33,7 +33,7 @@ object UserDetails {
 case class MessageSubmittedDetails(
   messageTypeCode: String,
   messageType: String,
-  localReferenceNumber: Option[String],
+  localReferenceNumber: String,
   administrativeReferenceCode: Option[String],
   movementId: Option[String], //De option if not possible to be unknown
   consignorId: String,
@@ -52,7 +52,7 @@ object MessageSubmittedDetails extends CommonFormats {
     (
       (__ \ "messageTypeCode").write[String] and
         (__ \ "messageType").write[String] and
-        (__ \ "localReferenceNumber").write[Option[String]] and
+        (__ \ "localReferenceNumber").write[String] and
         (__ \ "administrativeReferenceCode").write[Option[String]] and
         (__ \ "movementId").write[Option[String]] and
         (__ \ "consignorId").write[String] and

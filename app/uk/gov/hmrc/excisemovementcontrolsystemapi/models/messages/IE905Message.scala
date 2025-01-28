@@ -56,7 +56,7 @@ case class IE905Message(
 
   override def correlationId: Option[String] = obj.Header.CorrelationIdentifier
 
-  override def localReferenceNumber: Option[String] = None
+  override def optionalLocalReferenceNumber: Option[String] = None
 }
 
 object IE905Message {
