@@ -24,7 +24,7 @@ case class MessageProcessingMessageAuditInfo(
   correlationId: Option[String],
   messageTypeCode: String,
   messageType: String,
-  localReferenceNumber: String,
+  localReferenceNumber: Option[String],
   administrativeReferenceCode: Option[String]
   //TODO: Confirm this with Kara in the morning
 //  consignorId: String,
