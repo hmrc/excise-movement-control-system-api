@@ -43,4 +43,6 @@ object UnsupportedTestMessage extends IEMessage {
 
   override def messageAuditType: MessageAuditType = Unsupported
   override def correlationId: Option[String]      = None
+
+  override def optionalLocalReferenceNumber: Option[String] = None
 }

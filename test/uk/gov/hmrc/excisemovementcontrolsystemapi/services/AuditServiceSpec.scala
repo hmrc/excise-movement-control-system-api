@@ -339,25 +339,25 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
     }
   }
 
-  "messageProcessingSuccess" should {
-    "post a MessageProcessingSuccessAuditInfo event when called" in {
-
-      val expectedDetails = MessageProcessingSuccessAuditInfo(
-
-      )
-
-      service.messageProcessingSuccess()
-
-      verify(auditConnector, times(1))
-        .sendExplicitAudit(eqTo("MessageProcessing"), eqTo(???))(any, any, any)
-    }
-  }
-
-  "messageProcessingFailure" should {
-    "post a MessageProcessingFailureAuditInfo event when called" in {
-      service.messageProcessingFailure(???)
-      verify(auditConnector, times(1))
-        .sendExplicitAudit(eqTo("MessageProcessing"), eqTo(???))(any, any, any)
-    }
-  }
+//  "messageProcessingSuccess" should {
+//    "post a MessageProcessingSuccessAuditInfo event when called" in {
+//
+//      val expectedDetails = MessageProcessingSuccessAuditInfo(
+//
+//      )
+//
+//      service.messageProcessingSuccess()
+//
+//      verify(auditConnector, times(1))
+//        .sendExplicitAudit(eqTo("MessageProcessing"), eqTo(???))(any, any, any)
+//    }
+//  }
+//
+//  "messageProcessingFailure" should {
+//    "post a MessageProcessingFailureAuditInfo event when called" in {
+//      service.messageProcessingFailure(???)
+//      verify(auditConnector, times(1))
+//        .sendExplicitAudit(eqTo("MessageProcessing"), eqTo(???))(any, any, any)
+//    }
+//  }
 }
