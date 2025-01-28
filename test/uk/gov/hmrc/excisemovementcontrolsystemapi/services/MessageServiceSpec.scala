@@ -29,6 +29,8 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector.GetMessagesException
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, TraderMovementConnector}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessageGeneratorFactory}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes._
@@ -173,7 +175,8 @@ class MessageServiceSpec
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
             when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
             when(messageConnector.getNewMessages(any)(any))
-              .thenReturn(Future.successful(GetMessagesResponse(Seq.empty, 0)))
+//              .thenReturn(Future.successful(GetMessagesResponse(Seq.empty, 0)))
+              .thenReturn(Future.failed(GetMessagesException("ern", new Throwable("exception"))))
 
             messageService.updateMessages(ern, None).futureValue
 
@@ -1798,7 +1801,27 @@ class MessageServiceSpec
       }
     }
 
-    "WIP: Write a test when connector getMessages call fails" in ???
+    "the call to getMessages fails" should {
+      "return a GetMessagesException" in {
+        val ern      = "testErn"
+        val movement = Movement(None, "LRN", "Consignor", None)
+        when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
+        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
+        when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
+        when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
+        when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+
+        val exception = GetMessagesException("ern", new Throwable("exception"))
+        when(messageConnector.getNewMessages(any)(any))
+          .thenReturn(Future.failed(exception))
+
+        the[GetMessagesException] thrownBy {
+          await(messageService.updateMessages(ern, None))
+        } must have message exception.getMessage
+
+      }
+    }
   }
 
   "update all messages" when {

@@ -185,10 +185,10 @@ class MessageService @Inject() (
   private def processNewMessages(ern: String, jobId: Option[String])(implicit hc: HeaderCarrier): Future[Done] = {
     logger.info(s"[MessageService]: Processing new messages")
     val batchId     = UUID.randomUUID()
-    val getMessages = messageConnector.getNewMessages(ern).onComplete {
-      case Success(response)  => ???
-      case Failure(exception) => ???
-    }
+//    val getMessages = messageConnector.getNewMessages(ern).onComplete {
+//      case Success(response)  => ???
+//      case Failure(exception) => ???
+//    }
 
     for {
       response <- messageConnector.getNewMessages(ern)
