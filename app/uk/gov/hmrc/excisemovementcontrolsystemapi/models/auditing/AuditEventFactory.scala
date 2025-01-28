@@ -194,7 +194,30 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
     response: GetMessagesResponse,
     batchId: String,
     jobId: Option[String]
-  ): MessageProcessingSuccessAuditInfo = ???
+  ): MessageProcessingSuccessAuditInfo = {
+
+    val messages = {
+      response.messages.map( thing =>
+        MessageProcessingMessageAuditInfo(
+          thing.messageIdentifier,
+          thing.correlationId,
+          thing.messageType,
+          thing.messageAuditType.name,
+          thing.optionalLocalReferenceNumber,
+          thing.administrativeReferenceCode.head
+        )
+      )
+    }
+
+    MessageProcessingSuccessAuditInfo(
+      ern,
+      response.messageCount,
+      response.messages.length,
+      messages,
+      batchId,
+      jobId
+    )
+  }
 
   def createMessageProcessingFailureAuditInfo(
     ern: String,
