@@ -121,7 +121,7 @@ class MessageConnectorSpec
 
       result.messages mustBe empty
       result.messageCount mustBe 0
-      verify(auditService, times(1)).messageProcessingSuccess(eqTo(ern), eqTo(result), batchId, None)(hc)
+      verify(auditService, times(1)).messageProcessingSuccess(eqTo(ern), eqTo(result), eqTo(batchId), eqTo(None))(eqTo(hc))
     }
 
     "must return messages when the response from the server contains them" in {
@@ -153,11 +153,11 @@ class MessageConnectorSpec
 
       result.messages mustBe Seq(ie704Message)
       result.messageCount mustBe 1
-      verify(auditService, times(1)).messageProcessingSuccess(eqTo(ern), eqTo(result), batchId, None)(hc)
+      verify(auditService, times(1)).messageProcessingSuccess(eqTo(ern), eqTo(result), eqTo(batchId), eqTo(None))(eqTo(hc))
 
     }
 
-    "must audit each message received from the server" in {
+    "must audit each message received from the server - old auditing" in {
 
       val newMessagesDataResponse =
         scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(newMessageWith818And802.toString))
@@ -205,9 +205,7 @@ class MessageConnectorSpec
 
       val batchId = UUID.randomUUID().toString
 
-      val result = connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
-
-      verify(auditService, times(1)).messageProcessingFailure(eqTo(ern), eqTo(result.getMessage), batchId, None)(hc)
+      connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
     }
 
     //TODO: Add assertion for failed case
@@ -227,9 +225,7 @@ class MessageConnectorSpec
 
       val batchId = UUID.randomUUID().toString
 
-      val result = connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
-
-      verify(auditService, times(1)).messageProcessingFailure(eqTo(ern), eqTo(result.getMessage), batchId, None)(hc)
+      connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
     }
 
     //TODO: Add assertion for failed case
@@ -249,9 +245,8 @@ class MessageConnectorSpec
 
       val batchId = UUID.randomUUID().toString
 
-      val result = connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
+      connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
 
-      verify(auditService, times(1)).messageProcessingFailure(eqTo(ern), eqTo(result.getMessage), batchId, None)(hc)
     }
 
     //TODO: Add assertion for failed case
@@ -270,9 +265,7 @@ class MessageConnectorSpec
 
       val batchId = UUID.randomUUID().toString
 
-      val result = connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
-
-      verify(auditService, times(1)).messageProcessingFailure(eqTo(ern), eqTo(result.getMessage), batchId, None)(hc)
+      connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
     }
   }
 

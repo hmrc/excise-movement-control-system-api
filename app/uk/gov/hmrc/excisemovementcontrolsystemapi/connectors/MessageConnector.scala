@@ -78,17 +78,14 @@ class MessageConnector @Inject() (
             response <- parseJson[EISConsumptionResponse](response.body)
             messages <- getMessages(response)
             count    <- countOfMessagesAvailable(response.message)
-            _         = ??? // call audit success
           } yield GetMessagesResponse(messages, count)
         }
         else {
           logger.warn(s"[MessageConnector]: Invalid status returned: ${response.status}")
           Future.failed(new RuntimeException("Invalid status returned"))
-          // Call audit failure
         }
       }
       .recoverWith { case NonFatal(e) =>
-        // Call audit failure
         Future.failed(GetMessagesException(ern, e))
       }
   }
