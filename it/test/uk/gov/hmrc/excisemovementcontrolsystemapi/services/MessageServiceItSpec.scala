@@ -121,7 +121,7 @@ class MessageServiceItSpec
       )
       when(mockCorrelationIdService.generateCorrelationId()).thenReturn(newId)
 
-      when(mockMessageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+      when(mockMessageConnector.getNewMessages(any, any, any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
 
       when(mockMessageConnector.acknowledgeMessages(any)(any)).thenReturn(
         Future.failed(new RuntimeException()),
@@ -141,7 +141,7 @@ class MessageServiceItSpec
       // For this test, it's important that these are two calls that retrieve messages
       // We don't want the second call being throttled, so this check is added to make sure we're
       // testing the right behaviour
-      verify(mockMessageConnector, times(2)).getNewMessages(any)(any)
+      verify(mockMessageConnector, times(2)).getNewMessages(any, any, any)(any)
     }
 
     "must only allow a single call at a time" in {
@@ -158,7 +158,7 @@ class MessageServiceItSpec
       when(mockDateTimeService.timestamp()).thenReturn(now)
       when(mockCorrelationIdService.generateCorrelationId()).thenReturn(newId)
 
-      when(mockMessageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+      when(mockMessageConnector.getNewMessages(any, any, any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
       when(mockMessageConnector.acknowledgeMessages(any)(any)).thenReturn(Future(promise.future).flatten)
 
       val future = service.updateMessages(ern, None)(hc)
@@ -168,7 +168,7 @@ class MessageServiceItSpec
       future.futureValue
       future2.futureValue
 
-      verify(mockMessageConnector, times(1)).getNewMessages(any)(any)
+      verify(mockMessageConnector, times(1)).getNewMessages(any, any, any)(any)
     }
 
     "must not cause throttled requests to increase the throttle timeout" in {
@@ -184,7 +184,7 @@ class MessageServiceItSpec
 
       when(mockCorrelationIdService.generateCorrelationId()).thenReturn(newId)
 
-      when(mockMessageConnector.getNewMessages(any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+      when(mockMessageConnector.getNewMessages(any, any, any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
       when(mockMessageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
 
       when(mockDateTimeService.timestamp()).thenReturn(now)
@@ -194,7 +194,7 @@ class MessageServiceItSpec
       when(mockDateTimeService.timestamp()).thenReturn(now.plus(timeout.plus(Duration.ofSeconds(1))))
       service.updateMessages(ern, ernRetrievalRepository.getLastRetrieved(ern).futureValue)(hc).futureValue
 
-      verify(mockMessageConnector, times(2)).getNewMessages(any)(any)
+      verify(mockMessageConnector, times(2)).getNewMessages(any, any, any)(any)
     }
 
     "must not try to create a movement which already exists" in {
@@ -231,7 +231,7 @@ class MessageServiceItSpec
 
       when(mockCorrelationIdService.generateCorrelationId()).thenAnswer(UUID.randomUUID().toString)
 
-      when(mockMessageConnector.getNewMessages(any)(any)).thenReturn(
+      when(mockMessageConnector.getNewMessages(any, any, any)(any)).thenReturn(
         Future.successful(GetMessagesResponse(Seq(messages(1)), 1))
       )
 
@@ -281,7 +281,7 @@ class MessageServiceItSpec
 
       when(mockCorrelationIdService.generateCorrelationId()).thenAnswer(UUID.randomUUID().toString)
 
-      when(mockMessageConnector.getNewMessages(any)(any)).thenReturn(
+      when(mockMessageConnector.getNewMessages(any, any, any)(any)).thenReturn(
         Future.successful(GetMessagesResponse(Seq(messages.head), 1))
       )
 
