@@ -19,6 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.http.Fault
 import generated.NewMessagesDataResponse
+import org.mockito.ArgumentMatchersSugar.eqTo
 import org.mockito.{Mockito, MockitoSugar}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
@@ -43,7 +44,7 @@ import uk.gov.hmrc.http.test.WireMockSupport
 import java.nio.charset.StandardCharsets
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDateTime, ZoneOffset}
-import java.util.Base64
+import java.util.{Base64, UUID}
 
 class MessageConnectorSpec
     extends AnyFreeSpec
@@ -115,10 +116,12 @@ class MessageConnectorSpec
           )
       )
 
-      val result = connector.getNewMessages(ern)(hc).futureValue
+      val batchId = UUID.randomUUID().toString
+      val result  = connector.getNewMessages(ern, batchId, None)(hc).futureValue
 
       result.messages mustBe empty
       result.messageCount mustBe 0
+      verify(auditService, times(1)).messageProcessingSuccess(eqTo(ern), eqTo(result), batchId, None)(hc)
     }
 
     "must return messages when the response from the server contains them" in {
@@ -145,10 +148,13 @@ class MessageConnectorSpec
           )
       )
 
-      val result = connector.getNewMessages(ern)(hc).futureValue
+      val batchId = UUID.randomUUID().toString
+      val result  = connector.getNewMessages(ern, batchId, None)(hc).futureValue
 
       result.messages mustBe Seq(ie704Message)
       result.messageCount mustBe 1
+      verify(auditService, times(1)).messageProcessingSuccess(eqTo(ern), eqTo(result), batchId, None)(hc)
+
     }
 
     "must audit each message received from the server" in {
@@ -176,12 +182,14 @@ class MessageConnectorSpec
           )
       )
 
-      connector.getNewMessages(ern)(hc).futureValue
+      val batchId = UUID.randomUUID().toString
+      connector.getNewMessages(ern, batchId, None)(hc).futureValue
 
       verify(auditService).auditMessage(ie818Message)(hc)
       verify(auditService).auditMessage(ie802Message)(hc)
     }
 
+    //TODO: Add assertion for failed case
     "must fail when the server responds with an unexpected status" in {
 
       when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
@@ -195,9 +203,14 @@ class MessageConnectorSpec
           )
       )
 
-      connector.getNewMessages(ern)(hc).failed.futureValue
+      val batchId = UUID.randomUUID().toString
+
+      val result = connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
+
+      verify(auditService, times(1)).messageProcessingFailure(eqTo(ern), eqTo(result.getMessage), batchId, None)(hc)
     }
 
+    //TODO: Add assertion for failed case
     "must fail when the server responds with a non-json body" in {
 
       when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
@@ -212,9 +225,14 @@ class MessageConnectorSpec
           )
       )
 
-      connector.getNewMessages(ern)(hc).failed.futureValue
+      val batchId = UUID.randomUUID().toString
+
+      val result = connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
+
+      verify(auditService, times(1)).messageProcessingFailure(eqTo(ern), eqTo(result.getMessage), batchId, None)(hc)
     }
 
+    //TODO: Add assertion for failed case
     "must fail when the server responds with an invalid json body" in {
 
       when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
@@ -229,9 +247,14 @@ class MessageConnectorSpec
           )
       )
 
-      connector.getNewMessages(ern)(hc).failed.futureValue
+      val batchId = UUID.randomUUID().toString
+
+      val result = connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
+
+      verify(auditService, times(1)).messageProcessingFailure(eqTo(ern), eqTo(result.getMessage), batchId, None)(hc)
     }
 
+    //TODO: Add assertion for failed case
     "must fail when the connection fails" in {
 
       when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
@@ -245,7 +268,11 @@ class MessageConnectorSpec
           )
       )
 
-      connector.getNewMessages(ern)(hc).failed.futureValue
+      val batchId = UUID.randomUUID().toString
+
+      val result = connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
+
+      verify(auditService, times(1)).messageProcessingFailure(eqTo(ern), eqTo(result.getMessage), batchId, None)(hc)
     }
   }
 
@@ -355,7 +382,7 @@ class MessageConnectorSpec
   "getMessageException" - {
     "getStackTrace should return underlying cause stacktrace" in {
       val input  = new Throwable("message")
-      val sut    = new GetMessagesException("ern", input)
+      val sut    = GetMessagesException("ern", input)
       val result = sut.getStackTrace
 
       result mustBe input.getStackTrace
