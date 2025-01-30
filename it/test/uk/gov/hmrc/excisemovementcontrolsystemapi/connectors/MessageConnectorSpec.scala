@@ -121,7 +121,9 @@ class MessageConnectorSpec
 
       result.messages mustBe empty
       result.messageCount mustBe 0
-      verify(auditService, times(1)).messageProcessingSuccess(eqTo(ern), eqTo(result), eqTo(batchId), eqTo(None))(eqTo(hc))
+      verify(auditService, times(1)).messageProcessingSuccess(eqTo(ern), eqTo(result), eqTo(batchId), eqTo(None))(
+        eqTo(hc)
+      )
     }
 
     "must return messages when the response from the server contains them" in {
@@ -153,7 +155,9 @@ class MessageConnectorSpec
 
       result.messages mustBe Seq(ie704Message)
       result.messageCount mustBe 1
-      verify(auditService, times(1)).messageProcessingSuccess(eqTo(ern), eqTo(result), eqTo(batchId), eqTo(None))(eqTo(hc))
+      verify(auditService, times(1)).messageProcessingSuccess(eqTo(ern), eqTo(result), eqTo(batchId), eqTo(None))(
+        eqTo(hc)
+      )
 
     }
 
@@ -189,7 +193,6 @@ class MessageConnectorSpec
       verify(auditService).auditMessage(ie802Message)(hc)
     }
 
-    //TODO: Add assertion for failed case
     "must fail when the server responds with an unexpected status" in {
 
       when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
@@ -205,10 +208,12 @@ class MessageConnectorSpec
 
       val batchId = UUID.randomUUID().toString
 
-      connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
+      val result = connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
+
+      result mustBe a[GetMessagesException]
+      result.getMessage mustBe s"Failed to get messages for ern: $ern, cause: Invalid status returned"
     }
 
-    //TODO: Add assertion for failed case
     "must fail when the server responds with a non-json body" in {
 
       when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
@@ -225,10 +230,12 @@ class MessageConnectorSpec
 
       val batchId = UUID.randomUUID().toString
 
-      connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
+      val result = connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
+
+      result mustBe a[GetMessagesException]
+      result.getMessage must include("Unrecognized token 'foobar")
     }
 
-    //TODO: Add assertion for failed case
     "must fail when the server responds with an invalid json body" in {
 
       when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
@@ -245,11 +252,13 @@ class MessageConnectorSpec
 
       val batchId = UUID.randomUUID().toString
 
-      connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
+      val result = connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
+
+      result mustBe a[GetMessagesException]
+      result.getMessage must include("JsResultException")
 
     }
 
-    //TODO: Add assertion for failed case
     "must fail when the connection fails" in {
 
       when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
@@ -265,7 +274,10 @@ class MessageConnectorSpec
 
       val batchId = UUID.randomUUID().toString
 
-      connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
+      val result = connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
+
+      result mustBe a[GetMessagesException]
+      result.getMessage must include("Remotely closed")
     }
   }
 
