@@ -78,7 +78,11 @@ class MessageConnector @Inject() (
             response <- parseJson[EISConsumptionResponse](response.body)
             messages <- getMessages(response)
             count    <- countOfMessagesAvailable(response.message)
-          } yield GetMessagesResponse(messages, count)
+          } yield {
+            val getMessagesResponse = GetMessagesResponse(messages, count)
+            auditService.messageProcessingSuccess(ern, getMessagesResponse, batchId, jobId)
+            getMessagesResponse
+          }
         }
         else {
           logger.warn(s"[MessageConnector]: Invalid status returned: ${response.status}")
@@ -86,6 +90,7 @@ class MessageConnector @Inject() (
         }
       }
       .recoverWith { case NonFatal(e) =>
+        auditService.messageProcessingFailure(ern = ern, failureReason = e.getMessage, batchId = batchId, jobId = jobId)
         Future.failed(GetMessagesException(ern, e))
       }
   }
@@ -131,7 +136,7 @@ class MessageConnector @Inject() (
     }
   }
 
-  def countOfMessagesAvailable(encodedMessage: String): Try[Int] = Try {
+  private def countOfMessagesAvailable(encodedMessage: String): Try[Int] = Try {
     val newMessage = scala.xml.XML.loadString(base64Decode(encodedMessage))
     (newMessage \ "CountOfMessagesAvailable").text.toInt
   }

@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.http.Fault
 import generated.NewMessagesDataResponse
-import org.mockito.ArgumentMatchersSugar.eqTo
+import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.{Mockito, MockitoSugar}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
@@ -121,9 +121,12 @@ class MessageConnectorSpec
 
       result.messages mustBe empty
       result.messageCount mustBe 0
-      verify(auditService, times(1)).messageProcessingSuccess(eqTo(ern), eqTo(result), eqTo(batchId), eqTo(None))(
-        eqTo(hc)
-      )
+
+      withClue("should call audit service with success audit") {
+        verify(auditService, times(1)).messageProcessingSuccess(eqTo(ern), eqTo(result), eqTo(batchId), eqTo(None))(
+          eqTo(hc)
+        )
+      }
     }
 
     "must return messages when the response from the server contains them" in {
@@ -155,9 +158,12 @@ class MessageConnectorSpec
 
       result.messages mustBe Seq(ie704Message)
       result.messageCount mustBe 1
-      verify(auditService, times(1)).messageProcessingSuccess(eqTo(ern), eqTo(result), eqTo(batchId), eqTo(None))(
-        eqTo(hc)
-      )
+
+      withClue("should call audit service with success audit") {
+        verify(auditService, times(1)).messageProcessingSuccess(eqTo(ern), eqTo(result), eqTo(batchId), eqTo(None))(
+          eqTo(hc)
+        )
+      }
 
     }
 
@@ -206,12 +212,20 @@ class MessageConnectorSpec
           )
       )
 
-      val batchId = UUID.randomUUID().toString
+      val batchId       = UUID.randomUUID().toString
+      val failureReason = "Invalid status returned"
 
       val result = connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
 
       result mustBe a[GetMessagesException]
-      result.getMessage mustBe s"Failed to get messages for ern: $ern, cause: Invalid status returned"
+      result.getMessage mustBe s"Failed to get messages for ern: $ern, cause: $failureReason"
+
+      withClue("should call audit service with failed audit") {
+        verify(auditService, times(1))
+          .messageProcessingFailure(eqTo(ern), eqTo(failureReason), eqTo(batchId), eqTo(None))(
+            eqTo(hc)
+          )
+      }
     }
 
     "must fail when the server responds with a non-json body" in {
@@ -234,6 +248,13 @@ class MessageConnectorSpec
 
       result mustBe a[GetMessagesException]
       result.getMessage must include("Unrecognized token 'foobar")
+
+      withClue("should call audit service with failed audit") {
+        verify(auditService, times(1))
+          .messageProcessingFailure(eqTo(ern), any, eqTo(batchId), eqTo(None))(
+            eqTo(hc)
+          )
+      }
     }
 
     "must fail when the server responds with an invalid json body" in {
@@ -257,6 +278,13 @@ class MessageConnectorSpec
       result mustBe a[GetMessagesException]
       result.getMessage must include("JsResultException")
 
+      withClue("should call audit service with failed audit") {
+        verify(auditService, times(1))
+          .messageProcessingFailure(eqTo(ern), any, eqTo(batchId), eqTo(None))(
+            eqTo(hc)
+          )
+      }
+
     }
 
     "must fail when the connection fails" in {
@@ -278,6 +306,13 @@ class MessageConnectorSpec
 
       result mustBe a[GetMessagesException]
       result.getMessage must include("Remotely closed")
+
+      withClue("should call audit service with failed audit") {
+        verify(auditService, times(1))
+          .messageProcessingFailure(eqTo(ern), any, eqTo(batchId), eqTo(None))(
+            eqTo(hc)
+          )
+      }
     }
   }
 
