@@ -175,8 +175,7 @@ class MessageServiceSpec
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
             when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
             when(messageConnector.getNewMessages(any, any, any)(any))
-//              .thenReturn(Future.successful(GetMessagesResponse(Seq.empty, 0)))
-              .thenReturn(Future.failed(GetMessagesException("ern", new Throwable("exception"))))
+              .thenReturn(Future.successful(GetMessagesResponse(Seq.empty, 0)))
 
             messageService.updateMessages(ern, None).futureValue
 
