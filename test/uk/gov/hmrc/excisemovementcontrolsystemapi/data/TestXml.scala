@@ -2095,9 +2095,6 @@ trait TestXml {
           <urn:AdministrativeReferenceCode>23XI00000000000056341</urn:AdministrativeReferenceCode>
           <urn:SequenceNumber>1</urn:SequenceNumber>
         </urn:CEadVal>
-        <urn:NEadSub>
-          <urn:LocalReferenceNumber>lrnie8155755329</urn:LocalReferenceNumber>
-        </urn:NEadSub>
       </urn:RefusalByCustoms>
     </urn:Body>
   </urn:IE839>

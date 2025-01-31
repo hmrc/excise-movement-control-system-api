@@ -276,7 +276,7 @@ class IEMessageSpec extends PlaySpec with TestXml {
 
     "always return Some(localReferenceNumber)" in {
       val result = IE801Message.createFromXml(IE801)
-      result.localReferenceNumber mustBe Some("token")
+      result.optionalLocalReferenceNumber mustBe Some("token")
     }
   }
 
