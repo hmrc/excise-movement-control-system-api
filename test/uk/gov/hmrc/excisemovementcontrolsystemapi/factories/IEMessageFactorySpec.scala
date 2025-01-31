@@ -294,6 +294,7 @@ class IEMessageFactorySpec extends PlaySpec with TestXml with BeforeAndAfterEach
       result.submitter mustBe Consignor
       result.consignorId mustBe Some("GBWK240176600")
       result.consigneeId mustBe None
+      result.optionalLocalReferenceNumber mustBe None
       result.administrativeReferenceCode mustBe Seq(Some("23GB00000000000377768"))
       result.messageIdentifier mustBe "GB100000000302708"
       result.messageType mustBe MessageTypes.IE871.value

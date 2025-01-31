@@ -428,7 +428,7 @@ class MessageService @Inject() (
                 Movement(
                   correlationIdService.generateCorrelationId(),
                   None,
-                  ie801.localReferenceNumber, // LRN is not actually optional for an IE801.
+                  ie801.localReferenceNumber,
                   ie801.consignorId,
                   ie801.consigneeId,
                   administrativeReferenceCode = ie801.administrativeReferenceCode.head,

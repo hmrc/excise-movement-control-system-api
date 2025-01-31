@@ -76,7 +76,7 @@ object MessageProcessingSuccessAuditInfo {
 
 case class MessageProcessingFailureAuditInfo(
   exciseRegistrationNumber: String,
- processingStatus: String = "Failure",
+  processingStatus: String = "Failure",
   failureReason: String,
   batchId: String,
   jobId: Option[String]

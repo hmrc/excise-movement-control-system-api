@@ -111,57 +111,6 @@ class MessageServiceSpec
 
   "updateMessages" when {
 
-    "auditing" should {
-      //TODO: Rename test when we know how method is called !
-      "emit a MessageProcessingSuccessAuditInfo event" when {
-        "no messages are received in the response" in {
-          val getMessagesResponse = GetMessagesResponse(Seq.empty, 0)
-
-          when(messageConnector.getNewMessages(any, any, any)(any)).thenReturn(Future.successful(getMessagesResponse))
-
-//          verify(auditService, times(1)).unknownMethod()
-        }
-        "messages are received and parsed successfully" in {
-          val consignorErn = "testErn"
-          val consigneeErn = "consigneeErn"
-          val arc          = "23XI00000000000000012"
-
-          val ie818               = XmlMessageGeneratorFactory.generate(
-            consignorErn,
-            MessageParams(
-              IE818,
-              "GB00002",
-              Some(consigneeErn),
-              Some(arc),
-              None
-            )
-          )
-          val ie801               = XmlMessageGeneratorFactory.generate(
-            consignorErn,
-            MessageParams(
-              IE801,
-              "GB00001",
-              Some(consigneeErn),
-              Some(arc),
-              Some("lrn1")
-            )
-          )
-          val messages            = Seq(IE801Message.createFromXml(ie801), IE818Message.createFromXml(ie818))
-          val getMessagesResponse = GetMessagesResponse(messages, messages.length)
-
-          when(messageConnector.getNewMessages(any, any, any)(any))
-            .thenReturn(Future.successful(getMessagesResponse))
-
-//          verify(auditService, times(1)).unknownMethod()
-
-        }
-      }
-      "emit a MessageProcessingFailureAuditInfo event" when {
-        "connector throws RuntimeException" in {}
-        "connector throws GetMessagesException" in {}
-      }
-    }
-
     "last retrieved is empty" when {
       "there is a movement but we have never retrieved anything" when {
         "we try to retrieve messages but there are none" should {
