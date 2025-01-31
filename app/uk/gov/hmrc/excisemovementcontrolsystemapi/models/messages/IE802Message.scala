@@ -56,6 +56,8 @@ case class IE802Message(
     s"Message type: $messageType, message identifier: $messageIdentifier, ARC: $administrativeReferenceCode"
 
   override def correlationId: Option[String] = obj.Header.CorrelationIdentifier
+
+  def optionalLocalReferenceNumber: Option[String] = None
 }
 
 //TODO: For all IE Messages - IE815 handles this differently - maybe we can standardise to that? (Potential ticket)

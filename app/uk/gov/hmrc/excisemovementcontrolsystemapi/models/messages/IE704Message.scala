@@ -61,6 +61,8 @@ case class IE704Message(
       messageLrn <- attribute.LocalReferenceNumber
     } yield messageLrn
 
+  def optionalLocalReferenceNumber: Option[String] = localReferenceNumber
+
   override def toString: String =
     s"Message type: $messageType, message identifier: $messageIdentifier, LRN: $localReferenceNumber, ARC: $administrativeReferenceCode"
 

@@ -294,4 +294,51 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
 
   }
 
+  "createMessageProcessingSuccessAuditInfo creates MessageProcessingSuccessAuditInfo object" in {
+
+    val ern              = "testErn"
+    val firstMessage801  = IE801Message.createFromXml(IE801)
+    val secondMessage801 = IE801Message.createFromXml(IE801)
+    val batchId          = UUID.randomUUID().toString
+    val jobId            = UUID.randomUUID().toString
+
+    val response = GetMessagesResponse(Seq(firstMessage801, secondMessage801), 12)
+
+    val messageProcessingMessageAuditInfos = response.messages.map { message =>
+      MessageProcessingMessageAuditInfo(
+        message.messageIdentifier,
+        message.correlationId,
+        "IE801",
+        "MovementGenerated",
+        message.optionalLocalReferenceNumber,
+        message.administrativeReferenceCode.head
+      )
+    }
+
+    val expectedResult                            = MessageProcessingSuccessAuditInfo(
+      ern,
+      response.messageCount,
+      response.messages.length,
+      messageProcessingMessageAuditInfos,
+      batchId,
+      Some(jobId)
+    )
+    val result: MessageProcessingSuccessAuditInfo =
+      service.createMessageProcessingSuccessAuditInfo(ern, response, batchId, Some(jobId))
+
+    result mustBe expectedResult
+  }
+  "createMessageProcessingFailureAuditInfo creates MessageProcessingFailureAuditInfo object" in {
+    val ern           = "testErn"
+    val batchId       = UUID.randomUUID().toString
+    val jobId         = UUID.randomUUID().toString
+    val failureReason = "Invalid status returned"
+
+    val expectedResult = MessageProcessingFailureAuditInfo(ern, failureReason, batchId, Some(jobId))
+
+    val result: MessageProcessingFailureAuditInfo =
+      service.createMessageProcessingFailureAuditInfo(ern, failureReason, batchId, Some(jobId))
+
+    result mustBe expectedResult
+  }
 }

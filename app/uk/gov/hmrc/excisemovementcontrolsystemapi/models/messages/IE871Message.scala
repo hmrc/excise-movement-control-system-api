@@ -34,10 +34,10 @@ case class IE871Message(
 ) extends IEMessage
     with SubmitterTypeConverter
     with GeneratedJsonWriters {
-  def submitter: ExciseTraderType          = convertSubmitterType(
+  def submitter: ExciseTraderType                  = convertSubmitterType(
     obj.Body.ExplanationOnReasonForShortage.AttributesValue.SubmitterType
   )
-  def localReferenceNumber: Option[String] = None
+  def optionalLocalReferenceNumber: Option[String] = None
 
   def consignorId: Option[String] = Some(
     obj.Body.ExplanationOnReasonForShortage.ConsignorTrader.map(_.TraderExciseNumber)

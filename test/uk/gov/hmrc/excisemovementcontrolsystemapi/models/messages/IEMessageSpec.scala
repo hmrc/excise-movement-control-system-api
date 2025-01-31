@@ -247,9 +247,19 @@ class IEMessageSpec extends PlaySpec with TestXml {
       result.correlationId mustBe Some(testCorrelationId)
 
     }
-    "return None when it's not populated" in {
+    "return None when correlationId is not populated" in {
       val result = IE704Message.createFromXml(IE704WithoutCorrelationId)
       result.correlationId mustBe None
+    }
+
+    "return Some(localReferenceNumber) when populated" in {
+      val result = IE704Message.createFromXml(IE704)
+      result.localReferenceNumber mustBe Some("lrnie8158976912")
+
+    }
+    "return None when it's not populated" in {
+      val result = IE704Message.createFromXml(IE704NoLocalReferenceNumber)
+      result.localReferenceNumber mustBe None
     }
   }
 
@@ -259,9 +269,14 @@ class IEMessageSpec extends PlaySpec with TestXml {
       result.correlationId mustBe Some(testCorrelationId)
 
     }
-    "return None when it's not populated" in {
+    "return None when correlationId is not populated" in {
       val result = IE801Message.createFromXml(IE801WithoutCorrelationId)
       result.correlationId mustBe None
+    }
+
+    "always return Some(localReferenceNumber)" in {
+      val result = IE801Message.createFromXml(IE801)
+      result.optionalLocalReferenceNumber mustBe Some("token")
     }
   }
 
@@ -271,9 +286,14 @@ class IEMessageSpec extends PlaySpec with TestXml {
       result.correlationId mustBe Some(testCorrelationId)
 
     }
-    "return None when it's not populated" in {
+    "return None when correlationId is not populated " in {
       val result = IE802Message.createFromXml(IE802WithoutCorrelationId)
       result.correlationId mustBe None
+    }
+
+    "always return None for optionalLocalReferenceNumber" in {
+      val result = IE802Message.createFromXml(IE802)
+      result.optionalLocalReferenceNumber mustBe None
     }
   }
 
@@ -283,9 +303,13 @@ class IEMessageSpec extends PlaySpec with TestXml {
       result.correlationId mustBe Some(testCorrelationId)
 
     }
-    "return None when it's not populated" in {
+    "return None when correlationId is not populated" in {
       val result = IE803Message.createFromXml(IE803WithoutCorrelationId)
       result.correlationId mustBe None
+    }
+    "always return None for optionalLocalReferenceNumber" in {
+      val result = IE803Message.createFromXml(IE803)
+      result.optionalLocalReferenceNumber mustBe None
     }
   }
 
@@ -295,9 +319,14 @@ class IEMessageSpec extends PlaySpec with TestXml {
       result.correlationId mustBe Some(testCorrelationId)
 
     }
-    "return None when it's not populated" in {
+    "return None when correlationId is not populated" in {
       val result = IE807Message.createFromXml(IE807WithoutCorrelationId)
       result.correlationId mustBe None
+    }
+
+    "always return None for optionalLocalReferenceNumber" in {
+      val result = IE807Message.createFromXml(IE807)
+      result.optionalLocalReferenceNumber mustBe None
     }
   }
 
@@ -307,9 +336,14 @@ class IEMessageSpec extends PlaySpec with TestXml {
       result.correlationId mustBe Some(testCorrelationId)
 
     }
-    "return None when it's not populated" in {
+    "return None when correlationId is not populated" in {
       val result = IE810Message.createFromXml(IE810WithoutCorrelationId)
       result.correlationId mustBe None
+    }
+
+    "always return None for optionalLocalReferenceNumber" in {
+      val result = IE810Message.createFromXml(IE810)
+      result.optionalLocalReferenceNumber mustBe None
     }
   }
 
@@ -319,9 +353,14 @@ class IEMessageSpec extends PlaySpec with TestXml {
       result.correlationId mustBe Some(testCorrelationId)
 
     }
-    "return None when it's not populated" in {
+    "return None when correlationId is not populated" in {
       val result = IE813Message.createFromXml(IE813WithoutCorrelationId)
       result.correlationId mustBe None
+    }
+
+    "always return None for optionalLocalReferenceNumber" in {
+      val result = IE813Message.createFromXml(IE813)
+      result.optionalLocalReferenceNumber mustBe None
     }
   }
 
@@ -331,9 +370,13 @@ class IEMessageSpec extends PlaySpec with TestXml {
       result.correlationId mustBe Some(testCorrelationId)
 
     }
-    "return None when it's not populated" in {
+    "return None when correlationId is not populated" in {
       val result = IE815Message.createFromXml(IE815WithoutCorrelationId)
       result.correlationId mustBe None
+    }
+    "always return Some(localReferenceNumber)" in {
+      val result = IE815Message.createFromXml(IE815)
+      result.optionalLocalReferenceNumber mustBe Some("LRNQA20230909022221")
     }
   }
 
@@ -343,9 +386,14 @@ class IEMessageSpec extends PlaySpec with TestXml {
       result.correlationId mustBe Some(testCorrelationId)
 
     }
-    "return None when it's not populated" in {
+    "return None when correlationId is not populated" in {
       val result = IE818Message.createFromXml(IE818WithoutCorrelationId)
       result.correlationId mustBe None
+    }
+
+    "always return None for optionalLocalReferenceNumber" in {
+      val result = IE818Message.createFromXml(IE818)
+      result.optionalLocalReferenceNumber mustBe None
     }
   }
 
@@ -355,9 +403,13 @@ class IEMessageSpec extends PlaySpec with TestXml {
       result.correlationId mustBe Some(testCorrelationId)
 
     }
-    "return None when it's not populated" in {
+    "return None when correlationId is not populated" in {
       val result = IE819Message.createFromXml(IE819WithoutCorrelationId)
       result.correlationId mustBe None
+    }
+    "always return None for optionalLocalReferenceNumber" in {
+      val result = IE819Message.createFromXml(IE819)
+      result.optionalLocalReferenceNumber mustBe None
     }
   }
 
@@ -367,9 +419,14 @@ class IEMessageSpec extends PlaySpec with TestXml {
       result.correlationId mustBe Some(testCorrelationId)
 
     }
-    "return None when it's not populated" in {
+    "return None when correlationId is not populated" in {
       val result = IE829Message.createFromXml(IE829WithoutCorrelationId)
       result.correlationId mustBe None
+    }
+
+    "always return None for optionalLocalReferenceNumber" in {
+      val result = IE829Message.createFromXml(IE829)
+      result.optionalLocalReferenceNumber mustBe None
     }
   }
 
@@ -379,9 +436,14 @@ class IEMessageSpec extends PlaySpec with TestXml {
       result.correlationId mustBe Some(testCorrelationId)
 
     }
-    "return None when it's not populated" in {
+    "return None when correlationId is not populated" in {
       val result = IE837Message.createFromXml(IE837WithoutCorrelationId)
       result.correlationId mustBe None
+    }
+
+    "always return None for optionalLocalReferenceNumber" in {
+      val result = IE837Message.createFromXml(IE837WithConsignor)
+      result.optionalLocalReferenceNumber mustBe None
     }
   }
 
@@ -391,9 +453,18 @@ class IEMessageSpec extends PlaySpec with TestXml {
       result.correlationId mustBe Some(testCorrelationId)
 
     }
-    "return None when it's not populated" in {
+    "return None when correlationId is not populated" in {
       val result = IE839Message.createFromXml(IE839WithoutCorrelationId)
       result.correlationId mustBe None
+    }
+
+    "return Some(localReferenceNumber) when populated" in {
+      val result = IE839Message.createFromXml(IE839)
+      result.optionalLocalReferenceNumber mustBe Some("lrnie8155755329")
+    }
+    "return None when it's not populated" in {
+      val result = IE839Message.createFromXml(IE839NoLocalReferenceNumber)
+      result.optionalLocalReferenceNumber mustBe None
     }
   }
 
@@ -403,9 +474,14 @@ class IEMessageSpec extends PlaySpec with TestXml {
       result.correlationId mustBe Some(testCorrelationId)
 
     }
-    "return None when it's not populated" in {
+    "return None when correlationId is not populated" in {
       val result = IE840Message.createFromXml(IE840WithoutCorrelationId)
       result.correlationId mustBe None
+    }
+
+    "always return None for optionalLocalReferenceNumber" in {
+      val result = IE840Message.createFromXml(IE840)
+      result.optionalLocalReferenceNumber mustBe None
     }
   }
 
@@ -415,9 +491,13 @@ class IEMessageSpec extends PlaySpec with TestXml {
       result.correlationId mustBe Some(testCorrelationId)
 
     }
-    "return None when it's not populated" in {
+    "return None when correlationId is not populated" in {
       val result = IE871Message.createFromXml(IE871WithoutCorrelationId)
       result.correlationId mustBe None
+    }
+    "always return None for optionalLocalReferenceNumber" in {
+      val result = IE871Message.createFromXml(IE871WithConsignor)
+      result.optionalLocalReferenceNumber mustBe None
     }
   }
 
@@ -427,9 +507,14 @@ class IEMessageSpec extends PlaySpec with TestXml {
       result.correlationId mustBe Some(testCorrelationId)
 
     }
-    "return None when it's not populated" in {
+    "return None when correlationId is not populated" in {
       val result = IE881Message.createFromXml(IE881WithoutCorrelationId)
       result.correlationId mustBe None
+    }
+
+    "always return None for optionalLocalReferenceNumber" in {
+      val result = IE881Message.createFromXml(IE881)
+      result.optionalLocalReferenceNumber mustBe None
     }
   }
 
@@ -439,9 +524,14 @@ class IEMessageSpec extends PlaySpec with TestXml {
       result.correlationId mustBe Some(testCorrelationId)
 
     }
-    "return None when it's not populated" in {
+    "return None when correlationId is not populated" in {
       val result = IE905Message.createFromXml(IE905WithoutCorrelationId)
       result.correlationId mustBe None
+    }
+
+    "always return None for optionalLocalReferenceNumber" in {
+      val result = IE905Message.createFromXml(IE905)
+      result.optionalLocalReferenceNumber mustBe None
     }
   }
 }

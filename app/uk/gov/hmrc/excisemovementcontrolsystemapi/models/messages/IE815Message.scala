@@ -31,6 +31,10 @@ case class IE815Message(obj: IE815Type, messageAuditType: MessageAuditType)
   def localReferenceNumber: String =
     obj.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber
 
+  def optionalLocalReferenceNumber: Option[String] = Some(
+    obj.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber
+  )
+
   def consignorId: String =
     obj.Body.SubmittedDraftOfEADESAD.ConsignorTrader.TraderExciseNumber
 

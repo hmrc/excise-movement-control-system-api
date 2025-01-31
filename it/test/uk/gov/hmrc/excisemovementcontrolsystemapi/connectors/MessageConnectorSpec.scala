@@ -19,6 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.http.Fault
 import generated.NewMessagesDataResponse
+import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.{Mockito, MockitoSugar}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
@@ -43,7 +44,7 @@ import uk.gov.hmrc.http.test.WireMockSupport
 import java.nio.charset.StandardCharsets
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDateTime, ZoneOffset}
-import java.util.Base64
+import java.util.{Base64, UUID}
 
 class MessageConnectorSpec
     extends AnyFreeSpec
@@ -115,10 +116,17 @@ class MessageConnectorSpec
           )
       )
 
-      val result = connector.getNewMessages(ern)(hc).futureValue
+      val batchId = UUID.randomUUID().toString
+      val result  = connector.getNewMessages(ern, batchId, None)(hc).futureValue
 
       result.messages mustBe empty
       result.messageCount mustBe 0
+
+      withClue("should call audit service with success audit") {
+        verify(auditService, times(1)).messageProcessingSuccess(eqTo(ern), eqTo(result), eqTo(batchId), eqTo(None))(
+          eqTo(hc)
+        )
+      }
     }
 
     "must return messages when the response from the server contains them" in {
@@ -145,13 +153,21 @@ class MessageConnectorSpec
           )
       )
 
-      val result = connector.getNewMessages(ern)(hc).futureValue
+      val batchId = UUID.randomUUID().toString
+      val result  = connector.getNewMessages(ern, batchId, None)(hc).futureValue
 
       result.messages mustBe Seq(ie704Message)
       result.messageCount mustBe 1
+
+      withClue("should call audit service with success audit") {
+        verify(auditService, times(1)).messageProcessingSuccess(eqTo(ern), eqTo(result), eqTo(batchId), eqTo(None))(
+          eqTo(hc)
+        )
+      }
+
     }
 
-    "must audit each message received from the server" in {
+    "must audit each message received from the server - old auditing" in {
 
       val newMessagesDataResponse =
         scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(newMessageWith818And802.toString))
@@ -176,7 +192,8 @@ class MessageConnectorSpec
           )
       )
 
-      connector.getNewMessages(ern)(hc).futureValue
+      val batchId = UUID.randomUUID().toString
+      connector.getNewMessages(ern, batchId, None)(hc).futureValue
 
       verify(auditService).auditMessage(ie818Message)(hc)
       verify(auditService).auditMessage(ie802Message)(hc)
@@ -195,7 +212,20 @@ class MessageConnectorSpec
           )
       )
 
-      connector.getNewMessages(ern)(hc).failed.futureValue
+      val batchId       = UUID.randomUUID().toString
+      val failureReason = "Invalid status returned"
+
+      val result = connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
+
+      result mustBe a[GetMessagesException]
+      result.getMessage mustBe s"Failed to get messages for ern: $ern, cause: $failureReason"
+
+      withClue("should call audit service with failed audit") {
+        verify(auditService, times(1))
+          .messageProcessingFailure(eqTo(ern), eqTo(failureReason), eqTo(batchId), eqTo(None))(
+            eqTo(hc)
+          )
+      }
     }
 
     "must fail when the server responds with a non-json body" in {
@@ -212,7 +242,19 @@ class MessageConnectorSpec
           )
       )
 
-      connector.getNewMessages(ern)(hc).failed.futureValue
+      val batchId = UUID.randomUUID().toString
+
+      val result = connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
+
+      result mustBe a[GetMessagesException]
+      result.getMessage must include("Unrecognized token 'foobar")
+
+      withClue("should call audit service with failed audit") {
+        verify(auditService, times(1))
+          .messageProcessingFailure(eqTo(ern), any, eqTo(batchId), eqTo(None))(
+            eqTo(hc)
+          )
+      }
     }
 
     "must fail when the server responds with an invalid json body" in {
@@ -229,7 +271,20 @@ class MessageConnectorSpec
           )
       )
 
-      connector.getNewMessages(ern)(hc).failed.futureValue
+      val batchId = UUID.randomUUID().toString
+
+      val result = connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
+
+      result mustBe a[GetMessagesException]
+      result.getMessage must include("JsResultException")
+
+      withClue("should call audit service with failed audit") {
+        verify(auditService, times(1))
+          .messageProcessingFailure(eqTo(ern), any, eqTo(batchId), eqTo(None))(
+            eqTo(hc)
+          )
+      }
+
     }
 
     "must fail when the connection fails" in {
@@ -245,7 +300,19 @@ class MessageConnectorSpec
           )
       )
 
-      connector.getNewMessages(ern)(hc).failed.futureValue
+      val batchId = UUID.randomUUID().toString
+
+      val result = connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
+
+      result mustBe a[GetMessagesException]
+      result.getMessage must include("Remotely closed")
+
+      withClue("should call audit service with failed audit") {
+        verify(auditService, times(1))
+          .messageProcessingFailure(eqTo(ern), any, eqTo(batchId), eqTo(None))(
+            eqTo(hc)
+          )
+      }
     }
   }
 
@@ -355,7 +422,7 @@ class MessageConnectorSpec
   "getMessageException" - {
     "getStackTrace should return underlying cause stacktrace" in {
       val input  = new Throwable("message")
-      val sut    = new GetMessagesException("ern", input)
+      val sut    = GetMessagesException("ern", input)
       val result = sut.getStackTrace
 
       result mustBe input.getStackTrace

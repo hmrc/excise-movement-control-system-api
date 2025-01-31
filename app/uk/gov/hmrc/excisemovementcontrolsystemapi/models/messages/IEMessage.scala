@@ -41,6 +41,8 @@ trait IEMessage {
   def messageAuditType: MessageAuditType
 
   def correlationId: Option[String]
+
+  def optionalLocalReferenceNumber: Option[String]
 }
 
 trait SubmitterTypeConverter {

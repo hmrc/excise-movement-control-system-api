@@ -183,9 +183,10 @@ class MessageService @Inject() (
 
   private def processNewMessages(ern: String, jobId: Option[String])(implicit hc: HeaderCarrier): Future[Done] = {
     logger.info(s"[MessageService]: Processing new messages")
-    val batchId = UUID.randomUUID()
+    val batchId = UUID.randomUUID().toString
+
     for {
-      response <- messageConnector.getNewMessages(ern)
+      response <- messageConnector.getNewMessages(ern, batchId, jobId)
       _        <- updateMovements(ern, response.messages)
       _        <- acknowledgeAndContinue(response, ern, jobId)
     } yield Done
