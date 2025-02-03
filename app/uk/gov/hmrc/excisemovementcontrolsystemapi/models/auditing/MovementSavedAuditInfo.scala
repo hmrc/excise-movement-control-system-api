@@ -63,17 +63,17 @@ object MovementSavedSuccessAuditInfo {
   implicit val write: OWrites[MovementSavedSuccessAuditInfo] =
     (
       (JsPath \ "saveStatus").write[String] and
-      (JsPath \ "messagesAdded").write[Int] and
-      (JsPath \ "totalMessages").write[Int] and
-      (JsPath \ "movementId").write[String] and
-      (JsPath \ "localReferenceNumber").write[Option[String]] and
-      (JsPath \ "administrativeReferenceCode").write[Option[String]] and
-      (JsPath \ "consignorId").write[String] and
-      (JsPath \ "consigneeId").write[String] and
-      (JsPath \ "batchId").write[String] and
-      (JsPath \ "jobId").write[Option[String]] and
-      (JsPath \ "keyMessageDetails").write[Seq[KeyMessageDetailsAuditInfo]] and
-      (JsPath \ "fullMessageDetails").write[Seq[Message]]
+        (JsPath \ "messagesAdded").write[Int] and
+        (JsPath \ "totalMessages").write[Int] and
+        (JsPath \ "movementId").write[String] and
+        (JsPath \ "localReferenceNumber").write[Option[String]] and
+        (JsPath \ "administrativeReferenceCode").write[Option[String]] and
+        (JsPath \ "consignorId").write[String] and
+        (JsPath \ "consigneeId").write[String] and
+        (JsPath \ "batchId").write[String] and
+        (JsPath \ "jobId").write[Option[String]] and
+        (JsPath \ "keyMessageDetails").write[Seq[KeyMessageDetailsAuditInfo]] and
+        (JsPath \ "fullMessageDetails").write[Seq[Message]]
     )(unlift(MovementSavedSuccessAuditInfo.unapply))
 }
 
@@ -123,4 +123,19 @@ object MovementSavedFailureAuditInfo {
       keyMessageDetails,
       fullMessageDetails
     )
+
+  implicit val write: OWrites[MovementSavedFailureAuditInfo] =
+    ((JsPath \ "saveStatus").write[String] and
+      (JsPath \ "failureReason").write[String] and
+      (JsPath \ "messagesToBeAdded").write[Int] and
+      (JsPath \ "totalMessages").write[Int] and
+      (JsPath \ "movementId").write[String] and
+      (JsPath \ "localReferenceNumber").write[Option[String]] and
+      (JsPath \ "administrativeReferenceCode").write[Option[String]] and
+      (JsPath \ "consignorId").write[String] and
+      (JsPath \ "consigneeId").write[String] and
+      (JsPath \ "batchId").write[String] and
+      (JsPath \ "jobId").write[Option[String]] and
+      (JsPath \ "keyMessageDetails").write[Seq[KeyMessageDetailsAuditInfo]] and
+      (JsPath \ "fullMessageDetails").write[Seq[Message]])(unlift(MovementSavedFailureAuditInfo.unapply))
 }

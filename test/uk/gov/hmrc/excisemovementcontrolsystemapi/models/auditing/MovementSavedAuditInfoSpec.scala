@@ -10,40 +10,38 @@ class MovementSavedAuditInfoSpec extends PlaySpec {
   "MovementSavedSuccessAuditInfo.writes" should {
     "serialise jobId as null when None is provided" in {
 
-      val batchId                           = UUID.randomUUID().toString
-//      messagesAdded: Int,
-//      totalMessages: Int,
-//      movementId: String,
-//      localReferenceNumber: Option[String],
-//      administrativeReferenceCode: Option[String],
-//      consignorId: String,
-//      consigneeId: String,
-//      batchId: String,
-//      jobId: Option[String],
-//      keyMessageDetails: Seq[KeyMessageDetailsAuditInfo],
-//      fullMessageDetails: Seq[IEMessage]
-      val messageProcessingSuccessAuditInfo =
+      val batchId                       = UUID.randomUUID().toString
+      val movementSavedSuccessAuditInfo =
         MovementSavedSuccessAuditInfo(
-          1, 1, "movementId", Some("lrn"), Some("arc"), "consignorId", "consigneeId", "batchId", None,
+          1,
+          1,
+          "movementId",
+          Some("lrn"),
+          Some("arc"),
+          "consignorId",
+          "consigneeId",
+          batchId,
+          None,
           Seq.empty,
           Seq.empty
         )
 
       val expectedResult = Json.obj(
-        "messagesAdded" -> 1,
-        "totalMessages" -> 1,
-        "movementId" -> "movementId",
-        "localReferenceNumber" -> "lrn",
+        "saveStatus"                  -> "Success",
+        "messagesAdded"               -> 1,
+        "totalMessages"               -> 1,
+        "movementId"                  -> "movementId",
+        "localReferenceNumber"        -> "lrn",
         "administrativeReferenceCode" -> "arc",
-        "consignorId" -> "consignorId",
-        "consigneeId" -> "consigneeId",
-        "batchId" -> "batchId",
-        "jobId" -> JsNull,
-        "keyMessageDetails" -> JsArray.empty,
-        "fullMessageDetails" -> JsArray.empty
+        "consignorId"                 -> "consignorId",
+        "consigneeId"                 -> "consigneeId",
+        "batchId"                     -> batchId,
+        "jobId"                       -> JsNull,
+        "keyMessageDetails"           -> JsArray.empty,
+        "fullMessageDetails"          -> JsArray.empty
       )
 
-      val output = Json.toJson(messageProcessingSuccessAuditInfo)
+      val output = Json.toJson(movementSavedSuccessAuditInfo)
 
       output mustBe expectedResult
       (output \ "jobId").get mustBe JsNull
@@ -51,6 +49,44 @@ class MovementSavedAuditInfoSpec extends PlaySpec {
   }
 
   "MovementSavedFailureAuditInfo.writes" should {
-    "serialise jobId as null when None is provided" in {}
+    "serialise jobId as null when None is provided" in {
+
+      val batchId = UUID.randomUUID().toString
+
+      val movementSavedFailureAuditInfo = MovementSavedFailureAuditInfo(
+        "Failure reason",
+        1,
+        1,
+        "movementId",
+        Some("lrn"),
+        Some("arc"),
+        "consignorId",
+        "consigneeId",
+        batchId,
+        None,
+        Seq.empty,
+        Seq.empty
+      )
+
+      val expectedResult = Json.obj(
+        "saveStatus"                  -> "Failure",
+        "failureReason"               -> "Failure reason",
+        "messagesToBeAdded"           -> 1,
+        "totalMessages"               -> 1,
+        "movementId"                  -> "movementId",
+        "localReferenceNumber"        -> "lrn",
+        "administrativeReferenceCode" -> "arc",
+        "consignorId"                 -> "consignorId",
+        "consigneeId"                 -> "consigneeId",
+        "batchId"                     -> batchId,
+        "jobId"                       -> JsNull,
+        "keyMessageDetails"           -> JsArray.empty,
+        "fullMessageDetails"          -> JsArray.empty
+      )
+
+      val output = Json.toJson(movementSavedFailureAuditInfo)
+      output mustBe expectedResult
+      (output \ "jobId").get mustBe JsNull
+    }
   }
 }
