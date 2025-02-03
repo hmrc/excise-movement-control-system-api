@@ -79,7 +79,7 @@ object MovementSavedSuccessAuditInfo {
 case class MovementSavedFailureAuditInfo(
   saveStatus: String = "Failure",
   failureReason: String,
-  messagesAdded: Int,
+  messagesToBeAdded: Int,
   totalMessages: Int, // number on the movement in total after saving.
   movementId: String,
   localReferenceNumber: Option[String],

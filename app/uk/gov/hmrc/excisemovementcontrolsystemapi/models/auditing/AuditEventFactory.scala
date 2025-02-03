@@ -226,13 +226,15 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
   ): MessageProcessingFailureAuditInfo = MessageProcessingFailureAuditInfo(ern, failureReason, batchId, jobId)
 
   def createMovementSavedSuccessAuditInfo(
+    messagesAdded: Int,
+    totalMessages: Int,
     movement: Movement,
     batchId: String,
     jobId: Option[String]
   ): MovementSavedSuccessAuditInfo =
     MovementSavedSuccessAuditInfo(
-      ???,
-      ???,
+      messagesAdded,
+      totalMessages,
       movement._id,
       Some(movement.localReferenceNumber),
       movement.administrativeReferenceCode,
@@ -245,15 +247,17 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
     )
 
   def createMovementSavedFailureAuditInfo(
+    messagesToBeAdded: Int,
+    totalMessages: Int,
     movement: Movement,
     failureReason: String,
     batchId: String,
     jobId: Option[String]
-  ): Unit =
+  ): MovementSavedFailureAuditInfo =
     MovementSavedFailureAuditInfo(
       failureReason,
-      ???,
-      ???,
+      messagesToBeAdded,
+      totalMessages,
       movement._id,
       Some(movement.localReferenceNumber),
       movement.administrativeReferenceCode,
