@@ -341,4 +341,66 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
 
     result mustBe expectedResult
   }
+
+  "createMovementSavedSuccessAuditInfo creates MovementSavedSuccessAuditInfo object" in {
+
+    val movementId = UUID.randomUUID().toString
+    val batchId    = UUID.randomUUID().toString
+    val encodedXml = emcsUtils.encode(IE801.toString)
+
+    val message =
+      Message(encodedXml, "IE801", UUID.randomUUID().toString, "recipient", Set.empty[String], Instant.now())
+
+    val movement       =
+      Movement(movementId, None, "lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now(), Seq(message))
+    val expectedResult = MovementSavedSuccessAuditInfo(
+      1,
+      1,
+      movementId,
+      Some("lrn"),
+      Some("arc"),
+      "consignorId",
+      Some("consigneeId"),
+      batchId,
+      None,
+      Seq.empty, // TODO: Fix
+      movement.messages
+    )
+
+    val result = service.createMovementSavedSuccessAuditInfo(movement, batchId, None)
+
+    result mustBe expectedResult
+  }
+
+  "createMovementSavedFailureAuditInfo creates MovementSavedFailureAuditInfo object" in {
+
+    val batchId       = UUID.randomUUID().toString
+    val movementId    = UUID.randomUUID().toString
+    val failureReason = "Failure reason"
+    val encodedXml    = emcsUtils.encode(IE801.toString)
+
+    val message =
+      Message(encodedXml, "IE801", UUID.randomUUID().toString, "recipient", Set.empty[String], Instant.now())
+
+    val movement =
+      Movement(movementId, None, "lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now(), Seq(message))
+
+    val expectedResult = MovementSavedFailureAuditInfo(
+      failureReason,
+      ???,
+      ???,
+      movementId,
+      Some("lrn"),
+      Some("arc"),
+      "consignorId",
+      Some("consigneeId"),
+      batchId,
+      None,
+      ???, // TODO: Fix
+      movement.messages
+    )
+    val result         = service.createMovementSavedFailureAuditInfo(movement, failureReason, batchId, None)
+
+    result mustBe expectedResult
+  }
 }

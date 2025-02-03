@@ -225,5 +225,58 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
     jobId: Option[String]
   ): MessageProcessingFailureAuditInfo = MessageProcessingFailureAuditInfo(ern, failureReason, batchId, jobId)
 
-  private def convertErns(erns: Set[String]): NonEmptySeq[String] = NonEmptySeq(erns.head, erns.tail.toSeq)
+  def createMovementSavedSuccessAuditInfo(
+    movement: Movement,
+    batchId: String,
+    jobId: Option[String]
+  ): MovementSavedSuccessAuditInfo =
+    MovementSavedSuccessAuditInfo(
+      ???,
+      ???,
+      movement._id,
+      Some(movement.localReferenceNumber),
+      movement.administrativeReferenceCode,
+      movement.consignorId,
+      movement.consigneeId,
+      batchId,
+      jobId,
+      generateKeyMessageDetailsAuditInfo(movement.messages),
+      movement.messages
+    )
+
+  def createMovementSavedFailureAuditInfo(
+    movement: Movement,
+    failureReason: String,
+    batchId: String,
+    jobId: Option[String]
+  ): Unit =
+    MovementSavedFailureAuditInfo(
+      failureReason,
+      ???,
+      ???,
+      movement._id,
+      Some(movement.localReferenceNumber),
+      movement.administrativeReferenceCode,
+      movement.consignorId,
+      movement.consigneeId,
+      batchId,
+      jobId,
+      generateKeyMessageDetailsAuditInfo(movement.messages),
+      movement.messages
+    )
+
+  private def generateKeyMessageDetailsAuditInfo(messages: Seq[Message]): Seq[KeyMessageDetailsAuditInfo] =
+    messages.map { message =>
+      val decodedXml         = emcsUtils.decode(message.encodedMessage)
+      val decodedXmlNodeList = xml.XML.loadString(decodedXml)
+      val ieMessage          = ieMessageFactory.createFromXml(message.messageType, decodedXmlNodeList)
+      val correlationId      = ieMessage.correlationId
+      KeyMessageDetailsAuditInfo(
+        message.messageId,
+        correlationId,
+        message.messageType,
+        ieMessage.messageAuditType.name
+      )
+    }
+  private def convertErns(erns: Set[String]): NonEmptySeq[String]                                         = NonEmptySeq(erns.head, erns.tail.toSeq)
 }

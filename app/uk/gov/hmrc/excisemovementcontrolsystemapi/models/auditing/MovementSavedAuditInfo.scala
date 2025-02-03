@@ -1,8 +1,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
 import play.api.libs.functional.syntax.{toFunctionalBuilderOps, unlift}
-import play.api.libs.json.{JsPath, Json, OWrites}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import play.api.libs.json._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 
 case class KeyMessageDetailsAuditInfo(
@@ -24,7 +23,7 @@ case class MovementSavedSuccessAuditInfo(
   localReferenceNumber: Option[String],
   administrativeReferenceCode: Option[String],
   consignorId: String,
-  consigneeId: String,
+  consigneeId: Option[String],
   batchId: String,
   jobId: Option[String],
   keyMessageDetails: Seq[KeyMessageDetailsAuditInfo],
@@ -39,7 +38,7 @@ object MovementSavedSuccessAuditInfo {
     localReferenceNumber: Option[String],
     administrativeReferenceCode: Option[String],
     consignorId: String,
-    consigneeId: String,
+    consigneeId: Option[String],
     batchId: String,
     jobId: Option[String],
     keyMessageDetails: Seq[KeyMessageDetailsAuditInfo],
@@ -69,7 +68,7 @@ object MovementSavedSuccessAuditInfo {
         (JsPath \ "localReferenceNumber").write[Option[String]] and
         (JsPath \ "administrativeReferenceCode").write[Option[String]] and
         (JsPath \ "consignorId").write[String] and
-        (JsPath \ "consigneeId").write[String] and
+        (JsPath \ "consigneeId").write[Option[String]] and
         (JsPath \ "batchId").write[String] and
         (JsPath \ "jobId").write[Option[String]] and
         (JsPath \ "keyMessageDetails").write[Seq[KeyMessageDetailsAuditInfo]] and
@@ -86,7 +85,7 @@ case class MovementSavedFailureAuditInfo(
   localReferenceNumber: Option[String],
   administrativeReferenceCode: Option[String],
   consignorId: String,
-  consigneeId: String,
+  consigneeId: Option[String],
   batchId: String,
   jobId: Option[String],
   keyMessageDetails: Seq[KeyMessageDetailsAuditInfo],
@@ -102,7 +101,7 @@ object MovementSavedFailureAuditInfo {
     localReferenceNumber: Option[String],
     administrativeReferenceCode: Option[String],
     consignorId: String,
-    consigneeId: String,
+    consigneeId: Option[String],
     batchId: String,
     jobId: Option[String],
     keyMessageDetails: Seq[KeyMessageDetailsAuditInfo],
@@ -133,7 +132,7 @@ object MovementSavedFailureAuditInfo {
       (JsPath \ "localReferenceNumber").write[Option[String]] and
       (JsPath \ "administrativeReferenceCode").write[Option[String]] and
       (JsPath \ "consignorId").write[String] and
-      (JsPath \ "consigneeId").write[String] and
+      (JsPath \ "consigneeId").write[Option[String]] and
       (JsPath \ "batchId").write[String] and
       (JsPath \ "jobId").write[Option[String]] and
       (JsPath \ "keyMessageDetails").write[Seq[KeyMessageDetailsAuditInfo]] and
