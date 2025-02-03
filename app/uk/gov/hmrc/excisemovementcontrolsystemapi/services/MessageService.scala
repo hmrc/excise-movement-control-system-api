@@ -234,6 +234,14 @@ class MessageService @Inject() (
             }
             .flatMap {
               _.traverse { movement =>
+
+                // get the ids of the messages in this movement
+                // get the messages from the original list that match
+                // turn those into the xml/json/obj (check with kara)
+                // is totalMessages the total on that movement? or ...?
+                // messages added - filter original list of messages by this movement id
+                // need to be sure that we never retrieve from EIS ny messages that have previously been retrieved.
+
                 messageCount.update(movement.messages.length)
                 totalMessageSize.update(movement.messages.map(_.encodedMessage.length).sum)
                 movementRepository.save(movement).recoverWith { case NonFatal(e) =>
