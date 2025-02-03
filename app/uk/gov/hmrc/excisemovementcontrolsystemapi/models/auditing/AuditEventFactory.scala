@@ -225,21 +225,79 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
     jobId: Option[String]
   ): MessageProcessingFailureAuditInfo = MessageProcessingFailureAuditInfo(ern, failureReason, batchId, jobId)
 
-  def createMessageAcknowledgedEvent(
-    ern: String,
+  def createMovementSavedSuccessAuditInfo(
+    messagesAdded: Int,
+    totalMessages: Int,
+    movement: Movement,
     batchId: String,
-    jobId: Option[String],
-    recordsAffected: Int
-  ): MessageAcknowledgedSuccessAuditInfo =
+    jobId: Option[String]
+  ): MovementSavedSuccessAuditInfo =
+    MovementSavedSuccessAuditInfo(
+      messagesAdded,
+      totalMessages,
+      movement._id,
+      Some(movement.localReferenceNumber),
+      movement.administrativeReferenceCode,
+      movement.consignorId,
+      movement.consigneeId,
+      batchId,
+      jobId,
+      generateKeyMessageDetailsAuditInfo(movement.messages),
+      movement.messages
+    )
+
+  def createMovementSavedFailureAuditInfo(
+    messagesToBeAdded: Int,
+    totalMessages: Int,
+    movement: Movement,
+    failureReason: String,
+    batchId: String,
+    jobId: Option[String]
+  ): MovementSavedFailureAuditInfo =
+    MovementSavedFailureAuditInfo(
+      failureReason,
+      messagesToBeAdded,
+      totalMessages,
+      movement._id,
+      Some(movement.localReferenceNumber),
+      movement.administrativeReferenceCode,
+      movement.consignorId,
+      movement.consigneeId,
+      batchId,
+      jobId,
+      generateKeyMessageDetailsAuditInfo(movement.messages),
+      movement.messages
+    )
+
+  private def generateKeyMessageDetailsAuditInfo(messages: Seq[Message]): Seq[KeyMessageDetailsAuditInfo] =
+    messages.map { message =>
+      val decodedXml         = emcsUtils.decode(message.encodedMessage)
+      val decodedXmlNodeList = xml.XML.loadString(decodedXml)
+      val ieMessage          = ieMessageFactory.createFromXml(message.messageType, decodedXmlNodeList)
+      val correlationId      = ieMessage.correlationId
+      KeyMessageDetailsAuditInfo(
+        message.messageId,
+        correlationId,
+        message.messageType,
+        ieMessage.messageAuditType.name
+      )
+    }
+
+  def createMessageAcknowledgedEvent(
+                                      ern: String,
+                                      batchId: String,
+                                      jobId: Option[String],
+                                      recordsAffected: Int
+                                    ): MessageAcknowledgedSuccessAuditInfo =
     MessageAcknowledgedSuccessAuditInfo(batchId, jobId, ern, recordsAffected)
 
   def createMessageNotAcknowledgedEvent(
-    ern: String,
-    batchId: String,
-    jobId: Option[String],
-    failureReason: String
-  ): MessageAcknowledgedFailureAuditInfo =
+                                         ern: String,
+                                         batchId: String,
+                                         jobId: Option[String],
+                                         failureReason: String
+                                       ): MessageAcknowledgedFailureAuditInfo =
     MessageAcknowledgedFailureAuditInfo(failureReason, batchId, jobId, ern)
 
-  private def convertErns(erns: Set[String]): NonEmptySeq[String] = NonEmptySeq(erns.head, erns.tail.toSeq)
+  private def convertErns(erns: Set[String]): NonEmptySeq[String]                                         = NonEmptySeq(erns.head, erns.tail.toSeq)
 }

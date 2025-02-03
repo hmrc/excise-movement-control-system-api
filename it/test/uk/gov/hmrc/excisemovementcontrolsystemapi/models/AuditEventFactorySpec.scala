@@ -60,7 +60,8 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
   "IE905Message" - TestType(IE905TestMessageType, IE905Message.createFromXml(IE905))
 
   val emcsUtils           = new EmcsUtils
-  val service             = new AuditEventFactory(emcsUtils, new IEMessageFactory)
+  val ieMessageFactory    = new IEMessageFactory
+  val service             = new AuditEventFactory(emcsUtils, ieMessageFactory)
   private val fakeRequest = FakeRequest("GET", "/foo")
 
   case class TestType(testObject: TestMessageType, message: IEMessage) {
@@ -348,13 +349,23 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
     val batchId    = UUID.randomUUID().toString
     val encodedXml = emcsUtils.encode(IE801.toString)
 
-    val message =
-      Message(encodedXml, "IE801", UUID.randomUUID().toString, "recipient", Set.empty[String], Instant.now())
+    val decodedXmlNodeList = xml.XML.loadString(IE801.toString)
+    val ieMessage          = ieMessageFactory.createFromXml("IE801", decodedXmlNodeList)
+    val correlationId      = ieMessage.correlationId
 
-    val movement       =
+    val messageId = UUID.randomUUID().toString
+
+    val message =
+      Message(encodedXml, "IE801", messageId, "recipient", Set.empty[String], Instant.now())
+
+    val movement =
       Movement(movementId, None, "lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now(), Seq(message))
+
+    val keyMessageDetails =
+      KeyMessageDetailsAuditInfo(messageId, correlationId, "IE801", ieMessage.messageAuditType.name)
+
     val expectedResult = MovementSavedSuccessAuditInfo(
-      1,
+      10,
       1,
       movementId,
       Some("lrn"),
@@ -363,11 +374,11 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       Some("consigneeId"),
       batchId,
       None,
-      Seq.empty, // TODO: Fix
+      Seq(keyMessageDetails),
       movement.messages
     )
 
-    val result = service.createMovementSavedSuccessAuditInfo(movement, batchId, None)
+    val result = service.createMovementSavedSuccessAuditInfo(10, 1, movement, batchId, None)
 
     result mustBe expectedResult
   }
@@ -379,16 +390,25 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
     val failureReason = "Failure reason"
     val encodedXml    = emcsUtils.encode(IE801.toString)
 
+    val decodedXmlNodeList = xml.XML.loadString(IE801.toString)
+    val ieMessage          = ieMessageFactory.createFromXml("IE801", decodedXmlNodeList)
+    val correlationId      = ieMessage.correlationId
+
+    val messageId = UUID.randomUUID().toString
+
     val message =
-      Message(encodedXml, "IE801", UUID.randomUUID().toString, "recipient", Set.empty[String], Instant.now())
+      Message(encodedXml, "IE801", messageId, "recipient", Set.empty[String], Instant.now())
 
     val movement =
       Movement(movementId, None, "lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now(), Seq(message))
 
+    val keyMessageDetails =
+      KeyMessageDetailsAuditInfo(messageId, correlationId, "IE801", ieMessage.messageAuditType.name)
+
     val expectedResult = MovementSavedFailureAuditInfo(
       failureReason,
-      ???,
-      ???,
+      10,
+      1,
       movementId,
       Some("lrn"),
       Some("arc"),
@@ -396,10 +416,10 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       Some("consigneeId"),
       batchId,
       None,
-      ???, // TODO: Fix
+      Seq(keyMessageDetails),
       movement.messages
     )
-    val result         = service.createMovementSavedFailureAuditInfo(movement, failureReason, batchId, None)
+    val result         = service.createMovementSavedFailureAuditInfo(10, 1, movement, failureReason, batchId, None)
 
     result mustBe expectedResult
   }
