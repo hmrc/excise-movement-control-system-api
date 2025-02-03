@@ -1,6 +1,9 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
+import play.api.libs.functional.syntax.{toFunctionalBuilderOps, unlift}
+import play.api.libs.json.{JsPath, Json, OWrites}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 
 case class KeyMessageDetailsAuditInfo(
   messageId: String,
@@ -8,6 +11,10 @@ case class KeyMessageDetailsAuditInfo(
   messageTypeCode: String,
   messageType: String
 ) {}
+
+object KeyMessageDetailsAuditInfo {
+  implicit val writes = Json.writes[KeyMessageDetailsAuditInfo]
+}
 
 case class MovementSavedSuccessAuditInfo(
   saveStatus: String = "Success",
@@ -21,7 +28,7 @@ case class MovementSavedSuccessAuditInfo(
   batchId: String,
   jobId: Option[String],
   keyMessageDetails: Seq[KeyMessageDetailsAuditInfo],
-  fullMessageDetails: Seq[IEMessage]
+  fullMessageDetails: Seq[Message]
 ) {}
 
 object MovementSavedSuccessAuditInfo {
@@ -36,7 +43,7 @@ object MovementSavedSuccessAuditInfo {
     batchId: String,
     jobId: Option[String],
     keyMessageDetails: Seq[KeyMessageDetailsAuditInfo],
-    fullMessageDetails: Seq[IEMessage]
+    fullMessageDetails: Seq[Message]
   ): MovementSavedSuccessAuditInfo =
     MovementSavedSuccessAuditInfo(
       "Success",
@@ -52,13 +59,29 @@ object MovementSavedSuccessAuditInfo {
       keyMessageDetails,
       fullMessageDetails
     )
+
+  implicit val write: OWrites[MovementSavedSuccessAuditInfo] =
+    (
+      (JsPath \ "saveStatus").write[String] and
+      (JsPath \ "messagesAdded").write[Int] and
+      (JsPath \ "totalMessages").write[Int] and
+      (JsPath \ "movementId").write[String] and
+      (JsPath \ "localReferenceNumber").write[Option[String]] and
+      (JsPath \ "administrativeReferenceCode").write[Option[String]] and
+      (JsPath \ "consignorId").write[String] and
+      (JsPath \ "consigneeId").write[String] and
+      (JsPath \ "batchId").write[String] and
+      (JsPath \ "jobId").write[Option[String]] and
+      (JsPath \ "keyMessageDetails").write[Seq[KeyMessageDetailsAuditInfo]] and
+      (JsPath \ "fullMessageDetails").write[Seq[Message]]
+    )(unlift(MovementSavedSuccessAuditInfo.unapply))
 }
 
 case class MovementSavedFailureAuditInfo(
-  saveStatus: String = "Success",
+  saveStatus: String = "Failure",
   failureReason: String,
   messagesAdded: Int,
-  totalMessages: Int,
+  totalMessages: Int, // number on the movement in total after saving.
   movementId: String,
   localReferenceNumber: Option[String],
   administrativeReferenceCode: Option[String],
@@ -67,14 +90,14 @@ case class MovementSavedFailureAuditInfo(
   batchId: String,
   jobId: Option[String],
   keyMessageDetails: Seq[KeyMessageDetailsAuditInfo],
-  fullMessageDetails: Seq[IEMessage]
+  fullMessageDetails: Seq[Message]
 ) {}
 
 object MovementSavedFailureAuditInfo {
   def apply(
     failureReason: String,
-    messagesAdded: Int,
-    totalMessages: Int,
+    messagesToBeAdded: Int, // messages that were *supposed* to be added?
+    totalMessages: Int, // messages that were+are on the mvt (i.e. not changed due to save failure)
     movementId: String,
     localReferenceNumber: Option[String],
     administrativeReferenceCode: Option[String],
@@ -83,12 +106,12 @@ object MovementSavedFailureAuditInfo {
     batchId: String,
     jobId: Option[String],
     keyMessageDetails: Seq[KeyMessageDetailsAuditInfo],
-    fullMessageDetails: Seq[IEMessage]
+    fullMessageDetails: Seq[Message]
   ): MovementSavedFailureAuditInfo =
     MovementSavedFailureAuditInfo(
       "Failure",
       failureReason,
-      messagesAdded,
+      messagesToBeAdded,
       totalMessages,
       movementId,
       localReferenceNumber,
