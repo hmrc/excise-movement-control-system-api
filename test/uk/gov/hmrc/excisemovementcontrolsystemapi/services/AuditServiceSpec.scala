@@ -31,7 +31,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeXmlParsers
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, GetMessagesAuditInfo, GetMessagesRequestAuditInfo, GetMessagesResponseAuditInfo, GetMovementsAuditInfo, GetMovementsParametersAuditInfo, GetMovementsResponseAuditInfo, GetSpecificMessageAuditInfo, GetSpecificMessageRequestAuditInfo, GetSpecificMessageResponseAuditInfo, GetSpecificMovementAuditInfo, GetSpecificMovementRequestAuditInfo, MessageAuditInfo, MessageProcessingFailureAuditInfo, MessageProcessingMessageAuditInfo, MessageProcessingSuccessAuditInfo, MessageSubmittedDetails, UserDetails}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, GetMessagesAuditInfo, GetMessagesRequestAuditInfo, GetMessagesResponseAuditInfo, GetMovementsAuditInfo, GetMovementsParametersAuditInfo, GetMovementsResponseAuditInfo, GetSpecificMessageAuditInfo, GetSpecificMessageRequestAuditInfo, GetSpecificMessageResponseAuditInfo, GetSpecificMovementAuditInfo, GetSpecificMovementRequestAuditInfo, MessageAuditInfo, MessageProcessingFailureAuditInfo, MessageProcessingMessageAuditInfo, MessageProcessingSuccessAuditInfo, MessageSubmittedDetails, MovementSavedSuccessAuditInfo, UserDetails}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, GetMessagesResponse, IE704Message, IE801Message, IE815Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
@@ -396,6 +396,24 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
 
       verify(auditConnector, times(1))
         .sendExplicitAudit(eqTo("MessageProcessing"), eqTo(messageProcessingFailureAuditInfo))(any, any, any)
+    }
+  }
+
+  "movementSavedSuccess" should {
+    "post a MovementSavedSuccessAuditInfo event when called" in {
+      service.movementSavedSuccess(messagesAdded, totalMessages, movement, batchId, jobId)
+
+      verify(auditConnector, times(1))
+        .sendExplicitAudit("MovementSaved", eqTo(movementSavedSuccessAuditInfo))
+    }
+  }
+
+  "movementSavedFailure" should {
+    "post a MovementSavedFailureAuditInfo event when called" in {
+      service.movementSavedFailure(messagesToBeAdded, totalMessages, movement, failureReason, batchId, jobId)
+
+      verify(auditConnector, times(1))
+        .sendExplicitAudit("MovementSaved", eqTo(movementSavedFailureAuditInfo))
     }
   }
 }
