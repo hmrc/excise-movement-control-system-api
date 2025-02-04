@@ -124,10 +124,10 @@ class MessageConnector @Inject() (
           Future.failed(new RuntimeException("Invalid status returned"))
         }
       }
-      .recover { case ex =>
+      .recoverWith { case ex =>
         logger.warn(s"[MessageConnector]: Unexpected error: ${ex.getMessage}")
         auditService.messageNotAcknowledged(ern, batchId, jobId, ex.getMessage)
-        throw ex
+        Future.failed(ex)
       }
   }
 
