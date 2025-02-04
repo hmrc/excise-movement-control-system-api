@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.Singleton
 import com.mongodb.MongoWriteException
+import org.apache.pekko.Done
 import org.mongodb.scala.MongoCommandException
 import play.api.Logging
 import play.api.libs.json.Json
@@ -69,6 +70,9 @@ class MovementService @Inject() (
           )
       }
 
+  def saveMovement(movement: Movement): Future[Done] =
+    movementRepository.saveMovement(movement)
+
   def getMovementById(id: String): Future[Option[Movement]] =
     movementRepository.getMovementById(id)
 
@@ -112,4 +116,5 @@ class MovementService @Inject() (
         )
       )
     )
+
 }

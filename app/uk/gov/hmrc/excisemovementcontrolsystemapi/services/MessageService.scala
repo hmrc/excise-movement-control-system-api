@@ -57,7 +57,8 @@ class MessageService @Inject() (
   auditService: AuditService,
   mongoLockRepository: MongoLockRepository,
   metricRegistry: MetricRegistry,
-  messageFactory: IEMessageFactory
+  messageFactory: IEMessageFactory,
+  movementService: MovementService
 )(implicit executionContext: ExecutionContext)
     extends Logging {
 
@@ -142,7 +143,7 @@ class MessageService @Inject() (
           logger.warn(
             s"Saving updated movement with id ${m._id} with messages (${messageCounts(m)}) as part of fix for ${movement._id}"
           )
-          movementRepository.saveMovement(m)
+          movementService.saveMovement(m)
         }
       }
       .map(_ => Done)
@@ -257,7 +258,7 @@ class MessageService @Inject() (
 
                 messageCount.update(movement.messages.length)
                 totalMessageSize.update(movement.messages.map(_.encodedMessage.length).sum)
-                movementRepository.saveMovement(movement).recoverWith { case NonFatal(e) =>
+                movementService.saveMovement(movement).recoverWith { case NonFatal(e) =>
                   createEnrichedError(e, ern, movements, movement)
                 }
               }
