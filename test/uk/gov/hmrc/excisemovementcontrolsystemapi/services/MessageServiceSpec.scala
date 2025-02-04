@@ -33,6 +33,7 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector.GetMessagesException
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, TraderMovementConnector}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessageGeneratorFactory}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptSuccessResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
@@ -131,7 +132,7 @@ class MessageServiceSpec
             verify(messageConnector).getNewMessages(eqTo(ern), any, any)(any)
             verify(movementRepository, never).getAllBy(any)
             verify(movementRepository, never).save(any)
-            verify(messageConnector, never).acknowledgeMessages(any)(any)
+            verify(messageConnector, never).acknowledgeMessages(any, any, any)(any)
             verify(ernRetrievalRepository).setLastRetrieved(ern, lastRetrievedTimestamp)
           }
         }
@@ -176,7 +177,7 @@ class MessageServiceSpec
             when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set("boxId1", "boxId2")))
             when(messageConnector.getNewMessages(any, any, any)(any))
               .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
-            when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+            when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
             messageService.updateMessages(ern, None).futureValue
 
@@ -184,7 +185,7 @@ class MessageServiceSpec
             verify(movementRepository).getAllBy(ern)
             verify(movementRepository, never).save(unexpectedMovement)
             verify(movementRepository).save(expectedMovement)
-            verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
+            verify(messageConnector).acknowledgeMessages(eqTo(ern), any, any)(any)
           }
 
           "add messages to only the movement when the message has no LRN" in {
@@ -269,7 +270,7 @@ class MessageServiceSpec
               .thenReturn(Future.successful(GetMessagesResponse(Seq(messages(1)), 1)))
             when(traderMovementConnector.getMovementMessages(any, any)(any))
               .thenReturn(Future.successful(Seq(messages.head)))
-            when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+            when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
             messageService.updateMessages(consignorErn, None).futureValue
 
@@ -278,7 +279,7 @@ class MessageServiceSpec
             verify(movementRepository).getByArc(arc)
             verify(movementRepository, never).save(unexpectedMovement)
             verify(movementRepository).save(expectedMovement)
-            verify(messageConnector).acknowledgeMessages(eqTo(consignorErn))(any)
+            verify(messageConnector).acknowledgeMessages(eqTo(consignorErn), any, any)(any)
           }
         }
       }
@@ -331,14 +332,14 @@ class MessageServiceSpec
             when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
             when(messageConnector.getNewMessages(any, any, any)(any))
               .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
-            when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+            when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
             messageService.updateMessages(ern, None).futureValue
 
             verify(messageConnector).getNewMessages(eqTo(ern), any, any)(any)
             verify(movementRepository).getAllBy(eqTo(ern))
             verify(movementRepository).save(eqTo(expectedMovement))
-            verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
+            verify(messageConnector).acknowledgeMessages(eqTo(ern), any, any)(any)
           }
         }
       }
@@ -393,7 +394,7 @@ class MessageServiceSpec
           when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
           when(messageConnector.getNewMessages(any, any, any)(any))
             .thenReturn(Future.successful(GetMessagesResponse(Seq(message), 1)))
-          when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+          when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
           messageService.updateMessages(ern, None).futureValue
 
@@ -403,7 +404,7 @@ class MessageServiceSpec
           verify(messageConnector).getNewMessages(eqTo(ern), any, any)(any)
           verify(movementRepository).getAllBy(eqTo(ern))
           verify(movementRepository, times(2)).save(movementCaptor)
-          verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
+          verify(messageConnector).acknowledgeMessages(eqTo(ern), any, any)(any)
 
           movementCaptor.values.head mustBe expectedMovement1
           movementCaptor.values(1) mustBe expectedMovement2
@@ -447,14 +448,14 @@ class MessageServiceSpec
             when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set("boxId")))
             when(messageConnector.getNewMessages(any, any, any)(any))
               .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
-            when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+            when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
             messageService.updateMessages(ern, None).futureValue
 
             verify(messageConnector).getNewMessages(eqTo(ern), any, any)(any)
             verify(movementRepository).getAllBy(eqTo(ern))
             verify(movementRepository).save(eqTo(expectedMovement))
-            verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
+            verify(messageConnector).acknowledgeMessages(eqTo(ern), any, any)(any)
           }
           "a new movement should be created from an IE801 message for the consignor" in {
             val consignor        = "testErn"
@@ -510,14 +511,14 @@ class MessageServiceSpec
             when(boxIdRepository.getBoxIds(consignee)).thenReturn(Future.successful(Set("boxId2")))
             when(messageConnector.getNewMessages(any, any, any)(any))
               .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
-            when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+            when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
             messageService.updateMessages(consignor, None).futureValue
 
             verify(messageConnector).getNewMessages(eqTo(consignor), any, any)(any)
             verify(movementRepository).getAllBy(eqTo(consignor))
             verify(movementRepository).save(eqTo(expectedMovement))
-            verify(messageConnector).acknowledgeMessages(eqTo(consignor))(any)
+            verify(messageConnector).acknowledgeMessages(eqTo(consignor), any, any)(any)
           }
           "a new movement should be created from an IE801 message for the consignee" in {
             val consignor        = "testErn"
@@ -573,14 +574,14 @@ class MessageServiceSpec
             when(boxIdRepository.getBoxIds(consignee)).thenReturn(Future.successful(Set("boxId2")))
             when(messageConnector.getNewMessages(any, any, any)(any))
               .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
-            when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+            when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
             messageService.updateMessages(consignee, None).futureValue
 
             verify(messageConnector).getNewMessages(eqTo(consignee), any, any)(any)
             verify(movementRepository).getAllBy(eqTo(consignee))
             verify(movementRepository).save(eqTo(expectedMovement))
-            verify(messageConnector).acknowledgeMessages(eqTo(consignee))(any)
+            verify(messageConnector).acknowledgeMessages(eqTo(consignee), any, any)(any)
           }
 
           "a new movement is created from trader-movement call IE801 message if message is not an IE801 or IE704" in {
@@ -655,7 +656,7 @@ class MessageServiceSpec
               .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
             when(traderMovementConnector.getMovementMessages(any, any)(any))
               .thenReturn(Future.successful(traderMovementMessages))
-            when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+            when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
             messageService.updateMessages(consignor, None).futureValue
 
@@ -663,7 +664,7 @@ class MessageServiceSpec
             verify(traderMovementConnector).getMovementMessages(eqTo(consignor), eqTo("23XI00000000000000012"))(any)
             verify(movementRepository).getAllBy(eqTo(consignor))
             verify(movementRepository).save(eqTo(expectedMovement))
-            verify(messageConnector).acknowledgeMessages(eqTo(consignor))(any)
+            verify(messageConnector).acknowledgeMessages(eqTo(consignor), any, any)(any)
           }
           "a message is audited with failure if its not an IE801 or IE704, and the trader movement messages don't include an IE801" in {
             val ern      = "testErn"
@@ -686,7 +687,7 @@ class MessageServiceSpec
               .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
             when(traderMovementConnector.getMovementMessages(any, any)(any))
               .thenReturn(Future.successful(messages))
-            when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+            when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
             messageService.updateMessages(ern, None).futureValue
 
@@ -719,7 +720,7 @@ class MessageServiceSpec
               .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
             when(traderMovementConnector.getMovementMessages(any, any)(any))
               .thenReturn(Future.successful(messages))
-            when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+            when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
             messageService.updateMessages(ern, None).futureValue
 
@@ -801,7 +802,7 @@ class MessageServiceSpec
             when(boxIdRepository.getBoxIds(consignee)).thenReturn(Future.successful(Set("boxId2")))
             when(messageConnector.getNewMessages(any, any, any)(any))
               .thenReturn(Future.successful(GetMessagesResponse(messages, 0)))
-            when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+            when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
             messageService.updateMessages(consignor, None).futureValue
 
@@ -909,7 +910,7 @@ class MessageServiceSpec
             Future.successful(GetMessagesResponse(Seq(secondMessage), 2)),
             Future.successful(GetMessagesResponse(Seq(thirdMessage), 1))
           )
-          when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+          when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
           messageService.updateMessages(consignor, None).futureValue
 
@@ -919,7 +920,7 @@ class MessageServiceSpec
           verify(messageConnector, times(3)).getNewMessages(eqTo(consignor), any, any)(any)
           verify(movementRepository, times(3)).getAllBy(eqTo(consignor))
           verify(movementRepository, times(3)).save(movementCaptor)
-          verify(messageConnector, times(3)).acknowledgeMessages(eqTo(consignor))(any)
+          verify(messageConnector, times(3)).acknowledgeMessages(eqTo(consignor), any, any)(any)
 
           movementCaptor.values.head mustEqual firstExpectedMovement
           movementCaptor.values(1) mustEqual secondExpectedMovement
@@ -1030,7 +1031,7 @@ class MessageServiceSpec
           when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
           when(messageConnector.getNewMessages(any, any, any)(any))
             .thenReturn(Future.successful(GetMessagesResponse(messages, 3)))
-          when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+          when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
           messageService.updateMessages(consignor, None).futureValue
 
@@ -1207,7 +1208,7 @@ class MessageServiceSpec
             when(boxIdRepository.getBoxIds(newConsignee)).thenReturn(Future.successful(Set("boxId2")))
             when(messageConnector.getNewMessages(any, any, any)(any))
               .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
-            when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+            when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
             messageService.updateMessages(consignor, None).futureValue
 
@@ -1274,7 +1275,7 @@ class MessageServiceSpec
         when(boxIdRepository.getBoxIds(newConsignee)).thenReturn(Future.successful(Set("boxId2")))
         when(messageConnector.getNewMessages(any, any, any)(any))
           .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
-        when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+        when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
         messageService.updateMessages(consignor, None).futureValue
 
@@ -1322,7 +1323,7 @@ class MessageServiceSpec
         when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
         when(messageConnector.getNewMessages(any, any, any)(any))
           .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
-        when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+        when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
         messageService.updateMessages(ern, None).futureValue
 
@@ -1375,7 +1376,7 @@ class MessageServiceSpec
         when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
         when(messageConnector.getNewMessages(any, any, any)(any))
           .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
-        when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+        when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
         messageService.updateMessages(consignor, None).futureValue
 
@@ -1422,7 +1423,7 @@ class MessageServiceSpec
         when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
         when(messageConnector.getNewMessages(any, any, any)(any))
           .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
-        when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+        when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
         messageService.updateMessages(ern, None).futureValue
 
@@ -1483,7 +1484,7 @@ class MessageServiceSpec
         when(boxIdRepository.getBoxIds(consignee)).thenReturn(Future.successful(Set("boxId2")))
         when(messageConnector.getNewMessages(any, any, any)(any))
           .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
-        when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+        when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
         messageService.updateMessages(consignor, None).futureValue
 
@@ -1548,7 +1549,7 @@ class MessageServiceSpec
           when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
           when(messageConnector.getNewMessages(any, any, any)(any))
             .thenReturn(Future.successful(GetMessagesResponse(messages, 2)))
-          when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+          when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
           messageService.updateMessages(consignor, None).futureValue
 
@@ -1594,7 +1595,7 @@ class MessageServiceSpec
           when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
           when(messageConnector.getNewMessages(any, any, any)(any))
             .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
-          when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+          when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
           messageService.updateMessages(ern, None).futureValue
 
@@ -1669,7 +1670,7 @@ class MessageServiceSpec
           when(boxIdRepository.getBoxIds(consignee)).thenReturn(Future.successful(Set("boxId2")))
           when(messageConnector.getNewMessages(any, any, any)(any))
             .thenReturn(Future.successful(GetMessagesResponse(Seq(messages(1)), 1)))
-          when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+          when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
           messageService.updateMessages(consignee, None).futureValue
 
@@ -1738,7 +1739,7 @@ class MessageServiceSpec
         when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
         when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
         when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
-        when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+        when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
         when(dateTimeService.timestamp()).thenReturn(now)
 
         // These are the mocks that specify the important bits for this test:
@@ -1819,7 +1820,7 @@ class MessageServiceSpec
           .thenReturn(Future.successful(GetMessagesResponse(ern1NewMessages, 1)))
         when(messageConnector.getNewMessages(eqTo("ern2"), any, any)(any))
           .thenReturn(Future.successful(GetMessagesResponse(ern2NewMessages, 1)))
-        when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+        when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
         messageService.updateAllMessages(Set("ern1", "ern2")).futureValue
 
@@ -1872,7 +1873,7 @@ class MessageServiceSpec
           .thenReturn(Future.failed(new RuntimeException("Error!")))
         when(messageConnector.getNewMessages(eqTo("ern2"), any, any)(any))
           .thenReturn(Future.successful(GetMessagesResponse(ern2NewMessages, 1)))
-        when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+        when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
         messageService.updateAllMessages(Set("ern1", "ern2")).futureValue
 
@@ -1926,7 +1927,7 @@ class MessageServiceSpec
         when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
         when(messageConnector.getNewMessages(eqTo("ern1"), any, any)(any))
           .thenReturn(Future.successful(GetMessagesResponse(ern1NewMessages, 1)))
-        when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+        when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
 
         messageService.updateMessages("ern1", None).futureValue
 
@@ -2036,7 +2037,7 @@ class MessageServiceSpec
         when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
         when(messageConnector.getNewMessages(eqTo("ern1"), any, any)(any))
           .thenReturn(Future.successful(GetMessagesResponse(ern1NewMessages, 1)))
-        when(messageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+        when(messageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
         when(correlationIdService.generateCorrelationId()).thenReturn(newId)
 
         messageService.updateMessages("ern1", None).futureValue

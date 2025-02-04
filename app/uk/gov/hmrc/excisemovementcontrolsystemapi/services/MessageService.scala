@@ -38,6 +38,7 @@ import java.util.UUID
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 import scala.util.control.NonFatal
 import scala.xml.XML
 
@@ -188,23 +189,30 @@ class MessageService @Inject() (
     for {
       response <- messageConnector.getNewMessages(ern, batchId, jobId)
       _        <- updateMovements(ern, response.messages)
-      _        <- acknowledgeAndContinue(response, ern, jobId)
+      _        <- acknowledgeAndContinue(response, ern, batchId, jobId)
     } yield Done
   }
 
-  private def acknowledgeAndContinue(response: GetMessagesResponse, ern: String, jobId: Option[String])(implicit
+  private def acknowledgeAndContinue(
+    response: GetMessagesResponse,
+    ern: String,
+    batchId: String,
+    jobId: Option[String]
+  )(implicit
     hc: HeaderCarrier
   ): Future[Done] =
     if (response.messageCount == 0) {
       Future.successful(Done)
     } else {
-      messageConnector.acknowledgeMessages(ern).flatMap { _ =>
-        if (response.messageCount > response.messages.size) {
-          processNewMessages(ern, jobId)
-        } else {
-          Future.successful(Done)
+      messageConnector
+        .acknowledgeMessages(ern, batchId, jobId)
+        .flatMap { _ =>
+          if (response.messageCount > response.messages.size) {
+            processNewMessages(ern, jobId)
+          } else {
+            Future.successful(Done)
+          }
         }
-      }
     }
 
   private def updateMovements(ern: String, messages: Seq[IEMessage])(implicit

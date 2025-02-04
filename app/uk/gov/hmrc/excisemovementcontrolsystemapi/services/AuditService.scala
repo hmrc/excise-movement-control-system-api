@@ -156,4 +156,19 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
     auditConnector.sendExplicitAudit("MessageProcessing", messageProcessingFailureAuditInfo)
 
   }
+  def messageAcknowledged(ern: String, batchId: String, jobId: Option[String], recordsAffected: Int)(implicit
+    hc: HeaderCarrier
+  ): Unit                             =
+    if (appConfig.newAuditingEnabled) {
+      val event = factory.createMessageAcknowledgedEvent(ern, batchId, jobId, recordsAffected)
+      auditConnector.sendExplicitAudit("MessageAcknowledged", event)
+    }
+
+  def messageNotAcknowledged(ern: String, batchId: String, jobId: Option[String], failureReason: String)(implicit
+    hc: HeaderCarrier
+  ): Unit =
+    if (appConfig.newAuditingEnabled) {
+      val event = factory.createMessageNotAcknowledgedEvent(ern, batchId, jobId, failureReason)
+      auditConnector.sendExplicitAudit("MessageAcknowledged", event)
+    }
 }
