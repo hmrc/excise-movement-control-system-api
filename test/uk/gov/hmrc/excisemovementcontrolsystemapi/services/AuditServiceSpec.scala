@@ -31,7 +31,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeXmlParsers
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, GetMessagesAuditInfo, GetMessagesRequestAuditInfo, GetMessagesResponseAuditInfo, GetMovementsAuditInfo, GetMovementsParametersAuditInfo, GetMovementsResponseAuditInfo, GetSpecificMessageAuditInfo, GetSpecificMessageRequestAuditInfo, GetSpecificMessageResponseAuditInfo, GetSpecificMovementAuditInfo, GetSpecificMovementRequestAuditInfo, MessageAuditInfo, MessageProcessingFailureAuditInfo, MessageProcessingMessageAuditInfo, MessageProcessingSuccessAuditInfo, MessageSubmittedDetails, MovementSavedSuccessAuditInfo, UserDetails}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, GetMessagesAuditInfo, GetMessagesRequestAuditInfo, GetMessagesResponseAuditInfo, GetMovementsAuditInfo, GetMovementsParametersAuditInfo, GetMovementsResponseAuditInfo, GetSpecificMessageAuditInfo, GetSpecificMessageRequestAuditInfo, GetSpecificMessageResponseAuditInfo, GetSpecificMovementAuditInfo, GetSpecificMovementRequestAuditInfo, KeyMessageDetailsAuditInfo, MessageAuditInfo, MessageProcessingFailureAuditInfo, MessageProcessingMessageAuditInfo, MessageProcessingSuccessAuditInfo, MessageSubmittedDetails, MovementSavedFailureAuditInfo, MovementSavedSuccessAuditInfo, UserDetails}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, GetMessagesResponse, IE704Message, IE801Message, IE815Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
@@ -52,6 +52,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
   val auditConnector: AuditConnector = mock[AuditConnector]
   val appConfig: AppConfig           = mock[AppConfig]
   val utils                          = new EmcsUtils
+  val ieMessageFactory               = new IEMessageFactory
   val factory: AuditEventFactory     = new AuditEventFactory(utils, new IEMessageFactory)
 
   val testMovement: Movement = Movement("id", None, "lrn", "consignorId", None, None, Instant.now, Seq.empty[Message])
@@ -399,21 +400,109 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
     }
   }
 
-//  "movementSavedSuccess" should {
-//    "post a MovementSavedSuccessAuditInfo event when called" in {
-//      service.movementSavedSuccess(messagesAdded, totalMessages, movement, batchId, jobId)
-//
-//      verify(auditConnector, times(1))
-//        .sendExplicitAudit("MovementSaved", eqTo(movementSavedSuccessAuditInfo))
-//    }
-//  }
-//
-//  "movementSavedFailure" should {
-//    "post a MovementSavedFailureAuditInfo event when called" in {
-//      service.movementSavedFailure(messagesToBeAdded, totalMessages, movement, failureReason, batchId, jobId)
-//
-//      verify(auditConnector, times(1))
-//        .sendExplicitAudit("MovementSaved", eqTo(movementSavedFailureAuditInfo))
-//    }
-//  }
+  "movementSavedSuccess" should {
+    "post a MovementSavedSuccessAuditInfo event when called" in {
+      val messagesAdded = 1
+      val totalMessages = 1
+      val batchId       = UUID.randomUUID().toString
+
+      val movementId         = UUID.randomUUID().toString
+      val encodedXml         = utils.encode(IE801.toString)
+      val decodedXmlNodeList = xml.XML.loadString(IE801.toString)
+      val messageId          = UUID.randomUUID().toString
+
+      val message =
+        Message(encodedXml, "IE801", messageId, "recipient", Set.empty[String], Instant.now())
+
+      val movement          =
+        Movement(movementId, None, "lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now(), Seq(message))
+      val ieMessage         = ieMessageFactory.createFromXml("IE801", decodedXmlNodeList)
+      val correlationId     = ieMessage.correlationId
+      val keyMessageDetails =
+        KeyMessageDetailsAuditInfo("token", correlationId, "IE801", ieMessage.messageAuditType.name)
+
+      val ieMessagesConverted = movement.messages.map { message =>
+        val decodedXml         = utils.decode(message.encodedMessage)
+        val decodedXmlNodeList = xml.XML.loadString(decodedXml)
+        val ieMessage          = ieMessageFactory.createFromXml(message.messageType, decodedXmlNodeList)
+        ieMessage
+      }
+
+      val movementSavedSuccessAuditInfo = MovementSavedSuccessAuditInfo(
+        messagesAdded,
+        totalMessages,
+        movementId,
+        Some(movement.localReferenceNumber),
+        movement.administrativeReferenceCode,
+        movement.consignorId,
+        movement.consigneeId,
+        batchId,
+        None,
+        Seq(keyMessageDetails),
+        ieMessagesConverted.map(_.toJson)
+      )
+      service.movementSavedSuccess(messagesAdded, totalMessages, movement, batchId, None)
+
+      verify(auditConnector, times(1))
+        .sendExplicitAudit(eqTo("MovementSaved"), eqTo(movementSavedSuccessAuditInfo))(any, any, any)
+    }
+  }
+  "movementSavedFailure" should {
+    "post a MovementSavedFailureAuditInfo event when called" in {
+      val messagesToBeAdded = 1
+      val totalMessages     = 1
+      val batchId           = UUID.randomUUID().toString
+
+      val movementId         = UUID.randomUUID().toString
+      val encodedXml         = utils.encode(IE801.toString)
+      val decodedXmlNodeList = xml.XML.loadString(IE801.toString)
+      val messageId          = UUID.randomUUID().toString
+      val failureReason      = "Failure reason"
+      val message            =
+        Message(encodedXml, "IE801", messageId, "recipient", Set.empty[String], Instant.now())
+
+      val movement =
+        Movement(
+          movementId,
+          None,
+          "lrn",
+          "consignorId",
+          Some("consigneeId"),
+          Some("arc"),
+          Instant.now(),
+          Seq(message)
+        )
+
+      val ieMessage     = ieMessageFactory.createFromXml("IE801", decodedXmlNodeList)
+      val correlationId = ieMessage.correlationId
+
+      val keyMessageDetails =
+        KeyMessageDetailsAuditInfo("token", correlationId, "IE801", ieMessage.messageAuditType.name)
+      service.movementSavedFailure(messagesToBeAdded, totalMessages, movement, failureReason, batchId, None)
+
+      val ieMessagesConverted = movement.messages.map { message =>
+        val decodedXml         = utils.decode(message.encodedMessage)
+        val decodedXmlNodeList = xml.XML.loadString(decodedXml)
+        val ieMessage          = ieMessageFactory.createFromXml(message.messageType, decodedXmlNodeList)
+        ieMessage
+      }
+
+      val movementSavedFailureAuditInfo = MovementSavedFailureAuditInfo(
+        failureReason,
+        messagesToBeAdded,
+        totalMessages,
+        movement._id,
+        Some(movement.localReferenceNumber),
+        movement.administrativeReferenceCode,
+        movement.consignorId,
+        movement.consigneeId,
+        batchId,
+        None,
+        Seq(keyMessageDetails),
+        ieMessagesConverted.map(_.toJson)
+      )
+      verify(auditConnector, times(1))
+        .sendExplicitAudit(eqTo("MovementSaved"), eqTo(movementSavedFailureAuditInfo))(any, any, any)
+    }
+  }
 }

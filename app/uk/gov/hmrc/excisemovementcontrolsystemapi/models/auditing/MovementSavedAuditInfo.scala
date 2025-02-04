@@ -43,7 +43,7 @@ case class MovementSavedSuccessAuditInfo(
   batchId: String,
   jobId: Option[String],
   keyMessageDetails: Seq[KeyMessageDetailsAuditInfo],
-  fullMessageDetails: Seq[Message]
+  fullMessageDetails: Seq[JsValue]
 ) {}
 
 object MovementSavedSuccessAuditInfo {
@@ -58,7 +58,7 @@ object MovementSavedSuccessAuditInfo {
     batchId: String,
     jobId: Option[String],
     keyMessageDetails: Seq[KeyMessageDetailsAuditInfo],
-    fullMessageDetails: Seq[Message]
+    fullMessageDetails: Seq[JsValue]
   ): MovementSavedSuccessAuditInfo =
     MovementSavedSuccessAuditInfo(
       "Success",
@@ -88,7 +88,7 @@ object MovementSavedSuccessAuditInfo {
         (JsPath \ "batchId").write[String] and
         (JsPath \ "jobId").write[Option[String]] and
         (JsPath \ "keyMessageDetails").write[Seq[KeyMessageDetailsAuditInfo]] and
-        (JsPath \ "fullMessageDetails").write[Seq[Message]]
+        (JsPath \ "fullMessageDetails").write[Seq[JsValue]]
     )(unlift(MovementSavedSuccessAuditInfo.unapply))
 }
 
@@ -105,7 +105,7 @@ case class MovementSavedFailureAuditInfo(
   batchId: String,
   jobId: Option[String],
   keyMessageDetails: Seq[KeyMessageDetailsAuditInfo],
-  fullMessageDetails: Seq[Message]
+  fullMessageDetails: Seq[JsValue]
 ) {}
 
 object MovementSavedFailureAuditInfo {
@@ -121,7 +121,7 @@ object MovementSavedFailureAuditInfo {
     batchId: String,
     jobId: Option[String],
     keyMessageDetails: Seq[KeyMessageDetailsAuditInfo],
-    fullMessageDetails: Seq[Message]
+    fullMessageDetails: Seq[JsValue]
   ): MovementSavedFailureAuditInfo =
     MovementSavedFailureAuditInfo(
       "Failure",
@@ -152,5 +152,5 @@ object MovementSavedFailureAuditInfo {
       (JsPath \ "batchId").write[String] and
       (JsPath \ "jobId").write[Option[String]] and
       (JsPath \ "keyMessageDetails").write[Seq[KeyMessageDetailsAuditInfo]] and
-      (JsPath \ "fullMessageDetails").write[Seq[Message]])(unlift(MovementSavedFailureAuditInfo.unapply))
+      (JsPath \ "fullMessageDetails").write[Seq[JsValue]])(unlift(MovementSavedFailureAuditInfo.unapply))
 }

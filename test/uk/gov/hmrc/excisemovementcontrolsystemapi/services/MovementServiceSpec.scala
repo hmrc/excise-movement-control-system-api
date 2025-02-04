@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 import com.mongodb.{MongoCommandException, MongoWriteException, WriteError}
 import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.any
-import org.mockito.MockitoSugar.{reset, when}
+import org.mockito.MockitoSugar.{reset, verify, when}
 import org.mongodb.scala.{MongoCommandException, ServerAddress}
 import org.mongodb.scala.bson.BsonDocument
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
