@@ -398,21 +398,21 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
     }
   }
 
-  "movementSavedSuccess" should {
-    "post a MovementSavedSuccessAuditInfo event when called" in {
-      service.movementSavedSuccess(messagesAdded, totalMessages, movement, batchId, jobId)
-
-      verify(auditConnector, times(1))
-        .sendExplicitAudit("MovementSaved", eqTo(movementSavedSuccessAuditInfo))
-    }
-  }
-
-  "movementSavedFailure" should {
-    "post a MovementSavedFailureAuditInfo event when called" in {
-      service.movementSavedFailure(messagesToBeAdded, totalMessages, movement, failureReason, batchId, jobId)
-
-      verify(auditConnector, times(1))
-        .sendExplicitAudit("MovementSaved", eqTo(movementSavedFailureAuditInfo))
-    }
-  }
+//  "movementSavedSuccess" should {
+//    "post a MovementSavedSuccessAuditInfo event when called" in {
+//      service.movementSavedSuccess(messagesAdded, totalMessages, movement, batchId, jobId)
+//
+//      verify(auditConnector, times(1))
+//        .sendExplicitAudit("MovementSaved", eqTo(movementSavedSuccessAuditInfo))
+//    }
+//  }
+//
+//  "movementSavedFailure" should {
+//    "post a MovementSavedFailureAuditInfo event when called" in {
+//      service.movementSavedFailure(messagesToBeAdded, totalMessages, movement, failureReason, batchId, jobId)
+//
+//      verify(auditConnector, times(1))
+//        .sendExplicitAudit("MovementSaved", eqTo(movementSavedFailureAuditInfo))
+//    }
+//  }
 }

@@ -118,7 +118,7 @@ class MessageServiceSpec
             val ern      = "testErn"
             val movement = Movement(None, "LRN", "Consignor", None)
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
-            when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+            when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -130,7 +130,7 @@ class MessageServiceSpec
 
             verify(messageConnector).getNewMessages(eqTo(ern), any, any)(any)
             verify(movementRepository, never).getAllBy(any)
-            verify(movementRepository, never).save(any)
+            verify(movementRepository, never).saveMovement(any)
             verify(messageConnector, never).acknowledgeMessages(any)(any)
             verify(ernRetrievalRepository).setLastRetrieved(ern, lastRetrievedTimestamp)
           }
@@ -169,7 +169,7 @@ class MessageServiceSpec
             val unexpectedMovement = notLrnMovement.copy(messages = expectedMessages)
 
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(lrnMovement, notLrnMovement)))
-            when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+            when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -182,8 +182,8 @@ class MessageServiceSpec
 
             verify(messageConnector).getNewMessages(eqTo(ern), any, any)(any)
             verify(movementRepository).getAllBy(ern)
-            verify(movementRepository, never).save(unexpectedMovement)
-            verify(movementRepository).save(expectedMovement)
+            verify(movementRepository, never).saveMovement(unexpectedMovement)
+            verify(movementRepository).saveMovement(expectedMovement)
             verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
           }
 
@@ -258,7 +258,7 @@ class MessageServiceSpec
             val unexpectedMovement = notArcMovement.copy(messages = expectedMessages)
 
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(arcMovement, notArcMovement)))
-            when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+            when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
             when(movementRepository.getByArc(any)).thenReturn(Future.successful(None))
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
@@ -276,8 +276,8 @@ class MessageServiceSpec
             verify(messageConnector).getNewMessages(eqTo(consignorErn), any, any)(any)
             verify(movementRepository).getAllBy(consignorErn)
             verify(movementRepository).getByArc(arc)
-            verify(movementRepository, never).save(unexpectedMovement)
-            verify(movementRepository).save(expectedMovement)
+            verify(movementRepository, never).saveMovement(unexpectedMovement)
+            verify(movementRepository).saveMovement(expectedMovement)
             verify(messageConnector).acknowledgeMessages(eqTo(consignorErn))(any)
           }
         }
@@ -324,7 +324,7 @@ class MessageServiceSpec
             val expectedMovement = movement.copy(messages = expectedMessages, lastUpdated = updateOrCreateTimestamp)
 
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
-            when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+            when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -337,7 +337,7 @@ class MessageServiceSpec
 
             verify(messageConnector).getNewMessages(eqTo(ern), any, any)(any)
             verify(movementRepository).getAllBy(eqTo(ern))
-            verify(movementRepository).save(eqTo(expectedMovement))
+            verify(movementRepository).saveMovement(eqTo(expectedMovement))
             verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
           }
         }
@@ -386,7 +386,7 @@ class MessageServiceSpec
 
           when(dateTimeService.timestamp()).thenReturn(lastRetrievedTimestamp)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement1, movement2)))
-          when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+          when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
           when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
           when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
           when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -402,7 +402,7 @@ class MessageServiceSpec
 //          verify(dateTimeService, times(1)).timestamp()
           verify(messageConnector).getNewMessages(eqTo(ern), any, any)(any)
           verify(movementRepository).getAllBy(eqTo(ern))
-          verify(movementRepository, times(2)).save(movementCaptor)
+          verify(movementRepository, times(2)).saveMovement(movementCaptor)
           verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
 
           movementCaptor.values.head mustBe expectedMovement1
@@ -440,7 +440,7 @@ class MessageServiceSpec
 
             when(correlationIdService.generateCorrelationId()).thenReturn(newId)
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
-            when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+            when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -453,7 +453,7 @@ class MessageServiceSpec
 
             verify(messageConnector).getNewMessages(eqTo(ern), any, any)(any)
             verify(movementRepository).getAllBy(eqTo(ern))
-            verify(movementRepository).save(eqTo(expectedMovement))
+            verify(movementRepository).saveMovement(eqTo(expectedMovement))
             verify(messageConnector).acknowledgeMessages(eqTo(ern))(any)
           }
           "a new movement should be created from an IE801 message for the consignor" in {
@@ -502,7 +502,7 @@ class MessageServiceSpec
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
             when(movementRepository.getByArc(any)).thenReturn(Future.successful(None))
             when(movementRepository.getMovementByLRNAndERNIn(any, any)).thenReturn(Future.successful(Seq.empty))
-            when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+            when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -516,7 +516,7 @@ class MessageServiceSpec
 
             verify(messageConnector).getNewMessages(eqTo(consignor), any, any)(any)
             verify(movementRepository).getAllBy(eqTo(consignor))
-            verify(movementRepository).save(eqTo(expectedMovement))
+            verify(movementRepository).saveMovement(eqTo(expectedMovement))
             verify(messageConnector).acknowledgeMessages(eqTo(consignor))(any)
           }
           "a new movement should be created from an IE801 message for the consignee" in {
@@ -565,7 +565,7 @@ class MessageServiceSpec
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
             when(movementRepository.getByArc(any)).thenReturn(Future.successful(None))
             when(movementRepository.getMovementByLRNAndERNIn(any, any)).thenReturn(Future.successful(Seq.empty))
-            when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+            when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -579,7 +579,7 @@ class MessageServiceSpec
 
             verify(messageConnector).getNewMessages(eqTo(consignee), any, any)(any)
             verify(movementRepository).getAllBy(eqTo(consignee))
-            verify(movementRepository).save(eqTo(expectedMovement))
+            verify(movementRepository).saveMovement(eqTo(expectedMovement))
             verify(messageConnector).acknowledgeMessages(eqTo(consignee))(any)
           }
 
@@ -645,7 +645,7 @@ class MessageServiceSpec
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
             when(movementRepository.getByArc(any)).thenReturn(Future.successful(None))
             when(movementRepository.getMovementByLRNAndERNIn(any, any)).thenReturn(Future.successful(Seq.empty))
-            when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+            when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -662,7 +662,7 @@ class MessageServiceSpec
             verify(messageConnector).getNewMessages(eqTo(consignor), any, any)(any)
             verify(traderMovementConnector).getMovementMessages(eqTo(consignor), eqTo("23XI00000000000000012"))(any)
             verify(movementRepository).getAllBy(eqTo(consignor))
-            verify(movementRepository).save(eqTo(expectedMovement))
+            verify(movementRepository).saveMovement(eqTo(expectedMovement))
             verify(messageConnector).acknowledgeMessages(eqTo(consignor))(any)
           }
           "a message is audited with failure if its not an IE801 or IE704, and the trader movement messages don't include an IE801" in {
@@ -677,7 +677,7 @@ class MessageServiceSpec
             when(auditService.auditMessage(any, any)(any)).thenReturn(EitherT.pure(()))
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
             when(movementRepository.getByArc(any)).thenReturn(Future.successful(None))
-            when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+            when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -710,7 +710,7 @@ class MessageServiceSpec
             when(auditService.auditMessage(any, any)(any)).thenReturn(EitherT.pure(()))
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
             when(movementRepository.getByArc(any)).thenReturn(Future.successful(None))
-            when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+            when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -793,7 +793,7 @@ class MessageServiceSpec
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
             when(movementRepository.getByArc(any)).thenReturn(Future.successful(None))
             when(movementRepository.getMovementByLRNAndERNIn(any, any)).thenReturn(Future.successful(Seq.empty))
-            when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+            when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -808,7 +808,7 @@ class MessageServiceSpec
             verify(dateTimeService, times(3)).timestamp()
             verify(messageConnector).getNewMessages(eqTo(consignor), any, any)(any)
             verify(movementRepository).getAllBy(eqTo(consignor))
-            verify(movementRepository).save(eqTo(expectedMovement))
+            verify(movementRepository).saveMovement(eqTo(expectedMovement))
           }
         }
       }
@@ -897,7 +897,7 @@ class MessageServiceSpec
             Future.successful(Seq(secondExpectedMovement))
           )
 
-          when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+          when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
 
           when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
           when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
@@ -918,7 +918,7 @@ class MessageServiceSpec
           verify(dateTimeService, times(4)).timestamp()
           verify(messageConnector, times(3)).getNewMessages(eqTo(consignor), any, any)(any)
           verify(movementRepository, times(3)).getAllBy(eqTo(consignor))
-          verify(movementRepository, times(3)).save(movementCaptor)
+          verify(movementRepository, times(3)).saveMovement(movementCaptor)
           verify(messageConnector, times(3)).acknowledgeMessages(eqTo(consignor))(any)
 
           movementCaptor.values.head mustEqual firstExpectedMovement
@@ -1023,7 +1023,7 @@ class MessageServiceSpec
           when(dateTimeService.timestamp())
             .thenReturn(lastRetrievedTimestamp, movement1Timestamp, movement2Timestamp, movement3Timestamp)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement1, movement2, movement3)))
-          when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+          when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
           when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
           when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
           when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -1035,9 +1035,9 @@ class MessageServiceSpec
           messageService.updateMessages(consignor, None).futureValue
 
           verify(dateTimeService, times(4)).timestamp()
-          verify(movementRepository).save(expectedMovement1)
-          verify(movementRepository).save(expectedMovement2)
-          verify(movementRepository).save(expectedMovement3)
+          verify(movementRepository).saveMovement(expectedMovement1)
+          verify(movementRepository).saveMovement(expectedMovement2)
+          verify(movementRepository).saveMovement(expectedMovement3)
         }
       }
     }
@@ -1046,7 +1046,7 @@ class MessageServiceSpec
         val ern      = "testErn"
         val movement = Movement(None, "LRN", "Consignor", None)
         when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
-        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
         when(movementRepository.migrateLastUpdated(any)).thenReturn(Future.successful(Done))
         when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
         when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
@@ -1066,7 +1066,7 @@ class MessageServiceSpec
         val ern      = "testErn"
         val movement = Movement(None, "LRN", "Consignor", None)
         when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
-        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
         when(movementRepository.migrateLastUpdated(any)).thenReturn(Future.successful(Done))
         when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
         when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
@@ -1086,7 +1086,7 @@ class MessageServiceSpec
           val ern      = "testErn"
           val movement = Movement(None, "LRN", "Consignor", None)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
-          when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+          when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
           when(movementRepository.migrateLastUpdated(any)).thenReturn(Future.successful(Done))
           when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
           when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
@@ -1108,7 +1108,7 @@ class MessageServiceSpec
           val movement = Movement(None, "LRN", "Consignor", None)
           when(movementRepository.migrateLastUpdated(any)).thenReturn(Future.successful(Done))
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
-          when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+          when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
           when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
           when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
           when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
@@ -1128,7 +1128,7 @@ class MessageServiceSpec
           val movement = Movement(None, "LRN", "Consignor", None)
           when(movementRepository.migrateLastUpdated(any)).thenReturn(Future.successful(Done))
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
-          when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+          when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
           when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
           when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
           when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -1199,7 +1199,7 @@ class MessageServiceSpec
             when(correlationIdService.generateCorrelationId()).thenReturn(newId)
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
             when(movementRepository.getByArc(any)).thenReturn(Future.successful(Some(movement)))
-            when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+            when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -1211,7 +1211,7 @@ class MessageServiceSpec
 
             messageService.updateMessages(consignor, None).futureValue
 
-            verify(movementRepository).save(expectedMovement)
+            verify(movementRepository).saveMovement(expectedMovement)
           }
         }
 
@@ -1266,7 +1266,7 @@ class MessageServiceSpec
 
         when(correlationIdService.generateCorrelationId()).thenReturn(newId)
         when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
-        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
         when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
         when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
         when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -1278,7 +1278,7 @@ class MessageServiceSpec
 
         messageService.updateMessages(consignor, None).futureValue
 
-        verify(movementRepository).save(expectedMovement)
+        verify(movementRepository).saveMovement(expectedMovement)
       }
 
       "we get an 813, it should change the consignee" in {
@@ -1315,7 +1315,7 @@ class MessageServiceSpec
 
         when(correlationIdService.generateCorrelationId()).thenReturn(newId)
         when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
-        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
         when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
         when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
         when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -1326,7 +1326,7 @@ class MessageServiceSpec
 
         messageService.updateMessages(ern, None).futureValue
 
-        verify(movementRepository).save(expectedMovement)
+        verify(movementRepository).saveMovement(expectedMovement)
       }
     }
 
@@ -1368,7 +1368,7 @@ class MessageServiceSpec
 
         when(correlationIdService.generateCorrelationId()).thenReturn(newId)
         when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
-        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
         when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
         when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
         when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -1379,7 +1379,7 @@ class MessageServiceSpec
 
         messageService.updateMessages(consignor, None).futureValue
 
-        verify(movementRepository).save(expectedMovement)
+        verify(movementRepository).saveMovement(expectedMovement)
       }
 
       "we get an 813, it should set the consignee" in {
@@ -1415,7 +1415,7 @@ class MessageServiceSpec
 
         when(correlationIdService.generateCorrelationId()).thenReturn(newId)
         when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
-        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
         when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
         when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
         when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -1426,7 +1426,7 @@ class MessageServiceSpec
 
         messageService.updateMessages(ern, None).futureValue
 
-        verify(movementRepository).save(expectedMovement)
+        verify(movementRepository).saveMovement(expectedMovement)
       }
     }
 
@@ -1475,7 +1475,7 @@ class MessageServiceSpec
 
         when(correlationIdService.generateCorrelationId()).thenReturn(newId)
         when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
-        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
         when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
         when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
         when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -1487,7 +1487,7 @@ class MessageServiceSpec
 
         messageService.updateMessages(consignor, None).futureValue
 
-        verify(movementRepository).save(expectedMovement)
+        verify(movementRepository).saveMovement(expectedMovement)
       }
     }
 
@@ -1541,7 +1541,7 @@ class MessageServiceSpec
 
           when(correlationIdService.generateCorrelationId()).thenReturn(newId)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
-          when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+          when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
           when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
           when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
           when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -1552,7 +1552,7 @@ class MessageServiceSpec
 
           messageService.updateMessages(consignor, None).futureValue
 
-          verify(movementRepository).save(expectedMovement)
+          verify(movementRepository).saveMovement(expectedMovement)
         }
       }
     }
@@ -1587,7 +1587,7 @@ class MessageServiceSpec
 
           when(correlationIdService.generateCorrelationId()).thenReturn(newId)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
-          when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+          when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
           when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
           when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
           when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -1598,7 +1598,7 @@ class MessageServiceSpec
 
           messageService.updateMessages(ern, None).futureValue
 
-          verify(movementRepository).save(movement)
+          verify(movementRepository).saveMovement(movement)
         }
 
         "the duplicate message is added to the movement if recipient is different" in {
@@ -1661,7 +1661,7 @@ class MessageServiceSpec
 
           when(correlationIdService.generateCorrelationId()).thenReturn(newId)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
-          when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+          when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
           when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
           when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
           when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -1673,7 +1673,7 @@ class MessageServiceSpec
 
           messageService.updateMessages(consignee, None).futureValue
 
-          verify(movementRepository).save(expectedMovement)
+          verify(movementRepository).saveMovement(expectedMovement)
         }
       }
     }
@@ -1733,7 +1733,7 @@ class MessageServiceSpec
 
         when(correlationIdService.generateCorrelationId()).thenReturn(newId)
 
-        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
         when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
         when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
         when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -1750,7 +1750,7 @@ class MessageServiceSpec
 
         messageService.updateMessages(ern, None).futureValue
 
-        verify(movementRepository).save(expectedMovement)
+        verify(movementRepository).saveMovement(expectedMovement)
 
       }
     }
@@ -1809,7 +1809,7 @@ class MessageServiceSpec
 
         when(movementRepository.getAllBy(eqTo("ern1"))).thenReturn(Future.successful(Seq(ern1Movement)))
         when(movementRepository.getAllBy(eqTo("ern2"))).thenReturn(Future.successful(Seq(ern2Movement)))
-        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
         when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
         when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
         when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
@@ -1823,8 +1823,8 @@ class MessageServiceSpec
 
         messageService.updateAllMessages(Set("ern1", "ern2")).futureValue
 
-        verify(movementRepository).save(ern1Movement)
-        verify(movementRepository).save(ern2Movement)
+        verify(movementRepository).saveMovement(ern1Movement)
+        verify(movementRepository).saveMovement(ern2Movement)
       }
     }
     "an ern fails"            should {
@@ -1862,7 +1862,7 @@ class MessageServiceSpec
 
         when(movementRepository.getAllBy(eqTo("ern1"))).thenReturn(Future.successful(Seq(ern1Movement)))
         when(movementRepository.getAllBy(eqTo("ern2"))).thenReturn(Future.successful(Seq(ern2Movement)))
-        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
         when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
         when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
         when(ernRetrievalRepository.getLastRetrieved(any)).thenReturn(Future.successful(None))
@@ -1876,8 +1876,8 @@ class MessageServiceSpec
 
         messageService.updateAllMessages(Set("ern1", "ern2")).futureValue
 
-        verify(movementRepository, never).save(ern1Movement)
-        verify(movementRepository).save(ern2Movement)
+        verify(movementRepository, never).saveMovement(ern1Movement)
+        verify(movementRepository).saveMovement(ern2Movement)
       }
     }
 
@@ -1919,7 +1919,7 @@ class MessageServiceSpec
           message4Timestamp
         )
         when(movementRepository.getAllBy(eqTo("ern1"))).thenReturn(Future.successful(Seq(ern1Movement)))
-        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
         when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
         when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
         when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -1980,7 +1980,7 @@ class MessageServiceSpec
 
         val captor = ArgCaptor[Movement]
         verify(dateTimeService, times(5)).timestamp()
-        verify(movementRepository, times(1)).save(captor.capture)
+        verify(movementRepository, times(1)).saveMovement(captor.capture)
 
         captor.value mustEqual expectedMovement
       }
@@ -2029,7 +2029,7 @@ class MessageServiceSpec
         when(movementRepository.getAllBy(eqTo("ern1"))).thenReturn(Future.successful(Seq(ern1Movement)))
         when(movementRepository.getByArc(any)).thenReturn(Future.successful(None))
         when(movementRepository.getMovementByLRNAndERNIn(any, any)).thenReturn(Future.successful(Seq.empty))
-        when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+        when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
         when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
         when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
         when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -2118,7 +2118,7 @@ class MessageServiceSpec
 
         val movementCaptor = ArgCaptor[Movement]
         verify(dateTimeService, times(6)).timestamp()
-        verify(movementRepository, times(2)).save(movementCaptor.capture)
+        verify(movementRepository, times(2)).saveMovement(movementCaptor.capture)
 
         movementCaptor.values.head mustBe expectedMovement2
         movementCaptor.values(1) mustBe expectedMovement1

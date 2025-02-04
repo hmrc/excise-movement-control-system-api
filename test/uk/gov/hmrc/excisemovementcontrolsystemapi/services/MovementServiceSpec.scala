@@ -17,9 +17,10 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.mongodb.{MongoWriteException, WriteError}
+import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.{reset, when}
-import org.mongodb.scala.ServerAddress
+import org.mongodb.scala.{MongoCommandException, ServerAddress}
 import org.mongodb.scala.bson.BsonDocument
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
@@ -70,7 +71,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         .thenReturn(Future.successful(None))
 
       when(mockMovementRepository.saveMovement(any))
-        .thenReturn(Future.successful(true))
+        .thenReturn(Future.successful(Done))
 
       val result = await(movementService.saveNewMovement(successMovement))
 
@@ -96,7 +97,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       when(mockMovementRepository.saveMovement(any))
         .thenReturn(
           Future.failed(
-            new MongoWriteException(new WriteError(11000, "Duplicate Key", BsonDocument()), ServerAddress())
+            new MongoCommandException(BsonDocument(), ServerAddress())
           )
         )
 
@@ -114,7 +115,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       when(mockMovementRepository.findDraftMovement(any))
         .thenReturn(Future.failed(new RuntimeException("Database error")))
       when(mockMovementRepository.saveMovement(any))
-        .thenReturn(Future.successful(true))
+        .thenReturn(Future.successful(Done))
 
       val result = await(movementService.saveNewMovement(exampleMovement))
 
@@ -127,7 +128,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       when(mockMovementRepository.findDraftMovement(any))
         .thenReturn(Future.successful(Some(exampleMovement)))
       when(mockMovementRepository.saveMovement(any))
-        .thenReturn(Future.successful(true))
+        .thenReturn(Future.successful(Done))
 
       val result = await(movementService.saveNewMovement(exampleMovement))
 

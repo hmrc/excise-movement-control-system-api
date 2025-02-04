@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.Singleton
 import com.mongodb.MongoWriteException
+import org.mongodb.scala.MongoCommandException
 import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.Result
@@ -48,12 +49,12 @@ class MovementService @Inject() (
         }
       }
       .recover {
-        case _: MongoWriteException =>
+        case _: MongoCommandException =>
           logger.warn(
             s"[MovementService] - The local reference number has already been used for another movement"
           )
           createDuplicateErrorResponse(movement)
-        case NonFatal(e)            =>
+        case NonFatal(e)              =>
           logger.error(s"[MovementService] - Error occurred while saving movement, ${e.getMessage}", e)
           Left(
             InternalServerError(

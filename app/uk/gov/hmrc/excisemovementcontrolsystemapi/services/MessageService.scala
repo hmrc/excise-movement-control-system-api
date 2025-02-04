@@ -141,7 +141,7 @@ class MessageService @Inject() (
           logger.warn(
             s"Saving updated movement with id ${m._id} with messages (${messageCounts(m)}) as part of fix for ${movement._id}"
           )
-          movementRepository.save(m)
+          movementRepository.saveMovement(m)
         }
       }
       .map(_ => Done)
@@ -234,7 +234,6 @@ class MessageService @Inject() (
             }
             .flatMap {
               _.traverse { movement =>
-
                 // get the ids of the messages in this movement
                 // get the messages from the original list that match
                 // turn those into the xml/json/obj (check with kara)
@@ -244,7 +243,7 @@ class MessageService @Inject() (
 
                 messageCount.update(movement.messages.length)
                 totalMessageSize.update(movement.messages.map(_.encodedMessage.length).sum)
-                movementRepository.save(movement).recoverWith { case NonFatal(e) =>
+                movementRepository.saveMovement(movement).recoverWith { case NonFatal(e) =>
                   createEnrichedError(e, ern, movements, movement)
                 }
               }
