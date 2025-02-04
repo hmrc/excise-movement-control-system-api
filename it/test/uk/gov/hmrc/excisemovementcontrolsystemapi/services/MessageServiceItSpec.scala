@@ -99,9 +99,9 @@ class MessageServiceItSpec
 
     "must only add messages once, even if we process the message multiple times" in {
 
-      val hc                  = HeaderCarrier()
-      val ern                 = "testErn"
-      val lrn                 = "lrnie8158976912"
+      val hc  = HeaderCarrier()
+      val ern = "testErn"
+      val lrn = "lrnie8158976912"
       val acknowledgeResponse = MessageReceiptSuccessResponse(now, ern, 1)
 
       val ie704    =
@@ -150,9 +150,9 @@ class MessageServiceItSpec
 
     "must only allow a single call at a time" in {
 
-      val hc                  = HeaderCarrier()
-      val ern                 = "testErn"
-      val lrn                 = "lrnie8158976912"
+      val hc  = HeaderCarrier()
+      val ern = "testErn"
+      val lrn = "lrnie8158976912"
       val acknowledgeResponse = MessageReceiptSuccessResponse(now, ern, 1)
 
       val ie704    =
@@ -181,9 +181,9 @@ class MessageServiceItSpec
 
     "must not cause throttled requests to increase the throttle timeout" in {
 
-      val hc                  = HeaderCarrier()
-      val ern                 = "testErn"
-      val lrn                 = "lrnie8158976912"
+      val hc  = HeaderCarrier()
+      val ern = "testErn"
+      val lrn = "lrnie8158976912"
       val acknowledgeResponse = MessageReceiptSuccessResponse(now, ern, 1)
 
       val ie704    =
@@ -211,11 +211,11 @@ class MessageServiceItSpec
 
     "must not try to create a movement which already exists" in {
 
-      val hc                  = HeaderCarrier()
-      val consignorErn        = "testErn"
-      val consigneeErn        = "testErn2"
-      val lrn                 = "lrnie8158976912"
-      val arc                 = "arc"
+      val hc           = HeaderCarrier()
+      val consignorErn = "testErn"
+      val consigneeErn = "testErn2"
+      val lrn          = "lrnie8158976912"
+      val arc          = "arc"
       val acknowledgeResponse = MessageReceiptSuccessResponse(now, consignorErn, 1)
 
       val ie801    = XmlMessageGeneratorFactory.generate(
@@ -282,11 +282,11 @@ class MessageServiceItSpec
 
     "must not create a new movement when an existing movement can be found in the database via consignor ERN and LRN" in {
 
-      val hc                  = HeaderCarrier()
-      val consignorErn        = "testErn"
-      val consigneeErn        = "testErn2"
-      val lrn                 = "lrnie8158976912"
-      val arc                 = "arc"
+      val hc           = HeaderCarrier()
+      val consignorErn = "testErn"
+      val consigneeErn = "testErn2"
+      val lrn          = "lrnie8158976912"
+      val arc          = "arc"
       val acknowledgeResponse = MessageReceiptSuccessResponse(now, consignorErn, 1)
 
       val ie801    = XmlMessageGeneratorFactory.generate(
@@ -519,14 +519,12 @@ class MessageServiceItSpec
         actualRootMovement.administrativeReferenceCode mustEqual expectedRootMovement.administrativeReferenceCode
         actualRootMovement.consignorId mustEqual expectedRootMovement.consignorId
         actualRootMovement.consigneeId mustEqual expectedRootMovement.consigneeId
-        actualRootMovement.lastUpdated mustEqual expectedRootMovement.lastUpdated
         actualRootMovement.messages mustEqual expectedRootMovement.messages
 
         actualSecondMovement.localReferenceNumber mustEqual expectedSecondMovement.localReferenceNumber
         actualSecondMovement.administrativeReferenceCode mustEqual expectedSecondMovement.administrativeReferenceCode
         actualSecondMovement.consignorId mustEqual expectedSecondMovement.consignorId
         actualSecondMovement.consigneeId mustEqual expectedSecondMovement.consigneeId
-        actualSecondMovement.lastUpdated mustEqual expectedSecondMovement.lastUpdated
         actualSecondMovement.messages.head.encodedMessage mustEqual expectedSecondMovement.messages.head.encodedMessage
         actualSecondMovement.messages mustEqual expectedSecondMovement.messages
 
@@ -535,7 +533,6 @@ class MessageServiceItSpec
         actualThirdMovement.administrativeReferenceCode mustEqual expectedThirdMovement.administrativeReferenceCode
         actualThirdMovement.consignorId mustEqual expectedThirdMovement.consignorId
         actualThirdMovement.consigneeId mustEqual expectedThirdMovement.consigneeId
-        actualThirdMovement.lastUpdated mustEqual expectedThirdMovement.lastUpdated
         actualThirdMovement.messages mustEqual expectedThirdMovement.messages
       }
 
@@ -687,14 +684,12 @@ class MessageServiceItSpec
         actualRootMovement.administrativeReferenceCode mustEqual expectedRootMovement.administrativeReferenceCode
         actualRootMovement.consignorId mustEqual expectedRootMovement.consignorId
         actualRootMovement.consigneeId mustEqual expectedRootMovement.consigneeId
-        actualRootMovement.lastUpdated mustEqual expectedRootMovement.lastUpdated
         actualRootMovement.messages mustEqual expectedRootMovement.messages
 
         actualSecondMovement.localReferenceNumber mustEqual expectedSecondMovement.localReferenceNumber
         actualSecondMovement.administrativeReferenceCode mustEqual expectedSecondMovement.administrativeReferenceCode
         actualSecondMovement.consignorId mustEqual expectedSecondMovement.consignorId
         actualSecondMovement.consigneeId mustEqual expectedSecondMovement.consigneeId
-        actualSecondMovement.lastUpdated mustEqual expectedSecondMovement.lastUpdated
         actualSecondMovement.messages.head.encodedMessage mustEqual expectedSecondMovement.messages.head.encodedMessage
         actualSecondMovement.messages mustEqual expectedSecondMovement.messages
 
@@ -703,7 +698,6 @@ class MessageServiceItSpec
         actualThirdMovement.administrativeReferenceCode mustEqual expectedThirdMovement.administrativeReferenceCode
         actualThirdMovement.consignorId mustEqual expectedThirdMovement.consignorId
         actualThirdMovement.consigneeId mustEqual expectedThirdMovement.consigneeId
-        actualThirdMovement.lastUpdated mustEqual expectedThirdMovement.lastUpdated
         actualThirdMovement.messages mustEqual expectedThirdMovement.messages
       }
 
@@ -871,14 +865,12 @@ class MessageServiceItSpec
         actualRootMovement.administrativeReferenceCode mustEqual expectedRootMovement.administrativeReferenceCode
         actualRootMovement.consignorId mustEqual expectedRootMovement.consignorId
         actualRootMovement.consigneeId mustEqual expectedRootMovement.consigneeId
-        actualRootMovement.lastUpdated mustEqual expectedRootMovement.lastUpdated
         actualRootMovement.messages mustEqual expectedRootMovement.messages
 
         actualSecondMovement.localReferenceNumber mustEqual expectedSecondMovement.localReferenceNumber
         actualSecondMovement.administrativeReferenceCode mustEqual expectedSecondMovement.administrativeReferenceCode
         actualSecondMovement.consignorId mustEqual expectedSecondMovement.consignorId
         actualSecondMovement.consigneeId mustEqual expectedSecondMovement.consigneeId
-        actualSecondMovement.lastUpdated mustEqual expectedSecondMovement.lastUpdated
         actualSecondMovement.messages.head.encodedMessage mustEqual expectedSecondMovement.messages.head.encodedMessage
         actualSecondMovement.messages mustEqual expectedSecondMovement.messages
 
@@ -887,7 +879,6 @@ class MessageServiceItSpec
         actualThirdMovement.administrativeReferenceCode mustEqual expectedThirdMovement.administrativeReferenceCode
         actualThirdMovement.consignorId mustEqual expectedThirdMovement.consignorId
         actualThirdMovement.consigneeId mustEqual expectedThirdMovement.consigneeId
-        actualThirdMovement.lastUpdated mustEqual expectedThirdMovement.lastUpdated
         actualThirdMovement.messages mustEqual expectedThirdMovement.messages
       }
 
@@ -947,6 +938,7 @@ class MessageServiceItSpec
             Message(second801, "IE801", "XI000003", consignee2, Set.empty, now.minus(1, ChronoUnit.DAYS))
           )
         )
+        when(mockDateTimeService.timestamp()).thenReturn(now)
 
         insert(movement).futureValue
 
@@ -955,7 +947,7 @@ class MessageServiceItSpec
         count().futureValue mustEqual 1
 
         val result = findAll().futureValue.head
-        result mustEqual movement
+        result mustEqual movement.copy(lastUpdated = now)
       }
 
       "must fix a movement when the arc is wrong" in {
@@ -1063,14 +1055,12 @@ class MessageServiceItSpec
         actualRootMovement.administrativeReferenceCode mustEqual expectedRootMovement.administrativeReferenceCode
         actualRootMovement.consignorId mustEqual expectedRootMovement.consignorId
         actualRootMovement.consigneeId mustEqual expectedRootMovement.consigneeId
-        actualRootMovement.lastUpdated mustEqual expectedRootMovement.lastUpdated
         actualRootMovement.messages mustEqual expectedRootMovement.messages
 
         actualSecondMovement.localReferenceNumber mustEqual expectedSecondMovement.localReferenceNumber
         actualSecondMovement.administrativeReferenceCode mustEqual expectedSecondMovement.administrativeReferenceCode
         actualSecondMovement.consignorId mustEqual expectedSecondMovement.consignorId
         actualSecondMovement.consigneeId mustEqual expectedSecondMovement.consigneeId
-        actualSecondMovement.lastUpdated mustEqual expectedSecondMovement.lastUpdated
         actualSecondMovement.messages.head.encodedMessage mustEqual expectedSecondMovement.messages.head.encodedMessage
         actualSecondMovement.messages mustEqual expectedSecondMovement.messages
       }
@@ -1278,14 +1268,12 @@ class MessageServiceItSpec
         actualRootMovement.administrativeReferenceCode mustEqual expectedRootMovement.administrativeReferenceCode
         actualRootMovement.consignorId mustEqual expectedRootMovement.consignorId
         actualRootMovement.consigneeId mustEqual expectedRootMovement.consigneeId
-        actualRootMovement.lastUpdated mustEqual expectedRootMovement.lastUpdated
         actualRootMovement.messages mustEqual expectedRootMovement.messages
 
         actualSecondMovement.localReferenceNumber mustEqual expectedSecondMovement.localReferenceNumber
         actualSecondMovement.administrativeReferenceCode mustEqual expectedSecondMovement.administrativeReferenceCode
         actualSecondMovement.consignorId mustEqual expectedSecondMovement.consignorId
         actualSecondMovement.consigneeId mustEqual expectedSecondMovement.consigneeId
-        actualSecondMovement.lastUpdated mustEqual expectedSecondMovement.lastUpdated
         actualSecondMovement.messages.head.encodedMessage mustEqual expectedSecondMovement.messages.head.encodedMessage
         actualSecondMovement.messages mustEqual expectedSecondMovement.messages
 
@@ -1294,7 +1282,6 @@ class MessageServiceItSpec
         actualThirdMovement.administrativeReferenceCode mustEqual expectedThirdMovement.administrativeReferenceCode
         actualThirdMovement.consignorId mustEqual expectedThirdMovement.consignorId
         actualThirdMovement.consigneeId mustEqual expectedThirdMovement.consigneeId
-        actualThirdMovement.lastUpdated mustEqual expectedThirdMovement.lastUpdated
         actualThirdMovement.messages mustEqual expectedThirdMovement.messages
       }
     }

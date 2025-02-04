@@ -450,7 +450,7 @@ class DraftExciseMovementControllerItSpec
 
   private def setupRepositories = {
     when(movementRepository.saveMovement(any))
-      .thenReturn(Future.successful(true))
+      .thenReturn(Future.successful(Done))
 
     when(movementRepository.findDraftMovement(any))
       .thenReturn(Future.successful(None))
