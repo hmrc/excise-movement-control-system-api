@@ -231,7 +231,8 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
     movement: Movement,
     batchId: String,
     jobId: Option[String]
-  ): MovementSavedSuccessAuditInfo =
+  ): MovementSavedSuccessAuditInfo = {
+    val ieMessages = convertToIEMessage(movement.messages)
     MovementSavedSuccessAuditInfo(
       messagesAdded,
       totalMessages,
@@ -242,9 +243,10 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
       movement.consigneeId,
       batchId,
       jobId,
-      generateKeyMessageDetailsAuditInfo(movement.messages),
-      movement.messages
+      generateKeyMessageDetailsAuditInfo(ieMessages),
+      ieMessages.map(_.toJson)
     )
+  }
 
   def createMovementSavedFailureAuditInfo(
     messagesToBeAdded: Int,
@@ -253,7 +255,8 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
     failureReason: String,
     batchId: String,
     jobId: Option[String]
-  ): MovementSavedFailureAuditInfo =
+  ): MovementSavedFailureAuditInfo = {
+    val ieMessages = convertToIEMessage(movement.messages)
     MovementSavedFailureAuditInfo(
       failureReason,
       messagesToBeAdded,
@@ -265,22 +268,28 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
       movement.consigneeId,
       batchId,
       jobId,
-      generateKeyMessageDetailsAuditInfo(movement.messages),
-      movement.messages
+      generateKeyMessageDetailsAuditInfo(ieMessages),
+      ieMessages.map(_.toJson)
     )
+  }
+  private def generateKeyMessageDetailsAuditInfo(messages: Seq[IEMessage]): Seq[KeyMessageDetailsAuditInfo] =
+    messages.map { ieMessage =>
+      val correlationId = ieMessage.correlationId
+      KeyMessageDetailsAuditInfo(
+        ieMessage.messageIdentifier,
+        correlationId,
+        ieMessage.messageType,
+        ieMessage.messageAuditType.name
+      )
+    }
 
-  private def generateKeyMessageDetailsAuditInfo(messages: Seq[Message]): Seq[KeyMessageDetailsAuditInfo] =
+  private def convertToIEMessage(messages: Seq[Message]) =
     messages.map { message =>
       val decodedXml         = emcsUtils.decode(message.encodedMessage)
       val decodedXmlNodeList = xml.XML.loadString(decodedXml)
       val ieMessage          = ieMessageFactory.createFromXml(message.messageType, decodedXmlNodeList)
-      val correlationId      = ieMessage.correlationId
-      KeyMessageDetailsAuditInfo(
-        message.messageId,
-        correlationId,
-        message.messageType,
-        ieMessage.messageAuditType.name
-      )
+      ieMessage
     }
-  private def convertErns(erns: Set[String]): NonEmptySeq[String]                                         = NonEmptySeq(erns.head, erns.tail.toSeq)
+
+  private def convertErns(erns: Set[String]): NonEmptySeq[String] = NonEmptySeq(erns.head, erns.tail.toSeq)
 }

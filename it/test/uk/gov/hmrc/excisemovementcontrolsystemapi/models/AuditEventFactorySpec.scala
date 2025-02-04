@@ -362,7 +362,14 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       Movement(movementId, None, "lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now(), Seq(message))
 
     val keyMessageDetails =
-      KeyMessageDetailsAuditInfo(messageId, correlationId, "IE801", ieMessage.messageAuditType.name)
+      KeyMessageDetailsAuditInfo("token", correlationId, "IE801", ieMessage.messageAuditType.name)
+
+    val ieMessagesConverted = movement.messages.map { message =>
+      val decodedXml         = emcsUtils.decode(message.encodedMessage)
+      val decodedXmlNodeList = xml.XML.loadString(decodedXml)
+      val ieMessage          = ieMessageFactory.createFromXml(message.messageType, decodedXmlNodeList)
+      ieMessage
+    }
 
     val expectedResult = MovementSavedSuccessAuditInfo(
       10,
@@ -375,7 +382,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       batchId,
       None,
       Seq(keyMessageDetails),
-      movement.messages
+      ieMessagesConverted.map(_.toJson)
     )
 
     val result = service.createMovementSavedSuccessAuditInfo(10, 1, movement, batchId, None)
@@ -402,8 +409,14 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
     val movement =
       Movement(movementId, None, "lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now(), Seq(message))
 
-    val keyMessageDetails =
-      KeyMessageDetailsAuditInfo(messageId, correlationId, "IE801", ieMessage.messageAuditType.name)
+    val keyMessageDetails   =
+      KeyMessageDetailsAuditInfo("token", correlationId, "IE801", ieMessage.messageAuditType.name)
+    val ieMessagesConverted = movement.messages.map { message =>
+      val decodedXml         = emcsUtils.decode(message.encodedMessage)
+      val decodedXmlNodeList = xml.XML.loadString(decodedXml)
+      val ieMessage          = ieMessageFactory.createFromXml(message.messageType, decodedXmlNodeList)
+      ieMessage
+    }
 
     val expectedResult = MovementSavedFailureAuditInfo(
       failureReason,
@@ -417,7 +430,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       batchId,
       None,
       Seq(keyMessageDetails),
-      movement.messages
+      ieMessagesConverted.map(_.toJson)
     )
     val result         = service.createMovementSavedFailureAuditInfo(10, 1, movement, failureReason, batchId, None)
 
