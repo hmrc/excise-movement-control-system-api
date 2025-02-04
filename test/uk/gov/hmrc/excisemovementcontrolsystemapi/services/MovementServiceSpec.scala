@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-import com.mongodb.{MongoWriteException, WriteError}
+import com.mongodb.{MongoCommandException, MongoWriteException, WriteError}
 import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.{reset, when}
@@ -28,6 +28,7 @@ import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, InternalServerError}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector.GetMessagesException
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, TraderType}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
@@ -135,6 +136,32 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       result mustBe Right(exampleMovement)
     }
 
+  }
+
+  "saveMovement" should {
+    "return success if movementRepository.saveMovement() returns a success" in {
+      val successMovement = exampleMovement
+
+      when(mockMovementRepository.saveMovement(any))
+        .thenReturn(Future.successful(Done))
+
+      val result = await(movementService.saveMovement(successMovement))
+
+      result mustBe Done
+    }
+
+    "return failure if movementRepository.saveMovement() returns a failure" in {
+      val successMovement = exampleMovement
+
+      val exception = new MongoCommandException(new BsonDocument(), new ServerAddress())
+
+      when(mockMovementRepository.saveMovement(any))
+        .thenReturn(Future.failed(exception))
+
+      the[MongoCommandException] thrownBy {
+        await(movementService.saveMovement(successMovement))
+      } must have message exception.getMessage
+    }
   }
 
   "getMovementByLRNAndERNIn with valid LRN and ERN combination" should {
