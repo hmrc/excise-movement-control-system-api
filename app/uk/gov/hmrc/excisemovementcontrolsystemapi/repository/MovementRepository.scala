@@ -82,7 +82,7 @@ class MovementRepository @Inject() (
       )
       .headOption()
   }
-  def saveMovement(movement: Movement): Future[Done] = Mdc.preservingMdc {
+  def saveMovement(movement: Movement): Future[Done]                  = Mdc.preservingMdc {
     collection
       .findOneAndReplace(
         filter = byId(movement._id),

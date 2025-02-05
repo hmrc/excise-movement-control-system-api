@@ -142,7 +142,7 @@ class MessageService @Inject() (
           logger.warn(
             s"Saving updated movement with id ${m._id} with messages (${messageCounts(m)}) as part of fix for ${movement._id}"
           )
-          movementService.saveMovement(m)
+          movementService.saveMovement(m, None)
         }
       }
       .map(_ => Done)
@@ -188,7 +188,7 @@ class MessageService @Inject() (
 
     for {
       response <- messageConnector.getNewMessages(ern, batchId, jobId)
-      _        <- updateMovements(ern, response.messages)
+      _        <- updateMovements(ern, response.messages, jobId)
       _        <- acknowledgeAndContinue(response, ern, jobId)
     } yield Done
   }
@@ -208,7 +208,7 @@ class MessageService @Inject() (
       }
     }
 
-  private def updateMovements(ern: String, messages: Seq[IEMessage])(implicit
+  private def updateMovements(ern: String, messages: Seq[IEMessage], jobId: Option[String] = None)(implicit
     hc: HeaderCarrier
   ): Future[Done] = {
     logger.info(s"[MessageService]: Updating movements")
@@ -244,7 +244,7 @@ class MessageService @Inject() (
 
                 messageCount.update(movement.messages.length)
                 totalMessageSize.update(movement.messages.map(_.encodedMessage.length).sum)
-                movementService.saveMovement(movement).recoverWith { case NonFatal(e) =>
+                movementService.saveMovement(movement, jobId).recoverWith { case NonFatal(e) =>
                   createEnrichedError(e, ern, movements, movement)
                 }
               }
