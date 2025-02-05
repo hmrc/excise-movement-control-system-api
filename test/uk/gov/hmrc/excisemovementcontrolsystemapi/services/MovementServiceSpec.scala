@@ -185,7 +185,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         //TODO: Calculate movements properly, take another look at jobId as well
         verify(auditService, times(1)).movementSavedSuccess(1, 1, successMovement, batchId, None)
       }
-      
+
       "pass jobId to audit service in success case" in {
         val successMovement = exampleMovement
         val batchId         = "123"
@@ -234,7 +234,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
       "pass messagesAdded = 10 and totalMessages = 10 for a new movement with two messages when a call to repository is a success" in {
         val messages        = for {
-          i <- 1 to 10
+          _ <- 1 to 10
         } yield exampleMessage
         val successMovement = exampleMovement.copy(messages = messages)
 
@@ -248,6 +248,123 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         verify(auditService, times(1))
           .movementSavedSuccess(eqTo(10), eqTo(10), eqTo(successMovement), eqTo(batchId), eqTo(jobId))(any)
+
+      }
+
+      "pass messagesAdded = 0 when the single message for a movement is a message that is already present in mongo when a call to repository is a success" in {
+
+        val successMovement = exampleMovement.copy(messages = Seq(exampleMessage))
+
+        val messagesAlreadyInMongo = Seq(exampleMessage)
+
+        val batchId = "123"
+        val jobId   = Some(UUID.randomUUID().toString)
+
+        when(mockMovementRepository.saveMovement(any))
+          .thenReturn(Future.successful(Done))
+
+        movementService.saveMovement(successMovement, jobId, messagesAlreadyInMongo).futureValue
+
+        verify(auditService, times(1))
+          .movementSavedSuccess(eqTo(0), eqTo(1), eqTo(successMovement), eqTo(batchId), eqTo(jobId))(any)
+
+      }
+
+      "pass messagesAdded = 0 when both messages for a movement are a message that is already present in mongo when a call to repository is a success" in {
+
+        val exampleMessage2 = exampleMessage.copy(messageId = UUID.randomUUID().toString)
+
+        val exampleMessagesAlreadyInMongo =
+          Seq(exampleMessage, exampleMessage2)
+
+        val successMovement = exampleMovement.copy(messages = exampleMessagesAlreadyInMongo)
+
+        val batchId = "123"
+        val jobId   = Some(UUID.randomUUID().toString)
+
+        when(mockMovementRepository.saveMovement(any))
+          .thenReturn(Future.successful(Done))
+
+        movementService.saveMovement(successMovement, jobId, exampleMessagesAlreadyInMongo).futureValue
+
+        verify(auditService, times(1))
+          .movementSavedSuccess(eqTo(0), eqTo(2), eqTo(successMovement), eqTo(batchId), eqTo(jobId))(any)
+
+      }
+
+      "pass messagesAdded = 1 when one of the two messages for a movement is a message that is already present in mongo when a call to repository is a success" in {
+
+        val exampleMessage2 = exampleMessage.copy(messageId = UUID.randomUUID().toString)
+
+        val exampleMessagesAlreadyInMongo = Seq(exampleMessage2)
+
+        val successMovement = exampleMovement.copy(messages = Seq(exampleMessage, exampleMessage2))
+
+        val batchId = "123"
+        val jobId   = Some(UUID.randomUUID().toString)
+
+        when(mockMovementRepository.saveMovement(any))
+          .thenReturn(Future.successful(Done))
+
+        movementService.saveMovement(successMovement, jobId, exampleMessagesAlreadyInMongo).futureValue
+
+        verify(auditService, times(1))
+          .movementSavedSuccess(eqTo(1), eqTo(2), eqTo(successMovement), eqTo(batchId), eqTo(jobId))(any)
+
+      }
+
+      "pass messagesAdded = 2 when neither of the two messages for a movement is a message that is already present in mongo when a call to repository is a success" in {
+
+        val exampleMessage2 = exampleMessage.copy(messageId = UUID.randomUUID().toString)
+
+        val exampleMessage3 = exampleMessage.copy(messageId = UUID.randomUUID().toString)
+        val exampleMessage4 = exampleMessage.copy(messageId = UUID.randomUUID().toString)
+
+        val exampleMessagesAlreadyInMongo = Seq(exampleMessage, exampleMessage2)
+
+        val successMovement = exampleMovement.copy(messages = Seq(exampleMessage3, exampleMessage4))
+
+        val batchId = "123"
+        val jobId   = Some(UUID.randomUUID().toString)
+
+        when(mockMovementRepository.saveMovement(any))
+          .thenReturn(Future.successful(Done))
+
+        movementService.saveMovement(successMovement, jobId, exampleMessagesAlreadyInMongo).futureValue
+
+        verify(auditService, times(1))
+          .movementSavedSuccess(eqTo(2), eqTo(2), eqTo(successMovement), eqTo(batchId), eqTo(jobId))(any)
+
+      }
+
+      "pass messagesAdded = 3 when five of the eight messages for a movement are a messages that are already present in mongo when a call to repository is a success" in {
+
+        val exampleMessage2 = exampleMessage.copy(messageId = UUID.randomUUID().toString)
+        val exampleMessage3 = exampleMessage.copy(messageId = UUID.randomUUID().toString)
+        val exampleMessage4 = exampleMessage.copy(messageId = UUID.randomUUID().toString)
+        val exampleMessage5 = exampleMessage.copy(messageId = UUID.randomUUID().toString)
+
+        val exampleMessage6 = exampleMessage.copy(messageId = UUID.randomUUID().toString)
+        val exampleMessage7 = exampleMessage.copy(messageId = UUID.randomUUID().toString)
+        val exampleMessage8 = exampleMessage.copy(messageId = UUID.randomUUID().toString)
+
+        val exampleMessagesAlreadyInMongo =
+          Seq(exampleMessage, exampleMessage2, exampleMessage3, exampleMessage4, exampleMessage5)
+
+        val successMovement = exampleMovement.copy(messages =
+          exampleMessagesAlreadyInMongo ++ Seq(exampleMessage6, exampleMessage7, exampleMessage8)
+        )
+
+        val batchId = "123"
+        val jobId   = Some(UUID.randomUUID().toString)
+
+        when(mockMovementRepository.saveMovement(any))
+          .thenReturn(Future.successful(Done))
+
+        movementService.saveMovement(successMovement, jobId, exampleMessagesAlreadyInMongo).futureValue
+
+        verify(auditService, times(1))
+          .movementSavedSuccess(eqTo(3), eqTo(8), eqTo(successMovement), eqTo(batchId), eqTo(jobId))(any)
 
       }
     }
@@ -265,6 +382,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
           await(movementService.saveMovement(successMovement))
         } must have message exception.getMessage
       }
+
       "call an auditService.movementSavedFailure if call to repository is a Failure" in {
         val movement = exampleMovement
         val batchId  = "123"
@@ -278,6 +396,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         verify(auditService, times(1)).movementSavedFailure(1, 1, movement, result.getMessage, batchId, None)
 
       }
+
       "pass jobId to audit service in failure case" in {
         val movement = exampleMovement
         val batchId  = "123"
@@ -291,7 +410,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         verify(auditService, times(1)).movementSavedFailure(1, 1, movement, result.getMessage, batchId, jobId)
       }
 
-      "pass messagesAdded = 2 and totalMessages = 2 for a new movement with two messages when a call to repository is a failure" in {
+      "pass messagesToBeAdded = 2 and totalMessages = 2 for a new movement with two messages when a call to repository is a failure" in {
         val movement = exampleMovement.copy(messages = Seq(exampleMessage, exampleMessage))
 
         val batchId = "123"
@@ -306,9 +425,9 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
       }
 
-      "pass messagesAdded = 10 and totalMessages = 10 for a new movement with two messages when a call to repository is a failure" in {
+      "pass messagesToBeAdded = 10 and totalMessages = 10 for a new movement with two messages when a call to repository is a failure" in {
         val messages = for {
-          i <- 1 to 10
+          _ <- 1 to 10
         } yield exampleMessage
         val movement = exampleMovement.copy(messages = messages)
 
@@ -321,6 +440,55 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         val result = movementService.saveMovement(movement, jobId).failed.futureValue
 
         verify(auditService, times(1)).movementSavedFailure(10, 10, movement, result.getMessage, batchId, jobId)
+
+      }
+
+      "pass messagesToBeAdded = 1 and totalMessages = 1 for a new movement with one message when a call to repository is a failure" in {
+        val successMovement = exampleMovement
+
+        val batchId = "123"
+        val jobId   = Some(UUID.randomUUID().toString)
+
+        when(mockMovementRepository.saveMovement(any))
+          .thenReturn(Future.failed(new RuntimeException("Failure reason")))
+
+        val result = movementService.saveMovement(successMovement, jobId).failed.futureValue
+
+        verify(auditService, times(1))
+          .movementSavedFailure(
+            eqTo(1),
+            eqTo(1),
+            eqTo(successMovement),
+            eqTo(result.getMessage),
+            eqTo(batchId),
+            eqTo(jobId)
+          )(any)
+
+      }
+
+      "pass messagesToBeAdded = 0 when the single message for a movement is a message that is already present in mongo when a call to repository is a failure" in {
+
+        val successMovement = exampleMovement.copy(messages = Seq(exampleMessage))
+
+        val messagesAlreadyInMongo = Seq(exampleMessage)
+
+        val batchId = "123"
+        val jobId   = Some(UUID.randomUUID().toString)
+
+        when(mockMovementRepository.saveMovement(any))
+          .thenReturn(Future.failed(new RuntimeException("Failure reason")))
+
+        val result = movementService.saveMovement(successMovement, jobId, messagesAlreadyInMongo).failed.futureValue
+
+        verify(auditService, times(1))
+          .movementSavedFailure(
+            eqTo(0),
+            eqTo(1),
+            eqTo(successMovement),
+            eqTo(result.getMessage),
+            eqTo(batchId),
+            eqTo(jobId)
+          )(any)
 
       }
     }
