@@ -72,17 +72,22 @@ class MovementService @Inject() (
           )
       }
 
-  def saveMovement(movement: Movement, jobId: Option[String] = None)(implicit hc: HeaderCarrier): Future[Done] =
+  def saveMovement(movement: Movement, jobId: Option[String] = None)(implicit hc: HeaderCarrier): Future[Done] = {
+
+    val messagesAdded = movement.messages.length
+    val totalMessages = movement.messages.length
+
     movementRepository
       .saveMovement(movement)
       .map { _ =>
-        auditService.movementSavedSuccess(1, 1, movement, "123", jobId)
+        auditService.movementSavedSuccess(messagesAdded, totalMessages, movement, "123", jobId)
         Done
       }
       .recoverWith { case e =>
-        auditService.movementSavedFailure(1, 1, movement, e.getMessage, "123", jobId)
+        auditService.movementSavedFailure(messagesAdded, totalMessages, movement, e.getMessage, "123", jobId)
         Future.failed(e)
       }
+  }
 
   def getMovementById(id: String): Future[Option[Movement]] =
     movementRepository.getMovementById(id)
