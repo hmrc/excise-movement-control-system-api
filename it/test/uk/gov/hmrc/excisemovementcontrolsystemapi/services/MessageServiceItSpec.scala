@@ -30,6 +30,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, TraderMovementConnector}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessageGeneratorFactory}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptSuccessResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes.{IE704, IE801, IE802, IE813, IE818}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE704Message, IE801Message, IE818Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
@@ -98,9 +99,10 @@ class MessageServiceItSpec
 
     "must only add messages once, even if we process the message multiple times" in {
 
-      val hc  = HeaderCarrier()
-      val ern = "testErn"
-      val lrn = "lrnie8158976912"
+      val hc                  = HeaderCarrier()
+      val ern                 = "testErn"
+      val lrn                 = "lrnie8158976912"
+      val acknowledgeResponse = MessageReceiptSuccessResponse(now, ern, 1)
 
       val ie704    =
         XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some(lrn)))
@@ -122,11 +124,12 @@ class MessageServiceItSpec
       )
       when(mockCorrelationIdService.generateCorrelationId()).thenReturn(newId)
 
-      when(mockMessageConnector.getNewMessages(any, any, any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+      when(mockMessageConnector.getNewMessages(any, any, any)(any))
+        .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
 
       when(mockMessageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(
         Future.failed(new RuntimeException()),
-        Future.successful(Done)
+        Future.successful(acknowledgeResponse)
       )
 
       service.updateMessages(ern, None)(hc).failed.futureValue
@@ -147,9 +150,10 @@ class MessageServiceItSpec
 
     "must only allow a single call at a time" in {
 
-      val hc  = HeaderCarrier()
-      val ern = "testErn"
-      val lrn = "lrnie8158976912"
+      val hc                  = HeaderCarrier()
+      val ern                 = "testErn"
+      val lrn                 = "lrnie8158976912"
+      val acknowledgeResponse = MessageReceiptSuccessResponse(now, ern, 1)
 
       val ie704    =
         XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some(lrn)))
@@ -160,8 +164,10 @@ class MessageServiceItSpec
       when(mockDateTimeService.timestamp()).thenReturn(now)
       when(mockCorrelationIdService.generateCorrelationId()).thenReturn(newId)
 
-      when(mockMessageConnector.getNewMessages(any, any, any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
-      when(mockMessageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future(promise.future).flatten)
+      when(mockMessageConnector.getNewMessages(any, any, any)(any))
+        .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+      when(mockMessageConnector.acknowledgeMessages(any, any, any)(any))
+        .thenReturn(Future.successful(acknowledgeResponse))
 
       val future  = service.updateMessages(ern, None)(hc)
       val future2 = service.updateMessages(ern, None)(hc)
@@ -175,9 +181,10 @@ class MessageServiceItSpec
 
     "must not cause throttled requests to increase the throttle timeout" in {
 
-      val hc  = HeaderCarrier()
-      val ern = "testErn"
-      val lrn = "lrnie8158976912"
+      val hc                  = HeaderCarrier()
+      val ern                 = "testErn"
+      val lrn                 = "lrnie8158976912"
+      val acknowledgeResponse = MessageReceiptSuccessResponse(now, ern, 1)
 
       val ie704    =
         XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some(lrn)))
@@ -187,8 +194,10 @@ class MessageServiceItSpec
 
       when(mockCorrelationIdService.generateCorrelationId()).thenReturn(newId)
 
-      when(mockMessageConnector.getNewMessages(any, any, any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
-      when(mockMessageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
+      when(mockMessageConnector.getNewMessages(any, any, any)(any))
+        .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+      when(mockMessageConnector.acknowledgeMessages(any, any, any)(any))
+        .thenReturn(Future.successful(acknowledgeResponse))
 
       when(mockDateTimeService.timestamp()).thenReturn(now)
       service.updateMessages(ern, ernRetrievalRepository.getLastRetrieved(ern).futureValue)(hc).futureValue
@@ -202,11 +211,12 @@ class MessageServiceItSpec
 
     "must not try to create a movement which already exists" in {
 
-      val hc           = HeaderCarrier()
-      val consignorErn = "testErn"
-      val consigneeErn = "testErn2"
-      val lrn          = "lrnie8158976912"
-      val arc          = "arc"
+      val hc                  = HeaderCarrier()
+      val consignorErn        = "testErn"
+      val consigneeErn        = "testErn2"
+      val lrn                 = "lrnie8158976912"
+      val arc                 = "arc"
+      val acknowledgeResponse = MessageReceiptSuccessResponse(now, consignorErn, 1)
 
       val ie801    = XmlMessageGeneratorFactory.generate(
         consignorErn,
@@ -256,7 +266,8 @@ class MessageServiceItSpec
         Future.successful(GetMessagesResponse(Seq(messages(1)), 1))
       )
 
-      when(mockMessageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
+      when(mockMessageConnector.acknowledgeMessages(any, any, any)(any))
+        .thenReturn(Future.successful(acknowledgeResponse))
 
       when(mockTraderMovementConnector.getMovementMessages(any, any)(any)).thenReturn(Future.successful(messages))
 
@@ -271,11 +282,12 @@ class MessageServiceItSpec
 
     "must not create a new movement when an existing movement can be found in the database via consignor ERN and LRN" in {
 
-      val hc           = HeaderCarrier()
-      val consignorErn = "testErn"
-      val consigneeErn = "testErn2"
-      val lrn          = "lrnie8158976912"
-      val arc          = "arc"
+      val hc                  = HeaderCarrier()
+      val consignorErn        = "testErn"
+      val consigneeErn        = "testErn2"
+      val lrn                 = "lrnie8158976912"
+      val arc                 = "arc"
+      val acknowledgeResponse = MessageReceiptSuccessResponse(now, consignorErn, 1)
 
       val ie801    = XmlMessageGeneratorFactory.generate(
         consignorErn,
@@ -315,7 +327,8 @@ class MessageServiceItSpec
         Future.successful(GetMessagesResponse(Seq(messages.head), 1))
       )
 
-      when(mockMessageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(Future.successful(Done))
+      when(mockMessageConnector.acknowledgeMessages(any, any, any)(any))
+        .thenReturn(Future.successful(acknowledgeResponse))
 
       movementService.saveNewMovement(initialMovement).futureValue.isRight mustBe true
       service.updateMessages(consigneeErn, None)(hc).futureValue

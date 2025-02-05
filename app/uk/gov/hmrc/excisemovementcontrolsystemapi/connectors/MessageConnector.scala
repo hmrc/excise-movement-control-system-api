@@ -97,7 +97,7 @@ class MessageConnector @Inject() (
 
   def acknowledgeMessages(ern: String, batchId: String, jobId: Option[String])(implicit
     hc: HeaderCarrier
-  ): Future[Done] = {
+  ): Future[MessageReceiptSuccessResponse] = {
 
     logger.info(s"[MessageConnector]: Acknowledging messages")
     val correlationId = correlationIdService.generateCorrelationId()
@@ -113,22 +113,14 @@ class MessageConnector @Inject() (
       .execute[HttpResponse]
       .flatMap { response =>
         if (response.status == OK) Future.fromTry {
-          val parsedResponse = parseJson[MessageReceiptSuccessResponse](response.body)
-          parsedResponse.map { ackRes =>
-            auditService.messageAcknowledged(ern, batchId, jobId, ackRes.recordsAffected)
-          }
-          parsedResponse.as(Done)
+          parseJson[MessageReceiptSuccessResponse](response.body)
         }
         else {
           logger.warn(s"[MessageConnector]: Invalid status returned: ${response.status}")
           Future.failed(new RuntimeException("Invalid status returned"))
         }
       }
-      .recoverWith { case ex =>
-        logger.warn(s"[MessageConnector]: Unexpected error: ${ex.getMessage}")
-        auditService.messageNotAcknowledged(ern, batchId, jobId, ex.getMessage)
-        Future.failed(ex)
-      }
+
   }
 
   private def parseJson[A](string: String)(implicit reads: Reads[A]): Try[A] =

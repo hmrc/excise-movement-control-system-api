@@ -206,12 +206,18 @@ class MessageService @Inject() (
     } else {
       messageConnector
         .acknowledgeMessages(ern, batchId, jobId)
-        .flatMap { _ =>
+        .flatMap { ackRes =>
+          auditService.messageAcknowledged(ern, batchId, jobId, ackRes.recordsAffected)
           if (response.messageCount > response.messages.size) {
             processNewMessages(ern, jobId)
           } else {
             Future.successful(Done)
           }
+        }
+        .recoverWith { case ex =>
+          logger.warn(s"[MessageService]: Unexpected error: ${ex.getMessage}")
+          auditService.messageNotAcknowledged(ern, batchId, jobId, ex.getMessage)
+          Future.failed(ex)
         }
     }
 

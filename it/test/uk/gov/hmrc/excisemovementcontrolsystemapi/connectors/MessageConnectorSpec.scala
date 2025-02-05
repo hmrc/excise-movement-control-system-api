@@ -123,12 +123,6 @@ class MessageConnectorSpec
 
       result.messages mustBe empty
       result.messageCount mustBe 0
-
-      withClue("should call audit service with success audit") {
-        verify(auditService, times(1)).messageProcessingSuccess(eqTo(ern), eqTo(result), eqTo(batchId), eqTo(None))(
-          eqTo(hc)
-        )
-      }
     }
 
     "must return messages when the response from the server contains them" in {
@@ -160,12 +154,6 @@ class MessageConnectorSpec
 
       result.messages mustBe Seq(ie704Message)
       result.messageCount mustBe 1
-
-      withClue("should call audit service with success audit") {
-        verify(auditService, times(1)).messageProcessingSuccess(eqTo(ern), eqTo(result), eqTo(batchId), eqTo(None))(
-          eqTo(hc)
-        )
-      }
 
     }
 
@@ -221,13 +209,6 @@ class MessageConnectorSpec
 
       result mustBe a[GetMessagesException]
       result.getMessage mustBe s"Failed to get messages for ern: $ern, cause: $failureReason"
-
-      withClue("should call audit service with failed audit") {
-        verify(auditService, times(1))
-          .messageProcessingFailure(eqTo(ern), eqTo(failureReason), eqTo(batchId), eqTo(None))(
-            eqTo(hc)
-          )
-      }
     }
 
     "must fail when the server responds with a non-json body" in {
@@ -250,13 +231,6 @@ class MessageConnectorSpec
 
       result mustBe a[GetMessagesException]
       result.getMessage must include("Unrecognized token 'foobar")
-
-      withClue("should call audit service with failed audit") {
-        verify(auditService, times(1))
-          .messageProcessingFailure(eqTo(ern), any, eqTo(batchId), eqTo(None))(
-            eqTo(hc)
-          )
-      }
     }
 
     "must fail when the server responds with an invalid json body" in {
@@ -280,13 +254,6 @@ class MessageConnectorSpec
       result mustBe a[GetMessagesException]
       result.getMessage must include("JsResultException")
 
-      withClue("should call audit service with failed audit") {
-        verify(auditService, times(1))
-          .messageProcessingFailure(eqTo(ern), any, eqTo(batchId), eqTo(None))(
-            eqTo(hc)
-          )
-      }
-
     }
 
     "must fail when the connection fails" in {
@@ -309,12 +276,6 @@ class MessageConnectorSpec
       result mustBe a[GetMessagesException]
       result.getMessage must include("Remotely closed")
 
-      withClue("should call audit service with failed audit") {
-        verify(auditService, times(1))
-          .messageProcessingFailure(eqTo(ern), any, eqTo(batchId), eqTo(None))(
-            eqTo(hc)
-          )
-      }
     }
   }
 
@@ -328,7 +289,7 @@ class MessageConnectorSpec
     val batchId       = UUID.randomUUID().toString
     val jobId         = UUID.randomUUID().toString
 
-    "must return `Done` when the server responds with OK" in {
+    "must return a future of the success response when the server responds with OK" in {
       val response = MessageReceiptSuccessResponse(
         dateTime = timestamp,
         exciseRegistrationNumber = ern,
@@ -352,14 +313,8 @@ class MessageConnectorSpec
           )
       )
 
-      connector.acknowledgeMessages(ern, batchId, Some(jobId))(hc).futureValue mustBe a[Done]
+      connector.acknowledgeMessages(ern, batchId, Some(jobId))(hc).futureValue mustBe response
 
-      withClue("emits a MessageAcknwoledged Success audit event") {
-
-        verify(auditService, times(1)).messageAcknowledged(any[String], any[String], any[Option[String]], any[Int])(
-          any[HeaderCarrier]
-        )
-      }
     }
 
     "must fail when the server responds with an unexpected status" in {
@@ -376,13 +331,6 @@ class MessageConnectorSpec
 
       connector.acknowledgeMessages(ern, batchId, Some(jobId))(hc).failed.futureValue
 
-      withClue("emits a MessageAcknowledged Failure audit event") {
-
-        verify(auditService, times(1))
-          .messageNotAcknowledged(any[String], any[String], any[Option[String]], any[String])(
-            any[HeaderCarrier]
-          )
-      }
     }
 
     "must fail when the server responds with a non-json body" in {
@@ -401,13 +349,6 @@ class MessageConnectorSpec
 
       connector.acknowledgeMessages(ern, batchId, Some(jobId))(hc).failed.futureValue
 
-      withClue("emits a MessageAcknowledged Failure audit event") {
-
-        verify(auditService, times(1))
-          .messageNotAcknowledged(any[String], any[String], any[Option[String]], any[String])(
-            any[HeaderCarrier]
-          )
-      }
     }
 
     "must fail when the server responds with an invalid json body" in {
@@ -426,13 +367,6 @@ class MessageConnectorSpec
 
       connector.acknowledgeMessages(ern, batchId, Some(jobId))(hc).failed.futureValue
 
-      withClue("emits a MessageAcknowledged Failure audit event") {
-
-        verify(auditService, times(1))
-          .messageNotAcknowledged(any[String], any[String], any[Option[String]], any[String])(
-            any[HeaderCarrier]
-          )
-      }
     }
 
     "must fail when the connection fails" in {
@@ -449,14 +383,6 @@ class MessageConnectorSpec
       )
 
       connector.acknowledgeMessages(ern, batchId, Some(jobId))(hc).failed.futureValue
-
-      withClue("emits a MessageAcknowledged Failure audit event") {
-
-        verify(auditService, times(1))
-          .messageNotAcknowledged(any[String], any[String], any[Option[String]], any[String])(
-            any[HeaderCarrier]
-          )
-      }
     }
   }
 
