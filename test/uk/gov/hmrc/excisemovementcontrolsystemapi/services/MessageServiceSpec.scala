@@ -112,6 +112,96 @@ class MessageServiceSpec
 
   "updateMessages" when {
 
+    "acknowledgement fails should emit a MessageAcknowledged Failure" in {
+      val ern      = "ern"
+      val ie801    = XmlMessageGeneratorFactory.generate(
+        ern,
+        MessageParams(
+          IE801,
+          "GB00001",
+          Some("testConsignee"),
+          Some("23XI00000000000000012"),
+          Some("lrnie8158976912")
+        )
+      )
+      val ie704    = XmlMessageGeneratorFactory.generate(
+        ern,
+        MessageParams(IE704, "XI000001", localReferenceNumber = Some("lrnie8158976912"))
+      )
+      val movement = Movement(
+        None,
+        "lrnie8158976912",
+        ern,
+        Some("testConsignee"),
+        Some("23XI00000000000000012"),
+        messages = Seq(Message(utils.encode(ie801.toString()), "IE801", "GB00001", ern, Set.empty, now)),
+        lastUpdated = updateOrCreateTimestamp.minus(1, ChronoUnit.DAYS)
+      )
+      val messages = Seq(IE704Message.createFromXml(ie704))
+
+      when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
+      when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+      when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
+      when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
+      when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
+      when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+      when(messageConnector.getNewMessages(any, any, any)(any))
+        .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+
+      when(messageConnector.acknowledgeMessages(any, any, any)(any))
+        .thenReturn(Future.failed(new Exception("test message")))
+
+      messageService.updateMessages(ern, None).failed.futureValue
+
+      verify(auditService, times(1)).messageNotAcknowledged(eqTo(ern), any, any, eqTo("test message"))(any)
+    }
+
+    "acknowledgement succeeds should emit a MessageAcknowledged Success" in {
+      val ern                     = "ern"
+      val ie801                   = XmlMessageGeneratorFactory.generate(
+        ern,
+        MessageParams(
+          IE801,
+          "GB00001",
+          Some("testConsignee"),
+          Some("23XI00000000000000012"),
+          Some("lrnie8158976912")
+        )
+      )
+      val ie704                   = XmlMessageGeneratorFactory.generate(
+        ern,
+        MessageParams(IE704, "XI000001", localReferenceNumber = Some("lrnie8158976912"))
+      )
+      val movement                = Movement(
+        None,
+        "lrnie8158976912",
+        ern,
+        Some("testConsignee"),
+        Some("23XI00000000000000012"),
+        messages = Seq(Message(utils.encode(ie801.toString()), "IE801", "GB00001", ern, Set.empty, now)),
+        lastUpdated = updateOrCreateTimestamp.minus(1, ChronoUnit.DAYS)
+      )
+      val acknowledgementResponse = MessageReceiptSuccessResponse(now, ern, 1)
+
+      val messages = Seq(IE704Message.createFromXml(ie704))
+
+      when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
+      when(movementRepository.save(any)).thenReturn(Future.successful(Done))
+      when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
+      when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
+      when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
+      when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
+      when(messageConnector.getNewMessages(any, any, any)(any))
+        .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+
+      when(messageConnector.acknowledgeMessages(any, any, any)(any))
+        .thenReturn(Future.successful(acknowledgementResponse))
+      messageService.updateMessages("ern", None).futureValue
+
+      verify(auditService, times(1))
+        .messageAcknowledged(eqTo("ern"), any, any, eqTo(acknowledgementResponse.recordsAffected))(any)
+    }
+
     "last retrieved is empty" when {
       "there is a movement but we have never retrieved anything" when {
         "we try to retrieve messages but there are none" should {
