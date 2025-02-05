@@ -31,6 +31,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, DefaultPlayMongoRepositorySupport}
 
@@ -47,9 +48,9 @@ class MovementServiceItSpec
     with BeforeAndAfterAll
     with GuiceOneAppPerSuite {
 
-  private val dateTimeService = mock[DateTimeService]
-  private val timestamp       = Instant.now.truncatedTo(ChronoUnit.MILLIS)
-
+  private val dateTimeService                 = mock[DateTimeService]
+  private val timestamp                       = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+  private implicit val hc                     = HeaderCarrier()
   override def fakeApplication(): Application = GuiceApplicationBuilder()
     .overrides(
       bind[MongoComponent].toInstance(mongoComponent),

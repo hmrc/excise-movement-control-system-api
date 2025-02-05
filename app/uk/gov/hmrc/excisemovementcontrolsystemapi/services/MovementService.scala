@@ -29,6 +29,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -37,16 +38,17 @@ import scala.util.control.NonFatal
 @Singleton
 class MovementService @Inject() (
   movementRepository: MovementRepository,
-  dateTimeService: DateTimeService
+  dateTimeService: DateTimeService,
+  auditService: AuditService
 )(implicit ec: ExecutionContext)
     extends Logging {
 
-  def saveNewMovement(movement: Movement): Future[Either[Result, Movement]] =
+  def saveNewMovement(movement: Movement)(implicit hc: HeaderCarrier): Future[Either[Result, Movement]] =
     movementRepository
       .findDraftMovement(movement)
       .flatMap { draftMovement =>
         draftMovement.map(movement => Future.successful(Right(movement))).getOrElse {
-          movementRepository.saveMovement(movement).map(_ => Right(movement))
+          saveMovement(movement, None).map(_ => Right(movement))
         }
       }
       .recover {
@@ -70,8 +72,17 @@ class MovementService @Inject() (
           )
       }
 
-  def saveMovement(movement: Movement): Future[Done] =
-    movementRepository.saveMovement(movement)
+  def saveMovement(movement: Movement, jobId: Option[String] = None)(implicit hc: HeaderCarrier): Future[Done] =
+    movementRepository
+      .saveMovement(movement)
+      .map { _ =>
+        auditService.movementSavedSuccess(1, 1, movement, "123", jobId)
+        Done
+      }
+      .recoverWith { case e =>
+        auditService.movementSavedFailure(1, 1, movement, e.getMessage, "123", jobId)
+        Future.failed(e)
+      }
 
   def getMovementById(id: String): Future[Option[Movement]] =
     movementRepository.getMovementById(id)

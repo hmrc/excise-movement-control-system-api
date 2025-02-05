@@ -66,9 +66,10 @@ class MessageServiceItSpec
   private val mockCorrelationIdService    = mock[CorrelationIdService]
   private val mockTraderMovementConnector = mock[TraderMovementConnector]
 
-  private val now   = Instant.now.truncatedTo(ChronoUnit.MILLIS)
-  private val newId = "some-id"
-  private val utils = new EmcsUtils
+  private val now         = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+  private val newId       = "some-id"
+  private val utils       = new EmcsUtils
+  private implicit val hc = HeaderCarrier()
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -211,7 +212,6 @@ class MessageServiceItSpec
 
     "must not try to create a movement which already exists" in {
 
-      val hc           = HeaderCarrier()
       val consignorErn = "testErn"
       val consigneeErn = "testErn2"
       val lrn          = "lrnie8158976912"
@@ -330,7 +330,7 @@ class MessageServiceItSpec
       when(mockMessageConnector.acknowledgeMessages(any, any, any)(any))
         .thenReturn(Future.successful(acknowledgeResponse))
 
-      movementService.saveNewMovement(initialMovement).futureValue.isRight mustBe true
+      movementService.saveNewMovement(initialMovement)(hc).futureValue.isRight mustBe true
       service.updateMessages(consigneeErn, None)(hc).futureValue
 
       val result = repository.getMovementByLRNAndERNIn(lrn, List(consignorErn)).futureValue

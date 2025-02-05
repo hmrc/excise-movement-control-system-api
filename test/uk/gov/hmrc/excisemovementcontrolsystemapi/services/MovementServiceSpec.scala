@@ -16,41 +16,47 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-import com.mongodb.{MongoCommandException, MongoWriteException, WriteError}
+import com.mongodb.MongoCommandException
 import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.any
-import org.mockito.MockitoSugar.{reset, verify, when}
-import org.mongodb.scala.{MongoCommandException, ServerAddress}
+import org.mockito.MockitoSugar.{reset, times, verify, when}
+import org.mongodb.scala.ServerAddress
 import org.mongodb.scala.bson.BsonDocument
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, InternalServerError}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector.GetMessagesException
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessageGeneratorFactory}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, TraderType}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes.IE704
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE704Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.Instant
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
-class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfterEach {
+class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfterEach with ScalaFutures {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   protected implicit val hc: HeaderCarrier    = HeaderCarrier()
 
   private val mockMovementRepository = mock[MovementRepository]
+  private val auditService           = mock[AuditService]
   private val testDateTime: Instant  = Instant.parse("2023-11-15T17:02:34.123456Z")
   private val dateTimeService        = mock[DateTimeService]
+  private val utils                  = new EmcsUtils
+
   when(dateTimeService.timestamp()).thenReturn(testDateTime)
 
-  private val movementService = new MovementService(mockMovementRepository, dateTimeService)
+  private val movementService = new MovementService(mockMovementRepository, dateTimeService, auditService)
 
   private val lrn         = "123"
   private val consignorId = "ABC"
@@ -60,7 +66,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
   override def beforeEach(): Unit = {
     super.beforeEach()
 
-    reset(mockMovementRepository, newMessage)
+    reset(mockMovementRepository, newMessage, auditService)
   }
 
   private val exampleMovement: Movement = Movement(Some("boxId"), lrn, consignorId, Some(consigneeId))
@@ -139,29 +145,144 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
   }
 
   "saveMovement" should {
-    "return success if movementRepository.saveMovement() returns a success" in {
-      val successMovement = exampleMovement
+    "if movementRepository.saveMovement() returns a success" should {
+      "return success if movementRepository.saveMovement() returns a success" in {
+        val successMovement = exampleMovement
 
-      when(mockMovementRepository.saveMovement(any))
-        .thenReturn(Future.successful(Done))
+        when(mockMovementRepository.saveMovement(any))
+          .thenReturn(Future.successful(Done))
 
-      val result = await(movementService.saveMovement(successMovement))
+        val result = await(movementService.saveMovement(successMovement))
 
-      result mustBe Done
-    }
+        result mustBe Done
+      }
+      "call an auditService.movementSavedSuccess if call to repository is a Success" in {
+        val successMovement = exampleMovement
 
-    "return failure if movementRepository.saveMovement() returns a failure" in {
-      val successMovement = exampleMovement
+        //TODO: Take another look at batchId generation
+        val batchId = "123"
 
-      val exception = new MongoCommandException(new BsonDocument(), new ServerAddress())
+        when(mockMovementRepository.saveMovement(any))
+          .thenReturn(Future.successful(Done))
 
-      when(mockMovementRepository.saveMovement(any))
-        .thenReturn(Future.failed(exception))
-
-      the[MongoCommandException] thrownBy {
         await(movementService.saveMovement(successMovement))
-      } must have message exception.getMessage
+
+        //TODO: Calculate movements properly, take another look at jobId as well
+        verify(auditService, times(1)).movementSavedSuccess(1, 1, successMovement, batchId, None)
+      }
+      "pass jobId to audit service in success case" in {
+        val successMovement = exampleMovement
+        val batchId         = "123"
+        val jobId           = Some(UUID.randomUUID().toString)
+
+        when(mockMovementRepository.saveMovement(any))
+          .thenReturn(Future.successful(Done))
+
+        movementService.saveMovement(successMovement, jobId)
+
+        verify(auditService, times(1)).movementSavedSuccess(1, 1, successMovement, batchId, jobId)
+      }
+      "pass messagesAdded = 1 and totalMessages = 1 for a new movement with one message when a call to repository is a success" in {
+        val ie704     = XmlMessageGeneratorFactory.generate(
+          "ern",
+          MessageParams(IE704, "XI000001", localReferenceNumber = Some("lrnie8158976912"))
+        )
+        val ieMessage = IE704Message.createFromXml(ie704)
+
+        val message = Message(
+          utils.encode(ieMessage.toXml.toString()),
+          "IE704",
+          "XI000001",
+          "ern",
+          Set("boxId1", "boxId2"),
+          Instant.now()
+        )
+
+        val successMovement = exampleMovement.copy(messages = Seq(message))
+
+        val batchId = "123"
+        val jobId   = Some(UUID.randomUUID().toString)
+
+        when(mockMovementRepository.saveMovement(any))
+          .thenReturn(Future.successful(Done))
+
+        movementService.saveMovement(successMovement, jobId)
+
+        verify(auditService, times(1)).movementSavedSuccess(1, 1, successMovement, batchId, jobId)
+
+      }
+
+      "pass messagesAdded = 2 and totalMessages = 2 for a new movement with one message when a call to repository is a success" in {
+        val ie704     = XmlMessageGeneratorFactory.generate(
+          "ern",
+          MessageParams(IE704, "XI000001", localReferenceNumber = Some("lrnie8158976912"))
+        )
+        val ieMessage = IE704Message.createFromXml(ie704)
+
+        val message = Message(
+          utils.encode(ieMessage.toXml.toString()),
+          "IE704",
+          "XI000001",
+          "ern",
+          Set("boxId1", "boxId2"),
+          Instant.now()
+        )
+
+        val successMovement = exampleMovement.copy(messages = Seq(message))
+
+        val batchId = "123"
+        val jobId   = Some(UUID.randomUUID().toString)
+
+        when(mockMovementRepository.saveMovement(any))
+          .thenReturn(Future.successful(Done))
+
+        movementService.saveMovement(successMovement, jobId)
+
+        verify(auditService, times(1)).movementSavedSuccess(2, 2, successMovement, batchId, jobId)
+
+      }
     }
+
+    "if movementRepository.saveMovement() returns a failure" should {
+      "return failure if movementRepository.saveMovement() returns a failure" in {
+        val successMovement = exampleMovement
+
+        val exception = new MongoCommandException(new BsonDocument(), new ServerAddress())
+
+        when(mockMovementRepository.saveMovement(any))
+          .thenReturn(Future.failed(exception))
+
+        the[MongoCommandException] thrownBy {
+          await(movementService.saveMovement(successMovement))
+        } must have message exception.getMessage
+      }
+      "call an auditService.movementSavedFailure if call to repository is a Failure" in {
+        val movement = exampleMovement
+        val batchId  = "123"
+
+        when(mockMovementRepository.saveMovement(any))
+          .thenReturn(Future.failed(new RuntimeException("Failed reason")))
+
+        //TODO: Calculate movements properly
+        val result = movementService.saveMovement(movement).failed.futureValue
+
+        verify(auditService, times(1)).movementSavedFailure(1, 1, movement, result.getMessage, batchId, None)
+
+      }
+      "pass jobId to audit service in failure case" in {
+        val movement = exampleMovement
+        val batchId  = "123"
+        val jobId    = Some(UUID.randomUUID().toString)
+
+        when(mockMovementRepository.saveMovement(any))
+          .thenReturn(Future.failed(new RuntimeException("Failed reason")))
+
+        val result = movementService.saveMovement(movement, jobId).failed.futureValue
+
+        verify(auditService, times(1)).movementSavedFailure(1, 1, movement, result.getMessage, batchId, jobId)
+      }
+    }
+
   }
 
   "getMovementByLRNAndERNIn with valid LRN and ERN combination" should {
