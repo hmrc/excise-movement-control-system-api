@@ -27,7 +27,7 @@ import play.api.mvc.Results.{BadRequest, InternalServerError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, TraderType}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -72,19 +72,30 @@ class MovementService @Inject() (
           )
       }
 
-  def saveMovement(movement: Movement, jobId: Option[String] = None)(implicit hc: HeaderCarrier): Future[Done] = {
+  def saveMovement(
+    updatedMovement: Movement,
+    jobId: Option[String] = None,
+    messagesAlreadyInMongo: Seq[Message] = Seq.empty
+  )(implicit
+    hc: HeaderCarrier
+  ): Future[Done] = {
 
-    val messagesAdded = movement.messages.length
-    val totalMessages = movement.messages.length
+    val messagesAlreadyInMongoMap = messagesAlreadyInMongo.map(p => p.messageId -> p).toMap
+
+    val newMessages =
+      updatedMovement.messages.filter(p1 => !messagesAlreadyInMongoMap.get(p1.messageId).contains(p1))
+
+    val newMessageCount = newMessages.length
+    val totalMessages   = updatedMovement.messages.length
 
     movementRepository
-      .saveMovement(movement)
+      .saveMovement(updatedMovement)
       .map { _ =>
-        auditService.movementSavedSuccess(messagesAdded, totalMessages, movement, "123", jobId)
+        auditService.movementSavedSuccess(newMessageCount, totalMessages, updatedMovement, "123", jobId)
         Done
       }
       .recoverWith { case e =>
-        auditService.movementSavedFailure(messagesAdded, totalMessages, movement, e.getMessage, "123", jobId)
+        auditService.movementSavedFailure(newMessageCount, totalMessages, updatedMovement, e.getMessage, "123", jobId)
         Future.failed(e)
       }
   }
