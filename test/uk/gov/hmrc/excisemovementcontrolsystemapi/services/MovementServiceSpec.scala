@@ -185,6 +185,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         //TODO: Calculate movements properly, take another look at jobId as well
         verify(auditService, times(1)).movementSavedSuccess(1, 1, successMovement, batchId, None)
       }
+      
       "pass jobId to audit service in success case" in {
         val successMovement = exampleMovement
         val batchId         = "123"
@@ -198,6 +199,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         verify(auditService, times(1))
           .movementSavedSuccess(eqTo(1), eqTo(1), eqTo(successMovement), eqTo(batchId), eqTo(jobId))(any)
       }
+
       "pass messagesAdded = 1 and totalMessages = 1 for a new movement with one message when a call to repository is a success" in {
         val successMovement = exampleMovement
 
