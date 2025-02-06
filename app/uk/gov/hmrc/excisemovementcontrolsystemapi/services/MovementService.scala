@@ -17,7 +17,6 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.Singleton
-import com.mongodb.MongoWriteException
 import org.apache.pekko.Done
 import org.mongodb.scala.MongoCommandException
 import play.api.Logging
@@ -85,17 +84,14 @@ class MovementService @Inject() (
     val newMessages =
       updatedMovement.messages.filter(p1 => !messagesAlreadyInMongoMap.get(p1.messageId).contains(p1))
 
-    val newMessageCount = newMessages.length
-    val totalMessages   = updatedMovement.messages.length
-
     movementRepository
       .saveMovement(updatedMovement)
       .map { _ =>
-        auditService.movementSavedSuccess(newMessageCount, totalMessages, updatedMovement, "123", jobId)
+        auditService.movementSavedSuccess(updatedMovement, "123", jobId, newMessages)
         Done
       }
       .recoverWith { case e =>
-        auditService.movementSavedFailure(newMessageCount, totalMessages, updatedMovement, e.getMessage, "123", jobId)
+        auditService.movementSavedFailure(updatedMovement, e.getMessage, "123", jobId, newMessages)
         Future.failed(e)
       }
   }

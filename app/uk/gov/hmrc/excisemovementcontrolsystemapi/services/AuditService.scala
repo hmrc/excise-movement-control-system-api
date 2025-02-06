@@ -158,35 +158,32 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
   }
 
   def movementSavedSuccess(
-    messagesAdded: Int,
-    totalMessages: Int,
     movement: Movement,
     batchId: String,
-    jobId: Option[String]
+    jobId: Option[String],
+    newMessages: Seq[Message]
   )(implicit hc: HeaderCarrier): Unit = {
 
     val movementSavedSuccessAuditInfo =
-      factory.createMovementSavedSuccessAuditInfo(messagesAdded, totalMessages, movement, batchId, jobId)
+      factory.createMovementSavedSuccessAuditInfo(movement, batchId, jobId, newMessages)
 
     auditConnector.sendExplicitAudit("MovementSaved", movementSavedSuccessAuditInfo)
   }
 
   def movementSavedFailure(
-    messagesToBeAdded: Int,
-    totalMessages: Int,
     movement: Movement,
     failureReason: String,
     batchId: String,
-    jobId: Option[String]
+    jobId: Option[String],
+    messagesToBeAdded: Seq[Message]
   )(implicit hc: HeaderCarrier): Unit = {
 
     val movementSavedFailureAuditInfo = factory.createMovementSavedFailureAuditInfo(
-      messagesToBeAdded,
-      totalMessages,
       movement,
       failureReason,
       batchId,
-      jobId
+      jobId,
+      messagesToBeAdded
     )
 
     auditConnector.sendExplicitAudit("MovementSaved", movementSavedFailureAuditInfo)
