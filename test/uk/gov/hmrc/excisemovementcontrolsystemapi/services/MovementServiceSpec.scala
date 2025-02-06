@@ -29,10 +29,9 @@ import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, InternalServerError}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessageGeneratorFactory}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, TestXml, XmlMessageGeneratorFactory}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, TraderType}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes.IE704
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE704Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
@@ -43,7 +42,7 @@ import java.time.Instant
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
-class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfterEach with ScalaFutures {
+class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfterEach with ScalaFutures with TestXml {
 
   protected implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   protected implicit val hc: HeaderCarrier    = HeaderCarrier()
@@ -71,7 +70,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
   private val ie704          = XmlMessageGeneratorFactory.generate(
     "ern",
-    MessageParams(IE704, "XI000001", localReferenceNumber = Some("lrnie8158976912"))
+    MessageParams(MessageTypes.IE704, "XI000001", localReferenceNumber = Some("lrnie8158976912"))
   )
   private val ieMessage      = IE704Message.createFromXml(ie704)
   private val exampleMessage = Message(
@@ -167,23 +166,20 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         when(mockMovementRepository.saveMovement(any))
           .thenReturn(Future.successful(Done))
 
-        val result = await(movementService.saveMovement(successMovement))
+        val result = await(movementService.saveMovement(successMovement, None, Seq.empty))
 
         result mustBe Done
       }
       "call an auditService.movementSavedSuccess if call to repository is a Success" in {
         val successMovement = exampleMovement
-
-        //TODO: Take another look at batchId generation
-        val batchId = "123"
+        val batchId         = "123"
 
         when(mockMovementRepository.saveMovement(any))
           .thenReturn(Future.successful(Done))
 
-        await(movementService.saveMovement(successMovement))
+        await(movementService.saveMovement(successMovement, None, Seq.empty))
 
-        //TODO: Calculate movements properly, take another look at jobId as well
-        verify(auditService, times(1)).movementSavedSuccess(1, 1, successMovement, batchId, None)
+        verify(auditService, times(1)).movementSavedSuccess(successMovement, batchId, None, successMovement.messages)
       }
 
       "pass jobId to audit service in success case" in {
@@ -194,10 +190,10 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         when(mockMovementRepository.saveMovement(any))
           .thenReturn(Future.successful(Done))
 
-        movementService.saveMovement(successMovement, jobId).futureValue
+        movementService.saveMovement(successMovement, jobId, Seq.empty).futureValue
 
         verify(auditService, times(1))
-          .movementSavedSuccess(eqTo(1), eqTo(1), eqTo(successMovement), eqTo(batchId), eqTo(jobId))(any)
+          .movementSavedSuccess(eqTo(successMovement), eqTo(batchId), eqTo(jobId), eqTo(successMovement.messages))(any)
       }
 
       "pass messagesAdded = 1 and totalMessages = 1 for a new movement with one message when a call to repository is a success" in {
@@ -209,10 +205,10 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         when(mockMovementRepository.saveMovement(any))
           .thenReturn(Future.successful(Done))
 
-        movementService.saveMovement(successMovement, jobId).futureValue
+        movementService.saveMovement(successMovement, jobId, Seq().empty).futureValue
 
         verify(auditService, times(1))
-          .movementSavedSuccess(eqTo(1), eqTo(1), eqTo(successMovement), eqTo(batchId), eqTo(jobId))(any)
+          .movementSavedSuccess(eqTo(successMovement), eqTo(batchId), eqTo(jobId), eqTo(exampleMovement.messages))(any)
 
       }
 
@@ -228,7 +224,14 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         movementService.saveMovement(successMovement, jobId).futureValue
 
         verify(auditService, times(1))
-          .movementSavedSuccess(eqTo(2), eqTo(2), eqTo(successMovement), eqTo(batchId), eqTo(jobId))(any)
+          .movementSavedSuccess(
+            eqTo(successMovement),
+            eqTo(batchId),
+            eqTo(jobId),
+            eqTo(Seq(exampleMessage, exampleMessage))
+          )(
+            any
+          )
 
       }
 
@@ -247,7 +250,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         movementService.saveMovement(successMovement, jobId).futureValue
 
         verify(auditService, times(1))
-          .movementSavedSuccess(eqTo(10), eqTo(10), eqTo(successMovement), eqTo(batchId), eqTo(jobId))(any)
+          .movementSavedSuccess(eqTo(successMovement), eqTo(batchId), eqTo(jobId), eqTo(messages))(any)
 
       }
 
@@ -266,7 +269,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         movementService.saveMovement(successMovement, jobId, messagesAlreadyInMongo).futureValue
 
         verify(auditService, times(1))
-          .movementSavedSuccess(eqTo(0), eqTo(1), eqTo(successMovement), eqTo(batchId), eqTo(jobId))(any)
+          .movementSavedSuccess(eqTo(successMovement), eqTo(batchId), eqTo(jobId), eqTo(Seq.empty))(any)
 
       }
 
@@ -288,7 +291,9 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         movementService.saveMovement(successMovement, jobId, exampleMessagesAlreadyInMongo).futureValue
 
         verify(auditService, times(1))
-          .movementSavedSuccess(eqTo(0), eqTo(2), eqTo(successMovement), eqTo(batchId), eqTo(jobId))(any)
+          .movementSavedSuccess(eqTo(successMovement), eqTo(batchId), eqTo(jobId), eqTo(Seq.empty))(
+            any
+          )
 
       }
 
@@ -309,7 +314,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         movementService.saveMovement(successMovement, jobId, exampleMessagesAlreadyInMongo).futureValue
 
         verify(auditService, times(1))
-          .movementSavedSuccess(eqTo(1), eqTo(2), eqTo(successMovement), eqTo(batchId), eqTo(jobId))(any)
+          .movementSavedSuccess(eqTo(successMovement), eqTo(batchId), eqTo(jobId), eqTo(Seq(exampleMessage)))(any)
 
       }
 
@@ -333,7 +338,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         movementService.saveMovement(successMovement, jobId, exampleMessagesAlreadyInMongo).futureValue
 
         verify(auditService, times(1))
-          .movementSavedSuccess(eqTo(2), eqTo(2), eqTo(successMovement), eqTo(batchId), eqTo(jobId))(any)
+          .movementSavedSuccess(eqTo(successMovement), eqTo(batchId), eqTo(jobId), eqTo(successMovement.messages))(any)
 
       }
 
@@ -351,9 +356,9 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         val exampleMessagesAlreadyInMongo =
           Seq(exampleMessage, exampleMessage2, exampleMessage3, exampleMessage4, exampleMessage5)
 
-        val successMovement = exampleMovement.copy(messages =
-          exampleMessagesAlreadyInMongo ++ Seq(exampleMessage6, exampleMessage7, exampleMessage8)
-        )
+        val newMessages = Seq(exampleMessage6, exampleMessage7, exampleMessage8)
+
+        val successMovement = exampleMovement.copy(messages = exampleMessagesAlreadyInMongo ++ newMessages)
 
         val batchId = "123"
         val jobId   = Some(UUID.randomUUID().toString)
@@ -364,8 +369,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         movementService.saveMovement(successMovement, jobId, exampleMessagesAlreadyInMongo).futureValue
 
         verify(auditService, times(1))
-          .movementSavedSuccess(eqTo(3), eqTo(8), eqTo(successMovement), eqTo(batchId), eqTo(jobId))(any)
-
+          .movementSavedSuccess(eqTo(successMovement), eqTo(batchId), eqTo(jobId), eqTo(newMessages))(any)
       }
     }
 
@@ -383,35 +387,46 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         } must have message exception.getMessage
       }
 
-      "call an auditService.movementSavedFailure if call to repository is a Failure" in {
-        val movement = exampleMovement
-        val batchId  = "123"
+      "call an auditService.movementSavedFailure if call to repository is a Failure with correct diff in messages" in {
+        val movement   = exampleMovement
+        val newMessage = exampleMessage.copy(messageId = UUID.randomUUID().toString)
+
+        val updatedMovement = exampleMovement.copy(messages = movement.messages ++ Seq(newMessage))
+        val batchId         = "123"
 
         when(mockMovementRepository.saveMovement(any))
           .thenReturn(Future.failed(new RuntimeException("Failed reason")))
 
-        //TODO: Calculate movements properly
-        val result = movementService.saveMovement(movement).failed.futureValue
+        val result =
+          movementService.saveMovement(updatedMovement, messagesAlreadyInMongo = movement.messages).failed.futureValue
 
-        verify(auditService, times(1)).movementSavedFailure(1, 1, movement, result.getMessage, batchId, None)
+        verify(auditService, times(1))
+          .movementSavedFailure(updatedMovement, result.getMessage, batchId, None, Seq(newMessage))
 
       }
 
-      "pass jobId to audit service in failure case" in {
-        val movement = exampleMovement
-        val batchId  = "123"
-        val jobId    = Some(UUID.randomUUID().toString)
+      "pass jobId to audit service in failure case with correct diff in messages" in {
+        val movement   = exampleMovement
+        val newMessage = exampleMessage.copy(messageId = UUID.randomUUID().toString)
+
+        val updatedMovement = exampleMovement.copy(messages = movement.messages ++ Seq(newMessage))
+
+        val batchId = "123"
+        val jobId   = Some(UUID.randomUUID().toString)
 
         when(mockMovementRepository.saveMovement(any))
           .thenReturn(Future.failed(new RuntimeException("Failed reason")))
 
-        val result = movementService.saveMovement(movement, jobId).failed.futureValue
+        val result = movementService.saveMovement(updatedMovement, jobId, movement.messages).failed.futureValue
 
-        verify(auditService, times(1)).movementSavedFailure(1, 1, movement, result.getMessage, batchId, jobId)
+        verify(auditService, times(1))
+          .movementSavedFailure(updatedMovement, result.getMessage, batchId, jobId, Seq(newMessage))
       }
 
-      "pass messagesToBeAdded = 2 and totalMessages = 2 for a new movement with two messages when a call to repository is a failure" in {
-        val movement = exampleMovement.copy(messages = Seq(exampleMessage, exampleMessage))
+      "pass two messagesToBeAdded for a new movement with two messages when a call to repository is a failure" in {
+
+        val exampleMessage2 = exampleMessage.copy(messageId = UUID.randomUUID().toString)
+        val movement        = exampleMovement.copy(messages = Seq(exampleMessage, exampleMessage2))
 
         val batchId = "123"
         val jobId   = Some(UUID.randomUUID().toString)
@@ -421,14 +436,16 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         val result = movementService.saveMovement(movement, jobId).failed.futureValue
 
-        verify(auditService, times(1)).movementSavedFailure(2, 2, movement, result.getMessage, batchId, jobId)
+        verify(auditService, times(1))
+          .movementSavedFailure(movement, result.getMessage, batchId, jobId, movement.messages)
 
       }
 
-      "pass messagesToBeAdded = 10 and totalMessages = 10 for a new movement with two messages when a call to repository is a failure" in {
+      "pass 10 messagesToBeAdded  for a new movement with ten messages when a call to repository is a failure" in {
         val messages = for {
           _ <- 1 to 10
-        } yield exampleMessage
+        } yield exampleMessage.copy(messageId = UUID.randomUUID().toString)
+
         val movement = exampleMovement.copy(messages = messages)
 
         val batchId = "123"
@@ -439,12 +456,16 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         val result = movementService.saveMovement(movement, jobId).failed.futureValue
 
-        verify(auditService, times(1)).movementSavedFailure(10, 10, movement, result.getMessage, batchId, jobId)
+        verify(auditService, times(1))
+          .movementSavedFailure(eqTo(movement), eqTo(result.getMessage), eqTo(batchId), eqTo(jobId), eqTo(messages))(
+            any
+          )
 
       }
 
-      "pass messagesToBeAdded = 1 and totalMessages = 1 for a new movement with one message when a call to repository is a failure" in {
-        val successMovement = exampleMovement
+      "pass one messagesToBeAdded for a new movement with one message when a call to repository is a failure" in {
+        val message2        = exampleMessage.copy(messageId = UUID.randomUUID().toString)
+        val successMovement = exampleMovement.copy(messages = Seq(exampleMessage, message2))
 
         val batchId = "123"
         val jobId   = Some(UUID.randomUUID().toString)
@@ -452,23 +473,22 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         when(mockMovementRepository.saveMovement(any))
           .thenReturn(Future.failed(new RuntimeException("Failure reason")))
 
-        val result = movementService.saveMovement(successMovement, jobId).failed.futureValue
+        val result = movementService.saveMovement(successMovement, jobId, Seq(message2)).failed.futureValue
 
         verify(auditService, times(1))
           .movementSavedFailure(
-            eqTo(1),
-            eqTo(1),
             eqTo(successMovement),
             eqTo(result.getMessage),
             eqTo(batchId),
-            eqTo(jobId)
+            eqTo(jobId),
+            eqTo(Seq(exampleMessage))
           )(any)
 
       }
 
-      "pass messagesToBeAdded = 0 when the single message for a movement is a message that is already present in mongo when a call to repository is a failure" in {
+      "pass zero messagesToBeAdded when the single message for a movement is a message that is already present in mongo when a call to repository is a failure" in {
 
-        val successMovement = exampleMovement.copy(messages = Seq(exampleMessage))
+        val successMovement = exampleMovement
 
         val messagesAlreadyInMongo = Seq(exampleMessage)
 
@@ -482,12 +502,11 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         verify(auditService, times(1))
           .movementSavedFailure(
-            eqTo(0),
-            eqTo(1),
             eqTo(successMovement),
             eqTo(result.getMessage),
             eqTo(batchId),
-            eqTo(jobId)
+            eqTo(jobId),
+            eqTo(Seq.empty)
           )(any)
 
       }

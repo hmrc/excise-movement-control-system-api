@@ -226,21 +226,20 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
   ): MessageProcessingFailureAuditInfo = MessageProcessingFailureAuditInfo(ern, failureReason, batchId, jobId)
 
   def createMovementSavedSuccessAuditInfo(
-    messagesAdded: Int,
-    totalMessages: Int,
-    movement: Movement,
+    updatedMovement: Movement,
     batchId: String,
-    jobId: Option[String]
+    jobId: Option[String],
+    newMessages: Seq[Message]
   ): MovementSavedSuccessAuditInfo = {
-    val ieMessages = convertToIEMessage(movement.messages)
+    val ieMessages = convertToIEMessage(newMessages)
     MovementSavedSuccessAuditInfo(
-      messagesAdded,
-      totalMessages,
-      movement._id,
-      Some(movement.localReferenceNumber),
-      movement.administrativeReferenceCode,
-      movement.consignorId,
-      movement.consigneeId,
+      newMessages.length,
+      updatedMovement.messages.length,
+      updatedMovement._id,
+      Some(updatedMovement.localReferenceNumber),
+      updatedMovement.administrativeReferenceCode,
+      updatedMovement.consignorId,
+      updatedMovement.consigneeId,
       batchId,
       jobId,
       generateKeyMessageDetailsAuditInfo(ieMessages),
@@ -248,18 +247,17 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
     )
   }
   def createMovementSavedFailureAuditInfo(
-    messagesToBeAdded: Int,
-    totalMessages: Int,
     movement: Movement,
     failureReason: String,
     batchId: String,
-    jobId: Option[String]
+    jobId: Option[String],
+    messagesToBeAdded: Seq[Message]
   ): MovementSavedFailureAuditInfo = {
     val ieMessages = convertToIEMessage(movement.messages)
     MovementSavedFailureAuditInfo(
       failureReason,
-      messagesToBeAdded,
-      totalMessages,
+      messagesToBeAdded.length,
+      movement.messages.length,
       movement._id,
       Some(movement.localReferenceNumber),
       movement.administrativeReferenceCode,

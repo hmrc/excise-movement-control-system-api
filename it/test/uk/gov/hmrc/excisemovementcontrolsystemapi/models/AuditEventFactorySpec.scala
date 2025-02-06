@@ -372,7 +372,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
     }
 
     val expectedResult = MovementSavedSuccessAuditInfo(
-      10,
+      1,
       1,
       movementId,
       Some("lrn"),
@@ -385,12 +385,152 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       ieMessagesConverted.map(_.toJson)
     )
 
-    val result = service.createMovementSavedSuccessAuditInfo(10, 1, movement, batchId, None)
+    val result = service.createMovementSavedSuccessAuditInfo(movement, batchId, None, Seq(message))
+
+    result mustBe expectedResult
+  }
+
+  "createMovementSavedSuccessAuditInfo creates MovementSavedSuccessAuditInfo object with no new messages" in {
+
+    val movementId = UUID.randomUUID().toString
+    val batchId    = UUID.randomUUID().toString
+    val encodedXml = emcsUtils.encode(IE801.toString)
+
+    val messageId = UUID.randomUUID().toString
+
+    val message =
+      Message(encodedXml, "IE801", messageId, "recipient", Set.empty[String], Instant.now())
+
+    val movement =
+      Movement(movementId, None, "lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now(), Seq(message))
+
+    val expectedResult = MovementSavedSuccessAuditInfo(
+      0,
+      1,
+      movementId,
+      Some("lrn"),
+      Some("arc"),
+      "consignorId",
+      Some("consigneeId"),
+      batchId,
+      None,
+      Seq.empty,
+      Seq.empty
+    )
+
+    val result = service.createMovementSavedSuccessAuditInfo(movement, batchId, None, Seq.empty)
+
+    result mustBe expectedResult
+  }
+
+  "createMovementSavedSuccessAuditInfo creates MovementSavedSuccessAuditInfo object with two out of three messages are on the movement object" in {
+
+    val movementId = UUID.randomUUID().toString
+    val batchId    = UUID.randomUUID().toString
+    val encodedXml = emcsUtils.encode(IE801.toString)
+
+    val decodedXmlNodeList = xml.XML.loadString(IE801.toString)
+    val ieMessage          = ieMessageFactory.createFromXml("IE801", decodedXmlNodeList)
+    val correlationId      = ieMessage.correlationId
+
+    val messageId = UUID.randomUUID().toString
+
+    val message  =
+      Message(encodedXml, "IE801", messageId, "recipient", Set.empty[String], Instant.now())
+    val message2 =
+      Message(encodedXml, "IE801", UUID.randomUUID().toString, "recipient", Set.empty[String], Instant.now())
+
+    val message3 =
+      Message(encodedXml, "IE801", UUID.randomUUID().toString, "recipient", Set.empty[String], Instant.now())
+
+    val movement =
+      Movement(
+        movementId,
+        None,
+        "lrn",
+        "consignorId",
+        Some("consigneeId"),
+        Some("arc"),
+        Instant.now(),
+        Seq(message, message2)
+      )
+
+    val keyMessageDetails =
+      KeyMessageDetailsAuditInfo("token", correlationId, "IE801", ieMessage.messageAuditType.name)
+
+    val ieMessagesConverted = {
+      val decodedXml         = emcsUtils.decode(message3.encodedMessage)
+      val decodedXmlNodeList = xml.XML.loadString(decodedXml)
+      val ieMessage          = ieMessageFactory.createFromXml(message3.messageType, decodedXmlNodeList)
+      ieMessage
+    }
+
+    val expectedResult = MovementSavedSuccessAuditInfo(
+      1,
+      2,
+      movementId,
+      Some("lrn"),
+      Some("arc"),
+      "consignorId",
+      Some("consigneeId"),
+      batchId,
+      None,
+      Seq(keyMessageDetails),
+      Seq(ieMessagesConverted.toJson)
+    )
+
+    val result = service.createMovementSavedSuccessAuditInfo(movement, batchId, None, Seq(message3))
 
     result mustBe expectedResult
   }
 
   "createMovementSavedFailureAuditInfo creates MovementSavedFailureAuditInfo object" in {
+
+    val batchId       = UUID.randomUUID().toString
+    val movementId    = UUID.randomUUID().toString
+    val failureReason = "Failure reason"
+    val encodedXml    = emcsUtils.encode(IE801.toString)
+
+    val decodedXmlNodeList = xml.XML.loadString(IE801.toString)
+    val ieMessage          = ieMessageFactory.createFromXml("IE801", decodedXmlNodeList)
+    val correlationId      = ieMessage.correlationId
+
+    val messageId = UUID.randomUUID().toString
+
+    val message  =
+      Message(encodedXml, "IE801", messageId, "recipient", Set.empty[String], Instant.now())
+    val movement =
+      Movement(movementId, None, "lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now(), Seq(message))
+
+    val keyMessageDetails   =
+      KeyMessageDetailsAuditInfo("token", correlationId, "IE801", ieMessage.messageAuditType.name)
+    val ieMessagesConverted = movement.messages.map { message =>
+      val decodedXml         = emcsUtils.decode(message.encodedMessage)
+      val decodedXmlNodeList = xml.XML.loadString(decodedXml)
+      val ieMessage          = ieMessageFactory.createFromXml(message.messageType, decodedXmlNodeList)
+      ieMessage
+    }
+
+    val expectedResult = MovementSavedFailureAuditInfo(
+      failureReason,
+      1,
+      1,
+      movementId,
+      Some("lrn"),
+      Some("arc"),
+      "consignorId",
+      Some("consigneeId"),
+      batchId,
+      None,
+      Seq(keyMessageDetails),
+      ieMessagesConverted.map(_.toJson)
+    )
+    val result         = service.createMovementSavedFailureAuditInfo(movement, failureReason, batchId, None, Seq(message))
+
+    result mustBe expectedResult
+  }
+
+  "createMovementSavedFailureAuditInfo creates MovementSavedFailureAuditInfo object with no messages to be added" in {
 
     val batchId       = UUID.randomUUID().toString
     val movementId    = UUID.randomUUID().toString
@@ -420,7 +560,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
 
     val expectedResult = MovementSavedFailureAuditInfo(
       failureReason,
-      10,
+      0,
       1,
       movementId,
       Some("lrn"),
@@ -432,7 +572,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       Seq(keyMessageDetails),
       ieMessagesConverted.map(_.toJson)
     )
-    val result         = service.createMovementSavedFailureAuditInfo(10, 1, movement, failureReason, batchId, None)
+    val result         = service.createMovementSavedFailureAuditInfo(movement, failureReason, batchId, None, Seq.empty)
 
     result mustBe expectedResult
   }
