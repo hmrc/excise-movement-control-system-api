@@ -226,11 +226,11 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
   ): MessageProcessingFailureAuditInfo = MessageProcessingFailureAuditInfo(ern, failureReason, batchId, jobId)
 
   def createMovementSavedSuccessAuditInfo(
-    updatedMovement: Movement,
-    batchId: String,
-    jobId: Option[String],
-    newMessages: Seq[Message]
-  ): MovementSavedSuccessAuditInfo = {
+                                           updatedMovement: Movement,
+                                           batchId: String,
+                                           jobId: Option[String],
+                                           newMessages: Seq[Message]
+                                         ): MovementSavedSuccessAuditInfo = {
     val ieMessages = convertToIEMessage(newMessages)
     MovementSavedSuccessAuditInfo(
       newMessages.length,
@@ -246,13 +246,14 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
       ieMessages.map(_.toJson)
     )
   }
+
   def createMovementSavedFailureAuditInfo(
-    movement: Movement,
-    failureReason: String,
-    batchId: String,
-    jobId: Option[String],
-    messagesToBeAdded: Seq[Message]
-  ): MovementSavedFailureAuditInfo = {
+                                           movement: Movement,
+                                           failureReason: String,
+                                           batchId: String,
+                                           jobId: Option[String],
+                                           messagesToBeAdded: Seq[Message]
+                                         ): MovementSavedFailureAuditInfo = {
     val ieMessages = convertToIEMessage(movement.messages)
     MovementSavedFailureAuditInfo(
       failureReason,
@@ -288,21 +289,20 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
       ieMessage
     }
 
-  private def convertErns(erns: Set[String]): NonEmptySeq[String] = NonEmptySeq(erns.head, erns.tail.toSeq)
-
   def createMessageAcknowledgedEvent(
-    ern: String,
-    batchId: String,
-    jobId: Option[String],
-    recordsAffected: Int
-  ): MessageAcknowledgedSuccessAuditInfo =
+                                      ern: String,
+                                      batchId: String,
+                                      jobId: Option[String],
+                                      recordsAffected: Int
+                                    ): MessageAcknowledgedSuccessAuditInfo =
     MessageAcknowledgedSuccessAuditInfo(batchId, jobId, ern, recordsAffected)
 
   def createMessageNotAcknowledgedEvent(
-    ern: String,
-    batchId: String,
-    jobId: Option[String],
-    failureReason: String
-  ): MessageAcknowledgedFailureAuditInfo =
+                                         ern: String,
+                                         batchId: String,
+                                         jobId: Option[String],
+                                         failureReason: String
+                                       ): MessageAcknowledgedFailureAuditInfo =
     MessageAcknowledgedFailureAuditInfo(failureReason, batchId, jobId, ern)
+  private def convertErns(erns: Set[String]): NonEmptySeq[String] = NonEmptySeq(erns.head, erns.tail.toSeq)
 }
