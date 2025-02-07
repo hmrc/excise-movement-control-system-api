@@ -39,7 +39,7 @@ import java.nio.charset.StandardCharsets
 import java.util.Base64
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
 
 @Singleton
@@ -95,7 +95,9 @@ class MessageConnector @Inject() (
       }
   }
 
-  def acknowledgeMessages(ern: String)(implicit hc: HeaderCarrier): Future[Done] = {
+  def acknowledgeMessages(ern: String, batchId: String, jobId: Option[String])(implicit
+    hc: HeaderCarrier
+  ): Future[MessageReceiptSuccessResponse] = {
 
     logger.info(s"[MessageConnector]: Acknowledging messages")
     val correlationId = correlationIdService.generateCorrelationId()
@@ -111,13 +113,14 @@ class MessageConnector @Inject() (
       .execute[HttpResponse]
       .flatMap { response =>
         if (response.status == OK) Future.fromTry {
-          parseJson[MessageReceiptSuccessResponse](response.body).as(Done)
+          parseJson[MessageReceiptSuccessResponse](response.body)
         }
         else {
           logger.warn(s"[MessageConnector]: Invalid status returned: ${response.status}")
           Future.failed(new RuntimeException("Invalid status returned"))
         }
       }
+
   }
 
   private def parseJson[A](string: String)(implicit reads: Reads[A]): Try[A] =

@@ -81,6 +81,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
     reset(auditConnector, appConfig)
 
     when(appConfig.newAuditingEnabled).thenReturn(true)
+    when(appConfig.processingAuditingEnabled).thenReturn(true)
     when(auditConnector.sendExtendedEvent(any)(any, any)).thenReturn(Future.successful(AuditResult.Success))
   }
 

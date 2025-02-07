@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
-import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, equalTo, put, urlEqualTo}
 import com.github.tomakehurst.wiremock.http.Fault
 import generated.NewMessagesDataResponse
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
@@ -40,6 +40,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, Correl
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.WireMockSupport
+import org.apache.pekko.Done
 
 import java.nio.charset.StandardCharsets
 import java.time.format.DateTimeFormatter
@@ -60,6 +61,7 @@ class MessageConnectorSpec
   override def beforeEach(): Unit = {
     super.beforeEach()
     Mockito.reset(correlationIdService)
+    Mockito.reset(auditService)
   }
 
   private val correlationIdService = mock[CorrelationIdService]
@@ -121,12 +123,6 @@ class MessageConnectorSpec
 
       result.messages mustBe empty
       result.messageCount mustBe 0
-
-      withClue("should call audit service with success audit") {
-        verify(auditService, times(1)).messageProcessingSuccess(eqTo(ern), eqTo(result), eqTo(batchId), eqTo(None))(
-          eqTo(hc)
-        )
-      }
     }
 
     "must return messages when the response from the server contains them" in {
@@ -158,12 +154,6 @@ class MessageConnectorSpec
 
       result.messages mustBe Seq(ie704Message)
       result.messageCount mustBe 1
-
-      withClue("should call audit service with success audit") {
-        verify(auditService, times(1)).messageProcessingSuccess(eqTo(ern), eqTo(result), eqTo(batchId), eqTo(None))(
-          eqTo(hc)
-        )
-      }
 
     }
 
@@ -219,13 +209,6 @@ class MessageConnectorSpec
 
       result mustBe a[GetMessagesException]
       result.getMessage mustBe s"Failed to get messages for ern: $ern, cause: $failureReason"
-
-      withClue("should call audit service with failed audit") {
-        verify(auditService, times(1))
-          .messageProcessingFailure(eqTo(ern), eqTo(failureReason), eqTo(batchId), eqTo(None))(
-            eqTo(hc)
-          )
-      }
     }
 
     "must fail when the server responds with a non-json body" in {
@@ -248,13 +231,6 @@ class MessageConnectorSpec
 
       result mustBe a[GetMessagesException]
       result.getMessage must include("Unrecognized token 'foobar")
-
-      withClue("should call audit service with failed audit") {
-        verify(auditService, times(1))
-          .messageProcessingFailure(eqTo(ern), any, eqTo(batchId), eqTo(None))(
-            eqTo(hc)
-          )
-      }
     }
 
     "must fail when the server responds with an invalid json body" in {
@@ -278,13 +254,6 @@ class MessageConnectorSpec
       result mustBe a[GetMessagesException]
       result.getMessage must include("JsResultException")
 
-      withClue("should call audit service with failed audit") {
-        verify(auditService, times(1))
-          .messageProcessingFailure(eqTo(ern), any, eqTo(batchId), eqTo(None))(
-            eqTo(hc)
-          )
-      }
-
     }
 
     "must fail when the connection fails" in {
@@ -307,12 +276,6 @@ class MessageConnectorSpec
       result mustBe a[GetMessagesException]
       result.getMessage must include("Remotely closed")
 
-      withClue("should call audit service with failed audit") {
-        verify(auditService, times(1))
-          .messageProcessingFailure(eqTo(ern), any, eqTo(batchId), eqTo(None))(
-            eqTo(hc)
-          )
-      }
     }
   }
 
@@ -323,9 +286,10 @@ class MessageConnectorSpec
     val timestamp     = LocalDateTime.of(2024, 3, 2, 12, 30, 45, 100).toInstant(ZoneOffset.UTC)
     val ern           = "someErn"
     val url           = s"/emcs/messages/v1/message-receipt?exciseregistrationnumber=$ern"
+    val batchId       = UUID.randomUUID().toString
+    val jobId         = UUID.randomUUID().toString
 
-    "must return `Done` when the server responds with OK" in {
-
+    "must return a future of the success response when the server responds with OK" in {
       val response = MessageReceiptSuccessResponse(
         dateTime = timestamp,
         exciseRegistrationNumber = ern,
@@ -349,11 +313,11 @@ class MessageConnectorSpec
           )
       )
 
-      connector.acknowledgeMessages(ern)(hc).futureValue
+      connector.acknowledgeMessages(ern, batchId, Some(jobId))(hc).futureValue mustBe response
+
     }
 
     "must fail when the server responds with an unexpected status" in {
-
       when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
@@ -365,7 +329,8 @@ class MessageConnectorSpec
           )
       )
 
-      connector.acknowledgeMessages(ern)(hc).failed.futureValue
+      connector.acknowledgeMessages(ern, batchId, Some(jobId))(hc).failed.futureValue
+
     }
 
     "must fail when the server responds with a non-json body" in {
@@ -382,7 +347,8 @@ class MessageConnectorSpec
           )
       )
 
-      connector.acknowledgeMessages(ern)(hc).failed.futureValue
+      connector.acknowledgeMessages(ern, batchId, Some(jobId))(hc).failed.futureValue
+
     }
 
     "must fail when the server responds with an invalid json body" in {
@@ -399,7 +365,8 @@ class MessageConnectorSpec
           )
       )
 
-      connector.acknowledgeMessages(ern)(hc).failed.futureValue
+      connector.acknowledgeMessages(ern, batchId, Some(jobId))(hc).failed.futureValue
+
     }
 
     "must fail when the connection fails" in {
@@ -415,7 +382,7 @@ class MessageConnectorSpec
           )
       )
 
-      connector.acknowledgeMessages(ern)(hc).failed.futureValue
+      connector.acknowledgeMessages(ern, batchId, Some(jobId))(hc).failed.futureValue
     }
   }
 

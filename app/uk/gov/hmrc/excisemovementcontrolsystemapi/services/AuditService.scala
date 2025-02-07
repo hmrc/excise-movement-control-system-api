@@ -137,23 +137,41 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
     response: GetMessagesResponse,
     batchId: String,
     jobId: Option[String]
-  )(implicit hc: HeaderCarrier): Unit = {
-    val messageProcessingSuccessAuditInfo = factory.createMessageProcessingSuccessAuditInfo(
-      ern,
-      response,
-      batchId,
-      jobId
-    )
-    auditConnector.sendExplicitAudit("MessageProcessing", messageProcessingSuccessAuditInfo)
-  }
+  )(implicit hc: HeaderCarrier): Unit =
+    if (appConfig.processingAuditingEnabled) {
+      val messageProcessingSuccessAuditInfo = factory.createMessageProcessingSuccessAuditInfo(
+        ern,
+        response,
+        batchId,
+        jobId
+      )
+      auditConnector.sendExplicitAudit("MessageProcessing", messageProcessingSuccessAuditInfo)
+
+    }
 
   def messageProcessingFailure(ern: String, failureReason: String, batchId: String, jobId: Option[String])(implicit
     hc: HeaderCarrier
-  ): Unit = {
-    val messageProcessingFailureAuditInfo =
-      factory.createMessageProcessingFailureAuditInfo(ern, failureReason, batchId, jobId)
+  ): Unit =
+    if (appConfig.processingAuditingEnabled) {
+      val messageProcessingFailureAuditInfo =
+        factory.createMessageProcessingFailureAuditInfo(ern, failureReason, batchId, jobId)
 
-    auditConnector.sendExplicitAudit("MessageProcessing", messageProcessingFailureAuditInfo)
+      auditConnector.sendExplicitAudit("MessageProcessing", messageProcessingFailureAuditInfo)
+    }
 
-  }
+  def messageAcknowledged(ern: String, batchId: String, jobId: Option[String], recordsAffected: Int)(implicit
+    hc: HeaderCarrier
+  ): Unit =
+    if (appConfig.processingAuditingEnabled) {
+      val event = factory.createMessageAcknowledgedEvent(ern, batchId, jobId, recordsAffected)
+      auditConnector.sendExplicitAudit("MessageAcknowledged", event)
+    }
+
+  def messageNotAcknowledged(ern: String, batchId: String, jobId: Option[String], failureReason: String)(implicit
+    hc: HeaderCarrier
+  ): Unit =
+    if (appConfig.processingAuditingEnabled) {
+      val event = factory.createMessageNotAcknowledgedEvent(ern, batchId, jobId, failureReason)
+      auditConnector.sendExplicitAudit("MessageAcknowledged", event)
+    }
 }

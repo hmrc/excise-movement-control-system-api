@@ -30,6 +30,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, TraderMovementConnector}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessageGeneratorFactory}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptSuccessResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes.{IE704, IE801, IE802, IE813, IE818}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE704Message, IE801Message, IE818Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
@@ -46,7 +47,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Promise}
 
 class MessageServiceItSpec
-  extends AnyFreeSpec
+    extends AnyFreeSpec
     with Matchers
     with GuiceOneAppPerSuite
     with DefaultPlayMongoRepositorySupport[Movement]
@@ -60,12 +61,12 @@ class MessageServiceItSpec
   // but we have tests for checking these indexes in the individual repository specs
   override val checkIndexedQueries: Boolean = false
 
-  private val mockMessageConnector = mock[MessageConnector]
-  private val mockDateTimeService = mock[DateTimeService]
-  private val mockCorrelationIdService = mock[CorrelationIdService]
+  private val mockMessageConnector        = mock[MessageConnector]
+  private val mockDateTimeService         = mock[DateTimeService]
+  private val mockCorrelationIdService    = mock[CorrelationIdService]
   private val mockTraderMovementConnector = mock[TraderMovementConnector]
 
-  private val now = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+  private val now   = Instant.now.truncatedTo(ChronoUnit.MILLIS)
   private val newId = "some-id"
   private val utils = new EmcsUtils
 
@@ -80,7 +81,7 @@ class MessageServiceItSpec
   private lazy val ernRetrievalRepository: ErnRetrievalRepository =
     app.injector.instanceOf[ErnRetrievalRepository]
 
-  private lazy val service = app.injector.instanceOf[MessageService]
+  private lazy val service         = app.injector.instanceOf[MessageService]
   private lazy val movementService = app.injector.instanceOf[MovementService]
 
   override def fakeApplication(): Application =
@@ -98,11 +99,13 @@ class MessageServiceItSpec
 
     "must only add messages once, even if we process the message multiple times" in {
 
-      val hc = HeaderCarrier()
-      val ern = "testErn"
-      val lrn = "lrnie8158976912"
+      val hc                  = HeaderCarrier()
+      val ern                 = "testErn"
+      val lrn                 = "lrnie8158976912"
+      val acknowledgeResponse = MessageReceiptSuccessResponse(now, ern, 1)
 
-      val ie704 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some(lrn)))
+      val ie704    =
+        XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some(lrn)))
       val messages = Seq(IE704Message.createFromXml(ie704))
 
       val expectedMovement = Movement(
@@ -121,11 +124,12 @@ class MessageServiceItSpec
       )
       when(mockCorrelationIdService.generateCorrelationId()).thenReturn(newId)
 
-      when(mockMessageConnector.getNewMessages(any, any, any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+      when(mockMessageConnector.getNewMessages(any, any, any)(any))
+        .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
 
-      when(mockMessageConnector.acknowledgeMessages(any)(any)).thenReturn(
+      when(mockMessageConnector.acknowledgeMessages(any, any, any)(any)).thenReturn(
         Future.failed(new RuntimeException()),
-        Future.successful(Done)
+        Future.successful(acknowledgeResponse)
       )
 
       service.updateMessages(ern, None)(hc).failed.futureValue
@@ -146,11 +150,13 @@ class MessageServiceItSpec
 
     "must only allow a single call at a time" in {
 
-      val hc = HeaderCarrier()
-      val ern = "testErn"
-      val lrn = "lrnie8158976912"
+      val hc                  = HeaderCarrier()
+      val ern                 = "testErn"
+      val lrn                 = "lrnie8158976912"
+      val acknowledgeResponse = MessageReceiptSuccessResponse(now, ern, 1)
 
-      val ie704 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some(lrn)))
+      val ie704    =
+        XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some(lrn)))
       val messages = Seq(IE704Message.createFromXml(ie704))
 
       val promise = Promise[Done]()
@@ -158,10 +164,12 @@ class MessageServiceItSpec
       when(mockDateTimeService.timestamp()).thenReturn(now)
       when(mockCorrelationIdService.generateCorrelationId()).thenReturn(newId)
 
-      when(mockMessageConnector.getNewMessages(any, any, any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
-      when(mockMessageConnector.acknowledgeMessages(any)(any)).thenReturn(Future(promise.future).flatten)
+      when(mockMessageConnector.getNewMessages(any, any, any)(any))
+        .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+      when(mockMessageConnector.acknowledgeMessages(any, any, any)(any))
+        .thenReturn(Future.successful(acknowledgeResponse))
 
-      val future = service.updateMessages(ern, None)(hc)
+      val future  = service.updateMessages(ern, None)(hc)
       val future2 = service.updateMessages(ern, None)(hc)
 
       promise.success(Done)
@@ -173,19 +181,23 @@ class MessageServiceItSpec
 
     "must not cause throttled requests to increase the throttle timeout" in {
 
-      val hc = HeaderCarrier()
-      val ern = "testErn"
-      val lrn = "lrnie8158976912"
+      val hc                  = HeaderCarrier()
+      val ern                 = "testErn"
+      val lrn                 = "lrnie8158976912"
+      val acknowledgeResponse = MessageReceiptSuccessResponse(now, ern, 1)
 
-      val ie704 = XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some(lrn)))
+      val ie704    =
+        XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some(lrn)))
       val messages = Seq(IE704Message.createFromXml(ie704))
 
       val timeout = app.configuration.get[Duration]("microservice.services.eis.throttle-cutoff")
 
       when(mockCorrelationIdService.generateCorrelationId()).thenReturn(newId)
 
-      when(mockMessageConnector.getNewMessages(any, any, any)(any)).thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
-      when(mockMessageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+      when(mockMessageConnector.getNewMessages(any, any, any)(any))
+        .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
+      when(mockMessageConnector.acknowledgeMessages(any, any, any)(any))
+        .thenReturn(Future.successful(acknowledgeResponse))
 
       when(mockDateTimeService.timestamp()).thenReturn(now)
       service.updateMessages(ern, ernRetrievalRepository.getLastRetrieved(ern).futureValue)(hc).futureValue
@@ -199,14 +211,33 @@ class MessageServiceItSpec
 
     "must not try to create a movement which already exists" in {
 
-      val hc = HeaderCarrier()
-      val consignorErn = "testErn"
-      val consigneeErn = "testErn2"
-      val lrn = "lrnie8158976912"
-      val arc = "arc"
+      val hc                  = HeaderCarrier()
+      val consignorErn        = "testErn"
+      val consigneeErn        = "testErn2"
+      val lrn                 = "lrnie8158976912"
+      val arc                 = "arc"
+      val acknowledgeResponse = MessageReceiptSuccessResponse(now, consignorErn, 1)
 
-      val ie801 = XmlMessageGeneratorFactory.generate(consignorErn, MessageParams(IE801, "XI000001", consigneeErn = Some(consigneeErn), localReferenceNumber = Some(lrn), administrativeReferenceCode = Some(arc)))
-      val ie818 = XmlMessageGeneratorFactory.generate(consignorErn, MessageParams(IE818, "XI000002", consigneeErn = Some(consigneeErn), localReferenceNumber = None, administrativeReferenceCode = Some(arc)))
+      val ie801    = XmlMessageGeneratorFactory.generate(
+        consignorErn,
+        MessageParams(
+          IE801,
+          "XI000001",
+          consigneeErn = Some(consigneeErn),
+          localReferenceNumber = Some(lrn),
+          administrativeReferenceCode = Some(arc)
+        )
+      )
+      val ie818    = XmlMessageGeneratorFactory.generate(
+        consignorErn,
+        MessageParams(
+          IE818,
+          "XI000002",
+          consigneeErn = Some(consigneeErn),
+          localReferenceNumber = None,
+          administrativeReferenceCode = Some(arc)
+        )
+      )
       val messages = Seq(IE801Message.createFromXml(ie801), IE818Message.createFromXml(ie818))
 
       val initialMovement = Movement(
@@ -222,7 +253,7 @@ class MessageServiceItSpec
         messages = Seq(
           Message(utils.encode(messages.head.toXml.toString()), "IE801", "XI000001", consignorErn, Set.empty, now),
           Message(utils.encode(messages.head.toXml.toString()), "IE801", "XI000001", consigneeErn, Set.empty, now),
-          Message(utils.encode(messages(1).toXml.toString()), "IE818", "XI000002", consignorErn, Set.empty, now),
+          Message(utils.encode(messages(1).toXml.toString()), "IE818", "XI000002", consignorErn, Set.empty, now)
         ),
         administrativeReferenceCode = Some(arc)
       )
@@ -235,7 +266,8 @@ class MessageServiceItSpec
         Future.successful(GetMessagesResponse(Seq(messages(1)), 1))
       )
 
-      when(mockMessageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+      when(mockMessageConnector.acknowledgeMessages(any, any, any)(any))
+        .thenReturn(Future.successful(acknowledgeResponse))
 
       when(mockTraderMovementConnector.getMovementMessages(any, any)(any)).thenReturn(Future.successful(messages))
 
@@ -250,13 +282,23 @@ class MessageServiceItSpec
 
     "must not create a new movement when an existing movement can be found in the database via consignor ERN and LRN" in {
 
-      val hc = HeaderCarrier()
-      val consignorErn = "testErn"
-      val consigneeErn = "testErn2"
-      val lrn = "lrnie8158976912"
-      val arc = "arc"
+      val hc                  = HeaderCarrier()
+      val consignorErn        = "testErn"
+      val consigneeErn        = "testErn2"
+      val lrn                 = "lrnie8158976912"
+      val arc                 = "arc"
+      val acknowledgeResponse = MessageReceiptSuccessResponse(now, consignorErn, 1)
 
-      val ie801 = XmlMessageGeneratorFactory.generate(consignorErn, MessageParams(IE801, "XI000001", consigneeErn = Some(consigneeErn), localReferenceNumber = Some(lrn), administrativeReferenceCode = Some(arc)))
+      val ie801    = XmlMessageGeneratorFactory.generate(
+        consignorErn,
+        MessageParams(
+          IE801,
+          "XI000001",
+          consigneeErn = Some(consigneeErn),
+          localReferenceNumber = Some(lrn),
+          administrativeReferenceCode = Some(arc)
+        )
+      )
       val messages = Seq(IE801Message.createFromXml(ie801))
 
       val initialMovement = Movement(
@@ -285,7 +327,8 @@ class MessageServiceItSpec
         Future.successful(GetMessagesResponse(Seq(messages.head), 1))
       )
 
-      when(mockMessageConnector.acknowledgeMessages(any)(any)).thenReturn(Future.successful(Done))
+      when(mockMessageConnector.acknowledgeMessages(any, any, any)(any))
+        .thenReturn(Future.successful(acknowledgeResponse))
 
       movementService.saveNewMovement(initialMovement).futureValue.isRight mustBe true
       service.updateMessages(consigneeErn, None)(hc).futureValue
@@ -298,38 +341,96 @@ class MessageServiceItSpec
 
     "fixProblemMovement" - {
 
-      val utils = new EmcsUtils()
+      val utils          = new EmcsUtils()
       val messageFactory = IEMessageFactory()
 
-      def formatXml(ern: String, params: MessageParams): String = {
-        utils.encode(messageFactory.createFromXml(
-          params.messageType.value,
-          XmlMessageGeneratorFactory.generate(ern, params)
-        ).toXml.toString)
-      }
+      def formatXml(ern: String, params: MessageParams): String =
+        utils.encode(
+          messageFactory
+            .createFromXml(
+              params.messageType.value,
+              XmlMessageGeneratorFactory.generate(ern, params)
+            )
+            .toXml
+            .toString
+        )
 
       "must fix the given movement" in {
 
-        val hc = HeaderCarrier()
-        val consignor = "testErn"
+        val hc         = HeaderCarrier()
+        val consignor  = "testErn"
         val consignee1 = "testErn2"
         val consignee2 = "testErn3"
         val consignee3 = "testErn4"
 
         val rootLrn = "2"
         val rootArc = "arc"
-        val root801 = formatXml(consignor, MessageParams(IE801, "XI000001", consigneeErn = Some(consignee1), localReferenceNumber = Some(rootLrn), administrativeReferenceCode = Some(rootArc)))
+        val root801 = formatXml(
+          consignor,
+          MessageParams(
+            IE801,
+            "XI000001",
+            consigneeErn = Some(consignee1),
+            localReferenceNumber = Some(rootLrn),
+            administrativeReferenceCode = Some(rootArc)
+          )
+        )
 
         val secondLrn = "22"
         val secondArc = "arc2"
-        val second801 = formatXml(consignor, MessageParams(IE801, "XI000002", consigneeErn = Some(consignee2), localReferenceNumber = Some(secondLrn), administrativeReferenceCode = Some(secondArc)))
-        val second818 = formatXml(consignor, MessageParams(IE818, "XI000004", consigneeErn = Some(consignee2), localReferenceNumber = None, administrativeReferenceCode = Some(secondArc)))
+        val second801 = formatXml(
+          consignor,
+          MessageParams(
+            IE801,
+            "XI000002",
+            consigneeErn = Some(consignee2),
+            localReferenceNumber = Some(secondLrn),
+            administrativeReferenceCode = Some(secondArc)
+          )
+        )
+        val second818 = formatXml(
+          consignor,
+          MessageParams(
+            IE818,
+            "XI000004",
+            consigneeErn = Some(consignee2),
+            localReferenceNumber = None,
+            administrativeReferenceCode = Some(secondArc)
+          )
+        )
 
         val thirdLrn = "23"
         val thirdArc = "arc3"
-        val third801 = formatXml(consignor, MessageParams(IE801, "XI000003", consigneeErn = Some(consignee3), localReferenceNumber = Some(thirdLrn), administrativeReferenceCode = Some(thirdArc)))
-        val third802 = formatXml(consignor, MessageParams(IE802, "XI000006", consigneeErn = None, localReferenceNumber = None, administrativeReferenceCode = Some(thirdArc)))
-        val third818 = formatXml(consignor, MessageParams(IE818, "XI000005", consigneeErn = Some(consignee3), localReferenceNumber = None, administrativeReferenceCode = Some(thirdArc)))
+        val third801 = formatXml(
+          consignor,
+          MessageParams(
+            IE801,
+            "XI000003",
+            consigneeErn = Some(consignee3),
+            localReferenceNumber = Some(thirdLrn),
+            administrativeReferenceCode = Some(thirdArc)
+          )
+        )
+        val third802 = formatXml(
+          consignor,
+          MessageParams(
+            IE802,
+            "XI000006",
+            consigneeErn = None,
+            localReferenceNumber = None,
+            administrativeReferenceCode = Some(thirdArc)
+          )
+        )
+        val third818 = formatXml(
+          consignor,
+          MessageParams(
+            IE818,
+            "XI000005",
+            consigneeErn = Some(consignee3),
+            localReferenceNumber = None,
+            administrativeReferenceCode = Some(thirdArc)
+          )
+        )
 
         val rootMovement = Movement(
           boxId = None,
@@ -392,7 +493,7 @@ class MessageServiceItSpec
             Message(third801, "IE801", "XI000003", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
             Message(third801, "IE801", "XI000003", consignee3, Set.empty, now.minus(2, ChronoUnit.DAYS)),
             Message(third818, "IE818", "XI000005", consignee3, Set.empty, now.minus(1, ChronoUnit.DAYS)),
-            Message(third802, "IE802", "XI000006", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third802, "IE802", "XI000006", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS))
           )
         )
 
@@ -406,9 +507,12 @@ class MessageServiceItSpec
         count().futureValue mustEqual 3
         val results = findAll().futureValue
 
-        val actualRootMovement = results.find(_.administrativeReferenceCode == expectedRootMovement.administrativeReferenceCode).value
-        val actualSecondMovement = results.find(_.administrativeReferenceCode == expectedSecondMovement.administrativeReferenceCode).value
-        val actualThirdMovement = results.find(_.administrativeReferenceCode == thirdMovement.administrativeReferenceCode).value
+        val actualRootMovement   =
+          results.find(_.administrativeReferenceCode == expectedRootMovement.administrativeReferenceCode).value
+        val actualSecondMovement =
+          results.find(_.administrativeReferenceCode == expectedSecondMovement.administrativeReferenceCode).value
+        val actualThirdMovement  =
+          results.find(_.administrativeReferenceCode == thirdMovement.administrativeReferenceCode).value
 
         actualRootMovement._id mustEqual expectedRootMovement._id
         actualRootMovement.localReferenceNumber mustEqual expectedRootMovement.localReferenceNumber
@@ -437,8 +541,8 @@ class MessageServiceItSpec
 
       "must fix the given movement when none of its messages belong with it" in {
 
-        val hc = HeaderCarrier()
-        val consignor = "testErn"
+        val hc         = HeaderCarrier()
+        val consignor  = "testErn"
         val consignee2 = "testErn3"
         val consignee3 = "testErn4"
 
@@ -447,14 +551,59 @@ class MessageServiceItSpec
 
         val secondLrn = "22"
         val secondArc = "arc2"
-        val second801 = formatXml(consignor, MessageParams(IE801, "XI000002", consigneeErn = Some(consignee2), localReferenceNumber = Some(secondLrn), administrativeReferenceCode = Some(secondArc)))
-        val second818 = formatXml(consignor, MessageParams(IE818, "XI000004", consigneeErn = Some(consignee2), localReferenceNumber = None, administrativeReferenceCode = Some(secondArc)))
+        val second801 = formatXml(
+          consignor,
+          MessageParams(
+            IE801,
+            "XI000002",
+            consigneeErn = Some(consignee2),
+            localReferenceNumber = Some(secondLrn),
+            administrativeReferenceCode = Some(secondArc)
+          )
+        )
+        val second818 = formatXml(
+          consignor,
+          MessageParams(
+            IE818,
+            "XI000004",
+            consigneeErn = Some(consignee2),
+            localReferenceNumber = None,
+            administrativeReferenceCode = Some(secondArc)
+          )
+        )
 
         val thirdLrn = "23"
         val thirdArc = "arc3"
-        val third801 = formatXml(consignor, MessageParams(IE801, "XI000003", consigneeErn = Some(consignee3), localReferenceNumber = Some(thirdLrn), administrativeReferenceCode = Some(thirdArc)))
-        val third802 = formatXml(consignor, MessageParams(IE802, "XI000006", consigneeErn = None, localReferenceNumber = None, administrativeReferenceCode = Some(thirdArc)))
-        val third818 = formatXml(consignor, MessageParams(IE818, "XI000005", consigneeErn = Some(consignee3), localReferenceNumber = None, administrativeReferenceCode = Some(thirdArc)))
+        val third801 = formatXml(
+          consignor,
+          MessageParams(
+            IE801,
+            "XI000003",
+            consigneeErn = Some(consignee3),
+            localReferenceNumber = Some(thirdLrn),
+            administrativeReferenceCode = Some(thirdArc)
+          )
+        )
+        val third802 = formatXml(
+          consignor,
+          MessageParams(
+            IE802,
+            "XI000006",
+            consigneeErn = None,
+            localReferenceNumber = None,
+            administrativeReferenceCode = Some(thirdArc)
+          )
+        )
+        val third818 = formatXml(
+          consignor,
+          MessageParams(
+            IE818,
+            "XI000005",
+            consigneeErn = Some(consignee3),
+            localReferenceNumber = None,
+            administrativeReferenceCode = Some(thirdArc)
+          )
+        )
 
         val rootMovement = Movement(
           boxId = None,
@@ -513,7 +662,7 @@ class MessageServiceItSpec
             Message(third801, "IE801", "XI000003", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
             Message(third801, "IE801", "XI000003", consignee3, Set.empty, now.minus(2, ChronoUnit.DAYS)),
             Message(third818, "IE818", "XI000005", consignee3, Set.empty, now.minus(1, ChronoUnit.DAYS)),
-            Message(third802, "IE802", "XI000006", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third802, "IE802", "XI000006", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS))
           )
         )
 
@@ -527,9 +676,11 @@ class MessageServiceItSpec
         count().futureValue mustEqual 3
         val results = findAll().futureValue
 
-        val actualRootMovement = results.find(_.localReferenceNumber == expectedRootMovement.localReferenceNumber).value
-        val actualSecondMovement = results.find(_.administrativeReferenceCode == expectedSecondMovement.administrativeReferenceCode).value
-        val actualThirdMovement = results.find(_.administrativeReferenceCode == thirdMovement.administrativeReferenceCode).value
+        val actualRootMovement   = results.find(_.localReferenceNumber == expectedRootMovement.localReferenceNumber).value
+        val actualSecondMovement =
+          results.find(_.administrativeReferenceCode == expectedSecondMovement.administrativeReferenceCode).value
+        val actualThirdMovement  =
+          results.find(_.administrativeReferenceCode == thirdMovement.administrativeReferenceCode).value
 
         actualRootMovement._id mustEqual expectedRootMovement._id
         actualRootMovement.localReferenceNumber mustEqual expectedRootMovement.localReferenceNumber
@@ -558,26 +709,80 @@ class MessageServiceItSpec
 
       "must correctly restore movements when the messages are in non-chronological order" in {
 
-        val hc = HeaderCarrier()
-        val consignor = "testErn"
+        val hc         = HeaderCarrier()
+        val consignor  = "testErn"
         val consignee1 = "testErn2"
         val consignee2 = "testErn3"
         val consignee3 = "testErn4"
 
         val rootLrn = "2"
         val rootArc = "arc"
-        val root801 = formatXml(consignor, MessageParams(IE801, "XI000001", consigneeErn = Some(consignee1), localReferenceNumber = Some(rootLrn), administrativeReferenceCode = Some(rootArc)))
+        val root801 = formatXml(
+          consignor,
+          MessageParams(
+            IE801,
+            "XI000001",
+            consigneeErn = Some(consignee1),
+            localReferenceNumber = Some(rootLrn),
+            administrativeReferenceCode = Some(rootArc)
+          )
+        )
 
         val secondLrn = "22"
         val secondArc = "arc2"
-        val second801 = formatXml(consignor, MessageParams(IE801, "XI000002", consigneeErn = Some(consignee2), localReferenceNumber = Some(secondLrn), administrativeReferenceCode = Some(secondArc)))
-        val second818 = formatXml(consignor, MessageParams(IE818, "XI000004", consigneeErn = Some(consignee2), localReferenceNumber = None, administrativeReferenceCode = Some(secondArc)))
+        val second801 = formatXml(
+          consignor,
+          MessageParams(
+            IE801,
+            "XI000002",
+            consigneeErn = Some(consignee2),
+            localReferenceNumber = Some(secondLrn),
+            administrativeReferenceCode = Some(secondArc)
+          )
+        )
+        val second818 = formatXml(
+          consignor,
+          MessageParams(
+            IE818,
+            "XI000004",
+            consigneeErn = Some(consignee2),
+            localReferenceNumber = None,
+            administrativeReferenceCode = Some(secondArc)
+          )
+        )
 
         val thirdLrn = "23"
         val thirdArc = "arc3"
-        val third801 = formatXml(consignor, MessageParams(IE801, "XI000003", consigneeErn = Some(consignee3), localReferenceNumber = Some(thirdLrn), administrativeReferenceCode = Some(thirdArc)))
-        val third802 = formatXml(consignor, MessageParams(IE802, "XI000006", consigneeErn = None, localReferenceNumber = None, administrativeReferenceCode = Some(thirdArc)))
-        val third818 = formatXml(consignor, MessageParams(IE818, "XI000005", consigneeErn = Some(consignee3), localReferenceNumber = None, administrativeReferenceCode = Some(thirdArc)))
+        val third801 = formatXml(
+          consignor,
+          MessageParams(
+            IE801,
+            "XI000003",
+            consigneeErn = Some(consignee3),
+            localReferenceNumber = Some(thirdLrn),
+            administrativeReferenceCode = Some(thirdArc)
+          )
+        )
+        val third802 = formatXml(
+          consignor,
+          MessageParams(
+            IE802,
+            "XI000006",
+            consigneeErn = None,
+            localReferenceNumber = None,
+            administrativeReferenceCode = Some(thirdArc)
+          )
+        )
+        val third818 = formatXml(
+          consignor,
+          MessageParams(
+            IE818,
+            "XI000005",
+            consigneeErn = Some(consignee3),
+            localReferenceNumber = None,
+            administrativeReferenceCode = Some(thirdArc)
+          )
+        )
 
         val rootMovement = Movement(
           boxId = None,
@@ -640,7 +845,7 @@ class MessageServiceItSpec
             Message(third801, "IE801", "XI000003", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
             Message(third801, "IE801", "XI000003", consignee3, Set.empty, now.minus(2, ChronoUnit.DAYS)),
             Message(third818, "IE818", "XI000005", consignee3, Set.empty, now.minus(1, ChronoUnit.DAYS)),
-            Message(third802, "IE802", "XI000006", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third802, "IE802", "XI000006", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS))
           )
         )
 
@@ -654,9 +859,12 @@ class MessageServiceItSpec
         count().futureValue mustEqual 3
         val results = findAll().futureValue
 
-        val actualRootMovement = results.find(_.administrativeReferenceCode == expectedRootMovement.administrativeReferenceCode).value
-        val actualSecondMovement = results.find(_.administrativeReferenceCode == expectedSecondMovement.administrativeReferenceCode).value
-        val actualThirdMovement = results.find(_.administrativeReferenceCode == thirdMovement.administrativeReferenceCode).value
+        val actualRootMovement   =
+          results.find(_.administrativeReferenceCode == expectedRootMovement.administrativeReferenceCode).value
+        val actualSecondMovement =
+          results.find(_.administrativeReferenceCode == expectedSecondMovement.administrativeReferenceCode).value
+        val actualThirdMovement  =
+          results.find(_.administrativeReferenceCode == thirdMovement.administrativeReferenceCode).value
 
         actualRootMovement._id mustEqual expectedRootMovement._id
         actualRootMovement.localReferenceNumber mustEqual expectedRootMovement.localReferenceNumber
@@ -685,16 +893,43 @@ class MessageServiceItSpec
 
       "must not amend a movement which legitimately has more than 2 801s attached to it" in {
 
-        val hc = HeaderCarrier()
-        val consignor = "testErn"
-        val consignee = "testErn2"
+        val hc         = HeaderCarrier()
+        val consignor  = "testErn"
+        val consignee  = "testErn2"
         val consignee2 = "testErn3"
 
-        val rootLrn = "2"
-        val rootArc = "arc"
-        val first801 = formatXml(consignor, MessageParams(IE801, "XI000001", consigneeErn = Some(consignee), localReferenceNumber = Some(rootLrn), administrativeReferenceCode = Some(rootArc)))
-        val ie813 = formatXml(consignor, MessageParams(IE813, "XI000002", consigneeErn = Some(consignee), localReferenceNumber = None, administrativeReferenceCode = Some(rootArc)))
-        val second801 = formatXml(consignor, MessageParams(IE801, "XI000003", consigneeErn = Some(consignee2), localReferenceNumber = Some(rootLrn), administrativeReferenceCode = Some(rootArc)))
+        val rootLrn   = "2"
+        val rootArc   = "arc"
+        val first801  = formatXml(
+          consignor,
+          MessageParams(
+            IE801,
+            "XI000001",
+            consigneeErn = Some(consignee),
+            localReferenceNumber = Some(rootLrn),
+            administrativeReferenceCode = Some(rootArc)
+          )
+        )
+        val ie813     = formatXml(
+          consignor,
+          MessageParams(
+            IE813,
+            "XI000002",
+            consigneeErn = Some(consignee),
+            localReferenceNumber = None,
+            administrativeReferenceCode = Some(rootArc)
+          )
+        )
+        val second801 = formatXml(
+          consignor,
+          MessageParams(
+            IE801,
+            "XI000003",
+            consigneeErn = Some(consignee2),
+            localReferenceNumber = Some(rootLrn),
+            administrativeReferenceCode = Some(rootArc)
+          )
+        )
 
         val movement = Movement(
           boxId = None,
@@ -725,19 +960,46 @@ class MessageServiceItSpec
 
       "must fix a movement when the arc is wrong" in {
 
-        val hc = HeaderCarrier()
-        val consignor = "testErn"
+        val hc         = HeaderCarrier()
+        val consignor  = "testErn"
         val consignee1 = "testErn2"
         val consignee2 = "testErn3"
 
         val rootLrn = "2"
         val rootArc = "arc"
-        val root801 = formatXml(consignor, MessageParams(IE801, "XI000001", consigneeErn = Some(consignee1), localReferenceNumber = Some(rootLrn), administrativeReferenceCode = Some(rootArc)))
+        val root801 = formatXml(
+          consignor,
+          MessageParams(
+            IE801,
+            "XI000001",
+            consigneeErn = Some(consignee1),
+            localReferenceNumber = Some(rootLrn),
+            administrativeReferenceCode = Some(rootArc)
+          )
+        )
 
         val secondLrn = "22"
         val secondArc = "arc2"
-        val second801 = formatXml(consignor, MessageParams(IE801, "XI000002", consigneeErn = Some(consignee2), localReferenceNumber = Some(secondLrn), administrativeReferenceCode = Some(secondArc)))
-        val second818 = formatXml(consignor, MessageParams(IE818, "XI000005", consigneeErn = Some(consignee2), localReferenceNumber = None, administrativeReferenceCode = Some(secondArc)))
+        val second801 = formatXml(
+          consignor,
+          MessageParams(
+            IE801,
+            "XI000002",
+            consigneeErn = Some(consignee2),
+            localReferenceNumber = Some(secondLrn),
+            administrativeReferenceCode = Some(secondArc)
+          )
+        )
+        val second818 = formatXml(
+          consignor,
+          MessageParams(
+            IE818,
+            "XI000005",
+            consigneeErn = Some(consignee2),
+            localReferenceNumber = None,
+            administrativeReferenceCode = Some(secondArc)
+          )
+        )
 
         val rootMovement = Movement(
           boxId = None,
@@ -764,7 +1026,7 @@ class MessageServiceItSpec
           lastUpdated = now.minus(1, ChronoUnit.DAYS),
           messages = Seq(
             Message(root801, "IE801", "XI000001", consignor, Set.empty, now.minus(4, ChronoUnit.DAYS)),
-            Message(root801, "IE801", "XI000001", consignee1, Set.empty, now.minus(4, ChronoUnit.DAYS)),
+            Message(root801, "IE801", "XI000001", consignee1, Set.empty, now.minus(4, ChronoUnit.DAYS))
           )
         )
 
@@ -791,8 +1053,10 @@ class MessageServiceItSpec
         count().futureValue mustEqual 2
         val results = findAll().futureValue
 
-        val actualRootMovement = results.find(_.administrativeReferenceCode == expectedRootMovement.administrativeReferenceCode).value
-        val actualSecondMovement = results.find(_.administrativeReferenceCode == expectedSecondMovement.administrativeReferenceCode).value
+        val actualRootMovement   =
+          results.find(_.administrativeReferenceCode == expectedRootMovement.administrativeReferenceCode).value
+        val actualSecondMovement =
+          results.find(_.administrativeReferenceCode == expectedSecondMovement.administrativeReferenceCode).value
 
         actualRootMovement._id mustEqual expectedRootMovement._id
         actualRootMovement.localReferenceNumber mustEqual expectedRootMovement.localReferenceNumber
@@ -813,8 +1077,8 @@ class MessageServiceItSpec
 
       "must correctly set consignee when there is an 813" in {
 
-        val hc = HeaderCarrier()
-        val consignor = "testErn"
+        val hc         = HeaderCarrier()
+        val consignor  = "testErn"
         val consignee1 = "testErn2"
         val consignee2 = "testErn3"
         val consignee3 = "testErn4"
@@ -824,21 +1088,102 @@ class MessageServiceItSpec
 
         val rootLrn = "2"
         val rootArc = "arc"
-        val root801 = formatXml(consignor, MessageParams(IE801, "XI000001", consigneeErn = Some(consignee1), localReferenceNumber = Some(rootLrn), administrativeReferenceCode = Some(rootArc)))
-        val root813 = formatXml(consignor, MessageParams(IE813, "XI000007", consigneeErn = Some(consignee4), localReferenceNumber = None, administrativeReferenceCode = Some(rootArc)))
+        val root801 = formatXml(
+          consignor,
+          MessageParams(
+            IE801,
+            "XI000001",
+            consigneeErn = Some(consignee1),
+            localReferenceNumber = Some(rootLrn),
+            administrativeReferenceCode = Some(rootArc)
+          )
+        )
+        val root813 = formatXml(
+          consignor,
+          MessageParams(
+            IE813,
+            "XI000007",
+            consigneeErn = Some(consignee4),
+            localReferenceNumber = None,
+            administrativeReferenceCode = Some(rootArc)
+          )
+        )
 
         val secondLrn = "22"
         val secondArc = "arc2"
-        val second801 = formatXml(consignor, MessageParams(IE801, "XI000002", consigneeErn = Some(consignee2), localReferenceNumber = Some(secondLrn), administrativeReferenceCode = Some(secondArc)))
-        val second818 = formatXml(consignor, MessageParams(IE818, "XI000004", consigneeErn = Some(consignee2), localReferenceNumber = None, administrativeReferenceCode = Some(secondArc)))
-        val second813 = formatXml(consignor, MessageParams(IE813, "XI000008", consigneeErn = Some(consignee5), localReferenceNumber = None, administrativeReferenceCode = Some(secondArc)))
+        val second801 = formatXml(
+          consignor,
+          MessageParams(
+            IE801,
+            "XI000002",
+            consigneeErn = Some(consignee2),
+            localReferenceNumber = Some(secondLrn),
+            administrativeReferenceCode = Some(secondArc)
+          )
+        )
+        val second818 = formatXml(
+          consignor,
+          MessageParams(
+            IE818,
+            "XI000004",
+            consigneeErn = Some(consignee2),
+            localReferenceNumber = None,
+            administrativeReferenceCode = Some(secondArc)
+          )
+        )
+        val second813 = formatXml(
+          consignor,
+          MessageParams(
+            IE813,
+            "XI000008",
+            consigneeErn = Some(consignee5),
+            localReferenceNumber = None,
+            administrativeReferenceCode = Some(secondArc)
+          )
+        )
 
         val thirdLrn = "23"
         val thirdArc = "arc3"
-        val third801 = formatXml(consignor, MessageParams(IE801, "XI000003", consigneeErn = Some(consignee3), localReferenceNumber = Some(thirdLrn), administrativeReferenceCode = Some(thirdArc)))
-        val third802 = formatXml(consignor, MessageParams(IE802, "XI000006", consigneeErn = None, localReferenceNumber = None, administrativeReferenceCode = Some(thirdArc)))
-        val third818 = formatXml(consignor, MessageParams(IE818, "XI000005", consigneeErn = Some(consignee3), localReferenceNumber = None, administrativeReferenceCode = Some(thirdArc)))
-        val third813 = formatXml(consignor, MessageParams(IE813, "XI000009", consigneeErn = Some(consignee6), localReferenceNumber = None, administrativeReferenceCode = Some(thirdArc)))
+        val third801 = formatXml(
+          consignor,
+          MessageParams(
+            IE801,
+            "XI000003",
+            consigneeErn = Some(consignee3),
+            localReferenceNumber = Some(thirdLrn),
+            administrativeReferenceCode = Some(thirdArc)
+          )
+        )
+        val third802 = formatXml(
+          consignor,
+          MessageParams(
+            IE802,
+            "XI000006",
+            consigneeErn = None,
+            localReferenceNumber = None,
+            administrativeReferenceCode = Some(thirdArc)
+          )
+        )
+        val third818 = formatXml(
+          consignor,
+          MessageParams(
+            IE818,
+            "XI000005",
+            consigneeErn = Some(consignee3),
+            localReferenceNumber = None,
+            administrativeReferenceCode = Some(thirdArc)
+          )
+        )
+        val third813 = formatXml(
+          consignor,
+          MessageParams(
+            IE813,
+            "XI000009",
+            consigneeErn = Some(consignee6),
+            localReferenceNumber = None,
+            administrativeReferenceCode = Some(thirdArc)
+          )
+        )
 
         val rootMovement = Movement(
           boxId = None,
@@ -858,7 +1203,7 @@ class MessageServiceItSpec
             Message(third802, "IE802", "XI000006", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
             Message(third813, "IE813", "XI000009", consignee6, Set.empty, now.minus(2, ChronoUnit.DAYS)),
             Message(second813, "IE813", "XI000008", consignee5, Set.empty, now.minus(1, ChronoUnit.DAYS)),
-            Message(second818, "IE818", "XI000005", consignee5, Set.empty, now.minus(1, ChronoUnit.DAYS)),
+            Message(second818, "IE818", "XI000005", consignee5, Set.empty, now.minus(1, ChronoUnit.DAYS))
           )
         )
 
@@ -881,7 +1226,7 @@ class MessageServiceItSpec
           messages = Seq(
             Message(root801, "IE801", "XI000001", consignor, Set.empty, now.minus(4, ChronoUnit.DAYS)),
             Message(root801, "IE801", "XI000001", consignee1, Set.empty, now.minus(4, ChronoUnit.DAYS)),
-            Message(root813, "IE813", "XI000007", consignee4, Set.empty, now.minus(4, ChronoUnit.DAYS)),
+            Message(root813, "IE813", "XI000007", consignee4, Set.empty, now.minus(4, ChronoUnit.DAYS))
           )
         )
 
@@ -907,7 +1252,7 @@ class MessageServiceItSpec
             Message(third801, "IE801", "XI000003", consignee3, Set.empty, now.minus(2, ChronoUnit.DAYS)),
             Message(third818, "IE818", "XI000005", consignee6, Set.empty, now.minus(1, ChronoUnit.DAYS)),
             Message(third802, "IE802", "XI000006", consignor, Set.empty, now.minus(2, ChronoUnit.DAYS)),
-            Message(third813, "IE813", "XI000009", consignee6, Set.empty, now.minus(2, ChronoUnit.DAYS)),
+            Message(third813, "IE813", "XI000009", consignee6, Set.empty, now.minus(2, ChronoUnit.DAYS))
           )
         )
 
@@ -921,9 +1266,12 @@ class MessageServiceItSpec
         count().futureValue mustEqual 3
         val results = findAll().futureValue
 
-        val actualRootMovement = results.find(_.administrativeReferenceCode == expectedRootMovement.administrativeReferenceCode).value
-        val actualSecondMovement = results.find(_.administrativeReferenceCode == expectedSecondMovement.administrativeReferenceCode).value
-        val actualThirdMovement = results.find(_.administrativeReferenceCode == thirdMovement.administrativeReferenceCode).value
+        val actualRootMovement   =
+          results.find(_.administrativeReferenceCode == expectedRootMovement.administrativeReferenceCode).value
+        val actualSecondMovement =
+          results.find(_.administrativeReferenceCode == expectedSecondMovement.administrativeReferenceCode).value
+        val actualThirdMovement  =
+          results.find(_.administrativeReferenceCode == thirdMovement.administrativeReferenceCode).value
 
         actualRootMovement._id mustEqual expectedRootMovement._id
         actualRootMovement.localReferenceNumber mustEqual expectedRootMovement.localReferenceNumber
