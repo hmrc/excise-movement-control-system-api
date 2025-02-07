@@ -191,7 +191,7 @@ class MessageService @Inject() (
     for {
       response <- messageConnector.getNewMessages(ern, batchId, jobId)
       _        <- updateMovements(ern, response.messages, jobId, batchId)
-      _        <- acknowledgeAndContinue(response, ern,batchId, jobId)
+      _        <- acknowledgeAndContinue(response, ern, batchId, jobId)
     } yield Done
   }
 

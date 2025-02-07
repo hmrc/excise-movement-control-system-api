@@ -291,18 +291,18 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
   private def convertErns(erns: Set[String]): NonEmptySeq[String] = NonEmptySeq(erns.head, erns.tail.toSeq)
 
   def createMessageAcknowledgedEvent(
-                                      ern: String,
-                                      batchId: String,
-                                      jobId: Option[String],
-                                      recordsAffected: Int
-                                    ): MessageAcknowledgedSuccessAuditInfo =
+    ern: String,
+    batchId: String,
+    jobId: Option[String],
+    recordsAffected: Int
+  ): MessageAcknowledgedSuccessAuditInfo =
     MessageAcknowledgedSuccessAuditInfo(batchId, jobId, ern, recordsAffected)
 
   def createMessageNotAcknowledgedEvent(
-                                         ern: String,
-                                         batchId: String,
-                                         jobId: Option[String],
-                                         failureReason: String
-                                       ): MessageAcknowledgedFailureAuditInfo =
+    ern: String,
+    batchId: String,
+    jobId: Option[String],
+    failureReason: String
+  ): MessageAcknowledgedFailureAuditInfo =
     MessageAcknowledgedFailureAuditInfo(failureReason, batchId, jobId, ern)
 }

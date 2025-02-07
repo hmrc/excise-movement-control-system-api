@@ -226,7 +226,7 @@ class MessageServiceSpec
             verify(movementRepository, never).getAllBy(any)
             verify(movementService, never).saveMovement(any, eqTo(None), any, any)(any)
             verify(messageConnector, never).acknowledgeMessages(any, any, any)(any)
-            verify(movementService, never).saveMovement(any, eqTo(None), any)(any)
+            verify(movementService, never).saveMovement(any, eqTo(None), any, any)(any)
             verify(messageConnector, never).acknowledgeMessages(any, any, any)(any)
             verify(ernRetrievalRepository).setLastRetrieved(ern, lastRetrievedTimestamp)
           }
@@ -432,7 +432,7 @@ class MessageServiceSpec
             verify(movementService, never).saveMovement(eqTo(unexpectedMovement), eqTo(None), any, any)(any)
             verify(movementService).saveMovement(eqTo(expectedMovement), eqTo(None), any, any)(any)
             verify(messageConnector).acknowledgeMessages(eqTo(consignorErn), any, any)(any)
- verify(auditService)
+            verify(auditService)
               .messageAcknowledged(eqTo(consignorErn), any, any, eqTo(acknowledgementResponse.recordsAffected))(any)
 
           }
@@ -694,7 +694,7 @@ class MessageServiceSpec
 
             verify(messageConnector).getNewMessages(eqTo(consignor), any, any)(any)
             verify(movementRepository).getAllBy(eqTo(consignor))
-            verify(movementService).saveMovement(eqTo(expectedMovement), eqTo(None), any)(any)
+            verify(movementService).saveMovement(eqTo(expectedMovement), eqTo(None), any, any)(any)
             verify(messageConnector).acknowledgeMessages(eqTo(consignor), any, any)(any)
             verify(auditService)
               .messageAcknowledged(eqTo(consignor), any, any, eqTo(acknowledgementResponse.recordsAffected))(any)
@@ -748,7 +748,7 @@ class MessageServiceSpec
             when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq.empty))
             when(movementRepository.getByArc(any)).thenReturn(Future.successful(None))
             when(movementRepository.getMovementByLRNAndERNIn(any, any)).thenReturn(Future.successful(Seq.empty))
-            when(movementService.saveMovement(any, any, any, any)(any)).thenReturn(Future.successful(Done))
+            when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
             when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
             when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
             when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -763,10 +763,10 @@ class MessageServiceSpec
 
             verify(messageConnector).getNewMessages(eqTo(consignee), any, any)(any)
             verify(movementRepository).getAllBy(eqTo(consignee))
-            verify(movementService).saveMovement(eqTo(expectedMovement), eqTo(None), any, any)(any)
+            verify(movementRepository).saveMovement(eqTo(expectedMovement))
             verify(messageConnector).acknowledgeMessages(eqTo(consignee), any, any)(any)
-                       tService)
-              .messageAcknowledged(eqTo(consignor), any, any, eqTo(acknowledgementResponse.recordsAffected))(any)
+            verify(auditService)
+              .messageAcknowledged(eqTo(consignee), any, any, eqTo(acknowledgementResponse.recordsAffected))(any)
           }
 
           "a new movement is created from trader-movement call IE801 message if message is not an IE801 or IE704" in {
