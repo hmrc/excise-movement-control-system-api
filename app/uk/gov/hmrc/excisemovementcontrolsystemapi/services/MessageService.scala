@@ -112,6 +112,7 @@ class MessageService @Inject() (
 
   private def fixProblemMovement(movement: Movement)(implicit headerCarrier: HeaderCarrier) = {
     val movementWithNoMessages = movement.copy(messages = Seq.empty, administrativeReferenceCode = None)
+    val batchId                = UUID.randomUUID().toString
     movement.messages
       .sortBy(_.createdOn)
       .foldLeft(Future.successful(Seq.empty[Movement])) { (accumulated, message) =>
@@ -143,7 +144,7 @@ class MessageService @Inject() (
           logger.warn(
             s"Saving updated movement with id ${m._id} with messages (${messageCounts(m)}) as part of fix for ${movement._id}"
           )
-          movementService.saveMovement(m, None)
+          movementService.saveMovement(m, None, batchId)
         }
       }
       .map(_ => Done)
@@ -189,8 +190,8 @@ class MessageService @Inject() (
 
     for {
       response <- messageConnector.getNewMessages(ern, batchId, jobId)
-      _        <- updateMovements(ern, response.messages, jobId)
-      _        <- acknowledgeAndContinue(response, ern, batchId, jobId)
+      _        <- updateMovements(ern, response.messages, jobId, batchId)
+      _        <- acknowledgeAndContinue(response, ern,batchId, jobId)
     } yield Done
   }
 
@@ -222,8 +223,8 @@ class MessageService @Inject() (
         }
     }
 
-  private def updateMovements(ern: String, messages: Seq[IEMessage], jobId: Option[String] = None)(implicit
-    hc: HeaderCarrier
+  private def updateMovements(ern: String, messages: Seq[IEMessage], jobId: Option[String] = None, batchId: String)(
+    implicit hc: HeaderCarrier
   ): Future[Done] = {
     logger.info(s"[MessageService]: Updating movements")
     if (messages.nonEmpty) {
@@ -258,7 +259,7 @@ class MessageService @Inject() (
 
                 messageCount.update(movement.messages.length)
                 totalMessageSize.update(movement.messages.map(_.encodedMessage.length).sum)
-                movementService.saveMovement(movement, jobId).recoverWith { case NonFatal(e) =>
+                movementService.saveMovement(movement, jobId, batchId).recoverWith { case NonFatal(e) =>
                   createEnrichedError(e, ern, movements, movement)
                 }
               }
