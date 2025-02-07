@@ -40,7 +40,7 @@ case class MovementSavedSuccessAuditInfo(
   administrativeReferenceCode: Option[String],
   consignorId: String,
   consigneeId: Option[String],
-  batchId: String,
+  batchId: Option[String],
   jobId: Option[String],
   keyMessageDetails: Seq[KeyMessageDetailsAuditInfo],
   fullMessageDetails: Seq[JsValue]
@@ -55,7 +55,7 @@ object MovementSavedSuccessAuditInfo {
     administrativeReferenceCode: Option[String],
     consignorId: String,
     consigneeId: Option[String],
-    batchId: String,
+    batchId: Option[String],
     jobId: Option[String],
     keyMessageDetails: Seq[KeyMessageDetailsAuditInfo],
     fullMessageDetails: Seq[JsValue]
@@ -85,7 +85,7 @@ object MovementSavedSuccessAuditInfo {
         (JsPath \ "administrativeReferenceCode").write[Option[String]] and
         (JsPath \ "consignorId").write[String] and
         (JsPath \ "consigneeId").write[Option[String]] and
-        (JsPath \ "batchId").write[String] and
+        (JsPath \ "batchId").write[Option[String]] and
         (JsPath \ "jobId").write[Option[String]] and
         (JsPath \ "keyMessageDetails").write[Seq[KeyMessageDetailsAuditInfo]] and
         (JsPath \ "fullMessageDetails").write[Seq[JsValue]]
@@ -102,7 +102,7 @@ case class MovementSavedFailureAuditInfo(
   administrativeReferenceCode: Option[String],
   consignorId: String,
   consigneeId: Option[String],
-  batchId: String,
+  batchId: Option[String],
   jobId: Option[String],
   keyMessageDetails: Seq[KeyMessageDetailsAuditInfo],
   fullMessageDetails: Seq[JsValue]
@@ -118,7 +118,7 @@ object MovementSavedFailureAuditInfo {
     administrativeReferenceCode: Option[String],
     consignorId: String,
     consigneeId: Option[String],
-    batchId: String,
+    batchId: Option[String],
     jobId: Option[String],
     keyMessageDetails: Seq[KeyMessageDetailsAuditInfo],
     fullMessageDetails: Seq[JsValue]
@@ -149,7 +149,7 @@ object MovementSavedFailureAuditInfo {
       (JsPath \ "administrativeReferenceCode").write[Option[String]] and
       (JsPath \ "consignorId").write[String] and
       (JsPath \ "consigneeId").write[Option[String]] and
-      (JsPath \ "batchId").write[String] and
+      (JsPath \ "batchId").write[Option[String]] and
       (JsPath \ "jobId").write[Option[String]] and
       (JsPath \ "keyMessageDetails").write[Seq[KeyMessageDetailsAuditInfo]] and
       (JsPath \ "fullMessageDetails").write[Seq[JsValue]])(unlift(MovementSavedFailureAuditInfo.unapply))

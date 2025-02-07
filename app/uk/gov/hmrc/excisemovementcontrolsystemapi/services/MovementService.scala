@@ -30,7 +30,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Mov
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 
-import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
@@ -48,8 +47,7 @@ class MovementService @Inject() (
       .findDraftMovement(movement)
       .flatMap { draftMovement =>
         draftMovement.map(movement => Future.successful(Right(movement))).getOrElse {
-          val batchId = UUID.randomUUID().toString
-          saveMovement(movement, None, batchId).map(_ => Right(movement))
+          saveMovement(movement).map(_ => Right(movement))
         }
       }
       .recover {
@@ -76,7 +74,7 @@ class MovementService @Inject() (
   def saveMovement(
     updatedMovement: Movement,
     jobId: Option[String] = None,
-    batchId: String,
+    batchId: Option[String] = None,
     messagesAlreadyInMongo: Seq[Message] = Seq.empty
   )(implicit
     hc: HeaderCarrier

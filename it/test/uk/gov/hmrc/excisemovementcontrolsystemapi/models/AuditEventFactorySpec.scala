@@ -379,13 +379,13 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       Some("arc"),
       "consignorId",
       Some("consigneeId"),
-      batchId,
+      Some(batchId),
       None,
       Seq(keyMessageDetails),
       ieMessagesConverted.map(_.toJson)
     )
 
-    val result = service.createMovementSavedSuccessAuditInfo(movement, batchId, None, Seq(message))
+    val result = service.createMovementSavedSuccessAuditInfo(movement, Some(batchId), None, Seq(message))
 
     result mustBe expectedResult
   }
@@ -412,13 +412,13 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       Some("arc"),
       "consignorId",
       Some("consigneeId"),
-      batchId,
+      Some(batchId),
       None,
       Seq.empty,
       Seq.empty
     )
 
-    val result = service.createMovementSavedSuccessAuditInfo(movement, batchId, None, Seq.empty)
+    val result = service.createMovementSavedSuccessAuditInfo(movement, Some(batchId), None, Seq.empty)
 
     result mustBe expectedResult
   }
@@ -473,13 +473,13 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       Some("arc"),
       "consignorId",
       Some("consigneeId"),
-      batchId,
+      Some(batchId),
       None,
       Seq(keyMessageDetails),
       Seq(ieMessagesConverted.toJson)
     )
 
-    val result = service.createMovementSavedSuccessAuditInfo(movement, batchId, None, Seq(message3))
+    val result = service.createMovementSavedSuccessAuditInfo(movement, Some(batchId), None, Seq(message3))
 
     result mustBe expectedResult
   }
@@ -520,12 +520,12 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       Some("arc"),
       "consignorId",
       Some("consigneeId"),
-      batchId,
+      Some(batchId),
       None,
       Seq(keyMessageDetails),
       ieMessagesConverted.map(_.toJson)
     )
-    val result         = service.createMovementSavedFailureAuditInfo(movement, failureReason, batchId, None, Seq(message))
+    val result         = service.createMovementSavedFailureAuditInfo(movement, failureReason, Some(batchId), None, Seq(message))
 
     result mustBe expectedResult
   }
@@ -567,12 +567,12 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       Some("arc"),
       "consignorId",
       Some("consigneeId"),
-      batchId,
+      Some(batchId),
       None,
       Seq(keyMessageDetails),
       ieMessagesConverted.map(_.toJson)
     )
-    val result         = service.createMovementSavedFailureAuditInfo(movement, failureReason, batchId, None, Seq.empty)
+    val result         = service.createMovementSavedFailureAuditInfo(movement, failureReason, Some(batchId), None, Seq.empty)
 
     result mustBe expectedResult
   }

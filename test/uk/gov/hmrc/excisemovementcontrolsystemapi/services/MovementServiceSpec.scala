@@ -166,13 +166,14 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         when(mockMovementRepository.saveMovement(any))
           .thenReturn(Future.successful(Done))
 
-        val result = await(movementService.saveMovement(successMovement, None, UUID.randomUUID().toString, Seq.empty))
+        val result =
+          await(movementService.saveMovement(successMovement, None, Some(UUID.randomUUID().toString), Seq.empty))
 
         result mustBe Done
       }
       "call an auditService.movementSavedSuccess if call to repository is a Success" in {
         val successMovement = exampleMovement
-        val batchId         = UUID.randomUUID().toString
+        val batchId         = Some(UUID.randomUUID().toString)
 
         when(mockMovementRepository.saveMovement(any))
           .thenReturn(Future.successful(Done))
@@ -184,7 +185,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
       "pass jobId to audit service in success case" in {
         val successMovement = exampleMovement
-        val batchId         = UUID.randomUUID().toString
+        val batchId         = Some(UUID.randomUUID().toString)
         val jobId           = Some(UUID.randomUUID().toString)
 
         when(mockMovementRepository.saveMovement(any))
@@ -199,7 +200,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       "pass messagesAdded = 1 and totalMessages = 1 for a new movement with one message when a call to repository is a success" in {
         val successMovement = exampleMovement
 
-        val batchId = UUID.randomUUID().toString
+        val batchId = Some(UUID.randomUUID().toString)
         val jobId   = Some(UUID.randomUUID().toString)
 
         when(mockMovementRepository.saveMovement(any))
@@ -215,7 +216,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       "pass messagesAdded = 2 and totalMessages = 2 for a new movement with two messages when a call to repository is a success" in {
         val successMovement = exampleMovement.copy(messages = Seq(exampleMessage, exampleMessage))
 
-        val batchId = UUID.randomUUID().toString
+        val batchId = Some(UUID.randomUUID().toString)
         val jobId   = Some(UUID.randomUUID().toString)
 
         when(mockMovementRepository.saveMovement(any))
@@ -241,7 +242,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         } yield exampleMessage
         val successMovement = exampleMovement.copy(messages = messages)
 
-        val batchId = UUID.randomUUID().toString
+        val batchId = Some(UUID.randomUUID().toString)
         val jobId   = Some(UUID.randomUUID().toString)
 
         when(mockMovementRepository.saveMovement(any))
@@ -260,7 +261,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         val messagesAlreadyInMongo = Seq(exampleMessage)
 
-        val batchId = UUID.randomUUID().toString
+        val batchId = Some(UUID.randomUUID().toString)
         val jobId   = Some(UUID.randomUUID().toString)
 
         when(mockMovementRepository.saveMovement(any))
@@ -282,7 +283,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         val successMovement = exampleMovement.copy(messages = exampleMessagesAlreadyInMongo)
 
-        val batchId = UUID.randomUUID().toString
+        val batchId = Some(UUID.randomUUID().toString)
         val jobId   = Some(UUID.randomUUID().toString)
 
         when(mockMovementRepository.saveMovement(any))
@@ -305,7 +306,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         val successMovement = exampleMovement.copy(messages = Seq(exampleMessage, exampleMessage2))
 
-        val batchId = UUID.randomUUID().toString
+        val batchId = Some(UUID.randomUUID().toString)
         val jobId   = Some(UUID.randomUUID().toString)
 
         when(mockMovementRepository.saveMovement(any))
@@ -329,7 +330,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         val successMovement = exampleMovement.copy(messages = Seq(exampleMessage3, exampleMessage4))
 
-        val batchId = UUID.randomUUID().toString
+        val batchId = Some(UUID.randomUUID().toString)
         val jobId   = Some(UUID.randomUUID().toString)
 
         when(mockMovementRepository.saveMovement(any))
@@ -360,7 +361,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         val successMovement = exampleMovement.copy(messages = exampleMessagesAlreadyInMongo ++ newMessages)
 
-        val batchId = UUID.randomUUID().toString
+        val batchId = Some(UUID.randomUUID().toString)
         val jobId   = Some(UUID.randomUUID().toString)
 
         when(mockMovementRepository.saveMovement(any))
@@ -383,7 +384,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
           .thenReturn(Future.failed(exception))
 
         the[MongoCommandException] thrownBy {
-          await(movementService.saveMovement(successMovement, batchId = UUID.randomUUID().toString))
+          await(movementService.saveMovement(successMovement, batchId = Some(UUID.randomUUID().toString)))
         } must have message exception.getMessage
       }
 
@@ -392,7 +393,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         val newMessage = exampleMessage.copy(messageId = UUID.randomUUID().toString)
 
         val updatedMovement = exampleMovement.copy(messages = movement.messages ++ Seq(newMessage))
-        val batchId         = UUID.randomUUID().toString
+        val batchId         = Some(UUID.randomUUID().toString)
 
         when(mockMovementRepository.saveMovement(any))
           .thenReturn(Future.failed(new RuntimeException("Failed reason")))
@@ -414,7 +415,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         val updatedMovement = exampleMovement.copy(messages = movement.messages ++ Seq(newMessage))
 
-        val batchId = UUID.randomUUID().toString
+        val batchId = Some(UUID.randomUUID().toString)
         val jobId   = Some(UUID.randomUUID().toString)
 
         when(mockMovementRepository.saveMovement(any))
@@ -431,7 +432,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         val exampleMessage2 = exampleMessage.copy(messageId = UUID.randomUUID().toString)
         val movement        = exampleMovement.copy(messages = Seq(exampleMessage, exampleMessage2))
 
-        val batchId = UUID.randomUUID().toString
+        val batchId = Some(UUID.randomUUID().toString)
         val jobId   = Some(UUID.randomUUID().toString)
 
         when(mockMovementRepository.saveMovement(any))
@@ -451,7 +452,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         val movement = exampleMovement.copy(messages = messages)
 
-        val batchId = UUID.randomUUID().toString
+        val batchId = Some(UUID.randomUUID().toString)
         val jobId   = Some(UUID.randomUUID().toString)
 
         when(mockMovementRepository.saveMovement(any))
@@ -470,7 +471,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
         val message2        = exampleMessage.copy(messageId = UUID.randomUUID().toString)
         val successMovement = exampleMovement.copy(messages = Seq(exampleMessage, message2))
 
-        val batchId = UUID.randomUUID().toString
+        val batchId = Some(UUID.randomUUID().toString)
         val jobId   = Some(UUID.randomUUID().toString)
 
         when(mockMovementRepository.saveMovement(any))
@@ -495,7 +496,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
 
         val messagesAlreadyInMongo = Seq(exampleMessage)
 
-        val batchId = UUID.randomUUID().toString
+        val batchId = Some(UUID.randomUUID().toString)
         val jobId   = Some(UUID.randomUUID().toString)
 
         when(mockMovementRepository.saveMovement(any))

@@ -112,7 +112,7 @@ class MessageService @Inject() (
 
   private def fixProblemMovement(movement: Movement)(implicit headerCarrier: HeaderCarrier) = {
     val movementWithNoMessages = movement.copy(messages = Seq.empty, administrativeReferenceCode = None)
-    val batchId                = UUID.randomUUID().toString
+
     movement.messages
       .sortBy(_.createdOn)
       .foldLeft(Future.successful(Seq.empty[Movement])) { (accumulated, message) =>
@@ -144,7 +144,7 @@ class MessageService @Inject() (
           logger.warn(
             s"Saving updated movement with id ${m._id} with messages (${messageCounts(m)}) as part of fix for ${movement._id}"
           )
-          movementService.saveMovement(m, None, batchId)
+          movementService.saveMovement(m)
         }
       }
       .map(_ => Done)
@@ -190,7 +190,7 @@ class MessageService @Inject() (
 
     for {
       response <- messageConnector.getNewMessages(ern, batchId, jobId)
-      _        <- updateMovements(ern, response.messages, jobId, batchId)
+      _        <- updateMovements(ern, response.messages, jobId, Some(batchId))
       _        <- acknowledgeAndContinue(response, ern, batchId, jobId)
     } yield Done
   }
@@ -223,8 +223,13 @@ class MessageService @Inject() (
         }
     }
 
-  private def updateMovements(ern: String, messages: Seq[IEMessage], jobId: Option[String] = None, batchId: String)(
-    implicit hc: HeaderCarrier
+  private def updateMovements(
+    ern: String,
+    messages: Seq[IEMessage],
+    jobId: Option[String] = None,
+    batchId: Option[String]
+  )(implicit
+    hc: HeaderCarrier
   ): Future[Done] = {
     logger.info(s"[MessageService]: Updating movements")
     if (messages.nonEmpty) {
@@ -250,13 +255,6 @@ class MessageService @Inject() (
             }
             .flatMap {
               _.traverse { movement =>
-                // get the ids of the messages in this movement
-                // get the messages from the original list that match
-                // turn those into the xml/json/obj (check with kara)
-                // is totalMessages the total on that movement? or ...?
-                // messages added - filter original list of messages by this movement id
-                // need to be sure that we never retrieve from EIS ny messages that have previously been retrieved.
-
                 messageCount.update(movement.messages.length)
                 totalMessageSize.update(movement.messages.map(_.encodedMessage.length).sum)
                 movementService.saveMovement(movement, jobId, batchId).recoverWith { case NonFatal(e) =>

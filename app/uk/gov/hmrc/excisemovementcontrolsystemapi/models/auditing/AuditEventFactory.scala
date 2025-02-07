@@ -227,7 +227,7 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
 
   def createMovementSavedSuccessAuditInfo(
     updatedMovement: Movement,
-    batchId: String,
+    batchId: Option[String],
     jobId: Option[String],
     newMessages: Seq[Message]
   ): MovementSavedSuccessAuditInfo = {
@@ -250,7 +250,7 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
   def createMovementSavedFailureAuditInfo(
     movement: Movement,
     failureReason: String,
-    batchId: String,
+    batchId: Option[String],
     jobId: Option[String],
     messagesToBeAdded: Seq[Message]
   ): MovementSavedFailureAuditInfo = {
