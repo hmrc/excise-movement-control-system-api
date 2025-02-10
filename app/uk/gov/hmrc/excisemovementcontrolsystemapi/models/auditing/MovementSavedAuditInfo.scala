@@ -96,7 +96,7 @@ case class MovementSavedFailureAuditInfo(
   saveStatus: String = "Failure",
   failureReason: String,
   messagesToBeAdded: Int,
-  totalMessages: Int, // number on the movement in total after saving.
+  totalMessages: Int,
   movementId: String,
   localReferenceNumber: Option[String],
   administrativeReferenceCode: Option[String],
@@ -111,8 +111,8 @@ case class MovementSavedFailureAuditInfo(
 object MovementSavedFailureAuditInfo {
   def apply(
     failureReason: String,
-    messagesToBeAdded: Int, // messages that were *supposed* to be added?
-    totalMessages: Int, // messages that were+are on the mvt (i.e. not changed due to save failure)
+    messagesToBeAdded: Int,
+    totalMessages: Int,
     movementId: String,
     localReferenceNumber: Option[String],
     administrativeReferenceCode: Option[String],
