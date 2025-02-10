@@ -82,13 +82,17 @@ class MovementRepository @Inject() (
       )
       .headOption()
   }
-
-  def saveMovement(movement: Movement): Future[Boolean]       = Mdc.preservingMdc {
+  def saveMovement(movement: Movement): Future[Done]                  = Mdc.preservingMdc {
     collection
-      .insertOne(movement.copy(lastUpdated = timeService.timestamp()))
+      .findOneAndReplace(
+        filter = byId(movement._id),
+        replacement = movement.copy(lastUpdated = timeService.timestamp()),
+        FindOneAndReplaceOptions().upsert(true)
+      )
       .toFuture()
-      .map(_ => true)
+      .as(Done)
   }
+
   def saveMovements(movement: Seq[Movement]): Future[Boolean] = Mdc.preservingMdc {
     collection
       .insertMany(
@@ -97,30 +101,6 @@ class MovementRepository @Inject() (
       )
       .toFuture()
       .map(_ => true)
-  }
-
-  def save(movement: Movement): Future[Done] = Mdc.preservingMdc {
-    collection
-      .findOneAndReplace(
-        filter = byId(movement._id),
-        replacement = movement,
-        FindOneAndReplaceOptions().upsert(true)
-      )
-      .toFuture()
-      .as(Done)
-  }
-
-  def updateMovement(movement: Movement): Future[Option[Movement]] = Mdc.preservingMdc {
-
-    val updatedMovement = movement.copy(lastUpdated = timeService.timestamp())
-
-    collection
-      .findOneAndReplace(
-        filter = byId(updatedMovement._id),
-        replacement = updatedMovement,
-        new FindOneAndReplaceOptions().returnDocument(ReturnDocument.AFTER)
-      )
-      .headOption()
   }
 
   def getMovementById(id: String): Future[Option[Movement]] = Mdc.preservingMdc {

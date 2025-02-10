@@ -159,9 +159,40 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
       auditConnector.sendExplicitAudit("MessageProcessing", messageProcessingFailureAuditInfo)
     }
 
+  def movementSavedSuccess(
+    movement: Movement,
+    batchId: Option[String],
+    jobId: Option[String],
+    newMessages: Seq[Message]
+  )(implicit hc: HeaderCarrier): Unit =
+    if (appConfig.processingAuditingEnabled) {
+      val movementSavedSuccessAuditInfo =
+        factory.createMovementSavedSuccessAuditInfo(movement, batchId, jobId, newMessages)
+
+      auditConnector.sendExplicitAudit("MovementSaved", movementSavedSuccessAuditInfo)
+    }
+
+  def movementSavedFailure(
+    movement: Movement,
+    failureReason: String,
+    batchId: Option[String],
+    jobId: Option[String],
+    messagesToBeAdded: Seq[Message]
+  )(implicit hc: HeaderCarrier): Unit =
+    if (appConfig.processingAuditingEnabled) {
+      val movementSavedFailureAuditInfo = factory.createMovementSavedFailureAuditInfo(
+        movement,
+        failureReason,
+        batchId,
+        jobId,
+        messagesToBeAdded
+      )
+
+      auditConnector.sendExplicitAudit("MovementSaved", movementSavedFailureAuditInfo)
+    }
   def messageAcknowledged(ern: String, batchId: String, jobId: Option[String], recordsAffected: Int)(implicit
     hc: HeaderCarrier
-  ): Unit =
+  ): Unit                             =
     if (appConfig.processingAuditingEnabled) {
       val event = factory.createMessageAcknowledgedEvent(ern, batchId, jobId, recordsAffected)
       auditConnector.sendExplicitAudit("MessageAcknowledged", event)

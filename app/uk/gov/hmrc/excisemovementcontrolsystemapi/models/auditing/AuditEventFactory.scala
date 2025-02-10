@@ -225,6 +225,70 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
     jobId: Option[String]
   ): MessageProcessingFailureAuditInfo = MessageProcessingFailureAuditInfo(ern, failureReason, batchId, jobId)
 
+  def createMovementSavedSuccessAuditInfo(
+    updatedMovement: Movement,
+    batchId: Option[String],
+    jobId: Option[String],
+    newMessages: Seq[Message]
+  ): MovementSavedSuccessAuditInfo = {
+    val ieMessages = convertToIEMessage(newMessages)
+    MovementSavedSuccessAuditInfo(
+      newMessages.length,
+      updatedMovement.messages.length,
+      updatedMovement._id,
+      Some(updatedMovement.localReferenceNumber),
+      updatedMovement.administrativeReferenceCode,
+      updatedMovement.consignorId,
+      updatedMovement.consigneeId,
+      batchId,
+      jobId,
+      generateKeyMessageDetailsAuditInfo(ieMessages),
+      ieMessages.map(_.toJson)
+    )
+  }
+
+  def createMovementSavedFailureAuditInfo(
+    movement: Movement,
+    failureReason: String,
+    batchId: Option[String],
+    jobId: Option[String],
+    messagesToBeAdded: Seq[Message]
+  ): MovementSavedFailureAuditInfo = {
+    val ieMessages = convertToIEMessage(movement.messages)
+    MovementSavedFailureAuditInfo(
+      failureReason,
+      messagesToBeAdded.length,
+      movement.messages.length,
+      movement._id,
+      Some(movement.localReferenceNumber),
+      movement.administrativeReferenceCode,
+      movement.consignorId,
+      movement.consigneeId,
+      batchId,
+      jobId,
+      generateKeyMessageDetailsAuditInfo(ieMessages),
+      ieMessages.map(_.toJson)
+    )
+  }
+  private def generateKeyMessageDetailsAuditInfo(messages: Seq[IEMessage]): Seq[KeyMessageDetailsAuditInfo] =
+    messages.map { ieMessage =>
+      val correlationId = ieMessage.correlationId
+      KeyMessageDetailsAuditInfo(
+        ieMessage.messageIdentifier,
+        correlationId,
+        ieMessage.messageType,
+        ieMessage.messageAuditType.name
+      )
+    }
+
+  private def convertToIEMessage(messages: Seq[Message]) =
+    messages.map { message =>
+      val decodedXml         = emcsUtils.decode(message.encodedMessage)
+      val decodedXmlNodeList = xml.XML.loadString(decodedXml)
+      val ieMessage          = ieMessageFactory.createFromXml(message.messageType, decodedXmlNodeList)
+      ieMessage
+    }
+
   def createMessageAcknowledgedEvent(
     ern: String,
     batchId: String,
@@ -238,8 +302,7 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
     batchId: String,
     jobId: Option[String],
     failureReason: String
-  ): MessageAcknowledgedFailureAuditInfo =
+  ): MessageAcknowledgedFailureAuditInfo                          =
     MessageAcknowledgedFailureAuditInfo(failureReason, batchId, jobId, ern)
-
   private def convertErns(erns: Set[String]): NonEmptySeq[String] = NonEmptySeq(erns.head, erns.tail.toSeq)
 }

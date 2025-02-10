@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
+import org.apache.pekko.Done
 import org.mockito.MockitoSugar.when
 import org.mongodb.scala.model.Filters
 import org.scalactic.source.Position
@@ -82,7 +83,7 @@ class MovementRepositoryItSpec
         )
       ).futureValue.headOption.value
 
-      result mustBe true
+      result mustBe Done
       insertedRecord mustBe movement
     }
   }
@@ -107,66 +108,6 @@ class MovementRepositoryItSpec
     }
   }
 
-  "updateMovement" should {
-    "update a movement by lrn and consignorId" in {
-      val movementLRN1 = Movement(Some("boxId1"), "1", "345", Some("789"), None, timestamp)
-      val movementLRN2 = Movement(Some("boxId2"), "2", "897", Some("456"), None)
-      insertMovement(movementLRN1)
-      insertMovement(movementLRN2)
-
-      val message         = Message("any, message", MessageTypes.IE801.value, "messageId", "ern", Set.empty, timestamp)
-      val updatedMovement = movementLRN2.copy(administrativeReferenceCode = Some("arc"), messages = Seq(message))
-      val result          = repository.updateMovement(updatedMovement).futureValue
-
-      val records = findAll().futureValue
-
-      val expectedUpdated = updatedMovement.copy(lastUpdated = timestamp)
-      result mustBe Some(expectedUpdated)
-      records mustBe Seq(movementLRN1, expectedUpdated)
-    }
-
-    "update a movement by lrn and consigneeId" in {
-      val movementLRN1 = Movement(Some("boxId1"), "1", "345", Some("789"), None, timestamp)
-      val movementLRN2 = Movement(Some("boxId2"), "2", "897", Some("456"), None)
-      insertMovement(movementLRN1)
-      insertMovement(movementLRN2)
-
-      val message        = Message("any, message", MessageTypes.IE801.value, "messageId", "ern", Set.empty, timestamp)
-      val updateMovement = movementLRN2.copy(administrativeReferenceCode = Some("arc"), messages = Seq(message))
-      val result         = repository.updateMovement(updateMovement).futureValue
-
-      val records = findAll().futureValue
-
-      result mustBe Some(updateMovement.copy(lastUpdated = timestamp))
-      val expected = Seq(
-        movementLRN1,
-        movementLRN2.copy(administrativeReferenceCode = Some("arc"), lastUpdated = timestamp, messages = Seq(message))
-      )
-      records mustBe expected
-    }
-
-    "not update the movement if record not found" in {
-      val movementLRN1 = Movement(Some("boxId1"), "1", "345", Some("789"), None, timestamp)
-      val movementLRN2 = Movement(Some("boxId2"), "2", "897", Some("456"), None, timestamp)
-      insertMovement(movementLRN1)
-      insertMovement(movementLRN2)
-
-      val message = Message("any, message", MessageTypes.IE801.value, "messageId", "ern", Set.empty, timestamp)
-      val result  = repository
-        .updateMovement(Movement(Some("boxId"), "4", "897", Some("321"), Some("arc"), Instant.now, Seq(message)))
-        .futureValue
-
-      val records = findAll().futureValue
-
-      result mustBe None
-      records mustBe Seq(movementLRN1, movementLRN2)
-    }
-
-    mustPreserveMdc(
-      repository.updateMovement(Movement(Some("boxId"), "4", "897", Some("321"), Some("arc"), Instant.now, Seq.empty))
-    )
-  }
-
   "save" should {
 
     val movement =
@@ -174,7 +115,7 @@ class MovementRepositoryItSpec
 
     "insert a movement if one does not exist" in {
 
-      repository.save(movement).futureValue
+      repository.saveMovement(movement).futureValue
 
       val records = find(Filters.empty()).futureValue
       records must contain only movement
@@ -182,10 +123,10 @@ class MovementRepositoryItSpec
 
     "update a movement if one already exists" in {
 
-      repository.save(movement).futureValue
+      repository.saveMovement(movement).futureValue
 
       val updatedMovement = movement.copy(consigneeId = Some("678"))
-      repository.save(updatedMovement).futureValue
+      repository.saveMovement(updatedMovement).futureValue
 
       val records = find(Filters.empty()).futureValue
       records must contain only updatedMovement
@@ -193,16 +134,16 @@ class MovementRepositoryItSpec
 
     "fail to insert a new movement if it has the same consignorId/lrn as another movement" in {
 
-      repository.save(movement).futureValue
+      repository.saveMovement(movement).futureValue
 
       val newMovement = movement.copy(_id = UUID.randomUUID().toString)
-      repository.save(newMovement).failed.futureValue
+      repository.saveMovement(newMovement).failed.futureValue
 
       val records = find(Filters.empty()).futureValue
       records must contain only movement
     }
 
-    mustPreserveMdc(repository.save(movement))
+    mustPreserveMdc(repository.saveMovement(movement))
   }
 
   "getMovementById" should {

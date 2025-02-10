@@ -17,7 +17,8 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.Singleton
-import com.mongodb.MongoWriteException
+import org.apache.pekko.Done
+import org.mongodb.scala.MongoCommandException
 import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.Result
@@ -25,8 +26,9 @@ import play.api.mvc.Results.{BadRequest, InternalServerError}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, TraderType}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
+import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -35,25 +37,26 @@ import scala.util.control.NonFatal
 @Singleton
 class MovementService @Inject() (
   movementRepository: MovementRepository,
-  dateTimeService: DateTimeService
+  dateTimeService: DateTimeService,
+  auditService: AuditService
 )(implicit ec: ExecutionContext)
     extends Logging {
 
-  def saveNewMovement(movement: Movement): Future[Either[Result, Movement]] =
+  def saveNewMovement(movement: Movement)(implicit hc: HeaderCarrier): Future[Either[Result, Movement]] =
     movementRepository
       .findDraftMovement(movement)
       .flatMap { draftMovement =>
         draftMovement.map(movement => Future.successful(Right(movement))).getOrElse {
-          movementRepository.saveMovement(movement).map(_ => Right(movement))
+          saveMovement(movement).map(_ => Right(movement))
         }
       }
       .recover {
-        case _: MongoWriteException =>
+        case _: MongoCommandException =>
           logger.warn(
             s"[MovementService] - The local reference number has already been used for another movement"
           )
           createDuplicateErrorResponse(movement)
-        case NonFatal(e)            =>
+        case NonFatal(e)              =>
           logger.error(s"[MovementService] - Error occurred while saving movement, ${e.getMessage}", e)
           Left(
             InternalServerError(
@@ -67,6 +70,32 @@ class MovementService @Inject() (
             )
           )
       }
+
+  def saveMovement(
+    updatedMovement: Movement,
+    jobId: Option[String] = None,
+    batchId: Option[String] = None,
+    messagesAlreadyInMongo: Seq[Message] = Seq.empty
+  )(implicit
+    hc: HeaderCarrier
+  ): Future[Done] = {
+
+    val messagesAlreadyInMongoMap = messagesAlreadyInMongo.map(p => p.messageId -> p).toMap
+
+    val newMessages =
+      updatedMovement.messages.filter(p1 => !messagesAlreadyInMongoMap.get(p1.messageId).contains(p1))
+
+    movementRepository
+      .saveMovement(updatedMovement)
+      .map { _ =>
+        auditService.movementSavedSuccess(updatedMovement, batchId, jobId, newMessages)
+        Done
+      }
+      .recoverWith { case e =>
+        auditService.movementSavedFailure(updatedMovement, e.getMessage, batchId, jobId, newMessages)
+        Future.failed(e)
+      }
+  }
 
   def getMovementById(id: String): Future[Option[Movement]] =
     movementRepository.getMovementById(id)
@@ -111,4 +140,5 @@ class MovementService @Inject() (
         )
       )
     )
+
 }
