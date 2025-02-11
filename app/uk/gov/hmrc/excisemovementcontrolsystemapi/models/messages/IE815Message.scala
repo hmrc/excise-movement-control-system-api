@@ -35,8 +35,8 @@ case class IE815Message(obj: IE815Type, messageAuditType: MessageAuditType)
     obj.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber
   )
 
-  def consignorId: String =
-    obj.Body.SubmittedDraftOfEADESAD.ConsignorTrader.TraderExciseNumber
+  override def consignorId: Option[String] =
+    Some(obj.Body.SubmittedDraftOfEADESAD.ConsignorTrader.TraderExciseNumber)
 
   override def consigneeId: Option[String] =
     obj.Body.SubmittedDraftOfEADESAD.ConsigneeTrader.flatMap(_.Traderid)

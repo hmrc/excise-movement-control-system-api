@@ -315,8 +315,12 @@ class MessageService @Inject() (
   ): Future[Seq[Message]] =
     message match {
       case ie801: IE801Message =>
+        val consignorId: String =
+          ie801.consignorId.getOrElse(
+            throw new Exception(s"No Consignor on IE801: ${ie801.messageIdentifier}")
+          )
         Seq(
-          Some(convertMessage(ie801.consignorId, ie801, timestamp, shouldNotify)),
+          Some(convertMessage(consignorId, ie801, timestamp, shouldNotify)),
           ie801.consigneeId.map(convertMessage(_, ie801, timestamp, shouldNotify))
         ).flatten.sequence.map { messages =>
           val newMessages = messages.filterNot { m1 =>
@@ -327,7 +331,8 @@ class MessageService @Inject() (
           }
           movement.messages ++ newMessages
         }
-      case _                   =>
+
+      case _ =>
         convertMessage(recipient, message, timestamp, shouldNotify).map(movement.messages :+ _)
     }
 
@@ -411,30 +416,37 @@ class MessageService @Inject() (
         findMovementsForMessage(movements, updatedMovements, ie801).flatMap { movements =>
           if (movements.nonEmpty) {
             movements.traverse { movement =>
-              updateMovement(movement, ie801.consignorId, ie801, shouldNotify = false, timestamp).flatMap {
-                updatedMovement =>
-                  ie801.consigneeId
-                    .map { consigneeId =>
-                      updateMovement(updatedMovement, consigneeId, ie801, shouldNotify = false, timestamp)
-                    }
-                    .getOrElse(Future.successful(updatedMovement))
-                    .flatMap { updatedMovement =>
-                      updateMovement(
-                        updatedMovement,
-                        originatingErn,
-                        originatingMessage,
-                        shouldNotify = true,
-                        timestamp
-                      )
-                    }
+              val consignorId: String =
+                ie801.consignorId.getOrElse(
+                  throw new Exception(s"No Consignor on IE801: ${ie801.messageIdentifier}")
+                )
+              updateMovement(movement, consignorId, ie801, shouldNotify = false, timestamp).flatMap { updatedMovement =>
+                ie801.consigneeId
+                  .map { consigneeId =>
+                    updateMovement(updatedMovement, consigneeId, ie801, shouldNotify = false, timestamp)
+                  }
+                  .getOrElse(Future.successful(updatedMovement))
+                  .flatMap { updatedMovement =>
+                    updateMovement(
+                      updatedMovement,
+                      originatingErn,
+                      originatingMessage,
+                      shouldNotify = true,
+                      timestamp
+                    )
+                  }
               }
             }
           } else {
 
             // For a new movement from trader-movement call, add the IE801 for the consignor and consignee
             // also add the originating message all at once
+            val consignorId: String =
+              ie801.consignorId.getOrElse(
+                throw new Exception(s"No Consignor on IE801: ${ie801.messageIdentifier}")
+              )
             Seq(
-              Some(convertMessage(ie801.consignorId, ie801, timestamp, shouldNotify = false)),
+              Some(convertMessage(consignorId, ie801, timestamp, shouldNotify = false)),
               ie801.consigneeId.map(convertMessage(_, ie801, timestamp, shouldNotify = false)),
               Some(convertMessage(originatingErn, originatingMessage, timestamp, shouldNotify = true))
             ).flatten.sequence.map { messagesToAdd =>
@@ -443,7 +455,7 @@ class MessageService @Inject() (
                   correlationIdService.generateCorrelationId(),
                   None,
                   ie801.localReferenceNumber,
-                  ie801.consignorId,
+                  consignorId,
                   ie801.consigneeId,
                   administrativeReferenceCode = ie801.administrativeReferenceCode.head,
                   timestamp,
@@ -493,22 +505,27 @@ class MessageService @Inject() (
         }
     }
 
-  private def createMovementFromIE801(message: IE801Message, timestamp: Instant): Future[Movement] =
+  private def createMovementFromIE801(message: IE801Message, timestamp: Instant): Future[Movement] = {
+    val consignorId: String =
+      message.consignorId.getOrElse(
+        throw new Exception(s"No Consignor on IE801: ${message.messageIdentifier}")
+      )
     Seq(
-      Some(convertMessage(message.consignorId, message, timestamp, shouldNotify = true)),
+      Some(convertMessage(consignorId, message, timestamp, shouldNotify = true)),
       message.consigneeId.map(convertMessage(_, message, timestamp, shouldNotify = true))
     ).flatten.sequence.map { messages =>
       Movement(
         correlationIdService.generateCorrelationId(),
         None,
         message.localReferenceNumber,
-        message.consignorId,
+        consignorId,
         message.consigneeId,
         administrativeReferenceCode = message.administrativeReferenceCode.head,
         timestamp,
         messages = messages
       )
     }
+  }
 
   private def findByArc(movements: Seq[Movement], message: IEMessage): OptionT[Future, Seq[Movement]] = {
 
@@ -525,9 +542,14 @@ class MessageService @Inject() (
         .filter { movement =>
           message match {
             case ie801: IE801Message =>
-              movement.consignorId == ie801.consignorId &&
-                movement.localReferenceNumber == ie801.localReferenceNumber
-            case _                   =>
+              val consignorId: String =
+                ie801.consignorId.getOrElse(
+                  throw new Exception(s"No Consignor on IE801: ${ie801.messageIdentifier}")
+                )
+              movement.consignorId == consignorId &&
+              movement.localReferenceNumber == ie801.localReferenceNumber
+
+            case _ =>
               true
           }
         }
@@ -536,8 +558,12 @@ class MessageService @Inject() (
   private def findByConsignorLrnInMessage(message: IEMessage): OptionT[Future, Seq[Movement]] =
     message match {
       case ie801: IE801Message =>
-        OptionT.liftF(movementRepository.getMovementByLRNAndERNIn(ie801.localReferenceNumber, List(ie801.consignorId)))
-      case _                   =>
+        val consignorId: String = message.consignorId.getOrElse(
+          throw new Exception(s"No Consignor on IE801: ${message.messageIdentifier}")
+        )
+        OptionT.liftF(movementRepository.getMovementByLRNAndERNIn(ie801.localReferenceNumber, List(consignorId)))
+
+      case _ =>
         OptionT.none
     }
 

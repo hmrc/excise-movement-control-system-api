@@ -35,6 +35,7 @@ case class IE905Message(
     with GeneratedJsonWriters {
 
   override def consigneeId: Option[String] = None
+  override def consignorId: Option[String] = None
 
   override def administrativeReferenceCode: Seq[Option[String]] =
     Seq(Some(obj.Body.StatusResponse.AttributesValue.AdministrativeReferenceCode))

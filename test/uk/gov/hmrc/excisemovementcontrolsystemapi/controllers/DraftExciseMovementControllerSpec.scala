@@ -96,7 +96,7 @@ class DraftExciseMovementControllerSpec
     when(dateTimeService.timestamp()).thenReturn(timestamp)
 
     when(mockIeMessage.consigneeId).thenReturn(Some("789"))
-    when(mockIeMessage.consignorId).thenReturn(consignorId)
+    when(mockIeMessage.consignorId).thenReturn(Some(consignorId))
     when(mockIeMessage.localReferenceNumber).thenReturn("123")
     when(mockIeMessage.correlationId).thenReturn(Some("correlationId"))
 

@@ -34,7 +34,7 @@ case class IE810Message(
 ) extends IEMessage
     with GeneratedJsonWriters {
 
-  def consignorId: Option[String] = None
+  override def consignorId: Option[String] = None
 
   override def consigneeId: Option[String] = None
 

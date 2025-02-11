@@ -51,14 +51,18 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
     submittedToCore: Boolean,
     correlationId: Option[String],
     request: ParsedXmlRequest[NodeSeq]
-  ): MessageSubmittedDetails =
+  ): MessageSubmittedDetails = {
+    val consignorId: String =
+      message.consignorId.getOrElse(
+        throw new Exception(s"No Consignor on IE815: ${message.messageIdentifier}")
+      )
     MessageSubmittedDetails(
       message.messageType,
       message.messageAuditType.name,
       message.localReferenceNumber,
       None,
       None,
-      message.consignorId,
+      consignorId,
       message.consigneeId,
       submittedToCore,
       message.messageIdentifier,
@@ -67,6 +71,7 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
       NonEmptySeq(request.erns.head, request.erns.tail.toList),
       message.toJsObject
     )
+  }
 
   def createMessageSubmitted(
     movement: Movement,
@@ -204,7 +209,9 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
           message.messageType,
           message.messageAuditType.name,
           message.optionalLocalReferenceNumber,
-          message.administrativeReferenceCode.head
+          message.administrativeReferenceCode.head,
+          message.consignorId,
+          message.consigneeId
         )
       )
 

@@ -111,7 +111,7 @@ class EISSubmissionConnectorSpec
     when(appConfig.submissionBearerToken).thenReturn(submissionBearerToken)
     when(metrics.timer(any).time()) thenReturn timerContext
     when(ie815Message.messageType).thenReturn("IE815")
-    when(ie815Message.consignorId).thenReturn(ern)
+    when(ie815Message.consignorId).thenReturn(Some(ern))
     when(emcsUtils.encode(any)).thenReturn("encode-message")
     when(ie815Message.messageIdentifier).thenReturn("DummyIdentifier")
 

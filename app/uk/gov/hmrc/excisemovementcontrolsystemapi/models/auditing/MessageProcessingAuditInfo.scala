@@ -25,10 +25,22 @@ case class MessageProcessingMessageAuditInfo(
   messageTypeCode: String,
   messageType: String,
   localReferenceNumber: Option[String],
-  administrativeReferenceCode: Option[String]
+  administrativeReferenceCode: Option[String],
+  consignorId: Option[String],
+  consigneeId: Option[String]
 )
 object MessageProcessingMessageAuditInfo {
-  implicit val writes = Json.writes[MessageProcessingMessageAuditInfo]
+  implicit val write: OWrites[MessageProcessingMessageAuditInfo] =
+    (
+      (JsPath \ "messageId").write[String] and
+        (JsPath \ "correlationId").write[Option[String]] and
+        (JsPath \ "messageTypeCode").write[String] and
+        (JsPath \ "messageType").write[String] and
+        (JsPath \ "localReferenceNumber").write[Option[String]] and
+        (JsPath \ "administrativeReferenceCode").write[Option[String]] and
+        (JsPath \ "consignorId").write[Option[String]] and
+        (JsPath \ "consigneeId").write[Option[String]]
+    )(unlift(MessageProcessingMessageAuditInfo.unapply))
 
 }
 

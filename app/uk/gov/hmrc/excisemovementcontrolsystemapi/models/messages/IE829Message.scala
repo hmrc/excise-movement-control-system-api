@@ -34,6 +34,8 @@ case class IE829Message(
 ) extends IEMessage
     with GeneratedJsonWriters {
 
+  override def consignorId: Option[String] = None
+
   override def consigneeId: Option[String] =
     obj.Body.NotificationOfAcceptedExport.ConsigneeTrader.Traderid
 

@@ -34,7 +34,7 @@ case class IE813Message(
 ) extends IEMessage
     with GeneratedJsonWriters {
 
-  def consignorId: Option[String] = None
+  override def consignorId: Option[String] = None
 
   override def consigneeId: Option[String] =
     obj.Body.ChangeOfDestination.DestinationChanged.NewConsigneeTrader.flatMap(_.Traderid)

@@ -76,7 +76,7 @@ class NrsServiceSpec extends PlaySpec with ScalaFutures with NrsTestData with Ei
       .thenReturn(Future.successful(Done))
     when(nrsConnectorNew.sendToNrs(any, any)(any))
       .thenReturn(Future.successful(Done))
-    when(message.consignorId).thenReturn("ern")
+    when(message.consignorId).thenReturn(Some("ern"))
   }
 
   "submitNrsOld" should {

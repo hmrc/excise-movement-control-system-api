@@ -76,7 +76,7 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
     super.beforeEach()
     reset(connector, nrsService, nrsServiceNew, ernSubmissionRepository, mockAppconfig)
 
-    when(message.consignorId).thenReturn("1234")
+    when(message.consignorId).thenReturn(Some("1234"))
     when(correlationIdService.generateCorrelationId()).thenReturn("correlationId")
     when(connector.submitMessage(any, any, any, any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "IE815", "correlationId"))))

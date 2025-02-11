@@ -33,7 +33,7 @@ case class IE819Message(
   messageAuditType: MessageAuditType
 ) extends IEMessage
     with GeneratedJsonWriters {
-  def consignorId: Option[String] = None
+  override def consignorId: Option[String] = None
 
   override def consigneeId: Option[String] =
     obj.Body.AlertOrRejectionOfEADESAD.ConsigneeTrader.flatMap(_.Traderid)

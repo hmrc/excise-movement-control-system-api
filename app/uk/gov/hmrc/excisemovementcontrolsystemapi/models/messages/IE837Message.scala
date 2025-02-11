@@ -38,7 +38,7 @@ case class IE837Message(
     obj.Body.ExplanationOnDelayForDelivery.AttributesValue.SubmitterType
   )
 
-  def consignorId: Option[String] = submitter match {
+  override def consignorId: Option[String] = submitter match {
     case Consignor => Some(obj.Body.ExplanationOnDelayForDelivery.AttributesValue.SubmitterIdentification)
     case _         => None
   }

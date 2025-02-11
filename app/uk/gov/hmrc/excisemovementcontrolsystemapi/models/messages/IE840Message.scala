@@ -35,6 +35,7 @@ case class IE840Message(
     with GeneratedJsonWriters {
 
   override def consigneeId: Option[String] = None
+  override def consignorId: Option[String] = None
 
   override def administrativeReferenceCode: Seq[Option[String]] =
     Seq(obj.Body.EventReportEnvelope.ExciseMovement.map(_.AdministrativeReferenceCode))
