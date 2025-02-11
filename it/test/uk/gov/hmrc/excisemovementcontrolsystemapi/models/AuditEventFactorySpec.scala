@@ -121,7 +121,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       message.localReferenceNumber,
       None,
       None,
-      message.consignorId,
+      message.consignorId.get,
       message.consigneeId,
       submittedToCore = true,
       message.messageIdentifier,
@@ -312,7 +312,9 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
         "IE801",
         "MovementGenerated",
         message.optionalLocalReferenceNumber,
-        message.administrativeReferenceCode.head
+        message.administrativeReferenceCode.head,
+        Some("tokentokentok"),
+        Some("token")
       )
     }
 

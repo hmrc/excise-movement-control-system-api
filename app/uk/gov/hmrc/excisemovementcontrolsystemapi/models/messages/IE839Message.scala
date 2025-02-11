@@ -39,6 +39,7 @@ case class IE839Message(
 
   def optionalLocalReferenceNumber: Option[String] = localReferenceNumber
 
+  override def consignorId: Option[String] = None
   override def consigneeId: Option[String] =
     obj.Body.RefusalByCustoms.ConsigneeTrader.Traderid
 

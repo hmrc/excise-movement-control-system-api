@@ -26,6 +26,7 @@ case object Unsupported extends MessageAuditType("Unsupported")
 
 object UnsupportedTestMessage extends IEMessage {
   override def consigneeId: Option[String] = None
+  override def consignorId: Option[String] = None
 
   override def administrativeReferenceCode: Seq[Option[String]] = Seq.empty
 

@@ -145,7 +145,7 @@ class IEMessageFactorySpec extends PlaySpec with TestXml with BeforeAndAfterEach
 
     "return an instance of IE801Message" in {
       val result = sut.createFromXml("IE801", IE801).asInstanceOf[IE801Message]
-      result.consignorId mustBe "tokentokentok"
+      result.consignorId mustBe Some("tokentokentok")
       result.consigneeId mustBe Some("token")
       result.administrativeReferenceCode mustBe Seq(Some("tokentokentokentokent"))
       result.localReferenceNumber mustBe "token"
@@ -204,7 +204,7 @@ class IEMessageFactorySpec extends PlaySpec with TestXml with BeforeAndAfterEach
 
     "return an instance of IE815Message" in {
       val result = sut.createFromXml("IE815", IE815).asInstanceOf[IE815Message]
-      result.consignorId mustBe "GBWK002281023"
+      result.consignorId mustBe Some("GBWK002281023")
       result.consigneeId mustBe Some("GBWKQOZ8OVLYR")
       result.administrativeReferenceCode mustBe Seq(None)
       result.localReferenceNumber mustBe "LRNQA20230909022221"

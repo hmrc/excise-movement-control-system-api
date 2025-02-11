@@ -36,6 +36,8 @@ case class IE881Message(
 
   override def consigneeId: Option[String] = None
 
+  override def consignorId: Option[String] = None
+
   override def administrativeReferenceCode: Seq[Option[String]] =
     Seq(Some(obj.Body.ManualClosureResponse.AttributesValue.AdministrativeReferenceCode))
 

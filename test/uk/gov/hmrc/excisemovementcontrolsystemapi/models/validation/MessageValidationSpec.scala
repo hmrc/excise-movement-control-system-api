@@ -40,7 +40,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
 
     "return consignor id" when {
       "the consignor id is authorised" in {
-        when(ie815.consignorId).thenReturn("123")
+        when(ie815.consignorId).thenReturn(Some("123"))
 
         messageValidation.validateDraftMovement(authorisedErns, ie815) mustBe Right("123")
       }
@@ -48,7 +48,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
 
     "return consignor unauthorised error" when {
       "the consignor id is unauthorised" in {
-        when(ie815.consignorId).thenReturn("789")
+        when(ie815.consignorId).thenReturn(Some("789"))
 
         val result = messageValidation.validateDraftMovement(authorisedErns, ie815).left.value
         result mustBe a[MessageIdentifierIsUnauthorised]

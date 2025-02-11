@@ -148,14 +148,19 @@ class DraftExciseMovementController @Inject() (
 
   }
 
-  private def createMovementFomMessage(message: IE815Message, boxId: Option[String]): Movement =
+  private def createMovementFomMessage(message: IE815Message, boxId: Option[String]): Movement = {
+    val consignorId: String =
+      message.consignorId.getOrElse(
+        throw new Exception(s"No Consignor on IE815: ${message.messageIdentifier}")
+      )
     Movement(
       boxId,
       message.localReferenceNumber,
-      message.consignorId,
+      consignorId,
       message.consigneeId,
       None
     )
+  }
 
   private def getBoxId(
     clientId: String

@@ -115,7 +115,7 @@ class NrsServiceNewSpec
       Future.successful(testAuthRetrievals)
     when(mockNrsConnectorNew.sendToNrs(any, any)(any))
       .thenReturn(Future.successful(Done))
-    when(message.consignorId).thenReturn("ern")
+    when(message.consignorId).thenReturn(Some("ern"))
   }
 
   private val testRequest     = createRequest(message)

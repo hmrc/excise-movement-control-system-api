@@ -34,7 +34,8 @@ case class IE803Message(
 ) extends IEMessage
     with GeneratedJsonWriters {
 
-  def consigneeId: Option[String] = None
+  override def consignorId: Option[String] = None
+  override def consigneeId: Option[String] = None
 
   override def administrativeReferenceCode: Seq[Option[String]] =
     Seq(Some(obj.Body.NotificationOfDivertedEADESAD.ExciseNotification.AdministrativeReferenceCode))

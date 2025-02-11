@@ -139,8 +139,13 @@ private abstract class MovementMessageValidator(override val message: IEMessage,
     with MessageValidator
 
 private case class IE815MessageValidator(override val message: IE815Message) extends MessageValidator {
-  override def validate(authorisedErns: Set[String]): Either[MessageValidationResponse, String] =
-    Either.cond(authorisedErns.contains(message.consignorId), message.consignorId, ConsignorIsUnauthorised)
+  override def validate(authorisedErns: Set[String]): Either[MessageValidationResponse, String] = {
+    val consignorId: String =
+      message.consignorId.getOrElse(
+        throw new Exception(s"No Consignor on IE815: ${message.messageIdentifier}")
+      )
+    Either.cond(authorisedErns.contains(consignorId), consignorId, ConsignorIsUnauthorised)
+  }
 }
 
 private case class IE810MessageValidator(override val message: IE810Message, override val movement: Movement)

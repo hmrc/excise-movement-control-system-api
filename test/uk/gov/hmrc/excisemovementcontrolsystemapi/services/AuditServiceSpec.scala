@@ -360,7 +360,9 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
         messageTypeCode,
         messageType,
         Some(localReferenceNumber),
-        Some(arc)
+        Some(arc),
+        Some("tokentokentok"),
+        Some("token")
       )
 
       val batchId = UUID.randomUUID().toString

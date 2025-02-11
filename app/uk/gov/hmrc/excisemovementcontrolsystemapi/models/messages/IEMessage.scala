@@ -26,6 +26,7 @@ trait IEMessage {
   def messageIdentifier: String
 
   def consigneeId: Option[String]
+  def consignorId: Option[String]
 
   def administrativeReferenceCode: Seq[Option[String]]
 

@@ -39,7 +39,7 @@ case class IE871Message(
   )
   def optionalLocalReferenceNumber: Option[String] = None
 
-  def consignorId: Option[String] = Some(
+  override def consignorId: Option[String] = Some(
     obj.Body.ExplanationOnReasonForShortage.ConsignorTrader.map(_.TraderExciseNumber)
   ).flatten
 
