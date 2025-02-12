@@ -18,8 +18,11 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import cats.implicits.toFunctorOps
 import org.apache.pekko.Done
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.Source
 import org.bson.conversions.Bson
 import org.mongodb.scala.model.Filters._
+import org.mongodb.scala.model.Projections.{fields, include}
 import org.mongodb.scala.model._
 import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
@@ -44,7 +47,7 @@ class MovementRepository @Inject() (
   mongo: MongoComponent,
   appConfig: AppConfig,
   timeService: DateTimeService
-)(implicit ec: ExecutionContext)
+)(implicit ec: ExecutionContext, implicit val materializer: Materializer)
     extends PlayMongoRepository[Movement](
       collectionName = "movements",
       mongoComponent = mongo,
@@ -188,19 +191,22 @@ class MovementRepository @Inject() (
   }
 
   def getErnsAndLastReceived: Future[Map[String, Instant]] = Mdc.preservingMdc {
-    collection
-      .aggregate[ErnAndLastReceived](
-        Seq(
-          Aggregates.unwind("$messages"),
-          Aggregates.group("$messages.recipient", Accumulators.max("lastReceived", "$messages.createdOn"))
+    val source = Source.fromPublisher(
+      collection
+        .aggregate[ErnAndLastReceived](
+          Seq(
+            Aggregates.unwind("$message"),
+            Aggregates.project(fields(include("message.recipient", "message.createdOn")))
+          )
         )
-      )
-      .toFuture()
-      .map {
-        _.map { field =>
-          field._id -> field.lastReceived
-        }.toMap
+    )
+
+    source.runFold(Map.empty[String, Instant]) { (g, message) =>
+      g.updatedWith(message._id) {
+        _.map(c => if (c.isAfter(message.lastReceived)) c else message.lastReceived)
+          .orElse(Some(message.lastReceived))
       }
+    }
   }
 
   def getPendingMessageNotifications: Future[Seq[MessageNotification]] = Mdc.preservingMdc {
