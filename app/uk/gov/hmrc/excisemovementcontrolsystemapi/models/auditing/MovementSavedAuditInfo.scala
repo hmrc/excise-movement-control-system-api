@@ -24,7 +24,8 @@ case class KeyMessageDetailsAuditInfo(
   messageId: String,
   correlationId: Option[String],
   messageTypeCode: String,
-  messageType: String
+  messageType: String,
+  recipient: String
 ) {}
 
 object KeyMessageDetailsAuditInfo {
