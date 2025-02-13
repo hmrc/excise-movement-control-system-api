@@ -421,7 +421,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
       val ieMessage         = ieMessageFactory.createFromXml("IE801", decodedXmlNodeList)
       val correlationId     = ieMessage.correlationId
       val keyMessageDetails =
-        KeyMessageDetailsAuditInfo("token", correlationId, "IE801", ieMessage.messageAuditType.name)
+        KeyMessageDetailsAuditInfo("token", correlationId, "IE801", ieMessage.messageAuditType.name, "recipient")
 
       val ieMessagesConverted = movement.messages.map { message =>
         val decodedXml         = utils.decode(message.encodedMessage)
@@ -479,7 +479,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
       val correlationId = ieMessage.correlationId
 
       val keyMessageDetails =
-        KeyMessageDetailsAuditInfo("token", correlationId, "IE801", ieMessage.messageAuditType.name)
+        KeyMessageDetailsAuditInfo("token", correlationId, "IE801", ieMessage.messageAuditType.name, "recipient")
       service.movementSavedFailure(movement, failureReason, Some(batchId), None, Seq(message))
 
       val ieMessagesConverted = movement.messages.map { message =>

@@ -364,7 +364,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       Movement(movementId, None, "lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now(), Seq(message))
 
     val keyMessageDetails =
-      KeyMessageDetailsAuditInfo("token", correlationId, "IE801", ieMessage.messageAuditType.name)
+      KeyMessageDetailsAuditInfo("token", correlationId, "IE801", ieMessage.messageAuditType.name, "recipient")
 
     val ieMessagesConverted = movement.messages.map { message =>
       val decodedXml         = emcsUtils.decode(message.encodedMessage)
@@ -458,7 +458,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       )
 
     val keyMessageDetails =
-      KeyMessageDetailsAuditInfo("token", correlationId, "IE801", ieMessage.messageAuditType.name)
+      KeyMessageDetailsAuditInfo("token", correlationId, "IE801", ieMessage.messageAuditType.name, "recipient")
 
     val ieMessagesConverted = {
       val decodedXml         = emcsUtils.decode(message3.encodedMessage)
@@ -505,7 +505,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       Movement(movementId, None, "lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now(), Seq(message))
 
     val keyMessageDetails   =
-      KeyMessageDetailsAuditInfo("token", correlationId, "IE801", ieMessage.messageAuditType.name)
+      KeyMessageDetailsAuditInfo("token", correlationId, "IE801", ieMessage.messageAuditType.name, "recipient")
     val ieMessagesConverted = movement.messages.map { message =>
       val decodedXml         = emcsUtils.decode(message.encodedMessage)
       val decodedXmlNodeList = xml.XML.loadString(decodedXml)
@@ -552,7 +552,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
       Movement(movementId, None, "lrn", "consignorId", Some("consigneeId"), Some("arc"), Instant.now(), Seq(message))
 
     val keyMessageDetails   =
-      KeyMessageDetailsAuditInfo("token", correlationId, "IE801", ieMessage.messageAuditType.name)
+      KeyMessageDetailsAuditInfo("token", correlationId, "IE801", ieMessage.messageAuditType.name, "recipient")
     val ieMessagesConverted = movement.messages.map { message =>
       val decodedXml         = emcsUtils.decode(message.encodedMessage)
       val decodedXmlNodeList = xml.XML.loadString(decodedXml)
