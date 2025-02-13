@@ -266,32 +266,6 @@ class MovementRepository @Inject() (
       .as(Done)
   }
 
-  def getProblemMovements(): Future[Seq[ProblemMovement]] =
-    collection
-      .aggregate[ProblemMovement](
-        Seq(
-          Aggregates.project(Json.obj("messages.encodedMessage" -> 0).toDocument()),
-          Aggregates.unwind("$messages"),
-          Aggregates.`match`(Json.obj("messages.messageType" -> "IE801").toDocument()),
-          Aggregates.group("$_id", Accumulators.sum("countOfIe801s", 1)),
-          Aggregates.`match`(Filters.gt("countOfIe801s", 2))
-        )
-      )
-      .toFuture()
-
-  def getCountOfProblemMovements(): Future[Option[Total]] =
-    collection
-      .aggregate[Total](
-        Seq(
-          Aggregates.project(Json.obj("messages.encodedMessage" -> 0).toDocument()),
-          Aggregates.unwind("$messages"),
-          Aggregates.`match`(Json.obj("messages.messageType" -> "IE801").toDocument()),
-          Aggregates.group("$_id", Accumulators.sum("countOfIe801s", 1)),
-          Aggregates.`match`(Filters.gt("countOfIe801s", 2)),
-          Aggregates.count("total")
-        )
-      )
-      .headOption()
 }
 
 object MovementRepository {
