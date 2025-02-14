@@ -23,7 +23,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthActio
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ParsedPreValidateTraderETDSRequest, ParsedPreValidateTraderRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{CorrelationIdService, PreValidateTraderService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PreValidateTraderService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TraderTypeInterpreter
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -36,8 +36,7 @@ class PreValidateTraderController @Inject() (
   parseJsonAction: ParseJsonAction,
   preValidateTraderService: PreValidateTraderService,
   cc: ControllerComponents,
-  appConfig: AppConfig,
-  correlationIdService: CorrelationIdService
+  appConfig: AppConfig
 )(implicit ec: ExecutionContext)
     extends BackendController(cc) {
 

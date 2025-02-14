@@ -45,7 +45,6 @@ class SubscribeErnsControllerSpec
     with BeforeAndAfterEach {
 
   private val mockNotificationsService = mock[NotificationsService]
-  private val correlationIdService     = mock[CorrelationIdService]
   private val mockDateTimeService      = mock[DateTimeService]
   private val mockAppConfig            = mock[AppConfig]
   private val timestamp                = Instant.parse("2024-05-06T15:30:15.12345612Z")

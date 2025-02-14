@@ -18,7 +18,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
 import play.api.libs.functional.syntax.{toFunctionalBuilderOps, unlift}
 import play.api.libs.json._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 
 case class KeyMessageDetailsAuditInfo(
   messageId: String,
@@ -29,7 +28,7 @@ case class KeyMessageDetailsAuditInfo(
 ) {}
 
 object KeyMessageDetailsAuditInfo {
-  implicit val writes = Json.writes[KeyMessageDetailsAuditInfo]
+  implicit val writes: OWrites[KeyMessageDetailsAuditInfo] = Json.writes[KeyMessageDetailsAuditInfo]
 }
 
 case class MovementSavedSuccessAuditInfo(

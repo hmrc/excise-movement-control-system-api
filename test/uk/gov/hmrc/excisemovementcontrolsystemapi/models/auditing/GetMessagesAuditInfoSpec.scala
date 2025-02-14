@@ -19,7 +19,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 import cats.data.NonEmptySeq
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.{JsArray, JsNull, JsString, Json}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
 
 import java.time.Instant
 import java.util.UUID

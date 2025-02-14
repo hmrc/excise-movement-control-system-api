@@ -38,9 +38,7 @@ import java.util.UUID
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
 import scala.util.control.NonFatal
-import scala.xml.XML
 
 @Singleton
 class MessageService @Inject() (
@@ -118,9 +116,6 @@ class MessageService @Inject() (
     //noinspection MapGetOrElseBoolean
     maybeLastRetrieved.map(_.isBefore(cutoffTime)).getOrElse(true)
   }
-
-  private def getBoxIds(ern: String): Future[Set[String]] =
-    boxIdRepository.getBoxIds(ern)
 
   private def processNewMessages(ern: String, jobId: Option[String])(implicit hc: HeaderCarrier): Future[Done] = {
     logger.info(s"[MessageService]: Processing new messages")
