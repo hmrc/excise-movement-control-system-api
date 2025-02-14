@@ -41,6 +41,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.WireMockSupport
 import org.apache.pekko.Done
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.GetMessagesResponse
 
 import java.nio.charset.StandardCharsets
 import java.time.format.DateTimeFormatter
@@ -155,6 +156,59 @@ class MessageConnectorSpec
       result.messages mustBe Seq(ie704Message)
       result.messageCount mustBe 1
 
+    }
+
+    "must emit MessageProcessingSuccess when able to process the incoming messages" in {
+      val newMessagesDataResponse =
+        scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(newMessageXmlWithIE704.toString))
+      val ie704Message            = messageFactory.createIEMessage(newMessagesDataResponse.Messages.messagesoption.head)
+
+      val response = EISConsumptionResponse(
+        dateTime = timestamp,
+        exciseRegistrationNumber = ern,
+        message = base64Encode(newMessageXmlWithIE704.toString)
+      )
+
+      when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
+      when(mockDateTimeService.timestamp()).thenReturn(timestamp)
+
+      wireMockServer.stubFor(
+        put(urlEqualTo(url))
+          .willReturn(
+            aResponse()
+              .withStatus(OK)
+              .withBody(Json.stringify(Json.toJson(response)))
+          )
+      )
+
+      val getMessagesResponse = GetMessagesResponse(Seq(ie704Message), 1)
+
+      val batchId = UUID.randomUUID().toString
+      connector.getNewMessages(ern, batchId, None)(hc).futureValue
+
+      verify(auditService, times(1))
+        .messageProcessingSuccess(eqTo(ern), eqTo(getMessagesResponse), eqTo(batchId), eqTo(None))(any)
+    }
+
+    "must emit MessageProcessingFailure when unable to process any messages" in {
+      when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
+      when(mockDateTimeService.timestamp()).thenReturn(timestamp)
+
+      wireMockServer.stubFor(
+        put(urlEqualTo(url))
+          .willReturn(
+            aResponse()
+              .withStatus(500)
+          )
+      )
+
+      val failureReason = "Invalid status returned"
+
+      val batchId = UUID.randomUUID().toString
+      connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
+
+      verify(auditService, times(1))
+        .messageProcessingFailure(eqTo(ern), eqTo(failureReason), eqTo(batchId), eqTo(None))(any)
     }
 
     "must audit each message received from the server - old auditing" in {

@@ -22,7 +22,7 @@ import org.mockito.MockitoSugar.{reset, times, verify, when}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.libs.json.JsObject
+import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.AnyContent
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import play.api.test.{FakeHeaders, FakeRequest}
@@ -31,7 +31,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeXmlParsers
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, GetMessagesAuditInfo, GetMessagesRequestAuditInfo, GetMessagesResponseAuditInfo, GetMovementsAuditInfo, GetMovementsParametersAuditInfo, GetMovementsResponseAuditInfo, GetSpecificMessageAuditInfo, GetSpecificMessageRequestAuditInfo, GetSpecificMessageResponseAuditInfo, GetSpecificMovementAuditInfo, GetSpecificMovementRequestAuditInfo, KeyMessageDetailsAuditInfo, MessageAuditInfo, MessageProcessingFailureAuditInfo, MessageProcessingMessageAuditInfo, MessageProcessingSuccessAuditInfo, MessageSubmittedDetails, MovementSavedFailureAuditInfo, MovementSavedSuccessAuditInfo, UserDetails}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, GetMessagesAuditInfo, GetMessagesRequestAuditInfo, GetMessagesResponseAuditInfo, GetMovementsAuditInfo, GetMovementsParametersAuditInfo, GetMovementsResponseAuditInfo, GetSpecificMessageAuditInfo, GetSpecificMessageRequestAuditInfo, GetSpecificMessageResponseAuditInfo, GetSpecificMovementAuditInfo, GetSpecificMovementRequestAuditInfo, KeyMessageDetailsAuditInfo, MessageAcknowledgedFailureAuditInfo, MessageAcknowledgedSuccessAuditInfo, MessageAuditInfo, MessageProcessingFailureAuditInfo, MessageProcessingMessageAuditInfo, MessageProcessingSuccessAuditInfo, MessageSubmittedDetails, MovementSavedFailureAuditInfo, MovementSavedSuccessAuditInfo, UserDetails}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, GetMessagesResponse, IE704Message, IE801Message, IE815Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
@@ -503,8 +503,41 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
         Seq(keyMessageDetails),
         ieMessagesConverted.map(_.toJson)
       )
+
       verify(auditConnector, times(1))
         .sendExplicitAudit(eqTo("MovementSaved"), eqTo(movementSavedFailureAuditInfo))(any, any, any)
+    }
+  }
+
+  "messageAcknowledged" should {
+    "post a MessageAcknowledgedSuccessAuditInfo when called" in {
+      val batchId  = UUID.randomUUID().toString
+      val jobId    = UUID.randomUUID().toString
+      val ern      = "ern"
+      val affected = 5
+
+      val acknowledgedSuccess = MessageAcknowledgedSuccessAuditInfo("Success", batchId, Some(jobId), ern, affected)
+
+      service.messageAcknowledged(ern, batchId, Some(jobId), affected)
+
+      verify(auditConnector, times(1))
+        .sendExplicitAudit(eqTo("MessageAcknowledged"), eqTo(acknowledgedSuccess))(any, any, any)
+    }
+  }
+
+  "messageNotAcknowledged" should {
+    "post a MessageAcknowledgedFailureAuditInfo when called" in {
+      val batchId       = UUID.randomUUID().toString
+      val jobId         = UUID.randomUUID().toString
+      val ern           = "ern"
+      val failureReason = "test failure reason"
+
+      val acknowledgeFailure = MessageAcknowledgedFailureAuditInfo("Failure", failureReason, batchId, Some(jobId), ern)
+
+      service.messageNotAcknowledged(ern, batchId, Some(jobId), failureReason)
+
+      verify(auditConnector, times(1))
+        .sendExplicitAudit(eqTo("MessageAcknowledged"), eqTo(acknowledgeFailure))(any, any, any)
     }
   }
 }
