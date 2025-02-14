@@ -28,10 +28,10 @@ class UnusedRepositoryRemoverItSpec extends PlaySpec with CleanMongoCollectionSu
   implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
   private lazy val remover: UnusedRepositoryRemover  = new UnusedRepositoryRemover(mongoComponent)
 
-  "removeMiscodedMovements" should {
-    "remove miscoded movements archive from database" in {
+  "removeProblemMovements" should {
+    "remove problem movements archive from database" in {
 
-      val collectionName = "miscoded-movements-archive"
+      val collectionName = "problem-movements-archive"
 
       val result = for {
         _   <- mongoComponent.database.createCollection(collectionName).toFuture()
@@ -43,9 +43,9 @@ class UnusedRepositoryRemoverItSpec extends PlaySpec with CleanMongoCollectionSu
       response mustBe false
     }
 
-    "remove miscoded movements workItems from database" in {
+    "remove problem movements workItems from database" in {
 
-      val collectionName = "miscoded-movements-workItems"
+      val collectionName = "problem-movements-workItems"
 
       val result = for {
         _   <- mongoComponent.database.createCollection(collectionName).toFuture()

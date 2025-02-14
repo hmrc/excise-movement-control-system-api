@@ -43,8 +43,8 @@ class UnusedRepositoryRemoverStartItSpec
     .build()
 
   override def beforeEach(): Unit = {
-    val firstCollectionName  = "miscoded-movements-archive"
-    val secondCollectionName = "miscoded-movements-workItems"
+    val firstCollectionName  = "problem-movements-archive"
+    val secondCollectionName = "problem-movements-workItems"
 
     val collections = for {
       firstCollectionExists  <- existsCollection(mongoComponent, firstCollectionName)
@@ -61,13 +61,13 @@ class UnusedRepositoryRemoverStartItSpec
     else Future.successful()
 
   "unusedRepositoryRemover" should {
-    "drop repository miscoded movements archive on class instantiation" in {
-      val collectionName = "miscoded-movements-archive"
+    "drop repository problem movements archive on class instantiation" in {
+      val collectionName = "movements-archive"
       await(existsCollection(mongoComponent, collectionName)) mustBe false
     }
 
-    "drop repository miscoded movements workItems on class instantiation" in {
-      val collectionName = "miscoded-movements-workItems"
+    "drop repository problem movements workItems on class instantiation" in {
+      val collectionName = "problem-movements-workItems"
       await(existsCollection(mongoComponent, collectionName)) mustBe false
     }
   }
