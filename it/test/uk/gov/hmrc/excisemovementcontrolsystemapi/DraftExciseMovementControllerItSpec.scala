@@ -22,7 +22,7 @@ import com.github.tomakehurst.wiremock.extension.Parameters
 import com.github.tomakehurst.wiremock.http.Request
 import com.github.tomakehurst.wiremock.matching.{MatchResult, RequestMatcherExtension}
 import org.apache.pekko.Done
-import org.mockito.ArgumentMatchersSugar.{any}
+import org.mockito.ArgumentMatchersSugar.any
 import org.mockito.MockitoSugar.{verify, when, reset => mockitoSugarReset}
 import org.mockito.captor.ArgCaptor
 import org.scalatest.concurrent.{Eventually, IntegrationPatience}
@@ -215,7 +215,16 @@ class DraftExciseMovementControllerItSpec
         withAuthorizedTrader(consignorId)
         stubEISSuccessfulRequest
         setupRepositories
-        stubGetBoxIdFailureRequest(BAD_REQUEST, "Missing or incorrect query parameter")
+        wireMock.stubFor {
+          get(urlPathEqualTo(s"""/box"""))
+            .withQueryParam("boxName", equalTo(Constants.BoxName))
+            .withQueryParam("clientId", equalTo("clientId"))
+            .willReturn(
+              aResponse()
+                .withStatus(BAD_REQUEST)
+                .withBody("Missing or incorrect query parameter")
+            )
+        }
 
         val result = postRequest(IE815)
 
@@ -576,18 +585,6 @@ class DraftExciseMovementControllerItSpec
                   }
                 }
               """)
-        )
-    }
-
-  private def stubGetBoxIdFailureRequest(status: Int, body: String) =
-    wireMock.stubFor {
-      get(urlPathEqualTo(s"""/box"""))
-        .withQueryParam("boxName", equalTo(Constants.BoxName))
-        .withQueryParam("clientId", equalTo("clientId"))
-        .willReturn(
-          aResponse()
-            .withStatus(status)
-            .withBody(body)
         )
     }
 
