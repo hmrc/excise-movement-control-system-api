@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import cats.data.NonEmptySeq
 import org.apache.pekko.Done
 import org.apache.pekko.actor.ActorSystem
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
@@ -28,13 +27,12 @@ import play.api.http.HeaderNames
 import play.api.http.Status._
 import play.api.libs.json.{JsArray, JsValue, Json}
 import play.api.mvc.{AnyContent, Result}
-import play.api.test.Helpers.{await, contentAsJson, contentAsString, defaultAwaitTimeout, status, stubControllerComponents}
+import play.api.test.Helpers.{contentAsJson, contentAsString, defaultAwaitTimeout, status, stubControllerComponents}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateAcceptHeaderAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetMessagesRequestAuditInfo, GetMessagesResponseAuditInfo, GetSpecificMessageRequestAuditInfo, GetSpecificMessageResponseAuditInfo, MessageAuditInfo, UserDetails}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, Consignor, IE801Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
@@ -262,14 +260,6 @@ class GetMessagesControllerSpec
           contentAsJson(result) mustBe JsArray(expectedJson)
 
           withClue("Submits correct getInformation audit event") {
-            val messageAuditInfo = MessageAuditInfo(
-              message2.messageId,
-              Some("PORTAL6de1b822562c43fb9220d236e487c920"),
-              message2.messageType,
-              "MovementGenerated",
-              message2.recipient,
-              message2.createdOn
-            )
             verify(auditService, times(1))
               .getInformationForGetMessages(
                 eqTo(Seq(message2)),
@@ -482,18 +472,6 @@ class GetMessagesControllerSpec
       status(result) mustBe OK
 
       withClue("Submits getInformation audit event") {
-
-        val request  = GetSpecificMessageRequestAuditInfo(validUUID, messageId)
-        val response =
-          GetSpecificMessageResponseAuditInfo(
-            Some("PORTAL6de1b822562c43fb9220d236e487c920"),
-            "IE801",
-            "MovementGenerated",
-            "lrn",
-            Some("arc"),
-            movementWithMessage.consignorId,
-            movementWithMessage.consigneeId
-          )
 
         verify(auditService, times(1))
           .getInformationForGetSpecificMessage(
