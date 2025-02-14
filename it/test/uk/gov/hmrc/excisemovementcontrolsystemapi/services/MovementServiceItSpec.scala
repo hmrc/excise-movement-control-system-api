@@ -50,7 +50,7 @@ class MovementServiceItSpec
 
   private val dateTimeService                 = mock[DateTimeService]
   private val timestamp                       = Instant.now.truncatedTo(ChronoUnit.MILLIS)
-  private implicit val hc                     = HeaderCarrier()
+  private implicit val hc: HeaderCarrier      = HeaderCarrier()
   override def fakeApplication(): Application = GuiceApplicationBuilder()
     .overrides(
       bind[MongoComponent].toInstance(mongoComponent),

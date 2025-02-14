@@ -17,13 +17,9 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import org.scalatestplus.play.PlaySpec
-import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.Application
-import play.api.inject.bind
-import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
 
 import scala.concurrent.Future
 

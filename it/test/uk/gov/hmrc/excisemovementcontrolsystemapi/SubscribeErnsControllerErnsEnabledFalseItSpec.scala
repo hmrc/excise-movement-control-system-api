@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import org.apache.pekko.Done
 import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar.when
@@ -78,7 +79,7 @@ class SubscribeErnsControllerErnsEnabledFalseItSpec
     "return NotFound when correct ern is passed and feature flag is off" in {
       withAuthorizedTrader(consignorId)
       setupRepositories()
-      stubNotificationResponse("clientId", UUID.randomUUID().toString)
+      stubNotificationResponse(UUID.randomUUID().toString)
       val result = postRequestSubscribe(consignorId)
 
       result.status mustBe NOT_FOUND
@@ -90,7 +91,7 @@ class SubscribeErnsControllerErnsEnabledFalseItSpec
     "return NotFound when correct ern is passed and feature flag is off" in {
       withAuthorizedTrader(consignorId)
       setupRepositories()
-      stubNotificationResponse("clientId", UUID.randomUUID().toString)
+      stubNotificationResponse(UUID.randomUUID().toString)
       val result = postRequestUnsubscribe()
 
       result.status mustBe NOT_FOUND
@@ -127,11 +128,11 @@ class SubscribeErnsControllerErnsEnabledFalseItSpec
         .delete()
     )
 
-  private def stubNotificationResponse(clientId: String, boxId: String) =
+  private def stubNotificationResponse(boxId: String): StubMapping =
     wireMock.stubFor(
       get(urlPathEqualTo(s"""/box"""))
         .withQueryParam("boxName", equalTo(Constants.BoxName))
-        .withQueryParam("clientId", equalTo(clientId))
+        .withQueryParam("clientId", equalTo("clientId"))
         .willReturn(
           aResponse()
             .withStatus(ACCEPTED)
