@@ -24,7 +24,6 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
 import play.api.libs.json.Json
-import play.api.mvc.AnyContent
 import play.api.mvc.Results.{BadRequest, Forbidden}
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
@@ -32,7 +31,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.Correlatio
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EISErrorResponseDetails
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}

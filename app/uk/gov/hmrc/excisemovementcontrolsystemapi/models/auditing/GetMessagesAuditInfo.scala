@@ -18,9 +18,8 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
 import cats.data.NonEmptySeq
 import play.api.libs.functional.syntax.{toFunctionalBuilderOps, unlift}
-import play.api.libs.json.{JsPath, Json, OWrites}
+import play.api.libs.json.{JsPath, OWrites}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.CommonFormats
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.CommonFormats.commaWriter
 
 import java.time.Instant
 

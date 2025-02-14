@@ -19,7 +19,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 import play.api.mvc.Result
 import play.api.mvc.Results.BadRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ParseXmlAction
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
 

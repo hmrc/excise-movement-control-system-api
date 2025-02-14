@@ -30,7 +30,7 @@ import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeJsonParsers}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{CorrelationIdService, PreValidateTraderService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PreValidateTraderService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -44,7 +44,6 @@ class PreValidateTraderControllerSpec
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val sys: ActorSystem     = ActorSystem("DraftExciseMovementControllerSpec")
   private val service               = mock[PreValidateTraderService]
-  private val correlationIdService  = mock[CorrelationIdService]
   private val appConfig             = mock[AppConfig]
   private val cc                    = stubControllerComponents()
   private val request               = createRequest(Json.toJson(getPreValidateTraderRequest))
@@ -260,8 +259,7 @@ class PreValidateTraderControllerSpec
       FakeSuccessJsonParser,
       service,
       cc,
-      appConfig,
-      correlationIdService
+      appConfig
     )
 
   private def createWithFailingJsonParserAction =
@@ -270,8 +268,7 @@ class PreValidateTraderControllerSpec
       FakeFailureJsonParser,
       service,
       cc,
-      appConfig,
-      correlationIdService
+      appConfig
     )
 
   private def createWithSuccessfulAuth =
@@ -280,8 +277,7 @@ class PreValidateTraderControllerSpec
       FakeSuccessJsonParser,
       service,
       cc,
-      appConfig,
-      correlationIdService
+      appConfig
     )
 
   private def createRequest(body: JsValue): FakeRequest[JsValue] =

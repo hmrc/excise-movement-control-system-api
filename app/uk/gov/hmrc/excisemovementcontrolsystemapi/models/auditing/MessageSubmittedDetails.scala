@@ -27,7 +27,7 @@ case class UserDetails(
 )
 
 object UserDetails {
-  implicit val writes = Json.writes[UserDetails]
+  implicit val writes: OWrites[UserDetails] = Json.writes[UserDetails]
 }
 
 case class MessageSubmittedDetails(

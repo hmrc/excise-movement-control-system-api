@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing
 
 import play.api.libs.functional.syntax.{toFunctionalBuilderOps, unlift}
-import play.api.libs.json.{JsPath, Json, OWrites}
+import play.api.libs.json.{JsPath, OWrites}
 
 case class MessageProcessingMessageAuditInfo(
   messageId: String,
