@@ -57,7 +57,9 @@ class UnusedRepositoryRemoverStartItSpec
   }
 
   private def createIfCollectionDoesNotExist(collectionName: String, collectionExists: Boolean) =
-    if (!collectionExists) mongoComponent.database.createCollection(collectionName).toFuture()
+    if (!collectionExists) {
+      mongoComponent.database.createCollection(collectionName).toFuture()
+    }
     else Future.successful()
 
   "unusedRepositoryRemover" should {
@@ -78,5 +80,7 @@ class UnusedRepositoryRemoverStartItSpec
   ): Future[Boolean] =
     for {
       collections <- mongoComponent.database.listCollectionNames().toFuture()
-    } yield collections.contains(collectionName)
+    } yield {
+      collections.contains(collectionName)
+    }
 }
