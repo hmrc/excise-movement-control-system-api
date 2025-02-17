@@ -1,3 +1,4 @@
+
 /*
  * Copyright 2024 HM Revenue & Customs
  *
@@ -29,7 +30,7 @@ import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
 import scala.concurrent.Future
 
 class UnusedRepositoryRemoverStartItSpec
-    extends PlaySpec
+  extends PlaySpec
     with CleanMongoCollectionSupport
     with GuiceOneAppPerTest
     with BeforeAndAfterEach {
@@ -58,6 +59,7 @@ class UnusedRepositoryRemoverStartItSpec
 
   private def createIfCollectionDoesNotExist(collectionName: String, collectionExists: Boolean) =
     if (!collectionExists) {
+      println(s"*** creating collection name $collectionName")
       mongoComponent.database.createCollection(collectionName).toFuture()
     }
     else Future.successful()
@@ -75,12 +77,13 @@ class UnusedRepositoryRemoverStartItSpec
   }
 
   def existsCollection(
-    mongoComponent: MongoComponent,
-    collectionName: String
-  ): Future[Boolean] =
+                        mongoComponent: MongoComponent,
+                        collectionName: String
+                      ): Future[Boolean] =
     for {
       collections <- mongoComponent.database.listCollectionNames().toFuture()
     } yield {
+      println(s"*** checking for $collectionName collections present: $collections")
       collections.contains(collectionName)
     }
 }
