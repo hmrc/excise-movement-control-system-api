@@ -46,7 +46,7 @@ class UnusedRepositoryRemover @Inject() (
   private def logCollectionExistence(
     mongoComponent: MongoComponent,
     collectionName: String
-  ): Future[Unit]                             =
+  ): Future[Unit] = {
     for {
       collections <- mongoComponent.database.listCollectionNames().toFuture()
     } yield {
@@ -54,5 +54,6 @@ class UnusedRepositoryRemover @Inject() (
       logger.info(s"$collectionName exists in mongo: $containsCollection")
       ()
     }
+  }
 
 }
