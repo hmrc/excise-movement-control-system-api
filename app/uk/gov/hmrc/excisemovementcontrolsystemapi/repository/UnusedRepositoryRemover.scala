@@ -42,6 +42,7 @@ class UnusedRepositoryRemover @Inject() (
       _ <- logCollectionExistence(mongo, firstCollectionName)
       _ <- logCollectionExistence(mongo, secondCollectionName)
     } yield ()
+
   private def logCollectionExistence(
     mongoComponent: MongoComponent,
     collectionName: String
