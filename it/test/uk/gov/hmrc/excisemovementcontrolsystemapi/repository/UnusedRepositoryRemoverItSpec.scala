@@ -31,7 +31,7 @@ class UnusedRepositoryRemoverItSpec extends PlaySpec with CleanMongoCollectionSu
   "removeProblemMovements" should {
     "remove problem movements archive from database" in {
 
-      val collectionName = "problem-movements-archive"
+      val collectionName = "movements-archive"
 
       val result = for {
         _   <- mongoComponent.database.createCollection(collectionName).toFuture()

@@ -43,7 +43,7 @@ class UnusedRepositoryRemoverStartItSpec
     .build()
 
   override def beforeEach(): Unit = {
-    val firstCollectionName  = "problem-movements-archive"
+    val firstCollectionName  = "movements-archive"
     val secondCollectionName = "problem-movements-workItems"
 
     val collections = for {
