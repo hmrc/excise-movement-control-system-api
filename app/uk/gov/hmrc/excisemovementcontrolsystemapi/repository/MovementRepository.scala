@@ -21,8 +21,9 @@ import org.apache.pekko.Done
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
 import org.bson.conversions.Bson
+import org.mongodb.scala.Document
 import org.mongodb.scala.model.Filters._
-import org.mongodb.scala.model.Projections.{fields, include}
+import org.mongodb.scala.model.Projections.{exclude, fields, include}
 import org.mongodb.scala.model._
 import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
@@ -195,16 +196,16 @@ class MovementRepository @Inject() (
       collection
         .aggregate[ErnAndLastReceived](
           Seq(
-            Aggregates.unwind("$message"),
-            Aggregates.project(fields(include("message.recipient", "message.createdOn")))
+            Aggregates.project(fields(include("messages.recipient", "messages.createdOn"), exclude("_id"))),
+            Aggregates.unwind("$messages")
           )
         )
     )
 
     source.runFold(Map.empty[String, Instant]) { (g, message) =>
-      g.updatedWith(message._id) {
-        _.map(c => if (c.isAfter(message.lastReceived)) c else message.lastReceived)
-          .orElse(Some(message.lastReceived))
+      g.updatedWith(message.recipient) {
+        _.map(c => if (c.isAfter(message.createdOn)) c else message.createdOn)
+          .orElse(Some(message.createdOn))
       }
     }
   }
@@ -342,7 +343,7 @@ object MovementRepository {
       )
     )
 
-  final case class ErnAndLastReceived(_id: String, lastReceived: Instant)
+  case class ErnAndLastReceived(recipient: String, createdOn: Instant)
 
   object ErnAndLastReceived extends MongoJavatimeFormats.Implicits {
     implicit lazy val format: OFormat[ErnAndLastReceived] = Json.format
