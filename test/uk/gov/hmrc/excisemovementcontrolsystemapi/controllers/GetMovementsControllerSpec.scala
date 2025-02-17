@@ -16,23 +16,21 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
-import cats.data.NonEmptySeq
 import org.apache.pekko.Done
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, times, verify, when}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
-import play.api.http.Status.{BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, OK}
+import play.api.http.Status._
 import play.api.libs.json.Json
 import play.api.mvc.AnyContent
 import play.api.mvc.Results.BadRequest
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, TraderType}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication, FakeValidateErnParameterAction, FakeValidateTraderTypeAction, FakeValidateUpdatedSinceAction, MovementTestUtils}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{GetSpecificMovementRequestAuditInfo, UserDetails}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MovementIdFormatInvalid, MovementIdValidation}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
@@ -516,9 +514,6 @@ class GetMovementsControllerSpec
 
     "respond with 200 OK" when {
       "request is valid and the authorised ern is in the message recipients" in {
-        val request          = GetSpecificMovementRequestAuditInfo(uuid)
-        val userDetails      = UserDetails("testInternalId", "testGroupId")
-        val authExciseNumber = NonEmptySeq("testErn", Seq().empty)
 
         val movement =
           Movement(

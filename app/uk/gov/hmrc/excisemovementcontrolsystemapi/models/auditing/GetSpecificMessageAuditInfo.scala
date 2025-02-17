@@ -24,7 +24,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.GetSpecificMov
 case class GetSpecificMessageRequestAuditInfo(movementId: String, messageId: String)
 
 object GetSpecificMessageRequestAuditInfo {
-  implicit val writes = Json.writes[GetSpecificMessageRequestAuditInfo]
+  implicit val writes: OWrites[GetSpecificMessageRequestAuditInfo] = Json.writes[GetSpecificMessageRequestAuditInfo]
 }
 
 case class GetSpecificMessageResponseAuditInfo(

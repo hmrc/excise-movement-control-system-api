@@ -19,11 +19,6 @@ POST          /admin/notifications/subscribe                    uk.gov.hmrc.exci
 
 DELETE        /admin/erns                                       uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.RemoveErnsAdminController.removeErns()
 
-GET        /admin/problem-movements                             uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.ProblemMovementController.getMovementsWithTooMany801s()
-GET        /admin/count-problem-movements                       uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.ProblemMovementController.getCountOfMovementsWithTooMany801s()
-GET        /admin/problem-movements/build-work-list             uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.ProblemMovementController.buildWorkItemQueue()
-POST       /admin/problem-movements/resolve                     uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.ProblemMovementController.resolveProblemMovement()
-
 GET        /admin/movements/:movementId/details                 uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.AdminDetailsController.getMovementDetails(movementId: String)
 
 GET        /admin/:ern/summary                                  uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.RemoveErnsAdminController.findAllReferencesToErn(ern: String)

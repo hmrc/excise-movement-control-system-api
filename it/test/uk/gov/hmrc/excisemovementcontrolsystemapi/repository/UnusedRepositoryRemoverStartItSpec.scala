@@ -1,3 +1,4 @@
+
 /*
  * Copyright 2024 HM Revenue & Customs
  *
@@ -23,13 +24,13 @@ import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.mongo.{MongoComponent, MongoUtils}
+import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
 
 import scala.concurrent.Future
 
 class UnusedRepositoryRemoverStartItSpec
-    extends PlaySpec
+  extends PlaySpec
     with CleanMongoCollectionSupport
     with GuiceOneAppPerTest
     with BeforeAndAfterEach {
@@ -43,8 +44,8 @@ class UnusedRepositoryRemoverStartItSpec
     .build()
 
   override def beforeEach(): Unit = {
-    val firstCollectionName  = "miscoded-movements-archive"
-    val secondCollectionName = "miscoded-movements-workItems"
+    val firstCollectionName  = "movements-archive"
+    val secondCollectionName = "problem-movements-workItems"
 
     val collections = for {
       firstCollectionExists  <- existsCollection(mongoComponent, firstCollectionName)
@@ -57,25 +58,30 @@ class UnusedRepositoryRemoverStartItSpec
   }
 
   private def createIfCollectionDoesNotExist(collectionName: String, collectionExists: Boolean) =
-    if (!collectionExists) mongoComponent.database.createCollection(collectionName).toFuture()
+    if (!collectionExists) {
+      mongoComponent.database.createCollection(collectionName).toFuture()
+    }
     else Future.successful()
 
   "unusedRepositoryRemover" should {
-    "drop repository miscoded movements archive on class instantiation" in {
-      val collectionName = "miscoded-movements-archive"
+    "drop repository problem movements archive on class instantiation" in {
+      val collectionName = "movements-archive"
       await(existsCollection(mongoComponent, collectionName)) mustBe false
     }
 
-    "drop repository miscoded movements workItems on class instantiation" in {
-      val collectionName = "miscoded-movements-workItems"
+    "drop repository problem movements workItems on class instantiation" in {
+      val collectionName = "problem-movements-workItems"
       await(existsCollection(mongoComponent, collectionName)) mustBe false
     }
   }
+
   def existsCollection(
-    mongoComponent: MongoComponent,
-    collectionName: String
-  ): Future[Boolean] =
+                        mongoComponent: MongoComponent,
+                        collectionName: String
+                      ): Future[Boolean] =
     for {
       collections <- mongoComponent.database.listCollectionNames().toFuture()
-    } yield collections.contains(collectionName)
+    } yield {
+      collections.contains(collectionName)
+    }
 }

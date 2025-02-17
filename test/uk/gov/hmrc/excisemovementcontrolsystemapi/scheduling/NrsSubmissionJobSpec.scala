@@ -32,10 +32,8 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsServiceNew
 
-import java.time.{LocalDateTime, ZoneOffset}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -74,21 +72,7 @@ class NrsSubmissionJobSpec
     )
   }
 
-  private val timestamp = LocalDateTime.of(2024, 3, 2, 12, 30, 45, 100).toInstant(ZoneOffset.UTC)
-
   private lazy val nrsSubmissionScheduler = app.injector.instanceOf[NrsSubmissionJob]
-  private val nrsMetadata                 = NrsMetadata(
-    businessId = "emcs",
-    notableEvent = "excise-movement-control-system",
-    payloadContentType = "application/json",
-    payloadSha256Checksum = sha256Hash("payload for NRS"),
-    userSubmissionTimestamp = timestamp.toString,
-    identityData = testNrsIdentityData,
-    userAuthToken = testAuthToken,
-    headerData = Map(),
-    searchKeys = Map("ern" -> "123")
-  )
-  private val nrsPayLoad                  = NrsPayload("encodepayload", nrsMetadata)
 
   "nrs submission scheduler must" - {
     "have the correct name" in {

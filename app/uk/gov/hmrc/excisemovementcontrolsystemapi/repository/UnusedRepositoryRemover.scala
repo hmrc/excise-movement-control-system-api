@@ -27,8 +27,8 @@ class UnusedRepositoryRemover @Inject() (
   mongo: MongoComponent
 )(implicit ec: ExecutionContext)
     extends Logging {
-  val firstCollectionName  = "miscoded-movements-archive"
-  val secondCollectionName = "miscoded-movements-workItems"
+  val firstCollectionName  = "movements-archive"
+  val secondCollectionName = "problem-movements-workItems"
 
   removeMiscodedMovements()
 
@@ -38,14 +38,15 @@ class UnusedRepositoryRemover @Inject() (
       _ <- logCollectionExistence(mongo, secondCollectionName)
       _ <- mongo.database.getCollection(firstCollectionName).drop().toFuture()
       _ <- mongo.database.getCollection(secondCollectionName).drop().toFuture()
-      _  = logger.info("Miscoded movements repositories dropped")
+      _  = logger.warn("Problem movements repositories dropped")
       _ <- logCollectionExistence(mongo, firstCollectionName)
       _ <- logCollectionExistence(mongo, secondCollectionName)
     } yield ()
+
   private def logCollectionExistence(
     mongoComponent: MongoComponent,
     collectionName: String
-  ): Future[Unit]                             =
+  ): Future[Unit] = {
     for {
       collections <- mongoComponent.database.listCollectionNames().toFuture()
     } yield {
@@ -53,5 +54,6 @@ class UnusedRepositoryRemover @Inject() (
       logger.info(s"$collectionName exists in mongo: $containsCollection")
       ()
     }
+  }
 
 }

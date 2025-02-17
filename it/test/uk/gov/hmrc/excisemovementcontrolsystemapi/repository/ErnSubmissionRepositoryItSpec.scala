@@ -127,7 +127,7 @@ class ErnSubmissionRepositoryItSpec
 
       val result = repository.removeErns(Seq("testErn", "testErn2"))
 
-      whenReady(result) { r =>
+      whenReady(result) { _ =>
         find(Filters.in("ern", Seq("testErn", "testErn2"): _*)).futureValue.length mustBe 0
       }
 

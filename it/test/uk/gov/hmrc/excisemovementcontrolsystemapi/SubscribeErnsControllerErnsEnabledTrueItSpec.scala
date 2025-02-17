@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi
 
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import org.apache.pekko.Done
 import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar.when
@@ -78,7 +79,7 @@ class SubscribeErnsControllerErnsEnabledTrueItSpec
     "return Accepted when correct ern is passed and feature flag is on" in {
       withAuthorizedTrader(consignorId)
       setupRepositories()
-      stubNotificationResponse("clientId", UUID.randomUUID().toString)
+      stubNotificationResponse(UUID.randomUUID().toString)
       val result = postRequestSubscribe(consignorId)
 
       result.status mustBe ACCEPTED
@@ -88,7 +89,7 @@ class SubscribeErnsControllerErnsEnabledTrueItSpec
     "return Forbidden when ern passed in doesn't match ern from request" in {
       withAuthorizedTrader()
       setupRepositories()
-      stubNotificationResponse("clientId", UUID.randomUUID().toString)
+      stubNotificationResponse(UUID.randomUUID().toString)
       val result = postRequestSubscribe("123")
 
       result.status mustBe FORBIDDEN
@@ -100,7 +101,7 @@ class SubscribeErnsControllerErnsEnabledTrueItSpec
     "return Accepted when correct ern is passed and feature flag is on" in {
       withAuthorizedTrader(consignorId)
       setupRepositories()
-      stubNotificationResponse("clientId", UUID.randomUUID().toString)
+      stubNotificationResponse(UUID.randomUUID().toString)
       val result = postRequestUnsubscribe()
 
       result.status mustBe ACCEPTED
@@ -136,11 +137,11 @@ class SubscribeErnsControllerErnsEnabledTrueItSpec
         .delete()
     )
 
-  private def stubNotificationResponse(clientId: String, boxId: String) =
+  private def stubNotificationResponse(boxId: String): StubMapping =
     wireMock.stubFor(
       get(urlPathEqualTo(s"""/box"""))
         .withQueryParam("boxName", equalTo(Constants.BoxName))
-        .withQueryParam("clientId", equalTo(clientId))
+        .withQueryParam("clientId", equalTo("clientId"))
         .willReturn(
           aResponse()
             .withStatus(ACCEPTED)
