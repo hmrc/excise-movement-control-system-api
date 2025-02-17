@@ -72,7 +72,9 @@ object EISErrorResponseDetails {
       ValidationResponse(
         x.errorCategory,
         x.errorType,
-        x.errorReason,
+        x.errorReason.map(
+          _.replace("\n", "")
+        ), //Should this output in the same way as the response details error message?
         removeControlDocumentReferences(x.errorLocation),
         x.originalAttributeValue
       )
