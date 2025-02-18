@@ -222,7 +222,7 @@ the newly acquired access token. Then from command line type the following comma
   ```
 
 This will create a client application and give you back a clientId. This will also start the excise-movement-control-system-api
- service locally.
+ service locally...
 
 ## Licence
 
