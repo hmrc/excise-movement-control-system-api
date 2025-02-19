@@ -50,10 +50,11 @@ class SubmissionMessageServiceImpl @Inject() (
       .getOrElse(correlationIdService.generateCorrelationId())
 
     for {
-      submitMessageResponse <- connector.submitMessage(request.ieMessage, request.body.toString, authorisedErn, correlationId)
+      submitMessageResponse <-
+        connector.submitMessage(request.ieMessage, request.body.toString, authorisedErn, correlationId)
       isSuccess              = submitMessageResponse.isRight
-      _                      = if (isSuccess) ernSubmissionRepository.save(authorisedErn).recover {
-                                  case NonFatal(error) => logger.warn(s"Failed to save ERN to ERNSubmissionRepository", error)
+      _                      = if (isSuccess) ernSubmissionRepository.save(authorisedErn).recover { case NonFatal(error) =>
+                                 logger.warn(s"Failed to save ERN to ERNSubmissionRepository", error)
                                }
       _                      = if (isSuccess) nrsServiceNew.makeWorkItemAndQueue(request, authorisedErn)
     } yield submitMessageResponse

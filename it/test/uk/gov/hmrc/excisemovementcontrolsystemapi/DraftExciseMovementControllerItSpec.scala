@@ -37,7 +37,7 @@ import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.auth.core.InternalError
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, StringSupport}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, NrsTestData, StringSupport}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixtures.{ApplicationBuilderSupport, SubmitMessageTestSupport, WireMockServerSpec}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionRequest, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Constants
@@ -62,7 +62,8 @@ class DraftExciseMovementControllerItSpec
     with Eventually
     with IntegrationPatience
     with BeforeAndAfterAll
-    with BeforeAndAfterEach {
+    with BeforeAndAfterEach
+    with NrsTestData {
 
   private lazy val wsClient: WSClient = app.injector.instanceOf[WSClient]
   private val url                     = s"http://localhost:$port/movements"
@@ -105,8 +106,6 @@ class DraftExciseMovementControllerItSpec
     )
 
     wireMock.resetAll()
-    stubNrsResponse
-    authorizeNrsWithIdentityData
     stubGetBoxIdSuccessRequest
     when(dateTimeService.timestamp()).thenReturn(timeStamp)
     when(ernSubmissionRepository.save(any)).thenReturn(Future.successful(Done))
@@ -126,10 +125,6 @@ class DraftExciseMovementControllerItSpec
         result.status mustBe ACCEPTED
         withClue("return the json response") {
           assertValidResult(result, defaultBoxId)
-        }
-
-        withClue("submit to NRS") {
-          wireMock.verify(postRequestedFor(urlEqualTo("/submission")))
         }
       }
 
@@ -180,33 +175,6 @@ class DraftExciseMovementControllerItSpec
           verifyBoxIdIsSavedToDB(clientBoxId)
         }
       }
-
-      "NRS fails" in {
-        withAuthorizedTrader(consignorId)
-        stubEISSuccessfulRequest
-        stubNrsErrorResponse
-        setupRepositories
-
-        val result = postRequest(IE815)
-
-        result.status mustBe ACCEPTED
-        withClue("return the json response") {
-          assertValidResult(result)
-        }
-      }
-
-      "NRS throws an exception" in {
-        withAuthorizedTrader(consignorId)
-        stubEISSuccessfulRequest
-        stubNrsErrorResponse
-        setupRepositories
-
-        // no Authorization header added
-        val result = await(wsClient.url(url).addHttpHeaders("X-Client-Id" -> "clientId").post(IE815))
-
-        result.status mustBe ACCEPTED
-      }
-
     }
 
     "return a 400 Bad Request error" when {
@@ -236,10 +204,6 @@ class DraftExciseMovementControllerItSpec
             "Box Id error",
             "Missing or incorrect query parameter"
           )
-        }
-
-        withClue("should not submit to NRS") {
-          wireMock.verify(0, postRequestedFor(urlEqualTo("/submission")))
         }
 
         withClue("should not submit message") {
@@ -541,25 +505,6 @@ class DraftExciseMovementControllerItSpec
             .withStatus(status)
             .withBody(body)
             .withHeader("Content-Type", "application/json")
-        )
-    )
-
-  private def stubNrsResponse =
-    wireMock.stubFor(
-      post(urlEqualTo("/submission"))
-        .willReturn(
-          aResponse()
-            .withStatus(ACCEPTED)
-            .withBody(Json.obj("nrSubmissionId" -> "submissionId").toString())
-        )
-    )
-
-  private def stubNrsErrorResponse =
-    wireMock.stubFor(
-      post(urlEqualTo("/submission"))
-        .willReturn(
-          aResponse()
-            .withStatus(INTERNAL_SERVER_ERROR)
         )
     )
 

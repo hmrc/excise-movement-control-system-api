@@ -444,15 +444,6 @@ class SubmitMessageControllerItSpec
     postRequestWithCorrelationId(movement._id, IE818).status mustBe FORBIDDEN
   }
 
-  "submit to NRS" in {
-    withAuthorizedTrader(consigneeId)
-    stubEISSuccessfulRequest()
-
-    postRequestWithCorrelationId(movement._id, IE818)
-
-    verify(postRequestedFor(urlEqualTo("/submission")))
-  }
-
   "check if generated correlationID is present in header" in {
     withAuthorizedTrader(consigneeId)
     stubEISSuccessfulRequest()

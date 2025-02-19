@@ -67,8 +67,12 @@ class DraftExciseMovementController @Inject() (
         _             <- submitAndHandleError(request, authorisedErn, ie815Message)
         movement      <- saveMovement(boxId, ie815Message, request)
       } yield (movement, boxId, ie815Message)).fold[Result](
-        failResult => failResult,
+        failResult => {
+          println("******* in FAIL block of fold...")
+          failResult
+        },
         success => {
+          println("***** in success block of fold...")
           val (movement, boxId, ie815Message) = success
 
           auditService.auditMessage(request.ieMessage).value
@@ -95,10 +99,12 @@ class DraftExciseMovementController @Inject() (
     request: ParsedXmlRequest[NodeSeq],
     ern: String,
     message: IE815Message
-  )(implicit hc: HeaderCarrier): EitherT[Future, Result, EISSubmissionResponse] =
+  )(implicit hc: HeaderCarrier): EitherT[Future, Result, EISSubmissionResponse] = {
+    println("****** in submit and handle error")
     EitherT {
       submissionMessageService.submit(request, ern).map {
         case Left(error)     =>
+          println("****** in submit and handle error fail block")
           auditService.auditMessage(message, "Failed to submit") //OLD auditing
           auditService
             .messageSubmittedNoMovement(message, false, message.correlationId, request) //NEW auditing
@@ -119,33 +125,39 @@ class DraftExciseMovementController @Inject() (
           Right(response)
       }
     }
+  }
 
   private def validateMessage(
     message: IE815Message,
     authErns: Set[String]
-  ): EitherT[Future, Result, String] =
+  ): EitherT[Future, Result, String] = {
+    println("**** in validate message")
     EitherT.fromEither(messageValidator.validateDraftMovement(authErns, message).left.map { x =>
       messageValidator.convertErrorToResponse(x, dateTimeService.timestamp())
     })
+  }
 
   private def saveMovement(
     boxId: Option[String],
     message: IE815Message,
     request: ParsedXmlRequest[NodeSeq]
-  )(implicit hc: HeaderCarrier): EitherT[Future, Result, Movement] = EitherT {
+  )(implicit hc: HeaderCarrier): EitherT[Future, Result, Movement] = {
+    println("****** in save movement")
+    EitherT {
 
-    val newMovement: Movement = createMovementFomMessage(message, boxId)
-    boxId.map(boxIdRepository.save(newMovement.consignorId, _)) //TODO recover future in failure case
+      val newMovement: Movement = createMovementFomMessage(message, boxId)
+      boxId.map(boxIdRepository.save(newMovement.consignorId, _)) //TODO recover future in failure case
 
-    movementMessageService.saveNewMovement(newMovement).map {
-      case Left(result)    =>
-        auditService.auditMessage(message, "Failed to Save")
-        auditService.messageSubmittedNoMovement(message, true, message.correlationId, request)
-        Left(result)
-      case Right(movement) =>
-        Right(movement)
+      movementMessageService.saveNewMovement(newMovement).map {
+        case Left(result)    =>
+          auditService.auditMessage(message, "Failed to Save")
+          auditService.messageSubmittedNoMovement(message, true, message.correlationId, request)
+          Left(result)
+        case Right(movement) =>
+          Right(movement)
+      }
+
     }
-
   }
 
   private def createMovementFomMessage(message: IE815Message, boxId: Option[String]): Movement = {
@@ -164,7 +176,8 @@ class DraftExciseMovementController @Inject() (
 
   private def getBoxId(
     clientId: String
-  )(implicit request: ParsedXmlRequest[_]): EitherT[Future, Result, Option[String]] =
+  )(implicit request: ParsedXmlRequest[_]): EitherT[Future, Result, Option[String]] = {
+    println("***** in get box id")
     if (appConfig.pushNotificationsEnabled) {
       val clientBoxId = request.headers.get(Constants.XCallbackBoxId)
       EitherT(
@@ -173,6 +186,7 @@ class DraftExciseMovementController @Inject() (
     } else {
       EitherT.fromEither(Right(None))
     }
+  }
 
   private def getIe815Message(message: IEMessage): EitherT[Future, Result, IE815Message] =
     EitherT.fromEither(message match {
@@ -194,7 +208,8 @@ class DraftExciseMovementController @Inject() (
         )
     })
 
-  private def retrieveClientIdFromHeader(implicit request: ParsedXmlRequest[_]): EitherT[Future, Result, String] =
+  private def retrieveClientIdFromHeader(implicit request: ParsedXmlRequest[_]): EitherT[Future, Result, String] = {
+    println("***** in retrieve client ID")
     EitherT.fromOption(
       request.headers.get(Constants.XClientIdHeader),
       BadRequest(
@@ -207,4 +222,5 @@ class DraftExciseMovementController @Inject() (
         )
       )
     )
+  }
 }
