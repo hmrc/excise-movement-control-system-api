@@ -40,7 +40,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NRSWorkItemRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmissionWorkItem
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService.NonRepudiationIdentityRetrievals
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsServiceNew.NonRepudiationIdentityRetrievals
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, NrsEventIdMapper}
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier}
 import uk.gov.hmrc.mongo.TimestampSupport
@@ -75,7 +75,7 @@ class NrsServiceNewSpec
   lazy val testKit: ActorTestKit              = ActorTestKit()
   lazy val testActorSystem: actor.ActorSystem = ActorSystem("DraftExciseMovementControllerSpec")
 
-  val config = Configuration(
+  val config: Configuration = Configuration(
     "microservice.services.nrs.nrs-throttle-duration" -> "1 second",
     "microservice.services.nrs.lock-service-ttl"      -> "10 minutes"
   )

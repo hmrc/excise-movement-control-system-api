@@ -32,17 +32,11 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   lazy val nrsHost: String                   = servicesConfig.baseUrl("nrs")
   lazy val pushPullNotificationsHost: String = servicesConfig.baseUrl("push-pull-notifications")
 
-  lazy val nrsApiKey: String                   = servicesConfig.getConfString("nrs.api-key", "dummyNrsApiKey")
-  lazy val nrsRetryDelays: Seq[FiniteDuration] =
-    config.get[Seq[FiniteDuration]]("microservice.services.nrs.retryDelays")
+  lazy val nrsApiKey: String = servicesConfig.getConfString("nrs.api-key", "dummyNrsApiKey")
 
   lazy val movementTTL: Duration = config
     .getOptional[String]("mongodb.movement.TTL")
     .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
-
-  lazy val movementArchiveTTL: Duration = config
-    .getOptional[String]("mongodb.movementArchive.TTL")
-    .fold(Duration.create(40, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
 
   lazy val ernRetrievalTTL: Duration = config
     .getOptional[String]("mongodb.ernRetrieval.TTL")

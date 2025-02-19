@@ -32,7 +32,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeAuthentication
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{CorrelationIdService, NotificationsService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NotificationsService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import java.time.Instant

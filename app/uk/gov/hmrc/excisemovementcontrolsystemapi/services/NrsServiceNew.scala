@@ -21,13 +21,14 @@ import org.apache.pekko.actor.ActorSystem
 import play.api.{Configuration, Logging}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve._
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnectorNew
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnectorNew.UnexpectedResponseException
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NRSWorkItemRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmissionWorkItem
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService.nonRepudiationIdentityRetrievals
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsServiceNew.nonRepudiationIdentityRetrievals
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils._
 import uk.gov.hmrc.http.HttpErrorFunctions.{is4xx, is5xx}
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier, InternalServerException}
@@ -220,4 +221,31 @@ class NrsServiceNew @Inject() (
     } yield v
   }
 
+}
+
+object NrsServiceNew {
+
+  type NonRepudiationIdentityRetrievals =
+    (Option[AffinityGroup] ~ Option[String]
+      ~ Option[String] ~ Option[String]
+      ~ Option[Credentials] ~ ConfidenceLevel
+      ~ Option[String] ~ Option[String]
+      ~ Option[Name]
+      ~ Option[String] ~ AgentInformation
+      ~ Option[String] ~ Option[CredentialRole]
+      ~ Option[MdtpInformation] ~ Option[ItmpName]
+      ~ Option[ItmpAddress]
+      ~ Option[String])
+
+  val nonRepudiationIdentityRetrievals: Retrieval[NonRepudiationIdentityRetrievals] =
+    Retrievals.affinityGroup and Retrievals.internalId and
+      Retrievals.externalId and Retrievals.agentCode and
+      Retrievals.credentials and Retrievals.confidenceLevel and
+      Retrievals.nino and Retrievals.saUtr and
+      Retrievals.name and
+      Retrievals.email and Retrievals.agentInformation and
+      Retrievals.groupIdentifier and Retrievals.credentialRole and
+      Retrievals.mdtpInformation and Retrievals.itmpName and
+      Retrievals.itmpAddress and
+      Retrievals.credentialStrength
 }
