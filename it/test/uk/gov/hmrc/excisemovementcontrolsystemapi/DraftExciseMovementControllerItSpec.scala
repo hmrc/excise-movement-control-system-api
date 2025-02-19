@@ -106,6 +106,7 @@ class DraftExciseMovementControllerItSpec
     )
 
     wireMock.resetAll()
+    authorizeNrsWithIdentityData
     stubGetBoxIdSuccessRequest
     when(dateTimeService.timestamp()).thenReturn(timeStamp)
     when(ernSubmissionRepository.save(any)).thenReturn(Future.successful(Done))
