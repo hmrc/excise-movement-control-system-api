@@ -20,7 +20,7 @@ import play.api.inject.Binding
 import play.api.{Configuration, Environment}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsCircuitBreakerProvider
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnectorNew.NrsCircuitBreaker
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MessageRecipientMigration, MovementMigration, UnusedRepositoryRemover}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MessageRecipientMigration, MovementMigration}
 import uk.gov.hmrc.mongo.metrix.MetricOrchestrator
 
 import java.time.Clock
@@ -33,8 +33,7 @@ class Module extends play.api.inject.Module {
       bind[JobScheduler].toSelf.eagerly(),
       bind[Clock].toInstance(Clock.systemUTC()),
       bind[MetricOrchestrator].toProvider[MetricsProvider],
-      bind[NrsCircuitBreaker].toProvider[NrsCircuitBreakerProvider],
-      bind[UnusedRepositoryRemover].toSelf.eagerly()
+      bind[NrsCircuitBreaker].toProvider[NrsCircuitBreakerProvider]
     ) ++ migrationBindings(configuration)
 
   private def migrationBindings(configuration: Configuration): Seq[Binding[_]] =
