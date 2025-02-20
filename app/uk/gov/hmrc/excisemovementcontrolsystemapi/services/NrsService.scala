@@ -22,8 +22,8 @@ import play.api.{Configuration, Logging}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnectorNew
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnectorNew.UnexpectedResponseException
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.UnexpectedResponseException
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NRSWorkItemRepository
@@ -43,17 +43,17 @@ import scala.concurrent._
 
 @Singleton
 class NrsService @Inject() (
-  override val authConnector: AuthConnector,
-  nrsConnectorNew: NrsConnectorNew,
-  nrsWorkItemRepository: NRSWorkItemRepository,
-  dateTimeService: DateTimeService,
-  emcsUtils: EmcsUtils,
-  nrsEventIdMapper: NrsEventIdMapper,
-  correlationIdService: CorrelationIdService,
-  mongoLockRepository: MongoLockRepository,
-  timestampSupport: TimestampSupport,
-  actorSystem: ActorSystem,
-  configuration: Configuration
+                             override val authConnector: AuthConnector,
+                             nrsConnectorNew: NrsConnector,
+                             nrsWorkItemRepository: NRSWorkItemRepository,
+                             dateTimeService: DateTimeService,
+                             emcsUtils: EmcsUtils,
+                             nrsEventIdMapper: NrsEventIdMapper,
+                             correlationIdService: CorrelationIdService,
+                             mongoLockRepository: MongoLockRepository,
+                             timestampSupport: TimestampSupport,
+                             actorSystem: ActorSystem,
+                             configuration: Configuration
 )(implicit ec: ExecutionContext)
     extends AuthorisedFunctions
     with Logging {

@@ -23,7 +23,7 @@ import play.api.Logging
 import play.api.http.Status.ACCEPTED
 import play.api.libs.concurrent.Futures
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnectorNew.{NrsCircuitBreaker, UnexpectedResponseException, XApiKeyHeaderKey}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.{NrsCircuitBreaker, UnexpectedResponseException, XApiKeyHeaderKey}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.Retrying
 import uk.gov.hmrc.http.HttpErrorFunctions.is5xx
@@ -35,7 +35,7 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-class NrsConnectorNew @Inject() (
+class NrsConnector @Inject()(
   httpClient: HttpClientV2,
   appConfig: AppConfig,
   metrics: MetricRegistry,
@@ -93,7 +93,7 @@ class NrsConnectorNew @Inject() (
 
 }
 
-object NrsConnectorNew {
+object NrsConnector {
   val XApiKeyHeaderKey = "X-API-Key"
 
   final case class UnexpectedResponseException(status: Int, body: String) extends Exception {

@@ -31,8 +31,8 @@ import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, SEE_OTHER}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnectorNew
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnectorNew.UnexpectedResponseException
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.UnexpectedResponseException
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
@@ -63,7 +63,7 @@ class NrsServiceSpec
 
   implicit val ec: ExecutionContext                   = ExecutionContext.global
   implicit val hc: HeaderCarrier                      = HeaderCarrier(authorization = Some(Authorization(testAuthToken)))
-  private val mockNrsConnectorNew                     = mock[NrsConnectorNew]
+  private val mockNrsConnectorNew                     = mock[NrsConnector]
   private val mockNrsWorkItemRepository               = mock[NRSWorkItemRepository]
   private val mockCorrelationIdService                = mock[CorrelationIdService]
   private val mockDateTimeService                     = mock[DateTimeService]

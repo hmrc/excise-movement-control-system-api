@@ -30,7 +30,7 @@ import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnectorNew
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService
 
@@ -47,13 +47,13 @@ class NrsSubmissionJobSpec
     with NrsTestData {
 
   implicit val ec: ExecutionContext     = ExecutionContext.global
-  val mockNrsConnector: NrsConnectorNew = mock[NrsConnectorNew]
+  val mockNrsConnector: NrsConnector = mock[NrsConnector]
   val mockNrsService: NrsService        = mock[NrsService]
   val appConfig: AppConfig              = app.injector.instanceOf[AppConfig]
 
   override def fakeApplication(): Application = GuiceApplicationBuilder()
     .overrides(
-      bind[NrsConnectorNew].toInstance(mockNrsConnector),
+      bind[NrsConnector].toInstance(mockNrsConnector),
       bind[NrsService].toInstance(mockNrsService)
     )
     .configure(

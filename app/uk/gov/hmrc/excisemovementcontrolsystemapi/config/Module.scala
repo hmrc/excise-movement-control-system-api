@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.config
 import play.api.inject.Binding
 import play.api.{Configuration, Environment}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsCircuitBreakerProvider
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnectorNew.NrsCircuitBreaker
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.NrsCircuitBreaker
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MessageRecipientMigration, MovementMigration}
 import uk.gov.hmrc.mongo.metrix.MetricOrchestrator
 
