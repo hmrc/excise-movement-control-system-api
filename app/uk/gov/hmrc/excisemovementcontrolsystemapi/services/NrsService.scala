@@ -28,7 +28,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NRSWorkItemRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmissionWorkItem
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsServiceNew.nonRepudiationIdentityRetrievals
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService.nonRepudiationIdentityRetrievals
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils._
 import uk.gov.hmrc.http.HttpErrorFunctions.{is4xx, is5xx}
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier, InternalServerException}
@@ -42,7 +42,7 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent._
 
 @Singleton
-class NrsServiceNew @Inject() (
+class NrsService @Inject() (
   override val authConnector: AuthConnector,
   nrsConnectorNew: NrsConnectorNew,
   nrsWorkItemRepository: NRSWorkItemRepository,
@@ -223,7 +223,7 @@ class NrsServiceNew @Inject() (
 
 }
 
-object NrsServiceNew {
+object NrsService {
 
   type NonRepudiationIdentityRetrievals =
     (Option[AffinityGroup] ~ Option[String]

@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.fixture
 
 import uk.gov.hmrc.auth.core.{AffinityGroup, ConfidenceLevel, CredentialStrength, User}
 import uk.gov.hmrc.auth.core.retrieve.{AgentInformation, Credentials, ItmpAddress, ItmpName, MdtpInformation, Name}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsServiceNew.NonRepudiationIdentityRetrievals
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService.NonRepudiationIdentityRetrievals
 
 import java.time.{LocalDate, ZoneId, ZonedDateTime}
 import uk.gov.hmrc.auth.core.retrieve._

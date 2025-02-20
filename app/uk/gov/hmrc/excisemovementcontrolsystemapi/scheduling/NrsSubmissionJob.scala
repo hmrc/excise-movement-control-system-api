@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 import cats.implicits.toFunctorOps
 import org.apache.pekko.Done
 import play.api.{Configuration, Logging}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsServiceNew
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService
 import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.Inject
@@ -27,7 +27,7 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
 class NrsSubmissionJob @Inject() (
-  nrsService: NrsServiceNew,
+  nrsService: NrsService,
   configuration: Configuration
 ) extends ScheduledJob
     with Logging {

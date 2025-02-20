@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnectorNew
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsServiceNew
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
@@ -48,13 +48,13 @@ class NrsSubmissionJobSpec
 
   implicit val ec: ExecutionContext     = ExecutionContext.global
   val mockNrsConnector: NrsConnectorNew = mock[NrsConnectorNew]
-  val mockNrsService: NrsServiceNew     = mock[NrsServiceNew]
+  val mockNrsService: NrsService        = mock[NrsService]
   val appConfig: AppConfig              = app.injector.instanceOf[AppConfig]
 
   override def fakeApplication(): Application = GuiceApplicationBuilder()
     .overrides(
       bind[NrsConnectorNew].toInstance(mockNrsConnector),
-      bind[NrsServiceNew].toInstance(mockNrsService)
+      bind[NrsService].toInstance(mockNrsService)
     )
     .configure(
       "scheduler.nrsSubmissionJob.initialDelay"      -> "1 minutes",

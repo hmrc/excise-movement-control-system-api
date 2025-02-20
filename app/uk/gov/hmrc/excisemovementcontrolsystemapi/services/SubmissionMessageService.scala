@@ -31,7 +31,7 @@ import scala.util.control.NonFatal
 
 class SubmissionMessageServiceImpl @Inject() (
   connector: EISSubmissionConnector,
-  nrsServiceNew: NrsServiceNew,
+  nrsServiceNew: NrsService,
   correlationIdService: CorrelationIdService,
   ernSubmissionRepository: ErnSubmissionRepository
 )(implicit val ec: ExecutionContext)
