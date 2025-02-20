@@ -17,36 +17,60 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import org.apache.pekko.Done
-import play.api.Logging
+import org.apache.pekko.actor.ActorSystem
+import play.api.{Configuration, Logging}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.UnexpectedResponseException
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NRSWorkItemRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmissionWorkItem
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService.nonRepudiationIdentityRetrievals
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, NrsEventIdMapper}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils._
+import uk.gov.hmrc.http.HttpErrorFunctions.{is4xx, is5xx}
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier, InternalServerException}
+import uk.gov.hmrc.mongo.TimestampSupport
+import uk.gov.hmrc.mongo.lock.{MongoLockRepository, ScheduledLockService}
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{Failed, PermanentlyFailed}
+import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.control.NonFatal
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent._
 
 @Singleton
 class NrsService @Inject() (
-  override val authConnector: AuthConnector,
-  nrsConnector: NrsConnector,
-  dateTimeService: DateTimeService,
-  emcsUtils: EmcsUtils,
-  nrsEventIdMapper: NrsEventIdMapper
+                             override val authConnector: AuthConnector,
+                             nrsConnectorNew: NrsConnector,
+                             nrsWorkItemRepository: NRSWorkItemRepository,
+                             dateTimeService: DateTimeService,
+                             emcsUtils: EmcsUtils,
+                             nrsEventIdMapper: NrsEventIdMapper,
+                             correlationIdService: CorrelationIdService,
+                             mongoLockRepository: MongoLockRepository,
+                             timestampSupport: TimestampSupport,
+                             actorSystem: ActorSystem,
+                             configuration: Configuration
 )(implicit ec: ExecutionContext)
     extends AuthorisedFunctions
     with Logging {
 
-  def submitNrsOld(
+  private val lockId: String                    = "nrs-lock"
+  private val nrsThrottleDuration               = configuration.get[FiniteDuration]("microservice.services.nrs.nrs-throttle-duration")
+  private val lockServiceTTL                    = configuration.get[FiniteDuration]("microservice.services.nrs.lock-service-ttl")
+  private val lockService: ScheduledLockService = ScheduledLockService(
+    mongoLockRepository,
+    lockId = lockId,
+    timestampSupport,
+    lockServiceTTL
+  )
+
+  def makeWorkItemAndQueue(
     request: ParsedXmlRequest[_],
-    authorisedErn: String,
-    correlationId: String
+    authorisedErn: String
   )(implicit headerCarrier: HeaderCarrier): Future[Done] = {
 
     val payload        = request.body.toString
@@ -55,9 +79,9 @@ class NrsService @Inject() (
     val exciseNumber   = authorisedErn
     val notableEventId = nrsEventIdMapper.mapMessageToEventId(message)
 
-    (for {
+    for {
       identityData  <- retrieveIdentityData()
-      userAuthToken  = retrieveUserAuthToken(headerCarrier)
+      userAuthToken  = retrieveUserAuthToken()
       metaData       = NrsMetadata.create(
                          payload,
                          emcsUtils,
@@ -69,19 +93,46 @@ class NrsService @Inject() (
                          exciseNumber
                        )
       encodedPayload = emcsUtils.encode(payload)
-      nrsPayload     = NrsPayload(encodedPayload, metaData)
-      _             <- nrsConnector.sendToNrsOld(nrsPayload, correlationId)
-    } yield Done)
-      .recover { case NonFatal(e) =>
-        logger.warn(
-          s"[NrsService] - Error when submitting to Non repudiation system (NRS) with message: ${e.getMessage}",
-          e
-        )
-        Done
-      }
+      _             <- nrsWorkItemRepository.pushNew(NrsSubmissionWorkItem(NrsPayload(encodedPayload, metaData)))
+    } yield Done
   }
 
-  private def retrieveIdentityData()(implicit headerCarrier: HeaderCarrier): Future[IdentityData] =
+  def submitNrs(workItem: WorkItem[NrsSubmissionWorkItem])(implicit hc: HeaderCarrier): Future[Done] =
+    nrsConnectorNew
+      .sendToNrs(workItem.item.payload, correlationIdService.generateCorrelationId())
+      .flatMap { _ =>
+        nrsWorkItemRepository
+          .completeAndDelete(workItem.id)
+          .map(_ => Done)
+      }
+      .recoverWith {
+        case ex: UnexpectedResponseException if is4xx(ex.status) =>
+          logger.error(
+            s"NRS call failed permanently with status ${ex.status} - marking workitem ${workItem.id} as PermanentlyFailed",
+            ex
+          )
+          nrsWorkItemRepository
+            .complete(workItem.id, PermanentlyFailed)
+            .map(_ => Done)
+        case ex: UnexpectedResponseException if is5xx(ex.status) =>
+          logger.warn(
+            s"NRS call failed with status ${ex.status} - marking workitem ${workItem.id} as Failed for retry",
+            ex
+          )
+          nrsWorkItemRepository
+            .complete(workItem.id, Failed)
+            .map(_ => Done)
+        case ex: UnexpectedResponseException                     =>
+          logger.error(
+            s"NRS call failed permanently with status ${ex.status} - marking workitem ${workItem.id} as PermanentlyFailed",
+            ex
+          )
+          nrsWorkItemRepository
+            .complete(workItem.id, PermanentlyFailed)
+            .map(_ => Done)
+      }
+
+  private def retrieveIdentityData()(implicit hc: HeaderCarrier): Future[IdentityData] =
     authorised().retrieve(nonRepudiationIdentityRetrievals) {
       case affinityGroup ~ internalId ~
           externalId ~ agentCode ~
@@ -116,13 +167,60 @@ class NrsService @Inject() (
         )
     }
 
-  private def retrieveUserAuthToken(hc: HeaderCarrier): String =
+  private def retrieveUserAuthToken()(implicit hc: HeaderCarrier): String =
     hc.authorization match {
       case Some(Authorization(authToken)) => authToken
       case _                              =>
         logger.warn("[NrsService] - No auth token available for NRS")
         throw new InternalServerException("No auth token available for NRS")
     }
+
+  def processAllWithLock()(implicit hc: HeaderCarrier): Future[Done] =
+    lockService
+      .withLock {
+        processAll()
+      }
+      .map {
+        _.getOrElse {
+          logger.info(
+            s"Could not acquire lock on nrsWorkItemRepository"
+          )
+          Done
+        }
+      }
+
+  private def processAll()(implicit hc: HeaderCarrier): Future[Done] =
+    processSingleNrs()
+      .flatMap {
+        case true  => processAll()
+        case false => Future.successful(Done)
+      }
+
+  def processSingleNrs()(implicit hc: HeaderCarrier): Future[Boolean] = {
+
+    val now = dateTimeService.timestamp()
+
+    nrsWorkItemRepository
+      .pullOutstanding(now, now)
+      .flatMap {
+        case Some(wi) => submitNrsThrottled(wi).map(_ => true)
+        case None     => Future.successful(false)
+      }
+  }
+
+  private def submitNrsThrottled(workItem: WorkItem[NrsSubmissionWorkItem])(implicit hc: HeaderCarrier): Future[Done] =
+    takeAtLeastXTime(submitNrs(workItem), nrsThrottleDuration)
+
+  private def takeAtLeastXTime[A](f: => Future[A], duration: FiniteDuration): Future[A] = {
+    val promise             = Promise[Unit]()
+    lazy val succeedPromise = promise.success(())
+    actorSystem.scheduler.scheduleOnce(duration)(succeedPromise)
+    for {
+      v <- f
+      _ <- promise.future
+    } yield v
+  }
+
 }
 
 object NrsService {

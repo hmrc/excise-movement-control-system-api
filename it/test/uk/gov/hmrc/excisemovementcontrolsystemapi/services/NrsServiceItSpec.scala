@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
 import java.time.Instant
 import scala.concurrent.ExecutionContext
 
-class NrsServiceNewItSpec extends PlaySpec
+class NrsServiceItSpec extends PlaySpec
   with CleanMongoCollectionSupport
   with EitherValues
   with IntegrationPatience
@@ -101,7 +101,7 @@ class NrsServiceNewItSpec extends PlaySpec
 
   val lockRepository: MongoLockRepository = app.injector.instanceOf[MongoLockRepository]
 
-  private val service = app.injector.instanceOf[NrsServiceNew]
+  private val service = app.injector.instanceOf[NrsService]
 
   val url = "/submission"
 

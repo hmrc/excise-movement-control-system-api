@@ -18,7 +18,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.ImplementedBy
 import play.api.Logging
-import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EISErrorResponseDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
@@ -32,11 +31,9 @@ import scala.util.control.NonFatal
 
 class SubmissionMessageServiceImpl @Inject() (
   connector: EISSubmissionConnector,
-  nrsService: NrsService,
-  nrsServiceNew: NrsServiceNew,
+  nrsServiceNew: NrsService,
   correlationIdService: CorrelationIdService,
-  ernSubmissionRepository: ErnSubmissionRepository,
-  appConfig: AppConfig
+  ernSubmissionRepository: ErnSubmissionRepository
 )(implicit val ec: ExecutionContext)
     extends SubmissionMessageService
     with Logging {
@@ -59,12 +56,8 @@ class SubmissionMessageServiceImpl @Inject() (
       _                      = if (isSuccess) ernSubmissionRepository.save(authorisedErn).recover { case NonFatal(error) =>
                                  logger.warn(s"Failed to save ERN to ERNSubmissionRepository", error)
                                }
-      _                      = if (isSuccess) {
-                                 if (appConfig.nrsNewEnabled) nrsServiceNew.makeWorkItemAndQueue(request, authorisedErn)
-                                 else nrsService.submitNrsOld(request, authorisedErn, correlationId)
-                               }
+      _                      = if (isSuccess) nrsServiceNew.makeWorkItemAndQueue(request, authorisedErn)
     } yield submitMessageResponse
-
   }
 }
 

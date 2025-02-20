@@ -132,21 +132,22 @@ class DraftExciseMovementController @Inject() (
     boxId: Option[String],
     message: IE815Message,
     request: ParsedXmlRequest[NodeSeq]
-  )(implicit hc: HeaderCarrier): EitherT[Future, Result, Movement] = EitherT {
+  )(implicit hc: HeaderCarrier): EitherT[Future, Result, Movement] =
+    EitherT {
 
-    val newMovement: Movement = createMovementFomMessage(message, boxId)
-    boxId.map(boxIdRepository.save(newMovement.consignorId, _)) //TODO recover future in failure case
+      val newMovement: Movement = createMovementFomMessage(message, boxId)
+      boxId.map(boxIdRepository.save(newMovement.consignorId, _)) //TODO recover future in failure case
 
-    movementMessageService.saveNewMovement(newMovement).map {
-      case Left(result)    =>
-        auditService.auditMessage(message, "Failed to Save")
-        auditService.messageSubmittedNoMovement(message, true, message.correlationId, request)
-        Left(result)
-      case Right(movement) =>
-        Right(movement)
+      movementMessageService.saveNewMovement(newMovement).map {
+        case Left(result)    =>
+          auditService.auditMessage(message, "Failed to Save")
+          auditService.messageSubmittedNoMovement(message, true, message.correlationId, request)
+          Left(result)
+        case Right(movement) =>
+          Right(movement)
+      }
+
     }
-
-  }
 
   private def createMovementFomMessage(message: IE815Message, boxId: Option[String]): Movement = {
     val consignorId: String =

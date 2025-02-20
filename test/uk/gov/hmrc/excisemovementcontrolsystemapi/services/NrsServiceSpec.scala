@@ -16,49 +16,82 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-import org.apache.pekko.Done
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.actor.testkit.typed.scaladsl.ActorTestKit
+import org.apache.pekko.{Done, actor}
+import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchers.any
-import org.mockito.ArgumentMatchersSugar.eqTo
-import org.mockito.MockitoSugar.{reset, verify, when}
-import org.scalatest.concurrent.ScalaFutures
+import org.mockito.MockitoSugar.{reset, times, verify, when}
+import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
+import play.api.Configuration
+import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, SEE_OTHER}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{NrsConnector, NrsConnectorNew}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.UnexpectedResponseException
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NRSWorkItemRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmissionWorkItem
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService.NonRepudiationIdentityRetrievals
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, NrsEventIdMapper}
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier}
+import uk.gov.hmrc.mongo.TimestampSupport
+import uk.gov.hmrc.mongo.lock.MongoLockRepository
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{Failed, PermanentlyFailed, ToDo}
+import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 
-class NrsServiceSpec extends PlaySpec with ScalaFutures with NrsTestData with EitherValues with BeforeAndAfterEach {
+class NrsServiceSpec
+    extends PlaySpec
+    with ScalaFutures
+    with NrsTestData
+    with EitherValues
+    with BeforeAndAfterEach
+    with IntegrationPatience {
 
-  implicit val ec: ExecutionContext        = ExecutionContext.global
-  implicit val hc: HeaderCarrier           = HeaderCarrier(authorization = Some(Authorization(testAuthToken)))
-  private val nrsConnector                 = mock[NrsConnector]
-  private val nrsConnectorNew              = mock[NrsConnectorNew]
-  private val correlationIdService         = mock[CorrelationIdService]
-  private val dateTimeService              = mock[DateTimeService]
-  private val authConnector: AuthConnector = mock[AuthConnector]
-  private val timeStamp                    = Instant.now()
-  private val userHeaderData               = Seq("header" -> "test")
-  private val service                      = new NrsService(
-    authConnector,
-    nrsConnector,
-    dateTimeService,
+  implicit val ec: ExecutionContext                   = ExecutionContext.global
+  implicit val hc: HeaderCarrier                      = HeaderCarrier(authorization = Some(Authorization(testAuthToken)))
+  private val mockNrsConnectorNew                     = mock[NrsConnector]
+  private val mockNrsWorkItemRepository               = mock[NRSWorkItemRepository]
+  private val mockCorrelationIdService                = mock[CorrelationIdService]
+  private val mockDateTimeService                     = mock[DateTimeService]
+  private val mockAuthConnector: AuthConnector        = mock[AuthConnector]
+  private val mockLockRepository: MongoLockRepository = mock[MongoLockRepository]
+  private val mockTimeStampSupport: TimestampSupport  = mock[TimestampSupport]
+  private val timeStamp                               = Instant.now()
+
+  lazy val testKit: ActorTestKit              = ActorTestKit()
+  lazy val testActorSystem: actor.ActorSystem = ActorSystem("DraftExciseMovementControllerSpec")
+
+  val config: Configuration = Configuration(
+    "microservice.services.nrs.nrs-throttle-duration" -> "1 second",
+    "microservice.services.nrs.lock-service-ttl"      -> "10 minutes"
+  )
+
+  private val service = new NrsService(
+    mockAuthConnector,
+    mockNrsConnectorNew,
+    mockNrsWorkItemRepository,
+    mockDateTimeService,
     new EmcsUtils,
-    new NrsEventIdMapper
+    new NrsEventIdMapper,
+    mockCorrelationIdService,
+    mockLockRepository,
+    mockTimeStampSupport,
+    testActorSystem,
+    config
   )
 
   private val message           = mock[IE815Message]
@@ -66,67 +99,202 @@ class NrsServiceSpec extends PlaySpec with ScalaFutures with NrsTestData with Ei
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(authConnector, nrsConnector, nrsConnectorNew, dateTimeService, correlationIdService)
+    reset(
+      mockAuthConnector,
+      mockNrsConnectorNew,
+      mockDateTimeService,
+      mockCorrelationIdService,
+      mockNrsWorkItemRepository,
+      mockLockRepository,
+      mockTimeStampSupport
+    )
 
-    when(dateTimeService.timestamp()).thenReturn(timeStamp)
-    when(correlationIdService.generateCorrelationId()).thenReturn(testCorrelationId)
-    when(authConnector.authorise[NonRepudiationIdentityRetrievals](any, any)(any, any)) thenReturn
+    when(mockDateTimeService.timestamp()).thenReturn(timeStamp)
+    when(mockCorrelationIdService.generateCorrelationId()).thenReturn(testCorrelationId)
+    when(mockAuthConnector.authorise[NonRepudiationIdentityRetrievals](any, any)(any, any)) thenReturn
       Future.successful(testAuthRetrievals)
-    when(nrsConnector.sendToNrsOld(any, any)(any))
-      .thenReturn(Future.successful(Done))
-    when(nrsConnectorNew.sendToNrs(any, any)(any))
+    when(mockNrsConnectorNew.sendToNrs(any, any)(any))
       .thenReturn(Future.successful(Done))
     when(message.consignorId).thenReturn(Some("ern"))
   }
 
-  "submitNrsOld" should {
-    "return Done" in {
-      submitNrsOld(hc) mustBe Done
-    }
+  private val testRequest     = createRequest(message)
+  private val testNrsMetadata = NrsMetadata(
+    businessId = "emcs",
+    notableEvent = "excise-movement-control-system",
+    payloadContentType = "application/json",
+    payloadSha256Checksum = sha256Hash("payload for NRS"),
+    userSubmissionTimestamp = timeStamp.toString,
+    identityData = testNrsIdentityData,
+    userAuthToken = testAuthToken,
+    headerData = Map(),
+    searchKeys = Map("ern" -> "123")
+  )
 
-    "submit nrs payload" in {
-      submitNrsOld(hc)
+  private val encodedMessage  = Base64.getEncoder.encodeToString("<IE815>test</IE815>".getBytes(StandardCharsets.UTF_8))
+  private val testNrsPayload  = NrsPayload(encodedMessage, testNrsMetadata)
+  private val testNrsWorkItem = NrsSubmissionWorkItem(testNrsPayload)
+  private val testWorkItem    = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
 
-      val encodePayload = Base64.getEncoder.encodeToString("<IE815>test</IE815>".getBytes(StandardCharsets.UTF_8))
-      val nrsPayload    = NrsPayload(encodePayload, createExpectedMetadata)
+  "makeNrsWorkItemAndAddToRepository" should {
+    "create the NRSSubmission model and call to add it to the NRSWorkItemRepository" in {
 
-      verify(nrsConnector).sendToNrsOld(eqTo(nrsPayload), eqTo("correlationId"))(eqTo(hc))
-    }
+      when(mockNrsWorkItemRepository.pushNew(any(), any(), any()))
+        .thenReturn(
+          Future.successful(
+            WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, NrsSubmissionWorkItem(testNrsPayload))
+          )
+        )
 
-    "return Done when there's an error" when {
-      "NRS submit request fails" in {
-        when(nrsConnector.sendToNrsOld(any, any)(any))
-          .thenReturn(Future.successful(Done))
+      val result = await(service.makeWorkItemAndQueue(testRequest, "ern"))
 
-        submitNrsOld(hc) mustBe Done
-      }
-
-      "cannot retrieve user AuthToken" in {
-        val result = submitNrsOld(HeaderCarrier())
-
-        result mustBe Done
-      }
+      verify(mockNrsWorkItemRepository).pushNew(NrsSubmissionWorkItem(testNrsPayload))
+      result mustBe Done
     }
   }
 
-  private def createExpectedMetadata =
-    NrsMetadata(
+  "submitNrs" should {
+    "submit to NRS and call the repository to mark the workitem as done if it succeeds with ACCEPTED" in {
+
+      when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
+
+      when(mockNrsWorkItemRepository.completeAndDelete(any)).thenReturn(Future(true))
+
+      val result = await(service.submitNrs(testWorkItem))
+
+      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
+
+      result mustBe Done
+      verify(mockNrsWorkItemRepository).completeAndDelete(testWorkItem.id)
+    }
+    "mark the workItem as failed if submission fails with 5xx" in {
+      when(mockNrsConnectorNew.sendToNrs(any(), any())(any()))
+        .thenReturn(Future.failed(UnexpectedResponseException(INTERNAL_SERVER_ERROR, "body")))
+
+      when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+
+      val result = await(service.submitNrs(testWorkItem))
+
+      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
+      result mustBe Done
+      verify(mockNrsWorkItemRepository).complete(testWorkItem.id, Failed)
+    }
+    "mark the workItem as PERMANENTLY failed if submission fails with 4xx" in {
+      when(mockNrsConnectorNew.sendToNrs(any(), any())(any()))
+        .thenReturn(Future.failed(UnexpectedResponseException(BAD_REQUEST, "body")))
+
+      when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+
+      val result = await(service.submitNrs(testWorkItem))
+
+      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
+      result mustBe Done
+      verify(mockNrsWorkItemRepository).complete(testWorkItem.id, PermanentlyFailed)
+    }
+    "mark the workItem as PERMANENTLY failed if submission fails with a different status" in {
+      when(mockNrsConnectorNew.sendToNrs(any(), any())(any()))
+        .thenReturn(Future.failed(UnexpectedResponseException(SEE_OTHER, "body")))
+
+      when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+
+      val result = await(service.submitNrs(testWorkItem))
+
+      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
+      result mustBe Done
+      verify(mockNrsWorkItemRepository).complete(testWorkItem.id, PermanentlyFailed)
+    }
+  }
+
+  "processSingleNrs" should {
+    val testNrsMetadata = NrsMetadata(
       businessId = "emcs",
-      notableEvent = "emcs-create-a-movement-api",
-      payloadContentType = "application/xml",
-      payloadSha256Checksum = sha256Hash("<IE815>test</IE815>"),
+      notableEvent = "excise-movement-control-system",
+      payloadContentType = "application/json",
+      payloadSha256Checksum = sha256Hash("payload for NRS"),
       userSubmissionTimestamp = timeStamp.toString,
       identityData = testNrsIdentityData,
       userAuthToken = testAuthToken,
-      headerData = userHeaderData.toMap,
-      searchKeys = Map("ern" -> "ern")
+      headerData = Map(),
+      searchKeys = Map("ern" -> "123")
     )
 
-  private def submitNrsOld(hc: HeaderCarrier): Done = {
+    val encodedMessage  = Base64.getEncoder.encodeToString("<IE815>test</IE815>".getBytes(StandardCharsets.UTF_8))
+    val testNrsPayload  = NrsPayload(encodedMessage, testNrsMetadata)
+    val testNrsWorkItem = NrsSubmissionWorkItem(testNrsPayload)
+    val testWorkItem    = WorkItem(new ObjectId(), timeStamp, timeStamp, timeStamp, ToDo, 0, testNrsWorkItem)
 
-    val request = createRequest(message)
+    "call to submit the NRS data and return true if it processed a thing successfully" in {
 
-    await(service.submitNrsOld(request, "ern", "correlationId")(hc))
+      when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
+
+      when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
+        .thenReturn(Future.successful(Some(testWorkItem)))
+      when(mockNrsWorkItemRepository.completeAndDelete(any)).thenReturn(Future(true))
+
+      val result = await(service.processSingleNrs())
+
+      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
+      verify(mockNrsWorkItemRepository).completeAndDelete(testWorkItem.id)
+      result mustBe true
+    }
+    "call to submit the NRS data and return true if it tried to process a thing but failed" in {
+
+      when(mockNrsConnectorNew.sendToNrs(any(), any())(any()))
+        .thenReturn(Future.failed(UnexpectedResponseException(INTERNAL_SERVER_ERROR, "body")))
+
+      when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
+        .thenReturn(Future.successful(Some(testWorkItem)))
+      when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
+
+      val result = await(service.processSingleNrs())
+
+      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
+      verify(mockNrsWorkItemRepository).complete(testWorkItem.id, Failed)
+      result mustBe true
+    }
+    "if the connector call takes less than 1 second to finish, should take at least 1 second to finish" in {
+
+      when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
+      when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
+        .thenReturn(Future.successful(Some(testWorkItem)))
+      when(mockNrsWorkItemRepository.completeAndDelete(any)).thenReturn(Future(true))
+
+      val timeBefore = System.currentTimeMillis
+      service.processSingleNrs().futureValue
+      val timeAfter  = System.currentTimeMillis
+
+      val timeTaken: Long = timeAfter - timeBefore
+
+      timeTaken.toInt must be >= 1000
+    }
+    "if the connector call takes longer than 1 second to finish, should not take excessively long to finish" in {
+
+      lazy val future = Future {
+        Thread.sleep(1500)
+        Done
+      }
+      when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(future)
+      when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
+        .thenReturn(Future.successful(Some(testWorkItem)))
+      when(mockNrsWorkItemRepository.completeAndDelete(any)).thenReturn(Future(true))
+
+      val timeBefore = System.currentTimeMillis
+      service.processSingleNrs().futureValue
+      val timeAfter  = System.currentTimeMillis
+
+      val timeTaken: Long = timeAfter - timeBefore
+
+      timeTaken.toInt must be >= 1400
+      timeTaken.toInt must be < 1600
+    }
+    "return false if there was nothing in the repository to process" in {
+
+      when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
+        .thenReturn(Future.successful(None))
+
+      val result = await(service.processSingleNrs())
+      result mustBe false
+    }
   }
 
   private def createRequest(message: IEMessage): ParsedXmlRequest[_] = {
