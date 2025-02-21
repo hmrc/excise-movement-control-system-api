@@ -66,7 +66,6 @@ class SubscribeErnsControllerSpec
 
   "subscribeErn" must {
     "subscribe the given ern to the clientId" in {
-      when(mockAppConfig.subscribeErnsEnabled).thenReturn(true)
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
       when(mockNotificationsService.subscribeErns(any, any)(any)).thenReturn(Future.successful("boxId"))
@@ -85,7 +84,6 @@ class SubscribeErnsControllerSpec
     }
 
     "subscribe return Forbidden due to mismatch between ern in request and one passed in" in {
-      when(mockAppConfig.subscribeErnsEnabled).thenReturn(true)
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
       when(mockNotificationsService.subscribeErns(any, any)(any)).thenReturn(Future.successful("boxId"))
@@ -102,7 +100,6 @@ class SubscribeErnsControllerSpec
     }
 
     "subscribe returns BadRequest due to missing ClientId in header" in {
-      when(mockAppConfig.subscribeErnsEnabled).thenReturn(true)
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
       when(mockNotificationsService.subscribeErns(any, any)(any)).thenReturn(Future.successful("boxId"))
@@ -115,20 +112,6 @@ class SubscribeErnsControllerSpec
       val result = createWithSuccessfulAuth.subscribeErn(ern)(request)
 
       status(result) mustBe BAD_REQUEST
-    }
-
-    "subscribe the given ern should return NotFound when feature flag is off" in {
-      when(mockAppConfig.subscribeErnsEnabled).thenReturn(false)
-
-      val request = FakeRequest(routes.SubscribeErnsController.subscribeErn("ern1"))
-        .withHeaders(
-          HeaderNames.CONTENT_TYPE -> "application/json",
-          "X-Client-Id"            -> "clientId"
-        )
-
-      val result = createWithSuccessfulAuth.subscribeErn("ern1")(request)
-
-      status(result) mustBe NOT_FOUND
     }
 
     "return error" when {
@@ -150,7 +133,6 @@ class SubscribeErnsControllerSpec
 
   "unsubscribeErn" must {
     "unsubscribe the given ern from the clientId" in {
-      when(mockAppConfig.subscribeErnsEnabled).thenReturn(true)
       when(mockNotificationsService.unsubscribeErns(any, any)(any)).thenReturn(Future.successful(Done))
 
       val request = FakeRequest(routes.SubscribeErnsController.subscribeErn("ern1"))
@@ -167,7 +149,6 @@ class SubscribeErnsControllerSpec
     }
 
     "unsubscribe returns BadRequest when ClientId is missing from header" in {
-      when(mockAppConfig.subscribeErnsEnabled).thenReturn(true)
       when(mockNotificationsService.unsubscribeErns(any, any)(any)).thenReturn(Future.successful(Done))
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
@@ -179,20 +160,6 @@ class SubscribeErnsControllerSpec
       val result = createWithSuccessfulAuth.unsubscribeErn("ern1")(request)
 
       status(result) mustBe BAD_REQUEST
-    }
-
-    "unsubscribe the given ern returns NotFound when feature flag is off" in {
-      when(mockAppConfig.subscribeErnsEnabled).thenReturn(false)
-
-      val request = FakeRequest(routes.SubscribeErnsController.subscribeErn("ern1"))
-        .withHeaders(
-          HeaderNames.CONTENT_TYPE -> "application/json",
-          "X-Client-Id"            -> "clientId"
-        )
-
-      val result = createWithSuccessfulAuth.unsubscribeErn("ern1")(request)
-
-      status(result) mustBe NOT_FOUND
     }
 
     "return error" when {

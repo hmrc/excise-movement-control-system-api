@@ -66,10 +66,6 @@ class AppConfigSpec extends PlaySpec {
       configService.pushNotificationsEnabled mustBe false
     }
 
-    "return feature flag for subscribe and unsubscribe ERN endpoints" in {
-      configService.subscribeErnsEnabled mustBe true
-    }
-
     "return feature flag for ETDS PreValidateTrader" in {
       configService.etdsPreValidateTraderEnabled mustBe false
     }
