@@ -46,10 +46,10 @@ class NrsSubmissionJobSpec
     with BeforeAndAfterEach
     with NrsTestData {
 
-  implicit val ec: ExecutionContext     = ExecutionContext.global
+  implicit val ec: ExecutionContext  = ExecutionContext.global
   val mockNrsConnector: NrsConnector = mock[NrsConnector]
-  val mockNrsService: NrsService        = mock[NrsService]
-  val appConfig: AppConfig              = app.injector.instanceOf[AppConfig]
+  val mockNrsService: NrsService     = mock[NrsService]
+  val appConfig: AppConfig           = app.injector.instanceOf[AppConfig]
 
   override def fakeApplication(): Application = GuiceApplicationBuilder()
     .overrides(
@@ -59,8 +59,7 @@ class NrsSubmissionJobSpec
     .configure(
       "scheduler.nrsSubmissionJob.initialDelay"      -> "1 minutes",
       "scheduler.nrsSubmissionJob.interval"          -> "1 minute",
-      "scheduler.nrsSubmissionJob.numberOfInstances" -> 1,
-      "featureFlags.nrsSubmissionEnabled"            -> true
+      "scheduler.nrsSubmissionJob.numberOfInstances" -> 1
     )
     .build()
 
@@ -77,9 +76,6 @@ class NrsSubmissionJobSpec
   "nrs submission scheduler must" - {
     "have the correct name" in {
       nrsSubmissionScheduler.name mustBe "nrs-submission-scheduler"
-    }
-    "be enabled" in {
-      nrsSubmissionScheduler.enabled mustBe false
     }
     "use initial delay from configuration" in {
       nrsSubmissionScheduler.initialDelay mustBe FiniteDuration(1, "minutes")

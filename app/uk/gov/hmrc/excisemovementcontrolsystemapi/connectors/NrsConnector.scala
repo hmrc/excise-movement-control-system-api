@@ -35,7 +35,7 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-class NrsConnector @Inject()(
+class NrsConnector @Inject() (
   httpClient: HttpClientV2,
   appConfig: AppConfig,
   metrics: MetricRegistry,
