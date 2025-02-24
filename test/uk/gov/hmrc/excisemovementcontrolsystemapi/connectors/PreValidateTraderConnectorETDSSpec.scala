@@ -28,16 +28,18 @@ import play.api.http.Status._
 import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
+import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.EISHeaderTestSupport
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{ExciseTraderValidationETDSResponse, PreValidateTraderMessageResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.CorrelationIdService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils._
 import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
@@ -48,19 +50,21 @@ class PreValidateTraderConnectorETDSSpec
     with BeforeAndAfterEach
     with EitherValues {
 
-  protected implicit val hc: HeaderCarrier    = HeaderCarrier()
+  private val emcsCorrelationId = "1234566"
+
+  val request = FakeRequest().withHeaders(HttpHeader.xCorrelationId -> emcsCorrelationId)
+
+  implicit val hc                             = HeaderCarrierConverter.fromRequest(request)
   protected implicit val ec: ExecutionContext = ExecutionContext.global
 
-  private val mockHttpClient       = mock[HttpClientV2]
-  private val correlationIdService = mock[CorrelationIdService]
-  private val dateTimeService      = mock[DateTimeService]
-  private val appConfig            = mock[AppConfig]
+  private val mockHttpClient  = mock[HttpClientV2]
+  private val dateTimeService = mock[DateTimeService]
+  private val appConfig       = mock[AppConfig]
 
   private val metrics = mock[MetricRegistry](RETURNS_DEEP_STUBS)
 
   private val connector                    =
-    new PreValidateTraderConnector(mockHttpClient, correlationIdService, appConfig, metrics, dateTimeService)
-  private val emcsCorrelationId            = "1234566"
+    new PreValidateTraderConnector(mockHttpClient, appConfig, metrics, dateTimeService)
   private val timerContext                 = mock[Timer.Context]
   private val preValidateTraderBearerToken = "preValidateTraderETDSBearerToken"
   private val mockRequestBuilder           = mock[RequestBuilder]
@@ -82,7 +86,6 @@ class PreValidateTraderConnectorETDSSpec
       .thenReturn(Future.successful(Right(validResponse)))
 
     when(dateTimeService.timestamp()).thenReturn(timestamp)
-    when(correlationIdService.generateCorrelationId()).thenReturn(emcsCorrelationId)
     when(appConfig.preValidateTraderETDSUrl).thenReturn("http://localhost:8080/eis/path")
     when(appConfig.preValidateTraderETDSBearerToken).thenReturn(preValidateTraderBearerToken)
     when(metrics.timer(any).time()) thenReturn timerContext

@@ -24,7 +24,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.Service
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.CorrelationIdService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService._
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -41,7 +41,6 @@ import scala.util.Try
 class TraderMovementConnector @Inject() (
   configuration: Configuration,
   httpClient: HttpClientV2,
-  correlationIdService: CorrelationIdService,
   messageFactory: IEMessageFactory,
   dateTimeService: DateTimeService
 )(implicit ec: ExecutionContext)
@@ -52,13 +51,11 @@ class TraderMovementConnector @Inject() (
 
   def getMovementMessages(ern: String, arc: String)(implicit hc: HeaderCarrier): Future[Seq[IEMessage]] = {
     logger.info(s"[TraderMovementConnector]: Getting movement messages")
-    val correlationId = correlationIdService.generateCorrelationId()
-    val timestamp     = dateTimeService.timestamp().asStringInMilliseconds
+    val timestamp = dateTimeService.timestamp().asStringInMilliseconds
 
     httpClient
       .get(url"${service.baseUrl}/emcs/movements/v1/trader-movement?exciseregistrationnumber=$ern&arc=$arc")
       .setHeader("X-Forwarded-Host" -> "MDTP")
-      .setHeader("X-Correlation-Id" -> correlationId)
       .setHeader("Source" -> "APIP")
       .setHeader("DateTime" -> timestamp)
       .setHeader("Authorization" -> s"Bearer $bearerToken")

@@ -21,6 +21,12 @@ import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 import java.time.Instant
 import java.util.UUID
+import javax.inject.Inject
+
+@Inject
+class MovementIdGenerator {
+  def generateId: String = UUID.randomUUID().toString
+}
 
 case class Movement(
   _id: String,

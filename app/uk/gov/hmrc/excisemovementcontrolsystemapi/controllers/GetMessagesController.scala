@@ -21,14 +21,16 @@ import cats.implicits._
 import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ValidateAcceptHeaderAction}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, CorrelationIdAction, ValidateAcceptHeaderAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MessageResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, MessageService, MovementService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
 import java.time.Instant
 import javax.inject.{Inject, Singleton}
@@ -38,6 +40,7 @@ import scala.util.Try
 @Singleton
 class GetMessagesController @Inject() (
   authAction: AuthAction,
+  correlationIdAction: CorrelationIdAction,
   validateAcceptHeaderAction: ValidateAcceptHeaderAction,
   movementService: MovementService,
   messageService: MessageService,
@@ -53,8 +56,11 @@ class GetMessagesController @Inject() (
     (
       Action andThen
         validateAcceptHeaderAction andThen
-        authAction
+        authAction andThen
+        correlationIdAction
     ).async(parse.default) { implicit request =>
+      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
+
       val result = for {
         mvtId    <- validateMovementId(movementId)
         movement <- getMovement(mvtId)
@@ -79,7 +85,10 @@ class GetMessagesController @Inject() (
     updatedSince: Option[String],
     traderType: Option[String]
   ): Action[AnyContent] =
-    authAction.async(parse.default) { implicit request: EnrolmentRequest[AnyContent] =>
+    (authAction andThen
+      correlationIdAction).async(parse.default) { implicit request: EnrolmentRequest[AnyContent] =>
+      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
+
       val result = for {
         validatedMovementId   <- validateMovementId(movementId)
         validatedUpdatedSince <- validateUpdatedSince(updatedSince)

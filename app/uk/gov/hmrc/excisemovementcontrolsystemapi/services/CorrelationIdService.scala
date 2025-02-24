@@ -16,15 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
-import java.util.UUID
-import javax.inject.{Inject, Singleton}
-
-@Singleton //TODO: This is going to be removed in 820 (probably) as we source the id from the headercarriers
-class CorrelationIdService @Inject() {
-
-  def generateCorrelationId(): String = UUID.randomUUID().toString
-}
-
 object HttpHeader {
   val xCorrelationId = "x-correlation-id"
 }

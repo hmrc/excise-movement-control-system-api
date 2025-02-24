@@ -26,7 +26,7 @@ import play.api.{Configuration, Logging}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, TraderMovementConnector}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement, MovementIdGenerator}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService.{EnrichedError, UpdateOutcome}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
@@ -49,13 +49,13 @@ class MessageService @Inject() (
   messageConnector: MessageConnector,
   traderMovementConnector: TraderMovementConnector,
   dateTimeService: DateTimeService,
-  correlationIdService: CorrelationIdService,
   emcsUtils: EmcsUtils,
   auditService: AuditService,
   mongoLockRepository: MongoLockRepository,
   metricRegistry: MetricRegistry,
   messageFactory: IEMessageFactory,
-  movementService: MovementService
+  movementService: MovementService,
+  movementIdGenerator: MovementIdGenerator
 )(implicit executionContext: ExecutionContext)
     extends Logging {
 
@@ -392,7 +392,7 @@ class MessageService @Inject() (
             ).flatten.sequence.map { messagesToAdd =>
               Seq(
                 Movement(
-                  correlationIdService.generateCorrelationId(),
+                  movementIdGenerator.generateId,
                   None,
                   ie801.localReferenceNumber,
                   consignorId,
@@ -428,7 +428,7 @@ class MessageService @Inject() (
         .map { lrn =>
           Seq(
             Movement(
-              correlationIdService.generateCorrelationId(),
+              movementIdGenerator.generateId,
               None,
               lrn,
               consignor,
@@ -455,7 +455,7 @@ class MessageService @Inject() (
       message.consigneeId.map(convertMessage(_, message, timestamp, shouldNotify = true))
     ).flatten.sequence.map { messages =>
       Movement(
-        correlationIdService.generateCorrelationId(),
+        movementIdGenerator.generateId,
         None,
         message.localReferenceNumber,
         consignorId,

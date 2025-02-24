@@ -29,6 +29,7 @@ import play.api.mvc.Results.{InternalServerError, NotFound}
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.CorrelationIdAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeJsonParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PreValidateTraderService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils._
@@ -256,6 +257,7 @@ class PreValidateTraderControllerSpec
   private def createWithAuthActionFailure =
     new PreValidateTraderController(
       FakeFailingAuthentication,
+      new CorrelationIdAction,
       FakeSuccessJsonParser,
       service,
       cc,
@@ -265,6 +267,7 @@ class PreValidateTraderControllerSpec
   private def createWithFailingJsonParserAction =
     new PreValidateTraderController(
       FakeSuccessAuthentication(Set(ern)),
+      new CorrelationIdAction,
       FakeFailureJsonParser,
       service,
       cc,
@@ -274,6 +277,7 @@ class PreValidateTraderControllerSpec
   private def createWithSuccessfulAuth =
     new PreValidateTraderController(
       FakeSuccessAuthentication(Set(ern)),
+      new CorrelationIdAction,
       FakeSuccessJsonParser,
       service,
       cc,

@@ -32,7 +32,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessag
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptSuccessResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes.{IE704, IE801, IE818}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE704Message, IE801Message, IE818Message}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement, MovementIdGenerator}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -61,17 +61,19 @@ class MessageServiceItSpec
 
   private val mockMessageConnector        = mock[MessageConnector]
   private val mockDateTimeService         = mock[DateTimeService]
-  private val mockCorrelationIdService    = mock[CorrelationIdService]
   private val mockTraderMovementConnector = mock[TraderMovementConnector]
+  private val mockMovementIdGenerator     = mock[MovementIdGenerator]
 
-  private val now         = Instant.now.truncatedTo(ChronoUnit.MILLIS)
-  private val newId       = "some-id"
-  private val utils       = new EmcsUtils
+  private val now                        = Instant.now.truncatedTo(ChronoUnit.MILLIS)
+  private val newId                      = "some-id"
+  private val utils                      = new EmcsUtils
   private implicit val hc: HeaderCarrier = HeaderCarrier()
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    Mockito.reset(mockMessageConnector, mockDateTimeService, mockCorrelationIdService, mockTraderMovementConnector)
+    Mockito.reset(mockMessageConnector, mockDateTimeService, mockTraderMovementConnector, mockMovementIdGenerator)
+
+    when(mockMovementIdGenerator.generateId).thenReturn(newId)
   }
 
   override protected lazy val repository: MovementRepository =
@@ -89,8 +91,8 @@ class MessageServiceItSpec
         bind[MongoComponent].toInstance(mongoComponent),
         bind[MessageConnector].toInstance(mockMessageConnector),
         bind[DateTimeService].toInstance(mockDateTimeService),
-        bind[CorrelationIdService].toInstance(mockCorrelationIdService),
-        bind[TraderMovementConnector].toInstance(mockTraderMovementConnector)
+        bind[TraderMovementConnector].toInstance(mockTraderMovementConnector),
+        bind[MovementIdGenerator].toInstance(mockMovementIdGenerator)
       )
       .build()
 
@@ -98,9 +100,9 @@ class MessageServiceItSpec
 
     "must only add messages once, even if we process the message multiple times" in {
 
-      val hc  = HeaderCarrier()
-      val ern = "testErn"
-      val lrn = "lrnie8158976912"
+      val hc                  = HeaderCarrier()
+      val ern                 = "testErn"
+      val lrn                 = "lrnie8158976912"
       val acknowledgeResponse = MessageReceiptSuccessResponse(now, ern, 1)
 
       val ie704    =
@@ -121,8 +123,6 @@ class MessageServiceItSpec
       when(mockDateTimeService.timestamp()).thenReturn(
         now
       )
-      when(mockCorrelationIdService.generateCorrelationId()).thenReturn(newId)
-
       when(mockMessageConnector.getNewMessages(any, any, any)(any))
         .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
 
@@ -149,9 +149,9 @@ class MessageServiceItSpec
 
     "must only allow a single call at a time" in {
 
-      val hc  = HeaderCarrier()
-      val ern = "testErn"
-      val lrn = "lrnie8158976912"
+      val hc                  = HeaderCarrier()
+      val ern                 = "testErn"
+      val lrn                 = "lrnie8158976912"
       val acknowledgeResponse = MessageReceiptSuccessResponse(now, ern, 1)
 
       val ie704    =
@@ -161,7 +161,6 @@ class MessageServiceItSpec
       val promise = Promise[Done]()
 
       when(mockDateTimeService.timestamp()).thenReturn(now)
-      when(mockCorrelationIdService.generateCorrelationId()).thenReturn(newId)
 
       when(mockMessageConnector.getNewMessages(any, any, any)(any))
         .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
@@ -180,9 +179,9 @@ class MessageServiceItSpec
 
     "must not cause throttled requests to increase the throttle timeout" in {
 
-      val hc  = HeaderCarrier()
-      val ern = "testErn"
-      val lrn = "lrnie8158976912"
+      val hc                  = HeaderCarrier()
+      val ern                 = "testErn"
+      val lrn                 = "lrnie8158976912"
       val acknowledgeResponse = MessageReceiptSuccessResponse(now, ern, 1)
 
       val ie704    =
@@ -190,8 +189,6 @@ class MessageServiceItSpec
       val messages = Seq(IE704Message.createFromXml(ie704))
 
       val timeout = app.configuration.get[Duration]("microservice.services.eis.throttle-cutoff")
-
-      when(mockCorrelationIdService.generateCorrelationId()).thenReturn(newId)
 
       when(mockMessageConnector.getNewMessages(any, any, any)(any))
         .thenReturn(Future.successful(GetMessagesResponse(messages, 1)))
@@ -210,10 +207,10 @@ class MessageServiceItSpec
 
     "must not try to create a movement which already exists" in {
 
-      val consignorErn = "testErn"
-      val consigneeErn = "testErn2"
-      val lrn          = "lrnie8158976912"
-      val arc          = "arc"
+      val consignorErn        = "testErn"
+      val consigneeErn        = "testErn2"
+      val lrn                 = "lrnie8158976912"
+      val arc                 = "arc"
       val acknowledgeResponse = MessageReceiptSuccessResponse(now, consignorErn, 1)
 
       val ie801    = XmlMessageGeneratorFactory.generate(
@@ -258,8 +255,6 @@ class MessageServiceItSpec
 
       when(mockDateTimeService.timestamp()).thenReturn(now)
 
-      when(mockCorrelationIdService.generateCorrelationId()).thenAnswer(UUID.randomUUID().toString)
-
       when(mockMessageConnector.getNewMessages(any, any, any)(any)).thenReturn(
         Future.successful(GetMessagesResponse(Seq(messages(1)), 1))
       )
@@ -280,11 +275,11 @@ class MessageServiceItSpec
 
     "must not create a new movement when an existing movement can be found in the database via consignor ERN and LRN" in {
 
-      val hc           = HeaderCarrier()
-      val consignorErn = "testErn"
-      val consigneeErn = "testErn2"
-      val lrn          = "lrnie8158976912"
-      val arc          = "arc"
+      val hc                  = HeaderCarrier()
+      val consignorErn        = "testErn"
+      val consigneeErn        = "testErn2"
+      val lrn                 = "lrnie8158976912"
+      val arc                 = "arc"
       val acknowledgeResponse = MessageReceiptSuccessResponse(now, consignorErn, 1)
 
       val ie801    = XmlMessageGeneratorFactory.generate(
@@ -318,8 +313,6 @@ class MessageServiceItSpec
       )
 
       when(mockDateTimeService.timestamp()).thenReturn(now)
-
-      when(mockCorrelationIdService.generateCorrelationId()).thenAnswer(UUID.randomUUID().toString)
 
       when(mockMessageConnector.getNewMessages(any, any, any)(any)).thenReturn(
         Future.successful(GetMessagesResponse(Seq(messages.head), 1))

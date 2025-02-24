@@ -35,24 +35,23 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionRespon
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnSubmissionRepository
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
 class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with EitherValues with BeforeAndAfterEach {
 
-  implicit val hc: HeaderCarrier    = HeaderCarrier()
   implicit val ec: ExecutionContext = ExecutionContext.global
 
   private val connector               = mock[EISSubmissionConnector]
   private val nrsServiceNew           = mock[NrsService]
-  private val correlationIdService    = mock[CorrelationIdService]
   private val ernSubmissionRepository = mock[ErnSubmissionRepository]
   private val sut                     = new SubmissionMessageServiceImpl(
     connector,
     nrsServiceNew,
-    correlationIdService,
-    ernSubmissionRepository
+    mockAppconfig
+    ernSubmissionRepository,
   )
 
   private val message                  = mock[IE815Message]
@@ -72,7 +71,6 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
     reset(connector, nrsServiceNew, ernSubmissionRepository)
 
     when(message.consignorId).thenReturn(Some("1234"))
-    when(correlationIdService.generateCorrelationId()).thenReturn("correlationId")
     when(connector.submitMessage(any, any, any, any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "IE815", "correlationId"))))
   }

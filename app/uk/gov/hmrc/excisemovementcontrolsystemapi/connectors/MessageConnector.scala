@@ -26,7 +26,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptSuccessResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IEMessage}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, CorrelationIdService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, HttpHeader}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService._
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -44,7 +44,6 @@ import scala.util.control.NonFatal
 class MessageConnector @Inject() (
   configuration: Configuration,
   httpClient: HttpClientV2,
-  correlationIdService: CorrelationIdService,
   messageFactory: IEMessageFactory,
   dateTimeService: DateTimeService,
   auditService: AuditService
@@ -59,13 +58,11 @@ class MessageConnector @Inject() (
   ): Future[GetMessagesResponse] = {
     logger.info(s"[MessageConnector]: Getting new messages")
 
-    val correlationId = correlationIdService.generateCorrelationId()
-    val timestamp     = dateTimeService.timestamp().asStringInMilliseconds
+    val timestamp = dateTimeService.timestamp().asStringInMilliseconds
 
     httpClient
       .put(url"${service.baseUrl}/emcs/messages/v1/show-new-messages?exciseregistrationnumber=$ern")
       .setHeader("X-Forwarded-Host" -> "MDTP")
-      .setHeader("X-Correlation-Id" -> correlationId)
       .setHeader("Source" -> "APIP")
       .setHeader("DateTime" -> timestamp)
       .setHeader("Authorization" -> s"Bearer $bearerToken")
@@ -98,13 +95,11 @@ class MessageConnector @Inject() (
   ): Future[MessageReceiptSuccessResponse] = {
 
     logger.info(s"[MessageConnector]: Acknowledging messages")
-    val correlationId = correlationIdService.generateCorrelationId()
-    val timestamp     = dateTimeService.timestamp().asStringInMilliseconds
+    val timestamp = dateTimeService.timestamp().asStringInMilliseconds
 
     httpClient
       .put(url"${service.baseUrl}/emcs/messages/v1/message-receipt?exciseregistrationnumber=$ern")
       .setHeader("X-Forwarded-Host" -> "MDTP")
-      .setHeader("X-Correlation-Id" -> correlationId)
       .setHeader("Source" -> "APIP")
       .setHeader("DateTime" -> timestamp)
       .setHeader("Authorization" -> s"Bearer $bearerToken")

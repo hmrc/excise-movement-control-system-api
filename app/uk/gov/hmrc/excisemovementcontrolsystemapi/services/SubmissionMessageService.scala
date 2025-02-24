@@ -32,8 +32,8 @@ import scala.util.control.NonFatal
 class SubmissionMessageServiceImpl @Inject() (
   connector: EISSubmissionConnector,
   nrsServiceNew: NrsService,
-  correlationIdService: CorrelationIdService,
   ernSubmissionRepository: ErnSubmissionRepository
+  appConfig: AppConfig
 )(implicit val ec: ExecutionContext)
     extends SubmissionMessageService
     with Logging {
@@ -43,11 +43,8 @@ class SubmissionMessageServiceImpl @Inject() (
     authorisedErn: String
   )(implicit hc: HeaderCarrier): Future[Either[EISErrorResponseDetails, EISSubmissionResponse]] = {
 
-    val correlationId = hc
-      .headers(Seq(HttpHeader.xCorrelationId))
-      .find(_._1 == HttpHeader.xCorrelationId)
-      .map(_._2)
-      .getOrElse(correlationIdService.generateCorrelationId())
+    val correlationId =
+      hc.headers(Seq(HttpHeader.xCorrelationId)).headOption.fold(throw new Exception("No Correlation Id"))(_._2)
 
     for {
       submitMessageResponse <-

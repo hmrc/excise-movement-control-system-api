@@ -21,6 +21,7 @@ import org.apache.pekko.actor.ActorSystem
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, times, verify, when}
 import org.scalatest.BeforeAndAfterEach
+import org.scalatest.concurrent.ScalaFutures.convertScalaFuture
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.HeaderNames
@@ -29,7 +30,7 @@ import play.api.libs.json.{JsArray, JsValue, Json}
 import play.api.mvc.{AnyContent, Result}
 import play.api.test.Helpers.{contentAsJson, contentAsString, defaultAwaitTimeout, status, stubControllerComponents}
 import play.api.test.{FakeHeaders, FakeRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.ValidateAcceptHeaderAction
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{CorrelationIdAction, ValidateAcceptHeaderAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication}
@@ -592,6 +593,7 @@ class GetMessagesControllerSpec
   private def createWithSuccessfulAuth(erns: Set[String] = Set(ern)) =
     new GetMessagesController(
       FakeSuccessAuthentication(erns),
+      new CorrelationIdAction,
       new ValidateAcceptHeaderAction(dateTimeService),
       movementService,
       messageService,
@@ -605,6 +607,7 @@ class GetMessagesControllerSpec
   private def createWithFailedAuth =
     new GetMessagesController(
       FakeFailingAuthentication,
+      new CorrelationIdAction,
       new ValidateAcceptHeaderAction(dateTimeService),
       movementService,
       messageService,
