@@ -25,6 +25,7 @@ import play.api.libs.concurrent.Futures
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.{NrsCircuitBreaker, UnexpectedResponseException, XApiKeyHeaderKey}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.Retrying
 import uk.gov.hmrc.http.HttpErrorFunctions.is5xx
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -44,9 +45,12 @@ class NrsConnector @Inject() (
     extends Retrying
     with Logging {
 
-  def sendToNrs(payload: NrsPayload, correlationId: String)(implicit
+  def sendToNrs(payload: NrsPayload)(implicit
     hc: HeaderCarrier
   ): Future[Done] = {
+
+    val correlationId =
+      hc.headers(Seq(HttpHeader.xCorrelationId)).headOption.fold(throw new Exception("No Correlation Id"))(_._2)
 
     val exciseNumber = payload.metadata.searchKeys.getOrElse("ern", "No ERN present")
 

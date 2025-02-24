@@ -27,6 +27,7 @@ import play.api.http.HeaderNames
 import play.api.http.Status.INTERNAL_SERVER_ERROR
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import play.api.test.{FakeHeaders, FakeRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EISErrorResponseDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
@@ -42,16 +43,20 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with EitherValues with BeforeAndAfterEach {
 
+  val correalationId                = "some-id"
+  implicit val hc: HeaderCarrier    =
+    HeaderCarrierConverter.fromRequest(FakeRequest().withHeaders(HttpHeader.xCorrelationId -> correalationId))
   implicit val ec: ExecutionContext = ExecutionContext.global
 
+  private val mockAppconfig           = mock[AppConfig]
   private val connector               = mock[EISSubmissionConnector]
   private val nrsServiceNew           = mock[NrsService]
   private val ernSubmissionRepository = mock[ErnSubmissionRepository]
   private val sut                     = new SubmissionMessageServiceImpl(
     connector,
     nrsServiceNew,
-    mockAppconfig
     ernSubmissionRepository,
+    mockAppconfig
   )
 
   private val message                  = mock[IE815Message]
@@ -68,7 +73,7 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(connector, nrsServiceNew, ernSubmissionRepository)
+    reset(connector, nrsServiceNew, ernSubmissionRepository, mockAppconfig)
 
     when(message.consignorId).thenReturn(Some("1234"))
     when(connector.submitMessage(any, any, any, any)(any))
@@ -88,7 +93,7 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
           eqTo(message),
           eqTo(xmlBody),
           eqTo(ern),
-          eqTo("correlationId")
+          eqTo(correalationId)
         )(any)
 
         withClue("send to NRS when submitMessage is successful") {
@@ -111,7 +116,7 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
           eqTo(message),
           eqTo(xmlBody),
           eqTo(ern),
-          eqTo("correlationId")
+          eqTo(correalationId)
         )(any)
 
         withClue("send to NRS when submitMessage is successful") {

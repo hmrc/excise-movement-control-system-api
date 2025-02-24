@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.ImplementedBy
 import play.api.Logging
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EISErrorResponseDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
@@ -32,7 +33,7 @@ import scala.util.control.NonFatal
 class SubmissionMessageServiceImpl @Inject() (
   connector: EISSubmissionConnector,
   nrsServiceNew: NrsService,
-  ernSubmissionRepository: ErnSubmissionRepository
+  ernSubmissionRepository: ErnSubmissionRepository,
   appConfig: AppConfig
 )(implicit val ec: ExecutionContext)
     extends SubmissionMessageService

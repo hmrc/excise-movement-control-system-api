@@ -65,7 +65,6 @@ class NrsServiceSpec
   implicit val hc: HeaderCarrier                      = HeaderCarrier(authorization = Some(Authorization(testAuthToken)))
   private val mockNrsConnectorNew                     = mock[NrsConnector]
   private val mockNrsWorkItemRepository               = mock[NRSWorkItemRepository]
-  private val mockCorrelationIdService                = mock[CorrelationIdService]
   private val mockDateTimeService                     = mock[DateTimeService]
   private val mockAuthConnector: AuthConnector        = mock[AuthConnector]
   private val mockLockRepository: MongoLockRepository = mock[MongoLockRepository]
@@ -87,7 +86,6 @@ class NrsServiceSpec
     mockDateTimeService,
     new EmcsUtils,
     new NrsEventIdMapper,
-    mockCorrelationIdService,
     mockLockRepository,
     mockTimeStampSupport,
     testActorSystem,
@@ -103,17 +101,15 @@ class NrsServiceSpec
       mockAuthConnector,
       mockNrsConnectorNew,
       mockDateTimeService,
-      mockCorrelationIdService,
       mockNrsWorkItemRepository,
       mockLockRepository,
       mockTimeStampSupport
     )
 
     when(mockDateTimeService.timestamp()).thenReturn(timeStamp)
-    when(mockCorrelationIdService.generateCorrelationId()).thenReturn(testCorrelationId)
     when(mockAuthConnector.authorise[NonRepudiationIdentityRetrievals](any, any)(any, any)) thenReturn
       Future.successful(testAuthRetrievals)
-    when(mockNrsConnectorNew.sendToNrs(any, any)(any))
+    when(mockNrsConnectorNew.sendToNrs(any)(any))
       .thenReturn(Future.successful(Done))
     when(message.consignorId).thenReturn(Some("ern"))
   }
@@ -156,50 +152,50 @@ class NrsServiceSpec
   "submitNrs" should {
     "submit to NRS and call the repository to mark the workitem as done if it succeeds with ACCEPTED" in {
 
-      when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
+      when(mockNrsConnectorNew.sendToNrs(any())(any())).thenReturn(Future.successful(Done))
 
       when(mockNrsWorkItemRepository.completeAndDelete(any)).thenReturn(Future(true))
 
       val result = await(service.submitNrs(testWorkItem))
 
-      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
+      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload)
 
       result mustBe Done
       verify(mockNrsWorkItemRepository).completeAndDelete(testWorkItem.id)
     }
     "mark the workItem as failed if submission fails with 5xx" in {
-      when(mockNrsConnectorNew.sendToNrs(any(), any())(any()))
+      when(mockNrsConnectorNew.sendToNrs(any())(any()))
         .thenReturn(Future.failed(UnexpectedResponseException(INTERNAL_SERVER_ERROR, "body")))
 
       when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
 
       val result = await(service.submitNrs(testWorkItem))
 
-      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
+      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload)
       result mustBe Done
       verify(mockNrsWorkItemRepository).complete(testWorkItem.id, Failed)
     }
     "mark the workItem as PERMANENTLY failed if submission fails with 4xx" in {
-      when(mockNrsConnectorNew.sendToNrs(any(), any())(any()))
+      when(mockNrsConnectorNew.sendToNrs(any())(any()))
         .thenReturn(Future.failed(UnexpectedResponseException(BAD_REQUEST, "body")))
 
       when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
 
       val result = await(service.submitNrs(testWorkItem))
 
-      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
+      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload)
       result mustBe Done
       verify(mockNrsWorkItemRepository).complete(testWorkItem.id, PermanentlyFailed)
     }
     "mark the workItem as PERMANENTLY failed if submission fails with a different status" in {
-      when(mockNrsConnectorNew.sendToNrs(any(), any())(any()))
+      when(mockNrsConnectorNew.sendToNrs(any())(any()))
         .thenReturn(Future.failed(UnexpectedResponseException(SEE_OTHER, "body")))
 
       when(mockNrsWorkItemRepository.complete(any, any())).thenReturn(Future(true))
 
       val result = await(service.submitNrs(testWorkItem))
 
-      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
+      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload)
       result mustBe Done
       verify(mockNrsWorkItemRepository).complete(testWorkItem.id, PermanentlyFailed)
     }
@@ -225,7 +221,7 @@ class NrsServiceSpec
 
     "call to submit the NRS data and return true if it processed a thing successfully" in {
 
-      when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
+      when(mockNrsConnectorNew.sendToNrs(any())(any())).thenReturn(Future.successful(Done))
 
       when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
         .thenReturn(Future.successful(Some(testWorkItem)))
@@ -233,13 +229,13 @@ class NrsServiceSpec
 
       val result = await(service.processSingleNrs())
 
-      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
+      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload)
       verify(mockNrsWorkItemRepository).completeAndDelete(testWorkItem.id)
       result mustBe true
     }
     "call to submit the NRS data and return true if it tried to process a thing but failed" in {
 
-      when(mockNrsConnectorNew.sendToNrs(any(), any())(any()))
+      when(mockNrsConnectorNew.sendToNrs(any())(any()))
         .thenReturn(Future.failed(UnexpectedResponseException(INTERNAL_SERVER_ERROR, "body")))
 
       when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
@@ -248,13 +244,13 @@ class NrsServiceSpec
 
       val result = await(service.processSingleNrs())
 
-      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload, testCorrelationId)
+      verify(mockNrsConnectorNew, times(1)).sendToNrs(testNrsPayload)
       verify(mockNrsWorkItemRepository).complete(testWorkItem.id, Failed)
       result mustBe true
     }
     "if the connector call takes less than 1 second to finish, should take at least 1 second to finish" in {
 
-      when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(Future.successful(Done))
+      when(mockNrsConnectorNew.sendToNrs(any())(any())).thenReturn(Future.successful(Done))
       when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
         .thenReturn(Future.successful(Some(testWorkItem)))
       when(mockNrsWorkItemRepository.completeAndDelete(any)).thenReturn(Future(true))
@@ -273,7 +269,7 @@ class NrsServiceSpec
         Thread.sleep(1500)
         Done
       }
-      when(mockNrsConnectorNew.sendToNrs(any(), any())(any())).thenReturn(future)
+      when(mockNrsConnectorNew.sendToNrs(any())(any())).thenReturn(future)
       when(mockNrsWorkItemRepository.pullOutstanding(any(), any()))
         .thenReturn(Future.successful(Some(testWorkItem)))
       when(mockNrsWorkItemRepository.completeAndDelete(any)).thenReturn(Future(true))
