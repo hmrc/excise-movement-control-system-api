@@ -1258,7 +1258,6 @@ class MessageServiceSpec
         val movement = Movement(None, "LRN", "Consignor", None)
         when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
         when(movementService.saveMovement(any, any, any, any)(any)).thenReturn(Future.successful(Done))
-        when(movementRepository.migrateLastUpdated(any)).thenReturn(Future.successful(Done))
         when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
         when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
         when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
@@ -1278,7 +1277,6 @@ class MessageServiceSpec
         val movement = Movement(None, "LRN", "Consignor", None)
         when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
         when(movementService.saveMovement(any, any, any, any)(any)).thenReturn(Future.successful(Done))
-        when(movementRepository.migrateLastUpdated(any)).thenReturn(Future.successful(Done))
         when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
         when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
         when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
@@ -1298,7 +1296,6 @@ class MessageServiceSpec
           val movement = Movement(None, "LRN", "Consignor", None)
           when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
           when(movementService.saveMovement(any, any, any, any)(any)).thenReturn(Future.successful(Done))
-          when(movementRepository.migrateLastUpdated(any)).thenReturn(Future.successful(Done))
           when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
           when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
           when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
@@ -1309,47 +1306,6 @@ class MessageServiceSpec
 
           verify(messageConnector, never).getNewMessages(any, any, any)(any)
           verify(ernRetrievalRepository, never).setLastRetrieved(any, any)
-        }
-      }
-    }
-    "last retrieved is after the migrate lastUpdated cut-off" when {
-      "we try to migrate lastUpdated" should {
-        "does not migrate lastUpdated" in {
-          val ern      = "testErn"
-          val movement = Movement(None, "LRN", "Consignor", None)
-          when(movementRepository.migrateLastUpdated(any)).thenReturn(Future.successful(Done))
-          when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
-          when(movementService.saveMovement(any, any, any, any)(any)).thenReturn(Future.successful(Done))
-          when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
-          when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
-          when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
-          when(messageConnector.getNewMessages(any, any, any)(any))
-            .thenReturn(Future.successful(GetMessagesResponse(Seq.empty, 0)))
-
-          messageService.updateMessages(ern, Some(migrateCutoffTimestamp.plus(5, ChronoUnit.MINUTES))).futureValue
-
-          verify(movementRepository, never).migrateLastUpdated(any)
-        }
-      }
-    }
-    "last retrieved is before the migrate lastUpdated cut-off" when {
-      "we try to migrate lastUpdated" should {
-        "does migrate lastUpdated" in {
-          val ern      = "testErn"
-          val movement = Movement(None, "LRN", "Consignor", None)
-          when(movementRepository.migrateLastUpdated(any)).thenReturn(Future.successful(Done))
-          when(movementRepository.getAllBy(any)).thenReturn(Future.successful(Seq(movement)))
-          when(movementService.saveMovement(any, any, any, any)(any)).thenReturn(Future.successful(Done))
-          when(mongoLockRepository.takeLock(any, any, any)).thenReturn(Future.successful(Some(lock)))
-          when(mongoLockRepository.releaseLock(any, any)).thenReturn(Future.unit)
-          when(ernRetrievalRepository.setLastRetrieved(any, any)).thenReturn(Future.successful(None))
-          when(boxIdRepository.getBoxIds(any)).thenReturn(Future.successful(Set.empty))
-          when(messageConnector.getNewMessages(any, any, any)(any))
-            .thenReturn(Future.successful(GetMessagesResponse(Seq.empty, 0)))
-
-          messageService.updateMessages(ern, Some(migrateCutoffTimestamp.minus(5, ChronoUnit.MINUTES))).futureValue
-
-          verify(movementRepository).migrateLastUpdated(any)
         }
       }
     }

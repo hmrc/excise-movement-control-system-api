@@ -24,7 +24,6 @@ import org.bson.BsonMaximumSizeExceededException
 import org.mongodb.scala.MongoCommandException
 import play.api.{Configuration, Logging}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, TraderMovementConnector}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnRetrievalRepository, MovementRepository}
@@ -54,7 +53,6 @@ class MessageService @Inject() (
   auditService: AuditService,
   mongoLockRepository: MongoLockRepository,
   metricRegistry: MetricRegistry,
-  messageFactory: IEMessageFactory,
   movementService: MovementService
 )(implicit executionContext: ExecutionContext)
     extends Logging {
@@ -65,9 +63,6 @@ class MessageService @Inject() (
 
   private val throttleCutoff: FiniteDuration =
     configuration.get[FiniteDuration]("microservice.services.eis.throttle-cutoff")
-
-  private val migrateLastUpdatedCutoff: Instant =
-    Instant.parse(configuration.get[String]("migrateLastUpdatedCutoff"))
 
   def updateAllMessages(erns: Set[String])(implicit hc: HeaderCarrier): Future[Done] =
     erns.toSeq
@@ -88,13 +83,6 @@ class MessageService @Inject() (
     lockService
       .withLock {
         val now = dateTimeService.timestamp()
-        // Temporary migration code to update movement's lastUpdated
-        if (shouldMigrateLastUpdated(lastRetrieved)) {
-          movementRepository.migrateLastUpdated(ern).recover { case NonFatal(error) =>
-            logger.warn(s"[MessageService]: Failed to migrate lastUpdated", error)
-            Done
-          }
-        }
         if (shouldProcessNewMessages(lastRetrieved, now)) {
           for {
             _ <- processNewMessages(ern, jobId)
@@ -106,10 +94,6 @@ class MessageService @Inject() (
       }
       .map(_.getOrElse(UpdateOutcome.Locked))
   }
-
-  private def shouldMigrateLastUpdated(maybeLastRetrieved: Option[Instant]): Boolean =
-    //noinspection MapGetOrElseBoolean
-    maybeLastRetrieved.map(_.isBefore(migrateLastUpdatedCutoff)).getOrElse(false)
 
   private def shouldProcessNewMessages(maybeLastRetrieved: Option[Instant], now: Instant): Boolean = {
     val cutoffTime = now.minus(throttleCutoff.length, throttleCutoff.unit.toChronoUnit)
