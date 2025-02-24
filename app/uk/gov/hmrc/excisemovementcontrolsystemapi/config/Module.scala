@@ -20,7 +20,6 @@ import play.api.inject.Binding
 import play.api.{Configuration, Environment}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsCircuitBreakerProvider
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.NrsCircuitBreaker
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MessageRecipientMigration, MovementMigration}
 import uk.gov.hmrc.mongo.metrix.MetricOrchestrator
 
 import java.time.Clock
@@ -34,15 +33,14 @@ class Module extends play.api.inject.Module {
       bind[Clock].toInstance(Clock.systemUTC()),
       bind[MetricOrchestrator].toProvider[MetricsProvider],
       bind[NrsCircuitBreaker].toProvider[NrsCircuitBreakerProvider]
-    ) ++ migrationBindings(configuration)
+    )
 
-  private def migrationBindings(configuration: Configuration): Seq[Binding[_]] =
-    if (configuration.get[Boolean]("migrations-enabled")) {
-      Seq(
-        bind[MovementMigration].toSelf.eagerly(),
-        bind[MessageRecipientMigration].toSelf.eagerly()
-      )
-    } else {
-      Seq.empty
-    }
+//  private def migrationBindings(configuration: Configuration): Seq[Binding[_]] =
+//    if (configuration.get[Boolean]("migrations-enabled")) {
+//      Seq(
+//        bind[MessageRecipientMigration].toSelf.eagerly()
+//      )
+//    } else {
+//      Seq.empty
+//    }
 }

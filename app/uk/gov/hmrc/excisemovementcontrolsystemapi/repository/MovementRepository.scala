@@ -52,9 +52,7 @@ class MovementRepository @Inject() (
       indexes = mongoIndexes(appConfig.movementTTL),
       extraCodecs = Seq(
         Codecs.playFormatCodec(ErnAndLastReceived.format),
-        Codecs.playFormatCodec(MessageNotification.format),
-        Codecs.playFormatCodec(ProblemMovement.format),
-        Codecs.playFormatCodec(Total.format)
+        Codecs.playFormatCodec(MessageNotification.format)
       ),
       replaceIndexes = true
     ) {
@@ -162,30 +160,30 @@ class MovementRepository @Inject() (
       .headOption()
   }
 
-  def migrateLastUpdated(ern: String): Future[Done] = Mdc.preservingMdc {
-    val ernFilters = getErnFilters(Seq(ern))
-    collection
-      .updateMany(
-        Filters.and(
-          Filters.and(Filters.exists("messages"), Filters.not(Filters.size("messages", 0))),
-          Filters.or(ernFilters: _*)
-        ),
-        Seq(
-          Aggregates.set(
-            Field(
-              "lastUpdated",
-              Json
-                .obj(
-                  "$max" -> "$messages.createdOn"
-                )
-                .toDocument()
-            )
-          )
-        )
-      )
-      .toFuture()
-      .as(Done)
-  }
+//  def migrateLastUpdated(ern: String): Future[Done] = Mdc.preservingMdc {
+//    val ernFilters = getErnFilters(Seq(ern))
+//    collection
+//      .updateMany(
+//        Filters.and(
+//          Filters.and(Filters.exists("messages"), Filters.not(Filters.size("messages", 0))),
+//          Filters.or(ernFilters: _*)
+//        ),
+//        Seq(
+//          Aggregates.set(
+//            Field(
+//              "lastUpdated",
+//              Json
+//                .obj(
+//                  "$max" -> "$messages.createdOn"
+//                )
+//                .toDocument()
+//            )
+//          )
+//        )
+//      )
+//      .toFuture()
+//      .as(Done)
+//  }
 
   def getErnsAndLastReceived: Future[Map[String, Instant]] = Mdc.preservingMdc {
     collection
