@@ -11,15 +11,14 @@ GET           /movements/:movementId/messages/:messageId        uk.gov.hmrc.exci
 
 POST          /traders/pre-validate                             uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.PreValidateTraderController.submit
 
-POST       /erns/:ern/subscription                              uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubscribeErnsController.subscribeErn(ern: String)
-DELETE     /erns/:ern/subscription                              uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubscribeErnsController.unsubscribeErn(ern: String)
+POST          /erns/:ern/subscription                           uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubscribeErnsController.subscribeErn(ern: String)
+DELETE        /erns/:ern/subscription                           uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubscribeErnsController.unsubscribeErn(ern: String)
 
-POST          /inject/submit-batch                              uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.InjectController.submitBatch()
 POST          /admin/notifications/subscribe                    uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.SubscribeErnsAdminController.subscribeErns()
 
 DELETE        /admin/erns                                       uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.RemoveErnsAdminController.removeErns()
 
-GET        /admin/movements/:movementId/details                 uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.AdminDetailsController.getMovementDetails(movementId: String)
+GET           /admin/movements/:movementId/details              uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.AdminDetailsController.getMovementDetails(movementId: String)
 
-GET        /admin/:ern/summary                                  uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.RemoveErnsAdminController.findAllReferencesToErn(ern: String)
+GET           /admin/:ern/summary                               uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.RemoveErnsAdminController.findAllReferencesToErn(ern: String)
 
