@@ -43,17 +43,17 @@ import scala.concurrent._
 
 @Singleton
 class NrsService @Inject() (
-                             override val authConnector: AuthConnector,
-                             nrsConnectorNew: NrsConnector,
-                             nrsWorkItemRepository: NRSWorkItemRepository,
-                             dateTimeService: DateTimeService,
-                             emcsUtils: EmcsUtils,
-                             nrsEventIdMapper: NrsEventIdMapper,
-                             correlationIdService: CorrelationIdService,
-                             mongoLockRepository: MongoLockRepository,
-                             timestampSupport: TimestampSupport,
-                             actorSystem: ActorSystem,
-                             configuration: Configuration
+  override val authConnector: AuthConnector,
+  nrsConnectorNew: NrsConnector,
+  nrsWorkItemRepository: NRSWorkItemRepository,
+  dateTimeService: DateTimeService,
+  emcsUtils: EmcsUtils,
+  nrsEventIdMapper: NrsEventIdMapper,
+  correlationIdService: CorrelationIdService,
+  mongoLockRepository: MongoLockRepository,
+  timestampSupport: TimestampSupport,
+  actorSystem: ActorSystem,
+  configuration: Configuration
 )(implicit ec: ExecutionContext)
     extends AuthorisedFunctions
     with Logging {
