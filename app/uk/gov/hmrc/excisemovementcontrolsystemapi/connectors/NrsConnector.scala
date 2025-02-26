@@ -25,12 +25,14 @@ import play.api.libs.concurrent.Futures
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.{NrsCircuitBreaker, UnexpectedResponseException, XApiKeyHeaderKey}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.Retrying
 import uk.gov.hmrc.http.HttpErrorFunctions.is5xx
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
 
+import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -44,9 +46,24 @@ class NrsConnector @Inject() (
     extends Retrying
     with Logging {
 
-  def sendToNrs(payload: NrsPayload, correlationId: String)(implicit
+  private def enforceCorrelationId(hc: HeaderCarrier): HeaderCarrier =
+    hc.headers(Seq(HttpHeader.xCorrelationId)).headOption match {
+      case Some(_) => hc
+      case None    =>
+        val correlationId = UUID.randomUUID().toString
+        logger.info(s"generated new correlation id: $correlationId")
+        hc.withExtraHeaders(HttpHeader.xCorrelationId -> correlationId)
+    }
+
+  def sendToNrs(payload: NrsPayload)(implicit
     hc: HeaderCarrier
   ): Future[Done] = {
+
+    val hc2           = enforceCorrelationId(hc)
+    val correlationId = hc2
+      .headers(Seq(HttpHeader.xCorrelationId))
+      .headOption
+      .fold(hc2.extraHeaders.filter(x => x._1 == HttpHeader.xCorrelationId).head._2)(x => x._2)
 
     val exciseNumber = payload.metadata.searchKeys.getOrElse("ern", "No ERN present")
 
@@ -63,7 +80,7 @@ class NrsConnector @Inject() (
     nrsCircuitBreaker.breaker
       .withCircuitBreaker(
         httpClient
-          .post(url"$nrsSubmissionUrl")
+          .post(url"$nrsSubmissionUrl")(hc2)
           .setHeader("Content-Type" -> "application/json")
           .setHeader(XApiKeyHeaderKey -> appConfig.nrsApiKey)
           .withBody(payload.toJsObject)

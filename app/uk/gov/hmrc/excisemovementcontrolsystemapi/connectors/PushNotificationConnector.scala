@@ -26,11 +26,13 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
 
+import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
@@ -43,14 +45,24 @@ class PushNotificationConnector @Inject() (
     extends ResponseHandler
     with Logging {
 
+  private def enforceCorrelationId(hc: HeaderCarrier): HeaderCarrier =
+    hc.headers(Seq(HttpHeader.xCorrelationId)).headOption match {
+      case Some(_) => hc
+      case None    =>
+        val correlationId = UUID.randomUUID().toString
+        logger.info(s"generated new correlation id: $correlationId")
+        hc.withExtraHeaders(HttpHeader.xCorrelationId -> correlationId)
+    }
+
   def getDefaultBoxId(
     clientId: String
   )(implicit hc: HeaderCarrier): Future[Either[Result, SuccessBoxNotificationResponse]] = {
 
+    val hc2 = enforceCorrelationId(hc)
     val url = s"${appConfig.pushPullNotificationsHost}/box"
 
     httpClient
-      .get(url"$url?boxName=${Constants.BoxName}&clientId=$clientId")
+      .get(url"$url?boxName=${Constants.BoxName}&clientId=$clientId")(hc2)
       .execute[HttpResponse]
       .map { response =>
         extractIfSuccessful[SuccessBoxNotificationResponse](response)
@@ -75,11 +87,11 @@ class PushNotificationConnector @Inject() (
     boxId: String,
     notification: Notification
   )(implicit hc: HeaderCarrier): Future[NotificationResponse] = {
-
+    val hc2 = enforceCorrelationId(hc)
     val url = appConfig.pushPullNotificationsUri(boxId)
 
     httpClient
-      .post(url"$url")
+      .post(url"$url")(hc2)
       .withBody(Json.toJson(notification))
       .setHeader(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON)
       .execute[HttpResponse]

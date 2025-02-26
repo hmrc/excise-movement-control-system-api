@@ -27,7 +27,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresent
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ExciseTraderETDSRequest, PreValidateTraderRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{ExciseTraderValidationETDSResponse, PreValidateTraderEISResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{CorrelationIdService, HttpHeader}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
 import uk.gov.hmrc.http.client.HttpClientV2
@@ -39,7 +39,6 @@ import scala.util.control.NonFatal
 
 class PreValidateTraderConnector @Inject() (
   httpClient: HttpClientV2,
-  correlationIdService: CorrelationIdService,
   appConfig: AppConfig,
   metrics: MetricRegistry,
   dateTimeService: DateTimeService
@@ -55,7 +54,9 @@ class PreValidateTraderConnector @Inject() (
 
     val timer = metrics.timer("emcs.prevalidatetrader.connector.timer").time()
 
-    val correlationId   = correlationIdService.generateCorrelationId()
+    val correlationId =
+      hc.headers(Seq(HttpHeader.xCorrelationId)).headOption.fold(throw new Exception("No Correlation Id"))(_._2)
+
     val timestamp       = dateTimeService.timestamp()
     val createdDateTime = timestamp.asStringInMilliseconds
 
@@ -94,11 +95,8 @@ class PreValidateTraderConnector @Inject() (
 
     val timer = metrics.timer("etds.prevalidatetrader.connector.timer").time()
 
-    val correlationId = hc
-      .headers(Seq(HttpHeader.xCorrelationId))
-      .find(_._1 == HttpHeader.xCorrelationId)
-      .map(_._2)
-      .getOrElse(correlationIdService.generateCorrelationId())
+    val correlationId =
+      hc.headers(Seq(HttpHeader.xCorrelationId)).headOption.fold(throw new Exception("No Correlation Id"))(_._2)
 
     val timestamp       = dateTimeService.timestamp()
     val createdDateTime = timestamp.asStringInMilliseconds

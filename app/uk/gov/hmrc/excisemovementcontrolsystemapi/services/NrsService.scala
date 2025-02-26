@@ -49,7 +49,6 @@ class NrsService @Inject() (
   dateTimeService: DateTimeService,
   emcsUtils: EmcsUtils,
   nrsEventIdMapper: NrsEventIdMapper,
-  correlationIdService: CorrelationIdService,
   mongoLockRepository: MongoLockRepository,
   timestampSupport: TimestampSupport,
   actorSystem: ActorSystem,
@@ -99,7 +98,7 @@ class NrsService @Inject() (
 
   def submitNrs(workItem: WorkItem[NrsSubmissionWorkItem])(implicit hc: HeaderCarrier): Future[Done] =
     nrsConnectorNew
-      .sendToNrs(workItem.item.payload, correlationIdService.generateCorrelationId())
+      .sendToNrs(workItem.item.payload)
       .flatMap { _ =>
         nrsWorkItemRepository
           .completeAndDelete(workItem.id)

@@ -28,6 +28,7 @@ import play.api.mvc.AnyContent
 import play.api.mvc.Results.BadRequest
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, contentAsJson, defaultAwaitTimeout, status, stubControllerComponents}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.CorrelationIdAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, TraderType}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
@@ -60,6 +61,7 @@ class GetMovementsControllerSpec
 
   private val controller = new GetMovementsController(
     FakeSuccessAuthentication(Set(ern)),
+    new CorrelationIdAction,
     FakeValidateErnParameterSuccessAction,
     FakeValidateUpdatedSinceSuccessAction,
     FakeValidateTraderTypeSuccessAction,
@@ -77,6 +79,7 @@ class GetMovementsControllerSpec
   private def createControllerWithErnParameterError =
     new GetMovementsController(
       FakeSuccessAuthentication(Set(ern)),
+      new CorrelationIdAction,
       FakeValidateErnParameterFailureAction,
       FakeValidateUpdatedSinceSuccessAction,
       FakeValidateTraderTypeSuccessAction,
@@ -91,6 +94,7 @@ class GetMovementsControllerSpec
   private def createWithAuthActionFailure =
     new GetMovementsController(
       FakeFailingAuthentication,
+      new CorrelationIdAction,
       FakeValidateErnParameterSuccessAction,
       FakeValidateUpdatedSinceSuccessAction,
       FakeValidateTraderTypeSuccessAction,
@@ -105,6 +109,7 @@ class GetMovementsControllerSpec
   private val createWithUpdateSinceActionFailure =
     new GetMovementsController(
       FakeSuccessAuthentication(Set(ern)),
+      new CorrelationIdAction,
       FakeValidateErnParameterSuccessAction,
       FakeValidateUpdatedSinceFailureAction,
       FakeValidateTraderTypeSuccessAction,
@@ -119,6 +124,7 @@ class GetMovementsControllerSpec
   private val createWithTraderTypeActionFailure =
     new GetMovementsController(
       FakeSuccessAuthentication(Set(ern)),
+      new CorrelationIdAction,
       FakeValidateErnParameterSuccessAction,
       FakeValidateUpdatedSinceFailureAction,
       FakeValidateTraderTypeSuccessAction,
@@ -241,6 +247,7 @@ class GetMovementsControllerSpec
 
           val controller = new GetMovementsController(
             FakeSuccessAuthenticationMultiErn(Set(ern, "ern2")),
+            new CorrelationIdAction,
             FakeValidateErnParameterSuccessAction,
             FakeValidateUpdatedSinceSuccessAction,
             FakeValidateTraderTypeSuccessAction,
@@ -306,6 +313,7 @@ class GetMovementsControllerSpec
 
           val controller = new GetMovementsController(
             FakeSuccessAuthenticationMultiErn(Set(ern, localErn)),
+            new CorrelationIdAction,
             FakeValidateErnParameterSuccessAction,
             FakeValidateUpdatedSinceSuccessAction,
             FakeValidateTraderTypeSuccessAction,
@@ -543,6 +551,7 @@ class GetMovementsControllerSpec
       "request is valid and there are multiple authorised ERNS" in {
         val controller = new GetMovementsController(
           FakeSuccessAuthenticationMultiErn(Set(ern, "otherErn")),
+          new CorrelationIdAction,
           FakeValidateErnParameterSuccessAction,
           FakeValidateUpdatedSinceSuccessAction,
           FakeValidateTraderTypeSuccessAction,

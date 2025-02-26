@@ -31,6 +31,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.CorrelationIdAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeAuthentication
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NotificationsService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -183,6 +184,7 @@ class SubscribeErnsControllerSpec
   private def createWithSuccessfulAuth =
     new SubscribeErnsController(
       FakeSuccessAuthentication(Set(ern)),
+      new CorrelationIdAction,
       stubControllerComponents(),
       mockNotificationsService,
       mockDateTimeService,
@@ -192,6 +194,7 @@ class SubscribeErnsControllerSpec
   private def createWithFailingAuth =
     new SubscribeErnsController(
       FakeFailingAuthentication,
+      new CorrelationIdAction,
       stubControllerComponents(),
       mockNotificationsService,
       mockDateTimeService,
