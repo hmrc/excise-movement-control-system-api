@@ -35,9 +35,10 @@ response=$(curl --location -g --request POST 'http://localhost:9607/application'
     "name": "TEST APP",
     "access": {
         "accessType": "STANDARD",
-        "redirectUris": [],
-        "overrides": []
-    },
+         "redirectUris": [],
+         "postLogoutRedirectUris": [],
+         "overrides": []
+     },
     "environment": "SANDBOX",
     "collaborators": [
         {
