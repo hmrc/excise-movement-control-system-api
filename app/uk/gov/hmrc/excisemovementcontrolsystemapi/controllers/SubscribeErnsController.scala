@@ -69,9 +69,11 @@ class SubscribeErnsController @Inject() (
               )
             )
           )
-        )
-      )
-    }
+        }
+
+      } else {
+        Future.successful(NotFound)
+      }
   }
 
   def unsubscribeErn(ern: String): Action[AnyContent] = (authAction andThen correlationIdAction).async {

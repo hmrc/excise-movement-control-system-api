@@ -33,7 +33,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.CorrelationIdAction
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeAuthentication
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NotificationsService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{HttpHeader, NotificationsService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 
 import java.time.Instant
@@ -62,15 +62,14 @@ class SubscribeErnsControllerSpec
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(mockNotificationsService, mockDateTimeService, mockAppConfig)
+    reset(mockNotificationsService, mockDateTimeService)
   }
 
   "subscribeErn" must {
     "subscribe the given ern to the clientId" in {
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
-
       when(mockNotificationsService.subscribeErns(any, any)(any)).thenReturn(Future.successful("boxId"))
-
+      when(mockAppConfig.subscribeErnsEnabled).thenReturn(true)
       val request = FakeRequest(routes.SubscribeErnsController.subscribeErn(ern))
         .withHeaders(
           HeaderNames.CONTENT_TYPE -> "application/json",
@@ -86,8 +85,8 @@ class SubscribeErnsControllerSpec
 
     "subscribe return Forbidden due to mismatch between ern in request and one passed in" in {
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
-
       when(mockNotificationsService.subscribeErns(any, any)(any)).thenReturn(Future.successful("boxId"))
+      when(mockAppConfig.subscribeErnsEnabled).thenReturn(true)
 
       val request = FakeRequest(routes.SubscribeErnsController.subscribeErn(ern))
         .withHeaders(
