@@ -41,7 +41,7 @@ class CommonFormatsSpec extends PlaySpec with CommonFormats {
     "serialize into a list" in {
       val input          = NonEmptyList(1, List(2, 3))
       val expectedResult = Json.toJson(List(1, 2, 3))
-      val result         = Json.toJson(input)(nonEmptyListFormat[Int].writes)
+      val result         = Json.toJson(input)(nonEmptyListFormat[Int].writes(_))
       result mustBe expectedResult
     }
   }
@@ -64,7 +64,7 @@ class CommonFormatsSpec extends PlaySpec with CommonFormats {
     "serialize into a list" in {
       val input          = NonEmptySeq(1, Seq(2, 3))
       val expectedResult = Json.toJson(Seq(1, 2, 3))
-      val result         = Json.toJson(input)(notEmptySeqFormat[Int].writes)
+      val result         = Json.toJson(input)(notEmptySeqFormat[Int].writes(_))
       result mustBe expectedResult
     }
   }
