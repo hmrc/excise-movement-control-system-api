@@ -76,7 +76,7 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
     reset(connector, nrsServiceNew, ernSubmissionRepository, mockAppconfig)
 
     when(message.consignorId).thenReturn(Some("1234"))
-    when(connector.submitMessage(any, any, any, any)(any))
+    when(connector.submitMessage(any, any, any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "IE815", "correlationId"))))
   }
 
@@ -92,8 +92,7 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
         verify(connector).submitMessage(
           eqTo(message),
           eqTo(xmlBody),
-          eqTo(ern),
-          eqTo(correalationId)
+          eqTo(ern)
         )(any)
 
         withClue("send to NRS when submitMessage is successful") {
@@ -115,8 +114,7 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
         verify(connector).submitMessage(
           eqTo(message),
           eqTo(xmlBody),
-          eqTo(ern),
-          eqTo(correalationId)
+          eqTo(ern)
         )(any)
 
         withClue("send to NRS when submitMessage is successful") {
@@ -136,7 +134,7 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
         val testError =
           EISErrorResponseDetails(INTERNAL_SERVER_ERROR, Instant.now(), "message", "debug", "cId", None)
 
-        when(connector.submitMessage(any, any, any, any)(any))
+        when(connector.submitMessage(any, any, any)(any))
           .thenReturn(Future.successful(Left(testError)))
 
         val result = await(sut.submit(request, ern))

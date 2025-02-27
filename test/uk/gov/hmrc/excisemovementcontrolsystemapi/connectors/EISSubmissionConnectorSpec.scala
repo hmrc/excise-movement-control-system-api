@@ -27,15 +27,18 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.Status._
 import play.api.libs.json.Json
+import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{EISHeaderTestSupport, StringSupport}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EISErrorResponseDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
@@ -48,7 +51,10 @@ class EISSubmissionConnectorSpec
     with BeforeAndAfterEach
     with EitherValues {
 
-  protected implicit val hc: HeaderCarrier    = HeaderCarrier()
+  private val emcsCorrelationId = "1234566"
+
+  protected implicit val hc: HeaderCarrier    =
+    HeaderCarrierConverter.fromRequest(FakeRequest().withHeaders(HttpHeader.xCorrelationId -> emcsCorrelationId))
   protected implicit val ec: ExecutionContext = ExecutionContext.global
 
   private val mockHttpClient     = mock[HttpClientV2]
@@ -61,7 +67,6 @@ class EISSubmissionConnectorSpec
   private val metrics = mock[MetricRegistry](RETURNS_DEEP_STUBS)
 
   private val connector               = new EISSubmissionConnector(mockHttpClient, emcsUtils, appConfig, metrics, dateTimeService)
-  private val emcsCorrelationId       = "1234566"
   private val xml                     = <IE815></IE815>
   private val controlWrappedXml: Elem =
     <con:Control xmlns:con="http://www.govtalk.gov.uk/taxation/InternationalTrade/Common/ControlDocument">
@@ -235,5 +240,5 @@ class EISSubmissionConnectorSpec
     message: IEMessage,
     authErn: String
   ): Future[Either[EISErrorResponseDetails, EISSubmissionResponse]] =
-    connector.submitMessage(message, xml.toString(), authErn, emcsCorrelationId)
+    connector.submitMessage(message, xml.toString(), authErn)
 }

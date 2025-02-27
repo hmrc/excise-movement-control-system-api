@@ -42,21 +42,16 @@ class SubmissionMessageServiceImpl @Inject() (
   def submit(
     request: ParsedXmlRequest[_],
     authorisedErn: String
-  )(implicit hc: HeaderCarrier): Future[Either[EISErrorResponseDetails, EISSubmissionResponse]] = {
-
-    val correlationId =
-      hc.headers(Seq(HttpHeader.xCorrelationId)).headOption.fold(throw new Exception("No Correlation Id"))(_._2)
-
+  )(implicit hc: HeaderCarrier): Future[Either[EISErrorResponseDetails, EISSubmissionResponse]] =
     for {
       submitMessageResponse <-
-        connector.submitMessage(request.ieMessage, request.body.toString, authorisedErn, correlationId)
+        connector.submitMessage(request.ieMessage, request.body.toString, authorisedErn)
       isSuccess              = submitMessageResponse.isRight
       _                      = if (isSuccess) ernSubmissionRepository.save(authorisedErn).recover { case NonFatal(error) =>
                                  logger.warn(s"Failed to save ERN to ERNSubmissionRepository", error)
                                }
       _                      = if (isSuccess) nrsServiceNew.makeWorkItemAndQueue(request, authorisedErn)
     } yield submitMessageResponse
-  }
 }
 
 @ImplementedBy(classOf[SubmissionMessageServiceImpl])
