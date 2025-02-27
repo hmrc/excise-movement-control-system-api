@@ -34,7 +34,10 @@ import HttpReads.Implicits._
 import play.api.http.Status.INTERNAL_SERVER_ERROR
 import play.api.libs.json.{Json, Reads}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse.format
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
+
+import java.util.UUID
 
 class EISSubmissionConnector @Inject() (
   httpClient: HttpClientV2,
@@ -46,6 +49,15 @@ class EISSubmissionConnector @Inject() (
     extends EISSubmissionHeaders
     with Logging
     with HttpErrorFunctions {
+
+  private def enforceCorrelationId(hc: HeaderCarrier): (HeaderCarrier, String) =
+    hc.headers(Seq(HttpHeader.xCorrelationId)).headOption match {
+      case Some(id) => (hc, id._2)
+      case None     =>
+        val correlationId = UUID.randomUUID().toString
+        logger.info(s"generated new correlation id: $correlationId")
+        (hc.withExtraHeaders(HttpHeader.xCorrelationId -> correlationId), correlationId)
+    }
 
   implicit def errorRead(status: Int): Reads[EISErrorResponseDetails] =
     Json
@@ -60,22 +72,21 @@ class EISSubmissionConnector @Inject() (
   def submitMessage(
     message: IEMessage,
     requestXmlAsString: String,
-    authorisedErn: String,
-    correlationId: String
+    authorisedErn: String
   )(implicit hc: HeaderCarrier): Future[Either[EISErrorResponseDetails, EISSubmissionResponse]] = {
     logger.info("[EISSubmissionConnector]: Submitting a message to EIS")
-
-    val timer           = metrics.timer("emcs.submission.connector.timer").time()
-    val timestamp       = dateTimeService.timestamp()
-    val createdDateTime = timestamp.asStringInMilliseconds
-    val wrappedXml      = wrapXmlInControlDocument(message.messageIdentifier, requestXmlAsString, authorisedErn)
-    val messageType     = message.messageType
-    val encodedMessage  = emcsUtils.encode(wrappedXml.toString)
+    val (hc2, correlationId) = enforceCorrelationId(hc)
+    val timer                = metrics.timer("emcs.submission.connector.timer").time()
+    val timestamp            = dateTimeService.timestamp()
+    val createdDateTime      = timestamp.asStringInMilliseconds
+    val wrappedXml           = wrapXmlInControlDocument(message.messageIdentifier, requestXmlAsString, authorisedErn)
+    val messageType          = message.messageType
+    val encodedMessage       = emcsUtils.encode(wrappedXml.toString)
 
     val eisRequest = EISSubmissionRequest(authorisedErn, messageType, encodedMessage)
 
     httpClient
-      .post(url"${appConfig.emcsReceiverMessageUrl}")
+      .post(url"${appConfig.emcsReceiverMessageUrl}")(hc2)
       .setHeader(build(correlationId, createdDateTime, appConfig.submissionBearerToken): _*)
       .withBody(Json.toJson(eisRequest))
       .execute[HttpResponse]

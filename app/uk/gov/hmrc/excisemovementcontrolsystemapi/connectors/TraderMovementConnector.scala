@@ -24,7 +24,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.Service
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.CorrelationIdService
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService._
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -32,7 +32,7 @@ import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
 
 import java.nio.charset.StandardCharsets
-import java.util.Base64
+import java.util.{Base64, UUID}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -41,24 +41,31 @@ import scala.util.Try
 class TraderMovementConnector @Inject() (
   configuration: Configuration,
   httpClient: HttpClientV2,
-  correlationIdService: CorrelationIdService,
   messageFactory: IEMessageFactory,
   dateTimeService: DateTimeService
 )(implicit ec: ExecutionContext)
     extends Logging {
+
+  private def enforceCorrelationId(hc: HeaderCarrier): HeaderCarrier =
+    hc.headers(Seq(HttpHeader.xCorrelationId)).headOption match {
+      case Some(_) => hc
+      case None    =>
+        val correlationId = UUID.randomUUID().toString
+        logger.info(s"generated new correlation id: $correlationId")
+        hc.withExtraHeaders(HttpHeader.xCorrelationId -> correlationId)
+    }
 
   private val service: Service    = configuration.get[Service]("microservice.services.eis")
   private val bearerToken: String = configuration.get[String]("microservice.services.eis.movement-bearer-token")
 
   def getMovementMessages(ern: String, arc: String)(implicit hc: HeaderCarrier): Future[Seq[IEMessage]] = {
     logger.info(s"[TraderMovementConnector]: Getting movement messages")
-    val correlationId = correlationIdService.generateCorrelationId()
-    val timestamp     = dateTimeService.timestamp().asStringInMilliseconds
+    val timestamp = dateTimeService.timestamp().asStringInMilliseconds
+    val hc2       = enforceCorrelationId(hc)
 
     httpClient
-      .get(url"${service.baseUrl}/emcs/movements/v1/trader-movement?exciseregistrationnumber=$ern&arc=$arc")
+      .get(url"${service.baseUrl}/emcs/movements/v1/trader-movement?exciseregistrationnumber=$ern&arc=$arc")(hc2)
       .setHeader("X-Forwarded-Host" -> "MDTP")
-      .setHeader("X-Correlation-Id" -> correlationId)
       .setHeader("Source" -> "APIP")
       .setHeader("DateTime" -> timestamp)
       .setHeader("Authorization" -> s"Bearer $bearerToken")

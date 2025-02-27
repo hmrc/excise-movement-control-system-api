@@ -19,13 +19,15 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, ParseJsonAction}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, CorrelationIdAction, ParseJsonAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ParsedPreValidateTraderETDSRequest, ParsedPreValidateTraderRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PreValidateTraderService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TraderTypeInterpreter
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -33,6 +35,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class PreValidateTraderController @Inject() (
   authAction: AuthAction,
+  correlationIdAction: CorrelationIdAction,
   parseJsonAction: ParseJsonAction,
   preValidateTraderService: PreValidateTraderService,
   cc: ControllerComponents,
@@ -40,12 +43,16 @@ class PreValidateTraderController @Inject() (
 )(implicit ec: ExecutionContext)
     extends BackendController(cc) {
 
-  def submit: Action[JsValue] = authAction(parse.json).async { implicit authRequest: EnrolmentRequest[JsValue] =>
-    if (appConfig.etdsPreValidateTraderEnabled) {
-      handleETDSRequest()
-    } else {
-      handleLegacyRequest()
-    }
+  def submit: Action[JsValue] = (authAction andThen correlationIdAction)(parse.json).async {
+    implicit authRequest: EnrolmentRequest[JsValue] =>
+      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(authRequest)
+
+      if (appConfig.etdsPreValidateTraderEnabled) {
+        handleETDSRequest()
+      } else {
+        handleLegacyRequest()
+      }
+
   }
 
   private def handleETDSRequest()(implicit authRequest: EnrolmentRequest[JsValue]): Future[Result] =

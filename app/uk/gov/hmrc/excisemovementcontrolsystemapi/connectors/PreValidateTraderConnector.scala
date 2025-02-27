@@ -27,19 +27,19 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresent
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ExciseTraderETDSRequest, PreValidateTraderRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{ExciseTraderValidationETDSResponse, PreValidateTraderEISResponse}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{CorrelationIdService, HttpHeader}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, StringContextOps}
 
+import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 class PreValidateTraderConnector @Inject() (
   httpClient: HttpClientV2,
-  correlationIdService: CorrelationIdService,
   appConfig: AppConfig,
   metrics: MetricRegistry,
   dateTimeService: DateTimeService
@@ -47,15 +47,25 @@ class PreValidateTraderConnector @Inject() (
     extends EISSubmissionHeaders
     with Logging {
 
+  private def enforceCorrelationId(hc: HeaderCarrier): (HeaderCarrier, String) =
+    hc.headers(Seq(HttpHeader.xCorrelationId)).headOption match {
+      case Some(id) => (hc, id._2)
+      case None     =>
+        val correlationId = UUID.randomUUID().toString
+        logger.info(s"generated new correlation id: $correlationId")
+        (hc.withExtraHeaders(HttpHeader.xCorrelationId -> correlationId), correlationId)
+    }
+
   def submitMessage(request: PreValidateTraderRequest, ern: String)(implicit
     hc: HeaderCarrier
   ): Future[Either[Result, PreValidateTraderEISResponse]] = {
+
+    val (hc2, correlationId) = enforceCorrelationId(hc)
 
     logger.info("[PreValidateTraderConnector]: Submitting PreValidateTrader message")
 
     val timer = metrics.timer("emcs.prevalidatetrader.connector.timer").time()
 
-    val correlationId   = correlationIdService.generateCorrelationId()
     val timestamp       = dateTimeService.timestamp()
     val createdDateTime = timestamp.asStringInMilliseconds
 
@@ -66,7 +76,7 @@ class PreValidateTraderConnector @Inject() (
       dateTimeService = dateTimeService
     )
     httpClient
-      .post(url"${appConfig.preValidateTraderUrl}")
+      .post(url"${appConfig.preValidateTraderUrl}")(hc2)
       .setHeader(build(correlationId, createdDateTime, appConfig.preValidateTraderBearerToken): _*)
       .withBody(Json.toJson(request))
       .execute[Either[Result, PreValidateTraderEISResponse]]
@@ -94,11 +104,7 @@ class PreValidateTraderConnector @Inject() (
 
     val timer = metrics.timer("etds.prevalidatetrader.connector.timer").time()
 
-    val correlationId = hc
-      .headers(Seq(HttpHeader.xCorrelationId))
-      .find(_._1 == HttpHeader.xCorrelationId)
-      .map(_._2)
-      .getOrElse(correlationIdService.generateCorrelationId())
+    val (hc2, correlationId) = enforceCorrelationId(hc)
 
     val timestamp       = dateTimeService.timestamp()
     val createdDateTime = timestamp.asStringInMilliseconds
@@ -111,7 +117,7 @@ class PreValidateTraderConnector @Inject() (
         dateTimeService = dateTimeService
       )
     httpClient
-      .post(url"${appConfig.preValidateTraderETDSUrl}")
+      .post(url"${appConfig.preValidateTraderETDSUrl}")(hc2)
       .setHeader(buildETDS(correlationId, createdDateTime, appConfig.preValidateTraderETDSBearerToken): _*)
       .withBody(Json.toJson(request))
       .execute[Either[Result, ExciseTraderValidationETDSResponse]]

@@ -29,14 +29,16 @@ import play.api.http.Status.{INTERNAL_SERVER_ERROR, OK, UNPROCESSABLE_ENTITY}
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
+import play.api.test.FakeRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, NewMessagesXml, TraderMovementXmlGenerator, XmlMessageGeneratorFactory}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes.{IE801, IE818}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE801Message, IE818Message}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, CorrelationIdService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, HttpHeader}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.WireMockSupport
+import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
 import java.nio.charset.StandardCharsets
 import java.time.format.DateTimeFormatter
@@ -44,7 +46,7 @@ import java.time.{LocalDateTime, ZoneOffset}
 import java.util.Base64
 
 class TraderMovementConnectorSpec
-  extends AnyFreeSpec
+    extends AnyFreeSpec
     with Matchers
     with WireMockSupport
     with GuiceOneAppPerSuite
@@ -54,45 +56,41 @@ class TraderMovementConnectorSpec
     with BeforeAndAfterEach
     with NewMessagesXml {
 
-  override def beforeEach(): Unit = {
+  override def beforeEach(): Unit =
     super.beforeEach()
-    Mockito.reset(correlationIdService)
-  }
 
-  private val correlationIdService = mock[CorrelationIdService]
+  val correlationId               = "correlationId"
+  implicit val hc                 =
+    HeaderCarrierConverter.fromRequest(FakeRequest().withHeaders(HttpHeader.xCorrelationId -> correlationId))
+
   private val mockDateTimeService = mock[DateTimeService]
-  private val auditService = mock[AuditService]
-  private val xmlGenerator = new TraderMovementXmlGenerator(XmlMessageGeneratorFactory)
-  private val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX")
+  private val auditService        = mock[AuditService]
+  private val xmlGenerator        = new TraderMovementXmlGenerator(XmlMessageGeneratorFactory)
+  private val formatter           = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX")
 
-  override lazy val app: Application = {
+  override lazy val app: Application =
     GuiceApplicationBuilder()
       .configure(
-        "microservice.services.eis.port" -> wireMockPort,
+        "microservice.services.eis.port"                  -> wireMockPort,
         "microservice.services.eis.movement-bearer-token" -> "some-bearer"
       )
       .overrides(
-        bind[CorrelationIdService].toInstance(correlationIdService),
         bind[DateTimeService].toInstance(mockDateTimeService),
         bind[AuditService].toInstance(auditService)
       )
       .build()
-  }
 
   private lazy val connector = app.injector.instanceOf[TraderMovementConnector]
 
   "getMovementMessages" - {
 
-    val hc = HeaderCarrier()
-    val correlationId = "correlationId"
     val timestamp = LocalDateTime.of(2024, 3, 2, 12, 30, 45, 100).toInstant(ZoneOffset.UTC)
-    val ern = "someErn"
-    val arc = "someArc"
-    val url = s"/emcs/movements/v1/trader-movement?exciseregistrationnumber=$ern&arc=$arc"
+    val ern       = "someErn"
+    val arc       = "someArc"
+    val url       = s"/emcs/movements/v1/trader-movement?exciseregistrationnumber=$ern&arc=$arc"
 
     "must return an empty list when the response from the server is a 422" in {
 
-      when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
       wireMockServer.stubFor(
@@ -114,14 +112,14 @@ class TraderMovementConnectorSpec
     }
 
     "must return messages when the response from the server contains them" in {
-      val ie801Params = MessageParams(
+      val ie801Params       = MessageParams(
         IE801,
         "GB00001",
         Some("testConsignee"),
         Some("23XI00000000000000012"),
         Some("lrnie8158976912")
       )
-      val ie818Params = MessageParams(
+      val ie818Params       = MessageParams(
         IE818,
         "GB00002",
         Some("testConsignee"),
@@ -139,7 +137,6 @@ class TraderMovementConnectorSpec
         message = base64Encode(traderMovementXml.toString)
       )
 
-      when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
       wireMockServer.stubFor(
@@ -158,7 +155,6 @@ class TraderMovementConnectorSpec
 
     "must fail when the server responds with an unexpected status" in {
 
-      when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
       wireMockServer.stubFor(
@@ -174,7 +170,6 @@ class TraderMovementConnectorSpec
 
     "must fail when the server responds with a non-json body" in {
 
-      when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
       wireMockServer.stubFor(
@@ -191,7 +186,6 @@ class TraderMovementConnectorSpec
 
     "must fail when the server responds with an invalid json body" in {
 
-      when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
       wireMockServer.stubFor(
@@ -208,7 +202,6 @@ class TraderMovementConnectorSpec
 
     "must fail when the connection fails" in {
 
-      when(correlationIdService.generateCorrelationId()).thenReturn(correlationId)
       when(mockDateTimeService.timestamp()).thenReturn(timestamp)
 
       wireMockServer.stubFor(
@@ -220,6 +213,64 @@ class TraderMovementConnectorSpec
       )
 
       connector.getMovementMessages(ern, arc)(hc).failed.futureValue
+    }
+
+    "must forward the correlationId if provided" in {
+      when(mockDateTimeService.timestamp()).thenReturn(timestamp)
+
+      wireMockServer.stubFor(
+        get(urlEqualTo(url))
+          .withHeader("X-Forwarded-Host", equalTo("MDTP"))
+          .withHeader("X-Correlation-Id", equalTo(correlationId))
+          .withHeader("Source", equalTo("APIP"))
+          .withHeader("DateTime", equalTo(formatter.format(timestamp.atZone(ZoneOffset.UTC))))
+          .withHeader("Authorization", equalTo("Bearer some-bearer"))
+          .willReturn(
+            aResponse()
+              .withStatus(UNPROCESSABLE_ENTITY)
+          )
+      )
+
+      //If succeeds, the wiremock server has acted as a matcher
+      val result = connector.getMovementMessages(ern, arc)(hc).futureValue
+
+    }
+
+    "must forward a new correaltion id if none provided" in {
+      when(mockDateTimeService.timestamp()).thenReturn(timestamp)
+
+      wireMockServer.stubFor(
+        get(urlEqualTo(url))
+          .withHeader("X-Forwarded-Host", equalTo("MDTP"))
+          .withHeader("X-Correlation-Id", equalTo(correlationId))
+          .withHeader("Source", equalTo("APIP"))
+          .withHeader("DateTime", equalTo(formatter.format(timestamp.atZone(ZoneOffset.UTC))))
+          .withHeader("Authorization", equalTo("Bearer some-bearer"))
+          .willReturn(
+            aResponse()
+              .withStatus(UNPROCESSABLE_ENTITY)
+          )
+      )
+
+      //If should fail as no header carrier given
+      val result = connector.getMovementMessages(ern, arc)(HeaderCarrier()).failed.futureValue
+
+      wireMockServer.stubFor(
+        get(urlEqualTo(url))
+          .withHeader("X-Forwarded-Host", equalTo("MDTP"))
+          .withHeader("X-Correlation-Id", notMatching(correlationId))
+          .withHeader("Source", equalTo("APIP"))
+          .withHeader("DateTime", equalTo(formatter.format(timestamp.atZone(ZoneOffset.UTC))))
+          .withHeader("Authorization", equalTo("Bearer some-bearer"))
+          .willReturn(
+            aResponse()
+              .withStatus(UNPROCESSABLE_ENTITY)
+          )
+      )
+
+      //Should now succeed as the correlationId shouldn't match
+      val result2 = connector.getMovementMessages(ern, arc)(HeaderCarrier()).futureValue
+
     }
   }
 

@@ -28,7 +28,9 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
 import java.time.Instant
 import javax.inject.Inject
@@ -37,6 +39,7 @@ import scala.util.control.NonFatal
 
 class GetMovementsController @Inject() (
   authAction: AuthAction,
+  correlationIdAction: CorrelationIdAction,
   validateErnParameterAction: ValidateErnParameterAction,
   validateUpdatedSinceAction: ValidateUpdatedSinceAction,
   validateTraderTypeAction: ValidateTraderTypeAction,
@@ -57,9 +60,13 @@ class GetMovementsController @Inject() (
     updatedSince: Option[String],
     traderType: Option[String]
   ): Action[AnyContent] =
-    (authAction andThen validateErnParameterAction(ern)
+    (authAction
+      andThen correlationIdAction
+      andThen validateErnParameterAction(ern)
       andThen validateUpdatedSinceAction(updatedSince)
       andThen validateTraderTypeAction(traderType)).async(parse.default) { implicit request =>
+      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
+
       val filter =
         MovementFilter(
           ern,
@@ -95,7 +102,9 @@ class GetMovementsController @Inject() (
     }
 
   def getMovement(movementId: String): Action[AnyContent] =
-    authAction.async(parse.default) { implicit request =>
+    (authAction andThen correlationIdAction).async(parse.default) { implicit request =>
+      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
+
       val result = for {
         validatedMovementId <- validateMovementId(movementId)
         _                   <- EitherT.right(messageService.updateAllMessages(request.erns))

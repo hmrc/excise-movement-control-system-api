@@ -26,7 +26,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptSuccessResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IEMessage}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, CorrelationIdService}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, HttpHeader}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService._
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -34,7 +34,7 @@ import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
 
 import java.nio.charset.StandardCharsets
-import java.util.Base64
+import java.util.{Base64, UUID}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -44,7 +44,6 @@ import scala.util.control.NonFatal
 class MessageConnector @Inject() (
   configuration: Configuration,
   httpClient: HttpClientV2,
-  correlationIdService: CorrelationIdService,
   messageFactory: IEMessageFactory,
   dateTimeService: DateTimeService,
   auditService: AuditService
@@ -54,18 +53,27 @@ class MessageConnector @Inject() (
   private val service: Service    = configuration.get[Service]("microservice.services.eis")
   private val bearerToken: String = configuration.get[String]("microservice.services.eis.messages-bearer-token")
 
+  private def enforceCorrelationId(hc: HeaderCarrier): HeaderCarrier =
+    hc.headers(Seq(HttpHeader.xCorrelationId)).headOption match {
+      case Some(_) => hc
+      case None    =>
+        val correlationId = UUID.randomUUID().toString
+        logger.info(s"generated new correlation id: $correlationId")
+        hc.withExtraHeaders(HttpHeader.xCorrelationId -> correlationId)
+    }
+
   def getNewMessages(ern: String, batchId: String, jobId: Option[String])(implicit
     hc: HeaderCarrier
   ): Future[GetMessagesResponse] = {
     logger.info(s"[MessageConnector]: Getting new messages")
 
-    val correlationId = correlationIdService.generateCorrelationId()
-    val timestamp     = dateTimeService.timestamp().asStringInMilliseconds
+    val hc2 = enforceCorrelationId(hc)
+
+    val timestamp = dateTimeService.timestamp().asStringInMilliseconds
 
     httpClient
-      .put(url"${service.baseUrl}/emcs/messages/v1/show-new-messages?exciseregistrationnumber=$ern")
+      .put(url"${service.baseUrl}/emcs/messages/v1/show-new-messages?exciseregistrationnumber=$ern")(hc2)
       .setHeader("X-Forwarded-Host" -> "MDTP")
-      .setHeader("X-Correlation-Id" -> correlationId)
       .setHeader("Source" -> "APIP")
       .setHeader("DateTime" -> timestamp)
       .setHeader("Authorization" -> s"Bearer $bearerToken")
@@ -74,11 +82,11 @@ class MessageConnector @Inject() (
         if (response.status == OK) Future.fromTry {
           for {
             response <- parseJson[EISConsumptionResponse](response.body)
-            messages <- getMessages(response)
+            messages <- getMessages(response)(hc2)
             count    <- countOfMessagesAvailable(response.message)
           } yield {
             val getMessagesResponse = GetMessagesResponse(messages, count)
-            auditService.messageProcessingSuccess(ern, getMessagesResponse, batchId, jobId)
+            auditService.messageProcessingSuccess(ern, getMessagesResponse, batchId, jobId)(hc2)
             getMessagesResponse
           }
         }
@@ -88,7 +96,12 @@ class MessageConnector @Inject() (
         }
       }
       .recoverWith { case NonFatal(e) =>
-        auditService.messageProcessingFailure(ern = ern, failureReason = e.getMessage, batchId = batchId, jobId = jobId)
+        auditService.messageProcessingFailure(
+          ern = ern,
+          failureReason = e.getMessage,
+          batchId = batchId,
+          jobId = jobId
+        )(hc2)
         Future.failed(GetMessagesException(ern, e))
       }
   }
@@ -97,14 +110,14 @@ class MessageConnector @Inject() (
     hc: HeaderCarrier
   ): Future[MessageReceiptSuccessResponse] = {
 
+    val hc2 = enforceCorrelationId(hc)
+
     logger.info(s"[MessageConnector]: Acknowledging messages")
-    val correlationId = correlationIdService.generateCorrelationId()
-    val timestamp     = dateTimeService.timestamp().asStringInMilliseconds
+    val timestamp = dateTimeService.timestamp().asStringInMilliseconds
 
     httpClient
-      .put(url"${service.baseUrl}/emcs/messages/v1/message-receipt?exciseregistrationnumber=$ern")
+      .put(url"${service.baseUrl}/emcs/messages/v1/message-receipt?exciseregistrationnumber=$ern")(hc2)
       .setHeader("X-Forwarded-Host" -> "MDTP")
-      .setHeader("X-Correlation-Id" -> correlationId)
       .setHeader("Source" -> "APIP")
       .setHeader("DateTime" -> timestamp)
       .setHeader("Authorization" -> s"Bearer $bearerToken")

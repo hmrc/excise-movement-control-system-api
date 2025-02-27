@@ -18,6 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.ImplementedBy
 import play.api.Logging
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EISErrorResponseDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
@@ -32,8 +33,8 @@ import scala.util.control.NonFatal
 class SubmissionMessageServiceImpl @Inject() (
   connector: EISSubmissionConnector,
   nrsServiceNew: NrsService,
-  correlationIdService: CorrelationIdService,
-  ernSubmissionRepository: ErnSubmissionRepository
+  ernSubmissionRepository: ErnSubmissionRepository,
+  appConfig: AppConfig
 )(implicit val ec: ExecutionContext)
     extends SubmissionMessageService
     with Logging {
@@ -41,24 +42,16 @@ class SubmissionMessageServiceImpl @Inject() (
   def submit(
     request: ParsedXmlRequest[_],
     authorisedErn: String
-  )(implicit hc: HeaderCarrier): Future[Either[EISErrorResponseDetails, EISSubmissionResponse]] = {
-
-    val correlationId = hc
-      .headers(Seq(HttpHeader.xCorrelationId))
-      .find(_._1 == HttpHeader.xCorrelationId)
-      .map(_._2)
-      .getOrElse(correlationIdService.generateCorrelationId())
-
+  )(implicit hc: HeaderCarrier): Future[Either[EISErrorResponseDetails, EISSubmissionResponse]] =
     for {
       submitMessageResponse <-
-        connector.submitMessage(request.ieMessage, request.body.toString, authorisedErn, correlationId)
+        connector.submitMessage(request.ieMessage, request.body.toString, authorisedErn)
       isSuccess              = submitMessageResponse.isRight
       _                      = if (isSuccess) ernSubmissionRepository.save(authorisedErn).recover { case NonFatal(error) =>
                                  logger.warn(s"Failed to save ERN to ERNSubmissionRepository", error)
                                }
       _                      = if (isSuccess) nrsServiceNew.makeWorkItemAndQueue(request, authorisedErn)
     } yield submitMessageResponse
-  }
 }
 
 @ImplementedBy(classOf[SubmissionMessageServiceImpl])

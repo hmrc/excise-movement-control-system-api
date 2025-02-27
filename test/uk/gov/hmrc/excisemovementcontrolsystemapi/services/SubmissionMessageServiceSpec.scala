@@ -27,6 +27,7 @@ import play.api.http.HeaderNames
 import play.api.http.Status.INTERNAL_SERVER_ERROR
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import play.api.test.{FakeHeaders, FakeRequest}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EISErrorResponseDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
@@ -35,24 +36,27 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionRespon
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnSubmissionRepository
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
 class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with EitherValues with BeforeAndAfterEach {
 
-  implicit val hc: HeaderCarrier    = HeaderCarrier()
+  val correalationId                = "some-id"
+  implicit val hc: HeaderCarrier    =
+    HeaderCarrierConverter.fromRequest(FakeRequest().withHeaders(HttpHeader.xCorrelationId -> correalationId))
   implicit val ec: ExecutionContext = ExecutionContext.global
 
+  private val mockAppconfig           = mock[AppConfig]
   private val connector               = mock[EISSubmissionConnector]
   private val nrsServiceNew           = mock[NrsService]
-  private val correlationIdService    = mock[CorrelationIdService]
   private val ernSubmissionRepository = mock[ErnSubmissionRepository]
   private val sut                     = new SubmissionMessageServiceImpl(
     connector,
     nrsServiceNew,
-    correlationIdService,
-    ernSubmissionRepository
+    ernSubmissionRepository,
+    mockAppconfig
   )
 
   private val message                  = mock[IE815Message]
@@ -69,11 +73,10 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    reset(connector, nrsServiceNew, ernSubmissionRepository)
+    reset(connector, nrsServiceNew, ernSubmissionRepository, mockAppconfig)
 
     when(message.consignorId).thenReturn(Some("1234"))
-    when(correlationIdService.generateCorrelationId()).thenReturn("correlationId")
-    when(connector.submitMessage(any, any, any, any)(any))
+    when(connector.submitMessage(any, any, any)(any))
       .thenReturn(Future.successful(Right(EISSubmissionResponse("ok", "IE815", "correlationId"))))
   }
 
@@ -89,8 +92,7 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
         verify(connector).submitMessage(
           eqTo(message),
           eqTo(xmlBody),
-          eqTo(ern),
-          eqTo("correlationId")
+          eqTo(ern)
         )(any)
 
         withClue("send to NRS when submitMessage is successful") {
@@ -112,8 +114,7 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
         verify(connector).submitMessage(
           eqTo(message),
           eqTo(xmlBody),
-          eqTo(ern),
-          eqTo("correlationId")
+          eqTo(ern)
         )(any)
 
         withClue("send to NRS when submitMessage is successful") {
@@ -133,7 +134,7 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
         val testError =
           EISErrorResponseDetails(INTERNAL_SERVER_ERROR, Instant.now(), "message", "debug", "cId", None)
 
-        when(connector.submitMessage(any, any, any, any)(any))
+        when(connector.submitMessage(any, any, any)(any))
           .thenReturn(Future.successful(Left(testError)))
 
         val result = await(sut.submit(request, ern))
