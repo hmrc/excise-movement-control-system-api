@@ -16,170 +16,156 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, equalTo, notMatching, post, urlEqualTo}
+import com.github.tomakehurst.wiremock.client.WireMock._
 import org.mockito.MockitoSugar
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
-import org.scalatest.{BeforeAndAfterEach, EitherValues}
-import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerTest
 import play.api.Application
-import play.api.http.Status.{ACCEPTED, OK}
+import play.api.http.Status.OK
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
-import play.api.mvc.Result
 import play.api.test.FakeRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{EISHeaderTestSupport, StringSupport}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ExciseTraderETDSRequest, ExciseTraderRequest, ExciseTraderValidationRequest, PreValidateTraderRequest, ValidateProductAuthorisationRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{ExciseTraderResponse, ExciseTraderValidationETDSResponse, ExciseTraderValidationResponse, PreValidateTraderEISResponse}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Notification
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.{FailedPushNotification, SuccessBoxNotificationResponse, SuccessPushNotificationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.WireMockSupport
 import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
-class PrevalidateTraderConnectorSpec
+class PushNotificationConnectorSpec
     extends AnyFreeSpec
     with Matchers
     with WireMockSupport
     with GuiceOneAppPerTest
     with MockitoSugar
     with ScalaFutures
+    with TestXml
     with IntegrationPatience {
-
-  val seedResponse = PreValidateTraderEISResponse(
-    ExciseTraderValidationResponse("timestamp", Array.empty[ExciseTraderResponse])
-  )
-
-  val etdsResponse = ExciseTraderValidationETDSResponse("timestamp", "1", "exciseId", "Success", None)
 
   override def fakeApplication(): Application =
     GuiceApplicationBuilder()
-      .configure("microservice.services.eis.port" -> wireMockPort)
+      .configure("microservice.services.push-pull-notifications.port" -> wireMockPort)
       .build()
 
-  "submitMessage" - {
+  "getDefaultBoxId" - {
+    val response = SuccessBoxNotificationResponse("boxId")
+
     "forward the correlation id if it exists" in {
       val correlationId = "abcdefg"
       val hc            = HeaderCarrierConverter.fromRequest(FakeRequest().withHeaders(HttpHeader.xCorrelationId -> correlationId))
       val ern           = "ern"
-      val url           = "/emcs/pre-validate-trader/v1"
-      val connector     = app.injector.instanceOf[PreValidateTraderConnector]
+      val url           = "/box?boxName=customs/excise%23%231.0%23%23notificationUrl&clientId=clientId"
+      val connector     = app.injector.instanceOf[PushNotificationConnector]
+
       wireMockServer.stubFor(
-        post(urlEqualTo(url))
+        get(urlEqualTo(url))
           .withHeader("X-Correlation-Id", equalTo(correlationId))
           .willReturn(
             aResponse()
-              .withBody(Json.toJson(seedResponse).toString())
+              .withBody(Json.toJson(response).toString())
               .withStatus(OK)
           )
       )
 
-      val request = PreValidateTraderRequest(
-        ExciseTraderValidationRequest(
-          ExciseTraderRequest(ern, "entityGroup", Seq.empty[ValidateProductAuthorisationRequest])
-        )
-      )
-
       //If this succeeds the wiremock has acted as a matcher
-      val result = connector.submitMessage(request, ern)(hc).futureValue.isRight mustBe true
+      connector.getDefaultBoxId("clientId")(hc).futureValue.isRight mustBe true
     }
     "forward a new correlation id if not exists" in {
       val correlationId = "abcdefg"
       val ern           = "ern"
-      val url           = "/emcs/pre-validate-trader/v1"
-      val connector     = app.injector.instanceOf[PreValidateTraderConnector]
+      val url           = "/box?boxName=customs/excise%23%231.0%23%23notificationUrl&clientId=clientId"
+      val connector     = app.injector.instanceOf[PushNotificationConnector]
       wireMockServer.stubFor(
-        post(urlEqualTo(url))
+        get(urlEqualTo(url))
           .withHeader("X-Correlation-Id", equalTo(correlationId))
           .willReturn(
             aResponse()
-              .withBody(Json.toJson(seedResponse).toString())
+              .withBody(Json.toJson(response).toString())
               .withStatus(OK)
           )
       )
 
-      val request = PreValidateTraderRequest(
-        ExciseTraderValidationRequest(
-          ExciseTraderRequest(ern, "entityGroup", Seq.empty[ValidateProductAuthorisationRequest])
-        )
-      )
-
       //This should fail as the headers don't match
-      val result = connector.submitMessage(request, ern)(HeaderCarrier()).futureValue.isLeft mustBe true
+      val result = connector.getDefaultBoxId("clientId")(HeaderCarrier()).futureValue.isLeft mustBe true
 
       wireMockServer.stubFor(
-        post(urlEqualTo(url))
+        get(urlEqualTo(url))
           .withHeader("X-Correlation-Id", notMatching(correlationId))
           .willReturn(
             aResponse()
-              .withBody(Json.toJson(seedResponse).toString())
+              .withBody(Json.toJson(response).toString())
               .withStatus(OK)
           )
       )
 
       //This should succeed as the headers now don't match correlationId
-      val result2 = connector.submitMessage(request, ern)(HeaderCarrier()).futureValue.isRight mustBe true
+      val result2 = connector.getDefaultBoxId("clientId")(HeaderCarrier()).futureValue.isRight mustBe true
 
     }
 
   }
 
-  "submitMessageETDS" - {
+  "postNotification" - {
+    val response     = SuccessPushNotificationResponse("notificationId")
+    val notification = Notification("mid", "muri", "mid2", "mtype", "ern", None, None, "ern")
     "forward the correlation id if it exists" in {
       val correlationId = "abcdefg"
       val hc            = HeaderCarrierConverter.fromRequest(FakeRequest().withHeaders(HttpHeader.xCorrelationId -> correlationId))
-      val ern           = "ern"
-      val url           = "/etds/traderprevalidation/v1"
-      val connector     = app.injector.instanceOf[PreValidateTraderConnector]
+      val url           = "/box/boxId/notifications"
+      val connector     = app.injector.instanceOf[PushNotificationConnector]
       wireMockServer.stubFor(
         post(urlEqualTo(url))
           .withHeader("X-Correlation-Id", equalTo(correlationId))
           .willReturn(
             aResponse()
-              .withBody(Json.toJson(etdsResponse).toString())
+              .withBody(Json.toJson(response).toString())
               .withStatus(OK)
           )
       )
-
-      val request = ExciseTraderETDSRequest(ern, "entityGroup", None)
 
       //If this succeeds the wiremock has acted as a matcher
-      val result = connector.submitMessageETDS(request, ern)(hc).futureValue.isRight mustBe true
+      connector.postNotification("boxId", notification)(hc).futureValue
     }
+
     "forward a new correlation id if not exists" in {
       val correlationId = "abcdefg"
-      val ern           = "ern"
-      val url           = "/etds/traderprevalidation/v1"
-      val connector     = app.injector.instanceOf[PreValidateTraderConnector]
+      val url           = "/box/boxId/notifications"
+      val connector     = app.injector.instanceOf[PushNotificationConnector]
       wireMockServer.stubFor(
         post(urlEqualTo(url))
           .withHeader("X-Correlation-Id", equalTo(correlationId))
           .willReturn(
             aResponse()
-              .withBody(Json.toJson(etdsResponse).toString())
+              .withBody(Json.toJson(response).toString())
               .withStatus(OK)
           )
       )
 
-      val request = ExciseTraderETDSRequest(ern, "entityGroup", None)
-
       //This should fail as the headers don't match
-      val result = connector.submitMessageETDS(request, ern)(HeaderCarrier()).futureValue.isLeft mustBe true
+      val result =
+        connector.postNotification("boxId", notification)(HeaderCarrier()).futureValue mustBe a[FailedPushNotification]
 
       wireMockServer.stubFor(
         post(urlEqualTo(url))
           .withHeader("X-Correlation-Id", notMatching(correlationId))
           .willReturn(
             aResponse()
-              .withBody(Json.toJson(etdsResponse).toString())
+              .withBody(Json.toJson(response).toString())
               .withStatus(OK)
           )
       )
 
       //This should succeed as the headers now don't match correlationId
-      val result2 = connector.submitMessageETDS(request, ern)(HeaderCarrier()).futureValue.isRight mustBe true
+      val result2 = connector
+        .postNotification("boxId", notification)(HeaderCarrier())
+        .futureValue mustBe a[SuccessPushNotificationResponse]
 
     }
+
   }
 }
