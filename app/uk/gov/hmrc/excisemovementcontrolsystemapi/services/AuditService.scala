@@ -38,6 +38,7 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
 ) extends Auditing
     with Logging {
 
+  // old auditing
   def auditMessage(message: IEMessage)(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit] =
     auditMessage(message, None)
   def auditMessage(message: IEMessage, failureReason: String)(implicit
@@ -76,6 +77,7 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
       auditConnector.sendExplicitAudit("MessageSubmitted", event)
     }
 
+  // old auditing
   private def auditMessage(message: IEMessage, failureOpt: Option[String])(implicit
     hc: HeaderCarrier
   ): EitherT[Future, Result, Unit] =

@@ -73,7 +73,7 @@ class DraftExciseMovementController @Inject() (
         success => {
           val (movement, boxId, ie815Message) = success
 
-          auditService.auditMessage(request.ieMessage).value
+          if (appConfig.oldAuditingEnabled) auditService.auditMessage(request.ieMessage).value
           auditService.messageSubmitted(movement, true, ie815Message.correlationId, request)
 
           Accepted(
@@ -101,7 +101,7 @@ class DraftExciseMovementController @Inject() (
     EitherT {
       submissionMessageService.submit(request, ern).map {
         case Left(error)     =>
-          auditService.auditMessage(message, "Failed to submit") //OLD auditing
+          if (appConfig.oldAuditingEnabled) auditService.auditMessage(message, "Failed to submit") //OLD auditing
           auditService
             .messageSubmittedNoMovement(message, false, message.correlationId, request) //NEW auditing
           Left(
@@ -142,7 +142,7 @@ class DraftExciseMovementController @Inject() (
 
       movementMessageService.saveNewMovement(newMovement).map {
         case Left(result)    =>
-          auditService.auditMessage(message, "Failed to Save")
+          if (appConfig.oldAuditingEnabled) auditService.auditMessage(message, "Failed to Save")
           auditService.messageSubmittedNoMovement(message, true, message.correlationId, request)
           Left(result)
         case Right(movement) =>
