@@ -61,7 +61,6 @@ case class IE802Message(
   def optionalLocalReferenceNumber: Option[String] = None
 }
 
-//TODO: For all IE Messages - IE815 handles this differently - maybe we can standardise to that? (Potential ticket)
 object IE802Message {
   def apply(message: DataRecord[MessagesOption]): IE802Message =
     IE802Message(message.as[IE802Type], message.key, message.namespace, Reminder)

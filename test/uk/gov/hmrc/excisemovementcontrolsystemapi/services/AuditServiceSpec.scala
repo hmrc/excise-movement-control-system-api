@@ -203,7 +203,6 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
           message.toJsObject
         )
 
-        //TODO: Need to change this to actual correlationId from header
         service.messageSubmitted(movement, submittedToCore = true, Some("correlationId"), requestWithIE704)
 
         verify(auditConnector, times(1))

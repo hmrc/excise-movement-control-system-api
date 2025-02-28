@@ -138,7 +138,7 @@ class DraftExciseMovementController @Inject() (
     EitherT {
 
       val newMovement: Movement = createMovementFomMessage(message, boxId)
-      boxId.map(boxIdRepository.save(newMovement.consignorId, _)) //TODO recover future in failure case
+      boxId.map(boxIdRepository.save(newMovement.consignorId, _))
 
       movementMessageService.saveNewMovement(newMovement).map {
         case Left(result)    =>
