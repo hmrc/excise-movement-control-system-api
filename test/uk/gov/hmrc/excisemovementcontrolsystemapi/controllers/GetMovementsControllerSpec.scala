@@ -191,7 +191,6 @@ class GetMovementsControllerSpec
           Seq(expectedResponse)
         )
         withClue("Submits GetInformation (GetMovements) audit event") {
-          //TODO: Cannot figure out how to use eqTo on the request, despite checking all values match. Potential improvement on tests to use some sort of eqTo check across file.
           verify(auditService, times(1))
             .getInformationForGetMovements(eqTo(filter), eqTo(movements), any[EnrolmentRequest[AnyContent]])(
               any

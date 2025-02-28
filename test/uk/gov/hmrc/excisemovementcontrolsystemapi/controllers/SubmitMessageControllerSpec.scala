@@ -106,8 +106,6 @@ class SubmitMessageControllerSpec
 
     }
 
-    //TODO: Cannot figure out how to use eqTo on the request, despite checking all values match. Potential improvement on tests to use some sort of eqTo check across file.
-    //TODO: There may be need to look at the various test data to ensure they're all using the same source. Found conflicts between Fakes and local test data. Might warrant a review.
     "send an audit event (OLD auditing)" in {
       when(appConfig.oldAuditingEnabled).thenReturn(true)
       when(mockIeMessage.correlationId).thenReturn(Some("testXMLCorrelationId"))

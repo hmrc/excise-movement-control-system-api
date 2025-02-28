@@ -40,7 +40,6 @@ class IEMessageSpec extends PlaySpec with TestXml {
 
   "each message" should {
     "have the correct starting tag " when {
-      //TODO: Improve the messages generally to allow programmatic testing of them
       "using createFromXml (704) with namespace prefix" in {
         val result = IE704Message.createFromXml(IE704)
         result.key mustBe Some("IE704")
