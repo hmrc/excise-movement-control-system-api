@@ -28,8 +28,6 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Notification
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse.{FailedPushNotification, SuccessBoxNotificationResponse, SuccessPushNotificationResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
@@ -58,7 +56,6 @@ class PushNotificationConnectorSpec
     "forward the correlation id if it exists" in {
       val correlationId = "abcdefg"
       val hc            = HeaderCarrierConverter.fromRequest(FakeRequest().withHeaders(HttpHeader.xCorrelationId -> correlationId))
-      val ern           = "ern"
       val url           = "/box?boxName=customs/excise%23%231.0%23%23notificationUrl&clientId=clientId"
       val connector     = app.injector.instanceOf[PushNotificationConnector]
 
@@ -77,7 +74,6 @@ class PushNotificationConnectorSpec
     }
     "forward a new correlation id if not exists" in {
       val correlationId = "abcdefg"
-      val ern           = "ern"
       val url           = "/box?boxName=customs/excise%23%231.0%23%23notificationUrl&clientId=clientId"
       val connector     = app.injector.instanceOf[PushNotificationConnector]
       wireMockServer.stubFor(
@@ -91,7 +87,7 @@ class PushNotificationConnectorSpec
       )
 
       //This should fail as the headers don't match
-      val result = connector.getDefaultBoxId("clientId")(HeaderCarrier()).futureValue.isLeft mustBe true
+      connector.getDefaultBoxId("clientId")(HeaderCarrier()).futureValue.isLeft mustBe true
 
       wireMockServer.stubFor(
         get(urlEqualTo(url))
@@ -104,7 +100,7 @@ class PushNotificationConnectorSpec
       )
 
       //This should succeed as the headers now don't match correlationId
-      val result2 = connector.getDefaultBoxId("clientId")(HeaderCarrier()).futureValue.isRight mustBe true
+      connector.getDefaultBoxId("clientId")(HeaderCarrier()).futureValue.isRight mustBe true
 
     }
 
@@ -147,8 +143,7 @@ class PushNotificationConnectorSpec
       )
 
       //This should fail as the headers don't match
-      val result =
-        connector.postNotification("boxId", notification)(HeaderCarrier()).futureValue mustBe a[FailedPushNotification]
+      connector.postNotification("boxId", notification)(HeaderCarrier()).futureValue mustBe a[FailedPushNotification]
 
       wireMockServer.stubFor(
         post(urlEqualTo(url))
@@ -161,7 +156,7 @@ class PushNotificationConnectorSpec
       )
 
       //This should succeed as the headers now don't match correlationId
-      val result2 = connector
+      connector
         .postNotification("boxId", notification)(HeaderCarrier())
         .futureValue mustBe a[SuccessPushNotificationResponse]
 

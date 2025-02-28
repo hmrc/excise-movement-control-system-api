@@ -25,9 +25,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.reque
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.PreValidateTraderService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TraderTypeInterpreter
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -45,8 +43,6 @@ class PreValidateTraderController @Inject() (
 
   def submit: Action[JsValue] = (authAction andThen correlationIdAction)(parse.json).async {
     implicit authRequest: EnrolmentRequest[JsValue] =>
-      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(authRequest)
-
       if (appConfig.etdsPreValidateTraderEnabled) {
         handleETDSRequest()
       } else {

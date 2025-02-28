@@ -74,7 +74,7 @@ class RemoveErnsAdminController @Inject() (
       ids
     }
 
-    authorised.async { implicit request =>
+    authorised.async {
       for {
         ernSubmissions <- ernSubmissionRepository.findErns(Seq(ern))
         lastRetrieved  <- ernRetrievalRepository.getLastRetrieved(ern)

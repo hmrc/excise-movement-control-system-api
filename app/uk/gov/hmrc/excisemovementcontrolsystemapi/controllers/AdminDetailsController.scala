@@ -20,10 +20,8 @@ import play.api.libs.json.{Json, OFormat}
 import play.api.mvc._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.internalauth.client._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
 import java.time.Instant
 import javax.inject.{Inject, Singleton}
@@ -47,16 +45,16 @@ class AdminDetailsController @Inject() (
     retrieval = Retrieval.EmptyRetrieval
   )
 
-  def getMovementDetails(movementId: String): Action[AnyContent] = authorised.async { implicit request =>
-    implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
-
-    movementRepository.getMovementById(movementId).map { m =>
-      m match {
-        case Some(movement) => Ok(Json.toJson(MovementDetails.createFromMovement(movement)))
-        case None           => NotFound(s"No Movement Found with id: $movementId")
+  def getMovementDetails(movementId: String): Action[AnyContent] =
+    authorised.async {
+      movementRepository.getMovementById(movementId).map { m =>
+        m match {
+          case Some(movement) => Ok(Json.toJson(MovementDetails.createFromMovement(movement)))
+          case None           => NotFound(s"No Movement Found with id: $movementId")
+        }
       }
     }
-  }
+
 }
 
 case class MovementDetails(

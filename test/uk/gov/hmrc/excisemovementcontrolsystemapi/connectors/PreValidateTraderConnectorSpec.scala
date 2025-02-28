@@ -54,7 +54,7 @@ class PreValidateTraderConnectorSpec
 
   val request = FakeRequest().withHeaders(HttpHeader.xCorrelationId -> emcsCorrelationId)
 
-  implicit val hc                             = HeaderCarrierConverter.fromRequest(request)
+  implicit val hc: HeaderCarrier              = HeaderCarrierConverter.fromRequest(request)
   protected implicit val ec: ExecutionContext = ExecutionContext.global
 
   private val mockHttpClient  = mock[HttpClientV2]

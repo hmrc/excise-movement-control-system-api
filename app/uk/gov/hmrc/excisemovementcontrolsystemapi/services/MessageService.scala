@@ -70,10 +70,10 @@ class MessageService @Inject() (
     erns.toSeq
       .traverse { ern =>
         ernRetrievalRepository.getLastRetrieved(ern).flatMap { lastRetrieved =>
-          updateMessages(ern, lastRetrieved).recover { case NonFatal(error) =>
+          updateMessages(ern, lastRetrieved).recover({ case NonFatal(error) =>
             logger.warn(s"[MessageService]: Failed to update messages", error)
             Done
-          }
+          })
         }
       }
       .as(Done)

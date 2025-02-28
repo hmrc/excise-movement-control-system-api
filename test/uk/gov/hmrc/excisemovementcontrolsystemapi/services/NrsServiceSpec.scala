@@ -92,8 +92,7 @@ class NrsServiceSpec
     config
   )
 
-  private val message           = mock[IE815Message]
-  private val testCorrelationId = "testCorrelationId"
+  private val message = mock[IE815Message]
 
   override def beforeEach(): Unit = {
     super.beforeEach()
