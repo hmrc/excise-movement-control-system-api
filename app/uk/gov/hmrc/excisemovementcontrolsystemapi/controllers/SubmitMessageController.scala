@@ -20,6 +20,7 @@ import cats.data.EitherT
 import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{Action, ControllerComponents, Result}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, CorrelationIdAction, ParseXmlAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
@@ -48,7 +49,8 @@ class SubmitMessageController @Inject() (
   movementIdValidator: MovementIdValidation,
   dateTimeService: DateTimeService,
   cc: ControllerComponents,
-  correlationIdAction: CorrelationIdAction
+  correlationIdAction: CorrelationIdAction,
+  appConfig: AppConfig
 )(implicit ec: ExecutionContext)
     extends BackendController(cc)
     with Logging {
@@ -66,7 +68,7 @@ class SubmitMessageController @Inject() (
         failResult => failResult,
         movement => {
 
-          auditService.auditMessage(request.ieMessage)
+          if (appConfig.oldAuditingEnabled) auditService.auditMessage(request.ieMessage)
           auditService.messageSubmitted(movement, true, request.ieMessage.correlationId, request)
 
           Accepted(
@@ -124,7 +126,7 @@ class SubmitMessageController @Inject() (
     EitherT {
       submissionMessageService.submit(request, authorisedErn).map {
         case Left(error)     =>
-          auditService.auditMessage(request.ieMessage, "Failed to Submit").value
+          if (appConfig.oldAuditingEnabled) auditService.auditMessage(request.ieMessage, "Failed to Submit").value
           auditService.messageSubmitted(movement, false, request.ieMessage.correlationId, request)
 
           Left(

@@ -16,8 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
-import com.github.tomakehurst.wiremock.client.WireMock
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, equalTo, notContaining, notMatching, put, urlEqualTo}
+import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.http.Fault
 import generated.NewMessagesDataResponse
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
@@ -32,18 +31,17 @@ import play.api.http.Status.{INTERNAL_SERVER_ERROR, OK}
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
+import play.api.test.FakeRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector.GetMessagesException
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.NewMessagesXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptSuccessResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.GetMessagesResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, HttpHeader}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.test.WireMockSupport
-import org.apache.pekko.Done
-import play.api.test.FakeRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.GetMessagesResponse
 import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
 import java.nio.charset.StandardCharsets
@@ -75,7 +73,8 @@ class MessageConnectorSpec
     GuiceApplicationBuilder()
       .configure(
         "microservice.services.eis.port"                  -> wireMockPort,
-        "microservice.services.eis.messages-bearer-token" -> "some-bearer"
+        "microservice.services.eis.messages-bearer-token" -> "some-bearer",
+        "featureFlags.oldAuditingEnabled"                 -> "true"
       )
       .overrides(
         bind[DateTimeService].toInstance(mockDateTimeService),

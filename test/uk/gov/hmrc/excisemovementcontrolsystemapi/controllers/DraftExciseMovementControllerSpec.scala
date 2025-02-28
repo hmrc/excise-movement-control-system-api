@@ -188,12 +188,14 @@ class DraftExciseMovementControllerSpec
         .thenReturn(
           Future.successful(Right(Movement(Some(defaultBoxId), "123", consignorId, Some("789"), None, Instant.now)))
         )
-
+      when(appConfig.oldAuditingEnabled).thenReturn(true)
       when(auditService.auditMessage(any[IEMessage])(any)).thenReturn(EitherT.fromEither(Right(())))
 
       await(createWithSuccessfulAuth.submit(request))
 
+      //old auditing:
       verify(auditService, times(1)).auditMessage(any[IEMessage])(any)
+      //new auditing:
       verify(auditService, times(1)).messageSubmitted(any, any, eqTo(Some("correlationId")), any)(any)
 
     }
@@ -201,20 +203,26 @@ class DraftExciseMovementControllerSpec
     "sends failed audits when a message isn't submitted" in {
       when(submissionMessageService.submit(any, any)(any))
         .thenReturn(Future.successful(Left(createTestError(BAD_REQUEST))))
+      when(appConfig.oldAuditingEnabled).thenReturn(true)
 
       await(createWithSuccessfulAuth.submit(request))
 
+      //old auditing:
       verify(auditService, times(1)).auditMessage(any, any)(any)
+      //new auditing:
       verify(auditService, times(1)).messageSubmittedNoMovement(any, any, eqTo(Some("correlationId")), any)(any)
 
     }
 
     "sends failure audits when a message submits but doesn't save" in {
       when(movementService.saveNewMovement(any)(any)).thenReturn(Future.successful(Left(BadRequest(""))))
+      when(appConfig.oldAuditingEnabled).thenReturn(true)
 
       await(createWithSuccessfulAuth.submit(request))
 
+      //old auditing:
       verify(auditService, times(1)).auditMessage(any, any)(any)
+      //new auditing:
       verify(auditService, times(1)).messageSubmittedNoMovement(any, any, eqTo(Some("correlationId")), any)(any)
     }
 

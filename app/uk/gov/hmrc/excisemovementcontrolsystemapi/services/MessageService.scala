@@ -23,8 +23,8 @@ import org.apache.pekko.Done
 import org.bson.BsonMaximumSizeExceededException
 import org.mongodb.scala.MongoCommandException
 import play.api.{Configuration, Logging}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, TraderMovementConnector}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement, MovementIdGenerator}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{BoxIdRepository, ErnRetrievalRepository, MovementRepository}
@@ -53,9 +53,9 @@ class MessageService @Inject() (
   auditService: AuditService,
   mongoLockRepository: MongoLockRepository,
   metricRegistry: MetricRegistry,
-  messageFactory: IEMessageFactory,
   movementService: MovementService,
-  movementIdGenerator: MovementIdGenerator
+  movementIdGenerator: MovementIdGenerator,
+  appConfig: AppConfig
 )(implicit executionContext: ExecutionContext)
     extends Logging {
 
@@ -323,7 +323,7 @@ class MessageService @Inject() (
       }
       .getOrElse {
         // Auditing here because we only want to audit on the message we've picked up rather than the messages from `getMovementMessages`
-        auditMessageForNoMovement(message)
+        if (appConfig.oldAuditingEnabled) auditMessageForNoMovement(message)
         Future.successful(Seq.empty)
       }
 
@@ -393,7 +393,7 @@ class MessageService @Inject() (
         }
       }
       .getOrElse {
-        auditMessageForNoMovement(originatingMessage)
+        if (appConfig.oldAuditingEnabled) auditMessageForNoMovement(originatingMessage)
         Future.successful(Seq.empty)
       }
 
@@ -426,7 +426,7 @@ class MessageService @Inject() (
           )
         }
         .getOrElse {
-          auditMessageForNoMovement(message)
+          if (appConfig.oldAuditingEnabled) auditMessageForNoMovement(message)
           Seq.empty
         }
     }

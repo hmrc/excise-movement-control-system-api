@@ -31,6 +31,7 @@ import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.MessageConnector.GetMessagesException
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, TraderMovementConnector}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessageGeneratorFactory}
@@ -93,7 +94,8 @@ class MessageServiceSpec
     )
     .configure(
       "microservice.services.eis.throttle-cutoff" -> "5 minutes",
-      "migrateLastUpdatedCutoff"                  -> migrateCutoffTimestamp.toString
+      "migrateLastUpdatedCutoff"                  -> migrateCutoffTimestamp.toString,
+      "featureFlags.oldAuditingEnabled"           -> "true"
     )
     .build()
 
@@ -855,6 +857,7 @@ class MessageServiceSpec
             verify(movementRepository).getAllBy(eqTo(consignor))
             verify(movementService).saveMovement(eqTo(expectedMovement), eqTo(None), any, any)(any)
             verify(messageConnector).acknowledgeMessages(eqTo(consignor), any, any)(any)
+
             verify(auditService)
               .messageAcknowledged(eqTo(consignor), any, any, eqTo(acknowledgementResponse.recordsAffected))(any)
 
@@ -889,10 +892,12 @@ class MessageServiceSpec
             verify(messageConnector).getNewMessages(eqTo(ern), any, any)(any)
             verify(traderMovementConnector).getMovementMessages(eqTo(ern), eqTo("23XI00000000000000012"))(any)
             verify(movementRepository).getAllBy(eqTo(ern))
+            // old auditing
             verify(auditService).auditMessage(
               messages.head,
               s"An IE818 message has been retrieved with no movement, unable to create movement"
             )
+            // new auditing
             verify(auditService)
               .messageAcknowledged(eqTo(ern), any, any, eqTo(acknowledgementResponse.recordsAffected))(any)
           }
@@ -925,10 +930,12 @@ class MessageServiceSpec
             verify(messageConnector).getNewMessages(eqTo(ern), any, any)(any)
             verify(traderMovementConnector).getMovementMessages(eqTo(ern), eqTo("23XI00000000000000012"))(any)
             verify(movementRepository).getAllBy(eqTo(ern))
+            //old auditing:
             verify(auditService).auditMessage(
               messages.head,
               s"An IE704 message has been retrieved with no movement, unable to create movement"
             )
+            // new auditing:
             verify(auditService)
               .messageAcknowledged(eqTo(ern), any, any, eqTo(acknowledgementResponse.recordsAffected))(any)
           }
