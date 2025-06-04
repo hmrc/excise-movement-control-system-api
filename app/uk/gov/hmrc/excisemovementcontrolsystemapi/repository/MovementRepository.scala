@@ -199,7 +199,7 @@ class MovementRepository @Inject() (
                 "recipient"   -> "$messages.recipient",
                 "boxId"       -> "$messages.boxesToNotify"
               )
-              .toDocument()
+              .toDocument
           )
         )
       )
