@@ -3,7 +3,7 @@ import scoverage.ScoverageKeys
 import uk.gov.hmrc.DefaultBuildSettings
 
 ThisBuild / majorVersion := 0
-ThisBuild / scalaVersion := "2.13.12"
+ThisBuild / scalaVersion := "2.13.16"
 
 lazy val microservice = Project("excise-movement-control-system-api", file("."))
   .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin, ScalaxbPlugin)
@@ -22,7 +22,7 @@ lazy val microservice = Project("excise-movement-control-system-api", file("."))
     Test / parallelExecution := true
   )
   .settings(resolvers += Resolver.jcenterRepo)
-  .settings(scoverageSettings: _*)
+  .settings(scoverageSettings *)
   .settings(scalafmtOnCompile := true)
   .settings(
     Compile / unmanagedResourceDirectories += baseDirectory.value / "resources"
@@ -34,7 +34,7 @@ lazy val it = project
   .dependsOn(microservice % "test->test") // the "test->test" allows reusing test code and test dependencies
   .settings(DefaultBuildSettings.itSettings())
 
-lazy val scoverageSettings: Seq[Setting[_]] = Seq(
+lazy val scoverageSettings: Seq[Setting[?]] = Seq(
   ScoverageKeys.coverageExcludedPackages := List(
     "<empty>",
     "Reverse.*",

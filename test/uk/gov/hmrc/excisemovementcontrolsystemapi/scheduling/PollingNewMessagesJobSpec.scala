@@ -111,7 +111,7 @@ class PollingNewMessagesJobSpec
         "and last retrieved for the ern is inside of the slow polling interval" in {
 
           val ernsAndLastReceived  = Map.empty[String, Instant]
-          val ernsAndLastSubmitted = Map("testErn" -> now.minus(16, ChronoUnit.MINUTES))
+          val ernsAndLastSubmitted = Map("GB12345678900" -> now.minus(16, ChronoUnit.MINUTES))
           when(timeService.timestamp()).thenReturn(now)
           when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
           when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
@@ -124,7 +124,7 @@ class PollingNewMessagesJobSpec
 
           result mustBe ScheduledJob.Result.Completed
           verify(messageService)
-            .updateMessages(eqTo("testErn"), eqTo(Some(now.minus(31, ChronoUnit.MINUTES))), any)(any)
+            .updateMessages(eqTo("GB12345678900"), eqTo(Some(now.minus(31, ChronoUnit.MINUTES))), any)(any)
         }
       }
 
@@ -133,7 +133,7 @@ class PollingNewMessagesJobSpec
         "and last retrieved for the ern is inside of the fast polling interval" in {
 
           val ernsAndLastReceived  = Map.empty[String, Instant]
-          val ernsAndLastSubmitted = Map("testErn" -> now.minus(14, ChronoUnit.MINUTES))
+          val ernsAndLastSubmitted = Map("GB12345678900" -> now.minus(14, ChronoUnit.MINUTES))
           when(timeService.timestamp()).thenReturn(now)
           when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
           when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
@@ -145,7 +145,8 @@ class PollingNewMessagesJobSpec
           val result = pollingNewMessagesJob.execute.futureValue
 
           result mustBe ScheduledJob.Result.Completed
-          verify(messageService).updateMessages(eqTo("testErn"), eqTo(Some(now.minus(6, ChronoUnit.MINUTES))), any)(any)
+          verify(messageService)
+            .updateMessages(eqTo("GB12345678900"), eqTo(Some(now.minus(6, ChronoUnit.MINUTES))), any)(any)
         }
       }
 
@@ -153,7 +154,7 @@ class PollingNewMessagesJobSpec
 
         "and last retrieved for the ern is inside of the slow polling interval" in {
 
-          val ernsAndLastReceived  = Map("testErn" -> now.minus(16, ChronoUnit.MINUTES))
+          val ernsAndLastReceived  = Map("GB12345678900" -> now.minus(16, ChronoUnit.MINUTES))
           val ernsAndLastSubmitted = Map.empty[String, Instant]
           when(timeService.timestamp()).thenReturn(now)
           when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
@@ -167,7 +168,7 @@ class PollingNewMessagesJobSpec
 
           result mustBe ScheduledJob.Result.Completed
           verify(messageService)
-            .updateMessages(eqTo("testErn"), eqTo(Some(now.minus(31, ChronoUnit.MINUTES))), any)(any)
+            .updateMessages(eqTo("GB12345678900"), eqTo(Some(now.minus(31, ChronoUnit.MINUTES))), any)(any)
         }
       }
 
@@ -175,7 +176,7 @@ class PollingNewMessagesJobSpec
 
         "and last retrieved for the ern is inside of the fast polling interval" in {
 
-          val ernsAndLastReceived  = Map("testErn" -> now.minus(14, ChronoUnit.MINUTES))
+          val ernsAndLastReceived  = Map("GB12345678900" -> now.minus(14, ChronoUnit.MINUTES))
           val ernsAndLastSubmitted = Map.empty[String, Instant]
           when(timeService.timestamp()).thenReturn(now)
           when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
@@ -188,17 +189,39 @@ class PollingNewMessagesJobSpec
           val result = pollingNewMessagesJob.execute.futureValue
 
           result mustBe ScheduledJob.Result.Completed
-          verify(messageService).updateMessages(eqTo("testErn"), eqTo(Some(now.minus(6, ChronoUnit.MINUTES))), any)(any)
+          verify(messageService)
+            .updateMessages(eqTo("GB12345678900"), eqTo(Some(now.minus(6, ChronoUnit.MINUTES))), any)(any)
         }
       }
     }
 
-    "must not update movements for the end" - {
+    "must not update movements for the ern" - {
+
+      "when the ern is invalid (has been filtered out)" in {
+
+        val ernsAndLastReceived  = Map.empty[String, Instant]
+        val ernsAndLastSubmitted = Map("Volvo Estate" -> now.minus(16, ChronoUnit.MINUTES))
+        when(timeService.timestamp()).thenReturn(now)
+        when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
+        when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
+        when(ernRetrievalRepository.getLastRetrieved(any))
+          .thenReturn(Future.successful(Some(now.minus(31, ChronoUnit.MINUTES))))
+        when(messageService.updateMessages(any, any, any)(any))
+          .thenReturn(Future.successful(MessageService.UpdateOutcome.Updated))
+
+        val result = pollingNewMessagesJob.execute.futureValue
+
+        result mustBe ScheduledJob.Result.Completed
+        verify(ernRetrievalRepository, never())
+          .getLastRetrieved(eqTo("Volvo Estate"))
+        verify(messageService, never())
+          .updateMessages(eqTo("Volvo Estate"), eqTo(Some(now.minus(31, ChronoUnit.MINUTES))), any)(any)
+      }
 
       "when the deadline is in the past" in {
 
-        val ernsAndLastReceived  = Map("testErn" -> now.minus(6, ChronoUnit.MINUTES))
-        val ernsAndLastSubmitted = Map("testErn" -> now.minus(6, ChronoUnit.MINUTES))
+        val ernsAndLastReceived  = Map("GB12345678900" -> now.minus(6, ChronoUnit.MINUTES))
+        val ernsAndLastSubmitted = Map("GB12345678900" -> now.minus(6, ChronoUnit.MINUTES))
         when(timeService.timestamp()).thenReturn(
           now,
           now.plus(1, ChronoUnit.MINUTES)
@@ -219,7 +242,7 @@ class PollingNewMessagesJobSpec
         "and last retrieved for the ern is outside of the slow polling interval" in {
 
           val ernsAndLastReceived  = Map.empty[String, Instant]
-          val ernsAndLastSubmitted = Map("testErn" -> now.minus(16, ChronoUnit.MINUTES))
+          val ernsAndLastSubmitted = Map("GB12345678900" -> now.minus(16, ChronoUnit.MINUTES))
           when(timeService.timestamp()).thenReturn(now)
           when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
           when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
@@ -240,7 +263,7 @@ class PollingNewMessagesJobSpec
         "and last retrieved for the ern is inside of the fast polling interval" in {
 
           val ernsAndLastReceived  = Map.empty[String, Instant]
-          val ernsAndLastSubmitted = Map("testErn" -> now.minus(14, ChronoUnit.MINUTES))
+          val ernsAndLastSubmitted = Map("GB12345678900" -> now.minus(14, ChronoUnit.MINUTES))
           when(timeService.timestamp()).thenReturn(now)
           when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
           when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
@@ -260,7 +283,7 @@ class PollingNewMessagesJobSpec
 
         "and last retrieved for the ern is outside of the slow polling interval" in {
 
-          val ernsAndLastReceived  = Map("testErn" -> now.minus(16, ChronoUnit.MINUTES))
+          val ernsAndLastReceived  = Map("GB12345678900" -> now.minus(16, ChronoUnit.MINUTES))
           val ernsAndLastSubmitted = Map.empty[String, Instant]
           when(timeService.timestamp()).thenReturn(now)
           when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
@@ -281,7 +304,7 @@ class PollingNewMessagesJobSpec
 
         "and last retrieved for the ern is outside of the fast polling cutoff" in {
 
-          val ernsAndLastReceived  = Map("testErn" -> now.minus(14, ChronoUnit.MINUTES))
+          val ernsAndLastReceived  = Map("GB12345678900" -> now.minus(14, ChronoUnit.MINUTES))
           val ernsAndLastSubmitted = Map.empty[String, Instant]
           when(timeService.timestamp()).thenReturn(now)
           when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
