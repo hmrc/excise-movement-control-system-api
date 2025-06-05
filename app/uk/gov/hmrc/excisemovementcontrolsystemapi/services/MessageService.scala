@@ -70,10 +70,12 @@ class MessageService @Inject() (
     erns.toSeq
       .traverse { ern =>
         ernRetrievalRepository.getLastRetrieved(ern).flatMap { lastRetrieved =>
-          updateMessages(ern, lastRetrieved).recover({ case NonFatal(error) =>
-            logger.warn(s"[MessageService]: Failed to update messages", error)
-            Done
-          })
+          updateMessages(ern, lastRetrieved)
+            .map(_ => Done)
+            .recover({ case NonFatal(error) =>
+              logger.warn(s"[MessageService]: Failed to update messages", error)
+              Done
+            })
         }
       }
       .as(Done)
@@ -145,7 +147,7 @@ class MessageService @Inject() (
   private def updateMovements(
     ern: String,
     messages: Seq[IEMessage],
-    jobId: Option[String] = None,
+    jobId: Option[String],
     batchId: Option[String]
   )(implicit
     hc: HeaderCarrier
