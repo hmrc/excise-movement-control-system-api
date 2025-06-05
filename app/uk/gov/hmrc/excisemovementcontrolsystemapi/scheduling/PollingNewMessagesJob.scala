@@ -18,7 +18,6 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
 import cats.syntax.all._
 import play.api.Configuration
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.Regex.ERN_REGEX
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, ErnSubmissionRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.MessageService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -54,7 +53,6 @@ class PollingNewMessagesJob @Inject() (
     val deadline = dateTimeService.timestamp().plus(interval.toMillis, ChronoUnit.MILLIS)
     val jobId    = UUID.randomUUID().toString
     getLastActivity
-      .map(lastActivityMap => lastActivityMap.filter(lastActivity => ERN_REGEX.matches(lastActivity._1)))
       .flatMap { lastActivityMap =>
         Random.shuffle(lastActivityMap.toSeq).traverse { case (ern, lastActivity) =>
           val now = dateTimeService.timestamp()
