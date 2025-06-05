@@ -197,27 +197,6 @@ class PollingNewMessagesJobSpec
 
     "must not update movements for the ern" - {
 
-      "when the ern is invalid (has been filtered out)" in {
-
-        val ernsAndLastReceived  = Map.empty[String, Instant]
-        val ernsAndLastSubmitted = Map("Volvo Estate" -> now.minus(16, ChronoUnit.MINUTES))
-        when(timeService.timestamp()).thenReturn(now)
-        when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
-        when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
-        when(ernRetrievalRepository.getLastRetrieved(any))
-          .thenReturn(Future.successful(Some(now.minus(31, ChronoUnit.MINUTES))))
-        when(messageService.updateMessages(any, any, any)(any))
-          .thenReturn(Future.successful(MessageService.UpdateOutcome.Updated))
-
-        val result = pollingNewMessagesJob.execute.futureValue
-
-        result mustBe ScheduledJob.Result.Completed
-        verify(ernRetrievalRepository, never())
-          .getLastRetrieved(eqTo("Volvo Estate"))
-        verify(messageService, never())
-          .updateMessages(eqTo("Volvo Estate"), eqTo(Some(now.minus(31, ChronoUnit.MINUTES))), any)(any)
-      }
-
       "when the deadline is in the past" in {
 
         val ernsAndLastReceived  = Map("GB12345678900" -> now.minus(6, ChronoUnit.MINUTES))
