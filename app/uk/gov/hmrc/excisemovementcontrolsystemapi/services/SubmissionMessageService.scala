@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.ImplementedBy
+import org.apache.pekko.Done
 import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.EISSubmissionConnector
@@ -49,6 +50,7 @@ class SubmissionMessageServiceImpl @Inject() (
       isSuccess              = submitMessageResponse.isRight
       _                      = if (isSuccess) ernSubmissionRepository.save(authorisedErn).recover { case NonFatal(error) =>
                                  logger.warn(s"Failed to save ERN to ERNSubmissionRepository", error)
+                                 Done
                                }
       _                      = if (isSuccess) nrsServiceNew.makeWorkItemAndQueue(request, authorisedErn)
     } yield submitMessageResponse
