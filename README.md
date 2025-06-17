@@ -1,4 +1,3 @@
-
 # Excise Movement Control System API
 
 This is the public facing EMCS API to process and record Excise Movements.
