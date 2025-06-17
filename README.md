@@ -182,9 +182,9 @@ change some configuration setting as below:**
 * if you start the service from comannd line not using service manager use the following command:
 
 
-  ```
+  ````
   sbt start
-  ```
+  ````
 
 1. to see if a push notification was sent we can check if the push-pull-notification service has received the request.
 2. create an access token using the [Auth Wizard](http://localhost:9949/auth-login-stub/application-login)
