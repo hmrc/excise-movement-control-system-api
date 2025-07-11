@@ -50,7 +50,7 @@ class PollingNewMessagesJob @Inject() (
   private val throttledMeter = metrics.defaultRegistry.meter("polling-new-messages-job.throttled-meter")
 
   override def execute(implicit ec: ExecutionContext): Future[ScheduledJob.Result] = {
-    val deadline = dateTimeService.timestamp().plus(interval.toMillis, ChronoUnit.MILLIS)
+    val deadline = dateTimeService.timestamp().plus(duration.toMillis, ChronoUnit.MILLIS)
     val jobId    = UUID.randomUUID().toString
     getLastActivity
       .flatMap { lastActivityMap =>
@@ -132,6 +132,8 @@ class PollingNewMessagesJob @Inject() (
     configuration.get[FiniteDuration]("scheduler.pollingNewMessagesJob.initialDelay")
 
   override def interval: FiniteDuration = configuration.get[FiniteDuration]("scheduler.pollingNewMessagesJob.interval")
+
+  private def duration: FiniteDuration = configuration.get[FiniteDuration]("scheduler.pollingNewMessagesJob.duration")
 
   private val fastPollingInterval: FiniteDuration =
     configuration.get[FiniteDuration]("scheduler.pollingNewMessagesJob.fastPollingInterval")
