@@ -153,7 +153,7 @@ class MovementRepository @Inject() (
 
   def protectionFilter(ern: String): Future[Boolean] = {
     val movementFilter: MovementFilter = MovementFilter.emptyFilter
-    val filters =
+    val filters                        =
       Seq(
         movementFilter.updatedSince.map(Filters.gte("lastUpdated", _)),
         movementFilter.lrn.map(Filters.eq("localReferenceNumber", _)),
@@ -181,14 +181,16 @@ class MovementRepository @Inject() (
       )
       .toFuture()
       .map { count =>
-        logger.info(s"Protection filter responded with an error for ERN: $ern - Count is $count")
+        if (count > movementThreshold) {
+          logger.info(s"Protection filter responded with an error for ERN: $ern - Count is $count")
+        }
         count > movementThreshold
       }
   }
 
   def getAllBy(ern: String): Future[Seq[Movement]] = Mdc.preservingMdc {
     protectionFilter(ern).flatMap {
-      case true => throw new Exception(s"Protection filter responded with an error for ERN: $ern")
+      case true  => throw new Exception(s"Protection filter responded with an error for ERN: $ern")
       case false => getMovementByERN(Seq(ern), MovementFilter.emptyFilter)
     }
   }
