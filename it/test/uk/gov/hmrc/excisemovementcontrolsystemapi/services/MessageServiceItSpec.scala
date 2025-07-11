@@ -264,7 +264,7 @@ class MessageServiceItSpec
 
       when(mockTraderMovementConnector.getMovementMessages(any, any)(any)).thenReturn(Future.successful(messages))
 
-      movementService.getDraftMovementOrSaveNew(initialMovement).futureValue.isRight mustBe true
+      movementService.saveNewMovement(initialMovement).futureValue.isRight mustBe true
       service.updateMessages(consignorErn, None)(hc).futureValue
 
       val result = repository.getMovementByLRNAndERNIn(lrn, List(consignorErn)).futureValue
@@ -321,7 +321,7 @@ class MessageServiceItSpec
       when(mockMessageConnector.acknowledgeMessages(any, any, any)(any))
         .thenReturn(Future.successful(acknowledgeResponse))
 
-      movementService.getDraftMovementOrSaveNew(initialMovement)(hc).futureValue.isRight mustBe true
+      movementService.saveNewMovement(initialMovement)(hc).futureValue.isRight mustBe true
       service.updateMessages(consigneeErn, None)(hc).futureValue
 
       val result = repository.getMovementByLRNAndERNIn(lrn, List(consignorErn)).futureValue

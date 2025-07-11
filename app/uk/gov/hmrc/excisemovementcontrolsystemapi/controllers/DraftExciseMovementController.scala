@@ -65,10 +65,10 @@ class DraftExciseMovementController @Inject() (
         ie815Message  <- getIe815Message(request.ieMessage)
         authorisedErn <- validateMessage(ie815Message, request.erns)
         clientId      <- retrieveClientIdFromHeader(request)
-        maybeBoxId    <- getBoxId(clientId)
+        boxId         <- getBoxId(clientId)
         _             <- submitAndHandleError(request, authorisedErn, ie815Message)
-        movement      <- getDraftOrSaveNew(maybeBoxId, ie815Message, request)
-      } yield (movement, maybeBoxId, ie815Message)).fold[Result](
+        movement      <- saveMovement(boxId, ie815Message, request)
+      } yield (movement, boxId, ie815Message)).fold[Result](
         failResult => failResult,
         success => {
           val (movement, boxId, ie815Message) = success
@@ -130,17 +130,17 @@ class DraftExciseMovementController @Inject() (
       messageValidator.convertErrorToResponse(x, dateTimeService.timestamp())
     })
 
-  private def getDraftOrSaveNew(
-    maybeBoxId: Option[String],
+  private def saveMovement(
+    boxId: Option[String],
     message: IE815Message,
     request: ParsedXmlRequest[NodeSeq]
   )(implicit hc: HeaderCarrier): EitherT[Future, Result, Movement] =
     EitherT {
 
-      val unsavedMovement: Movement = createMovementFomMessage(message, maybeBoxId)
-      maybeBoxId.foreach(boxIdRepository.save(unsavedMovement.consignorId, _))
+      val newMovement: Movement = createMovementFomMessage(message, boxId)
+      boxId.map(boxIdRepository.save(newMovement.consignorId, _))
 
-      movementMessageService.getDraftMovementOrSaveNew(unsavedMovement).map {
+      movementMessageService.saveNewMovement(newMovement).map {
         case Left(result)    =>
           if (appConfig.oldAuditingEnabled) auditService.auditMessage(message, "Failed to Save")
           auditService.messageSubmittedNoMovement(message, true, message.correlationId, request)

@@ -113,7 +113,7 @@ class DraftExciseMovementControllerSpec
     "return 202" when {
 
       "push pull notifications feature flag is enabled" in {
-        when(movementService.getDraftMovementOrSaveNew(any)(any))
+        when(movementService.saveNewMovement(any)(any))
           .thenReturn(
             Future.successful(Right(Movement(Some(defaultBoxId), "123", consignorId, Some("789"), None, Instant.now)))
           )
@@ -134,7 +134,7 @@ class DraftExciseMovementControllerSpec
 
         withClue("should save the new movement") {
           val captor      = ArgCaptor[Movement]
-          verify(movementService).getDraftMovementOrSaveNew(captor.capture)(any)
+          verify(movementService).saveNewMovement(captor.capture)(any)
           val newMovement = captor.value
           newMovement.localReferenceNumber mustBe "123"
           newMovement.consignorId mustBe consignorId
@@ -148,7 +148,7 @@ class DraftExciseMovementControllerSpec
       "push pull notifications feature flag is disabled" in {
         when(appConfig.pushNotificationsEnabled).thenReturn(false)
 
-        when(movementService.getDraftMovementOrSaveNew(any)(any))
+        when(movementService.saveNewMovement(any)(any))
           .thenReturn(
             Future.successful(Right(Movement(Some(defaultBoxId), "123", consignorId, Some("789"), None, Instant.now)))
           )
@@ -163,7 +163,7 @@ class DraftExciseMovementControllerSpec
 
         withClue("should save the new movement with no box id") {
           val captor      = ArgCaptor[Movement]
-          verify(movementService).getDraftMovementOrSaveNew(captor.capture)(any)
+          verify(movementService).saveNewMovement(captor.capture)(any)
           val newMovement = captor.value
           newMovement.boxId mustBe None
         }
@@ -172,7 +172,7 @@ class DraftExciseMovementControllerSpec
     }
 
     "pass the Client Box id to notification service when is present" in {
-      when(movementService.getDraftMovementOrSaveNew(any)(any))
+      when(movementService.saveNewMovement(any)(any))
         .thenReturn(
           Future.successful(Right(Movement(Some(defaultBoxId), "123", consignorId, Some("789"), None, Instant.now)))
         )
@@ -184,7 +184,7 @@ class DraftExciseMovementControllerSpec
     }
 
     "sends expected audit events" in {
-      when(movementService.getDraftMovementOrSaveNew(any)(any))
+      when(movementService.saveNewMovement(any)(any))
         .thenReturn(
           Future.successful(Right(Movement(Some(defaultBoxId), "123", consignorId, Some("789"), None, Instant.now)))
         )
@@ -215,7 +215,7 @@ class DraftExciseMovementControllerSpec
     }
 
     "sends failure audits when a message submits but doesn't save" in {
-      when(movementService.getDraftMovementOrSaveNew(any)(any)).thenReturn(Future.successful(Left(BadRequest(""))))
+      when(movementService.saveNewMovement(any)(any)).thenReturn(Future.successful(Left(BadRequest(""))))
       when(appConfig.oldAuditingEnabled).thenReturn(true)
 
       await(createWithSuccessfulAuth.submit(request))
@@ -227,7 +227,7 @@ class DraftExciseMovementControllerSpec
     }
 
     "adds the boxId to the BoxIdRepository for consignor" in {
-      when(movementService.getDraftMovementOrSaveNew(any)(any))
+      when(movementService.saveNewMovement(any)(any))
         .thenReturn(Future.successful(Right(Movement(Some(defaultBoxId), "lrn", consignorId, None))))
 
       await(createWithSuccessfulAuth.submit(request))
@@ -309,7 +309,7 @@ class DraftExciseMovementControllerSpec
       }
 
       "cannot save the movement" in {
-        when(movementService.getDraftMovementOrSaveNew(any)(any))
+        when(movementService.saveNewMovement(any)(any))
           .thenReturn(Future.successful(Left(InternalServerError("error"))))
 
         val result = createWithSuccessfulAuth.submit(request)
@@ -318,7 +318,7 @@ class DraftExciseMovementControllerSpec
       }
 
       "XML is not a IE815 message" in {
-        when(movementService.getDraftMovementOrSaveNew(any)(any))
+        when(movementService.saveNewMovement(any)(any))
           .thenReturn(
             Future.successful(Right(Movement(Some(defaultBoxId), "123", "456", Some("789"), None, Instant.now)))
           )

@@ -42,12 +42,12 @@ class MovementService @Inject() (
 )(implicit ec: ExecutionContext)
     extends Logging {
 
-  def getDraftMovementOrSaveNew(newMovement: Movement)(implicit hc: HeaderCarrier): Future[Either[Result, Movement]] =
+  def saveNewMovement(movement: Movement)(implicit hc: HeaderCarrier): Future[Either[Result, Movement]] =
     movementRepository
-      .findDraftMovement(newMovement)
-      .flatMap { maybeDraftMovement =>
-        maybeDraftMovement.map(draftMovement => Future.successful(Right(draftMovement))).getOrElse {
-          saveMovement(newMovement).map(_ => Right(newMovement))
+      .findDraftMovement(movement)
+      .flatMap { draftMovement =>
+        draftMovement.map(movement => Future.successful(Right(movement))).getOrElse {
+          saveMovement(movement).map(_ => Right(movement))
         }
       }
       .recover {
@@ -55,7 +55,7 @@ class MovementService @Inject() (
           logger.warn(
             s"[MovementService] - The local reference number has already been used for another movement"
           )
-          Left(createDuplicateErrorResponse(newMovement))
+          createDuplicateErrorResponse(movement)
         case NonFatal(e)              =>
           logger.error(s"[MovementService] - Error occurred while saving movement, ${e.getMessage}", e)
           Left(
@@ -72,7 +72,7 @@ class MovementService @Inject() (
       }
 
   def saveMovement(
-    movement: Movement,
+    updatedMovement: Movement,
     jobId: Option[String] = None,
     batchId: Option[String] = None,
     messagesAlreadyInMongo: Seq[Message] = Seq.empty
@@ -83,16 +83,16 @@ class MovementService @Inject() (
     val messagesAlreadyInMongoMap = messagesAlreadyInMongo.map(p => p.messageId -> p).toMap
 
     val newMessages =
-      movement.messages.filter(p1 => !messagesAlreadyInMongoMap.get(p1.messageId).contains(p1))
+      updatedMovement.messages.filter(p1 => !messagesAlreadyInMongoMap.get(p1.messageId).contains(p1))
 
     movementRepository
-      .saveMovement(movement)
+      .saveMovement(updatedMovement)
       .map { _ =>
-        auditService.movementSavedSuccess(movement, batchId, jobId, newMessages)
+        auditService.movementSavedSuccess(updatedMovement, batchId, jobId, newMessages)
         Done
       }
       .recoverWith { case e =>
-        auditService.movementSavedFailure(movement, e.getMessage, batchId, jobId, newMessages)
+        auditService.movementSavedFailure(updatedMovement, e.getMessage, batchId, jobId, newMessages)
         Future.failed(e)
       }
   }
@@ -128,13 +128,15 @@ class MovementService @Inject() (
       }
     }
 
-  private def createDuplicateErrorResponse(movement: Movement): Result =
-    BadRequest(
-      Json.toJson(
-        ErrorResponse(
-          dateTimeService.timestamp(),
-          "Duplicate LRN error",
-          s"The local reference number ${movement.localReferenceNumber} has already been used for another movement"
+  private def createDuplicateErrorResponse(movement: Movement): Either[Result, Movement] =
+    Left(
+      BadRequest(
+        Json.toJson(
+          ErrorResponse(
+            dateTimeService.timestamp(),
+            "Duplicate LRN error",
+            s"The local reference number ${movement.localReferenceNumber} has already been used for another movement"
+          )
         )
       )
     )
