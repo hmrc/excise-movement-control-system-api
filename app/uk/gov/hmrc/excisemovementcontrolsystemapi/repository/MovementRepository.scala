@@ -70,10 +70,7 @@ class MovementRepository @Inject() (
       Some(equal("consignorId", movement.consignorId)),
       Some(equal("localReferenceNumber", movement.localReferenceNumber)),
       Some(not(exists("administrativeReferenceCode"))),
-      // consigneeId is not included here
-      // This should make it match the duplication checking logic in Core so we
-      // don't have the problem where movements are saved successfully by Core
-      // and then rejected as being duplicates by EMCS API - for more info see CS-6769
+      movement.consigneeId.map(consignee => equal("consigneeId", consignee))
     )
     collection
       .find(

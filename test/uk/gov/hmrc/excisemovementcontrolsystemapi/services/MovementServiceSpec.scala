@@ -85,7 +85,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
   private val exampleMovement: Movement =
     Movement(Some("boxId"), lrn, consignorId, Some(consigneeId), messages = Seq(exampleMessage))
 
-  "getDraftMovementOrSaveNew" should {
+  "saveNewMovement" should {
     "return a Movement" in {
       val successMovement = exampleMovement
       when(mockMovementRepository.findDraftMovement(any))
@@ -94,7 +94,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       when(mockMovementRepository.saveMovement(any))
         .thenReturn(Future.successful(Done))
 
-      val result = await(movementService.getDraftMovementOrSaveNew(successMovement))
+      val result = await(movementService.saveNewMovement(successMovement))
 
       result mustBe Right(successMovement)
     }
@@ -106,7 +106,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       when(mockMovementRepository.saveMovement(any))
         .thenReturn(Future.failed(new RuntimeException("error")))
 
-      val result = await(movementService.getDraftMovementOrSaveNew(exampleMovement))
+      val result = await(movementService.saveNewMovement(exampleMovement))
 
       val expectedError = ErrorResponse(testDateTime, "Database error", "error")
       result.left.value mustBe InternalServerError(Json.toJson(expectedError))
@@ -122,7 +122,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
           )
         )
 
-      val result = await(movementService.getDraftMovementOrSaveNew(exampleMovement))
+      val result = await(movementService.saveNewMovement(exampleMovement))
 
       val expectedError = ErrorResponse(
         testDateTime,
@@ -138,7 +138,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       when(mockMovementRepository.saveMovement(any))
         .thenReturn(Future.successful(Done))
 
-      val result = await(movementService.getDraftMovementOrSaveNew(exampleMovement))
+      val result = await(movementService.saveNewMovement(exampleMovement))
 
       val expectedError = ErrorResponse(testDateTime, "Database error", "Database error")
       result.left.value mustBe InternalServerError(Json.toJson(expectedError))
@@ -151,7 +151,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
       when(mockMovementRepository.saveMovement(any))
         .thenReturn(Future.successful(Done))
 
-      val result = await(movementService.getDraftMovementOrSaveNew(exampleMovement))
+      val result = await(movementService.saveNewMovement(exampleMovement))
 
       result mustBe Right(exampleMovement)
     }
