@@ -68,7 +68,7 @@ class MovementRepositoryItSpec
     when(dateTimeService.timestamp()).thenReturn(timestamp)
   }
 
-  "saveMovement" should {
+  "upsertMovement" should {
 
     val uuid     = UUID.randomUUID()
     val movement = Movement(uuid.toString, Some("boxId"), "123", "345", Some("789"), None, timestamp, Seq.empty)
@@ -244,11 +244,11 @@ class MovementRepositoryItSpec
 
       result mustBe None
     }
-    "return None if matching LRN and consignor but has different consignee" in {
+    "do not include consigneeId when trying to see if a draft movement exists (this matches the duplication checking logic in Core)" in {
       insertMovement(movementDiffConsignee)
       val result = repository.findDraftMovement(movement).futureValue
 
-      result mustBe None
+      result mustBe Some(movementDiffConsignee)
     }
     "return the existing movement matching the consignor, consignee and LRN with no ARC" in {
       insertMovement(movement)
