@@ -21,6 +21,8 @@ import org.apache.pekko.Done
 import org.bson.conversions.Bson
 import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model._
+import play.api.Configuration
+import play.api.libs.Files.logger
 import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
@@ -43,7 +45,8 @@ import scala.jdk.CollectionConverters.SeqHasAsJava
 class MovementRepository @Inject() (
   mongo: MongoComponent,
   appConfig: AppConfig,
-  timeService: DateTimeService
+  timeService: DateTimeService,
+  configuration: Configuration
 )(implicit ec: ExecutionContext)
     extends PlayMongoRepository[Movement](
       collectionName = "movements",
@@ -148,8 +151,46 @@ class MovementRepository @Inject() (
       Filters.in("messages.recipient", ern: _*)
     )
 
+  def protectionFilter(ern: String): Future[Boolean] = {
+    val movementFilter: MovementFilter = MovementFilter.emptyFilter
+    val filters =
+      Seq(
+        movementFilter.updatedSince.map(Filters.gte("lastUpdated", _)),
+        movementFilter.lrn.map(Filters.eq("localReferenceNumber", _)),
+        movementFilter.arc.map(Filters.eq("administrativeReferenceCode", _)),
+        movementFilter.ern.map(ern =>
+          Filters
+            .or(Filters.eq("consignorId", ern), Filters.eq("consigneeId", ern), Filters.eq("messages.recipient", ern))
+        )
+      ).flatten
+
+    val movementThreshold = configuration.get[Int]("movement.threshold")
+
+    val filter = if (filters.nonEmpty) Filters.and(filters: _*) else Filters.empty()
+
+    val ernFilters = getErnFilters(Seq(ern))
+
+    collection
+      .countDocuments(
+        and(
+          filter,
+          or(
+            ernFilters: _*
+          )
+        )
+      )
+      .toFuture()
+      .map { count =>
+        logger.info(s"Protection filter responded with an error for ERN: $ern - Count is $count")
+        count > movementThreshold
+      }
+  }
+
   def getAllBy(ern: String): Future[Seq[Movement]] = Mdc.preservingMdc {
-    getMovementByERN(Seq(ern), MovementFilter.emptyFilter)
+    protectionFilter(ern).flatMap {
+      case true => throw new Exception(s"Protection filter responded with an error for ERN: $ern")
+      case false => getMovementByERN(Seq(ern), MovementFilter.emptyFilter)
+    }
   }
 
   def getByArc(arc: String): Future[Option[Movement]] = Mdc.preservingMdc {

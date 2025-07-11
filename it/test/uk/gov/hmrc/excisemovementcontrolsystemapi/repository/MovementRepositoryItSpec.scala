@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import org.apache.pekko.Done
+import org.mockito.IdiomaticMockito.WithExpect.expect
 import org.mockito.MockitoSugar.when
 import org.mongodb.scala.model.Filters
 import org.scalactic.source.Position
@@ -628,6 +629,30 @@ class MovementRepositoryItSpec
       val result = repository.getAllBy("896").futureValue
 
       result mustBe Seq.empty
+    }
+
+    "respond with error when there would be too many movements" in {
+      insertMovement(Movement(Some("boxId"), "1", "345", Some("789"), None))
+      insertMovement(Movement(Some("boxId"), "2", "345", Some("456"), None))
+      insertMovement(Movement(Some("boxId"), "3", "345", Some("523"), None))
+      insertMovement(Movement(Some("boxId"), "4", "345", Some("456"), None))
+      insertMovement(Movement(Some("boxId"), "5", "345", Some("523"), None))
+
+      val exception = intercept[Exception] {
+        repository.getAllBy("345").futureValue
+      }
+
+      exception.getCause.getMessage mustEqual "Protection filter responded with an error for ERN: 345"
+    }
+
+    "don't respond with error when there are not too many movements" in {
+      insertMovement(Movement(Some("boxId"), "1", "345", Some("789"), None))
+      insertMovement(Movement(Some("boxId"), "2", "345", Some("456"), None))
+      insertMovement(Movement(Some("boxId"), "3", "345", Some("523"), None))
+
+      val result = repository.getAllBy("345").futureValue
+
+      result.length mustBe 3
     }
 
     mustPreserveMdc(repository.getAllBy("ern"))
