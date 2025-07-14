@@ -17,12 +17,12 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import org.apache.pekko.Done
-import org.mockito.IdiomaticMockito.WithExpect.expect
 import org.mockito.MockitoSugar.when
 import org.mongodb.scala.model.Filters
 import org.scalactic.source.Position
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.IntegrationPatience
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
@@ -33,15 +33,18 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository.MessageNotification
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Message
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.test.{CleanMongoCollectionSupport, DefaultPlayMongoRepositorySupport}
+import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
+import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import java.time._
 import java.time.temporal.ChronoUnit
 import java.util.UUID
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 class MovementRepositoryItSpec
     extends PlaySpec
@@ -591,7 +594,7 @@ class MovementRepositoryItSpec
       insertMovement(movementLrn2)
       insertMovement(movementLrn6)
 
-      val result = repository.getAllBy("345").futureValue
+      val result = repository.getAllBy("345", Seq.empty, Seq.empty).futureValue
 
       result mustBe Seq(movementLrn1, movementLrn6)
     }
@@ -606,7 +609,7 @@ class MovementRepositoryItSpec
       insertMovement(movementLrn6)
       insertMovement(movementLrn1Consignor564)
 
-      val result = repository.getAllBy("456").futureValue
+      val result = repository.getAllBy("456", Seq.empty, Seq.empty).futureValue
 
       result mustBe Seq(movementLrn2, movementLrn1Consignor564)
     }
@@ -616,7 +619,7 @@ class MovementRepositoryItSpec
       val movementLrn1 = Movement(Some("boxId"), "1", "345", Some("789"), None, timestamp, messages = Seq(message))
       insertMovement(movementLrn1)
 
-      val result = repository.getAllBy("456").futureValue
+      val result = repository.getAllBy("456", Seq.empty, Seq.empty).futureValue
 
       result mustBe Seq(movementLrn1)
     }
@@ -626,7 +629,7 @@ class MovementRepositoryItSpec
       insertMovement(Movement(Some("boxId"), "2", "897", Some("456"), None))
       insertMovement(Movement(Some("boxId"), "6", "345", Some("523"), None))
 
-      val result = repository.getAllBy("896").futureValue
+      val result = repository.getAllBy("896", Seq.empty, Seq.empty).futureValue
 
       result mustBe Seq.empty
     }
@@ -637,25 +640,42 @@ class MovementRepositoryItSpec
       insertMovement(Movement(Some("boxId"), "3", "345", Some("523"), None))
       insertMovement(Movement(Some("boxId"), "4", "345", Some("456"), None))
       insertMovement(Movement(Some("boxId"), "5", "345", Some("523"), None))
+      insertMovement(Movement(Some("boxId"), "6", "345", Some("223"), None))
+      insertMovement(Movement(Some("boxId"), "7", "345", Some("224"), None))
 
       val exception = intercept[Exception] {
-        repository.getAllBy("345").futureValue
+        repository.getAllBy("345", Seq.empty, Seq.empty).futureValue
       }
 
       exception.getCause.getMessage mustEqual "Protection filter responded with an error for ERN: 345"
     }
 
     "don't respond with error when there are not too many movements" in {
+    
       insertMovement(Movement(Some("boxId"), "1", "345", Some("789"), None))
       insertMovement(Movement(Some("boxId"), "2", "345", Some("456"), None))
       insertMovement(Movement(Some("boxId"), "3", "345", Some("523"), None))
 
-      val result = repository.getAllBy("345").futureValue
+      val result = repository.getAllBy("345", Seq.empty, Seq.empty).futureValue
 
       result.length mustBe 3
     }
 
-    mustPreserveMdc(repository.getAllBy("ern"))
+    "use getFilteredMovementByErn" when {
+      "the user has movements in the range of the filtered threshold" in {
+      insertMovement(Movement(Some("boxId"), "1", "888", Some("789"), None))
+      insertMovement(Movement(Some("boxId"), "2", "888", Some("456"), None))
+      insertMovement(Movement(Some("boxId"), "3", "888", Some("523"), None))
+      insertMovement(Movement(Some("boxId"), "4", "888", Some("456"), None))
+      insertMovement(Movement(Some("boxId"), "5", "888", Some("523"), None))
+
+      val result = repository.getAllBy("888", Seq("1", "2", "3", "4", "5"), Seq.empty).futureValue
+
+      result.length mustBe 5
+      }
+    }
+
+    mustPreserveMdc(repository.getAllBy("ern", Seq.empty, Seq.empty))
   }
 
   "getErnsAndLastReceived" should {
