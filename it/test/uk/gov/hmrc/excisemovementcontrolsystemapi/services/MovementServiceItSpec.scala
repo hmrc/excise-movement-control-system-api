@@ -66,7 +66,7 @@ class MovementServiceItSpec
     when(dateTimeService.timestamp()).thenReturn(timestamp)
   }
 
-  "saveNewMovement" should {
+  "getDraftMovementOrSaveNew" should {
     val lrn            = "123"
     val consignorId    = "Abc"
     val consigneeId    = "def"
@@ -82,7 +82,7 @@ class MovementServiceItSpec
     "throw an error when LRN is already in database for consignor with an ARC" in {
       insert(withArc).futureValue
 
-      val result = movementService.saveNewMovement(movement).futureValue
+      val result = movementService.getDraftMovementOrSaveNew(movement).futureValue
 
       val expectedError = ErrorResponse(
         timestamp,
@@ -92,23 +92,18 @@ class MovementServiceItSpec
       result.left.value mustBe BadRequest(Json.toJson(expectedError))
     }
 
-    "throw an error when LRN is already in database with no ARC for same consignor but different consignee" in {
+    "return the newly saved movement even if the consigneeId is different (this matches the duplication checking logic in Core)" in {
       insert(diffConsignee).futureValue
 
-      val result = movementService.saveNewMovement(movement).futureValue
+      val result = movementService.getDraftMovementOrSaveNew(movement).futureValue
 
-      val expectedError = ErrorResponse(
-        timestamp,
-        "Duplicate LRN error",
-        "The local reference number 123 has already been used for another movement"
-      )
-      result.left.value mustBe BadRequest(Json.toJson(expectedError))
+      result mustBe Right(diffConsignee)
     }
 
     "return the newly saved movement when LRN is already in database for different consignor but same consignee" in {
       insert(diffConsignor).futureValue
 
-      val result = movementService.saveNewMovement(movement).futureValue
+      val result = movementService.getDraftMovementOrSaveNew(movement).futureValue
 
       result mustBe Right(movement)
     }
@@ -116,7 +111,7 @@ class MovementServiceItSpec
     "return the newly saved movement when LRN is already in database as a consignee and it is submitted as a consignor" in {
       insert(switched).futureValue
 
-      val result = movementService.saveNewMovement(movement).futureValue
+      val result = movementService.getDraftMovementOrSaveNew(movement).futureValue
 
       result mustBe Right(movement)
     }
