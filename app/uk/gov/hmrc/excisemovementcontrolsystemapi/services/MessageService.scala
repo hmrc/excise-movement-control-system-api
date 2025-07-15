@@ -154,8 +154,11 @@ class MessageService @Inject() (
   ): Future[Done] = {
     logger.info(s"[MessageService]: Updating movements")
     if (messages.nonEmpty) {
+      val administrativeReferenceCodes: Seq[String] = messages.flatMap(_.administrativeReferenceCode).flatten
+      val localReferenceNumbers: Seq[String]        = messages.flatMap(_.optionalLocalReferenceNumber)
+
       movementRepository
-        .getAllBy(ern)
+        .getAllBy(ern, localReferenceNumbers, administrativeReferenceCodes)
         .flatMap { movements: Seq[Movement] =>
           messages
             .foldLeft(Future.successful(Seq.empty[Movement])) { (accumulated, message) =>

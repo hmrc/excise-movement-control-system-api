@@ -112,6 +112,29 @@ class MovementRepository @Inject() (
     collection.find(byLrnAndErns(lrn, erns)).toFuture()
   }
 
+  private def getFilteredMovementByERN(
+    ern: String,
+    localReferenceNumbers: Seq[String],
+    administrativeReferenceCodes: Seq[String]
+  ): Future[Seq[Movement]] = Mdc.preservingMdc {
+
+    val ernFilters = or(getErnFilters(Seq(ern)): _*)
+
+    val idFilter: Bson = Filters.or(
+      Filters.in("localReferenceNumber", localReferenceNumbers: _*),
+      Filters.in("administrativeReferenceCode", administrativeReferenceCodes: _*)
+    )
+
+    collection
+      .find(
+        and(
+          idFilter,
+          ernFilters
+        )
+      )
+      .toFuture()
+  }
+
   def getMovementByERN(
     ern: Seq[String],
     movementFilter: MovementFilter = MovementFilter.emptyFilter
@@ -151,9 +174,17 @@ class MovementRepository @Inject() (
       Filters.in("messages.recipient", ern: _*)
     )
 
-  def protectionFilter(ern: String): Future[Boolean] = {
+  object MovementFilterThresholds {
+    sealed trait Threshold
+
+    case object Normal extends Threshold
+    case object Filtered extends Threshold
+    case object Failure extends Threshold
+  }
+
+  def protectionFilter(ern: String): Future[MovementFilterThresholds.Threshold] = {
     val movementFilter: MovementFilter = MovementFilter.emptyFilter
-    val filters =
+    val filters                        =
       Seq(
         movementFilter.updatedSince.map(Filters.gte("lastUpdated", _)),
         movementFilter.lrn.map(Filters.eq("localReferenceNumber", _)),
@@ -164,7 +195,9 @@ class MovementRepository @Inject() (
         )
       ).flatten
 
-    val movementThreshold = configuration.get[Int]("movement.threshold")
+    val movementThreshold        = configuration.get[Int]("movement.threshold")
+    val movementFailureThreshold =
+      configuration.getOptional[Int]("movement.failureThreshold").getOrElse(movementThreshold)
 
     val filter = if (filters.nonEmpty) Filters.and(filters: _*) else Filters.empty()
 
@@ -181,17 +214,30 @@ class MovementRepository @Inject() (
       )
       .toFuture()
       .map { count =>
-        if (count > movementThreshold) {
+        if (count > movementThreshold && count <= movementFailureThreshold) {
+          logger.warn(s"Protection filter filtering to occur for ERN: $ern - Count is $count")
+          MovementFilterThresholds.Filtered
+        } else if (count > movementFailureThreshold) {
           logger.warn(s"Protection filter responded with an error for ERN: $ern - Count is $count")
+          MovementFilterThresholds.Failure
+        } else {
+          MovementFilterThresholds.Normal
         }
-        count > movementThreshold
       }
   }
 
-  def getAllBy(ern: String): Future[Seq[Movement]] = Mdc.preservingMdc {
+  def getAllBy(
+    ern: String,
+    localReferenceNumbers: Seq[String],
+    administrativeReferenceCodes: Seq[String]
+  ): Future[Seq[Movement]] = Mdc.preservingMdc {
     protectionFilter(ern).flatMap {
-      case true  => throw new Exception(s"Protection filter responded with an error for ERN: $ern")
-      case false => getMovementByERN(Seq(ern), MovementFilter.emptyFilter)
+      case MovementFilterThresholds.Failure  =>
+        throw new Exception(s"Protection filter responded with an error for ERN: $ern")
+      case MovementFilterThresholds.Filtered =>
+        getFilteredMovementByERN(ern, localReferenceNumbers, administrativeReferenceCodes)
+      case MovementFilterThresholds.Normal   =>
+        getMovementByERN(Seq(ern), MovementFilter.emptyFilter)
     }
   }
 
@@ -323,6 +369,18 @@ object MovementRepository {
         Indexes.ascending("messages.recipient"),
         IndexOptions()
           .name("recipient_idx")
+      ),
+      IndexModel(
+        Indexes.compoundIndex(
+          Indexes.text("consignorId"),
+          Indexes.text("consigneeId"),
+          Indexes.text("messages.recipient"),
+          Indexes.text("localReferenceNumber"),
+          Indexes.text("administrativeReferenceCode")
+        ),
+        IndexOptions()
+          .name("messageId_idx")
+          .sparse(true)
       )
     )
 

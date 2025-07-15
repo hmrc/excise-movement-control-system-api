@@ -137,6 +137,7 @@ class DraftExciseMovementController @Inject() (
   )(implicit hc: HeaderCarrier): EitherT[Future, Result, Movement] =
     EitherT {
 
+      //TODO cannot find by ID as a new ID is generate from the message here
       val newMovement: Movement = createMovementFomMessage(message, boxId)
       boxId.map(boxIdRepository.save(newMovement.consignorId, _))
 
