@@ -641,7 +641,6 @@ class MovementRepositoryItSpec
       insertMovement(Movement(Some("boxId"), "4", "345", Some("456"), None))
       insertMovement(Movement(Some("boxId"), "5", "345", Some("523"), None))
       insertMovement(Movement(Some("boxId"), "6", "345", Some("223"), None))
-      insertMovement(Movement(Some("boxId"), "7", "345", Some("224"), None))
 
       val exception = intercept[Exception] {
         repository.getAllBy("345", Seq.empty, Seq.empty).futureValue
@@ -662,16 +661,49 @@ class MovementRepositoryItSpec
     }
 
     "use getFilteredMovementByErn" when {
-      "the user has movements in the range of the filtered threshold" in {
-      insertMovement(Movement(Some("boxId"), "1", "888", Some("789"), None))
-      insertMovement(Movement(Some("boxId"), "2", "888", Some("456"), None))
-      insertMovement(Movement(Some("boxId"), "3", "888", Some("523"), None))
-      insertMovement(Movement(Some("boxId"), "4", "888", Some("456"), None))
-      insertMovement(Movement(Some("boxId"), "5", "888", Some("523"), None))
+      "the user has movements with LRNs in the range of the filtered threshold" in {
+        insertMovement(Movement(Some("boxId"), "0", "888", Some("123"), None))
+        insertMovement(Movement(Some("boxId"), "1", "878", Some("345"), None)) // should not retrieve this one
+        insertMovement(Movement(Some("boxId"), "2", "888", Some("789"), None))
+        insertMovement(Movement(Some("boxId"), "3", "888", Some("456"), None))
+        insertMovement(Movement(Some("boxId"), "4", "888", Some("523"), None))
+        insertMovement(Movement(Some("boxId"), "5", "888", Some("634"), None))
 
-      val result = repository.getAllBy("888", Seq("1", "2", "3", "4", "5"), Seq.empty).futureValue
+        val result = repository.getAllBy("888", Seq("1", "2", "3", "4", "5"), Seq.empty).futureValue
 
-      result.length mustBe 5
+        result.length mustBe 4
+      }
+    }
+
+    "use getFilteredMovementByErn" when {
+      "the user has movements with ARCs in the range of the filtered threshold" in {
+        val testArc = "12345"
+
+        insertMovement(Movement(Some("boxId"), "1", "888", Some("789"), None))
+        insertMovement(Movement(Some("boxId"), "2", "888", Some("456"), Some(testArc)))
+        insertMovement(Movement(Some("boxId"), "3", "888", Some("523"), None))
+        insertMovement(Movement(Some("boxId"), "4", "888", Some("456"), Some(testArc)))
+        insertMovement(Movement(Some("boxId"), "5", "888", Some("523"), None))
+
+        val result = repository.getAllBy("888", Seq(), Seq(testArc)).futureValue
+
+        result.length mustBe 2
+      }
+    }
+
+    "use getFilteredMovementByErn" when {
+      "the user has movements with LRNs and ARCs in the range of the filtered threshold" in {
+        val testArc = "12345"
+
+        insertMovement(Movement(Some("boxId"), "1", "888", Some("789"), None))
+        insertMovement(Movement(Some("boxId"), "2", "888", Some("456"), Some(testArc)))
+        insertMovement(Movement(Some("boxId"), "3", "888", Some("523"), None))
+        insertMovement(Movement(Some("boxId"), "4", "888", Some("456"), Some(testArc)))
+        insertMovement(Movement(Some("boxId"), "5", "888", Some("523"), None))
+
+        val result = repository.getAllBy("888", Seq("3","4"), Seq(testArc)).futureValue
+
+        result.length mustBe 3
       }
     }
 

@@ -196,7 +196,8 @@ class MovementRepository @Inject() (
       ).flatten
 
     val movementThreshold        = configuration.get[Int]("movement.threshold")
-    val movementFailureThreshold = configuration.getOptional[Int]("movement.failureThreshold").getOrElse(movementThreshold)
+    val movementFailureThreshold =
+      configuration.getOptional[Int]("movement.failureThreshold").getOrElse(movementThreshold)
 
     val filter = if (filters.nonEmpty) Filters.and(filters: _*) else Filters.empty()
 
