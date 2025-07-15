@@ -641,6 +641,7 @@ class MovementRepositoryItSpec
       insertMovement(Movement(Some("boxId"), "4", "345", Some("456"), None))
       insertMovement(Movement(Some("boxId"), "5", "345", Some("523"), None))
       insertMovement(Movement(Some("boxId"), "6", "345", Some("223"), None))
+      insertMovement(Movement(Some("boxId"), "7", "345", Some("224"), None))
 
       val exception = intercept[Exception] {
         repository.getAllBy("345", Seq.empty, Seq.empty).futureValue
