@@ -372,11 +372,11 @@ object MovementRepository {
       ),
       IndexModel(
         Indexes.compoundIndex(
-          Indexes.text("consignorId"),
-          Indexes.text("consigneeId"),
-          Indexes.text("messages.recipient"),
-          Indexes.text("localReferenceNumber"),
-          Indexes.text("administrativeReferenceCode")
+          Indexes.ascending("consignorId"),
+          Indexes.ascending("consigneeId"),
+          Indexes.ascending("messages.recipient"),
+          Indexes.ascending("localReferenceNumber"),
+          Indexes.ascending("administrativeReferenceCode")
         ),
         IndexOptions()
           .name("messageId_idx")
