@@ -369,6 +369,17 @@ object MovementRepository {
         Indexes.ascending("messages.recipient"),
         IndexOptions()
           .name("recipient_idx")
+      ),
+      IndexModel(
+        Indexes.compoundIndex(
+          Indexes.text("consignorId"),
+          Indexes.text("consigneeId"),
+          Indexes.text("localReferenceNumber"),
+          Indexes.text("administrativeReferenceCode")
+        ),
+        IndexOptions()
+          .name("messageId_idx")
+          .sparse(true)
       )
     )
 
