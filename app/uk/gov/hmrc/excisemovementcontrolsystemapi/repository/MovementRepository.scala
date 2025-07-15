@@ -374,6 +374,7 @@ object MovementRepository {
         Indexes.compoundIndex(
           Indexes.text("consignorId"),
           Indexes.text("consigneeId"),
+          Indexes.text("messages.recipient"),
           Indexes.text("localReferenceNumber"),
           Indexes.text("administrativeReferenceCode")
         ),
