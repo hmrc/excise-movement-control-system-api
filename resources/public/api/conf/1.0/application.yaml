@@ -915,7 +915,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/exciseTraderPreValidationRequest"
+              $ref: "#/components/schemas/ExciseTraderRequest"
       responses:
         '200':
           description: Return Excise confirmation
