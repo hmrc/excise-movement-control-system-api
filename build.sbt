@@ -21,7 +21,6 @@ lazy val microservice = Project("excise-movement-control-system-api", file("."))
   .settings(
     Test / parallelExecution := true
   )
-  .settings(resolvers += Resolver.jcenterRepo)
   .settings(scoverageSettings *)
   .settings(scalafmtOnCompile := true)
   .settings(
