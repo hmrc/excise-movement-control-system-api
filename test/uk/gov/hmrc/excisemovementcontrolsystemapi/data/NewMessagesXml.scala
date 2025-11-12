@@ -22,8 +22,8 @@ trait NewMessagesXml {
 
   def newMessageWithIE801(messageCount: Int = 1): Elem = <ns:NewMessagesDataResponse
   xmlns:ns="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/NewMessagesData/3"
-  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.13"
-  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
+  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.23"
+  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23">
     <ns:Messages>
       <urn1:IE801>
         <urn1:Header>
@@ -155,9 +155,9 @@ trait NewMessagesXml {
               <!--Optional:-->
               <urn1:UpstreamArc>tokentokentokentokent</urn1:UpstreamArc>
               <!--0 to 9 repetitions:-->
-              <urn1:ImportSad>
-                <urn1:ImportSadNumber>token</urn1:ImportSadNumber>
-              </urn1:ImportSad>
+              <urn1:ImportCustomsDeclaration>
+                <urn1:ImportCustomsDeclarationNumber>token</urn1:ImportCustomsDeclarationNumber>
+              </urn1:ImportCustomsDeclaration>
             </urn1:EadEsad>
             <urn1:HeaderEadEsad>
               <urn1:SequenceNumber>to</urn1:SequenceNumber>
@@ -268,7 +268,7 @@ trait NewMessagesXml {
   lazy val newMessageXmlWithIE704: Elem = <ns:NewMessagesDataResponse
   xmlns:ns="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/NewMessagesData/3"
   xmlns:ns1="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3"
-  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
+  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23">
     <ns:Messages>
       <ns1:IE704>
         <ns1:Header>
@@ -309,8 +309,8 @@ trait NewMessagesXml {
 
   lazy val newMessageWith2IE801sXml: Elem = <ns:NewMessagesDataResponse
   xmlns:ns="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/NewMessagesData/3"
-  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.13"
-  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
+  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.23"
+  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23">
     <ns:Messages>
       <urn:IE801>
         <urn:Header>
@@ -442,9 +442,9 @@ trait NewMessagesXml {
               <!--Optional:-->
               <urn:UpstreamArc>tokentokentokentokent</urn:UpstreamArc>
               <!--0 to 9 repetitions:-->
-              <urn:ImportSad>
-                <urn:ImportSadNumber>token</urn:ImportSadNumber>
-              </urn:ImportSad>
+              <urn:ImportCustomsDeclaration>
+                <urn:ImportCustomsDeclarationNumber>token</urn:ImportCustomsDeclarationNumber>
+              </urn:ImportCustomsDeclaration>
             </urn:EadEsad>
             <urn:HeaderEadEsad>
               <urn:SequenceNumber>to</urn:SequenceNumber>
@@ -678,9 +678,9 @@ trait NewMessagesXml {
                 <!--Optional:-->
                 <urn:UpstreamArc>tokentokentokentokent</urn:UpstreamArc>
                 <!--0 to 9 repetitions:-->
-                <urn:ImportSad>
-                  <urn:ImportSadNumber>token</urn:ImportSadNumber>
-                </urn:ImportSad>
+                <urn:ImportCustomsDeclaration>
+                  <urn:ImportCustomsDeclarationNumber>token</urn:ImportCustomsDeclarationNumber>
+                </urn:ImportCustomsDeclaration>
               </urn:EadEsad>
               <urn:HeaderEadEsad>
                 <urn:SequenceNumber>to</urn:SequenceNumber>
@@ -790,9 +790,9 @@ trait NewMessagesXml {
 
   lazy val newMessageWith818And802: Elem = <ns:NewMessagesDataResponse
   xmlns:ns="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/NewMessagesData/3"
-  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
-  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE818:V3.13"
-  xmlns:urn2="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE802:V3.13">
+  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE818:V3.23"
+  xmlns:urn2="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE802:V3.23">
     <ns:Messages>
       <urn1:IE818>
         <urn1:Header>

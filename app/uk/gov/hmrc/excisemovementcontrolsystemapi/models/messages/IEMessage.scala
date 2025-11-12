@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
 import play.api.libs.json.{JsObject, JsValue}
-import generated.{Number1Value31, Number2Value30, SubmitterType}
+import generated.{Number1Value30, Number1Value31, Number2Value29, Number2Value30, SubmitterType}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType
 
 import scala.xml.NodeSeq
@@ -49,7 +49,7 @@ trait IEMessage {
 trait SubmitterTypeConverter {
   def convertSubmitterType(submitterType: SubmitterType): ExciseTraderType =
     submitterType match {
-      case Number1Value31 => Consignor
-      case Number2Value30 => Consignee
+      case Number1Value30 => Consignor
+      case Number2Value29 => Consignee
     }
 }

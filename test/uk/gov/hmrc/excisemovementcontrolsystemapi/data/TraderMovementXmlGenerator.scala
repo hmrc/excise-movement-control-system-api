@@ -26,8 +26,8 @@ class TraderMovementXmlGenerator(
   def generate(ern: String, messageParams: Seq[MessageParams]): NodeSeq =
     <ns:MovementForTraderDataResponse
     xmlns:ns="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/MovementForTraderData/3"
-    xmlns:ie934="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE934:V3.13"
-    xmlns:tms="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
+    xmlns:ie934="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE934:V3.23"
+    xmlns:tms="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23">
       <ie934:IE934 >
         <ie934:Header>
           <tms:MessageSender>NDEA.XI</tms:MessageSender>

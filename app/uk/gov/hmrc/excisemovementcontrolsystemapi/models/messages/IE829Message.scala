@@ -37,7 +37,7 @@ case class IE829Message(
   override def consignorId: Option[String] = None
 
   override def consigneeId: Option[String] =
-    obj.Body.NotificationOfAcceptedExport.ConsigneeTrader.Traderid
+    obj.Body.NotificationOfAcceptedExport.ConsigneeTrader.flatMap(a => a.Traderid)
 
   override def administrativeReferenceCode: Seq[Option[String]] =
     obj.Body.NotificationOfAcceptedExport.ExciseMovementEad.map(x => Some(x.AdministrativeReferenceCode))
