@@ -983,6 +983,11 @@
       <xs:documentation>Guarantor Type Code</xs:documentation>
     </xs:annotation>
     <xs:restriction base="xs:nonNegativeInteger">
+      <xs:enumeration value="0">
+        <xs:annotation>
+          <xs:documentation>Guarantor not required (qualifying UK to UK movements)</xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
       <xs:enumeration value="1">
         <xs:annotation>
           <xs:documentation>Consignor</xs:documentation>

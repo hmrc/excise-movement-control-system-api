@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Purpose: Defines error types from the HMRC EMCS error catalogue -->
-<!-- Version: 3.2 -->
+<!-- Version: 3.4 -->
 <!-- Status: Issued -->
-<!-- Date: 02 Dec 2019 -->
+<!-- Date: 18 November 2025 -->
 <!-- Author: EMCS Core -->
 <xs:schema xmlns="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/EmcsUkCodes/3" xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/EmcsUkCodes/3" elementFormDefault="qualified" attributeFormDefault="unqualified">
 	<xs:simpleType name="FunctionalErrorCodes">
@@ -22,82 +22,82 @@
 			</xs:enumeration>
 			<xs:enumeration value="4403">
 				<xs:annotation>
-					<xs:documentation>Invalid or missing Consignor on SEED</xs:documentation>
+					<xs:documentation>Invalid or missing Consignor on ETDS (SEED)</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4404">
 				<xs:annotation>
-					<xs:documentation>Invalid or missing Place of Dispatch on SEED</xs:documentation>
+					<xs:documentation>Invalid or missing Place of Dispatch on ETDS (SEED)</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4405">
 				<xs:annotation>
-					<xs:documentation>Invalid or missing Consignee on SEED</xs:documentation>
+					<xs:documentation>Invalid or missing Consignee on ETDS (SEED)</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4406">
 				<xs:annotation>
-					<xs:documentation>Invalid or missing Place of Delivery on SEED</xs:documentation>
+					<xs:documentation>Invalid or missing Place of Delivery on ETDS (SEED)</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4407">
 				<xs:annotation>
-					<xs:documentation>For Temporary Registered Consignee the EPC and product amounts exceed the allowed amounts on SEED</xs:documentation>
+					<xs:documentation>For Temporary Registered Consignee the EPC and product amounts exceed the allowed amounts on ETDS (SEED)</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4408">
 				<xs:annotation>
-					<xs:documentation>The link between the nature of goods on the draft movement and those allowed for the consignor as held on SEED is missing or invalid</xs:documentation>
+					<xs:documentation>The link between the nature of goods on the draft movement and those allowed for the consignor as held on ETDS (SEED) is missing or invalid</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4409">
 				<xs:annotation>
-					<xs:documentation>The link between the nature of goods on the movement and those allowed for the consignee as held on SEED is missing or invalid</xs:documentation>
+					<xs:documentation>The link between the nature of goods on the movement and those allowed for the consignee as held on ETDS (SEED) is missing or invalid</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4410">
 				<xs:annotation>
-					<xs:documentation>The link between the nature of goods on the movement and those allowed for the Tax Warehouse as Place of Delivery as held on SEED is missing or invalid</xs:documentation>
+					<xs:documentation>The link between the nature of goods on the movement and those allowed for the Tax Warehouse as Place of Delivery as held on ETDS (SEED) is missing or invalid</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4411">
 				<xs:annotation>
-					<xs:documentation>The link between the Consignor and EU 15/6 Products (Energy Products) as held on SEED is missing or invalid</xs:documentation>
+					<xs:documentation>The link between the Consignor and EU 15/6 Products (Energy Products) as held on ETDS (SEED) is missing or invalid</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4412">
 				<xs:annotation>
-					<xs:documentation>The link between the Consignee and Place of Delivery as held on SEED is missing or invalid</xs:documentation>
+					<xs:documentation>The link between the Consignee and Place of Delivery as held on ETDS (SEED) is missing or invalid</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4413">
 				<xs:annotation>
-					<xs:documentation>The link between the Consignee and the TCA for a related Temporary Registered Consignee Trader Id as held on SEED is Pending</xs:documentation>
+					<xs:documentation>The link between the Consignee and the TCA for a related Temporary Registered Consignee Trader ID as held on ETDS (SEED) is Pending</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4414">
 				<xs:annotation>
-					<xs:documentation>The link between the Consignee and the TCA for a related Temporary Registered Consignee Trader Id as held on SEED is Already Used</xs:documentation>
+					<xs:documentation>The link between the Consignee and the TCA for a related Temporary Registered Consignee Trader ID as held on ETDS (SEED) is Already Used</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4415">
 				<xs:annotation>
-					<xs:documentation>The link between the Consignee and the TCA for a related Temporary Registered Consignee Trader Id as held on SEED is Withdrawn</xs:documentation>
+					<xs:documentation>The link between the Consignee and the TCA for a related Temporary Registered Consignee Trader ID as held on ETDS (SEED) is Withdrawn</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4416">
 				<xs:annotation>
-					<xs:documentation>The link between the Consignee and the TCA for a related Temporary Registered Consignee Trader Id as held on SEED is Cancelled</xs:documentation>
+					<xs:documentation>The link between the Consignee and the TCA for a related Temporary Registered Consignee Trader ID as held on ETDS (SEED) is Cancelled</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4417">
 				<xs:annotation>
-					<xs:documentation>The link between the Consignee and the TCA for a related Temporary Registered Consignee Trader Id as held on SEED is Expired</xs:documentation>
+					<xs:documentation>The link between the Consignee and the TCA for a related Temporary Registered Consignee Trader ID as held on ETDS (SEED) is Expired</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4418">
 				<xs:annotation>
-					<xs:documentation>The link between the Temporary Registered Consignees TCA number and the TRC Trader(Excise) Id as held on SEED is missing or invalid or the TRC is in the UK</xs:documentation>
+					<xs:documentation>The link between the Temporary Registered Consignees TCA number and the TRC Trader(Excise) ID as held on ETDS (SEED) is missing or invalid or the TRC is in the UK</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4419">
@@ -107,7 +107,7 @@
 			</xs:enumeration>
 			<xs:enumeration value="4420">
 				<xs:annotation>
-					<xs:documentation>The Consignor is not authorised to trade with the quoted TCA as found on SEED</xs:documentation>
+					<xs:documentation>The Consignor is not authorised to trade with the quoted TCA as found on ETDS (SEED)</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4421">
@@ -117,7 +117,7 @@
 			</xs:enumeration>
 			<xs:enumeration value="4422">
 				<xs:annotation>
-					<xs:documentation>Consignor is a Registered Consignor but Origin is not Import</xs:documentation>
+					<xs:documentation>Consignor is a Registered Consignor but Origin is not Import</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4423">
@@ -157,7 +157,7 @@
 			</xs:enumeration>
 			<xs:enumeration value="4430">
 				<xs:annotation>
-					<xs:documentation>Invalid Language Codes for Trader Id</xs:documentation>
+					<xs:documentation>Invalid Language Codes for Trader ID</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4431">
@@ -257,7 +257,7 @@
 			</xs:enumeration>
 			<xs:enumeration value="4450">
 				<xs:annotation>
-					<xs:documentation>Reserved code</xs:documentation>
+					<xs:documentation>Reserved Code</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4451">
@@ -387,7 +387,7 @@
 			</xs:enumeration>
 			<xs:enumeration value="4476">
 				<xs:annotation>
-					<xs:documentation>Consignee Excise id on the IE818 does not match the Consignee Excise id on the Movement</xs:documentation>
+					<xs:documentation>Consignee Excise ID on the IE818 does not match the Consignee Excise ID on the Movement</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4477">
@@ -502,7 +502,7 @@
 			</xs:enumeration>
 			<xs:enumeration value="4499">
 				<xs:annotation>
-					<xs:documentation>SEED Unavailable Failure</xs:documentation>
+					<xs:documentation>ETDS (SEED) Unavailable Failure</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4500">
@@ -627,7 +627,7 @@
 			</xs:enumeration>
 			<xs:enumeration value="4527">
 				<xs:annotation>
-					<xs:documentation>The link between the nature of goods on the draft movement and those allowed for the Tax Warehouse as Place of Dispatch as held on SEED is missing or invalid</xs:documentation>
+					<xs:documentation>The link between the nature of goods on the draft movement and those allowed for the Tax Warehouse as Place of Dispatch as held on ETDS (SEED) is missing or invalid</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4528">
@@ -662,7 +662,7 @@
 			</xs:enumeration>
 			<xs:enumeration value="4601">
 				<xs:annotation>
-					<xs:documentation>Rule 216: transport mode must be either 1(sea transport) or 7 (Fixed transport intallations) if guarantor type code = 5.</xs:documentation>
+					<xs:documentation>Rule 216: transport mode must be either 1(sea transport) or 7 (Fixed transport installations) if guarantor type code = 5.</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
 			<xs:enumeration value="4602">
@@ -675,33 +675,82 @@
 					<xs:documentation>Rule 18: EORI can only be entered when the destination type code relates to an export.</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
-
-			<!-- BSPEMCS - 245 -->
-			<xs:enumeration value="9003">
-				<xs:annotation>
-					<xs:documentation>This message cannot be processed as the destination type is invalid ? only ?Destination - Tax warehouse? or ?Destination ? Export? are permitted</xs:documentation>
-				</xs:annotation>
-			</xs:enumeration>
-
-			<!-- BSPEMCS - 246 -->
 			<xs:enumeration value="9001">
 				<xs:annotation>
 					<xs:documentation>This message cannot be processed as the Consignee is located in a Member State of the European Union.</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
-
-			<!-- BSPEMCS - 247 -->
+			<xs:enumeration value="9003">
+				<xs:annotation>
+					<xs:documentation>This message cannot be processed as the destination type is invalid ? only ?Destination - Tax warehouse? or ?Destination ? Export? are permitted</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
 			<xs:enumeration value="9004">
 				<xs:annotation>
 					<xs:documentation>This message cannot be processed as the Customs Office Place of Delivery is located in a Member State of the European Union</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
-
 			<xs:enumeration value="9005">
 				<xs:annotation>
-					<xs:documentation>A GB Trader cannot 1) raise movements to EU destinations 2) raise exports with a non-GB export office 3) use anything other than NDEA.GB in 'Message Sender' 4) raise movements other than to a Warehouse or Rest of World Export. Also, a NI Trader cannot 1) raise an export with a GB export office 2) use anything other than NDEA.XI in 'Message Sender'.</xs:documentation>
+					<xs:documentation>A GB Trader cannot 1) raise movements to EU destinations 2) raise exports with a non-GB export office 3) use anything other than NDEA.GB in ‘Message Sender’ 4) raise movements other than to a Warehouse or Rest of World Export. Also, a NI Trader cannot 1) raise an export with a GB export office 2) use anything other than NDEA.XI in ‘Message Sender’.</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
+			<xs:enumeration value="9010">
+				<xs:annotation>
+					<xs:documentation>The link between the Consignee and the PTC for a related Temporary Certified Consignee Trader ID as held on ETDS (SEED) is Pending</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="9011">
+				<xs:annotation>
+					<xs:documentation>The link between the Consignee and the PTC for a related Temporary Certified Consignee Trader ID as held on ETDS (SEED) is Already Used</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="9012">
+				<xs:annotation>
+					<xs:documentation>The link between the Consignee and the PTC for a related Temporary Certified Consignee Trader ID as held on ETDS (SEED) is Already Withdrawn</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="9013">
+				<xs:annotation>
+					<xs:documentation>The link between the Consignee and the PTC for a related Temporary Certified Consignee Trader ID as held on ETDS (SEED) is Cancelled</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="9014">
+				<xs:annotation>
+					<xs:documentation>The link between the Consignee and the PTC for a related Temporary Certified Consignee Trader ID as held on ETDS (SEED) is Expired</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="9015">
+				<xs:annotation>
+					<xs:documentation>The link between the Temporary Certified Consignees PTC number and the TCC Trader(Excise) ID as held on ETDS (SEED) is missing or invalid or the TCC is in the UK</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="9016">
+				<xs:annotation>
+					<xs:documentation>For Temporary Certified Consignee, the EPC and product amounts exceed the allowed amounts on ETDS (SEED)</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="9017">
+				<xs:annotation>
+					<xs:documentation>The Consignor is not authorised to trade with the quoted PTC as found on ETDS (SEED)</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="9018">
+				<xs:annotation>
+					<xs:documentation>Temporary Certified Consignee Product Codes Invalid</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="9019">
+				<xs:annotation>
+					<xs:documentation>Change of Destination for a Duty Paid movement is only permitted to a different Place of delivery belonging to the original Consignee or back to the Place of dispatch of the Consignor</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="9020">
+				<xs:annotation>
+					<xs:documentation>Consignee is missing</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+
 		</xs:restriction>
 	</xs:simpleType>
 </xs:schema>
