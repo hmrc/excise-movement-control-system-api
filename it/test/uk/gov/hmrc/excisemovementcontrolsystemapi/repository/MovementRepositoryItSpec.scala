@@ -635,13 +635,16 @@ class MovementRepositoryItSpec
     }
 
     "respond with error when there would be too many movements" in {
-      insertMovement(Movement(Some("boxId"), "1", "345", Some("789"), None))
-      insertMovement(Movement(Some("boxId"), "2", "345", Some("456"), None))
-      insertMovement(Movement(Some("boxId"), "3", "345", Some("523"), None))
-      insertMovement(Movement(Some("boxId"), "4", "345", Some("456"), None))
-      insertMovement(Movement(Some("boxId"), "5", "345", Some("523"), None))
-      insertMovement(Movement(Some("boxId"), "6", "345", Some("223"), None))
-      insertMovement(Movement(Some("boxId"), "7", "345", Some("224"), None))
+
+      val movements = 1 to 27
+
+      movements.map{
+        index  =>
+          val consignorId = "345"
+          val consigneeId = s"345{${index.toString}}"
+
+          insertMovement(Movement(Some("boxId"), index.toString, consignorId, Some(consigneeId), None))
+      }
 
       val exception = intercept[Exception] {
         repository.getAllBy("345", Seq.empty, Seq.empty).futureValue
@@ -663,46 +666,61 @@ class MovementRepositoryItSpec
 
     "use getFilteredMovementByErn" when {
       "the user has movements with LRNs in the range of the filtered threshold" in {
-        insertMovement(Movement(Some("boxId"), "0", "888", Some("123"), None))
+
+        val movements = 1 to 21
+        movements.map{
+          index  =>
+            val consignorId = "888"
+            val consigneeId = s"345{${index.toString}}"
+
+            insertMovement(Movement(Some("boxId"), index.toString, consignorId, Some(consigneeId), None))
+        }
+
         insertMovement(Movement(Some("boxId"), "1", "878", Some("345"), None)) // should not retrieve this one
-        insertMovement(Movement(Some("boxId"), "2", "888", Some("789"), None))
-        insertMovement(Movement(Some("boxId"), "3", "888", Some("456"), None))
-        insertMovement(Movement(Some("boxId"), "4", "888", Some("523"), None))
-        insertMovement(Movement(Some("boxId"), "5", "888", Some("634"), None))
 
-        val result = repository.getAllBy("888", Seq("1", "2", "3", "4", "5"), Seq.empty).futureValue
+        val result = repository.getAllBy("888", movements.map(_.toString), Seq.empty).futureValue
 
-        result.length mustBe 4
+        result.length mustBe 21
       }
     }
 
     "use getFilteredMovementByErn" when {
       "the user has movements with ARCs in the range of the filtered threshold" in {
         val testArc = "12345"
+        val movements = 1 to 19 //below threshold to add None for some of the arcs manually
+        movements.map{
+          index  =>
+            val consignorId = "888"
+            val consigneeId = s"345{${index.toString}}"
 
-        insertMovement(Movement(Some("boxId"), "1", "888", Some("789"), None))
-        insertMovement(Movement(Some("boxId"), "2", "888", Some("456"), Some(testArc)))
-        insertMovement(Movement(Some("boxId"), "3", "888", Some("523"), None))
-        insertMovement(Movement(Some("boxId"), "4", "888", Some("456"), Some(testArc)))
-        insertMovement(Movement(Some("boxId"), "5", "888", Some("523"), None))
+            insertMovement(Movement(Some("boxId"), index.toString, consignorId, Some(consigneeId), Some(testArc)))
+        }
+        insertMovement(Movement(Some("boxId"), "22", "888", Some("789"), None))
+        insertMovement(Movement(Some("boxId"), "23", "888", Some("523"), None))
+        insertMovement(Movement(Some("boxId"), "24", "888", Some("523"), None))
 
         val result = repository.getAllBy("888", Seq(), Seq(testArc)).futureValue
 
-        result.length mustBe 2
+        result.length mustBe 19
       }
     }
 
     "use getFilteredMovementByErn" when {
       "the user has movements with LRNs and ARCs in the range of the filtered threshold" in {
         val testArc = "12345"
+        val movements = 1 to 19
+        movements.map{
+          index  =>
+            val consignorId = "888"
+            val consigneeId = s"345{${index.toString}}"
 
-        insertMovement(Movement(Some("boxId"), "1", "888", Some("789"), None))
-        insertMovement(Movement(Some("boxId"), "2", "888", Some("456"), Some(testArc)))
-        insertMovement(Movement(Some("boxId"), "3", "888", Some("523"), None))
-        insertMovement(Movement(Some("boxId"), "4", "888", Some("456"), Some(testArc)))
-        insertMovement(Movement(Some("boxId"), "5", "888", Some("523"), None))
+            insertMovement(Movement(Some("boxId"), index.toString, consignorId, Some(consigneeId), None))
+        }
+        insertMovement(Movement(Some("boxId"), "21", "888", Some("789"), None))
+        insertMovement(Movement(Some("boxId"), "22", "888", Some("523"), None))
+        insertMovement(Movement(Some("boxId"), "23", "888", Some("523"), Some(testArc)))
 
-        val result = repository.getAllBy("888", Seq("3","4"), Seq(testArc)).futureValue
+        val result = repository.getAllBy("888", Seq("2","3"), Seq(testArc)).futureValue
 
         result.length mustBe 3
       }
