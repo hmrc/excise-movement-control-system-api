@@ -234,13 +234,20 @@ class MovementRepository @Inject() (
     localReferenceNumbers: Seq[String],
     administrativeReferenceCodes: Seq[String]
   ): Future[Seq[Movement]] = Mdc.preservingMdc {
-    protectionFilter(ern).flatMap {
-      case MovementFilterThresholds.Failure  =>
-        throw new Exception(s"Protection filter responded with an error for ERN: $ern")
+    val protectFilter: Future[MovementFilterThresholds.Threshold] =
+      if(appConfig.protectionFilterEnabled){
+        protectionFilter(ern)
+      } else {
+        Future.successful(MovementFilterThresholds.Filtered)
+      }
+
+    protectFilter.flatMap {
       case MovementFilterThresholds.Filtered =>
         getFilteredMovementByERN(ern, localReferenceNumbers, administrativeReferenceCodes)
       case MovementFilterThresholds.Normal   =>
         getMovementByERN(Seq(ern), MovementFilter.emptyFilter)
+      case MovementFilterThresholds.Failure  =>
+        throw new Exception(s"Protection filter responded with an error for ERN: $ern")
     }
   }
 
