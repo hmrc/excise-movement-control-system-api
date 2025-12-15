@@ -4,12 +4,12 @@
 <!-- Date: 02 Dec 2019 -->
 <!-- Author: EMCS Core -->
 <xs:schema xmlns="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/MovementForTraderData/3"
-           xmlns:ie="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE934:V3.13"
+           xmlns:ie="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE934:V3.23"
            xmlns:xs="http://www.w3.org/2001/XMLSchema"
            targetNamespace="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/MovementForTraderData/3"
            elementFormDefault="qualified"
            attributeFormDefault="unqualified">
-    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE934:V3.13" schemaLocation="ie934.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE934:V3.23" schemaLocation="ie934.xsd"/>
 
     <xs:element name="MovementForTraderDataResponse">
         <xs:complexType>
