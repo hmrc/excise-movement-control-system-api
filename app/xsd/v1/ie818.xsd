@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:ie="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE818:V3.13" targetNamespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE818:V3.13" xmlns:tms="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13" xmlns:emcs="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:EMCS:V3.13" xmlns:doc="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:DOC:V3.13" xmlns:tcl="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TCL:V3.13" version="18.0" elementFormDefault="qualified" attributeFormDefault="unqualified">
+  <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13" schemaLocation="tms.xsd"/>
+  <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:EMCS:V3.13" schemaLocation="types.xsd"/>
+  <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:DOC:V3.13" schemaLocation="doc.xsd"/>
+  <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TCL:V3.13" schemaLocation="tcl.xsd"/>
+  <xs:element name="IE818" type="ie:IE818Type"/>
+  <xs:complexType name="IE818Type">
+    <xs:sequence>
+      <xs:element name="Header" type="tms:HeaderType"/>
+      <xs:element name="Body" type="ie:BodyType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="BodyType">
+    <xs:sequence>
+      <xs:element name="AcceptedOrRejectedReportOfReceiptExport" type="ie:AcceptedOrRejectedReportOfReceiptExportType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="AcceptedOrRejectedReportOfReceiptExportType">
+    <xs:sequence>
+      <xs:element name="Attributes" type="ie:AttributesType"/>
+      <xs:element name="ConsigneeTrader" type="ie:ConsigneeTraderType"/>
+      <xs:element name="ExciseMovement" type="ie:ExciseMovementType"/>
+      <xs:element minOccurs="0" name="DeliveryPlaceTrader" type="ie:DeliveryPlaceTraderType"/>
+      <xs:element minOccurs="0" name="DestinationOffice" type="ie:DestinationOfficeType"/>
+      <xs:element name="ReportOfReceiptExport" type="ie:ReportOfReceiptExportType"/>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="BodyReportOfReceiptExport" type="ie:BodyReportOfReceiptExportType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="AttributesType">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="DateAndTimeOfValidationOfReportOfReceiptExport" type="emcs:DateTimeType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ConsigneeTraderType">
+    <xs:annotation>
+      <xs:documentation>
+        <doc:description value="(CONSIGNEE) TRADER"/>
+      </xs:documentation>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element minOccurs="0" name="Traderid" type="emcs:TraderidType"/>
+      <xs:element name="TraderName" type="emcs:TraderNameType"/>
+      <xs:element name="StreetName" type="emcs:StreetNameType"/>
+      <xs:element minOccurs="0" name="StreetNumber" type="emcs:StreetNumberType"/>
+      <xs:element name="Postcode" type="emcs:PostcodeType"/>
+      <xs:element name="City" type="emcs:CityType"/>
+      <xs:element minOccurs="0" name="EoriNumber" type="emcs:EoriNumberType"/>
+    </xs:sequence>
+    <xs:attribute use="required" name="language" type="emcs:LanguageCodeType"/>
+  </xs:complexType>
+  <xs:complexType name="ExciseMovementType">
+    <xs:annotation>
+      <xs:documentation>
+        <doc:description value="EXCISE MOVEMENT"/>
+      </xs:documentation>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="AdministrativeReferenceCode" type="emcs:AdministrativeReferenceCodeType"/>
+      <xs:element name="SequenceNumber" type="emcs:SequenceNumberType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="DeliveryPlaceTraderType">
+    <xs:annotation>
+      <xs:documentation>
+        <doc:description value="(DELIVERY PLACE) TRADER"/>
+      </xs:documentation>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element minOccurs="0" name="Traderid" type="emcs:TraderidType"/>
+      <xs:element minOccurs="0" name="TraderName" type="emcs:TraderNameType"/>
+      <xs:element minOccurs="0" name="StreetName" type="emcs:StreetNameType"/>
+      <xs:element minOccurs="0" name="StreetNumber" type="emcs:StreetNumberType"/>
+      <xs:element minOccurs="0" name="Postcode" type="emcs:PostcodeType"/>
+      <xs:element minOccurs="0" name="City" type="emcs:CityType"/>
+    </xs:sequence>
+    <xs:attribute use="optional" name="language" type="emcs:LanguageCodeType"/>
+  </xs:complexType>
+  <xs:complexType name="DestinationOfficeType">
+    <xs:annotation>
+      <xs:documentation>
+        <doc:description value="(DESTINATION) OFFICE"/>
+      </xs:documentation>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="ReferenceNumber" type="emcs:ExciseOfficeCodeType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ReportOfReceiptExportType">
+    <xs:annotation>
+      <xs:documentation>
+        <doc:description value="REPORT OF RECEIPT/EXPORT"/>
+      </xs:documentation>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="DateOfArrivalOfExciseProducts" type="emcs:DateType"/>
+      <xs:element name="GlobalConclusionOfReceipt" type="tcl:GlobalConclusionOfReceipt"/>
+      <xs:element minOccurs="0" name="ComplementaryInformation" type="ie:LSDComplementaryInformationType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="BodyReportOfReceiptExportType">
+    <xs:annotation>
+      <xs:documentation>
+        <doc:description value="(BODY) REPORT OF RECEIPT/EXPORT"/>
+      </xs:documentation>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="BodyRecordUniqueReference" type="emcs:BodyRecordUniqueReferenceType"/>
+      <xs:element minOccurs="0" name="IndicatorOfShortageOrExcess" type="tcl:IndicatorOfShortageOrExcess"/>
+      <xs:element minOccurs="0" name="ObservedShortageOrExcess" type="emcs:ObservedShortageOrExcessType"/>
+      <xs:element name="ExciseProductCode" type="emcs:ExciseProductCodeType"/>
+      <xs:element minOccurs="0" name="RefusedQuantity" type="emcs:RefusedQuantityType"/>
+      <xs:element minOccurs="0" maxOccurs="9" name="UnsatisfactoryReason" type="ie:UnsatisfactoryReasonType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="UnsatisfactoryReasonType">
+    <xs:annotation>
+      <xs:documentation>
+        <doc:description value="UNSATISFACTORY REASON"/>
+      </xs:documentation>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="UnsatisfactoryReasonCode" type="emcs:UnsatisfactoryReasonCodeType"/>
+      <xs:element minOccurs="0" name="ComplementaryInformation" type="ie:LSDComplementaryInformationType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="LSDComplementaryInformationType">
+    <xs:simpleContent>
+      <xs:extension base="emcs:ComplementaryInformationType">
+        <xs:attribute use="required" name="language" type="emcs:LanguageCodeType"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+</xs:schema>

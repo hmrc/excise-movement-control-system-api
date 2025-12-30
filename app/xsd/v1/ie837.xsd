@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:ie="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE837:V3.13" targetNamespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE837:V3.13" xmlns:tms="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13" xmlns:emcs="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:EMCS:V3.13" xmlns:tcl="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TCL:V3.13" xmlns:doc="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:DOC:V3.13" version="18.0" elementFormDefault="qualified" attributeFormDefault="unqualified">
+  <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13" schemaLocation="tms.xsd"/>
+  <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:EMCS:V3.13" schemaLocation="types.xsd"/>
+  <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TCL:V3.13" schemaLocation="tcl.xsd"/>
+  <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:DOC:V3.13" schemaLocation="doc.xsd"/>
+  <xs:element name="IE837" type="ie:IE837Type"/>
+  <xs:complexType name="IE837Type">
+    <xs:sequence>
+      <xs:element name="Header" type="tms:HeaderType"/>
+      <xs:element name="Body" type="ie:BodyType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="BodyType">
+    <xs:sequence>
+      <xs:element name="ExplanationOnDelayForDelivery" type="ie:ExplanationOnDelayForDeliveryType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ExplanationOnDelayForDeliveryType">
+    <xs:sequence>
+      <xs:element name="Attributes" type="ie:AttributesType"/>
+      <xs:element name="ExciseMovement" type="ie:ExciseMovementType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="AttributesType">
+    <xs:sequence>
+      <xs:element name="SubmitterIdentification" type="emcs:SubmitterIdentificationType"/>
+      <xs:element name="SubmitterType" type="tcl:SubmitterType"/>
+      <xs:element name="ExplanationCode" type="emcs:ExplanationCodeType"/>
+      <xs:element minOccurs="0" name="ComplementaryInformation" type="ie:LSDComplementaryInformationType"/>
+      <xs:element name="MessageRole" type="tcl:MessageRoleCode"/>
+      <xs:element minOccurs="0" name="DateAndTimeOfValidationOfExplanationOnDelay" type="emcs:DateTimeType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ExciseMovementType">
+    <xs:annotation>
+      <xs:documentation>
+        <doc:description value="EXCISE MOVEMENT"/>
+      </xs:documentation>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="AdministrativeReferenceCode" type="emcs:AdministrativeReferenceCodeType"/>
+      <xs:element name="SequenceNumber" type="emcs:SequenceNumberType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="LSDComplementaryInformationType">
+    <xs:simpleContent>
+      <xs:extension base="emcs:ComplementaryInformationType">
+        <xs:attribute use="required" name="language" type="emcs:LanguageCodeType"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+</xs:schema>

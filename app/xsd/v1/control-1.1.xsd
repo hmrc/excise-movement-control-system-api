@@ -1,0 +1,179 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://www.govtalk.gov.uk/taxation/InternationalTrade/Common/ControlDocument" targetNamespace="http://www.govtalk.gov.uk/taxation/InternationalTrade/Common/ControlDocument" elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.1">
+  <xs:annotation>
+    <xs:documentation xml:lang="en"><![CDATA[
+			
+		A schema for Control Document (see Reference Architecture).
+		
+		=== HISTORY===
+		Version 1.0 - 29/04/2009
+		+Initial Version for Reference Architecture 1.0 and EMCS FS0. Maven version 1.0
+		
+		Version 1.0.1 - 11/08/2009
+		+Interim release Version for EU VAT (Reference Architecture 1.0 plus optional CleansedVirusReference 
+		   attribute).  Note namespace not changed. Maven version 1.0.1
+		
+		
+		Version 1.1 - Date 17/08/2009
+		+Version to align with Reference architecture 1.1 
+		+Removed the ServiceName, VersionNumber from the Metadata and Name from OperationRequestType
+		+Changed namespace to comply with HMRC Namespace policy
+			
+					
+		]]></xs:documentation>
+  </xs:annotation>
+  <xs:complexType name="metaDataType">
+    <xs:sequence>
+      <xs:element name="MessageId">
+        <xs:annotation>
+          <xs:documentation>Uniquely identifies the message, within the Source / Identity scope. Duplicate checking is performed on MessageId, Source and Identity</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:maxLength value="44" />
+            <!-- EU Gateway will have message ID as 24 character and all services should take care of the message ID length before it send stuff to EUGW-->
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="Source" type="xs:string">
+        <xs:annotation>
+          <xs:documentation>Identifies the Source (client) making the request</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Identity" type="xs:string" minOccurs="0">
+        <xs:annotation>
+          <xs:documentation>Optional sub-Source used to identify multiple clients from a single Source</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Partner" type="xs:string" minOccurs="0">
+        <xs:annotation>
+          <xs:documentation>Optional identifier</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="CorrelationId" type="xs:string" minOccurs="0">
+        <xs:annotation>
+          <xs:documentation>Optional id used to correlate a request with a response, typically in an asynchronous scenario</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="BusinessKey" type="xs:string" minOccurs="0">
+        <xs:annotation>
+          <xs:documentation>Optional Business key, used by EU Gateway to throttle and order messages</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="MessageDescriptor" type="xs:string" minOccurs="0">
+        <xs:annotation>
+          <xs:documentation>Optional descriptor used to route asynchronous messages</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="QualityOfService" type="xs:string" minOccurs="0">
+        <xs:annotation>
+          <xs:documentation>Optional category to indicate the desired Quality of Service for asynchronous message handling</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Destination" type="xs:string" minOccurs="0">
+        <xs:annotation>
+          <xs:documentation>Optional destination for asynchronous message delivery</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Priority" minOccurs="0">
+        <xs:annotation>
+          <xs:documentation>Optional priority which can be specified for the request (0-9)</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:integer" />
+        </xs:simpleType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="parameterType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="Name" type="xs:string" use="required" />
+        <xs:attribute name="CleansedVirusReference" type="xs:string">
+          <xs:annotation>
+            <xs:documentation>Where a virus has been cleansed from the payload this is a reference to the Anti-Virus log entry holding the details of the virus</xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="dataType">
+    <xs:attribute name="Name" type="xs:string" use="required" />
+  </xs:complexType>
+  <xs:complexType name="parametersType">
+    <xs:sequence minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="Parameter" type="parameterType" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="returnDataType">
+    <xs:sequence minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="Data" type="dataType" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="operationRequestType">
+    <xs:sequence>
+      <xs:element name="Parameters" type="parametersType">
+        <xs:annotation>
+          <xs:documentation>List of parameters required for the operation call</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="ReturnData" type="returnDataType">
+        <xs:annotation>
+          <xs:documentation>List of expected return data for the operation call</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="resultType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="Name" type="xs:string" use="required" />
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="resultsType">
+    <xs:sequence maxOccurs="unbounded">
+      <xs:element name="Result" type="resultType" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="errorType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="Name" type="xs:string" use="required" />
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="errorsType">
+    <xs:sequence maxOccurs="unbounded">
+      <xs:element name="Error" type="errorType" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="operationResponseType">
+    <xs:choice>
+      <xs:element name="Results" type="resultsType">
+        <xs:annotation>
+          <xs:documentation>List of result data for the operation call</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Errors" type="errorsType">
+        <xs:annotation>
+          <xs:documentation>List of errors for the operation call</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="controlType">
+    <xs:sequence>
+      <xs:element name="MetaData" type="metaDataType" />
+      <xs:choice>
+        <xs:element name="OperationRequest" type="operationRequestType" />
+        <xs:element name="OperationResponse" type="operationResponseType">
+          <xs:annotation>
+            <xs:documentation>Contains either result data or error data</xs:documentation>
+          </xs:annotation>
+        </xs:element>
+      </xs:choice>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="Control" type="controlType" />
+</xs:schema>
