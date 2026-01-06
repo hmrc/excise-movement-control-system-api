@@ -34,7 +34,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EISErrorResponseDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815MessageV1, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services._
@@ -72,7 +72,7 @@ class SubmitMessageControllerSpec
 
   val parsedXmlRequest: ParsedXmlRequest[NodeSeq] = ParsedXmlRequest(
     EnrolmentRequest(FakeRequest().withBody(IE801), Set(ern), fakeUserDetails),
-    IE815Message.createFromXml(IE815),
+    IE815MessageV1.createFromXml(IE815),
     Set(ern),
     fakeUserDetails
   )

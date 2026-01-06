@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
-import generated.NewMessagesDataResponse
+import generated.v1.NewMessagesDataResponse
 import play.api.http.Status.OK
 import play.api.libs.json.{Json, Reads}
 import play.api.{Configuration, Logging}

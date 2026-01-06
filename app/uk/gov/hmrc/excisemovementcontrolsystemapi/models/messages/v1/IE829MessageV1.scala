@@ -16,60 +16,59 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
-import generated.{IE839Type, MessagesOption}
+import generated.v1
+import generated.v1.{IE829Type, MessagesOption}
 import play.api.libs.json.{JsObject, JsValue, Json}
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType.RefusalByCustoms
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType.NotificationOfAcceptedExport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1.MessageTypeFormats.GeneratedJsonWritersV1
 
 import scala.xml.NodeSeq
 
-case class IE839Message(
-  obj: IE839Type,
+case class IE829MessageV1(
+  obj: IE829Type,
   key: Option[String],
   namespace: Option[String],
   messageAuditType: MessageAuditType
 ) extends IEMessage
-    with GeneratedJsonWriters {
-
-  def localReferenceNumber: Option[String] =
-    obj.Body.RefusalByCustoms.NEadSub.map(_.LocalReferenceNumber)
-
-  def optionalLocalReferenceNumber: Option[String] = localReferenceNumber
+    with GeneratedJsonWritersV1 {
 
   override def consignorId: Option[String] = None
+
   override def consigneeId: Option[String] =
-    obj.Body.RefusalByCustoms.ConsigneeTrader.flatMap(a => a.Traderid)
+    obj.Body.NotificationOfAcceptedExport.ConsigneeTrader.Traderid
 
   override def administrativeReferenceCode: Seq[Option[String]] =
-    obj.Body.RefusalByCustoms.CEadVal.map(x => Some(x.AdministrativeReferenceCode))
+    obj.Body.NotificationOfAcceptedExport.ExciseMovementEad.map(x => Some(x.AdministrativeReferenceCode))
 
-  override def messageType: String = MessageTypes.IE839.value
+  override def messageType: String = MessageTypes.IE829.value
 
   override def toXml: NodeSeq =
-    scalaxb.toXML[IE839Type](obj, namespace, key, generated.defaultScope)
+    scalaxb.toXML[IE829Type](obj, namespace, key, v1.defaultScope)
 
   override def toJson: JsValue      = Json.toJson(obj)
   override def toJsObject: JsObject = Json.toJsObject(obj)
 
-  override def lrnEquals(lrn: String): Boolean = localReferenceNumber.contains(lrn)
+  override def lrnEquals(lrn: String): Boolean = false
 
   override def messageIdentifier: String = obj.Header.MessageIdentifier
 
   override def toString: String =
-    s"Message type: $messageType, message identifier: $messageIdentifier, LRN: $localReferenceNumber, ARCs: $administrativeReferenceCode"
+    s"Message type: $messageType, message identifier: $messageIdentifier, ARCs: $administrativeReferenceCode"
 
   override def correlationId: Option[String] = obj.Header.CorrelationIdentifier
+
+  def optionalLocalReferenceNumber: Option[String] = None
 }
 
-object IE839Message {
-  def apply(message: DataRecord[MessagesOption]): IE839Message =
-    IE839Message(message.as[IE839Type], message.key, message.namespace, RefusalByCustoms)
+object IE829MessageV1 {
+  def apply(message: DataRecord[MessagesOption]): IE829MessageV1 =
+    IE829MessageV1(message.as[IE829Type], message.key, message.namespace, NotificationOfAcceptedExport)
 
-  def createFromXml(xml: NodeSeq): IE839Message = {
-    val ie839: IE839Type = scalaxb.fromXML[IE839Type](xml)
-    IE839Message(ie839, Some(xml.head.label), Option(xml.head.namespace), RefusalByCustoms)
+  def createFromXml(xml: NodeSeq): IE829MessageV1 = {
+    val ie829: IE829Type = scalaxb.fromXML[IE829Type](xml)
+    IE829MessageV1(ie829, Some(xml.head.label), Option(xml.head.namespace), NotificationOfAcceptedExport)
   }
 }

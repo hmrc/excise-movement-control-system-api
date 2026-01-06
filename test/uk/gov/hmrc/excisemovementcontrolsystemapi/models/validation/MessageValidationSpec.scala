@@ -36,7 +36,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
   private val timestamp         = Instant.now()
 
   "validateDraftMovement" should {
-    val ie815 = mock[IE815Message]
+    val ie815 = mock[IE815MessageV1]
 
     "return consignor id" when {
       "the consignor id is authorised" in {
@@ -60,7 +60,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
   "validateSubmittedMessage" when {
 
     "an IE810 message" should {
-      val ie810 = mock[IE810Message]
+      val ie810 = mock[IE810MessageV1]
 
       "return movement consignor id" when {
         "the consignor id is authorised and message ARC matches movement ARC" in {
@@ -96,7 +96,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
     }
 
     "an IE813 message" should {
-      val ie813 = mock[IE813Message]
+      val ie813 = mock[IE813MessageV1]
 
       "return movement consignor id" when {
         "the consignor id is authorised and message ARC matches movement ARC" in {
@@ -133,7 +133,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
     }
 
     "an IE818 message" should {
-      val ie818 = mock[IE818Message]
+      val ie818 = mock[IE818MessageV1]
 
       "return movement consignee id" when {
         "the consignee id is authorised and message consignee matches the movement consignee and message ARC matches movement ARC" in {
@@ -194,7 +194,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
     }
 
     "an IE819 message" should {
-      val ie819 = mock[IE819Message]
+      val ie819 = mock[IE819MessageV1]
 
       "return movement consignee id" when {
         "the consignee id is authorised and message consignee matches the movement consignee and message ARC matches movement ARC" in {
@@ -255,7 +255,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
     }
 
     "an IE837 message" should {
-      val ie837 = mock[IE837Message]
+      val ie837 = mock[IE837MessageV1]
 
       "return movement consignor id" when {
         "the consignor is being used and the consignor id is authorised and message consignor matches the movement consignor and message ARC matches movement ARC" in {
@@ -404,7 +404,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
     }
 
     "an IE871 message" should {
-      val ie871 = mock[IE871Message]
+      val ie871 = mock[IE871MessageV1]
 
       "return movement consignor id" when {
         "the consignor is being used and the consignor id is authorised and message consignor matches the movement consignor and message ARC matches movement ARC" in {
@@ -555,7 +555,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
     "return invalid message type" when {
       "message type is not supported by the SubmitMessage endpoint" in {
 
-        val ie801 = mock[IE801Message]
+        val ie801 = mock[IE801MessageV1]
 
         when(ie801.messageType).thenReturn("IE801")
 

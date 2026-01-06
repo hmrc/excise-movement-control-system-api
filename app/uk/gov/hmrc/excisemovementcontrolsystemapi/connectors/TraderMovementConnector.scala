@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
-import generated.{MessageBodyType, MovementForTraderDataResponse}
+import generated.v1.{MessageBodyType, MovementForTraderDataResponse}
 import play.api.{Configuration, Logging}
 import play.api.http.Status.{OK, UNPROCESSABLE_ENTITY}
 import play.api.libs.json.{Json, Reads}
@@ -37,6 +37,7 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
+//needs updating to manage multiple versions
 @Singleton
 class TraderMovementConnector @Inject() (
   configuration: Configuration,

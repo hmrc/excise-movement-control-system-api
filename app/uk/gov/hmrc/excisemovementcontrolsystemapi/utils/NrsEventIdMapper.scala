@@ -16,20 +16,20 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.utils
 
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE810Message, IE813Message, IE815Message, IE818Message, IE819Message, IE837Message, IE871Message, IEMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE810MessageV1, IE813MessageV1, IE815MessageV1, IE818MessageV1, IE819MessageV1, IE837MessageV1, IE871MessageV1, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs.NrsMetadata
 
 class NrsEventIdMapper {
   def mapMessageToEventId(message: IEMessage): String =
     message match {
-      case _: IE815Message => NrsMetadata.EmcsCreateMovementNotableEventId
-      case _: IE810Message => NrsMetadata.EmccCancelMovement
-      case _: IE813Message => NrsMetadata.EmcsChangeDestinationNotableEventId
-      case _: IE818Message => NrsMetadata.EmcsReportOfReceiptNotableEvent
-      case _: IE819Message => NrsMetadata.EmcsSubmitAlertOrRejectionNotableEventId
-      case _: IE837Message => NrsMetadata.EmcsExplainADelayNotableEventId
-      case _: IE871Message => NrsMetadata.EmcsExplainAShortageNotableEventId
-      case _               => throw new RuntimeException(s"[NrsEventClientMapper] - Unsupported message: ${message.messageType}")
+      case _: IE815MessageV1 => NrsMetadata.EmcsCreateMovementNotableEventId
+      case _: IE810MessageV1 => NrsMetadata.EmccCancelMovement
+      case _: IE813MessageV1 => NrsMetadata.EmcsChangeDestinationNotableEventId
+      case _: IE818MessageV1 => NrsMetadata.EmcsReportOfReceiptNotableEvent
+      case _: IE819MessageV1 => NrsMetadata.EmcsSubmitAlertOrRejectionNotableEventId
+      case _: IE837MessageV1 => NrsMetadata.EmcsExplainADelayNotableEventId
+      case _: IE871MessageV1 => NrsMetadata.EmcsExplainAShortageNotableEventId
+      case _                 => throw new RuntimeException(s"[NrsEventClientMapper] - Unsupported message: ${message.messageType}")
     }
 
 }

@@ -31,7 +31,7 @@ import play.api.mvc.Results.{BadRequest, InternalServerError}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, TestXml, XmlMessageGeneratorFactory}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, TraderType}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE704Message, IEMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE704MessageV1, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
@@ -72,7 +72,7 @@ class MovementServiceSpec extends PlaySpec with EitherValues with BeforeAndAfter
     "ern",
     MessageParams(MessageTypes.IE704, "XI000001", localReferenceNumber = Some("lrnie8158976912"))
   )
-  private val ieMessage      = IE704Message.createFromXml(ie704)
+  private val ieMessage      = IE704MessageV1.createFromXml(ie704)
   private val exampleMessage = Message(
     utils.encode(ieMessage.toXml.toString()),
     "IE704",

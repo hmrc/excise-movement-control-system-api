@@ -23,7 +23,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE815Message, IEMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE815MessageV1, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
@@ -60,7 +60,7 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
     }
 
   def messageSubmittedNoMovement(
-    message: IE815Message,
+    message: IE815MessageV1,
     submittedToCore: Boolean,
     correlationId: Option[String],
     request: ParsedXmlRequest[NodeSeq]

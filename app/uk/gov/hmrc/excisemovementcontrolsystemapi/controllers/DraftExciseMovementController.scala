@@ -24,7 +24,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, CorrelationIdAction, ParseXmlAction}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815MessageV1, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Constants
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models._
@@ -40,6 +40,7 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
+//needs updating to manage multiple versions
 @Singleton
 class DraftExciseMovementController @Inject() (
   authAction: AuthAction,
@@ -62,19 +63,19 @@ class DraftExciseMovementController @Inject() (
     (authAction andThen correlationIdAction andThen xmlParser).async(parse.xml) { implicit request =>
       implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
       (for {
-        ie815Message  <- getIe815Message(request.ieMessage)
-        authorisedErn <- validateMessage(ie815Message, request.erns)
-        clientId      <- retrieveClientIdFromHeader(request)
-        maybeBoxId    <- getBoxId(clientId)
-        _             <- submitAndHandleError(request, authorisedErn, ie815Message)
-        movement      <- getDraftOrSaveNew(maybeBoxId, ie815Message, request)
-      } yield (movement, maybeBoxId, ie815Message)).fold[Result](
+        ie815MessageV1 <- getIE815MessageV1(request.ieMessage)
+        authorisedErn  <- validateMessage(ie815MessageV1, request.erns)
+        clientId       <- retrieveClientIdFromHeader(request)
+        maybeBoxId     <- getBoxId(clientId)
+        _              <- submitAndHandleError(request, authorisedErn, ie815MessageV1)
+        movement       <- getDraftOrSaveNew(maybeBoxId, ie815MessageV1, request)
+      } yield (movement, maybeBoxId, ie815MessageV1)).fold[Result](
         failResult => failResult,
         success => {
-          val (movement, boxId, ie815Message) = success
+          val (movement, boxId, ie815MessageV1) = success
 
           if (appConfig.oldAuditingEnabled) auditService.auditMessage(request.ieMessage).value
-          auditService.messageSubmitted(movement, true, ie815Message.correlationId, request)
+          auditService.messageSubmitted(movement, true, ie815MessageV1.correlationId, request)
 
           Accepted(
             Json.toJson(
@@ -96,7 +97,7 @@ class DraftExciseMovementController @Inject() (
   private def submitAndHandleError(
     request: ParsedXmlRequest[NodeSeq],
     ern: String,
-    message: IE815Message
+    message: IE815MessageV1
   )(implicit hc: HeaderCarrier): EitherT[Future, Result, EISSubmissionResponse] =
     EitherT {
       submissionMessageService.submit(request, ern).map {
@@ -123,7 +124,7 @@ class DraftExciseMovementController @Inject() (
     }
 
   private def validateMessage(
-    message: IE815Message,
+    message: IE815MessageV1,
     authErns: Set[String]
   ): EitherT[Future, Result, String] =
     EitherT.fromEither(messageValidator.validateDraftMovement(authErns, message).left.map { x =>
@@ -132,7 +133,7 @@ class DraftExciseMovementController @Inject() (
 
   private def getDraftOrSaveNew(
     maybeBoxId: Option[String],
-    message: IE815Message,
+    message: IE815MessageV1,
     request: ParsedXmlRequest[NodeSeq]
   )(implicit hc: HeaderCarrier): EitherT[Future, Result, Movement] =
     EitherT {
@@ -152,7 +153,7 @@ class DraftExciseMovementController @Inject() (
 
     }
 
-  private def createMovementFomMessage(message: IE815Message, boxId: Option[String]): Movement = {
+  private def createMovementFomMessage(message: IE815MessageV1, boxId: Option[String]): Movement = {
     val consignorId: String =
       message.consignorId.getOrElse(
         throw new Exception(s"No Consignor on IE815: ${message.messageIdentifier}")
@@ -178,10 +179,10 @@ class DraftExciseMovementController @Inject() (
       EitherT.fromEither(Right(None))
     }
 
-  private def getIe815Message(message: IEMessage): EitherT[Future, Result, IE815Message] =
+  private def getIE815MessageV1(message: IEMessage): EitherT[Future, Result, IE815MessageV1] =
     EitherT.fromEither(message match {
-      case x: IE815Message => Right(x)
-      case _               =>
+      case x: IE815MessageV1 => Right(x)
+      case _                 =>
         logger.warn(
           s"[DraftExciseMovementController] - Message type ${message.messageType} cannot be sent to the draft excise movement endpoint"
         )

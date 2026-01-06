@@ -16,38 +16,37 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
-import generated.{IE810Type, MessagesOption}
+import generated.v1
+import generated.v1.{IE905Type, MessagesOption}
 import play.api.libs.json.{JsObject, JsValue, Json}
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType.CancelMovement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType.StatusResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1.MessageTypeFormats.GeneratedJsonWritersV1
 
 import scala.xml.NodeSeq
 
-case class IE810Message(
-  obj: IE810Type,
+case class IE905MessageV1(
+  obj: IE905Type,
   key: Option[String],
   namespace: Option[String],
   messageAuditType: MessageAuditType
 ) extends IEMessage
-    with GeneratedJsonWriters {
-
-  override def consignorId: Option[String] = None
+    with GeneratedJsonWritersV1 {
 
   override def consigneeId: Option[String] = None
+  override def consignorId: Option[String] = None
 
   override def administrativeReferenceCode: Seq[Option[String]] =
-    Seq(Some(obj.Body.CancellationOfEAD.ExciseMovementEad.AdministrativeReferenceCode))
+    Seq(Some(obj.Body.StatusResponse.AttributesValue.AdministrativeReferenceCode))
 
-  override def messageType: String = MessageTypes.IE810.value
+  override def messageType: String = MessageTypes.IE905.value
 
   override def toXml: NodeSeq =
-    scalaxb.toXML[IE810Type](obj, namespace, key, generated.defaultScope)
+    scalaxb.toXML[IE905Type](obj, namespace, key, v1.defaultScope)
 
-  override def toJson: JsValue = Json.toJson(obj)
-
+  override def toJson: JsValue      = Json.toJson(obj)
   override def toJsObject: JsObject = Json.toJsObject(obj)
 
   override def lrnEquals(lrn: String): Boolean = false
@@ -59,15 +58,15 @@ case class IE810Message(
 
   override def correlationId: Option[String] = obj.Header.CorrelationIdentifier
 
-  def optionalLocalReferenceNumber: Option[String] = None
+  override def optionalLocalReferenceNumber: Option[String] = None
 }
 
-object IE810Message {
-  def apply(message: DataRecord[MessagesOption]): IE810Message =
-    IE810Message(message.as[IE810Type], message.key, message.namespace, CancelMovement)
+object IE905MessageV1 {
+  def apply(message: DataRecord[MessagesOption]): IE905MessageV1 =
+    IE905MessageV1(message.as[IE905Type], message.key, message.namespace, StatusResponse)
 
-  def createFromXml(xml: NodeSeq): IE810Message = {
-    val ie810: IE810Type = scalaxb.fromXML[IE810Type](xml)
-    IE810Message(ie810, Some(xml.head.label), Option(xml.head.namespace), CancelMovement)
+  def createFromXml(xml: NodeSeq): IE905MessageV1 = {
+    val ie905: IE905Type = scalaxb.fromXML[IE905Type](xml)
+    IE905MessageV1(ie905, Some(xml.head.label), Option(xml.head.namespace), StatusResponse)
   }
 }

@@ -21,7 +21,7 @@ import play.api.mvc.AnyContent
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE815Message, IEMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE815MessageV1, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.http.HeaderCarrier
@@ -33,7 +33,7 @@ import scala.xml.NodeSeq
 
 @Singleton
 class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMessageFactory) extends Auditing {
-
+//read from config
   def createMessageAuditEvent(input: IEMessage, failureOpt: Option[String])(implicit
     hc: HeaderCarrier
   ): ExtendedDataEvent = {
@@ -47,7 +47,7 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
   }
 
   def createMessageSubmittedNoMovement(
-    message: IE815Message,
+    message: IE815MessageV1,
     submittedToCore: Boolean,
     correlationId: Option[String],
     request: ParsedXmlRequest[NodeSeq]

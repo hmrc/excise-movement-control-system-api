@@ -16,25 +16,26 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
-import generated.{IE837Type, MessagesOption}
+import generated.v1
+import generated.v1.{IE837Type, MessagesOption}
 import play.api.libs.json.{JsObject, JsValue, Json}
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType.Delay
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1.MessageTypeFormats.GeneratedJsonWritersV1
 
 import scala.xml.NodeSeq
 
-case class IE837Message(
+case class IE837MessageV1(
   obj: IE837Type,
   key: Option[String],
   namespace: Option[String],
   messageAuditType: MessageAuditType
 ) extends IEMessage
     with SubmitterTypeConverter
-    with GeneratedJsonWriters {
-  def submitter: ExciseTraderType = convertSubmitterType(
+    with GeneratedJsonWritersV1 {
+  def submitter: ExciseTraderType = convertSubmitterTypeV1(
     obj.Body.ExplanationOnDelayForDelivery.AttributesValue.SubmitterType
   )
 
@@ -54,7 +55,7 @@ case class IE837Message(
   override def messageType: String = MessageTypes.IE837.value
 
   override def toXml: NodeSeq =
-    scalaxb.toXML[IE837Type](obj, namespace, key, generated.defaultScope)
+    scalaxb.toXML[IE837Type](obj, namespace, key, v1.defaultScope)
 
   override def toJson: JsValue = Json.toJson(obj)
 
@@ -72,12 +73,12 @@ case class IE837Message(
   def optionalLocalReferenceNumber: Option[String] = None
 }
 
-object IE837Message {
-  def apply(message: DataRecord[MessagesOption]): IE837Message =
-    IE837Message(message.as[IE837Type], message.key, message.namespace, Delay)
+object IE837MessageV1 {
+  def apply(message: DataRecord[MessagesOption]): IE837MessageV1 =
+    IE837MessageV1(message.as[IE837Type], message.key, message.namespace, Delay)
 
-  def createFromXml(xml: NodeSeq): IE837Message = {
+  def createFromXml(xml: NodeSeq): IE837MessageV1 = {
     val ie837: IE837Type = scalaxb.fromXML[IE837Type](xml)
-    IE837Message(ie837, Some(xml.head.label), Option(xml.head.namespace), Delay)
+    IE837MessageV1(ie837, Some(xml.head.label), Option(xml.head.namespace), Delay)
   }
 }

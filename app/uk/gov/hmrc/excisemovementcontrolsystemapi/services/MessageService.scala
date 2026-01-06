@@ -245,7 +245,7 @@ class MessageService @Inject() (
     shouldNotify: Boolean
   ): Future[Seq[Message]] =
     message match {
-      case ie801: IE801Message =>
+      case ie801: IE801MessageV1 =>
         val consignorId: String =
           ie801.consignorId.getOrElse(
             throw new Exception(s"No Consignor on IE801: ${ie801.messageIdentifier}")
@@ -281,16 +281,16 @@ class MessageService @Inject() (
 
   private def getConsignee(movement: Movement, message: IEMessage): Option[String] =
     message match {
-      case ie801: IE801Message => ie801.consigneeId
-      case ie813: IE813Message => ie813.consigneeId orElse movement.consigneeId
-      case _                   => movement.consigneeId
+      case ie801: IE801MessageV1 => ie801.consigneeId
+      case ie813: IE813MessageV1 => ie813.consigneeId orElse movement.consigneeId
+      case _                     => movement.consigneeId
     }
 
   private def getArc(movement: Movement, message: IEMessage): Option[String] =
     message match {
-      case ie801: IE801Message =>
+      case ie801: IE801MessageV1 =>
         movement.administrativeReferenceCode orElse ie801.administrativeReferenceCode.flatten.headOption
-      case _                   => movement.administrativeReferenceCode
+      case _                     => movement.administrativeReferenceCode
     }
 
   private def createMovements(
@@ -303,11 +303,11 @@ class MessageService @Inject() (
     hc: HeaderCarrier
   ): Future[Seq[Movement]] =
     message match {
-      case ie704: IE704Message if ie704.localReferenceNumber.isDefined =>
+      case ie704: IE704MessageV1 if ie704.localReferenceNumber.isDefined =>
         createMovementFromIE704(ern, ie704, timestamp)
-      case ie801: IE801Message                                         =>
+      case ie801: IE801MessageV1                                         =>
         createMovementFromIE801(ie801, timestamp).map(Seq(_))
-      case _                                                           =>
+      case _                                                             =>
         createMovementsFromTraderMovement(ern, message, movements, updatedMovements, timestamp)
     }
 
@@ -343,7 +343,7 @@ class MessageService @Inject() (
     hc: HeaderCarrier
   ): Future[Seq[Movement]] =
     messages
-      .collectFirst { case ie801: IE801Message =>
+      .collectFirst { case ie801: IE801MessageV1 =>
         findMovementsForMessage(movements, updatedMovements, ie801).flatMap { movements =>
           if (movements.nonEmpty) {
             movements.traverse { movement =>
@@ -411,7 +411,7 @@ class MessageService @Inject() (
     logger.error(errorMessage)
   }
 
-  private def createMovementFromIE704(consignor: String, message: IE704Message, timestamp: Instant)(implicit
+  private def createMovementFromIE704(consignor: String, message: IE704MessageV1, timestamp: Instant)(implicit
     hc: HeaderCarrier
   ): Future[Seq[Movement]] =
     convertMessage(consignor, message, timestamp, shouldNotify = true).map { convertedMessage =>
@@ -436,7 +436,7 @@ class MessageService @Inject() (
         }
     }
 
-  private def createMovementFromIE801(message: IE801Message, timestamp: Instant): Future[Movement] = {
+  private def createMovementFromIE801(message: IE801MessageV1, timestamp: Instant): Future[Movement] = {
     val consignorId: String =
       message.consignorId.getOrElse(
         throw new Exception(s"No Consignor on IE801: ${message.messageIdentifier}")
@@ -472,7 +472,7 @@ class MessageService @Inject() (
       OptionT(movementRepository.getByArc(arc))
         .filter { movement =>
           message match {
-            case ie801: IE801Message =>
+            case ie801: IE801MessageV1 =>
               val consignorId: String =
                 ie801.consignorId.getOrElse(
                   throw new Exception(s"No Consignor on IE801: ${ie801.messageIdentifier}")
@@ -488,7 +488,7 @@ class MessageService @Inject() (
 
   private def findByConsignorLrnInMessage(message: IEMessage): OptionT[Future, Seq[Movement]] =
     message match {
-      case ie801: IE801Message =>
+      case ie801: IE801MessageV1 =>
         val consignorId: String = message.consignorId.getOrElse(
           throw new Exception(s"No Consignor on IE801: ${message.messageIdentifier}")
         )

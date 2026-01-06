@@ -16,37 +16,38 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
-import generated.{IE881Type, MessagesOption}
+import generated.v1
+import generated.v1.{IE819Type, MessagesOption}
 import play.api.libs.json.{JsObject, JsValue, Json}
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType.ManualClosure
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType.AlertRejection
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1.MessageTypeFormats.GeneratedJsonWritersV1
 
 import scala.xml.NodeSeq
 
-case class IE881Message(
-  obj: IE881Type,
+case class IE819MessageV1(
+  obj: IE819Type,
   key: Option[String],
   namespace: Option[String],
   messageAuditType: MessageAuditType
 ) extends IEMessage
-    with GeneratedJsonWriters {
-
-  override def consigneeId: Option[String] = None
-
+    with GeneratedJsonWritersV1 {
   override def consignorId: Option[String] = None
 
+  override def consigneeId: Option[String] =
+    obj.Body.AlertOrRejectionOfEADESAD.ConsigneeTrader.flatMap(_.Traderid)
+
   override def administrativeReferenceCode: Seq[Option[String]] =
-    Seq(Some(obj.Body.ManualClosureResponse.AttributesValue.AdministrativeReferenceCode))
+    Seq(Some(obj.Body.AlertOrRejectionOfEADESAD.ExciseMovement.AdministrativeReferenceCode))
 
-  override def messageType: String = MessageTypes.IE881.value
+  override def messageType: String = MessageTypes.IE819.value
 
-  override def toXml: NodeSeq =
-    scalaxb.toXML[IE881Type](obj, namespace, key, generated.defaultScope)
+  override def toXml: NodeSeq  =
+    scalaxb.toXML[IE819Type](obj, namespace, key, v1.defaultScope)
+  override def toJson: JsValue = Json.toJson(obj)
 
-  override def toJson: JsValue      = Json.toJson(obj)
   override def toJsObject: JsObject = Json.toJsObject(obj)
 
   override def lrnEquals(lrn: String): Boolean = false
@@ -58,15 +59,15 @@ case class IE881Message(
 
   override def correlationId: Option[String] = obj.Header.CorrelationIdentifier
 
-  override def optionalLocalReferenceNumber: Option[String] = None
+  def optionalLocalReferenceNumber: Option[String] = None
 }
 
-object IE881Message {
-  def apply(message: DataRecord[MessagesOption]): IE881Message =
-    IE881Message(message.as[IE881Type], message.key, message.namespace, ManualClosure)
+object IE819MessageV1 {
+  def apply(message: DataRecord[MessagesOption]): IE819MessageV1 =
+    IE819MessageV1(message.as[IE819Type], message.key, message.namespace, AlertRejection)
 
-  def createFromXml(xml: NodeSeq): IE881Message = {
-    val ie881: IE881Type = scalaxb.fromXML[IE881Type](xml)
-    IE881Message(ie881, Some(xml.head.label), Option(xml.head.namespace), ManualClosure)
+  def createFromXml(xml: NodeSeq): IE819MessageV1 = {
+    val ie819: IE819Type = scalaxb.fromXML[IE819Type](xml)
+    IE819MessageV1(ie819, Some(xml.head.label), Option(xml.head.namespace), AlertRejection)
   }
 }

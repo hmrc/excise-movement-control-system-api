@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats
-
-import generated._
+package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1.MessageTypeFormats
+import generated.v1._
 import play.api.libs.json.{Format, JsError, JsObject, JsString, JsSuccess, Json, OWrites, Reads, Writes}
 import scalaxb.{DataRecord, DataTypeFactory}
 
@@ -27,7 +26,7 @@ import scala.util.Try
   * It is important to make sure that the implicit writers are in child-first order in this file.
   * xImplicit writes in the same file must always be before the writes that use them.
   */
-trait GeneratedJsonWriters {
+trait GeneratedJsonWritersV1 {
 
   implicit val mapWrites: OWrites[Map[String, DataRecord[Any]]] = OWrites { map =>
     JsObject(map.toSeq.map { case (s, r) =>
@@ -103,8 +102,8 @@ trait GeneratedJsonWriters {
   implicit val LSDIndependentSmallProducersDeclarationTypeType
     : OWrites[LSDIndependentSmallProducersDeclarationTypeType]                                                 =
     Json.writes[LSDIndependentSmallProducersDeclarationTypeType]
-  implicit val ImportSadTypeType: OWrites[ImportCustomsDeclarationTypeType]                                    =
-    Json.writes[ImportCustomsDeclarationTypeType]
+  implicit val ImportSadTypeType: OWrites[ImportSadTypeType]                                                   =
+    Json.writes[ImportSadTypeType]
   implicit val LSDSealInformationTypeType5: OWrites[LSDSealInformationTypeType5]                               =
     Json.writes[LSDSealInformationTypeType5]
 
@@ -165,7 +164,7 @@ trait GeneratedJsonWriters {
 
   implicit val LSDReferenceOfDocumentType: OWrites[LSDReferenceOfDocumentType]                                   = Json.writes[LSDReferenceOfDocumentType]
   implicit val LSDDocumentDescriptionType: OWrites[LSDDocumentDescriptionType]                                   = Json.writes[LSDDocumentDescriptionType]
-  implicit val ImportSadType: OWrites[ImportCustomsDeclarationType]                                              = Json.writes[ImportCustomsDeclarationType]
+  implicit val ImportSadType: OWrites[ImportSadType]                                                             = Json.writes[ImportSadType]
   implicit val LSDSealInformationTypeType4: OWrites[LSDSealInformationTypeType4]                                 =
     Json.writes[LSDSealInformationTypeType4]
   implicit val WineOperationType: OWrites[WineOperationType]                                                     = Json.writes[WineOperationType]

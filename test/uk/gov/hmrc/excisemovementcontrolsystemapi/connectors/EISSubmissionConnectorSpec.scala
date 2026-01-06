@@ -87,7 +87,7 @@ class EISSubmissionConnectorSpec
       </con:OperationRequest>
     </con:Control>
   private val timerContext            = mock[Timer.Context]
-  private val ie815Message            = mock[IE815Message]
+  private val IE815MessageV1          = mock[IE815MessageV1]
   private val submissionBearerToken   = "submissionBearerToken"
 
   private val ern       = "123"
@@ -115,10 +115,10 @@ class EISSubmissionConnectorSpec
     when(appConfig.emcsReceiverMessageUrl).thenReturn("http://localhost:8080/eis/path")
     when(appConfig.submissionBearerToken).thenReturn(submissionBearerToken)
     when(metrics.timer(any).time()) thenReturn timerContext
-    when(ie815Message.messageType).thenReturn("IE815")
-    when(ie815Message.consignorId).thenReturn(Some(ern))
+    when(IE815MessageV1.messageType).thenReturn("IE815")
+    when(IE815MessageV1.consignorId).thenReturn(Some(ern))
     when(emcsUtils.encode(any)).thenReturn("encode-message")
-    when(ie815Message.messageIdentifier).thenReturn("DummyIdentifier")
+    when(IE815MessageV1.messageIdentifier).thenReturn("DummyIdentifier")
 
   }
 
@@ -130,13 +130,13 @@ class EISSubmissionConnectorSpec
     }
 
     "get URL from appConfig" in {
-      submitExciseMovementWithParams(xml, ie815Message, ern)
+      submitExciseMovementWithParams(xml, IE815MessageV1, ern)
 
       verify(appConfig).emcsReceiverMessageUrl
     }
 
     "wrap the xml in the control document" in {
-      submitExciseMovementWithParams(xml, ie815Message, ern)
+      submitExciseMovementWithParams(xml, IE815MessageV1, ern)
 
       val captor = ArgCaptor[String]
       verify(emcsUtils).encode(captor.capture)
@@ -233,7 +233,7 @@ class EISSubmissionConnectorSpec
   }
 
   private def submitExciseMovementForIE815: Future[Either[EISErrorResponseDetails, EISSubmissionResponse]] =
-    submitExciseMovementWithParams(xml, ie815Message, ern)
+    submitExciseMovementWithParams(xml, IE815MessageV1, ern)
 
   private def submitExciseMovementWithParams(
     xml: NodeSeq,

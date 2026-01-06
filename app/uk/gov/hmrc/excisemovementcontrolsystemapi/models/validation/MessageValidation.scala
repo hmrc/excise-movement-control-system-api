@@ -33,9 +33,9 @@ case class MessageValidation() {
 
   def validateDraftMovement(
     authorisedErns: Set[String],
-    ie815: IE815Message
+    ie815: IE815MessageV1
   ): Either[MessageValidationResponse, String] =
-    IE815MessageValidator(ie815).validate(authorisedErns)
+    IE815MessageV1Validator(ie815).validate(authorisedErns)
 
   def validateSubmittedMessage(
     authorisedErns: Set[String],
@@ -43,13 +43,13 @@ case class MessageValidation() {
     message: IEMessage
   ): Either[MessageValidationResponse, String] = {
     val validator: MovementMessageValidator = message match {
-      case m: IE810Message => IE810MessageValidator(m, movement)
-      case m: IE813Message => IE813MessageValidator(m, movement)
-      case m: IE818Message => IE818MessageValidator(m, movement)
-      case m: IE819Message => IE819MessageValidator(m, movement)
-      case m: IE837Message => IE837MessageValidator(m, movement)
-      case m: IE871Message => IE871MessageValidator(m, movement)
-      case m: IEMessage    => InvalidMessageTypeValidator(m, movement)
+      case m: IE810MessageV1 => IE810MessageV1Validator(m, movement)
+      case m: IE813MessageV1 => IE813MessageV1Validator(m, movement)
+      case m: IE818MessageV1 => IE818MessageV1Validator(m, movement)
+      case m: IE819MessageV1 => IE819MessageV1Validator(m, movement)
+      case m: IE837MessageV1 => IE837MessageV1Validator(m, movement)
+      case m: IE871MessageV1 => IE871MessageV1Validator(m, movement)
+      case m: IEMessage      => InvalidMessageTypeValidator(m, movement)
     }
     validator.validate(authorisedErns)
   }
@@ -138,7 +138,7 @@ private abstract class MovementMessageValidator(override val message: IEMessage,
     extends MovementValidator
     with MessageValidator
 
-private case class IE815MessageValidator(override val message: IE815Message) extends MessageValidator {
+private case class IE815MessageV1Validator(override val message: IE815MessageV1) extends MessageValidator {
   override def validate(authorisedErns: Set[String]): Either[MessageValidationResponse, String] = {
     val consignorId: String =
       message.consignorId.getOrElse(
@@ -148,7 +148,7 @@ private case class IE815MessageValidator(override val message: IE815Message) ext
   }
 }
 
-private case class IE810MessageValidator(override val message: IE810Message, override val movement: Movement)
+private case class IE810MessageV1Validator(override val message: IE810MessageV1, override val movement: Movement)
     extends MovementMessageValidator(message, movement) {
   override def validate(authorisedErns: Set[String]): Either[MessageValidationResponse, String] =
     if (authorisedErns.contains(movement.consignorId)) {
@@ -162,7 +162,7 @@ private case class IE810MessageValidator(override val message: IE810Message, ove
     }
 }
 
-private case class IE813MessageValidator(override val message: IE813Message, override val movement: Movement)
+private case class IE813MessageV1Validator(override val message: IE813MessageV1, override val movement: Movement)
     extends MovementMessageValidator(message, movement) {
   override def validate(authorisedErns: Set[String]): Either[MessageValidationResponse, String] =
     if (authorisedErns.contains(movement.consignorId)) {
@@ -176,7 +176,7 @@ private case class IE813MessageValidator(override val message: IE813Message, ove
     }
 }
 
-private case class IE818MessageValidator(override val message: IE818Message, override val movement: Movement)
+private case class IE818MessageV1Validator(override val message: IE818MessageV1, override val movement: Movement)
     extends MovementMessageValidator(message, movement) {
   override def validate(authorisedErns: Set[String]): Either[MessageValidationResponse, String] =
     message.consigneeId match {
@@ -200,7 +200,7 @@ private case class IE818MessageValidator(override val message: IE818Message, ove
     }
 }
 
-private case class IE819MessageValidator(override val message: IE819Message, override val movement: Movement)
+private case class IE819MessageV1Validator(override val message: IE819MessageV1, override val movement: Movement)
     extends MovementMessageValidator(message, movement) {
   override def validate(authorisedErns: Set[String]): Either[MessageValidationResponse, String] =
     message.consigneeId match {
@@ -231,7 +231,7 @@ private case class SubmitterDetails(
   notAuthorised: MessageIdentifierIsUnauthorised
 )
 
-private case class IE837MessageValidator(override val message: IE837Message, override val movement: Movement)
+private case class IE837MessageV1Validator(override val message: IE837MessageV1, override val movement: Movement)
     extends MovementMessageValidator(message, movement) {
   override def validate(authorisedErns: Set[String]): Either[MessageValidationResponse, String] =
     getSubmitter match {
@@ -278,7 +278,7 @@ private case class IE837MessageValidator(override val message: IE837Message, ove
     }
 }
 
-private case class IE871MessageValidator(override val message: IE871Message, override val movement: Movement)
+private case class IE871MessageV1Validator(override val message: IE871MessageV1, override val movement: Movement)
     extends MovementMessageValidator(message, movement) {
   override def validate(authorisedErns: Set[String]): Either[MessageValidationResponse, String] =
     getSubmitter match {

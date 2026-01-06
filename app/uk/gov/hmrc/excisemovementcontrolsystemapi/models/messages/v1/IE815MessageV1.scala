@@ -16,18 +16,19 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
-import generated.IE815Type
+import generated.v1
+import generated.v1.IE815Type
 import play.api.libs.json.{JsObject, JsValue, Json}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType.DraftMovement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1.MessageTypeFormats.GeneratedJsonWritersV1
 
 import scala.xml.NodeSeq
 
-case class IE815Message(obj: IE815Type, messageAuditType: MessageAuditType)
+case class IE815MessageV1(obj: IE815Type, messageAuditType: MessageAuditType)
     extends IEMessage
-    with GeneratedJsonWriters {
+    with GeneratedJsonWritersV1 {
   def localReferenceNumber: String =
     obj.Body.SubmittedDraftOfEADESAD.EadEsadDraft.LocalReferenceNumber
 
@@ -46,7 +47,7 @@ case class IE815Message(obj: IE815Type, messageAuditType: MessageAuditType)
   override def messageType: String = MessageTypes.IE815.value
 
   override def toXml: NodeSeq =
-    scalaxb.toXML[IE815Type](obj, MessageTypes.IE815.value, generated.defaultScope)
+    scalaxb.toXML[IE815Type](obj, MessageTypes.IE815.value, v1.defaultScope)
 
   override def toJson: JsValue = Json.toJson(obj)
 
@@ -61,8 +62,8 @@ case class IE815Message(obj: IE815Type, messageAuditType: MessageAuditType)
   def correlationId             = obj.Header.CorrelationIdentifier
 }
 
-object IE815Message {
-  def createFromXml(xml: NodeSeq): IE815Message =
-    IE815Message(scalaxb.fromXML[IE815Type](xml), DraftMovement)
+object IE815MessageV1 {
+  def createFromXml(xml: NodeSeq): IE815MessageV1 =
+    IE815MessageV1(scalaxb.fromXML[IE815Type](xml), DraftMovement)
 
 }

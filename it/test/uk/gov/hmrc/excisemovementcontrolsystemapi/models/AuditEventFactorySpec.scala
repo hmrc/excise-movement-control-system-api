@@ -41,23 +41,23 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  "IE704Message" - TestType(IE704TestMessageType, IE704Message.createFromXml(IE704))
-  "IE801Message" - TestType(IE801TestMessageType, IE801Message.createFromXml(IE801))
-  "IE802Message" - TestType(IE802TestMessageType, IE802Message.createFromXml(IE802))
-  "IE803Message" - TestType(IE803TestMessageType, IE803Message.createFromXml(IE803))
-  "IE807Message" - TestType(IE807TestMessageType, IE807Message.createFromXml(IE807))
-  "IE810Message" - TestType(IE810TestMessageType, IE810Message.createFromXml(IE810))
-  "IE813Message" - TestType(IE813TestMessageType, IE813Message.createFromXml(IE813))
-  "IE815Message" - TestType(IE815TestMessageType, IE815Message.createFromXml(IE815))
-  "IE818Message" - TestType(IE818TestMessageType, IE818Message.createFromXml(IE818))
-  "IE819Message" - TestType(IE819TestMessageType, IE819Message.createFromXml(IE819))
-  "IE829Message" - TestType(IE829TestMessageType, IE829Message.createFromXml(IE829))
-  "IE837Message" - TestType(IE837TestMessageType, IE837Message.createFromXml(IE837WithConsignor))
-  "IE839Message" - TestType(IE839TestMessageType, IE839Message.createFromXml(IE839))
-  "IE840Message" - TestType(IE840TestMessageType, IE840Message.createFromXml(IE840))
-  "IE871Message" - TestType(IE871TestMessageType, IE871Message.createFromXml(IE871WithConsignor))
-  "IE881Message" - TestType(IE881TestMessageType, IE881Message.createFromXml(IE881))
-  "IE905Message" - TestType(IE905TestMessageType, IE905Message.createFromXml(IE905))
+  "IE704MessageV1" - TestType(IE704TestMessageType, IE704MessageV1.createFromXml(IE704))
+  "IE801MessageV1" - TestType(IE801TestMessageType, IE801MessageV1.createFromXml(IE801))
+  "IE802MessageV1" - TestType(IE802TestMessageType, IE802MessageV1.createFromXml(IE802))
+  "IE803MessageV1" - TestType(IE803TestMessageType, IE803MessageV1.createFromXml(IE803))
+  "IE807MessageV1" - TestType(IE807TestMessageType, IE807MessageV1.createFromXml(IE807))
+  "IE810MessageV1" - TestType(IE810TestMessageType, IE810MessageV1.createFromXml(IE810))
+  "IE813MessageV1" - TestType(IE813TestMessageType, IE813MessageV1.createFromXml(IE813))
+  "IE815MessageV1" - TestType(IE815TestMessageType, IE815MessageV1.createFromXml(IE815))
+  "IE818MessageV1" - TestType(IE818TestMessageType, IE818MessageV1.createFromXml(IE818))
+  "IE819MessageV1" - TestType(IE819TestMessageType, IE819MessageV1.createFromXml(IE819))
+  "IE829MessageV1" - TestType(IE829TestMessageType, IE829MessageV1.createFromXml(IE829))
+  "IE837MessageV1" - TestType(IE837TestMessageType, IE837MessageV1.createFromXml(IE837WithConsignor))
+  "IE839MessageV1" - TestType(IE839TestMessageType, IE839MessageV1.createFromXml(IE839))
+  "IE840MessageV1" - TestType(IE840TestMessageType, IE840MessageV1.createFromXml(IE840))
+  "IE871MessageV1" - TestType(IE871TestMessageType, IE871MessageV1.createFromXml(IE871WithConsignor))
+  "IE881MessageV1" - TestType(IE881TestMessageType, IE881MessageV1.createFromXml(IE881))
+  "IE905MessageV1" - TestType(IE905TestMessageType, IE905MessageV1.createFromXml(IE905))
 
   val emcsUtils           = new EmcsUtils
   val ieMessageFactory    = new IEMessageFactory
@@ -98,7 +98,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
   "createMessageSubmittedNoMovement creates message submitted details object" in {
 
     val testCorrelationid = UUID.randomUUID()
-    val message           = IE815Message.createFromXml(IE815)
+    val message           = IE815MessageV1.createFromXml(IE815)
     val userDetails       = UserDetails("gatewayID", "groupid")
     val erns              = Set("ern1")
     val parsedXmlRequest  = ParsedXmlRequest[NodeSeq](
@@ -298,8 +298,8 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
   "createMessageProcessingSuccessAuditInfo creates MessageProcessingSuccessAuditInfo object" in {
 
     val ern              = "testErn"
-    val firstMessage801  = IE801Message.createFromXml(IE801)
-    val secondMessage801 = IE801Message.createFromXml(IE801)
+    val firstMessage801  = IE801MessageV1.createFromXml(IE801)
+    val secondMessage801 = IE801MessageV1.createFromXml(IE801)
     val batchId          = UUID.randomUUID().toString
     val jobId            = UUID.randomUUID().toString
 

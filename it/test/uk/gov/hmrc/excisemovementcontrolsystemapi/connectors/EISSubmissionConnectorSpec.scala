@@ -30,7 +30,7 @@ import play.api.test.FakeRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815MessageV1
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{ExciseTraderResponse, ExciseTraderValidationETDSResponse, ExciseTraderValidationResponse, PreValidateTraderEISResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
@@ -74,7 +74,7 @@ class EISSubmissionConnectorSpec
       )
 
       //If this succeeds the wiremock has acted as a matcher
-      connector.submitMessage(IE815Message.createFromXml(IE815), "xmlAsString", ern)(hc).futureValue.isRight mustBe true
+      connector.submitMessage(IE815MessageV1.createFromXml(IE815), "xmlAsString", ern)(hc).futureValue.isRight mustBe true
     }
     "forward a new correlation id if not exists" in {
       val correlationId = "abcdefg"
@@ -93,7 +93,7 @@ class EISSubmissionConnectorSpec
 
       //This should fail as the headers don't match
       val result = connector
-        .submitMessage(IE815Message.createFromXml(IE815), "xmlAsString", ern)(HeaderCarrier())
+        .submitMessage(IE815MessageV1.createFromXml(IE815), "xmlAsString", ern)(HeaderCarrier())
         .futureValue
         .isLeft mustBe true
 
@@ -109,7 +109,7 @@ class EISSubmissionConnectorSpec
 
       //This should succeed as the headers now don't match correlationId
       val result2 = connector
-        .submitMessage(IE815Message.createFromXml(IE815), "xmlAsString", ern)(HeaderCarrier())
+        .submitMessage(IE815MessageV1.createFromXml(IE815), "xmlAsString", ern)(HeaderCarrier())
         .futureValue
         .isRight mustBe true
 

@@ -16,23 +16,24 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
-import generated.{IE704Type, MessagesOption}
+import generated.v1
+import generated.v1.{IE704Type, MessagesOption}
 import play.api.libs.json.{JsObject, JsValue, Json}
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType.Refused
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1.MessageTypeFormats.GeneratedJsonWritersV1
 
 import scala.xml.NodeSeq
 
-case class IE704Message(
+case class IE704MessageV1(
   obj: IE704Type,
   key: Option[String],
   namespace: Option[String],
   messageAuditType: MessageAuditType
 ) extends IEMessage
-    with GeneratedJsonWriters {
+    with GeneratedJsonWritersV1 {
   override def consigneeId: Option[String] = None
   override def consignorId: Option[String] = None
 
@@ -47,7 +48,7 @@ case class IE704Message(
   override def messageIdentifier: String = obj.Header.MessageIdentifier
 
   override def toXml: NodeSeq =
-    scalaxb.toXML[IE704Type](obj, namespace, key, generated.defaultScope)
+    scalaxb.toXML[IE704Type](obj, namespace, key, v1.defaultScope)
 
   override def toJson: JsValue = Json.toJson(obj)
 
@@ -70,12 +71,12 @@ case class IE704Message(
   def correlationId = obj.Header.CorrelationIdentifier
 }
 
-object IE704Message {
-  def apply(message: DataRecord[MessagesOption]): IE704Message =
-    IE704Message(message.as[IE704Type], message.key, message.namespace, Refused)
+object IE704MessageV1 {
+  def apply(message: DataRecord[MessagesOption]): IE704MessageV1 =
+    IE704MessageV1(message.as[IE704Type], message.key, message.namespace, Refused)
 
-  def createFromXml(xml: NodeSeq): IE704Message = {
+  def createFromXml(xml: NodeSeq): IE704MessageV1 = {
     val ie704: IE704Type = scalaxb.fromXML[IE704Type](xml)
-    IE704Message(ie704, Some(xml.head.label), Option(xml.head.namespace), Refused)
+    IE704MessageV1(ie704, Some(xml.head.label), Option(xml.head.namespace), Refused)
   }
 }

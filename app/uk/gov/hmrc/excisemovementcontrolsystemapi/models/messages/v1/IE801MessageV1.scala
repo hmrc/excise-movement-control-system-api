@@ -15,24 +15,24 @@
  */
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
-
-import generated.{IE801Type, MessagesOption}
+import generated.v1
+import generated.v1.{IE801Type, MessagesOption}
 import play.api.libs.json.{JsObject, JsValue, Json}
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType.MovementGenerated
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1.MessageTypeFormats.GeneratedJsonWritersV1
 
 import scala.xml.NodeSeq
 
-case class IE801Message(
+case class IE801MessageV1(
   obj: IE801Type,
   key: Option[String],
   namespace: Option[String],
   messageAuditType: MessageAuditType
 ) extends IEMessage
-    with GeneratedJsonWriters {
+    with GeneratedJsonWritersV1 {
   def localReferenceNumber: String =
     obj.Body.EADESADContainer.EadEsad.LocalReferenceNumber
 
@@ -50,7 +50,7 @@ case class IE801Message(
   override def messageType: String = MessageTypes.IE801.value
 
   override def toXml: NodeSeq =
-    scalaxb.toXML[IE801Type](obj, namespace, key, generated.defaultScope)
+    scalaxb.toXML[IE801Type](obj, namespace, key, v1.defaultScope)
 
   override def toJson: JsValue = Json.toJson(obj)
 
@@ -66,12 +66,12 @@ case class IE801Message(
   override def correlationId: Option[String] = obj.Header.CorrelationIdentifier
 }
 
-object IE801Message {
-  def apply(message: DataRecord[MessagesOption]): IE801Message =
-    IE801Message(message.as[IE801Type], message.key, message.namespace, MovementGenerated)
+object IE801MessageV1 {
+  def apply(message: DataRecord[MessagesOption]): IE801MessageV1 =
+    IE801MessageV1(message.as[IE801Type], message.key, message.namespace, MovementGenerated)
 
-  def createFromXml(xml: NodeSeq): IE801Message = {
+  def createFromXml(xml: NodeSeq): IE801MessageV1 = {
     val ie801: IE801Type = scalaxb.fromXML[IE801Type](xml)
-    IE801Message(ie801, Some(xml.head.label), Option(xml.head.namespace), MovementGenerated)
+    IE801MessageV1(ie801, Some(xml.head.label), Option(xml.head.namespace), MovementGenerated)
   }
 }

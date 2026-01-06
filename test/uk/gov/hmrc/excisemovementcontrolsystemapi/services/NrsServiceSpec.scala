@@ -36,7 +36,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.Unexpe
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815MessageV1, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NRSWorkItemRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmissionWorkItem
@@ -92,7 +92,7 @@ class NrsServiceSpec
     config
   )
 
-  private val message = mock[IE815Message]
+  private val message = mock[IE815MessageV1]
 
   override def beforeEach(): Unit = {
     super.beforeEach()

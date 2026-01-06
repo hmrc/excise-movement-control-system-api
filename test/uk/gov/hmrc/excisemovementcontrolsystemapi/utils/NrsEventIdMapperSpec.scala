@@ -27,31 +27,31 @@ class NrsEventIdMapperSpec extends PlaySpec {
 
   "mapMessageToEventClient" should {
     "map IE815 to emcs-create-a-movement-api" in {
-      sut.mapMessageToEventId(mock[IE815Message]) mustBe "emcs-create-a-movement-api"
+      sut.mapMessageToEventId(mock[IE815MessageV1]) mustBe "emcs-create-a-movement-api"
     }
 
     "map IE810 to emcs-cancel-a-movement-api" in {
-      sut.mapMessageToEventId(mock[IE810Message]) mustBe "emcs-cancel-a-movement-api"
+      sut.mapMessageToEventId(mock[IE810MessageV1]) mustBe "emcs-cancel-a-movement-api"
     }
 
     "map IE813 to emcs-change-a-destination-api" in {
-      sut.mapMessageToEventId(mock[IE813Message]) mustBe "emcs-change-a-destination-api"
+      sut.mapMessageToEventId(mock[IE813MessageV1]) mustBe "emcs-change-a-destination-api"
     }
 
     "map IE818 to emcs-report-a-receipt-api" in {
-      sut.mapMessageToEventId(mock[IE818Message]) mustBe "emcs-report-a-receipt-api"
+      sut.mapMessageToEventId(mock[IE818MessageV1]) mustBe "emcs-report-a-receipt-api"
     }
 
     "map IE819 to emcs-submit-alert-or-rejection-api" in {
-      sut.mapMessageToEventId(mock[IE819Message]) mustBe "emcs-submit-alert-or-rejection-api"
+      sut.mapMessageToEventId(mock[IE819MessageV1]) mustBe "emcs-submit-alert-or-rejection-api"
     }
 
     "map IE837 to emcs-explain-a-delay-api" in {
-      sut.mapMessageToEventId(mock[IE837Message]) mustBe "emcs-explain-a-delay-api"
+      sut.mapMessageToEventId(mock[IE837MessageV1]) mustBe "emcs-explain-a-delay-api"
     }
 
     "map IE871 to emcs-explain-a-shortage-api" in {
-      sut.mapMessageToEventId(mock[IE871Message]) mustBe "emcs-explain-a-shortage-api"
+      sut.mapMessageToEventId(mock[IE871MessageV1]) mustBe "emcs-explain-a-shortage-api"
     }
 
     "return an error if cannot match a message to aan event client id" in {

@@ -35,7 +35,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IE818Message, IEMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815MessageV1, IE818MessageV1, IEMessage}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MessageIdentifierIsUnauthorised, MessageValidation}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EISErrorResponseDetails, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
@@ -62,7 +62,7 @@ class DraftExciseMovementControllerSpec
   private val movementService          = mock[MovementService]
   private val cc                       = stubControllerComponents()
   private val request                  = createRequestWithClientId
-  private val mockIeMessage            = mock[IE815Message]
+  private val mockIeMessage            = mock[IE815MessageV1]
   private val boxIdRepository          = mock[BoxIdRepository]
   private val ernSubmissionRepository  = mock[ErnSubmissionRepository]
   private val notificationService      = mock[PushNotificationService]
@@ -345,13 +345,13 @@ class DraftExciseMovementControllerSpec
 
   private def createWithWrongMessageType = {
 
-    val mockIe818Message = mock[IE818Message]
+    val mockIE818MessageV1 = mock[IE818MessageV1]
 
-    when(mockIe818Message.messageType).thenReturn(MessageTypes.IE818.value)
+    when(mockIE818MessageV1.messageType).thenReturn(MessageTypes.IE818.value)
 
     new DraftExciseMovementController(
       FakeSuccessAuthentication(Set(ern)),
-      FakeSuccessXMLParser(mockIe818Message),
+      FakeSuccessXMLParser(mockIE818MessageV1),
       movementService,
       submissionMessageService,
       notificationService,

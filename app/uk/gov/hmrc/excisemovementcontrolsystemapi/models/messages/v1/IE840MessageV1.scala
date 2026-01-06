@@ -16,57 +16,57 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
-import generated.{IE803Type, MessagesOption}
+import generated.v1
+import generated.v1.{IE840Type, MessagesOption}
 import play.api.libs.json.{JsObject, JsValue, Json}
 import scalaxb.DataRecord
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType.NotificationOfDivertedMovement
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.MessageAuditType.EventReport
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1.MessageTypeFormats.GeneratedJsonWritersV1
 
 import scala.xml.NodeSeq
 
-case class IE803Message(
-  obj: IE803Type,
+case class IE840MessageV1(
+  obj: IE840Type,
   key: Option[String],
   namespace: Option[String],
   messageAuditType: MessageAuditType
 ) extends IEMessage
-    with GeneratedJsonWriters {
+    with GeneratedJsonWritersV1 {
 
-  override def consignorId: Option[String] = None
   override def consigneeId: Option[String] = None
+  override def consignorId: Option[String] = None
 
   override def administrativeReferenceCode: Seq[Option[String]] =
-    Seq(Some(obj.Body.NotificationOfDivertedEADESAD.ExciseNotification.AdministrativeReferenceCode))
+    Seq(obj.Body.EventReportEnvelope.ExciseMovement.map(_.AdministrativeReferenceCode))
+
+  override def messageType: String = MessageTypes.IE840.value
 
   override def toXml: NodeSeq =
-    scalaxb.toXML[IE803Type](obj, namespace, key, generated.defaultScope)
+    scalaxb.toXML[IE840Type](obj, namespace, key, v1.defaultScope)
 
-  override def toJson: JsValue = Json.toJson(obj)
-
+  override def toJson: JsValue      = Json.toJson(obj)
   override def toJsObject: JsObject = Json.toJsObject(obj)
 
-  override def messageType: String = MessageTypes.IE803.value
+  override def lrnEquals(lrn: String): Boolean = false
 
   override def messageIdentifier: String = obj.Header.MessageIdentifier
-
-  override def lrnEquals(lrn: String): Boolean = false
 
   override def toString: String =
     s"Message type: $messageType, message identifier: $messageIdentifier, ARC: $administrativeReferenceCode"
 
   override def correlationId: Option[String] = obj.Header.CorrelationIdentifier
 
-  def optionalLocalReferenceNumber: Option[String] = None
+  override def optionalLocalReferenceNumber: Option[String] = None
 }
 
-object IE803Message {
-  def apply(message: DataRecord[MessagesOption]): IE803Message =
-    IE803Message(message.as[IE803Type], message.key, message.namespace, NotificationOfDivertedMovement)
+object IE840MessageV1 {
+  def apply(message: DataRecord[MessagesOption]): IE840MessageV1 =
+    IE840MessageV1(message.as[IE840Type], message.key, message.namespace, EventReport)
 
-  def createFromXml(xml: NodeSeq): IE803Message = {
-    val ie803: IE803Type = scalaxb.fromXML[IE803Type](xml)
-    IE803Message(ie803, Some(xml.head.label), Option(xml.head.namespace), NotificationOfDivertedMovement)
+  def createFromXml(xml: NodeSeq): IE840MessageV1 = {
+    val ie840: IE840Type = scalaxb.fromXML[IE840Type](xml)
+    IE840MessageV1(ie840, Some(xml.head.label), Option(xml.head.namespace), EventReport)
   }
 }
