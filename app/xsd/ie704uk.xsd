@@ -42,7 +42,7 @@
     <xs:complexType name="GenericRefusalMessageType">
         <xs:sequence>
             <xs:element name="Attributes" type="ie:AttributesType" minOccurs="0" />
-            <xs:element name="FunctionalError" type="ie:FunctionalErrorType" maxOccurs="unbounded" />
+            <xs:element name="FunctionalError" type="ie:FunctionalErrorType" maxOccurs="999" />
         </xs:sequence>
     </xs:complexType>
     <xs:complexType name="AttributesType">
