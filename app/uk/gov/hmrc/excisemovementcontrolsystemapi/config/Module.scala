@@ -18,20 +18,52 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.config
 
 import play.api.inject.Binding
 import play.api.{Configuration, Environment}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsCircuitBreakerProvider
+import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{NrsCircuitBreakerProvider, TraderMovementConnector, TraderMovementConnectorV1, TraderMovementConnectorV2}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.NrsCircuitBreaker
+import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.{DraftExciseMovementController, DraftExciseMovementControllerV1, DraftExciseMovementControllerV2}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.{IEMessageFactory, IEMessageFactoryV1, IEMessageFactoryV2}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, AuditEventFactoryV2}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MessageValidation, MessageValidationV1, MessageValidationV2}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, AuditServiceV1, AuditServiceV2, MessageService, MessageServiceV1, MessageServiceV2}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{NrsEventIdMapper, NrsEventIdMapperV1, NrsEventIdMapperV2}
 import uk.gov.hmrc.mongo.metrix.MetricOrchestrator
 
 import java.time.Clock
 
 class Module extends play.api.inject.Module {
 
-  override def bindings(environment: Environment, configuration: Configuration): collection.Seq[Binding[_]] =
+  override def bindings(environment: Environment, configuration: Configuration): collection.Seq[Binding[_]] = {
+    val latestSpec      = configuration.get[Boolean]("featureFlags.latestFunctionalSpecEnabled")
+    val versionBindings =
+      if (latestSpec)
+        Seq(
+          bind[DraftExciseMovementController].to[DraftExciseMovementControllerV2],
+          bind[MessageService].to[MessageServiceV2],
+          bind[IEMessageFactory].to[IEMessageFactoryV2],
+          bind[TraderMovementConnector].to[TraderMovementConnectorV2],
+          bind[AuditEventFactory].to[AuditEventFactoryV2],
+          bind[NrsEventIdMapper].to[NrsEventIdMapperV2],
+          bind[AuditService].to[AuditServiceV2],
+          bind[MessageValidation].to[MessageValidationV2]
+        )
+      else
+        Seq(
+          bind[DraftExciseMovementController].to[DraftExciseMovementControllerV1],
+          bind[MessageService].to[MessageServiceV1],
+          bind[IEMessageFactory].to[IEMessageFactoryV1],
+          bind[TraderMovementConnector].to[TraderMovementConnectorV1],
+          bind[AuditEventFactory].to[AuditEventFactoryV2],
+          bind[NrsEventIdMapper].to[NrsEventIdMapperV1],
+          bind[AuditService].to[AuditServiceV1],
+          bind[MessageValidation].to[MessageValidationV1]
+        )
+
     Seq(
       bind[AppConfig].toSelf.eagerly(),
       bind[JobScheduler].toSelf.eagerly(),
       bind[Clock].toInstance(Clock.systemUTC()),
       bind[MetricOrchestrator].toProvider[MetricsProvider],
       bind[NrsCircuitBreaker].toProvider[NrsCircuitBreakerProvider]
-    )
+    ) ++ versionBindings
+  }
 }

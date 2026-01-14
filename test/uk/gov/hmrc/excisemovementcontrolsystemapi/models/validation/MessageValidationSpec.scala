@@ -24,6 +24,7 @@ import play.api.libs.json.Json
 import play.api.mvc.Results.{BadRequest, Forbidden}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.ErrorResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
 import java.time.Instant
@@ -32,7 +33,7 @@ class MessageValidationSpec extends PlaySpec with EitherValues {
 
   private val authorisedErns    = Set("123", "456")
   private val movement          = mock[Movement]
-  private val messageValidation = MessageValidation()
+  private val messageValidation = MessageValidationV1()
   private val timestamp         = Instant.now()
 
   "validateDraftMovement" should {

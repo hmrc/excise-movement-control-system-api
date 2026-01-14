@@ -31,7 +31,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, 
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessageGeneratorFactory}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptSuccessResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes.{IE704, IE801, IE818}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE704MessageV1, IE801MessageV1, IE818MessageV1}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.GetMessagesResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1.{IE704MessageV1, IE801MessageV1, IE818MessageV1}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement, MovementIdGenerator}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}

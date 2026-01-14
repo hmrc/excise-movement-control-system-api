@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.http.Fault
-import generated.NewMessagesDataResponse
+import generated.v1.NewMessagesDataResponse
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.{Mockito, MockitoSugar}
 import org.scalatest.BeforeAndAfterEach
@@ -206,7 +206,7 @@ class MessageConnectorSpec
 
       val newMessagesDataResponse =
         scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(newMessageXmlWithIE704.toString))
-      val IE704MessageV1            = messageFactory.createIEMessage(newMessagesDataResponse.Messages.messagesoption.head)
+      val IE704MessageV1            = messageFactory.createIEMessage(Left(newMessagesDataResponse.Messages.messagesoption.head))
 
       val response = EISConsumptionResponse(
         dateTime = timestamp,
@@ -236,7 +236,7 @@ class MessageConnectorSpec
     "must emit MessageProcessingSuccess when able to process the incoming messages" in {
       val newMessagesDataResponse =
         scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(newMessageXmlWithIE704.toString))
-      val IE704MessageV1            = messageFactory.createIEMessage(newMessagesDataResponse.Messages.messagesoption.head)
+      val IE704MessageV1            = messageFactory.createIEMessage(Left(newMessagesDataResponse.Messages.messagesoption.head))
 
       val response = EISConsumptionResponse(
         dateTime = timestamp,
@@ -288,8 +288,8 @@ class MessageConnectorSpec
 
       val newMessagesDataResponse =
         scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(newMessageWith818And802.toString))
-      val IE818MessageV1            = messageFactory.createIEMessage(newMessagesDataResponse.Messages.messagesoption.head)
-      val IE802MessageV1            = messageFactory.createIEMessage(newMessagesDataResponse.Messages.messagesoption(1))
+      val IE818MessageV1            = messageFactory.createIEMessage(Left(newMessagesDataResponse.Messages.messagesoption.head))
+      val IE802MessageV1            = messageFactory.createIEMessage(Left(newMessagesDataResponse.Messages.messagesoption(1)))
 
       val response = EISConsumptionResponse(
         dateTime = timestamp,

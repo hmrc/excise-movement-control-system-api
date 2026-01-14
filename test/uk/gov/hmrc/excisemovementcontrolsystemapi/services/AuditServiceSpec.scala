@@ -28,12 +28,13 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
+import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.{IEMessageFactory, IEMessageFactoryV1}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeXmlParsers
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.http.HeaderCarrier
@@ -52,8 +53,8 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
   val auditConnector: AuditConnector = mock[AuditConnector]
   val appConfig: AppConfig           = mock[AppConfig]
   val utils                          = new EmcsUtils
-  val ieMessageFactory               = new IEMessageFactory
-  val factory: AuditEventFactory     = new AuditEventFactory(utils, new IEMessageFactory)
+  val ieMessageFactory               = new IEMessageFactoryV1
+  val factory: AuditEventFactory     = new AuditEventFactoryV1(utils, ieMessageFactory)
 
   val testMovement: Movement = Movement("id", None, "lrn", "consignorId", None, None, Instant.now, Seq.empty[Message])
   val testErns: Set[String]  = Set("123", "456")
@@ -92,7 +93,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
       when(auditConnector.sendExtendedEvent(any)(any, any))
         .thenReturn(Future.successful(AuditResult.Failure("test", None)))
 
-      val service = new AuditService(auditConnector, appConfig, factory)
+      val service = new AuditServiceV1(auditConnector, appConfig, factory)
       val result  = service.auditMessage(IE815MessageV1.createFromXml(IE815))
 
       await(result.value) equals Right(())
@@ -100,14 +101,14 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
 
     "return Right(())) on success" in {
 
-      val service = new AuditService(auditConnector, appConfig, factory)
+      val service = new AuditServiceV1(auditConnector, appConfig, factory)
       val result  = service.auditMessage(IE815MessageV1.createFromXml(IE815))
 
       await(result.value) equals Right(())
     }
   }
 
-  val service = new AuditService(auditConnector, appConfig, factory)
+  val service = new AuditServiceV1(auditConnector, appConfig, factory)
 
   "messageSubmittedNoMovement" should {
 

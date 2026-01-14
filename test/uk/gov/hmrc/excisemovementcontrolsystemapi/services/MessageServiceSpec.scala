@@ -45,6 +45,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.XmlMessageGeneratorFactor
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptSuccessResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.BoxIdRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnRetrievalRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
@@ -808,14 +809,14 @@ class MessageServiceSpec
                 Some("lrnie8158976912")
               )
             )
-            val IE801MessageV1         = IE801MessageV1.createFromXml(ie801Xml)
+            val ie801MessageV1         = IE801MessageV1.createFromXml(ie801Xml)
             val ie818Xml               = XmlMessageGeneratorFactory.generate(
               consignor,
               MessageParams(IE818, "GB00002", Some(consignee), Some("23XI00000000000000012"))
             )
-            val IE818MessageV1         = IE818MessageV1.createFromXml(ie818Xml)
-            val messages               = Seq(IE818MessageV1)
-            val traderMovementMessages = Seq(IE801MessageV1, IE818MessageV1)
+            val ie818MessageV1         = IE818MessageV1.createFromXml(ie818Xml)
+            val messages               = Seq(ie818MessageV1)
+            val traderMovementMessages = Seq(ie801MessageV1, ie818MessageV1)
             val expectedMovement       = Movement(
               newId,
               None,
@@ -826,7 +827,7 @@ class MessageServiceSpec
               updateOrCreateTimestamp,
               messages = Seq(
                 Message(
-                  utils.encode(IE801MessageV1.toXml.toString()),
+                  utils.encode(ie801MessageV1.toXml.toString()),
                   "IE801",
                   "GB00001",
                   consignor,
@@ -834,7 +835,7 @@ class MessageServiceSpec
                   updateOrCreateTimestamp
                 ),
                 Message(
-                  utils.encode(IE801MessageV1.toXml.toString()),
+                  utils.encode(ie801MessageV1.toXml.toString()),
                   "IE801",
                   "GB00001",
                   consignee,
@@ -842,7 +843,7 @@ class MessageServiceSpec
                   updateOrCreateTimestamp
                 ),
                 Message(
-                  utils.encode(IE818MessageV1.toXml.toString()),
+                  utils.encode(ie818MessageV1.toXml.toString()),
                   "IE818",
                   "GB00002",
                   consignor,

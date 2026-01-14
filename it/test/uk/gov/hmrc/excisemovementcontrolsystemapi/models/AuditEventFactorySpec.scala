@@ -22,11 +22,12 @@ import org.scalatest.matchers.must.Matchers
 import play.api.mvc.AnyContent
 import play.api.test.FakeRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
+import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.{IEMessageFactory, IEMessageFactoryV1}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{MessageAuditInfo, _}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.excisemovementcontrolsystemapi.writes.testObjects._
@@ -60,8 +61,8 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
   "IE905MessageV1" - TestType(IE905TestMessageType, IE905MessageV1.createFromXml(IE905))
 
   val emcsUtils           = new EmcsUtils
-  val ieMessageFactory    = new IEMessageFactory
-  val service             = new AuditEventFactory(emcsUtils, ieMessageFactory)
+  val ieMessageFactory    = new IEMessageFactoryV1
+  val service             = new AuditEventFactoryV1(emcsUtils, ieMessageFactory)
   private val fakeRequest = FakeRequest("GET", "/foo")
 
   case class TestType(testObject: TestMessageType, message: IEMessage) {

@@ -41,10 +41,12 @@ object IE829TestMessageType extends TestMessageType {
       |            "ExciseMovementEad": [
       |                {
       |                    "AdministrativeReferenceCode": "23XI00000000000056339",
+      |                    "ExportDeclarationAcceptanceOrGoodsReleasedForExport": "1",
       |                    "SequenceNumber": "1"
       |                },
       |                {
       |                    "AdministrativeReferenceCode": "23XI00000000000056340",
+      |                    "ExportDeclarationAcceptanceOrGoodsReleasedForExport": "1",
       |                    "SequenceNumber": "1"
       |                }
       |            ],
@@ -53,8 +55,7 @@ object IE829TestMessageType extends TestMessageType {
       |                "DateOfRelease": "2002-11-05Z",
       |                "DocumentReferenceNumber": "token",
       |                "IdentificationOfSenderCustomsOfficer": "token",
-      |                "ReferenceNumberOfSenderCustomsOffice": "tokentok",
-      |                "ExportDeclarationAcceptanceOrGoodsReleasedForExport": "1"
+      |                "ReferenceNumberOfSenderCustomsOffice": "tokentok"
       |            },
       |            "ExportPlaceCustomsOffice": {
       |                "ReferenceNumber": "tokentok"
@@ -104,11 +105,13 @@ object IE829TestMessageType extends TestMessageType {
       |        "ExciseMovementEad": [
       |          {
       |            "AdministrativeReferenceCode": "23XI00000000000056339",
-      |            "SequenceNumber": "1"
+      |            "SequenceNumber": "1",
+      |            "ExportDeclarationAcceptanceOrGoodsReleasedForExport": "1"
       |          },
       |          {
       |            "AdministrativeReferenceCode": "23XI00000000000056340",
-      |            "SequenceNumber": "1"
+      |            "SequenceNumber": "1",
+      |            "ExportDeclarationAcceptanceOrGoodsReleasedForExport": "1"
       |          }
       |        ],
       |        "ExportPlaceCustomsOffice": {
@@ -119,8 +122,7 @@ object IE829TestMessageType extends TestMessageType {
       |          "IdentificationOfSenderCustomsOfficer": "token",
       |          "DateOfAcceptance": "2013-05-22+01:00",
       |          "DateOfRelease": "2002-11-05Z",
-      |          "DocumentReferenceNumber": "token",
-      |          "ExportDeclarationAcceptanceOrGoodsReleasedForExport": "1"
+      |          "DocumentReferenceNumber": "token"
       |        }
       |      }
       |    }
@@ -162,11 +164,13 @@ object IE829TestMessageType extends TestMessageType {
        |        "ExciseMovementEad": [
        |          {
        |            "AdministrativeReferenceCode": "23XI00000000000056339",
-       |            "SequenceNumber": "1"
+       |            "SequenceNumber": "1",
+       |            "ExportDeclarationAcceptanceOrGoodsReleasedForExport": "1"
        |          },
        |          {
        |            "AdministrativeReferenceCode": "23XI00000000000056340",
-       |            "SequenceNumber": "1"
+       |            "SequenceNumber": "1",
+       |            "ExportDeclarationAcceptanceOrGoodsReleasedForExport": "1"
        |          }
        |        ],
        |        "ExportPlaceCustomsOffice": {
@@ -177,8 +181,7 @@ object IE829TestMessageType extends TestMessageType {
        |          "IdentificationOfSenderCustomsOfficer": "token",
        |          "DateOfAcceptance": "2013-05-22+01:00",
        |          "DateOfRelease": "2002-11-05Z",
-       |          "DocumentReferenceNumber": "token",
-       |          "ExportDeclarationAcceptanceOrGoodsReleasedForExport": "1"
+       |          "DocumentReferenceNumber": "token"
        |        }
        |      }
        |    }

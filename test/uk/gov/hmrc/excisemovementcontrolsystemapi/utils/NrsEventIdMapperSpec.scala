@@ -20,10 +20,11 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.UnsupportedTestMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1._
 
 class NrsEventIdMapperSpec extends PlaySpec {
 
-  val sut = new NrsEventIdMapper()
+  val sut = new NrsEventIdMapperV1()
 
   "mapMessageToEventClient" should {
     "map IE815 to emcs-create-a-movement-api" in {

@@ -30,7 +30,7 @@ import play.api.test.FakeRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815MessageV1
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1.IE815MessageV1
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.response.{ExciseTraderResponse, ExciseTraderValidationETDSResponse, ExciseTraderValidationResponse, PreValidateTraderEISResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader

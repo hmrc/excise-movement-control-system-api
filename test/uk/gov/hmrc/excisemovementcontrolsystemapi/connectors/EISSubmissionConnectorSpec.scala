@@ -34,6 +34,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{EISHeaderTestSupport,
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EISErrorResponseDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.{EISErrorResponse, EISSubmissionResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
 import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
