@@ -35,9 +35,10 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
 @Singleton
-class AuditServiceV2 @Inject()(auditConnector: AuditConnector, appConfig: AppConfig, factory: AuditEventFactory)(implicit
-                                                                                                                 ec: ExecutionContext
-) extends AuditService with Logging {
+class AuditServiceV2 @Inject() (auditConnector: AuditConnector, appConfig: AppConfig, factory: AuditEventFactory)(
+  implicit ec: ExecutionContext
+) extends AuditService
+    with Logging {
 
   // old auditing
   def auditMessage(message: IEMessage)(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit] =

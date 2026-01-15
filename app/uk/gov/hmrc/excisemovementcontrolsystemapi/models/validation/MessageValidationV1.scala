@@ -26,11 +26,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 
 import java.time.Instant
 
-
-
 case class MessageValidationV1() extends MessageValidation {
-
-
 
   def validateSubmittedMessage(
     authorisedErns: Set[String],
@@ -167,7 +163,6 @@ private case class IE819MessageV1Validator(override val message: IE819MessageV1,
       case _ => Left(ConsigneeIsMissing)
     }
 }
-
 
 private case class IE837MessageV1Validator(override val message: IE837MessageV1, override val movement: Movement)
     extends MovementMessageValidator(message, movement) {

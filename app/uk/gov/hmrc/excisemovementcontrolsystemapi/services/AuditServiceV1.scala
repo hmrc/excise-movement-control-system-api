@@ -35,10 +35,10 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
 @Singleton
-class AuditServiceV1 @Inject()(auditConnector: AuditConnector, appConfig: AppConfig, factory: AuditEventFactory)(implicit
-                                                                                                                 ec: ExecutionContext
+class AuditServiceV1 @Inject() (auditConnector: AuditConnector, appConfig: AppConfig, factory: AuditEventFactory)(
+  implicit ec: ExecutionContext
 ) extends AuditService
-with Logging {
+    with Logging {
 
   // old auditing
   def auditMessage(message: IEMessage)(implicit hc: HeaderCarrier): EitherT[Future, Result, Unit] =
@@ -79,11 +79,11 @@ with Logging {
       auditConnector.sendExplicitAudit("MessageSubmitted", event)
     }
   def messageSubmittedNoMovement(
-                                  message: IE815MessageV2,
-                                  submittedToCore: Boolean,
-                                  correlationId: Option[String],
-                                  request: ParsedXmlRequest[NodeSeq]
-                                )(implicit hc: HeaderCarrier): Unit =
+    message: IE815MessageV2,
+    submittedToCore: Boolean,
+    correlationId: Option[String],
+    request: ParsedXmlRequest[NodeSeq]
+  )(implicit hc: HeaderCarrier): Unit =
     if (appConfig.newAuditingEnabled) {
 
       val event = factory.createMessageSubmittedNoMovement(
@@ -98,7 +98,7 @@ with Logging {
   // old auditing
   private def auditMessage(message: IEMessage, failureOpt: Option[String])(implicit
     hc: HeaderCarrier
-  ): EitherT[Future, Result, Unit] =
+  ): EitherT[Future, Result, Unit]    =
     EitherT {
 
       auditConnector.sendExtendedEvent(factory.createMessageAuditEvent(message, failureOpt)).map {

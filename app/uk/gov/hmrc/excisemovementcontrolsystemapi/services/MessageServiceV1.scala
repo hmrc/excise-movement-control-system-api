@@ -582,5 +582,3 @@ class MessageServiceV1 @Inject() (
         Future.failed(EnrichedError(message, e))
     }
 }
-
-

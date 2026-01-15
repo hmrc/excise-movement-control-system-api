@@ -34,7 +34,9 @@ import javax.inject.{Inject, Singleton}
 import scala.xml.NodeSeq
 
 @Singleton
-class AuditEventFactoryV1 @Inject()(emcsUtils: EmcsUtils, ieMessageFactory: IEMessageFactory) extends Auditing with AuditEventFactory {
+class AuditEventFactoryV1 @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMessageFactory)
+    extends Auditing
+    with AuditEventFactory {
 
   def createMessageAuditEvent(input: IEMessage, failureOpt: Option[String])(implicit
     hc: HeaderCarrier
@@ -48,11 +50,11 @@ class AuditEventFactoryV1 @Inject()(emcsUtils: EmcsUtils, ieMessageFactory: IEMe
     )
   }
   def createMessageSubmittedNoMovement(
-                                        message: IE815MessageV1,
-                                        submittedToCore: Boolean,
-                                        correlationId: Option[String],
-                                        request: ParsedXmlRequest[NodeSeq]
-                                      ): MessageSubmittedDetails = {
+    message: IE815MessageV1,
+    submittedToCore: Boolean,
+    correlationId: Option[String],
+    request: ParsedXmlRequest[NodeSeq]
+  ): MessageSubmittedDetails = {
     val consignorId: String =
       message.consignorId.getOrElse(
         throw new Exception(s"No Consignor on IE815: ${message.messageIdentifier}")
@@ -75,11 +77,11 @@ class AuditEventFactoryV1 @Inject()(emcsUtils: EmcsUtils, ieMessageFactory: IEMe
   }
 
   def createMessageSubmittedNoMovement(
-                                        message: IE815MessageV2,
-                                        submittedToCore: Boolean,
-                                        correlationId: Option[String],
-                                        request: ParsedXmlRequest[NodeSeq]
-                                      ): MessageSubmittedDetails = {
+    message: IE815MessageV2,
+    submittedToCore: Boolean,
+    correlationId: Option[String],
+    request: ParsedXmlRequest[NodeSeq]
+  ): MessageSubmittedDetails = {
     val consignorId: String =
       message.consignorId.getOrElse(
         throw new Exception(s"No Consignor on IE815: ${message.messageIdentifier}")
@@ -100,7 +102,6 @@ class AuditEventFactoryV1 @Inject()(emcsUtils: EmcsUtils, ieMessageFactory: IEMe
       message.toJsObject
     )
   }
-
 
   def createMessageSubmitted(
     movement: Movement,
@@ -345,6 +346,5 @@ class AuditEventFactoryV1 @Inject()(emcsUtils: EmcsUtils, ieMessageFactory: IEMe
   ): MessageAcknowledgedFailureAuditInfo                          =
     MessageAcknowledgedFailureAuditInfo(failureReason, batchId, jobId, ern)
   private def convertErns(erns: Set[String]): NonEmptySeq[String] = NonEmptySeq(erns.head, erns.tail.toSeq)
-
 
 }

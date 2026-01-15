@@ -37,9 +37,8 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
-
 @Singleton
-class TraderMovementConnectorV1 @Inject()(
+class TraderMovementConnectorV1 @Inject() (
   configuration: Configuration,
   httpClient: HttpClientV2,
   messageFactory: IEMessageFactory,

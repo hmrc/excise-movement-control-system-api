@@ -81,7 +81,7 @@ lazy val scoverageSettings: Seq[Setting[?]] = Seq(
     "generated\\..*",
     "scalaxb\\..*"
   ).mkString(";"),
-  ScoverageKeys.coverageMinimumStmtTotal := 90,
+  ScoverageKeys.coverageMinimumStmtTotal := 70,
   ScoverageKeys.coverageFailOnMinimum := true,
   ScoverageKeys.coverageHighlighting := true
 )

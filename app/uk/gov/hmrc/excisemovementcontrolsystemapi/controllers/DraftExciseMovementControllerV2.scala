@@ -41,9 +41,8 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
-
 @Singleton
-class DraftExciseMovementControllerV2 @Inject()(
+class DraftExciseMovementControllerV2 @Inject() (
   authAction: AuthAction,
   xmlParser: ParseXmlAction,
   movementMessageService: MovementService,
@@ -59,7 +58,7 @@ class DraftExciseMovementControllerV2 @Inject()(
 )(implicit ec: ExecutionContext)
     extends BackendController(cc)
     with Logging
-    with DraftExciseMovementController{
+    with DraftExciseMovementController {
 
   def submit: Action[NodeSeq] =
     (authAction andThen correlationIdAction andThen xmlParser).async(parse.xml) { implicit request =>

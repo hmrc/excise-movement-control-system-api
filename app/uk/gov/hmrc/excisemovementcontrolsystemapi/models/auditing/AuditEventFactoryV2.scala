@@ -34,7 +34,9 @@ import javax.inject.{Inject, Singleton}
 import scala.xml.NodeSeq
 
 @Singleton
-class AuditEventFactoryV2 @Inject()(emcsUtils: EmcsUtils, ieMessageFactory: IEMessageFactory) extends Auditing with AuditEventFactory {
+class AuditEventFactoryV2 @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMessageFactory)
+    extends Auditing
+    with AuditEventFactory {
 //read from config
   def createMessageAuditEvent(input: IEMessage, failureOpt: Option[String])(implicit
     hc: HeaderCarrier

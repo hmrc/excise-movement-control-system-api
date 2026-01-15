@@ -165,9 +165,6 @@ private case class IE819MessageV2Validator(override val message: IE819MessageV2,
     }
 }
 
-
-
-
 private case class IE837MessageV2Validator(override val message: IE837MessageV2, override val movement: Movement)
     extends MovementMessageValidator(message, movement) {
   override def validate(authorisedErns: Set[String]): Either[MessageValidationResponse, String] =
@@ -261,5 +258,3 @@ private case class IE871MessageV2Validator(override val message: IE871MessageV2,
         )
     }
 }
-
-

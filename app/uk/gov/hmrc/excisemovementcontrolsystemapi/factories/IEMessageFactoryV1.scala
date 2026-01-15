@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.factories
 
-
 import play.api.Logging
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
@@ -26,12 +25,16 @@ import scala.xml.NodeSeq
 
 case class IEMessageFactoryV1() extends Logging with IEMessageFactory {
   def createIEMessage(message: MessageOption): IEMessage = {
-    val (messageType,record)  = message match{
-      case Left(m) =>(m.key.getOrElse {
-        logger.warn(s"[IEMessageFactory] - Could not create Message object. Message type is empty")
-        throw new IEMessageFactoryException("Could not create Message object. Message type is empty")
-      }, m)
-      case Right(a)=>
+    val (messageType, record) = message match {
+      case Left(m)  =>
+        (
+          m.key.getOrElse {
+            logger.warn(s"[IEMessageFactory] - Could not create Message object. Message type is empty")
+            throw new IEMessageFactoryException("Could not create Message object. Message type is empty")
+          },
+          m
+        )
+      case Right(a) =>
         logger.warn(s"[IEMessageFactory] - Invalid Control flow.")
         throw new IllegalStateException("Invalid state - should not have reached.")
     }
@@ -83,5 +86,3 @@ case class IEMessageFactoryV1() extends Logging with IEMessageFactory {
         throw new IEMessageFactoryException(s"Could not create Message object. Unsupported message: $messageType")
     }
 }
-
-

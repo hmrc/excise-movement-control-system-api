@@ -41,9 +41,8 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.NodeSeq
 
-
 @Singleton
-class DraftExciseMovementControllerV1 @Inject()(
+class DraftExciseMovementControllerV1 @Inject() (
   authAction: AuthAction,
   xmlParser: ParseXmlAction,
   movementMessageService: MovementService,
