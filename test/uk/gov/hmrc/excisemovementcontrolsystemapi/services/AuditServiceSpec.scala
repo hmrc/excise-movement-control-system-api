@@ -28,12 +28,13 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
+import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.{IEMessageFactory, IEMessageFactoryV1}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.FakeXmlParsers
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.EmcsUtils
 import uk.gov.hmrc.http.HeaderCarrier
@@ -52,8 +53,8 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
   val auditConnector: AuditConnector = mock[AuditConnector]
   val appConfig: AppConfig           = mock[AppConfig]
   val utils                          = new EmcsUtils
-  val ieMessageFactory               = new IEMessageFactory
-  val factory: AuditEventFactory     = new AuditEventFactory(utils, new IEMessageFactory)
+  val ieMessageFactory               = new IEMessageFactoryV1
+  val factory: AuditEventFactory     = new AuditEventFactoryV1(utils, ieMessageFactory)
 
   val testMovement: Movement = Movement("id", None, "lrn", "consignorId", None, None, Instant.now, Seq.empty[Message])
   val testErns: Set[String]  = Set("123", "456")
@@ -67,7 +68,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
         testErns,
         UserDetails("", "")
       ),
-      IE815Message.createFromXml(body),
+      IE815MessageV1.createFromXml(body),
       testErns,
       UserDetails("", "")
     )
@@ -92,22 +93,22 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
       when(auditConnector.sendExtendedEvent(any)(any, any))
         .thenReturn(Future.successful(AuditResult.Failure("test", None)))
 
-      val service = new AuditService(auditConnector, appConfig, factory)
-      val result  = service.auditMessage(IE815Message.createFromXml(IE815))
+      val service = new AuditServiceV1(auditConnector, appConfig, factory)
+      val result  = service.auditMessage(IE815MessageV1.createFromXml(IE815))
 
       await(result.value) equals Right(())
     }
 
     "return Right(())) on success" in {
 
-      val service = new AuditService(auditConnector, appConfig, factory)
-      val result  = service.auditMessage(IE815Message.createFromXml(IE815))
+      val service = new AuditServiceV1(auditConnector, appConfig, factory)
+      val result  = service.auditMessage(IE815MessageV1.createFromXml(IE815))
 
       await(result.value) equals Right(())
     }
   }
 
-  val service = new AuditService(auditConnector, appConfig, factory)
+  val service = new AuditServiceV1(auditConnector, appConfig, factory)
 
   "messageSubmittedNoMovement" should {
 
@@ -115,7 +116,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
 
     "post an event if newAuditing feature switch is true" in {
 
-      val message = IE815Message.createFromXml(IE815)
+      val message = IE815MessageV1.createFromXml(IE815)
 
       val expectedMessageSubmittedDetails = MessageSubmittedDetails(
         "IE815",
@@ -144,7 +145,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
       when(appConfig.newAuditingEnabled).thenReturn(false)
 
       service.messageSubmittedNoMovement(
-        IE815Message.createFromXml(IE815),
+        IE815MessageV1.createFromXml(IE815),
         submittedToCore = true,
         Some("correlationId"),
         request
@@ -168,12 +169,12 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
               testErns,
               UserDetails("", "")
             ),
-            IE704Message.createFromXml(IE704),
+            IE704MessageV1.createFromXml(IE704),
             testErns,
             UserDetails("", "")
           )
 
-        val message    = IE704Message.createFromXml(IE704)
+        val message    = IE704MessageV1.createFromXml(IE704)
         val movementId = "4bf36235-4816-464a-b3f3-71dbd3a30095"
 
         val movement = Movement(
@@ -376,7 +377,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
         Some(jobId)
       )
 
-      val getMessagesResponse = GetMessagesResponse(Seq(IE801Message.createFromXml(IE801)), 10)
+      val getMessagesResponse = GetMessagesResponse(Seq(IE801MessageV1.createFromXml(IE801)), 10)
       service.messageProcessingSuccess(ern, getMessagesResponse, batchId, Some(jobId))
 
       verify(auditConnector, times(1))

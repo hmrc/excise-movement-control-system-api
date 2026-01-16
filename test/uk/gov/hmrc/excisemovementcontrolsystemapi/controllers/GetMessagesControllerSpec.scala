@@ -34,7 +34,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{ErrorResponseSupport, FakeAuthentication}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, Consignor, IE801Message}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{Consignee, Consignor}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1.IE801MessageV1
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, MessageService, MovementService}
@@ -80,7 +81,7 @@ class GetMessagesControllerSpec
 
     when(dateTimeService.timestamp()).thenReturn(timeStamp)
     when(messageService.updateAllMessages(any)(any)).thenReturn(Future.successful(Done))
-    when(messageFactory.createFromXml(any, any)).thenReturn(IE801Message.createFromXml(IE801))
+    when(messageFactory.createFromXml(any, any)).thenReturn(IE801MessageV1.createFromXml(IE801))
 
   }
 

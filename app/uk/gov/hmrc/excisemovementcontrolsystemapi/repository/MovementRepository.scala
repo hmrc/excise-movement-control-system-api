@@ -235,7 +235,7 @@ class MovementRepository @Inject() (
     administrativeReferenceCodes: Seq[String]
   ): Future[Seq[Movement]] = Mdc.preservingMdc {
     val protectFilter: Future[MovementFilterThresholds.Threshold] =
-      if(appConfig.protectionFilterEnabled){
+      if (appConfig.protectionFilterEnabled) {
         protectionFilter(ern)
       } else {
         Future.successful(MovementFilterThresholds.Filtered)

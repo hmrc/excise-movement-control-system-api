@@ -33,7 +33,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EISErrorResponseDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IE815Message
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1.IE815MessageV1
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnSubmissionRepository
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.http.HeaderCarrierConverter
@@ -59,7 +59,7 @@ class SubmissionMessageServiceSpec extends PlaySpec with ScalaFutures with Eithe
     mockAppconfig
   )
 
-  private val message                  = mock[IE815Message]
+  private val message                  = mock[IE815MessageV1]
   private val xmlBody                  = "<IE815>test</IE815>"
   val fakeRequest: FakeRequest[String] = FakeRequest()
     .withBody(xmlBody)

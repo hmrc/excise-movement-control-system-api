@@ -33,7 +33,7 @@ import play.api.test.FakeRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, NewMessagesXml, TraderMovementXmlGenerator, XmlMessageGeneratorFactory}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes.{IE801, IE818}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE801Message, IE818Message}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1.{IE801MessageV1, IE818MessageV1}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, HttpHeader}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
@@ -128,8 +128,8 @@ class TraderMovementConnectorSpec
       )
       val traderMovementXml = xmlGenerator.generate(ern, Seq(ie801Params, ie818Params))
 
-      val ie801Message = IE801Message.createFromXml(XmlMessageGeneratorFactory.generate(ern, ie801Params))
-      val ie818Message = IE818Message.createFromXml(XmlMessageGeneratorFactory.generate(ern, ie818Params))
+      val ie801MessageV1 = IE801MessageV1.createFromXml(XmlMessageGeneratorFactory.generate(ern, ie801Params))
+      val ie818MessageV1 = IE818MessageV1.createFromXml(XmlMessageGeneratorFactory.generate(ern, ie818Params))
 
       val response = EISConsumptionResponse(
         dateTime = timestamp,
@@ -150,7 +150,7 @@ class TraderMovementConnectorSpec
 
       val result = connector.getMovementMessages(ern, arc)(hc).futureValue
 
-      result mustBe Seq(ie801Message, ie818Message)
+      result mustBe Seq(ie801MessageV1, ie818MessageV1)
     }
 
     "must fail when the server responds with an unexpected status" in {

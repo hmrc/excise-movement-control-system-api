@@ -22,7 +22,7 @@ import scala.xml.Elem
 
 trait TestXml {
 
-  lazy val IE704: Elem = <ns1:IE704 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+  lazy val IE704: Elem = <ns1:IE704 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                     xmlns:ns1="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3">
     <ns1:Header>
       <urn:MessageSender>NDEA.XI</urn:MessageSender>
@@ -57,7 +57,7 @@ trait TestXml {
     </ns1:Body>
   </ns1:IE704>
 
-  lazy val IE704NoLocalReferenceNumber: Elem = <ns1:IE704 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+  lazy val IE704NoLocalReferenceNumber: Elem = <ns1:IE704 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                     xmlns:ns1="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3">
     <ns1:Header>
       <urn:MessageSender>NDEA.XI</urn:MessageSender>
@@ -90,7 +90,7 @@ trait TestXml {
     </ns1:Body>
   </ns1:IE704>
 
-  lazy val IE704NoNamespace: Elem = <IE704 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+  lazy val IE704NoNamespace: Elem = <IE704 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                     xmlns:ns1="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3">
     <ns1:Header>
       <urn:MessageSender>NDEA.XI</urn:MessageSender>
@@ -125,7 +125,7 @@ trait TestXml {
     </ns1:Body>
   </IE704>
 
-  lazy val IE704NoArc: Elem = <ns1:IE704 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+  lazy val IE704NoArc: Elem = <ns1:IE704 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                          xmlns:ns1="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3">
     <ns1:Header>
       <urn:MessageSender>NDEA.XI</urn:MessageSender>
@@ -151,7 +151,7 @@ trait TestXml {
     </ns1:Body>
   </ns1:IE704>
 
-  lazy val IE704WithoutCorrelationId: Elem = <ns1:IE704 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+  lazy val IE704WithoutCorrelationId: Elem = <ns1:IE704 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                     xmlns:ns1="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3">
     <ns1:Header>
       <urn:MessageSender>NDEA.XI</urn:MessageSender>
@@ -186,8 +186,8 @@ trait TestXml {
 
   lazy val IE801: Elem =
     <urn:IE801
-    xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.23"
-    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23">
+    xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.13"
+    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
       <urn:Header>
         <urn1:MessageSender>token</urn1:MessageSender>
         <urn1:MessageRecipient>token</urn1:MessageRecipient>
@@ -278,9 +278,9 @@ trait TestXml {
             <urn:DateOfDispatch>2002-11-05+00:00</urn:DateOfDispatch>
             <urn:TimeOfDispatch>16:46:32+01:00</urn:TimeOfDispatch>
             <urn:UpstreamArc>tokentokentokentokent</urn:UpstreamArc>
-            <urn:ImportCustomsDeclaration>
-              <urn:ImportCustomsDeclarationNumber>token</urn:ImportCustomsDeclarationNumber>
-            </urn:ImportCustomsDeclaration>
+            <urn:ImportSad>
+              <urn:ImportSadNumber>token</urn:ImportSadNumber>
+            </urn:ImportSad>
           </urn:EadEsad>
           <urn:HeaderEadEsad>
             <urn:SequenceNumber>to</urn:SequenceNumber>
@@ -352,8 +352,8 @@ trait TestXml {
 
   lazy val IE801NoNamespace: Elem =
     <IE801
-    xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.23"
-    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23">
+    xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.13"
+    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
       <urn:Header>
         <urn1:MessageSender>token</urn1:MessageSender>
         <urn1:MessageRecipient>token</urn1:MessageRecipient>
@@ -444,9 +444,9 @@ trait TestXml {
             <urn:DateOfDispatch>2002-11-05+00:00</urn:DateOfDispatch>
             <urn:TimeOfDispatch>16:46:32+01:00</urn:TimeOfDispatch>
             <urn:UpstreamArc>tokentokentokentokent</urn:UpstreamArc>
-            <urn:ImportCustomsDeclaration>
-              <urn:ImportCustomsDeclarationNumber>token</urn:ImportCustomsDeclarationNumber>
-            </urn:ImportCustomsDeclaration>
+            <urn:ImportSad>
+              <urn:ImportSadNumber>token</urn:ImportSadNumber>
+            </urn:ImportSad>
           </urn:EadEsad>
           <urn:HeaderEadEsad>
             <urn:SequenceNumber>to</urn:SequenceNumber>
@@ -518,8 +518,8 @@ trait TestXml {
 
   lazy val IE801WithoutCorrelationId: Elem =
     <urn:IE801
-    xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.23"
-    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23">
+    xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.13"
+    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
       <urn:Header>
         <urn1:MessageSender>token</urn1:MessageSender>
         <urn1:MessageRecipient>token</urn1:MessageRecipient>
@@ -609,9 +609,9 @@ trait TestXml {
             <urn:DateOfDispatch>2002-11-05+00:00</urn:DateOfDispatch>
             <urn:TimeOfDispatch>16:46:32+01:00</urn:TimeOfDispatch>
             <urn:UpstreamArc>tokentokentokentokent</urn:UpstreamArc>
-            <urn:ImportCustomsDeclaration>
-              <urn:ImportCustomsDeclarationNumber>token</urn:ImportCustomsDeclarationNumber>
-            </urn:ImportCustomsDeclaration>
+            <urn:ImportSad>
+              <urn:ImportSadNumber>token</urn:ImportSadNumber>
+            </urn:ImportSad>
           </urn:EadEsad>
           <urn:HeaderEadEsad>
             <urn:SequenceNumber>to</urn:SequenceNumber>
@@ -681,8 +681,8 @@ trait TestXml {
       </urn:Body>
     </urn:IE801>
 
-  lazy val IE802: Elem = <urn7:IE802 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
-                                     xmlns:urn7="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE802:V3.23">
+  lazy val IE802: Elem = <urn7:IE802 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
+                                     xmlns:urn7="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE802:V3.13">
     <urn7:Header>
       <urn:MessageSender>CSMISE.EC</urn:MessageSender>
       <urn:MessageRecipient>CSMISE.EC</urn:MessageRecipient>
@@ -709,8 +709,8 @@ trait TestXml {
     </urn7:Body>
   </urn7:IE802>
 
-  lazy val IE802WithoutCorrelationId: Elem = <urn7:IE802 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
-                                     xmlns:urn7="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE802:V3.23">
+  lazy val IE802WithoutCorrelationId: Elem = <urn7:IE802 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
+                                     xmlns:urn7="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE802:V3.13">
     <urn7:Header>
       <urn:MessageSender>CSMISE.EC</urn:MessageSender>
       <urn:MessageRecipient>CSMISE.EC</urn:MessageRecipient>
@@ -735,8 +735,8 @@ trait TestXml {
     </urn7:Body>
   </urn7:IE802>
 
-  lazy val IE802NoNamespace: Elem = <IE802 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
-                                     xmlns:urn7="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE802:V3.23">
+  lazy val IE802NoNamespace: Elem = <IE802 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
+                                     xmlns:urn7="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE802:V3.13">
     <urn7:Header>
       <urn:MessageSender>CSMISE.EC</urn:MessageSender>
       <urn:MessageRecipient>CSMISE.EC</urn:MessageRecipient>
@@ -763,8 +763,8 @@ trait TestXml {
     </urn7:Body>
   </IE802>
 
-  lazy val IE803: Elem = <urn6:IE803 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
-                                     xmlns:urn6="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE803:V3.23">
+  lazy val IE803: Elem = <urn6:IE803 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
+                                     xmlns:urn6="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE803:V3.13">
     <urn6:Header>
       <urn:MessageSender>NDEA.GB</urn:MessageSender>
       <urn:MessageRecipient>NDEA.XI</urn:MessageRecipient>
@@ -785,8 +785,8 @@ trait TestXml {
     </urn6:Body>
   </urn6:IE803>
 
-  lazy val IE803WithoutCorrelationId: Elem = <urn6:IE803 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
-                                     xmlns:urn6="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE803:V3.23">
+  lazy val IE803WithoutCorrelationId: Elem = <urn6:IE803 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
+                                     xmlns:urn6="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE803:V3.13">
     <urn6:Header>
       <urn:MessageSender>NDEA.GB</urn:MessageSender>
       <urn:MessageRecipient>NDEA.XI</urn:MessageRecipient>
@@ -806,8 +806,8 @@ trait TestXml {
     </urn6:Body>
   </urn6:IE803>
 
-  lazy val IE803NoNamespace: Elem = <IE803 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
-                                     xmlns:urn6="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE803:V3.23">
+  lazy val IE803NoNamespace: Elem = <IE803 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
+                                     xmlns:urn6="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE803:V3.13">
     <urn6:Header>
       <urn:MessageSender>NDEA.GB</urn:MessageSender>
       <urn:MessageRecipient>NDEA.XI</urn:MessageRecipient>
@@ -828,8 +828,8 @@ trait TestXml {
     </urn6:Body>
   </IE803>
 
-  lazy val IE807: Elem = <urn4:IE807 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
-                                     xmlns:urn4="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE807:V3.23">
+  lazy val IE807: Elem = <urn4:IE807 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
+                                     xmlns:urn4="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE807:V3.13">
     <urn4:Header>
       <urn:MessageSender>NDEA.GB</urn:MessageSender>
       <urn:MessageRecipient>NDEA.XI</urn:MessageRecipient>
@@ -861,8 +861,8 @@ trait TestXml {
     </urn4:Body>
   </urn4:IE807>
 
-  lazy val IE807WithoutCorrelationId: Elem = <urn4:IE807 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
-                                     xmlns:urn4="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE807:V3.23">
+  lazy val IE807WithoutCorrelationId: Elem = <urn4:IE807 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
+                                     xmlns:urn4="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE807:V3.13">
     <urn4:Header>
       <urn:MessageSender>NDEA.GB</urn:MessageSender>
       <urn:MessageRecipient>NDEA.XI</urn:MessageRecipient>
@@ -893,8 +893,8 @@ trait TestXml {
     </urn4:Body>
   </urn4:IE807>
 
-  lazy val IE807NoNamespace: Elem = <IE807 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
-                                     xmlns:urn4="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE807:V3.23">
+  lazy val IE807NoNamespace: Elem = <IE807 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
+                                     xmlns:urn4="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE807:V3.13">
     <urn4:Header>
       <urn:MessageSender>NDEA.GB</urn:MessageSender>
       <urn:MessageRecipient>NDEA.XI</urn:MessageRecipient>
@@ -926,8 +926,8 @@ trait TestXml {
     </urn4:Body>
   </IE807>
 
-  lazy val IE810: Elem = <urn:IE810 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE810:V3.23"
-                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+  lazy val IE810: Elem = <urn:IE810 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE810:V3.13"
+                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                     xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                                     xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -954,8 +954,8 @@ trait TestXml {
     </urn:Body>
   </urn:IE810>
 
-  lazy val IE810WithoutCorrelationId: Elem = <urn:IE810 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE810:V3.23"
-                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+  lazy val IE810WithoutCorrelationId: Elem = <urn:IE810 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE810:V3.13"
+                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                     xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                                     xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -981,8 +981,8 @@ trait TestXml {
     </urn:Body>
   </urn:IE810>
 
-  lazy val IE810NoNamespace: Elem = <IE810 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE810:V3.23"
-                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+  lazy val IE810NoNamespace: Elem = <IE810 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE810:V3.13"
+                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                     xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                                     xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -1009,8 +1009,8 @@ trait TestXml {
     </urn:Body>
   </IE810>
 
-  lazy val IE813: Elem = <urn:IE813 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE813:V3.23"
-                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+  lazy val IE813: Elem = <urn:IE813 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE813:V3.13"
+                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                     xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                                     xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -1072,8 +1072,8 @@ trait TestXml {
     </urn:Body>
   </urn:IE813>
 
-  lazy val IE813WithoutCorrelationId: Elem = <urn:IE813 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE813:V3.23"
-                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+  lazy val IE813WithoutCorrelationId: Elem = <urn:IE813 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE813:V3.13"
+                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                     xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                                     xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -1134,8 +1134,8 @@ trait TestXml {
     </urn:Body>
   </urn:IE813>
 
-  lazy val IE813NoNamespace: Elem = <IE813 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE813:V3.23"
-                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+  lazy val IE813NoNamespace: Elem = <IE813 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE813:V3.13"
+                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                     xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                                     xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -1202,8 +1202,8 @@ trait TestXml {
   lazy val IE815WithNoConsignor: Elem                = IE815Template("")
   val testCorrelationId                              = "PORTAL6de1b822562c43fb9220d236e487c920"
   private def IE815Template(consignor: String): Elem =
-    <urn:IE815 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.23"
-                                                                  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+    <urn:IE815 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13"
+                                                                  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                                                   xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                                                                   xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                                                                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -1309,8 +1309,8 @@ trait TestXml {
   </urn:IE815>
 
   private def IE815TemplateWithoutCorrelationId(consignor: String): Elem =
-    <urn:IE815 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.23"
-               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+    <urn:IE815 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13"
+               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -1414,8 +1414,8 @@ trait TestXml {
       </urn:Body>
     </urn:IE815>
 
-  lazy val IE818: Elem = <urn:IE818 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE818:V3.23"
-                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+  lazy val IE818: Elem = <urn:IE818 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE818:V3.13"
+                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                     xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                                     xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -1471,8 +1471,8 @@ trait TestXml {
     </urn:Body>
   </urn:IE818>
 
-  lazy val IE818WithoutCorrelationId: Elem = <urn:IE818 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE818:V3.23"
-                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+  lazy val IE818WithoutCorrelationId: Elem = <urn:IE818 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE818:V3.13"
+                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                     xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                                     xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -1527,8 +1527,8 @@ trait TestXml {
     </urn:Body>
   </urn:IE818>
 
-  lazy val IE818NoNamespace: Elem = <IE818 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE818:V3.23"
-                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+  lazy val IE818NoNamespace: Elem = <IE818 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE818:V3.13"
+                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                     xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                                     xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -1585,8 +1585,8 @@ trait TestXml {
   </IE818>
 
   lazy val IE819: Elem =
-    <urn:IE819 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE819:V3.23"
-               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+    <urn:IE819 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE819:V3.13"
+               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -1631,8 +1631,8 @@ trait TestXml {
     </urn:IE819>
 
   lazy val IE819WithoutCorrelationId: Elem =
-    <urn:IE819 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE819:V3.23"
-               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+    <urn:IE819 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE819:V3.13"
+               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -1676,8 +1676,8 @@ trait TestXml {
     </urn:IE819>
 
   lazy val IE819NoNamespace: Elem =
-    <IE819 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE819:V3.23"
-               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+    <IE819 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE819:V3.13"
+               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -1722,8 +1722,8 @@ trait TestXml {
     </IE819>
 
   lazy val IE829: Elem = <urn:IE829
-  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE829:V3.23"
-  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23">
+  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE829:V3.13"
+  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
     <urn:Header>
       <urn1:MessageSender>NDEA.XI</urn1:MessageSender>
       <urn1:MessageRecipient>NDEA.AT</urn1:MessageRecipient>
@@ -1750,10 +1750,12 @@ trait TestXml {
         <urn:ExciseMovementEad>
           <urn:AdministrativeReferenceCode>23XI00000000000056339</urn:AdministrativeReferenceCode>
           <urn:SequenceNumber>1</urn:SequenceNumber>
+          <urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>1</urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>
         </urn:ExciseMovementEad>
         <urn:ExciseMovementEad>
           <urn:AdministrativeReferenceCode>23XI00000000000056340</urn:AdministrativeReferenceCode>
           <urn:SequenceNumber>1</urn:SequenceNumber>
+          <urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>1</urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>
         </urn:ExciseMovementEad>
         <urn:ExportPlaceCustomsOffice>
           <urn:ReferenceNumber>tokentok</urn:ReferenceNumber>
@@ -1764,15 +1766,14 @@ trait TestXml {
           <urn:DateOfAcceptance>2013-05-22+01:00</urn:DateOfAcceptance>
           <urn:DateOfRelease>2002-11-05+00:00</urn:DateOfRelease>
           <urn:DocumentReferenceNumber>token</urn:DocumentReferenceNumber>
-          <urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>1</urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>
         </urn:ExportDeclarationAcceptanceRelease>
       </urn:NotificationOfAcceptedExport>
     </urn:Body>
   </urn:IE829>
 
   lazy val IE829WithoutCorrelationId: Elem = <urn:IE829
-  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE829:V3.23"
-  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23">
+  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE829:V3.13"
+  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
     <urn:Header>
       <urn1:MessageSender>NDEA.XI</urn1:MessageSender>
       <urn1:MessageRecipient>NDEA.AT</urn1:MessageRecipient>
@@ -1797,10 +1798,12 @@ trait TestXml {
         <urn:ExciseMovementEad>
           <urn:AdministrativeReferenceCode>23XI00000000000056339</urn:AdministrativeReferenceCode>
           <urn:SequenceNumber>1</urn:SequenceNumber>
+          <urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>1</urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>
         </urn:ExciseMovementEad>
         <urn:ExciseMovementEad>
           <urn:AdministrativeReferenceCode>23XI00000000000056340</urn:AdministrativeReferenceCode>
           <urn:SequenceNumber>1</urn:SequenceNumber>
+          <urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>1</urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>
         </urn:ExciseMovementEad>
         <urn:ExportPlaceCustomsOffice>
           <urn:ReferenceNumber>tokentok</urn:ReferenceNumber>
@@ -1811,15 +1814,14 @@ trait TestXml {
           <urn:DateOfAcceptance>2013-05-22+01:00</urn:DateOfAcceptance>
           <urn:DateOfRelease>2002-11-05+00:00</urn:DateOfRelease>
           <urn:DocumentReferenceNumber>token</urn:DocumentReferenceNumber>
-          <urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>1</urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>
         </urn:ExportDeclarationAcceptanceRelease>
       </urn:NotificationOfAcceptedExport>
     </urn:Body>
   </urn:IE829>
 
   lazy val IE829NoNamespace: Elem = <IE829
-  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE829:V3.23"
-  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23">
+  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE829:V3.13"
+  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
     <urn:Header>
       <urn1:MessageSender>NDEA.XI</urn1:MessageSender>
       <urn1:MessageRecipient>NDEA.AT</urn1:MessageRecipient>
@@ -1846,10 +1848,12 @@ trait TestXml {
         <urn:ExciseMovementEad>
           <urn:AdministrativeReferenceCode>23XI00000000000056339</urn:AdministrativeReferenceCode>
           <urn:SequenceNumber>1</urn:SequenceNumber>
+          <urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>1</urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>
         </urn:ExciseMovementEad>
         <urn:ExciseMovementEad>
           <urn:AdministrativeReferenceCode>23XI00000000000056340</urn:AdministrativeReferenceCode>
           <urn:SequenceNumber>1</urn:SequenceNumber>
+          <urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>1</urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>
         </urn:ExciseMovementEad>
         <urn:ExportPlaceCustomsOffice>
           <urn:ReferenceNumber>tokentok</urn:ReferenceNumber>
@@ -1860,15 +1864,14 @@ trait TestXml {
           <urn:DateOfAcceptance>2013-05-22+01:00</urn:DateOfAcceptance>
           <urn:DateOfRelease>2002-11-05+00:00</urn:DateOfRelease>
           <urn:DocumentReferenceNumber>token</urn:DocumentReferenceNumber>
-          <urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>1</urn:ExportDeclarationAcceptanceOrGoodsReleasedForExport>
         </urn:ExportDeclarationAcceptanceRelease>
       </urn:NotificationOfAcceptedExport>
     </urn:Body>
   </IE829>
 
   lazy val IE837WithConsignor: Elem        = ie837Template(Consignor, "GBWK240176600")
-  lazy val IE837WithoutCorrelationId: Elem = <IE837 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE837:V3.23"
-                                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+  lazy val IE837WithoutCorrelationId: Elem = <IE837 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE837:V3.13"
+                                                    xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                                     xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                                                     xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                                                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -1897,8 +1900,8 @@ trait TestXml {
     </urn:Body>
   </IE837>
 
-  lazy val IE837WithConsignorNoNamespace: Elem = <IE837 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE837:V3.23"
-                                                            xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+  lazy val IE837WithConsignorNoNamespace: Elem = <IE837 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE837:V3.13"
+                                                            xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                                             xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                                                             xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                                                             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -1934,8 +1937,8 @@ trait TestXml {
 
     val submitterTypeAsInt = if (submitterType == Consignor) 1 else 2
 
-    <urn:IE837 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE837:V3.23"
-               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+    <urn:IE837 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE837:V3.13"
+               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -1967,8 +1970,8 @@ trait TestXml {
   }
 
   lazy val IE839: Elem = <urn:IE839
-  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.23"
-  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23">
+  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.13"
+  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
     <urn:Header>
       <urn1:MessageSender>NDEA.XI</urn1:MessageSender>
       <urn1:MessageRecipient>NDEA.FR</urn1:MessageRecipient>
@@ -2034,8 +2037,8 @@ trait TestXml {
   </urn:IE839>
 
   lazy val IE839NoLocalReferenceNumber: Elem = <urn:IE839
-  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.23"
-  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23">
+  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.13"
+  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
     <urn:Header>
       <urn1:MessageSender>NDEA.XI</urn1:MessageSender>
       <urn1:MessageRecipient>NDEA.FR</urn1:MessageRecipient>
@@ -2097,8 +2100,8 @@ trait TestXml {
   </urn:IE839>
 
   lazy val IE839WithoutCorrelationId: Elem = <urn:IE839
-  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.23"
-  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23">
+  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.13"
+  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
     <urn:Header>
       <urn1:MessageSender>NDEA.XI</urn1:MessageSender>
       <urn1:MessageRecipient>NDEA.FR</urn1:MessageRecipient>
@@ -2163,8 +2166,8 @@ trait TestXml {
   </urn:IE839>
 
   lazy val IE839NoNamespace: Elem = <IE839
-  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.23"
-  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23">
+  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.13"
+  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
     <urn:Header>
       <urn1:MessageSender>NDEA.XI</urn1:MessageSender>
       <urn1:MessageRecipient>NDEA.FR</urn1:MessageRecipient>
@@ -2230,8 +2233,8 @@ trait TestXml {
   </IE839>
 
   lazy val IE839MultipleArcs: Elem = <urn:IE839
-  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.23"
-  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23">
+  xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.13"
+  xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
     <urn:Header>
       <urn1:MessageSender>NDEA.XI</urn1:MessageSender>
       <urn1:MessageRecipient>NDEA.FR</urn1:MessageRecipient>
@@ -2304,8 +2307,8 @@ trait TestXml {
     </urn:Body>
   </urn:IE839>
 
-  lazy val IE840: Elem = <urn5:IE840 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
-                                     xmlns:urn5="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE840:V3.23">
+  lazy val IE840: Elem = <urn5:IE840 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
+                                     xmlns:urn5="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE840:V3.13">
     <urn5:Header>
       <urn:MessageSender>NDEA.XI</urn:MessageSender>
       <urn:MessageRecipient>NDEA.GB</urn:MessageRecipient>
@@ -2429,8 +2432,8 @@ trait TestXml {
     </urn5:Body>
   </urn5:IE840>
 
-  lazy val IE840WithoutCorrelationId: Elem = <urn5:IE840 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
-                                     xmlns:urn5="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE840:V3.23">
+  lazy val IE840WithoutCorrelationId: Elem = <urn5:IE840 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
+                                     xmlns:urn5="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE840:V3.13">
     <urn5:Header>
       <urn:MessageSender>NDEA.XI</urn:MessageSender>
       <urn:MessageRecipient>NDEA.GB</urn:MessageRecipient>
@@ -2553,8 +2556,8 @@ trait TestXml {
     </urn5:Body>
   </urn5:IE840>
 
-  lazy val IE840NoNamespace: Elem = <IE840 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
-                                     xmlns:urn5="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE840:V3.23">
+  lazy val IE840NoNamespace: Elem = <IE840 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
+                                     xmlns:urn5="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE840:V3.13">
     <urn5:Header>
       <urn:MessageSender>NDEA.XI</urn:MessageSender>
       <urn:MessageRecipient>NDEA.GB</urn:MessageRecipient>
@@ -2680,8 +2683,8 @@ trait TestXml {
 
   lazy val IE871WithConsignor: Elem = ie871ForConsignor(Consignor)
 
-  lazy val IE871WithoutCorrelationId: Elem = <IE871 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE871:V3.23"
-                                                        xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+  lazy val IE871WithoutCorrelationId: Elem = <IE871 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE871:V3.13"
+                                                        xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                                         xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                                                         xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                                                         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -2716,8 +2719,8 @@ trait TestXml {
     </urn:Body>
   </IE871>
 
-  lazy val IE871WithConsignorNoNamespace: Elem = <IE871 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE871:V3.23"
-                                                            xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+  lazy val IE871WithConsignorNoNamespace: Elem = <IE871 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE871:V3.13"
+                                                            xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                                                             xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                                                             xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                                                             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -2756,8 +2759,8 @@ trait TestXml {
 
     val submitterTypeAsInt = if (submitterType == Consignor) 1 else 2
 
-    <urn:IE871 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE871:V3.23"
-               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+    <urn:IE871 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE871:V3.13"
+               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -2800,8 +2803,8 @@ trait TestXml {
 
     val submitterTypeAsInt = if (submitterType == Consignor) 1 else 2
 
-    <urn:IE871 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE871:V3.23"
-               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23"
+    <urn:IE871 xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE871:V3.13"
+               xmlns:urn1="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13"
                xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
                xmlns="http://www.hmrc.gov.uk/ChRIS/Service/Control"
                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -2840,8 +2843,8 @@ trait TestXml {
   }
 
   lazy val IE881: Elem =
-    <urn5:IE881 xmlns:urn5="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE881:V3.23"
-                xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23">
+    <urn5:IE881 xmlns:urn5="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE881:V3.13"
+                xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
       <urn5:Header>
         <urn:MessageSender>NDEA.GB</urn:MessageSender>
         <urn:MessageRecipient>NDEA.XI</urn:MessageRecipient>
@@ -2887,8 +2890,8 @@ trait TestXml {
     </urn5:IE881>
 
   lazy val IE881WithoutCorrelationId: Elem =
-    <urn5:IE881 xmlns:urn5="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE881:V3.23"
-                xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23">
+    <urn5:IE881 xmlns:urn5="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE881:V3.13"
+                xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
       <urn5:Header>
         <urn:MessageSender>NDEA.GB</urn:MessageSender>
         <urn:MessageRecipient>NDEA.XI</urn:MessageRecipient>
@@ -2933,8 +2936,8 @@ trait TestXml {
     </urn5:IE881>
 
   lazy val IE881NoNamespace: Elem =
-    <IE881 xmlns:urn5="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE881:V3.23"
-                xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23">
+    <IE881 xmlns:urn5="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE881:V3.13"
+                xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
       <urn5:Header>
         <urn:MessageSender>NDEA.GB</urn:MessageSender>
         <urn:MessageRecipient>NDEA.XI</urn:MessageRecipient>
@@ -2979,8 +2982,8 @@ trait TestXml {
       </urn5:Body>
     </IE881>
 
-  lazy val IE905: Elem = <urn6:IE905 xmlns:urn6="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE905:V3.23"
-                                     xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23">
+  lazy val IE905: Elem = <urn6:IE905 xmlns:urn6="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE905:V3.13"
+                                     xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
     <urn6:Header>
       <urn:MessageSender>NDEA.GB</urn:MessageSender>
       <urn:MessageRecipient>NDEA.XI</urn:MessageRecipient>
@@ -3001,8 +3004,8 @@ trait TestXml {
     </urn6:Body>
   </urn6:IE905>
 
-  lazy val IE905WithoutCorrelationId: Elem = <urn6:IE905 xmlns:urn6="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE905:V3.23"
-                                     xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23">
+  lazy val IE905WithoutCorrelationId: Elem = <urn6:IE905 xmlns:urn6="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE905:V3.13"
+                                     xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
     <urn6:Header>
       <urn:MessageSender>NDEA.GB</urn:MessageSender>
       <urn:MessageRecipient>NDEA.XI</urn:MessageRecipient>
@@ -3022,8 +3025,8 @@ trait TestXml {
     </urn6:Body>
   </urn6:IE905>
 
-  lazy val IE905NoNamespace: Elem = <IE905 xmlns:urn6="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE905:V3.23"
-                                     xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.23">
+  lazy val IE905NoNamespace: Elem = <IE905 xmlns:urn6="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE905:V3.13"
+                                     xmlns:urn="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
     <urn6:Header>
       <urn:MessageSender>NDEA.GB</urn:MessageSender>
       <urn:MessageRecipient>NDEA.XI</urn:MessageRecipient>

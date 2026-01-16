@@ -35,7 +35,8 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.{FakeAuthentication, FakeXmlParsers}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.ParsedXmlRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IE818Message, IEMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1.{IE815MessageV1, IE818MessageV1}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MessageIdentifierIsUnauthorised, MessageValidation}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{EISErrorResponseDetails, MessageTypes}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
@@ -62,7 +63,7 @@ class DraftExciseMovementControllerSpec
   private val movementService          = mock[MovementService]
   private val cc                       = stubControllerComponents()
   private val request                  = createRequestWithClientId
-  private val mockIeMessage            = mock[IE815Message]
+  private val mockIeMessage            = mock[IE815MessageV1]
   private val boxIdRepository          = mock[BoxIdRepository]
   private val ernSubmissionRepository  = mock[ErnSubmissionRepository]
   private val notificationService      = mock[PushNotificationService]
@@ -92,7 +93,7 @@ class DraftExciseMovementControllerSpec
     when(notificationService.getBoxId(any, any)(any))
       .thenReturn(Future.successful(Right(defaultBoxId)))
 
-    when(messageValidation.validateDraftMovement(any, any)).thenReturn(Right(consignorId))
+    when(messageValidation.validateDraftMovement(any, any[IE815MessageV1])).thenReturn(Right(consignorId))
     when(dateTimeService.timestamp()).thenReturn(timestamp)
 
     when(mockIeMessage.consigneeId).thenReturn(Some("789"))
@@ -210,7 +211,10 @@ class DraftExciseMovementControllerSpec
       //old auditing:
       verify(auditService, times(1)).auditMessage(any, any)(any)
       //new auditing:
-      verify(auditService, times(1)).messageSubmittedNoMovement(any, any, eqTo(Some("correlationId")), any)(any)
+      verify(auditService, times(1))
+        .messageSubmittedNoMovement(any[IE815MessageV1], any, eqTo(Some("correlationId")), any)(
+          any
+        )
 
     }
 
@@ -223,7 +227,10 @@ class DraftExciseMovementControllerSpec
       //old auditing:
       verify(auditService, times(1)).auditMessage(any, any)(any)
       //new auditing:
-      verify(auditService, times(1)).messageSubmittedNoMovement(any, any, eqTo(Some("correlationId")), any)(any)
+      verify(auditService, times(1))
+        .messageSubmittedNoMovement(any[IE815MessageV1], any, eqTo(Some("correlationId")), any)(
+          any
+        )
     }
 
     "adds the boxId to the BoxIdRepository for consignor" in {
@@ -257,7 +264,8 @@ class DraftExciseMovementControllerSpec
           "The Consignor is not authorised to submit this message for the movement"
         )
 
-        when(messageValidation.validateDraftMovement(any, any)).thenReturn(Left(TestMessageIdentifierIsUnauthorised))
+        when(messageValidation.validateDraftMovement(any, any[IE815MessageV1]))
+          .thenReturn(Left(TestMessageIdentifierIsUnauthorised))
         when(messageValidation.convertErrorToResponse(eqTo(TestMessageIdentifierIsUnauthorised), eqTo(timestamp)))
           .thenReturn(Forbidden(Json.toJson(expectedError)))
 
@@ -345,13 +353,13 @@ class DraftExciseMovementControllerSpec
 
   private def createWithWrongMessageType = {
 
-    val mockIe818Message = mock[IE818Message]
+    val mockIE818MessageV1 = mock[IE818MessageV1]
 
-    when(mockIe818Message.messageType).thenReturn(MessageTypes.IE818.value)
+    when(mockIE818MessageV1.messageType).thenReturn(MessageTypes.IE818.value)
 
-    new DraftExciseMovementController(
+    new DraftExciseMovementControllerV1(
       FakeSuccessAuthentication(Set(ern)),
-      FakeSuccessXMLParser(mockIe818Message),
+      FakeSuccessXMLParser(mockIE818MessageV1),
       movementService,
       submissionMessageService,
       notificationService,
@@ -366,7 +374,7 @@ class DraftExciseMovementControllerSpec
   }
 
   private def createWithAuthActionFailure =
-    new DraftExciseMovementController(
+    new DraftExciseMovementControllerV1(
       FakeFailingAuthentication,
       FakeSuccessXMLParser(mockIeMessage),
       movementService,
@@ -382,7 +390,7 @@ class DraftExciseMovementControllerSpec
     )
 
   private def createWithFailingXmlParserAction =
-    new DraftExciseMovementController(
+    new DraftExciseMovementControllerV1(
       FakeSuccessAuthentication(Set(ern)),
       FakeFailureXMLParser,
       movementService,
@@ -398,7 +406,7 @@ class DraftExciseMovementControllerSpec
     )
 
   private def createWithSuccessfulAuth =
-    new DraftExciseMovementController(
+    new DraftExciseMovementControllerV1(
       FakeSuccessAuthentication(Set(ern)),
       FakeSuccessXMLParser(mockIeMessage),
       movementService,

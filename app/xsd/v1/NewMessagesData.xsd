@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Version: 4.1 -->
+<!-- Status: Draft -->
+<!-- Date: 18 May 2020 -->
+<!-- Author: EMCS Core -->
+<xs:schema xmlns="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/NewMessagesData/3" 
+           targetNamespace="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/NewMessagesData/3" 
+           xmlns:ie801="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.13" 
+           xmlns:ie802="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE802:V3.13" 
+           xmlns:ie803="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE803:V3.13" 
+           xmlns:ie807="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE807:V3.13" 
+           xmlns:ie810="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE810:V3.13" 
+           xmlns:ie813="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE813:V3.13" 
+           xmlns:ie818="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE818:V3.13" 
+           xmlns:ie819="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE819:V3.13" 
+           xmlns:ie829="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE829:V3.13" 
+           xmlns:ie837="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE837:V3.13" 
+           xmlns:ie839="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.13"
+           xmlns:ie840="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE840:V3.13" 
+    	   xmlns:ie871="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE871:V3.13" 
+    	   xmlns:ie881="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE881:V3.13"
+    	   xmlns:ie905="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE905:V3.13" 
+           xmlns:ie704uk="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3" 
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.13" schemaLocation="ie801.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE802:V3.13" schemaLocation="ie802.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE803:V3.13" schemaLocation="ie803.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE807:V3.13" schemaLocation="ie807.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE810:V3.13" schemaLocation="ie810.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE813:V3.13" schemaLocation="ie813.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE818:V3.13" schemaLocation="ie818.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE819:V3.13" schemaLocation="ie819.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE829:V3.13" schemaLocation="ie829.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE837:V3.13" schemaLocation="ie837.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.13" schemaLocation="ie839.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE840:V3.13" schemaLocation="ie840.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE871:V3.13" schemaLocation="ie871.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE881:V3.13" schemaLocation="ie881.xsd"/>
+    <xs:import namespace="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE905:V3.13" schemaLocation="ie905.xsd"/>
+    <xs:import namespace="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3" schemaLocation="ie704uk.xsd"/>
+    
+    <xs:element name="NewMessagesDataResponse">
+        <xs:annotation>
+            <xs:documentation>Response to getNewMessages operation</xs:documentation>
+        </xs:annotation>
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="Messages">
+                    <xs:complexType>
+                        <xs:sequence minOccurs="0" maxOccurs="unbounded">
+                            <xs:choice>
+                                <xs:element ref="ie704uk:IE704"/>
+                                <xs:element ref="ie801:IE801"/>
+                                <xs:element ref="ie802:IE802"/>
+                                <xs:element ref="ie803:IE803"/> 
+                                <xs:element ref="ie807:IE807"/>
+                                <xs:element ref="ie810:IE810"/>
+                                <xs:element ref="ie813:IE813"/>
+                                <xs:element ref="ie818:IE818"/>
+                                <xs:element ref="ie819:IE819"/>
+                                <xs:element ref="ie829:IE829"/>
+                                <xs:element ref="ie837:IE837"/>
+                                <xs:element ref="ie839:IE839"/>
+                                <xs:element ref="ie840:IE840"/>
+                                <xs:element ref="ie871:IE871"/>
+								<xs:element ref="ie881:IE881"/>
+                                <xs:element ref="ie905:IE905"/>
+                            </xs:choice>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="CountOfMessagesAvailable" type="xs:long"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>

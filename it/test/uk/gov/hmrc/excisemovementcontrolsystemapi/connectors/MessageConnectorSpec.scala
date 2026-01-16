@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.http.Fault
-import generated.NewMessagesDataResponse
+import generated.v1.NewMessagesDataResponse
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.{Mockito, MockitoSugar}
 import org.scalatest.BeforeAndAfterEach
@@ -206,7 +206,7 @@ class MessageConnectorSpec
 
       val newMessagesDataResponse =
         scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(newMessageXmlWithIE704.toString))
-      val ie704Message            = messageFactory.createIEMessage(newMessagesDataResponse.Messages.messagesoption.head)
+      val IE704MessageV1            = messageFactory.createIEMessage(Left(newMessagesDataResponse.Messages.messagesoption.head))
 
       val response = EISConsumptionResponse(
         dateTime = timestamp,
@@ -228,7 +228,7 @@ class MessageConnectorSpec
       val batchId = UUID.randomUUID().toString
       val result  = connector.getNewMessages(ern, batchId, None)(hc).futureValue
 
-      result.messages mustBe Seq(ie704Message)
+      result.messages mustBe Seq(IE704MessageV1)
       result.messageCount mustBe 1
 
     }
@@ -236,7 +236,7 @@ class MessageConnectorSpec
     "must emit MessageProcessingSuccess when able to process the incoming messages" in {
       val newMessagesDataResponse =
         scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(newMessageXmlWithIE704.toString))
-      val ie704Message            = messageFactory.createIEMessage(newMessagesDataResponse.Messages.messagesoption.head)
+      val IE704MessageV1            = messageFactory.createIEMessage(Left(newMessagesDataResponse.Messages.messagesoption.head))
 
       val response = EISConsumptionResponse(
         dateTime = timestamp,
@@ -255,7 +255,7 @@ class MessageConnectorSpec
           )
       )
 
-      val getMessagesResponse = GetMessagesResponse(Seq(ie704Message), 1)
+      val getMessagesResponse = GetMessagesResponse(Seq(IE704MessageV1), 1)
 
       val batchId = UUID.randomUUID().toString
       connector.getNewMessages(ern, batchId, None)(hc).futureValue
@@ -288,8 +288,8 @@ class MessageConnectorSpec
 
       val newMessagesDataResponse =
         scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(newMessageWith818And802.toString))
-      val ie818Message            = messageFactory.createIEMessage(newMessagesDataResponse.Messages.messagesoption.head)
-      val ie802Message            = messageFactory.createIEMessage(newMessagesDataResponse.Messages.messagesoption(1))
+      val IE818MessageV1            = messageFactory.createIEMessage(Left(newMessagesDataResponse.Messages.messagesoption.head))
+      val IE802MessageV1            = messageFactory.createIEMessage(Left(newMessagesDataResponse.Messages.messagesoption(1)))
 
       val response = EISConsumptionResponse(
         dateTime = timestamp,
@@ -311,8 +311,8 @@ class MessageConnectorSpec
       val batchId = UUID.randomUUID().toString
       connector.getNewMessages(ern, batchId, None)(hc).futureValue
 
-      verify(auditService).auditMessage(ie818Message)(hc)
-      verify(auditService).auditMessage(ie802Message)(hc)
+      verify(auditService).auditMessage(IE818MessageV1)(hc)
+      verify(auditService).auditMessage(IE802MessageV1)(hc)
     }
 
     "must fail when the server responds with an unexpected status" in {

@@ -36,12 +36,13 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.NrsConnector.Unexpe
 import uk.gov.hmrc.excisemovementcontrolsystemapi.fixture.NrsTestData
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.UserDetails
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.{EnrolmentRequest, ParsedXmlRequest}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{IE815Message, IEMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1.IE815MessageV1
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.nrs._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.NRSWorkItemRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.NrsSubmissionWorkItem
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.NrsService.NonRepudiationIdentityRetrievals
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, NrsEventIdMapper}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils, NrsEventIdMapper, NrsEventIdMapperV1}
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier}
 import uk.gov.hmrc.mongo.TimestampSupport
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
@@ -85,14 +86,14 @@ class NrsServiceSpec
     mockNrsWorkItemRepository,
     mockDateTimeService,
     new EmcsUtils,
-    new NrsEventIdMapper,
+    new NrsEventIdMapperV1,
     mockLockRepository,
     mockTimeStampSupport,
     testActorSystem,
     config
   )
 
-  private val message = mock[IE815Message]
+  private val message = mock[IE815MessageV1]
 
   override def beforeEach(): Unit = {
     super.beforeEach()
