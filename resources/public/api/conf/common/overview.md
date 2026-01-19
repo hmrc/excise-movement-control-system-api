@@ -4,7 +4,8 @@ Use the EMCS API to:
 * retrieve messages from EMCS
 * retrieve information about excise traders
 
-For a detailed overview of v1.0 of the API, see the [EMCS API service guide](/guides/emcs-api-service-guide/).
+For a detailed overview of V3.13 of the EMCS API, see the [EMCS API service guide - V3.13](https://developer.service.hmrc.gov.uk/guides/emcs-api-service-guide/).
+For a detailed overview of V3.23 of the EMCS API, see the [EMCS API service guide - V3.23](https://developer.service.hmrc.gov.uk/guides/emcs-api-service-guide-4-2/).
 
 ## Changelog
 
