@@ -24,7 +24,6 @@ import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.BadRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.PushNotificationConnector
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.routes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Notification
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse._
@@ -41,7 +40,6 @@ class PushNotificationServiceImpl @Inject() (
   dateTimeService: DateTimeService
 )(implicit val ec: ExecutionContext)
     extends PushNotificationService
-    with ResponseHandler
     with Logging {
 
   def getBoxId(
