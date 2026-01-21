@@ -17,27 +17,28 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import com.codahale.metrics.MetricRegistry
+import com.fasterxml.jackson.core.JacksonException
 import play.api.Logging
+import play.api.http.Status.INTERNAL_SERVER_ERROR
+import play.api.libs.json.{JsResultException, Json, Reads}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EISErrorResponseDetails
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse.format
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.IEMessage
+import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
+import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
+import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, HttpErrorFunctions, HttpReads, HttpResponse, StringContextOps}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpErrorFunctions, HttpResponse, StringContextOps}
 
+import java.time.Instant
+import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.xml.NodeSeq
-import HttpReads.Implicits._
-import play.api.http.Status.INTERNAL_SERVER_ERROR
-import play.api.libs.json.{Json, Reads}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISSubmissionResponse.format
-import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
-import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
-
-import java.util.UUID
 
 class EISSubmissionConnector @Inject() (
   httpClient: HttpClientV2,
@@ -59,7 +60,18 @@ class EISSubmissionConnector @Inject() (
         (hc.withExtraHeaders(HttpHeader.xCorrelationId -> correlationId), correlationId)
     }
 
-  implicit def errorRead(status: Int): Reads[EISErrorResponseDetails] =
+  private def internalError(timestamp: Instant, correlationId: String): Either[EISErrorResponseDetails, Nothing] =
+    Left(
+      EISErrorResponseDetails(
+        INTERNAL_SERVER_ERROR,
+        timestamp,
+        "Internal server error",
+        "Unexpected error occurred while processing Submission request",
+        correlationId
+      )
+    )
+
+  private def errorRead(status: Int): Reads[EISErrorResponseDetails] =
     Json
       .reads[EISErrorResponse]
       .map(error => EISErrorResponseDetails.createFromEISError(status, dateTimeService.timestamp(), error))
@@ -94,22 +106,27 @@ class EISSubmissionConnector @Inject() (
         if (is2xx(response.status)) {
           Right(response.json.as[EISSubmissionResponse])
         } else {
-          Left(response.json.as[EISErrorResponseDetails](errorRead(response.status)))
+          val errorDetails = response.json.as[EISErrorResponseDetails](errorRead(response.status))
+          logger.warn(EISErrorMessage(createdDateTime, s"status: ${errorDetails.status}", correlationId, messageType))
+          Left(errorDetails)
         }
       }
       .andThen { case _ => timer.stop() }
-      .recover { case NonFatal(ex) =>
-        logger.warn(EISErrorMessage(createdDateTime, ex.getMessage, correlationId, messageType), ex)
+      .recover {
+        case _: JacksonException =>
+          // JSON parsing error
+          logger.error(EISErrorMessage.parseError(createdDateTime, correlationId, messageType))
+          internalError(timestamp, correlationId)
 
-        Left(
-          EISErrorResponseDetails(
-            INTERNAL_SERVER_ERROR,
-            timestamp,
-            "Internal server error",
-            "Unexpected error occurred while processing Submission request",
-            correlationId
-          )
-        )
+        case _: JsResultException =>
+          // JSON deserialization error
+          logger.error(EISErrorMessage.readError(createdDateTime, correlationId, messageType))
+          internalError(timestamp, correlationId)
+
+        case NonFatal(ex) =>
+          // Something else
+          logger.error(EISErrorMessage(createdDateTime, ex.getMessage, correlationId, messageType), ex)
+          internalError(timestamp, correlationId)
       }
   }
 

@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import com.codahale.metrics.{MetricRegistry, Timer}
+import com.fasterxml.jackson.core.JsonParseException
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchersSugar.eqTo
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
@@ -164,6 +165,40 @@ class EISSubmissionConnectorSpec
       when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.execute[HttpResponse](any(), any()))
         .thenReturn(Future.failed(new RuntimeException("error")))
+
+      val result = await(submitExciseMovementForIE815)
+
+      result.left.value mustBe EISErrorResponseDetails(
+        INTERNAL_SERVER_ERROR,
+        timestamp,
+        "Internal server error",
+        "Unexpected error occurred while processing Submission request",
+        emcsCorrelationId
+      )
+    }
+
+    "return EISErrorResponseDetails if JSON parsing fails" in {
+      when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
+      when(mockResponse.json).thenThrow(new JsonParseException("Invalid JSON object"))
+
+      val result = await(submitExciseMovementForIE815)
+
+      result.left.value mustBe EISErrorResponseDetails(
+        INTERNAL_SERVER_ERROR,
+        timestamp,
+        "Internal server error",
+        "Unexpected error occurred while processing Submission request",
+        emcsCorrelationId
+      )
+    }
+
+    "return EISErrorResponseDetails if JSON deserialization fails" in {
+      when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
+      when(mockResponse.json).thenReturn(Json.obj())
 
       val result = await(submitExciseMovementForIE815)
 

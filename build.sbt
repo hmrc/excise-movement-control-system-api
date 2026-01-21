@@ -9,41 +9,38 @@ lazy val generatedV1 = (project in file("generated-v1"))
   .enablePlugins(ScalaxbPlugin)
   .settings(
     scalaVersion := "2.13.16",
+    // Suppress compiler warnings in generated code
+    scalacOptions += "-Wconf:src=src_managed/.*:s",
     libraryDependencies ++= Seq(
       "org.scala-lang.modules" %% "scala-xml" % "2.2.0",
       "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2",
       "javax.xml.bind" % "jaxb-api" % "2.3.1",
-
-
     ),
-    Compile / scalaxb / scalaxbXsdSource := new File("app/xsd/v1"),
+    Compile / scalaxb / scalaxbXsdSource := file("app/xsd/v1"),
     Compile / scalaxb / scalaxbDispatchVersion := "1.1.3",
     Compile / scalaxb / scalaxbGenerateRuntime := true,
     Compile / scalaxb / scalaxbPackageName := "generated.v1",
-
-
   )
 
 lazy val generatedV2 = (project in file("generated-v2"))
   .enablePlugins(ScalaxbPlugin)
-  .dependsOn(generatedV1)
   .settings(
     scalaVersion := "2.13.16",
+    // Suppress compiler warnings in generated code
+    scalacOptions += "-Wconf:src=src_managed/.*:s",
     libraryDependencies ++= Seq(
       "org.scala-lang.modules" %% "scala-xml" % "2.2.0",
       "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2",
       "javax.xml.bind" % "jaxb-api" % "2.3.1",
-
-
     ),
-    Compile / scalaxb / scalaxbXsdSource := new File("app/xsd/v2"),
+    Compile / scalaxb / scalaxbXsdSource := file("app/xsd/v2"),
     Compile / scalaxb / scalaxbDispatchVersion := "1.1.3",
     Compile / scalaxb / scalaxbGenerateRuntime := true,
     Compile / scalaxb / scalaxbPackageName := "generated.v2",
   )
 
 lazy val microservice = Project("excise-movement-control-system-api", file("."))
-  .dependsOn(generatedV1,generatedV2)
+  .dependsOn(generatedV1, generatedV2)
   .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
   .settings(
     PlayKeys.playDefaultPort := 10250,

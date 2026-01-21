@@ -17,6 +17,31 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis
 
 object EISErrorMessage {
+  private def formatError(
+    header: String,
+    createDateTime: String,
+    correlationId: String,
+    messageTypes: String
+  ): String =
+    s"""$header
+   | messageId: $correlationId,
+   | correlationId: $correlationId,
+   | messageType: $messageTypes,
+   | timestamp: $createDateTime""".stripMargin
+
+  def parseError(
+    createDateTime: String,
+    correlationId: String,
+    messageTypes: String
+  ): String =
+    formatError("Error parsing response JSON:", createDateTime, correlationId, messageTypes)
+
+  def readError(
+    createDateTime: String,
+    correlationId: String,
+    messageTypes: String
+  ): String =
+    formatError("Error deserializing response JSON:", createDateTime, correlationId, messageTypes)
 
   def apply(
     createDateTime: String,
@@ -24,9 +49,5 @@ object EISErrorMessage {
     correlationId: String,
     messageTypes: String
   ): String =
-    s"""EIS error with message: $message,
-    | messageId: $correlationId,
-    | correlationId: $correlationId,
-    | messageType: $messageTypes,
-    | timestamp: $createDateTime""".stripMargin
+    formatError(s"EIS error with message: $message,", createDateTime, correlationId, messageTypes)
 }
