@@ -21,9 +21,9 @@ import org.apache.pekko.Done
 import org.bson.conversions.Bson
 import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model._
-import play.api.{Configuration, Logging}
+import play.api.Configuration
 import play.api.libs.Files.logger
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository._
@@ -31,35 +31,31 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, Mdc}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.Codecs.JsonOps
-import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 
 import java.time.Instant
-import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.SeqHasAsJava
-import scala.util.control.NonFatal
 
 @Singleton
-class TransformationRepository @Inject()(
-                                          mongo: MongoComponent,
-                                          appConfig: AppConfig,
-                                          timeService: DateTimeService,
-                                          configuration: Configuration
-                                        )(implicit ec: ExecutionContext)
-  extends PlayMongoRepository[Movement](
-    collectionName = "movements_v2",
-    mongoComponent = mongo,
-    domainFormat = Movement.format,
-    indexes = mongoIndexes(appConfig.movementTTL),
-    extraCodecs = Seq(
-      Codecs.playFormatCodec(ErnAndLastReceived.format),
-      Codecs.playFormatCodec(MessageNotification.format)
-    ),
-    replaceIndexes = true
-  ){
+class TransformationRepository @Inject() (
+  mongo: MongoComponent,
+  appConfig: AppConfig,
+  timeService: DateTimeService,
+  configuration: Configuration
+)(implicit ec: ExecutionContext)
+    extends PlayMongoRepository[Movement](
+      collectionName = "movements_v2",
+      mongoComponent = mongo,
+      domainFormat = Movement.format,
+      indexes = mongoIndexes(appConfig.movementTTL),
+      extraCodecs = Seq(
+        Codecs.playFormatCodec(ErnAndLastReceived.format),
+        Codecs.playFormatCodec(MessageNotification.format)
+      ),
+      replaceIndexes = true
+    ) {
 
   private def byId(id: String): Bson = Filters.equal("_id", id)
 
@@ -108,7 +104,6 @@ class TransformationRepository @Inject()(
       .toFuture()
       .map(_ => true)
 
-
   }
 
   def getMovementById(id: String): Future[Option[Movement]] = Mdc.preservingMdc {
@@ -120,10 +115,10 @@ class TransformationRepository @Inject()(
   }
 
   private def getFilteredMovementByERN(
-                                        ern: String,
-                                        localReferenceNumbers: Seq[String],
-                                        administrativeReferenceCodes: Seq[String]
-                                      ): Future[Seq[Movement]] = Mdc.preservingMdc {
+    ern: String,
+    localReferenceNumbers: Seq[String],
+    administrativeReferenceCodes: Seq[String]
+  ): Future[Seq[Movement]] = Mdc.preservingMdc {
 
     val ernFilters = or(getErnFilters(Seq(ern)): _*)
 
@@ -143,9 +138,9 @@ class TransformationRepository @Inject()(
   }
 
   def getMovementByERN(
-                        ern: Seq[String],
-                        movementFilter: MovementFilter = MovementFilter.emptyFilter
-                      ): Future[Seq[Movement]] = Mdc.preservingMdc {
+    ern: Seq[String],
+    movementFilter: MovementFilter = MovementFilter.emptyFilter
+  ): Future[Seq[Movement]] = Mdc.preservingMdc {
 
     val ernFilters = getErnFilters(ern)
 
@@ -193,7 +188,7 @@ class TransformationRepository @Inject()(
 
   def protectionFilter(ern: String): Future[MovementFilterThresholds.Threshold] = {
     val movementFilter: MovementFilter = MovementFilter.emptyFilter
-    val filters =
+    val filters                        =
       Seq(
         movementFilter.updatedSince.map(Filters.gte("lastUpdated", _)),
         movementFilter.lrn.map(Filters.eq("localReferenceNumber", _)),
@@ -204,7 +199,7 @@ class TransformationRepository @Inject()(
         )
       ).flatten
 
-    val movementThreshold = configuration.get[Int]("movement.threshold")
+    val movementThreshold        = configuration.get[Int]("movement.threshold")
     val movementFailureThreshold =
       configuration.getOptional[Int]("movement.failureThreshold").getOrElse(movementThreshold)
 
@@ -236,10 +231,10 @@ class TransformationRepository @Inject()(
   }
 
   def getAllBy(
-                ern: String,
-                localReferenceNumbers: Seq[String],
-                administrativeReferenceCodes: Seq[String]
-              ): Future[Seq[Movement]] = Mdc.preservingMdc {
+    ern: String,
+    localReferenceNumbers: Seq[String],
+    administrativeReferenceCodes: Seq[String]
+  ): Future[Seq[Movement]] = Mdc.preservingMdc {
     val protectFilter: Future[MovementFilterThresholds.Threshold] =
       if (appConfig.protectionFilterEnabled) {
         protectionFilter(ern)
@@ -250,9 +245,9 @@ class TransformationRepository @Inject()(
     protectFilter.flatMap {
       case MovementFilterThresholds.Filtered =>
         getFilteredMovementByERN(ern, localReferenceNumbers, administrativeReferenceCodes)
-      case MovementFilterThresholds.Normal =>
+      case MovementFilterThresholds.Normal   =>
         getMovementByERN(Seq(ern), MovementFilter.emptyFilter)
-      case MovementFilterThresholds.Failure =>
+      case MovementFilterThresholds.Failure  =>
         throw new Exception(s"Protection filter responded with an error for ERN: $ern")
     }
   }
@@ -295,14 +290,14 @@ class TransformationRepository @Inject()(
           Aggregates.replaceRoot(
             Json
               .obj(
-                "movementId" -> "$_id",
-                "messageId" -> "$messages.messageId",
+                "movementId"  -> "$_id",
+                "messageId"   -> "$messages.messageId",
                 "messageType" -> "$messages.messageType",
-                "consignor" -> "$consignorId",
-                "consignee" -> "$consigneeId",
-                "arc" -> "$administrativeReferenceCode",
-                "recipient" -> "$messages.recipient",
-                "boxId" -> "$messages.boxesToNotify"
+                "consignor"   -> "$consignorId",
+                "consignee"   -> "$consigneeId",
+                "arc"         -> "$administrativeReferenceCode",
+                "recipient"   -> "$messages.recipient",
+                "boxId"       -> "$messages.boxesToNotify"
               )
               .toDocument
           )
@@ -343,6 +338,5 @@ class TransformationRepository @Inject()(
       .toFuture()
       .as(Done)
   }
-
 
 }
