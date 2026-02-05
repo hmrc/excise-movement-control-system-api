@@ -59,7 +59,8 @@ lazy val microservice = Project("excise-movement-control-system-api", file("."))
   .settings(scoverageSettings *)
   .settings(scalafmtOnCompile := true)
   .settings(
-    Compile / unmanagedResourceDirectories += baseDirectory.value / "resources"
+    Compile / unmanagedResourceDirectories += baseDirectory.value / "resources",
+    Compile / unmanagedResourceDirectories += baseDirectory.value / "app/xsd",
   )
   .disablePlugins(JUnitXmlReportPlugin) //Required to prevent https://github.com/scalatest/scalatest/issues/1427
 
