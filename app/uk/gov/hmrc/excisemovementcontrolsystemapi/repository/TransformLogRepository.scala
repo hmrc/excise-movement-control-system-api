@@ -37,15 +37,19 @@ import scala.concurrent.duration.{Duration, MINUTES}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class TransformLogRepository @Inject()(mongo: MongoComponent, configuration: Configuration, timeService: DateTimeService)(
-  implicit ec: ExecutionContext
+class TransformLogRepository @Inject() (
+  mongo: MongoComponent,
+  configuration: Configuration,
+  timeService: DateTimeService
+)(implicit
+  ec: ExecutionContext
 ) extends PlayMongoRepository[TransformLog](
-  collectionName = "transform_log",
-  mongoComponent = mongo,
-  domainFormat = TransformLog.format,
-  indexes = mongoIndexes(configuration.get[Duration]("mongodb.movement.TTL")),
-  replaceIndexes = true
-) {
+      collectionName = "transform_log",
+      mongoComponent = mongo,
+      domainFormat = TransformLog.format,
+      indexes = mongoIndexes(configuration.get[Duration]("mongodb.movement.TTL")),
+      replaceIndexes = true
+    ) {
 
   def saveLog(log: Seq[TransformLog]): Future[Boolean] = Mdc.preservingMdc {
     collection
@@ -58,25 +62,27 @@ class TransformLogRepository @Inject()(mongo: MongoComponent, configuration: Con
   }
 
   def saveLog(transformLog: TransformLog): Future[Boolean] = Mdc.preservingMdc {
-    collection.replaceOne(
+    collection
+      .replaceOne(
         Filters.eq("_id", transformLog._id),
         transformLog,
         ReplaceOptions().upsert(true)
-      ).toFuture()
+      )
+      .toFuture()
       .map(_ => true)
   }
 
-  def findLog(movement: Movement) = Mdc.preservingMdc{
-    val filter = and(
-      equal("_id", movement._id),
-      equal("isTransformSuccess", true))
+  def findLog(movement: Movement) = Mdc.preservingMdc {
+    val filter = and(equal("_id", movement._id), equal("isTransformSuccess", true))
 
-    collection.find(filter).first()
-      .toFutureOption().map{
+    collection
+      .find(filter)
+      .first()
+      .toFutureOption()
+      .map {
         case Some(log) => true
-        case None => false
+        case None      => false
       }
-
 
   }
 }

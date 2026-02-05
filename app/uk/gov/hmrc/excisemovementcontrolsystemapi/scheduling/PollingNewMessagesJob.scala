@@ -124,7 +124,7 @@ class PollingNewMessagesJob @Inject() (
       mergedMap.updated(k, Seq(mergedMap.get(k), Some(v)).flatten.max)
     }
 
-  override val enabled: Boolean       = true
+  override val enabled: Boolean       = false
   override val numberOfInstances: Int =
     configuration.get[Int]("scheduler.pollingNewMessagesJob.numberOfInstances").max(1)
 

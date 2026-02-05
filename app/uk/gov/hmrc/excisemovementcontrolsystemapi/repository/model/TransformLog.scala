@@ -23,15 +23,14 @@ import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 import java.time.Instant
 
-
 case class TransformLog(
-                         _id: String,
-                         isTransformSuccess:Boolean,
-                         errors:Seq[EnhancedTransformationError], //update to EnhancedError
-                         lastUpdated: Instant)
+  _id: String,
+  isTransformSuccess: Boolean,
+  errors: Seq[EnhancedTransformationError], //update to EnhancedError
+  lastUpdated: Instant
+)
 
-
-object TransformLog{
-  implicit val instantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
+object TransformLog {
+  implicit val instantFormat: Format[Instant]     = MongoJavatimeFormats.instantFormat
   implicit lazy val format: OFormat[TransformLog] = Json.format
 }

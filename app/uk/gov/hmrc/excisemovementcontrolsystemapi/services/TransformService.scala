@@ -37,8 +37,8 @@ import java.nio.charset.StandardCharsets
 import scala.xml.{Elem, NodeSeq}
 
 @Singleton
-class TransformService @Inject()(implicit ec: ExecutionContext){
-  val xsdPaths = Map(
+class TransformService @Inject() (implicit ec: ExecutionContext) {
+  val xsdPaths                                                                                         = Map(
     "IE704" -> "v2/ie704uk.xsd",
     "IE801" -> "v2/IE801.xsd",
     "IE802" -> "v2/IE802.xsd",
@@ -54,56 +54,52 @@ class TransformService @Inject()(implicit ec: ExecutionContext){
     "IE840" -> "v2/IE840.xsd",
     "IE871" -> "v2/IE871.xsd",
     "IE881" -> "v2/IE881.xsd",
-    "IE905" -> "v2/IE905.xsd",
-
+    "IE905" -> "v2/IE905.xsd"
   )
 
   def transform(messageType: String, base64EncodedMessage: String, messageId: String) = {
     val result = for {
-      updatedXML <- rewriteNamespace(base64EncodedMessage)
-      messageWithIE801Check <- if (messageType == "IE815") convertImportSadToCustomDeclarationHelper(updatedXML) else EitherT.fromEither[Future](Right(updatedXML))
-      messageWithIE829Check <- if (messageType == "IE829") exportDeclarationTransformation(scala.xml.XML.loadString(messageWithIE801Check)) else EitherT.fromEither[Future](Right(messageWithIE801Check))
-      _ <- validateFormat(messageType, messageWithIE829Check)
-      _ <- validateSchema(messageType, messageWithIE829Check)
-    } yield (messageWithIE829Check)
-
+      updatedXML            <- rewriteNamespace(base64EncodedMessage)
+      messageWithIE801Check <- if (messageType == "IE815") convertImportSadToCustomDeclarationHelper(updatedXML)
+                               else EitherT.fromEither[Future](Right(updatedXML))
+      messageWithIE829Check <- if (messageType == "IE829")
+                                 exportDeclarationTransformation(scala.xml.XML.loadString(messageWithIE801Check))
+                               else EitherT.fromEither[Future](Right(messageWithIE801Check))
+      _                     <- validateFormat(messageType, messageWithIE829Check)
+      _                     <- validateSchema(messageType, messageWithIE829Check)
+    } yield messageWithIE829Check
 
     result.value.map {
-      case Left(e) => Left(e)
+      case Left(e)  => Left(e)
       case Right(a) => Right(base64Encode(a))
     }
 
-
   }
-  def validateFormat(messageType: String, message: String): EitherT[Future, TransformationError, Unit] = {
+  def validateFormat(messageType: String, message: String): EitherT[Future, TransformationError, Unit] =
     EitherT.fromEither {
-      try {
-        messageType match {
-          case "IE704" => scalaxb.fromXML[IE704Type](scala.xml.XML.loadString(message)); Right()
-          case "IE801" => scalaxb.fromXML[IE801Type](scala.xml.XML.loadString(message)); Right()
-          case "IE802" => scalaxb.fromXML[IE802Type](scala.xml.XML.loadString(message)); Right()
-          case "IE803" => scalaxb.fromXML[IE803Type](scala.xml.XML.loadString(message)); Right()
-          case "IE807" => scalaxb.fromXML[IE807Type](scala.xml.XML.loadString(message)); Right()
-          case "IE810" => scalaxb.fromXML[IE810Type](scala.xml.XML.loadString(message)); Right()
-          case "IE813" => scalaxb.fromXML[IE813Type](scala.xml.XML.loadString(message)); Right()
-          case "IE818" => scalaxb.fromXML[IE818Type](scala.xml.XML.loadString(message)); Right()
-          case "IE819" => scalaxb.fromXML[IE819Type](scala.xml.XML.loadString(message)); Right()
-          case "IE829" => scalaxb.fromXML[IE829Type](scala.xml.XML.loadString(message)); Right()
-          case "IE837" => scalaxb.fromXML[IE837Type](scala.xml.XML.loadString(message)); Right()
-          case "IE839" => scalaxb.fromXML[IE839Type](scala.xml.XML.loadString(message)); Right()
-          case "IE840" => scalaxb.fromXML[IE840Type](scala.xml.XML.loadString(message)); Right()
-          case "IE871" => scalaxb.fromXML[IE871Type](scala.xml.XML.loadString(message)); Right()
-          case "IE881" => scalaxb.fromXML[IE881Type](scala.xml.XML.loadString(message)); Right()
-          case "IE905" => scalaxb.fromXML[IE905Type](scala.xml.XML.loadString(message)); Right()
-          case _ => Left(MessageDoesNotExistError)
-        }
-
+      try messageType match {
+        case "IE704" => scalaxb.fromXML[IE704Type](scala.xml.XML.loadString(message)); Right()
+        case "IE801" => scalaxb.fromXML[IE801Type](scala.xml.XML.loadString(message)); Right()
+        case "IE802" => scalaxb.fromXML[IE802Type](scala.xml.XML.loadString(message)); Right()
+        case "IE803" => scalaxb.fromXML[IE803Type](scala.xml.XML.loadString(message)); Right()
+        case "IE807" => scalaxb.fromXML[IE807Type](scala.xml.XML.loadString(message)); Right()
+        case "IE810" => scalaxb.fromXML[IE810Type](scala.xml.XML.loadString(message)); Right()
+        case "IE813" => scalaxb.fromXML[IE813Type](scala.xml.XML.loadString(message)); Right()
+        case "IE818" => scalaxb.fromXML[IE818Type](scala.xml.XML.loadString(message)); Right()
+        case "IE819" => scalaxb.fromXML[IE819Type](scala.xml.XML.loadString(message)); Right()
+        case "IE829" => scalaxb.fromXML[IE829Type](scala.xml.XML.loadString(message)); Right()
+        case "IE837" => scalaxb.fromXML[IE837Type](scala.xml.XML.loadString(message)); Right()
+        case "IE839" => scalaxb.fromXML[IE839Type](scala.xml.XML.loadString(message)); Right()
+        case "IE840" => scalaxb.fromXML[IE840Type](scala.xml.XML.loadString(message)); Right()
+        case "IE871" => scalaxb.fromXML[IE871Type](scala.xml.XML.loadString(message)); Right()
+        case "IE881" => scalaxb.fromXML[IE881Type](scala.xml.XML.loadString(message)); Right()
+        case "IE905" => scalaxb.fromXML[IE905Type](scala.xml.XML.loadString(message)); Right()
+        case _       => Left(MessageDoesNotExistError)
       } catch {
         case NonFatal(e) => Left(FormatValidationError(e.toString))
       }
 
     }
-  }
 
   def validateSchema(messageType: String, message: String): EitherT[Future, TransformationError, Unit] = {
     var exceptions = List[String]()
@@ -111,12 +107,11 @@ class TransformService @Inject()(implicit ec: ExecutionContext){
       Future {
 
         val schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
-        val url = getClass.getClassLoader.getResource(xsdPaths(messageType))
+        val url           = getClass.getClassLoader.getResource(xsdPaths(messageType))
 
-        val src = new StreamSource(url.openStream())
+        val src    = new StreamSource(url.openStream())
         src.setSystemId(url.toExternalForm)
         val schema = schemaFactory.newSchema(src)
-
 
         val validator = schema.newValidator()
         validator.setErrorHandler(new ErrorHandler() {
@@ -134,129 +129,132 @@ class TransformService @Inject()(implicit ec: ExecutionContext){
         })
         validator.validate(new StreamSource(new StringReader(message)))
 
-        if(exceptions.nonEmpty){
+        if (exceptions.nonEmpty) {
 
           Left(SchemaValidationError(exceptions = exceptions))
 
-
-        }else{
+        } else {
           Right(())
         }
-      }.recover {
-        case e => Left(SchemaValidationError(Some(e.getMessage), exceptions))
+      }.recover { case e =>
+        Left(SchemaValidationError(Some(e.getMessage), exceptions))
       }
     }
   }
 
   //todo use a more directed regex
-  def rewriteNamespace(bade64EncodedMessage: String): EitherT[Future, TransformationError, String] = {
+  def rewriteNamespace(bade64EncodedMessage: String): EitherT[Future, TransformationError, String] =
     EitherT.fromEither[Future] {
       try {
-      //  val regex = """"(urn:publicid:-:EC:DGTAXUD:EMCS:[^"]+?):V3\.13""""
+        //  val regex = """"(urn:publicid:-:EC:DGTAXUD:EMCS:[^"]+?):V3\.13""""
 
-        val updateNamespace = (str: String) => if (str != null && str.nonEmpty && str.startsWith("urn:") && str.endsWith("V3.13")) str.dropRight(5) + "V3.23" else str
-        val namespaceRegex =
+        val updateNamespace = (str: String) =>
+          if (str != null && str.nonEmpty && str.startsWith("urn:") && str.endsWith("V3.13")) str.dropRight(5) + "V3.23"
+          else str
+        val namespaceRegex  =
           """xmlns(?:\s*:\s*([A-Za-z0-9_.-]+))?\s*=\s*"([^"]+)"""".r
 
         val tagRegex = """<\s*[^/!?][^>]*>""".r
 
         val xmlStr = new String(Base64.getDecoder.decode(bade64EncodedMessage), "UTF-8")
-        Right(tagRegex.replaceAllIn(xmlStr, { elements =>
+        Right(
+          tagRegex.replaceAllIn(
+            xmlStr,
+            { elements =>
+              val updatedTag = namespaceRegex.replaceAllIn(
+                elements.matched,
+                namespace =>
+                  // val ns = Option(namespace.group(2))
+                  namespace.matched.replace(namespace.group(2), updateNamespace(namespace.group(2)))
+                // updateNamespace(namespace.group(2))
+                // namespace.matched
+              )
 
-          val updatedTag = namespaceRegex.replaceAllIn(elements.matched, {
-            namespace =>
-              // val ns = Option(namespace.group(2))
-              namespace.matched.replace(namespace.group(2), updateNamespace(namespace.group(2)))
-            // updateNamespace(namespace.group(2))
-            // namespace.matched
+              updatedTag
 
-          })
-
-          updatedTag
-
-        }))
+            }
+          )
+        )
 
       } catch {
         case e: Exception => Left(RewriteNamespaceError(e.toString))
       }
 
     }
-  }
 
-  def convertImportSadToCustomDeclarationHelper(updatedXML: String): EitherT[Future, TransformationError, String] = {
+  def convertImportSadToCustomDeclarationHelper(updatedXML: String): EitherT[Future, TransformationError, String] =
     EitherT.fromEither[Future] {
-      try {
-        Right(convertImportSadToCustomDeclaration(scala.xml.XML.loadString(updatedXML)).toString())
-      } catch {
+      try Right(convertImportSadToCustomDeclaration(scala.xml.XML.loadString(updatedXML)).toString())
+      catch {
         case e: Exception => Left(ImportSadConversionError(e.toString))
       }
     }
-  }
 
-  def convertImportSadToCustomDeclaration(n: scala.xml.Node): scala.xml.Node = {
+  def convertImportSadToCustomDeclaration(n: scala.xml.Node): scala.xml.Node =
     n match {
 
       case e: scala.xml.Elem =>
         val newLabel = e.label match {
-          case "ImportSad" => "ImportCustomsDeclaration"
+          case "ImportSad"       => "ImportCustomsDeclaration"
           case "ImportSadNumber" => "ImportCustomsDeclarationNumber"
-          case label => label
+          case label             => label
         }
 
         e.copy(label = newLabel, child = e.child.map(convertImportSadToCustomDeclaration))
 
       case other => other
     }
-  }
 
-  def exportDeclarationTransformation(xml: scala.xml.Node): EitherT[Future, TransformationError, String] = {
+  def exportDeclarationTransformation(xml: scala.xml.Node): EitherT[Future, TransformationError, String] =
     EitherT.fromEither[Future] {
-      val exportDeclarationElement = (xml \\ "ExportDeclarationAcceptanceOrGoodsReleasedForExport")
-      if (exportDeclarationElement.map(_.text).toSet.size > 1) Left(ExportDeclarationMultipleDifferentValuesError) else {
+      val exportDeclarationElement = xml \\ "ExportDeclarationAcceptanceOrGoodsReleasedForExport"
+      if (exportDeclarationElement.map(_.text).toSet.size > 1) Left(ExportDeclarationMultipleDifferentValuesError)
+      else {
 
-        exportDeclarationElement.headOption.map {
-          exportDeclaration =>
+        exportDeclarationElement.headOption
+          .map { exportDeclaration =>
             def removeExportDeclaration(n: scala.xml.Node): NodeSeq = {
               //get export save it append it to
               val res = n match {
-                case t: scala.xml.Text if t.text.trim.isEmpty => NodeSeq.Empty
-                case e: scala.xml.Elem if e.label == "ExportDeclarationAcceptanceOrGoodsReleasedForExport" => NodeSeq.Empty
-                case e: scala.xml.Elem => e.copy(child = e.child.flatMap(removeExportDeclaration))
-                case other => other
+                case t: scala.xml.Text if t.text.trim.isEmpty                                              => NodeSeq.Empty
+                case e: scala.xml.Elem if e.label == "ExportDeclarationAcceptanceOrGoodsReleasedForExport" =>
+                  NodeSeq.Empty
+                case e: scala.xml.Elem                                                                     => e.copy(child = e.child.flatMap(removeExportDeclaration))
+                case other                                                                                 => other
               }
               res
             }
 
-            def appendToExportDeclarationAcceptanceRelease(xml: scala.xml.Node): NodeSeq = {
+            def appendToExportDeclarationAcceptanceRelease(xml: scala.xml.Node): NodeSeq =
               //keep, delete, put aside - message only
               //catch if head is empty
-
-
               xml match {
-                case e: scala.xml.Elem if e.label == "ExportDeclarationAcceptanceRelease" => e.copy(child = e.child ++ exportDeclaration)
-                case e: Elem =>
+                case e: scala.xml.Elem if e.label == "ExportDeclarationAcceptanceRelease" =>
+                  e.copy(child = e.child ++ exportDeclaration)
+                case e: Elem                                                              =>
                   e.copy(child = e.child.flatMap(appendToExportDeclarationAcceptanceRelease))
-                case other => other
+                case other                                                                => other
 
               }
 
-            }
-
-            try {
-              Right(appendToExportDeclarationAcceptanceRelease(removeExportDeclaration(xml).head).toString())
-
-            } catch {
+            try Right(appendToExportDeclarationAcceptanceRelease(removeExportDeclaration(xml).head).toString())
+            catch {
               case e: Exception => Left(ExportDeclarationTransformError(e.toString))
             }
-        }.getOrElse(Left(ExportDeclarationNotFoundTransformError("Could not locate ExportDeclarationAcceptanceOrGoodsReleasedForExport in xml")))
+          }
+          .getOrElse(
+            Left(
+              ExportDeclarationNotFoundTransformError(
+                "Could not locate ExportDeclarationAcceptanceOrGoodsReleasedForExport in xml"
+              )
+            )
+          )
       }
     }
-  }
 
   private def base64Encode(string: String): String =
     Base64.getEncoder.encodeToString(string.getBytes(StandardCharsets.UTF_8))
 }
-
 
 sealed trait TransformationError
 
@@ -265,27 +263,29 @@ case class SchemaValidationError(error: Option[String] = None, exceptions: List[
 case object MessageDoesNotExistError extends TransformationError
 
 case class RewriteNamespaceError(error: String) extends TransformationError
-case class ImportSadConversionError(error:String) extends  TransformationError
+case class ImportSadConversionError(error: String) extends TransformationError
 
 case class ExportDeclarationNotFoundTransformError(error: String) extends TransformationError
 case class ExportDeclarationTransformError(error: String) extends TransformationError
 case object ExportDeclarationMultipleDifferentValuesError extends TransformationError
 
-object TransformationError{
-  implicit lazy val transformError: OFormat[TransformationError] = Json.format
-  implicit lazy val formatValidationError: OFormat[FormatValidationError] = Json.format
-  implicit lazy val schemaValidationError: OFormat[SchemaValidationError] = Json.format
-  implicit lazy val messageDoesNotExistError: OFormat[MessageDoesNotExistError.type] = Json.format
-  implicit lazy val rewriteNamespaceError: OFormat[RewriteNamespaceError] = Json.format
-  implicit lazy val importSadConversionError: OFormat[ImportSadConversionError] = Json.format
-  implicit lazy val exportDeclarationNotFoundTransformError: OFormat[ExportDeclarationNotFoundTransformError] = Json.format
-  implicit lazy val exportDeclarationTransformError: OFormat[ExportDeclarationTransformError] = Json.format
-  implicit lazy val exportDeclarationMultipleDifferentValuesError: OFormat[ExportDeclarationMultipleDifferentValuesError.type ] = Json.format
+object TransformationError {
+  implicit lazy val transformError: OFormat[TransformationError]                                              = Json.format
+  implicit lazy val formatValidationError: OFormat[FormatValidationError]                                     = Json.format
+  implicit lazy val schemaValidationError: OFormat[SchemaValidationError]                                     = Json.format
+  implicit lazy val messageDoesNotExistError: OFormat[MessageDoesNotExistError.type]                          = Json.format
+  implicit lazy val rewriteNamespaceError: OFormat[RewriteNamespaceError]                                     = Json.format
+  implicit lazy val importSadConversionError: OFormat[ImportSadConversionError]                               = Json.format
+  implicit lazy val exportDeclarationNotFoundTransformError: OFormat[ExportDeclarationNotFoundTransformError] =
+    Json.format
+  implicit lazy val exportDeclarationTransformError: OFormat[ExportDeclarationTransformError]                 = Json.format
+  implicit lazy val exportDeclarationMultipleDifferentValuesError
+    : OFormat[ExportDeclarationMultipleDifferentValuesError.type]                                             = Json.format
 
 }
 
 case class EnhancedTransformationError(error: TransformationError, messageType: String, messageID: String)
 
-object EnhancedTransformationError{
+object EnhancedTransformationError {
   implicit lazy val format: OFormat[EnhancedTransformationError] = Json.format
 }
