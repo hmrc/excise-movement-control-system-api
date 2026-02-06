@@ -40,21 +40,21 @@ import scala.xml.{Elem, NodeSeq}
 class TransformService @Inject() (implicit ec: ExecutionContext) {
   val xsdPaths                                                                                                 = Map(
     "IE704" -> "/v2/ie704uk.xsd",
-    "IE801" -> "/v2/IE801.xsd",
-    "IE802" -> "/v2/IE802.xsd",
-    "IE803" -> "/v2/IE803.xsd",
-    "IE807" -> "/v2/IE807.xsd",
-    "IE810" -> "/v2/IE810.xsd",
-    "IE813" -> "/v2/IE813.xsd",
-    "IE818" -> "/v2/IE818.xsd",
-    "IE819" -> "/v2/IE819.xsd",
-    "IE829" -> "/v2/IE829.xsd",
-    "IE837" -> "/v2/IE837.xsd",
-    "IE839" -> "/v2/IE839.xsd",
-    "IE840" -> "/v2/IE840.xsd",
-    "IE871" -> "/v2/IE871.xsd",
-    "IE881" -> "/v2/IE881.xsd",
-    "IE905" -> "/v2/IE905.xsd"
+    "IE801" -> "/v2/ie801.xsd",
+    "IE802" -> "/v2/ie802.xsd",
+    "IE803" -> "/v2/ie803.xsd",
+    "IE807" -> "/v2/ie807.xsd",
+    "IE810" -> "/v2/ie810.xsd",
+    "IE813" -> "/v2/ie813.xsd",
+    "IE818" -> "/v2/ie818.xsd",
+    "IE819" -> "/v2/ie819.xsd",
+    "IE829" -> "/v2/ie829.xsd",
+    "IE837" -> "/v2/ie837.xsd",
+    "IE839" -> "/v2/ie839.xsd",
+    "IE840" -> "/v2/ie840.xsd",
+    "IE871" -> "/v2/ie871.xsd",
+    "IE881" -> "/v2/ie881.xsd",
+    "IE905" -> "/v2/ie905.xsd"
   )
 
   def transform(
