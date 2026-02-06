@@ -71,7 +71,8 @@ class TransformLogRepository @Inject() (
   }
 
   def findLog(movement: Movement) = Mdc.preservingMdc {
-    val filter = and(equal("_id", movement._id), equal("isTransformSuccess", true))
+    val filter =
+      and(equal("_id", movement._id), equal("isTransformSuccess", true), equal("messageCount", movement.messages.size))
 
     collection
       .find(filter)

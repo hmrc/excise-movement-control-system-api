@@ -21,7 +21,6 @@ import play.api.Configuration
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MovementRepository, TransformLogRepository, TransformationRepository}
 import org.apache.pekko.stream.scaladsl._
 import org.apache.pekko.stream.{ActorAttributes, Materializer, Supervision}
-
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Movement, TransformLog}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{EnhancedTransformationError, TransformService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -29,6 +28,7 @@ import uk.gov.hmrc.mongo.lock.{LockRepository, LockService}
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoUtils.DuplicateKey
 
+import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import javax.inject.{Inject, Singleton}
@@ -53,6 +53,8 @@ class TransformJob @Inject() (
   override val ttl: Duration        = Duration.create(15, MINUTES)
 
   def execute(): Future[ScheduledJob.Result] = {
+    val movementsCount   = movementRepository.collection.countDocuments().toFuture()
+    val transformedCount = new AtomicInteger(0)
 
     val done = Source
       .fromPublisher(movementRepository.collection.find().batchSize(10))
@@ -97,11 +99,18 @@ class TransformJob @Inject() (
         movement
           .map { m =>
             transformationRepository
-              .saveMovements(Seq(m))
+              .saveMovement(m)
               .flatMap { _ =>
-                transformLogRepository.saveLog(
-                  TransformLog(m._id, isTransformSuccess = true, errors = Nil, lastUpdated = timeService.timestamp())
-                )
+                transformLogRepository
+                  .saveLog(
+                    TransformLog(
+                      m._id,
+                      isTransformSuccess = true,
+                      errors = Nil,
+                      lastUpdated = timeService.timestamp(),
+                      m.messages.size
+                    )
+                  )
               }
               .recover { case DuplicateKey(e) =>
                 logger.warn(s"Illegal State Duplicate key $e")
@@ -113,10 +122,18 @@ class TransformJob @Inject() (
       }
       .withAttributes(ActorAttributes.withSupervisionStrategy { err =>
         logger.error(
-          s"$name :  ${err.getClass.getName}"
+          s"$name :  ${err.getClass.getName}  "
         )
         Supervision.resume
       })
+      .map { _ =>
+        movementsCount.foreach { count =>
+          if (transformedCount.incrementAndGet() % 5 == 0)
+            logger.warn(
+              s"Progress: ${transformedCount.get()}/$count : ${((transformedCount.get().toDouble / count) * 100).round}%"
+            )
+        }
+      }
       .run()
       .map { _ =>
         ScheduledJob.Result.Completed
@@ -127,9 +144,19 @@ class TransformJob @Inject() (
   withLock(execute())
 
   //atomic adder
-  def transformAndLog(movement: Movement, updatedMovement: Movement, errList: Seq[EnhancedTransformationError]) =
+  private def transformAndLog(
+    movement: Movement,
+    updatedMovement: Movement,
+    errList: Seq[EnhancedTransformationError]
+  ) =
     if (updatedMovement.messages.size != movement.messages.size) {
-      val log = TransformLog(updatedMovement._id, isTransformSuccess = false, errList, timeService.timestamp())
+      val log = TransformLog(
+        updatedMovement._id,
+        isTransformSuccess = false,
+        errList,
+        timeService.timestamp(),
+        updatedMovement.messages.size
+      )
       transformLogRepository.saveLog(log).map { _ =>
         None
       }
