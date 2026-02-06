@@ -38,7 +38,7 @@ import scala.xml.{Elem, NodeSeq}
 
 @Singleton
 class TransformService @Inject() (implicit ec: ExecutionContext) {
-  val xsdPaths = Map(
+  val xsdPaths                                                                                                 = Map(
     "IE704" -> "/v2/ie704uk.xsd",
     "IE801" -> "/v2/IE801.xsd",
     "IE802" -> "/v2/IE802.xsd",
