@@ -59,8 +59,7 @@ class TransformService @Inject() (implicit ec: ExecutionContext) {
 
   def transform(
     messageType: String,
-    base64EncodedMessage: String,
-    messageId: String
+    base64EncodedMessage: String
   ): Future[Either[TransformationError, String]] = {
     val result = for {
       updatedXML            <- rewriteNamespace(base64EncodedMessage)

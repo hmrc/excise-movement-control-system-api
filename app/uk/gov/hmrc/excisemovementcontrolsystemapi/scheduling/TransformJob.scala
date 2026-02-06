@@ -69,7 +69,7 @@ class TransformJob @Inject() (
           .map { movement =>
             val transformResult =
               Future.sequence(movement.messages.map { message =>
-                transformService.transform(message.messageType, message.encodedMessage, message.messageId).map {
+                transformService.transform(message.messageType, message.encodedMessage).map {
                   case Right(e)  => Right(message.copy(encodedMessage = e))
                   case Left(err) =>
                     logger.warn(
