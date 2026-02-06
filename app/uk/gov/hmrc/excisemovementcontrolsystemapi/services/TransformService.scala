@@ -38,23 +38,23 @@ import scala.xml.{Elem, NodeSeq}
 
 @Singleton
 class TransformService @Inject() (implicit ec: ExecutionContext) {
-  val xsdPaths                                                                                                 = Map(
-    "IE704" -> "v2/ie704uk.xsd",
-    "IE801" -> "v2/IE801.xsd",
-    "IE802" -> "v2/IE802.xsd",
-    "IE803" -> "v2/IE803.xsd",
-    "IE807" -> "v2/IE807.xsd",
-    "IE810" -> "v2/IE810.xsd",
-    "IE813" -> "v2/IE813.xsd",
-    "IE818" -> "v2/IE818.xsd",
-    "IE819" -> "v2/IE819.xsd",
-    "IE829" -> "v2/IE829.xsd",
-    "IE837" -> "v2/IE837.xsd",
-    "IE839" -> "v2/IE839.xsd",
-    "IE840" -> "v2/IE840.xsd",
-    "IE871" -> "v2/IE871.xsd",
-    "IE881" -> "v2/IE881.xsd",
-    "IE905" -> "v2/IE905.xsd"
+  val xsdPaths = Map(
+    "IE704" -> "/v2/ie704uk.xsd",
+    "IE801" -> "/v2/IE801.xsd",
+    "IE802" -> "/v2/IE802.xsd",
+    "IE803" -> "/v2/IE803.xsd",
+    "IE807" -> "/v2/IE807.xsd",
+    "IE810" -> "/v2/IE810.xsd",
+    "IE813" -> "/v2/IE813.xsd",
+    "IE818" -> "/v2/IE818.xsd",
+    "IE819" -> "/v2/IE819.xsd",
+    "IE829" -> "/v2/IE829.xsd",
+    "IE837" -> "/v2/IE837.xsd",
+    "IE839" -> "/v2/IE839.xsd",
+    "IE840" -> "/v2/IE840.xsd",
+    "IE871" -> "/v2/IE871.xsd",
+    "IE881" -> "/v2/IE881.xsd",
+    "IE905" -> "/v2/IE905.xsd"
   )
 
   def transform(
@@ -110,7 +110,7 @@ class TransformService @Inject() (implicit ec: ExecutionContext) {
       Future {
 
         val schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
-        val url           = getClass.getClassLoader.getResource(xsdPaths(messageType))
+        val url           = getClass.getResource(xsdPaths(messageType))
 
         val src    = new StreamSource(url.openStream())
         src.setSystemId(url.toExternalForm)
