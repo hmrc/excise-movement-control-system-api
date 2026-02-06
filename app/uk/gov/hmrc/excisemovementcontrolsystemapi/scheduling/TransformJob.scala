@@ -128,7 +128,7 @@ class TransformJob @Inject() (
       })
       .map { _ =>
         movementsCount.foreach { count =>
-          if (transformedCount.incrementAndGet() % 5 == 0)
+          if (transformedCount.incrementAndGet() % 1000 == 0)
             logger.warn(
               s"Progress: ${transformedCount.get()}/$count : ${((transformedCount.get().toDouble / count) * 100).round}%"
             )
