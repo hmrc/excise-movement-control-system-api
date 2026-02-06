@@ -24,6 +24,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.{DraftExciseMoveme
 import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.{IEMessageFactory, IEMessageFactoryV1, IEMessageFactoryV2}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auditing.{AuditEventFactory, AuditEventFactoryV2}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.{MessageValidation, MessageValidationV1, MessageValidationV2}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling.TransformJob
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, AuditServiceV1, AuditServiceV2, MessageService, MessageServiceV1, MessageServiceV2}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{NrsEventIdMapper, NrsEventIdMapperV1, NrsEventIdMapperV2}
 import uk.gov.hmrc.mongo.metrix.MetricOrchestrator
@@ -33,8 +34,10 @@ import java.time.Clock
 class Module extends play.api.inject.Module {
 
   override def bindings(environment: Environment, configuration: Configuration): collection.Seq[Binding[_]] = {
-    val latestSpec      = configuration.get[Boolean]("featureFlags.latestFunctionalSpecEnabled")
-    val versionBindings =
+    val latestSpec          = configuration.get[Boolean]("featureFlags.latestFunctionalSpecEnabled")
+    val transformJobEnabled = configuration.get[Boolean]("featureFlags.transformJobEnabled")
+    val transformJob        = if (transformJobEnabled) Seq(bind[TransformJob].toSelf.eagerly()) else Seq()
+    val versionBindings     =
       if (latestSpec)
         Seq(
           bind[DraftExciseMovementController].to[DraftExciseMovementControllerV2],
@@ -64,6 +67,6 @@ class Module extends play.api.inject.Module {
       bind[Clock].toInstance(Clock.systemUTC()),
       bind[MetricOrchestrator].toProvider[MetricsProvider],
       bind[NrsCircuitBreaker].toProvider[NrsCircuitBreakerProvider]
-    ) ++ versionBindings
+    ) ++ versionBindings ++ transformJob
   }
 }

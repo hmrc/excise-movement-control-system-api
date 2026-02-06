@@ -23,7 +23,7 @@ import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model._
 import play.api.Configuration
 import play.api.libs.Files.logger
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository._
@@ -31,25 +31,22 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, Mdc}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.Codecs.JsonOps
-import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 
 import java.time.Instant
-import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.SeqHasAsJava
 
 @Singleton
-class MovementRepository @Inject() (
+class TransformationRepository @Inject() (
   mongo: MongoComponent,
   appConfig: AppConfig,
   timeService: DateTimeService,
   configuration: Configuration
 )(implicit ec: ExecutionContext)
     extends PlayMongoRepository[Movement](
-      collectionName = appConfig.movementCollectionName,
+      collectionName = "movements_v2",
       mongoComponent = mongo,
       domainFormat = Movement.format,
       indexes = mongoIndexes(appConfig.movementTTL),
@@ -86,7 +83,8 @@ class MovementRepository @Inject() (
       )
       .headOption()
   }
-  def saveMovement(movement: Movement): Future[Done]                  = Mdc.preservingMdc {
+
+  def saveMovement(movement: Movement): Future[Done] = Mdc.preservingMdc {
     collection
       .findOneAndReplace(
         filter = byId(movement._id),
@@ -100,11 +98,12 @@ class MovementRepository @Inject() (
   def saveMovements(movement: Seq[Movement]): Future[Boolean] = Mdc.preservingMdc {
     collection
       .insertMany(
-        movement.map(_.copy(lastUpdated = timeService.timestamp())),
+        movement,
         InsertManyOptions().ordered(false)
       )
       .toFuture()
       .map(_ => true)
+
   }
 
   def getMovementById(id: String): Future[Option[Movement]] = Mdc.preservingMdc {
@@ -181,7 +180,9 @@ class MovementRepository @Inject() (
     sealed trait Threshold
 
     case object Normal extends Threshold
+
     case object Filtered extends Threshold
+
     case object Failure extends Threshold
   }
 
@@ -338,80 +339,4 @@ class MovementRepository @Inject() (
       .as(Done)
   }
 
-}
-
-object MovementRepository {
-  def mongoIndexes(ttl: Duration): Seq[IndexModel] =
-    Seq(
-      IndexModel(
-        Indexes.ascending("lastUpdated"),
-        IndexOptions()
-          .name("lastUpdated_ttl_idx")
-          .expireAfter(ttl.toSeconds, TimeUnit.SECONDS)
-      ),
-      IndexModel(
-        Indexes.compoundIndex(
-          Indexes.ascending("localReferenceNumber"),
-          Indexes.ascending("consignorId")
-        ),
-        IndexOptions()
-          .name("lrn_consignor_idx")
-          .unique(true)
-      ),
-      IndexModel(
-        Indexes.ascending("administrativeReferenceCode"),
-        IndexOptions().name("arc_idx")
-      ),
-      IndexModel(
-        Indexes.ascending("consignorId"),
-        IndexOptions().name("consignorId_idx")
-      ),
-      IndexModel(
-        Indexes.ascending("consigneeId"),
-        IndexOptions().name("consigneeId_idx")
-      ),
-      IndexModel(
-        Indexes.ascending("messages.boxesToNotify"),
-        IndexOptions()
-          .name("boxesToNotify_idx")
-      ),
-      IndexModel(
-        Indexes.ascending("messages.recipient"),
-        IndexOptions()
-          .name("recipient_idx")
-      ),
-      IndexModel(
-        Indexes.compoundIndex(
-          Indexes.ascending("consignorId"),
-          Indexes.ascending("consigneeId"),
-          Indexes.ascending("messages.recipient"),
-          Indexes.ascending("localReferenceNumber"),
-          Indexes.ascending("administrativeReferenceCode")
-        ),
-        IndexOptions()
-          .name("messageId_idx")
-          .sparse(true)
-      )
-    )
-
-  final case class ErnAndLastReceived(_id: String, lastReceived: Instant)
-
-  object ErnAndLastReceived extends MongoJavatimeFormats.Implicits {
-    implicit lazy val format: OFormat[ErnAndLastReceived] = Json.format
-  }
-
-  final case class MessageNotification(
-    movementId: String,
-    messageId: String,
-    messageType: String,
-    consignor: String,
-    consignee: Option[String],
-    arc: Option[String],
-    recipient: String,
-    boxId: String
-  )
-
-  object MessageNotification {
-    implicit lazy val format: OFormat[MessageNotification] = Json.format
-  }
 }
