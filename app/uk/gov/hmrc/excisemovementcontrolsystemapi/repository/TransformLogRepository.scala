@@ -84,6 +84,17 @@ class TransformLogRepository @Inject() (
       }
 
   }
+
+  def findLog(movement: String): Future[Option[TransformLog]] = Mdc.preservingMdc {
+    val filter = equal("_id", movement)
+
+    collection
+      .find(filter)
+      .first()
+      .toFutureOption()
+
+  }
+
 }
 
 object TransformLogRepository {

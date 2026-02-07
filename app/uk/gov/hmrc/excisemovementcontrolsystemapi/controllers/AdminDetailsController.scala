@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MovementRepository, TransformLogRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.internalauth.client._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -31,7 +31,8 @@ import scala.concurrent.ExecutionContext
 class AdminDetailsController @Inject() (
   cc: ControllerComponents,
   auth: BackendAuthComponents,
-  movementRepository: MovementRepository
+  movementRepository: MovementRepository,
+  transformLogRepository: TransformLogRepository
 )(implicit
   ec: ExecutionContext
 ) extends BackendController(cc) {
@@ -52,6 +53,14 @@ class AdminDetailsController @Inject() (
           case Some(movement) => Ok(Json.toJson(MovementDetails.createFromMovement(movement)))
           case None           => NotFound(s"No Movement Found with id: $movementId")
         }
+      }
+    }
+
+  def getTransformLogDetails(movementId: String): Action[AnyContent] =
+    authorised.async {
+      transformLogRepository.findLog(movementId).map {
+        case Some(transformLog) => Ok(Json.toJson(transformLog))
+        case None               => NotFound(s"No Transform Log Found with id: $movementId")
       }
     }
 
