@@ -19,6 +19,7 @@ POST          /admin/notifications/subscribe                    uk.gov.hmrc.exci
 DELETE        /admin/erns                                       uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.RemoveErnsAdminController.removeErns()
 
 GET           /admin/movements/:movementId/details              uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.AdminDetailsController.getMovementDetails(movementId: String)
+GET           /admin/transform-log/:movementId/details          uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.AdminDetailsController.getTransformLogDetails(movementId: String)
 
 GET           /admin/:ern/summary                               uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.RemoveErnsAdminController.findAllReferencesToErn(ern: String)
 
