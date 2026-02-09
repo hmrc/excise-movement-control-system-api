@@ -74,7 +74,7 @@ class TransformJob @Inject() (
                   case Right(e)  => Right(message.copy(encodedMessage = e))
                   case Left(err) =>
                     logger.warn(
-                      s"$name Error while transforming movement id: ${movement._id} message type: ${message.messageType} & message Id: ${message.messageId}"
+                      s"$name Error while transforming movement id: ${movement._id} message type: ${message.messageType} & message Id: ${message.messageId} + $err"
                     )
                     Left(
                       EnhancedTransformationError(err, messageType = message.messageType, messageID = message.messageId)
@@ -108,7 +108,8 @@ class TransformJob @Inject() (
                       m._id,
                       isTransformSuccess = true,
                       errors = Nil,
-                      lastUpdated = timeService.timestamp(),
+                      lastUpdatedMovement = m.lastUpdated,
+                      lastUpdatedLog = timeService.timestamp(),
                       m.messages.size
                     )
                   )
@@ -158,6 +159,7 @@ class TransformJob @Inject() (
         updatedMovement._id,
         isTransformSuccess = false,
         errList,
+        movement.lastUpdated,
         timeService.timestamp(),
         updatedMovement.messages.size
       )
