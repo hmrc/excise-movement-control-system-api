@@ -108,7 +108,8 @@ class TransformJob @Inject() (
                       m._id,
                       isTransformSuccess = true,
                       errors = Nil,
-                      lastUpdated = timeService.timestamp(),
+                      lastUpdatedMovement = m.lastUpdated,
+                      lastUpdatedLog = timeService.timestamp(),
                       m.messages.size
                     )
                   )
@@ -158,6 +159,7 @@ class TransformJob @Inject() (
         updatedMovement._id,
         isTransformSuccess = false,
         errList,
+        movement.lastUpdated,
         timeService.timestamp(),
         updatedMovement.messages.size
       )

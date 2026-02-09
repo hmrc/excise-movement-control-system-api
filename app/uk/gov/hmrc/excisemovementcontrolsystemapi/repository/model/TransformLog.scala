@@ -26,7 +26,8 @@ case class TransformLog(
   _id: String,
   isTransformSuccess: Boolean,
   errors: Seq[EnhancedTransformationError], //update to EnhancedError
-  lastUpdated: Instant,
+  lastUpdatedMovement: Instant,
+  lastUpdatedLog: Instant,
   messageCount: Int
 )
 

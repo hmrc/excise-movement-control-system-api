@@ -57,7 +57,7 @@ class TransformService @Inject() (implicit ec: ExecutionContext) {
     "IE905" -> "/v1/ie905.xsd"
   )
 
-  val xsdPathsV2                                                                                               = Map(
+  val xsdPathsV2 = Map(
     "IE704" -> "/v2/ie704uk.xsd",
     "IE801" -> "/v2/ie801.xsd",
     "IE802" -> "/v2/ie802.xsd",
@@ -159,17 +159,13 @@ class TransformService @Inject() (implicit ec: ExecutionContext) {
         validator.validate(new StreamSource(new StringReader(message)))
 
         if (exceptions.nonEmpty) {
-          if (isOldSchema)
-            Left(OldSchemaValidationError(exceptions = exceptions))
-          else {
-            Left(SchemaValidationError(exceptions = exceptions))
-          }
+          Left(schemaError(isOldSchema, exceptions))
 
         } else {
           Right(())
         }
       }.recover { case e =>
-        Left(SchemaValidationError(Some(e.getMessage), exceptions))
+        Left(schemaError(isOldSchema, exceptions, Some(e.getMessage)))
       }
     }
   }
@@ -221,9 +217,15 @@ class TransformService @Inject() (implicit ec: ExecutionContext) {
 
     }
 
+  private def schemaError(isOldSchema: Boolean, exceptions: List[String], errMessage: Option[String] = None) =
+    if (isOldSchema) {
+      OldSchemaValidationError(errMessage, exceptions = exceptions)
+    } else {
+      SchemaValidationError(errMessage, exceptions)
+    }
   private def convertImportSadToCustomDeclarationHelper(
     updatedXML: String
-  ): EitherT[Future, TransformationError, String] =
+  ): EitherT[Future, TransformationError, String]                                                            =
     EitherT.fromEither[Future] {
       try Right(convertImportSadToCustomDeclaration(scala.xml.XML.loadString(updatedXML)).toString())
       catch {
