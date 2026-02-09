@@ -38,9 +38,7 @@ import java.nio.charset.StandardCharsets
 import scala.xml.{Elem, NodeSeq}
 
 @Singleton
-class TransformService @Inject()(
-                                 appConfig: AppConfig)
-                               (implicit ec: ExecutionContext) {
+class TransformService @Inject() (appConfig: AppConfig)(implicit ec: ExecutionContext) {
   val xsdPathsV1 = Map(
     "IE704" -> "/v1/ie704uk.xsd",
     "IE801" -> "/v1/ie801.xsd",
@@ -60,7 +58,7 @@ class TransformService @Inject()(
     "IE905" -> "/v1/ie905.xsd"
   )
 
-  val xsdPathsV2 = Map(
+  val xsdPathsV2                                                                                               = Map(
     "IE704" -> "/v2/ie704uk.xsd",
     "IE801" -> "/v2/ie801.xsd",
     "IE802" -> "/v2/ie802.xsd",
@@ -85,7 +83,8 @@ class TransformService @Inject()(
   ): Future[Either[TransformationError, String]] = {
     val result = for {
       decodedMessage        <- decodeBase64(base64EncodedMessage)
-      _                     <- if(appConfig.runV1Validation) validateSchema(messageType, decodedMessage, xsdPathsV1, isOldSchema = true) else EitherT.pure[Future, TransformationError](())
+      _                     <- if (appConfig.runV1Validation) validateSchema(messageType, decodedMessage, xsdPathsV1, isOldSchema = true)
+                               else EitherT.pure[Future, TransformationError](())
       updatedXML            <- rewriteNamespace(decodedMessage)
       messageWithIE801Check <- if (messageType == "IE801") convertImportSadToCustomDeclarationHelper(updatedXML)
                                else EitherT.fromEither[Future](Right(updatedXML))
