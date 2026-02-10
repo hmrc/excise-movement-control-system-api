@@ -26,7 +26,7 @@ import org.xml.sax.{ErrorHandler, SAXParseException}
 import java.io.StringReader
 import javax.xml.XMLConstants
 import javax.xml.transform.stream.StreamSource
-import javax.xml.validation.SchemaFactory
+import javax.xml.validation.{Schema, SchemaFactory}
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 import cats.implicits._
@@ -35,6 +35,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 
 import java.util.Base64
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.ConcurrentHashMap
 import scala.xml.{Elem, NodeSeq}
 
 @Singleton
@@ -58,7 +59,7 @@ class TransformService @Inject() (appConfig: AppConfig)(implicit ec: ExecutionCo
     "IE905" -> "/v1/ie905.xsd"
   )
 
-  val xsdPathsV2                                                                                               = Map(
+  val xsdPathsV2 = Map(
     "IE704" -> "/v2/ie704uk.xsd",
     "IE801" -> "/v2/ie801.xsd",
     "IE802" -> "/v2/ie802.xsd",
@@ -76,6 +77,8 @@ class TransformService @Inject() (appConfig: AppConfig)(implicit ec: ExecutionCo
     "IE881" -> "/v2/ie881.xsd",
     "IE905" -> "/v2/ie905.xsd"
   )
+
+  private val schemaMap = new ConcurrentHashMap[String, Schema]()
 
   def transform(
     messageType: String,
@@ -136,13 +139,14 @@ class TransformService @Inject() (appConfig: AppConfig)(implicit ec: ExecutionCo
     var exceptions = List[String]()
     EitherT {
       Future {
-
-        val schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
-        val url           = getClass.getResource(xsdPaths(messageType))
-
-        val src    = new StreamSource(url.openStream())
-        src.setSystemId(url.toExternalForm)
-        val schema = schemaFactory.newSchema(src)
+        val schema = schemaMap.computeIfAbsent(messageType, messageType => {
+            val schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
+            val url = getClass.getResource(xsdPaths(messageType))
+            val src = new StreamSource(url.openStream())
+            src.setSystemId(url.toExternalForm)
+            schemaFactory.newSchema(src)
+          }
+        )
 
         val validator = schema.newValidator()
         validator.setErrorHandler(new ErrorHandler() {
