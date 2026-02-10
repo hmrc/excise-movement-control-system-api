@@ -53,6 +53,7 @@ class TransformJob @Inject() (
   override val ttl: Duration        = Duration.create(15, MINUTES)
 
   def execute(): Future[ScheduledJob.Result] = {
+    logger.warn(s"$name started")
     val movementsCount   = movementRepository.collection.countDocuments().toFuture()
     val transformedCount = new AtomicInteger(0)
     val processorCount   = Runtime.getRuntime.availableProcessors()
@@ -130,6 +131,9 @@ class TransformJob @Inject() (
             logger.warn(s"Illegal State Duplicate key $e")
             false
           }
+          .map { _ =>
+            movements
+          }
       }
       .withAttributes(ActorAttributes.withSupervisionStrategy { err =>
         logger.error(
@@ -137,9 +141,9 @@ class TransformJob @Inject() (
         )
         Supervision.resume
       })
-      .map { _ =>
+      .map { movements =>
         movementsCount.foreach { count =>
-          if (transformedCount.incrementAndGet() % 1000 == 0)
+          if (transformedCount.addAndGet(movements.length) % 1000 == 0)
             logger.warn(
               s"Progress: ${transformedCount.get()}/$count : ${((transformedCount.get().toDouble / count) * 100).round}%"
             )
@@ -147,6 +151,7 @@ class TransformJob @Inject() (
       }
       .run()
       .map { _ =>
+        logger.warn(s"$name completed")
         ScheduledJob.Result.Completed
       }
 
