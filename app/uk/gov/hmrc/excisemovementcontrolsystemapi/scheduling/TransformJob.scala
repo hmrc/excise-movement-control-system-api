@@ -57,13 +57,13 @@ class TransformJob @Inject() (
     val processorCount   = Runtime.getRuntime.availableProcessors()
     val done             = Source
       .fromPublisher(movementRepository.collection.find().batchSize(100).limit(5000))
-      .zipWithIndex.mapAsync(1) {
-        case (movement, index) =>
-          // Renew the lock every 5000 movements
-          if (index % 5000 == 0)
-            withRenewedLock(Future.successful(movement))
-          else
-            Future.successful(Some(movement))
+      .zipWithIndex
+      .mapAsync(1) { case (movement, index) =>
+        // Renew the lock every 5000 movements
+        if (index % 5000 == 0)
+          withRenewedLock(Future.successful(movement))
+        else
+          Future.successful(Some(movement))
       }
       .collect { case Some(movement) => movement }
       .mapAsyncUnordered(processorCount) { movement =>

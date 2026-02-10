@@ -139,10 +139,12 @@ class TransformService @Inject() (appConfig: AppConfig)(implicit ec: ExecutionCo
     var exceptions = List[String]()
     EitherT {
       Future {
-        val schema = schemaMap.computeIfAbsent(messageType, messageType => {
+        val schema = schemaMap.computeIfAbsent(
+          messageType,
+          messageType => {
             val schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
-            val url = getClass.getResource(xsdPaths(messageType))
-            val src = new StreamSource(url.openStream())
+            val url           = getClass.getResource(xsdPaths(messageType))
+            val src           = new StreamSource(url.openStream())
             src.setSystemId(url.toExternalForm)
             schemaFactory.newSchema(src)
           }
@@ -187,7 +189,7 @@ class TransformService @Inject() (appConfig: AppConfig)(implicit ec: ExecutionCo
   private def rewriteNamespace(decodedMessage: String): EitherT[Future, TransformationError, String] =
     EitherT.fromEither[Future] {
       try {
-        val namespaceRegex  = "\"(urn:publicid:-:EC:DGTAXUD:EMCS:[^\"]+?):V3\\.13\"".r
+        val namespaceRegex = "\"(urn:publicid:-:EC:DGTAXUD:EMCS:[^\"]+?):V3\\.13\"".r
         Right(namespaceRegex.replaceAllIn(decodedMessage, "\"$1:V3.23\""))
       } catch {
         case e: Exception => Left(RewriteNamespaceError(e.toString))
@@ -237,7 +239,8 @@ class TransformService @Inject() (appConfig: AppConfig)(implicit ec: ExecutionCo
             def removeExportDeclaration(n: scala.xml.Node): NodeSeq = {
               //get export save it append it to
               val res = n match {
-                case e: scala.xml.Elem if e.label == "ExportDeclarationAcceptanceOrGoodsReleasedForExport" => NodeSeq.Empty
+                case e: scala.xml.Elem if e.label == "ExportDeclarationAcceptanceOrGoodsReleasedForExport" =>
+                  NodeSeq.Empty
                 case e: scala.xml.Elem                                                                     => e.copy(child = e.child.flatMap(removeExportDeclaration))
                 case other                                                                                 => other
               }

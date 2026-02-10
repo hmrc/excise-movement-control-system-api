@@ -361,8 +361,8 @@ class TransformServiceSpec extends PlaySpec with EitherValues with BeforeAndAfte
     "return no errors when transforming IE801" in {
       val messageType = "IE801"
 
-      val encodedMessage            = Base64.getEncoder.encodeToString(inputIE801Message.getBytes("UTF-8"))
-      val result                    = await(sut.transform(messageType, encodedMessage))
+      val encodedMessage = Base64.getEncoder.encodeToString(inputIE801Message.getBytes("UTF-8"))
+      val result         = await(sut.transform(messageType, encodedMessage))
 
       new String(Base64.getDecoder.decode(result.value), "UTF-8") mustBe outputIE801Message
     }
@@ -370,8 +370,8 @@ class TransformServiceSpec extends PlaySpec with EitherValues with BeforeAndAfte
     "return no errors when transforming IE829" in {
       val messageType = "IE829"
 
-      val encodedMessage            = Base64.getEncoder.encodeToString(inputIE829Message.getBytes("UTF-8"))
-      val result                    = await(sut.transform(messageType, encodedMessage))
+      val encodedMessage = Base64.getEncoder.encodeToString(inputIE829Message.getBytes("UTF-8"))
+      val result         = await(sut.transform(messageType, encodedMessage))
 
       new String(Base64.getDecoder.decode(result.value), "UTF-8") mustBe outputIE829Message
     }
