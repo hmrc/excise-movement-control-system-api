@@ -58,7 +58,7 @@ class TransformJob @Inject() (
     val transformedCount = new AtomicInteger(0)
     val processorCount   = Runtime.getRuntime.availableProcessors()
     val done             = Source
-      .fromPublisher(movementRepository.collection.find().batchSize(100).limit(25000))
+      .fromPublisher(movementRepository.collection.find().batchSize(100))
       .zipWithIndex
       .mapAsync(1) { case (movement, index) =>
         // Renew the lock every 5000 movements
@@ -132,9 +132,6 @@ class TransformJob @Inject() (
             logger.warn(s"Illegal State Duplicate key $e")
             false
           }
-          .map { _ =>
-            movements
-          }
       }
       .withAttributes(ActorAttributes.withSupervisionStrategy { err =>
         logger.error(
@@ -142,9 +139,9 @@ class TransformJob @Inject() (
         )
         Supervision.resume
       })
-      .map { movements =>
+      .map { _ =>
         movementsCount.foreach { count =>
-          if (transformedCount.addAndGet(movements.length) % 1000 == 0)
+          if (transformedCount.addAndGet(100) % 1000 == 0)
             logger.warn(
               s"Progress: ${transformedCount.get()}/$count : ${((transformedCount.get().toDouble / count) * 100).round}%"
             )
