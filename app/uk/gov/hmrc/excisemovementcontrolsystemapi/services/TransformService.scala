@@ -78,7 +78,8 @@ class TransformService @Inject() (appConfig: AppConfig)(implicit ec: ExecutionCo
     "IE905" -> "/v2/ie905.xsd"
   )
 
-  private val schemaMap = new ConcurrentHashMap[String, Schema]()
+  private val schemaMapV1 = new ConcurrentHashMap[String, Schema]()
+  private val schemaMapV2 = new ConcurrentHashMap[String, Schema]()
 
   def transform(
     messageType: String,
@@ -86,7 +87,7 @@ class TransformService @Inject() (appConfig: AppConfig)(implicit ec: ExecutionCo
   ): Future[Either[TransformationError, String]] = {
     val result = for {
       decodedMessage        <- decodeBase64(base64EncodedMessage)
-      _                     <- if (appConfig.runV1Validation) validateSchema(messageType, decodedMessage, xsdPathsV1, isOldSchema = true)
+      _                     <- if (appConfig.runV1Validation) validateSchema(messageType, decodedMessage, isOldSchema = true)
                                else EitherT.pure[Future, TransformationError](())
       updatedXML            <- rewriteNamespace(decodedMessage)
       messageWithIE801Check <- if (messageType == "IE801") convertImportSadToCustomDeclarationHelper(updatedXML)
@@ -95,7 +96,7 @@ class TransformService @Inject() (appConfig: AppConfig)(implicit ec: ExecutionCo
                                  exportDeclarationTransformation(scala.xml.XML.loadString(messageWithIE801Check))
                                else EitherT.fromEither[Future](Right(messageWithIE801Check))
       _                     <- validateFormat(messageType, messageWithIE829Check)
-      _                     <- validateSchema(messageType, messageWithIE829Check, xsdPathsV2, isOldSchema = false)
+      _                     <- validateSchema(messageType, messageWithIE829Check, isOldSchema = false)
     } yield messageWithIE829Check
 
     result.value.map {
@@ -133,22 +134,15 @@ class TransformService @Inject() (appConfig: AppConfig)(implicit ec: ExecutionCo
   private def validateSchema(
     messageType: String,
     message: String,
-    xsdPaths: Map[String, String],
     isOldSchema: Boolean
   ): EitherT[Future, TransformationError, Unit] = {
     var exceptions = List[String]()
     EitherT {
       Future {
-        val schema = schemaMap.computeIfAbsent(
-          messageType,
-          messageType => {
-            val schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
-            val url           = getClass.getResource(xsdPaths(messageType))
-            val src           = new StreamSource(url.openStream())
-            src.setSystemId(url.toExternalForm)
-            schemaFactory.newSchema(src)
-          }
-        )
+        val schema =
+          if (isOldSchema) fetchSchema(schemaMapV1, xsdPathsV1, messageType)
+          else
+            fetchSchema(schemaMapV2, xsdPathsV2, messageType)
 
         val validator = schema.newValidator()
         validator.setErrorHandler(new ErrorHandler() {
@@ -177,6 +171,22 @@ class TransformService @Inject() (appConfig: AppConfig)(implicit ec: ExecutionCo
       }
     }
   }
+
+  private def fetchSchema(
+    schemaMap: ConcurrentHashMap[String, Schema],
+    xsdPaths: Map[String, String],
+    messageType: String
+  ) =
+    schemaMap.computeIfAbsent(
+      messageType,
+      messageType => {
+        val schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
+        val url           = getClass.getResource(xsdPaths(messageType))
+        val src           = new StreamSource(url.openStream())
+        src.setSystemId(url.toExternalForm)
+        schemaFactory.newSchema(src)
+      }
+    )
 
   private def decodeBase64(base64EncodedMessage: String): EitherT[Future, TransformationError, String] =
     EitherT.fromEither {

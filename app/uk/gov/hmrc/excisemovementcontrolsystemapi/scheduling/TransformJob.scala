@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
 import cats.implicits.toTraverseOps
+import cats.syntax.parallel._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MovementRepository, TransformLogRepository, TransformationRepository}
 import org.apache.pekko.stream.scaladsl._
 import org.apache.pekko.stream.{ActorAttributes, Materializer, Supervision}
@@ -56,7 +57,7 @@ class TransformJob @Inject() (
     val transformedCount = new AtomicInteger(0)
     val processorCount   = Runtime.getRuntime.availableProcessors()
     val done             = Source
-      .fromPublisher(movementRepository.collection.find().batchSize(100).limit(5000))
+      .fromPublisher(movementRepository.collection.find().batchSize(100).limit(25000))
       .zipWithIndex
       .mapAsync(1) { case (movement, index) =>
         // Renew the lock every 5000 movements
@@ -66,15 +67,19 @@ class TransformJob @Inject() (
           Future.successful(Some(movement))
       }
       .collect { case Some(movement) => movement }
-      .mapAsyncUnordered(processorCount) { movement =>
-        transformLogRepository.findLog(movement).map {
-          case true  => None
-          case false => Some(movement)
+      .grouped(100)
+      .mapAsyncUnordered(processorCount) { movements =>
+        movements.flatTraverse[Future, Movement] { movement =>
+          transformLogRepository.findLog(movement).map {
+            case true  => Nil
+            case false => List(movement)
+          }
         }
+
       }
       .mapAsyncUnordered(processorCount) { mov =>
         mov
-          .map { movement =>
+          .flatTraverse[Future, Movement] { movement =>
             val transformResult =
               Future.sequence(movement.messages.map { message =>
                 transformService.transform(message.messageType, message.encodedMessage).map {
@@ -98,36 +103,33 @@ class TransformJob @Inject() (
             for {
               updatedMov <- updatedMovement
               errList    <- errorList
-              mov        <- transformAndLog(movement, updatedMov, errList)
+              mov        <- logTransformation(movement, updatedMov, errList)
             } yield mov
           }
-          .getOrElse(Future.successful(None))
-      }
-      .mapAsyncUnordered(processorCount) { movement =>
-        movement
-          .map { m =>
-            transformationRepository
-              .saveMovement(m)
-              .flatMap { _ =>
-                transformLogRepository
-                  .saveLog(
-                    TransformLog(
-                      m._id,
-                      isTransformSuccess = true,
-                      errors = Nil,
-                      lastUpdatedMovement = m.lastUpdated,
-                      lastUpdatedLog = timeService.timestamp(),
-                      m.messages.size
-                    )
-                  )
-              }
-              .recover { case DuplicateKey(e) =>
-                logger.warn(s"Illegal State Duplicate key $e")
-                false
-              }
-          }
-          .traverse(identity)
 
+      }
+      .mapAsyncUnordered(processorCount) { movements =>
+        transformationRepository
+          .updateMovements(movements)
+          .flatMap { _ =>
+            transformLogRepository
+              .saveLogs(
+                movements.map { m =>
+                  TransformLog(
+                    m._id,
+                    isTransformSuccess = true,
+                    errors = Nil,
+                    lastUpdatedMovement = m.lastUpdated,
+                    lastUpdatedLog = timeService.timestamp(),
+                    m.messages.size
+                  )
+                }
+              )
+          }
+          .recover { case DuplicateKey(e) =>
+            logger.warn(s"Illegal State Duplicate key $e")
+            false
+          }
       }
       .withAttributes(ActorAttributes.withSupervisionStrategy { err =>
         logger.error(
@@ -147,6 +149,7 @@ class TransformJob @Inject() (
       .map { _ =>
         ScheduledJob.Result.Completed
       }
+
     done
   }
 
@@ -156,7 +159,7 @@ class TransformJob @Inject() (
   }
 
   //atomic adder
-  private def transformAndLog(
+  private def logTransformation(
     movement: Movement,
     updatedMovement: Movement,
     errList: Seq[EnhancedTransformationError]
@@ -171,11 +174,11 @@ class TransformJob @Inject() (
         updatedMovement.messages.size
       )
       transformLogRepository.saveLog(log).map { _ =>
-        None
+        Nil
       }
 
     } else {
-      Future.successful(Some(updatedMovement))
+      Future.successful(List(updatedMovement))
     }
 
   private def shouldRun(): Future[Boolean] = {
