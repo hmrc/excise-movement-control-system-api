@@ -184,39 +184,11 @@ class TransformService @Inject() (appConfig: AppConfig)(implicit ec: ExecutionCo
       }
     }
 
-  //todo use a more directed regex
   private def rewriteNamespace(decodedMessage: String): EitherT[Future, TransformationError, String] =
     EitherT.fromEither[Future] {
       try {
-        //  val regex = """"(urn:publicid:-:EC:DGTAXUD:EMCS:[^"]+?):V3\.13""""
-
-        val updateNamespace = (str: String) =>
-          if (str != null && str.nonEmpty && str.startsWith("urn:") && str.endsWith("V3.13")) str.dropRight(5) + "V3.23"
-          else str
-        val namespaceRegex  =
-          """xmlns(?:\s*:\s*([A-Za-z0-9_.-]+))?\s*=\s*"([^"]+)"""".r
-
-        val tagRegex = """<\s*[^/!?][^>]*>""".r
-
-        Right(
-          tagRegex.replaceAllIn(
-            decodedMessage,
-            { elements =>
-              val updatedTag = namespaceRegex.replaceAllIn(
-                elements.matched,
-                namespace =>
-                  // val ns = Option(namespace.group(2))
-                  namespace.matched.replace(namespace.group(2), updateNamespace(namespace.group(2)))
-                // updateNamespace(namespace.group(2))
-                // namespace.matched
-              )
-
-              updatedTag
-
-            }
-          )
-        )
-
+        val namespaceRegex  = "\"(urn:publicid:-:EC:DGTAXUD:EMCS:[^\"]+?):V3\\.13\"".r
+        Right(namespaceRegex.replaceAllIn(decodedMessage, "\"$1:V3.23\""))
       } catch {
         case e: Exception => Left(RewriteNamespaceError(e.toString))
       }
