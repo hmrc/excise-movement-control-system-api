@@ -17,15 +17,14 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.scheduling
 
 import cats.implicits.toTraverseOps
-import play.api.Configuration
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MovementRepository, TransformLogRepository, TransformationRepository}
 import org.apache.pekko.stream.scaladsl._
 import org.apache.pekko.stream.{ActorAttributes, Materializer, Supervision}
-import org.mongodb.scala.model.Filters.{and, equal}
+import org.mongodb.scala.model.Filters.equal
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Movement, TransformLog}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{EnhancedTransformationError, TransformService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
-import uk.gov.hmrc.mongo.lock.{LockRepository, LockService}
+import uk.gov.hmrc.mongo.lock.{LockRepository, TimePeriodLockService}
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoUtils.DuplicateKey
 
@@ -36,7 +35,6 @@ import javax.inject.{Inject, Singleton}
 
 @Singleton
 class TransformJob @Inject() (
-  configuration: Configuration,
   val movementRepository: MovementRepository,
   transformationRepository: TransformationRepository,
   transformLogRepository: TransformLogRepository,
@@ -44,7 +42,7 @@ class TransformJob @Inject() (
   timeService: DateTimeService,
   val lockRepository: LockRepository
 )(implicit val mat: Materializer)
-    extends LockService
+    extends TimePeriodLockService
     with Logging {
 
   def name: String = "movement-transformation-job"
@@ -58,7 +56,11 @@ class TransformJob @Inject() (
     val transformedCount = new AtomicInteger(0)
     val processorCount   = Runtime.getRuntime.availableProcessors()
     val done             = Source
-      .fromPublisher(movementRepository.collection.find().batchSize(100))
+      .fromPublisher(movementRepository.collection.find().batchSize(100).limit(5000))
+      .grouped(100)
+      .mapAsync(1)(batch => withRenewedLock(Future.successful(batch))) // Renew the lock every 100 movements
+      .collect { case Some(batch) => batch }
+      .flatMapConcat(Source.apply) // Flatten the batch back into the stream
       .mapAsyncUnordered(processorCount) { movement =>
         transformLogRepository.findLog(movement).map {
           case true  => None
@@ -144,7 +146,7 @@ class TransformJob @Inject() (
   }
 
   shouldRun().map {
-    case true  => withLock(execute())
+    case true  => withRenewedLock(execute())
     case false => logger.warn("All movements are already transformed")
   }
 
