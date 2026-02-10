@@ -237,9 +237,7 @@ class TransformService @Inject() (appConfig: AppConfig)(implicit ec: ExecutionCo
             def removeExportDeclaration(n: scala.xml.Node): NodeSeq = {
               //get export save it append it to
               val res = n match {
-                case t: scala.xml.Text if t.text.trim.isEmpty                                              => NodeSeq.Empty
-                case e: scala.xml.Elem if e.label == "ExportDeclarationAcceptanceOrGoodsReleasedForExport" =>
-                  NodeSeq.Empty
+                case e: scala.xml.Elem if e.label == "ExportDeclarationAcceptanceOrGoodsReleasedForExport" => NodeSeq.Empty
                 case e: scala.xml.Elem                                                                     => e.copy(child = e.child.flatMap(removeExportDeclaration))
                 case other                                                                                 => other
               }
