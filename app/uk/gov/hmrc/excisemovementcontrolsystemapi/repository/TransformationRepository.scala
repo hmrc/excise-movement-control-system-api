@@ -49,7 +49,7 @@ class TransformationRepository @Inject() (
       collectionName = "movements_v2",
       mongoComponent = mongo,
       domainFormat = Movement.format,
-      indexes = mongoIndexes(appConfig.movementTTL),
+      indexes = mongoIndexes(appConfig.movementV2TTL),
       extraCodecs = Seq(
         Codecs.playFormatCodec(ErnAndLastReceived.format),
         Codecs.playFormatCodec(MessageNotification.format)
@@ -116,7 +116,6 @@ class TransformationRepository @Inject() (
             ReplaceOptions().upsert(true)
           )
         }
-
       }
       .toFuture()
       .map(_ => true)
