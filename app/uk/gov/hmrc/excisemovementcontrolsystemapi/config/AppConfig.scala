@@ -40,6 +40,10 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
     .getOptional[String]("mongodb.movement.TTL")
     .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
 
+  lazy val movementV2TTL: Duration = config
+    .getOptional[String]("mongodb.movementV2.TTL")
+    .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
+
   lazy val transformLogTTL: Duration = config
     .getOptional[String]("mongodb.transformLog.TTL")
     .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
