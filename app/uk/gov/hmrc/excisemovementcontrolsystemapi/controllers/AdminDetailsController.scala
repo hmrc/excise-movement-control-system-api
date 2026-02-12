@@ -32,8 +32,7 @@ class AdminDetailsController @Inject() (
   cc: ControllerComponents,
   auth: BackendAuthComponents,
   movementRepository: MovementRepository,
-  transformLogRepository: TransformLogRepository,
-  transformationRepository: TransformationRepository
+  transformLogRepository: TransformLogRepository
 )(implicit
   ec: ExecutionContext
 ) extends BackendController(cc) {
