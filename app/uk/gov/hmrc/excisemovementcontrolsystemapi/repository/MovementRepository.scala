@@ -49,7 +49,7 @@ class MovementRepository @Inject() (
   configuration: Configuration
 )(implicit ec: ExecutionContext)
     extends PlayMongoRepository[Movement](
-      collectionName = appConfig.movementCollectionName,
+      collectionName = "movements_v2",
       mongoComponent = mongo,
       domainFormat = Movement.format,
       indexes = mongoIndexes(appConfig.movementTTL),

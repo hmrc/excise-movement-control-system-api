@@ -16,19 +16,67 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.factories
 
-import generated.v1
-import generated.v2
+import generated.MessagesOption
+import play.api.Logging
 import scalaxb.DataRecord
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
 
 import scala.xml.NodeSeq
 
-trait IEMessageFactory {
-  type MessageOption = Either[DataRecord[v1.MessagesOption], DataRecord[v2.MessagesOption]]
+case class IEMessageFactory() extends Logging {
+  def createIEMessage(message: DataRecord[MessagesOption]): IEMessage = {
+    val messageType = message.key.getOrElse {
+      logger.warn(s"[IEMessageFactory] - Could not create Message object. Message type is empty")
+      throw new IEMessageFactoryException("Could not create Message object. Message type is empty")
+    }
 
-  def createIEMessage(message: MessageOption): IEMessage
+    MessageTypes.withValueOpt(messageType) match {
+      case Some(MessageTypes.IE704) => IE704Message(message)
+      case Some(MessageTypes.IE801) => IE801Message(message)
+      case Some(MessageTypes.IE802) => IE802Message(message)
+      case Some(MessageTypes.IE803) => IE803Message(message)
+      case Some(MessageTypes.IE807) => IE807Message(message)
+      case Some(MessageTypes.IE810) => IE810Message(message)
+      case Some(MessageTypes.IE813) => IE813Message(message)
+      case Some(MessageTypes.IE818) => IE818Message(message)
+      case Some(MessageTypes.IE819) => IE819Message(message)
+      case Some(MessageTypes.IE829) => IE829Message(message)
+      case Some(MessageTypes.IE837) => IE837Message(message)
+      case Some(MessageTypes.IE839) => IE839Message(message)
+      case Some(MessageTypes.IE840) => IE840Message(message)
+      case Some(MessageTypes.IE871) => IE871Message(message)
+      case Some(MessageTypes.IE881) => IE881Message(message)
+      case Some(MessageTypes.IE905) => IE905Message(message)
+      case _                        =>
+        logger.warn(s"[IEMessageFactory] - Could not create Message object. Unsupported message: $messageType")
+        throw new IEMessageFactoryException(s"Could not create Message object. Unsupported message: $messageType")
+    }
+  }
 
-  def createFromXml(messageType: String, xml: NodeSeq): IEMessage
+  def createFromXml(messageType: String, xml: NodeSeq): IEMessage =
+    MessageTypes.withValueOpt(messageType) match {
+      case Some(MessageTypes.IE704) => IE704Message.createFromXml(xml)
+      case Some(MessageTypes.IE801) => IE801Message.createFromXml(xml)
+      case Some(MessageTypes.IE802) => IE802Message.createFromXml(xml)
+      case Some(MessageTypes.IE803) => IE803Message.createFromXml(xml)
+      case Some(MessageTypes.IE807) => IE807Message.createFromXml(xml)
+      case Some(MessageTypes.IE810) => IE810Message.createFromXml(xml)
+      case Some(MessageTypes.IE813) => IE813Message.createFromXml(xml)
+      case Some(MessageTypes.IE815) => IE815Message.createFromXml(xml)
+      case Some(MessageTypes.IE818) => IE818Message.createFromXml(xml)
+      case Some(MessageTypes.IE819) => IE819Message.createFromXml(xml)
+      case Some(MessageTypes.IE829) => IE829Message.createFromXml(xml)
+      case Some(MessageTypes.IE837) => IE837Message.createFromXml(xml)
+      case Some(MessageTypes.IE839) => IE839Message.createFromXml(xml)
+      case Some(MessageTypes.IE840) => IE840Message.createFromXml(xml)
+      case Some(MessageTypes.IE871) => IE871Message.createFromXml(xml)
+      case Some(MessageTypes.IE881) => IE881Message.createFromXml(xml)
+      case Some(MessageTypes.IE905) => IE905Message.createFromXml(xml)
+      case _                        =>
+        logger.warn(s"[IEMessageFactory] - Could not create Message object. Unsupported message: $messageType")
+        throw new IEMessageFactoryException(s"Could not create Message object. Unsupported message: $messageType")
+    }
 }
 
 class IEMessageFactoryException(message: String) extends RuntimeException(message)

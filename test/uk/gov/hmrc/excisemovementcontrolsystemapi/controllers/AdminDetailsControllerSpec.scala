@@ -29,8 +29,8 @@ import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MovementRepository, TransformLogRepository}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement, TransformLog}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement}
 import uk.gov.hmrc.internalauth.client._
 import uk.gov.hmrc.internalauth.client.test.{BackendAuthComponentsStub, StubBehaviour}
 
@@ -39,9 +39,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class AdminDetailsControllerSpec extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterEach {
 
-  private val mockStubBehaviour          = mock[StubBehaviour]
-  private val mockMovementRepository     = mock[MovementRepository]
-  private val mockTransformLogRepository = mock[TransformLogRepository]
+  private val mockStubBehaviour      = mock[StubBehaviour]
+  private val mockMovementRepository = mock[MovementRepository]
 
   val backendAuthComponentsStub: BackendAuthComponents =
     BackendAuthComponentsStub(mockStubBehaviour)(Helpers.stubControllerComponents(), ExecutionContext.global)
@@ -50,8 +49,7 @@ class AdminDetailsControllerSpec extends PlaySpec with GuiceOneAppPerSuite with 
     new GuiceApplicationBuilder()
       .overrides(
         bind[BackendAuthComponents].toInstance(backendAuthComponentsStub),
-        bind[MovementRepository].toInstance(mockMovementRepository),
-        bind[TransformLogRepository].toInstance(mockTransformLogRepository)
+        bind[MovementRepository].toInstance(mockMovementRepository)
       )
       .build()
 
@@ -114,57 +112,6 @@ class AdminDetailsControllerSpec extends PlaySpec with GuiceOneAppPerSuite with 
       val result: Future[Result] = route(app, fakeRequest).value
 
       contentAsString(result) mustBe s"No Movement Found with id: testId"
-      status(result) mustBe NOT_FOUND
-    }
-  }
-
-  "getTransformLogDetails" must {
-    "return OK with a json payload of transform log details as expected for an existing id" in {
-      val testErn   = "apples"
-      val timestamp = Instant.now()
-
-      val transformLog = TransformLog(
-        "testId",
-        isTransformSuccess = true,
-        Nil,
-        timestamp,
-        timestamp,
-        2
-      )
-
-      when(mockStubBehaviour.stubAuth(Some(expectedPredicate), Retrieval.EmptyRetrieval))
-        .thenReturn(Future.successful(()))
-
-      when(mockTransformLogRepository.findLog(any[String]))
-        .thenReturn(Future.successful(Some(transformLog)))
-
-      val expectedResult = transformLog
-
-      val fakeRequest            =
-        FakeRequest(routes.AdminDetailsController.getTransformLogDetails("testId"))
-          .withHeaders("Authorization" -> "Token some-token")
-
-      val result: Future[Result] = route(app, fakeRequest).value
-
-      contentAsJson(result) mustBe Json.toJson(expectedResult)
-      status(result) mustBe OK
-    }
-
-    "return NotFound transform log for the movementntId" in {
-
-      when(mockStubBehaviour.stubAuth(Some(expectedPredicate), Retrieval.EmptyRetrieval))
-        .thenReturn(Future.successful(()))
-
-      when(mockTransformLogRepository.findLog(any[String]))
-        .thenReturn(Future.successful(None))
-
-      val fakeRequest            =
-        FakeRequest(routes.AdminDetailsController.getTransformLogDetails("testId"))
-          .withHeaders("Authorization" -> "Token some-token")
-
-      val result: Future[Result] = route(app, fakeRequest).value
-
-      contentAsString(result) mustBe s"No Transform Log Found with id: testId"
       status(result) mustBe NOT_FOUND
     }
   }
