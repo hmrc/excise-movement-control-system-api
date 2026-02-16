@@ -128,7 +128,7 @@ class TransformJob @Inject() (
       })
       .map { _ =>
         movementsCount.foreach { count =>
-          if (transformedCount.incrementAndGet() % 1000 == 0)
+          if (transformedCount.incrementAndGet() % 5 == 0)
             logger.warn(
               s"Progress: ${transformedCount.get()}/$count : ${((transformedCount.get().toDouble / count) * 100).round}%"
             )
@@ -141,10 +141,7 @@ class TransformJob @Inject() (
     done
   }
 
-  shouldRun().map {
-    case true  => withLock(execute())
-    case false => logger.warn("All movements are already transformed")
-  }
+  withLock(execute())
 
   //atomic adder
   private def transformAndLog(
@@ -167,16 +164,4 @@ class TransformJob @Inject() (
     } else {
       Future.successful(Some(updatedMovement))
     }
-
-  private def shouldRun(): Future[Boolean] = {
-    val movementsCount    = movementRepository.collection.countDocuments().toFuture()
-    val transformLogCount = transformLogRepository.collection.countDocuments().toFuture()
-
-    for {
-      movementCount <- movementsCount
-      logCount      <- transformLogCount
-
-    } yield movementCount > logCount
-  }
-
 }

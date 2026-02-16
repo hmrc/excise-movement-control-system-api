@@ -17,13 +17,15 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import org.mongodb.scala.model._
+
 import org.mongodb.scala.model.Filters.equal
 import play.api.Configuration
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.TransformLogRepository.mongoIndexes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Movement, TransformLog}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, Mdc}
+
 import org.mongodb.scala.model.Filters._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
+
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
@@ -36,15 +38,14 @@ import scala.concurrent.{ExecutionContext, Future}
 class TransformLogRepository @Inject() (
   mongo: MongoComponent,
   configuration: Configuration,
-  timeService: DateTimeService,
-  appConfig: AppConfig
+  timeService: DateTimeService
 )(implicit
   ec: ExecutionContext
 ) extends PlayMongoRepository[TransformLog](
       collectionName = "transform_log",
       mongoComponent = mongo,
       domainFormat = TransformLog.format,
-      indexes = mongoIndexes(appConfig.transformLogTTL),
+      indexes = mongoIndexes(configuration.get[Duration]("mongodb.movement.TTL")),
       replaceIndexes = true
     ) {
 
@@ -83,17 +84,6 @@ class TransformLogRepository @Inject() (
       }
 
   }
-
-  def findLog(movement: String): Future[Option[TransformLog]] = Mdc.preservingMdc {
-    val filter = equal("_id", movement)
-
-    collection
-      .find(filter)
-      .first()
-      .toFutureOption()
-
-  }
-
 }
 
 object TransformLogRepository {
