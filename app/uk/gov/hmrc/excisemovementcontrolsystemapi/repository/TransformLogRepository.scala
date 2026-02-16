@@ -58,28 +58,13 @@ class TransformLogRepository @Inject() (
       .map(_ => true)
   }
 
-  def saveLog(transformLog: TransformLog): Future[Boolean]        = Mdc.preservingMdc {
+  def saveLog(transformLog: TransformLog): Future[Boolean] = Mdc.preservingMdc {
     collection
       .replaceOne(
         Filters.eq("_id", transformLog._id),
         transformLog,
         ReplaceOptions().upsert(true)
       )
-      .toFuture()
-      .map(_ => true)
-  }
-  def saveLogs(transformLogs: Seq[TransformLog]): Future[Boolean] = Mdc.preservingMdc {
-
-    collection
-      .bulkWrite {
-        transformLogs.map { log =>
-          ReplaceOneModel(
-            Filters.eq("_id", log._id),
-            log,
-            ReplaceOptions().upsert(true)
-          )
-        }
-      }
       .toFuture()
       .map(_ => true)
   }

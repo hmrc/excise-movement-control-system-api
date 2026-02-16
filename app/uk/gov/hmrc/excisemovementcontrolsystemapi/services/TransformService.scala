@@ -26,7 +26,7 @@ import org.xml.sax.{ErrorHandler, SAXParseException}
 import java.io.StringReader
 import javax.xml.XMLConstants
 import javax.xml.transform.stream.StreamSource
-import javax.xml.validation.{Schema, SchemaFactory}
+import javax.xml.validation.SchemaFactory
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 import cats.implicits._
@@ -35,7 +35,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 
 import java.util.Base64
 import java.nio.charset.StandardCharsets
-import java.util.concurrent.ConcurrentHashMap
 import scala.xml.{Elem, NodeSeq}
 
 @Singleton
@@ -59,7 +58,7 @@ class TransformService @Inject() (appConfig: AppConfig)(implicit ec: ExecutionCo
     "IE905" -> "/v1/ie905.xsd"
   )
 
-  val xsdPathsV2 = Map(
+  val xsdPathsV2                                                                                               = Map(
     "IE704" -> "/v2/ie704uk.xsd",
     "IE801" -> "/v2/ie801.xsd",
     "IE802" -> "/v2/ie802.xsd",
@@ -78,16 +77,13 @@ class TransformService @Inject() (appConfig: AppConfig)(implicit ec: ExecutionCo
     "IE905" -> "/v2/ie905.xsd"
   )
 
-  private val schemaMapV1 = new ConcurrentHashMap[String, Schema]()
-  private val schemaMapV2 = new ConcurrentHashMap[String, Schema]()
-
   def transform(
     messageType: String,
     base64EncodedMessage: String
   ): Future[Either[TransformationError, String]] = {
     val result = for {
       decodedMessage        <- decodeBase64(base64EncodedMessage)
-      _                     <- if (appConfig.runV1Validation) validateSchema(messageType, decodedMessage, isOldSchema = true)
+      _                     <- if (appConfig.runV1Validation) validateSchema(messageType, decodedMessage, xsdPathsV1, isOldSchema = true)
                                else EitherT.pure[Future, TransformationError](())
       updatedXML            <- rewriteNamespace(decodedMessage)
       messageWithIE801Check <- if (messageType == "IE801") convertImportSadToCustomDeclarationHelper(updatedXML)
@@ -96,7 +92,7 @@ class TransformService @Inject() (appConfig: AppConfig)(implicit ec: ExecutionCo
                                  exportDeclarationTransformation(scala.xml.XML.loadString(messageWithIE801Check))
                                else EitherT.fromEither[Future](Right(messageWithIE801Check))
       _                     <- validateFormat(messageType, messageWithIE829Check)
-      _                     <- validateSchema(messageType, messageWithIE829Check, isOldSchema = false)
+      _                     <- validateSchema(messageType, messageWithIE829Check, xsdPathsV2, isOldSchema = false)
     } yield messageWithIE829Check
 
     result.value.map {
@@ -134,15 +130,19 @@ class TransformService @Inject() (appConfig: AppConfig)(implicit ec: ExecutionCo
   private def validateSchema(
     messageType: String,
     message: String,
+    xsdPaths: Map[String, String],
     isOldSchema: Boolean
   ): EitherT[Future, TransformationError, Unit] = {
     var exceptions = List[String]()
     EitherT {
       Future {
-        val schema =
-          if (isOldSchema) fetchSchema(schemaMapV1, xsdPathsV1, messageType)
-          else
-            fetchSchema(schemaMapV2, xsdPathsV2, messageType)
+
+        val schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
+        val url           = getClass.getResource(xsdPaths(messageType))
+
+        val src    = new StreamSource(url.openStream())
+        src.setSystemId(url.toExternalForm)
+        val schema = schemaFactory.newSchema(src)
 
         val validator = schema.newValidator()
         validator.setErrorHandler(new ErrorHandler() {
@@ -172,22 +172,6 @@ class TransformService @Inject() (appConfig: AppConfig)(implicit ec: ExecutionCo
     }
   }
 
-  private def fetchSchema(
-    schemaMap: ConcurrentHashMap[String, Schema],
-    xsdPaths: Map[String, String],
-    messageType: String
-  ) =
-    schemaMap.computeIfAbsent(
-      messageType,
-      messageType => {
-        val schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
-        val url           = getClass.getResource(xsdPaths(messageType))
-        val src           = new StreamSource(url.openStream())
-        src.setSystemId(url.toExternalForm)
-        schemaFactory.newSchema(src)
-      }
-    )
-
   private def decodeBase64(base64EncodedMessage: String): EitherT[Future, TransformationError, String] =
     EitherT.fromEither {
       try Right(new String(Base64.getDecoder.decode(base64EncodedMessage), "UTF-8"))
@@ -196,11 +180,39 @@ class TransformService @Inject() (appConfig: AppConfig)(implicit ec: ExecutionCo
       }
     }
 
+  //todo use a more directed regex
   private def rewriteNamespace(decodedMessage: String): EitherT[Future, TransformationError, String] =
     EitherT.fromEither[Future] {
       try {
-        val namespaceRegex = "\"(urn:publicid:-:EC:DGTAXUD:EMCS:[^\"]+?):V3\\.13\"".r
-        Right(namespaceRegex.replaceAllIn(decodedMessage, "\"$1:V3.23\""))
+        //  val regex = """"(urn:publicid:-:EC:DGTAXUD:EMCS:[^"]+?):V3\.13""""
+
+        val updateNamespace = (str: String) =>
+          if (str != null && str.nonEmpty && str.startsWith("urn:") && str.endsWith("V3.13")) str.dropRight(5) + "V3.23"
+          else str
+        val namespaceRegex  =
+          """xmlns(?:\s*:\s*([A-Za-z0-9_.-]+))?\s*=\s*"([^"]+)"""".r
+
+        val tagRegex = """<\s*[^/!?][^>]*>""".r
+
+        Right(
+          tagRegex.replaceAllIn(
+            decodedMessage,
+            { elements =>
+              val updatedTag = namespaceRegex.replaceAllIn(
+                elements.matched,
+                namespace =>
+                  // val ns = Option(namespace.group(2))
+                  namespace.matched.replace(namespace.group(2), updateNamespace(namespace.group(2)))
+                // updateNamespace(namespace.group(2))
+                // namespace.matched
+              )
+
+              updatedTag
+
+            }
+          )
+        )
+
       } catch {
         case e: Exception => Left(RewriteNamespaceError(e.toString))
       }
@@ -249,6 +261,7 @@ class TransformService @Inject() (appConfig: AppConfig)(implicit ec: ExecutionCo
             def removeExportDeclaration(n: scala.xml.Node): NodeSeq = {
               //get export save it append it to
               val res = n match {
+                case t: scala.xml.Text if t.text.trim.isEmpty                                              => NodeSeq.Empty
                 case e: scala.xml.Elem if e.label == "ExportDeclarationAcceptanceOrGoodsReleasedForExport" =>
                   NodeSeq.Empty
                 case e: scala.xml.Elem                                                                     => e.copy(child = e.child.flatMap(removeExportDeclaration))

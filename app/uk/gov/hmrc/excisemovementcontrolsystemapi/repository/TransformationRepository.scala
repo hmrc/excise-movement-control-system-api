@@ -106,23 +106,6 @@ class TransformationRepository @Inject() (
 
   }
 
-  def updateMovements(movements: Seq[Movement]): Future[Boolean] = Mdc.preservingMdc {
-    collection
-      .bulkWrite {
-        movements.map { movement =>
-          ReplaceOneModel(
-            Filters.eq("_id", movement._id),
-            movement,
-            ReplaceOptions().upsert(true)
-          )
-        }
-
-      }
-      .toFuture()
-      .map(_ => true)
-
-  }
-
   def getMovementById(id: String): Future[Option[Movement]] = Mdc.preservingMdc {
     collection.find(byId(id)).headOption()
   }
