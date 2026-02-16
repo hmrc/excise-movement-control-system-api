@@ -31,8 +31,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.{MessageConnector, 
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.{MessageParams, XmlMessageGeneratorFactory}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptSuccessResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes.{IE704, IE801, IE818}
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.GetMessagesResponse
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1.{IE704MessageV1, IE801MessageV1, IE818MessageV1}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IE704Message, IE801Message, IE818Message}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Message, Movement, MovementIdGenerator}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{ErnRetrievalRepository, MovementRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.{DateTimeService, EmcsUtils}
@@ -108,7 +107,7 @@ class MessageServiceItSpec
 
       val ie704    =
         XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some(lrn)))
-      val messages = Seq(IE704MessageV1.createFromXml(ie704))
+      val messages = Seq(IE704Message.createFromXml(ie704))
 
       val expectedMovement = Movement(
         newId,
@@ -157,7 +156,7 @@ class MessageServiceItSpec
 
       val ie704    =
         XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some(lrn)))
-      val messages = Seq(IE704MessageV1.createFromXml(ie704))
+      val messages = Seq(IE704Message.createFromXml(ie704))
 
       val promise = Promise[Done]()
 
@@ -187,7 +186,7 @@ class MessageServiceItSpec
 
       val ie704    =
         XmlMessageGeneratorFactory.generate(ern, MessageParams(IE704, "XI000001", localReferenceNumber = Some(lrn)))
-      val messages = Seq(IE704MessageV1.createFromXml(ie704))
+      val messages = Seq(IE704Message.createFromXml(ie704))
 
       val timeout = app.configuration.get[Duration]("microservice.services.eis.throttle-cutoff")
 
@@ -234,7 +233,7 @@ class MessageServiceItSpec
           administrativeReferenceCode = Some(arc)
         )
       )
-      val messages = Seq(IE801MessageV1.createFromXml(ie801), IE818MessageV1.createFromXml(ie818))
+      val messages = Seq(IE801Message.createFromXml(ie801), IE818Message.createFromXml(ie818))
 
       val initialMovement = Movement(
         None,
@@ -293,7 +292,7 @@ class MessageServiceItSpec
           administrativeReferenceCode = Some(arc)
         )
       )
-      val messages = Seq(IE801MessageV1.createFromXml(ie801))
+      val messages = Seq(IE801Message.createFromXml(ie801))
 
       val initialMovement = Movement(
         None,

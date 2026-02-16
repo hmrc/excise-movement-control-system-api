@@ -16,34 +16,33 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.writes
 
-import generated.v1.{IE704Type, IE801Type, IE802Type, IE803Type, IE807Type, IE810Type, IE813Type, IE815Type, IE818Type, IE819Type, IE829Type, IE837Type, IE839Type, IE840Type, IE871Type, IE881Type, IE905Type, XMLProtocol}
+import generated.{IE704Type, IE801Type, IE802Type, IE803Type, IE807Type, IE810Type, IE813Type, IE815Type, IE818Type, IE819Type, IE829Type, IE837Type, IE839Type, IE840Type, IE871Type, IE881Type, IE905Type, XMLProtocol}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.MessageTypeFormats.GeneratedJsonWriters
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1.MessageTypeFormats.GeneratedJsonWritersV1
 import uk.gov.hmrc.excisemovementcontrolsystemapi.writes.testObjects._
 
-class GeneratedJsonWritersSpec extends AnyFreeSpec with GeneratedJsonWritersV1 with Matchers with TestXml {
+class GeneratedJsonWritersSpec extends AnyFreeSpec with GeneratedJsonWriters with Matchers with TestXml {
 
-  "IE704MessageV1" - new TestType[IE704Type](IE704TestMessageType, IE704MessageV1.createFromXml(IE704))
-  "IE801MessageV1" - new TestType[IE801Type](IE801TestMessageType, IE801MessageV1.createFromXml(IE801))
-  "IE802MessageV1" - new TestType[IE802Type](IE802TestMessageType, IE802MessageV1.createFromXml(IE802))
-  "IE803MessageV1" - new TestType[IE803Type](IE803TestMessageType, IE803MessageV1.createFromXml(IE803))
-  "IE807MessageV1" - new TestType[IE807Type](IE807TestMessageType, IE807MessageV1.createFromXml(IE807))
-  "IE810MessageV1" - new TestType[IE810Type](IE810TestMessageType, IE810MessageV1.createFromXml(IE810))
-  "IE813MessageV1" - new TestType[IE813Type](IE813TestMessageType, IE813MessageV1.createFromXml(IE813))
-  "IE815MessageV1" - new TestType[IE815Type](IE815TestMessageType, IE815MessageV1.createFromXml(IE815))
-  "IE818MessageV1" - new TestType[IE818Type](IE818TestMessageType, IE818MessageV1.createFromXml(IE818))
-  "IE819MessageV1" - new TestType[IE819Type](IE819TestMessageType, IE819MessageV1.createFromXml(IE819))
-  "IE829MessageV1" - new TestType[IE829Type](IE829TestMessageType, IE829MessageV1.createFromXml(IE829))
-  "IE837MessageV1" - new TestType[IE837Type](IE837TestMessageType, IE837MessageV1.createFromXml(IE837WithConsignor))
-  "IE839MessageV1" - new TestType[IE839Type](IE839TestMessageType, IE839MessageV1.createFromXml(IE839))
-  "IE840MessageV1" - new TestType[IE840Type](IE840TestMessageType, IE840MessageV1.createFromXml(IE840))
-  "IE871MessageV1" - new TestType[IE871Type](IE871TestMessageType, IE871MessageV1.createFromXml(IE871WithConsignor))
-  "IE881MessageV1" - new TestType[IE881Type](IE881TestMessageType, IE881MessageV1.createFromXml(IE881))
-  "IE905MessageV1" - new TestType[IE905Type](IE905TestMessageType, IE905MessageV1.createFromXml(IE905))
+  "IE704Message" - new TestType[IE704Type](IE704TestMessageType, IE704Message.createFromXml(IE704))
+  "IE801Message" - new TestType[IE801Type](IE801TestMessageType, IE801Message.createFromXml(IE801))
+  "IE802Message" - new TestType[IE802Type](IE802TestMessageType, IE802Message.createFromXml(IE802))
+  "IE803Message" - new TestType[IE803Type](IE803TestMessageType, IE803Message.createFromXml(IE803))
+  "IE807Message" - new TestType[IE807Type](IE807TestMessageType, IE807Message.createFromXml(IE807))
+  "IE810Message" - new TestType[IE810Type](IE810TestMessageType, IE810Message.createFromXml(IE810))
+  "IE813Message" - new TestType[IE813Type](IE813TestMessageType, IE813Message.createFromXml(IE813))
+  "IE815Message" - new TestType[IE815Type](IE815TestMessageType, IE815Message.createFromXml(IE815))
+  "IE818Message" - new TestType[IE818Type](IE818TestMessageType, IE818Message.createFromXml(IE818))
+  "IE819Message" - new TestType[IE819Type](IE819TestMessageType, IE819Message.createFromXml(IE819))
+  "IE829Message" - new TestType[IE829Type](IE829TestMessageType, IE829Message.createFromXml(IE829))
+  "IE837Message" - new TestType[IE837Type](IE837TestMessageType, IE837Message.createFromXml(IE837WithConsignor))
+  "IE839Message" - new TestType[IE839Type](IE839TestMessageType, IE839Message.createFromXml(IE839))
+  "IE840Message" - new TestType[IE840Type](IE840TestMessageType, IE840Message.createFromXml(IE840))
+  "IE871Message" - new TestType[IE871Type](IE871TestMessageType, IE871Message.createFromXml(IE871WithConsignor))
+  "IE881Message" - new TestType[IE881Type](IE881TestMessageType, IE881Message.createFromXml(IE881))
+  "IE905Message" - new TestType[IE905Type](IE905TestMessageType, IE905Message.createFromXml(IE905))
 
   case class TestType[T](testObject: TestMessageType, message: IEMessage) extends XMLProtocol {
 

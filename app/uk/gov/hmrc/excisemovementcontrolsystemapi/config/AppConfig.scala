@@ -51,8 +51,8 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
     .map(JavaDuration.ofMinutes)
     .getOrElse(JavaDuration.ofMinutes(10))
 
-  lazy val pushNotificationsEnabled: Boolean  = servicesConfig.getBoolean("featureFlags.pushNotificationsEnabled")
-  lazy val latestSpec: Boolean                = servicesConfig.getBoolean("featureFlags.latestFunctionalSpecEnabled")
+  lazy val pushNotificationsEnabled: Boolean = servicesConfig.getBoolean("featureFlags.pushNotificationsEnabled")
+
   lazy val newAuditingEnabled: Boolean        = config.getOptional[Boolean]("featureFlags.newAuditingEnabled").getOrElse(false)
   lazy val oldAuditingEnabled: Boolean        = config.getOptional[Boolean]("featureFlags.oldAuditingEnabled").getOrElse(false)
   lazy val processingAuditingEnabled: Boolean =
