@@ -49,7 +49,7 @@ class MovementRepository @Inject() (
   configuration: Configuration
 )(implicit ec: ExecutionContext)
     extends PlayMongoRepository[Movement](
-      collectionName = "movements",
+      collectionName = "movements_v2",
       mongoComponent = mongo,
       domainFormat = Movement.format,
       indexes = mongoIndexes(appConfig.movementTTL),
@@ -235,7 +235,7 @@ class MovementRepository @Inject() (
     administrativeReferenceCodes: Seq[String]
   ): Future[Seq[Movement]] = Mdc.preservingMdc {
     val protectFilter: Future[MovementFilterThresholds.Threshold] =
-      if(appConfig.protectionFilterEnabled){
+      if (appConfig.protectionFilterEnabled) {
         protectionFilter(ern)
       } else {
         Future.successful(MovementFilterThresholds.Filtered)
