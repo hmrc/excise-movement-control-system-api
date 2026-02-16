@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MovementRepository, TransformLogRepository, TransformationRepository}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MovementRepository, TransformLogRepository}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
 import uk.gov.hmrc.internalauth.client._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -32,8 +32,7 @@ class AdminDetailsController @Inject() (
   cc: ControllerComponents,
   auth: BackendAuthComponents,
   movementRepository: MovementRepository,
-  transformLogRepository: TransformLogRepository,
-  transformationRepository: TransformationRepository
+  transformLogRepository: TransformLogRepository
 )(implicit
   ec: ExecutionContext
 ) extends BackendController(cc) {
