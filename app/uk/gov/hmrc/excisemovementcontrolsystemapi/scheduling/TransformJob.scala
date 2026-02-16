@@ -109,7 +109,6 @@ class TransformJob @Inject() (
           }
 
       }
-      .filter(_.nonEmpty)
       .mapAsyncUnordered(processorCount) { movements =>
         transformationRepository
           .updateMovements(movements)
