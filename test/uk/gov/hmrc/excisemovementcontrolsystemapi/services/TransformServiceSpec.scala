@@ -44,7 +44,7 @@ class TransformServiceSpec extends PlaySpec with EitherValues with BeforeAndAfte
 
   private val appConfig = mock[AppConfig]
   private val timestamp = Instant.parse("2024-10-01T12:32:32.12345678Z")
-  private val sut       = new TransformService(appConfig)
+  private val sut       = new TransformService()
 
   "transformation" should {
 

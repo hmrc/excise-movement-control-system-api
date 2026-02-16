@@ -56,16 +56,16 @@ class TransformJob @Inject() (
   def execute(): Future[ScheduledJob.Result] = {
     val movementsCount   = movementRepository.collection.countDocuments().toFuture()
     val transformedCount = new AtomicInteger(0)
-    val processorCount   = Runtime.getRuntime.availableProcessors()
-    val done             = Source
-      .fromPublisher(movementRepository.collection.find().batchSize(100))
-      .mapAsyncUnordered(processorCount) { movement =>
+
+    val done = Source
+      .fromPublisher(movementRepository.collection.find().batchSize(10))
+      .mapAsync(1) { movement =>
         transformLogRepository.findLog(movement).map {
           case true  => None
           case false => Some(movement)
         }
       }
-      .mapAsyncUnordered(processorCount) { mov =>
+      .mapAsync(1) { mov =>
         mov
           .map { movement =>
             val transformResult =
@@ -96,7 +96,7 @@ class TransformJob @Inject() (
           }
           .getOrElse(Future.successful(None))
       }
-      .mapAsyncUnordered(processorCount) { movement =>
+      .mapAsync(1) { movement =>
         movement
           .map { m =>
             transformationRepository
