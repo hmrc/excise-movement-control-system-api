@@ -38,26 +38,7 @@ import scala.xml.{Elem, NodeSeq}
 
 @Singleton
 class TransformService @Inject() (implicit ec: ExecutionContext) {
-  val xsdPathsV1 = Map(
-    "IE704" -> "/v1/ie704uk.xsd",
-    "IE801" -> "/v1/ie801.xsd",
-    "IE802" -> "/v1/ie802.xsd",
-    "IE803" -> "/v1/ie803.xsd",
-    "IE807" -> "/v1/ie807.xsd",
-    "IE810" -> "/v1/ie810.xsd",
-    "IE813" -> "/v1/ie813.xsd",
-    "IE818" -> "/v1/ie818.xsd",
-    "IE819" -> "/v1/ie819.xsd",
-    "IE829" -> "/v1/ie829.xsd",
-    "IE837" -> "/v1/ie837.xsd",
-    "IE839" -> "/v1/ie839.xsd",
-    "IE840" -> "/v1/ie840.xsd",
-    "IE871" -> "/v1/ie871.xsd",
-    "IE881" -> "/v1/ie881.xsd",
-    "IE905" -> "/v1/ie905.xsd"
-  )
-
-  val xsdPathsV2                                                                                               = Map(
+  val xsdPaths                                                                                                 = Map(
     "IE704" -> "/v2/ie704uk.xsd",
     "IE801" -> "/v2/ie801.xsd",
     "IE802" -> "/v2/ie802.xsd",
@@ -81,16 +62,14 @@ class TransformService @Inject() (implicit ec: ExecutionContext) {
     base64EncodedMessage: String
   ): Future[Either[TransformationError, String]] = {
     val result = for {
-      decodedMessage        <- decodeBase64(base64EncodedMessage)
-      _                     <- validateSchema(messageType, decodedMessage, xsdPathsV1, isOldSchema = true)
-      updatedXML            <- rewriteNamespace(decodedMessage)
-      messageWithIE801Check <- if (messageType == "IE801") convertImportSadToCustomDeclarationHelper(updatedXML)
+      updatedXML            <- rewriteNamespace(base64EncodedMessage)
+      messageWithIE801Check <- if (messageType == "IE815") convertImportSadToCustomDeclarationHelper(updatedXML)
                                else EitherT.fromEither[Future](Right(updatedXML))
       messageWithIE829Check <- if (messageType == "IE829")
                                  exportDeclarationTransformation(scala.xml.XML.loadString(messageWithIE801Check))
                                else EitherT.fromEither[Future](Right(messageWithIE801Check))
       _                     <- validateFormat(messageType, messageWithIE829Check)
-      _                     <- validateSchema(messageType, messageWithIE829Check, xsdPathsV2, isOldSchema = false)
+      _                     <- validateSchema(messageType, messageWithIE829Check)
     } yield messageWithIE829Check
 
     result.value.map {
@@ -125,12 +104,7 @@ class TransformService @Inject() (implicit ec: ExecutionContext) {
 
     }
 
-  private def validateSchema(
-    messageType: String,
-    message: String,
-    xsdPaths: Map[String, String],
-    isOldSchema: Boolean
-  ): EitherT[Future, TransformationError, Unit] = {
+  private def validateSchema(messageType: String, message: String): EitherT[Future, TransformationError, Unit] = {
     var exceptions = List[String]()
     EitherT {
       Future {
@@ -159,11 +133,8 @@ class TransformService @Inject() (implicit ec: ExecutionContext) {
         validator.validate(new StreamSource(new StringReader(message)))
 
         if (exceptions.nonEmpty) {
-          if (isOldSchema)
-            Left(OldSchemaValidationError(exceptions = exceptions))
-          else {
-            Left(SchemaValidationError(exceptions = exceptions))
-          }
+
+          Left(SchemaValidationError(exceptions = exceptions))
 
         } else {
           Right(())
@@ -174,16 +145,8 @@ class TransformService @Inject() (implicit ec: ExecutionContext) {
     }
   }
 
-  private def decodeBase64(base64EncodedMessage: String): EitherT[Future, TransformationError, String] =
-    EitherT.fromEither {
-      try Right(new String(Base64.getDecoder.decode(base64EncodedMessage), "UTF-8"))
-      catch {
-        case NonFatal(e) => Left(Base64DecodingError(e.getMessage))
-      }
-    }
-
   //todo use a more directed regex
-  private def rewriteNamespace(decodedMessage: String): EitherT[Future, TransformationError, String] =
+  private def rewriteNamespace(bade64EncodedMessage: String): EitherT[Future, TransformationError, String] =
     EitherT.fromEither[Future] {
       try {
         //  val regex = """"(urn:publicid:-:EC:DGTAXUD:EMCS:[^"]+?):V3\.13""""
@@ -196,9 +159,10 @@ class TransformService @Inject() (implicit ec: ExecutionContext) {
 
         val tagRegex = """<\s*[^/!?][^>]*>""".r
 
+        val xmlStr = new String(Base64.getDecoder.decode(bade64EncodedMessage), "UTF-8")
         Right(
           tagRegex.replaceAllIn(
-            decodedMessage,
+            xmlStr,
             { elements =>
               val updatedTag = namespaceRegex.replaceAllIn(
                 elements.matched,
@@ -299,10 +263,8 @@ class TransformService @Inject() (implicit ec: ExecutionContext) {
 
 sealed trait TransformationError
 
-case class Base64DecodingError(error: String) extends TransformationError
 case class FormatValidationError(error: String) extends TransformationError
 case class SchemaValidationError(error: Option[String] = None, exceptions: List[String]) extends TransformationError
-case class OldSchemaValidationError(error: Option[String] = None, exceptions: List[String]) extends TransformationError
 case object MessageDoesNotExistError extends TransformationError
 
 case class RewriteNamespaceError(error: String) extends TransformationError
@@ -314,8 +276,6 @@ case object ExportDeclarationMultipleDifferentValuesError extends Transformation
 
 object TransformationError {
   implicit lazy val transformError: OFormat[TransformationError]                                              = Json.format
-  implicit lazy val base64DecodingError: OFormat[Base64DecodingError]                                         = Json.format
-  implicit lazy val oldSchemaValidationError: OFormat[OldSchemaValidationError]                               = Json.format
   implicit lazy val formatValidationError: OFormat[FormatValidationError]                                     = Json.format
   implicit lazy val schemaValidationError: OFormat[SchemaValidationError]                                     = Json.format
   implicit lazy val messageDoesNotExistError: OFormat[MessageDoesNotExistError.type]                          = Json.format
