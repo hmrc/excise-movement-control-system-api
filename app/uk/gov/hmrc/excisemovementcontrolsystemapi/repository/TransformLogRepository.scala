@@ -100,14 +100,10 @@ object TransformLogRepository {
   def mongoIndexes(ttl: Duration): Seq[IndexModel] =
     Seq(
       IndexModel(
-        Indexes.ascending("lastUpdatedMovement"),
+        Indexes.ascending("lastUpdated"),
         IndexOptions()
-          .name("lastUpdatedMovement_ttl_index")
+          .name("lastUpdated_ttl_index")
           .expireAfter(ttl.toSeconds, TimeUnit.SECONDS)
-      ),
-      IndexModel(
-        Indexes.ascending("lastUpdatedLog"),
-        IndexOptions().name("lastUpdatedLog_idx")
       )
     )
 }
