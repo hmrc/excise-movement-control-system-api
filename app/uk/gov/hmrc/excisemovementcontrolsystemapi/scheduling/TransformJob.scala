@@ -21,7 +21,6 @@ import play.api.Configuration
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.{MovementRepository, TransformLogRepository, TransformationRepository}
 import org.apache.pekko.stream.scaladsl._
 import org.apache.pekko.stream.{ActorAttributes, Materializer, Supervision}
-import org.mongodb.scala.model.Filters.{and, equal}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.{Movement, TransformLog}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{EnhancedTransformationError, TransformService}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
@@ -170,9 +169,8 @@ class TransformJob @Inject() (
     }
 
   private def shouldRun(): Future[Boolean] = {
-    val filter            = equal("isTransformSuccess", true)
     val movementsCount    = movementRepository.collection.countDocuments().toFuture()
-    val transformLogCount = transformLogRepository.collection.countDocuments(filter).toFuture()
+    val transformLogCount = transformLogRepository.collection.countDocuments().toFuture()
 
     for {
       movementCount <- movementsCount
