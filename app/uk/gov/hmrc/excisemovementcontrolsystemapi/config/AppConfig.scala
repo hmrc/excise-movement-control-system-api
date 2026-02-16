@@ -34,8 +34,6 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
 
   lazy val nrsApiKey: String = servicesConfig.getConfString("nrs.api-key", "dummyNrsApiKey")
 
-  lazy val movementCollectionName = config.getOptional[String]("mongodb.movement.collectionName").getOrElse("movements")
-
   lazy val movementTTL: Duration = config
     .getOptional[String]("mongodb.movement.TTL")
     .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
