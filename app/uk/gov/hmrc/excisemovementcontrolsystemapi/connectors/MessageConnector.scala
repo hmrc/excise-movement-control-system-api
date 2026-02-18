@@ -16,9 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
-import generated.v1
-import generated.v2
-
+import generated.NewMessagesDataResponse
 import play.api.http.Status.OK
 import play.api.libs.json.{Json, Reads}
 import play.api.{Configuration, Logging}
@@ -147,27 +145,12 @@ class MessageConnector @Inject() (
     response: EISConsumptionResponse
   )(implicit headerCarrier: HeaderCarrier): Try[Seq[IEMessage]] = Try {
     val decodedMessage: String = base64Decode(response.message)
-
-    if (appConfig.latestSpec) {
-      val xmlResponse = scalaxb.fromXML[v2.NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
-
-      if (appConfig.oldAuditingEnabled) {
-
-        xmlResponse.Messages.messagesoption.map(m => messageFactory.createIEMessage(Right(m))).tapEach {
-          auditService.auditMessage(_)(headerCarrier)
-        }
-      } else xmlResponse.Messages.messagesoption.map(m => messageFactory.createIEMessage(Right(m)))
-    } else {
-      val xmlResponse = scalaxb.fromXML[v1.NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
-
-      if (appConfig.oldAuditingEnabled) {
-
-        xmlResponse.Messages.messagesoption.map(m => messageFactory.createIEMessage(Left(m))).tapEach {
-          auditService.auditMessage(_)(headerCarrier)
-        }
-      } else xmlResponse.Messages.messagesoption.map(m => messageFactory.createIEMessage(Left(m)))
-    }
-
+    val xmlResponse            = scalaxb.fromXML[NewMessagesDataResponse](scala.xml.XML.loadString(decodedMessage))
+    if (appConfig.oldAuditingEnabled) {
+      xmlResponse.Messages.messagesoption.map(messageFactory.createIEMessage).tapEach {
+        auditService.auditMessage(_)(headerCarrier)
+      }
+    } else xmlResponse.Messages.messagesoption.map(messageFactory.createIEMessage)
   }
 
   private def countOfMessagesAvailable(encodedMessage: String): Try[Int] = Try {

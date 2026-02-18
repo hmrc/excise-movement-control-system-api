@@ -34,18 +34,8 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
 
   lazy val nrsApiKey: String = servicesConfig.getConfString("nrs.api-key", "dummyNrsApiKey")
 
-  lazy val movementCollectionName = config.getOptional[String]("mongodb.movement.collectionName").getOrElse("movements")
-
   lazy val movementTTL: Duration = config
     .getOptional[String]("mongodb.movement.TTL")
-    .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
-
-  lazy val movementV2TTL: Duration = config
-    .getOptional[String]("mongodb.movementV2.TTL")
-    .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
-
-  lazy val transformLogTTL: Duration = config
-    .getOptional[String]("mongodb.transformLog.TTL")
     .fold(Duration.create(30, DAYS))(Duration.create(_).asInstanceOf[FiniteDuration])
 
   lazy val ernRetrievalTTL: Duration = config
@@ -61,10 +51,8 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
     .map(JavaDuration.ofMinutes)
     .getOrElse(JavaDuration.ofMinutes(10))
 
-  lazy val runV1Validation: Boolean = config.getOptional[Boolean]("featureFlags.runV1Validation").getOrElse(false)
+  lazy val pushNotificationsEnabled: Boolean = servicesConfig.getBoolean("featureFlags.pushNotificationsEnabled")
 
-  lazy val pushNotificationsEnabled: Boolean  = servicesConfig.getBoolean("featureFlags.pushNotificationsEnabled")
-  lazy val latestSpec: Boolean                = servicesConfig.getBoolean("featureFlags.latestFunctionalSpecEnabled")
   lazy val newAuditingEnabled: Boolean        = config.getOptional[Boolean]("featureFlags.newAuditingEnabled").getOrElse(false)
   lazy val oldAuditingEnabled: Boolean        = config.getOptional[Boolean]("featureFlags.oldAuditingEnabled").getOrElse(false)
   lazy val processingAuditingEnabled: Boolean =

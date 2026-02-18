@@ -45,7 +45,6 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.data.XmlMessageGeneratorFactor
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptSuccessResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages._
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.BoxIdRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnRetrievalRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository
@@ -158,7 +157,7 @@ class MessageServiceSpec
         messages = Seq(Message(utils.encode(ie801.toString()), "IE801", "GB00001", ern, Set.empty, now)),
         lastUpdated = updateOrCreateTimestamp.minus(1, ChronoUnit.DAYS)
       )
-      val messages = Seq(IE704MessageV1.createFromXml(ie704))
+      val messages = Seq(IE704Message.createFromXml(ie704))
 
       when(movementRepository.getAllBy(any, any, any)).thenReturn(Future.successful(Seq(movement)))
       when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
@@ -205,7 +204,7 @@ class MessageServiceSpec
       )
       val acknowledgementResponse = MessageReceiptSuccessResponse(now, ern, 1)
 
-      val messages = Seq(IE704MessageV1.createFromXml(ie704))
+      val messages = Seq(IE704Message.createFromXml(ie704))
 
       when(movementRepository.getAllBy(any, any, any)).thenReturn(Future.successful(Seq(movement)))
       when(movementRepository.saveMovement(any)).thenReturn(Future.successful(Done))
@@ -268,7 +267,7 @@ class MessageServiceSpec
               ern,
               MessageParams(IE704, "XI000001", localReferenceNumber = Some("lrnie8158976912"))
             )
-            val messages         = Seq(IE704MessageV1.createFromXml(ie704))
+            val messages         = Seq(IE704Message.createFromXml(ie704))
             val expectedMessages =
               Seq(
                 Message(
@@ -321,7 +320,7 @@ class MessageServiceSpec
               ern,
               MessageParams(IE704, "XI000001", localReferenceNumber = Some("lrnie8158976912"))
             )
-            val messages                = Seq(IE704MessageV1.createFromXml(ie704))
+            val messages                = Seq(IE704Message.createFromXml(ie704))
             val expectedMessages        =
               Seq(
                 Message(
@@ -382,7 +381,7 @@ class MessageServiceSpec
                 Some("lrn1")
               )
             )
-            val messages       = Seq(IE801MessageV1.createFromXml(ie801), IE818MessageV1.createFromXml(ie818))
+            val messages       = Seq(IE801Message.createFromXml(ie801), IE818Message.createFromXml(ie818))
             val arcMovement    = Movement(
               None,
               "lrn1",
@@ -492,7 +491,7 @@ class MessageServiceSpec
             )
             val acknowledgementResponse = MessageReceiptSuccessResponse(now, ern, 1)
 
-            val messages         = Seq(IE704MessageV1.createFromXml(ie704))
+            val messages         = Seq(IE704Message.createFromXml(ie704))
             val expectedMessages = movement.messages ++ Seq(
               Message(
                 utils.encode(messages.head.toXml.toString()),
@@ -546,7 +545,7 @@ class MessageServiceSpec
           val arc2      = "23XI00000000000056340"
           val movement1 = Movement(None, "???", "???", None, Some(arc1), movement1Timestamp, Seq.empty)
           val movement2 = Movement(None, "???", "???", None, Some(arc2), movement2Timestamp, Seq.empty)
-          val message   = IE829MessageV1.createFromXml(ie829)
+          val message   = IE829Message.createFromXml(ie829)
 
           val expectedMessage1  =
             Seq(
@@ -612,7 +611,7 @@ class MessageServiceSpec
               ern,
               MessageParams(IE704, "XI000001", localReferenceNumber = Some("lrnie8158976912"))
             )
-            val messages         = Seq(IE704MessageV1.createFromXml(ie704))
+            val messages         = Seq(IE704Message.createFromXml(ie704))
             val expectedMovement = Movement(
               newId,
               None,
@@ -670,7 +669,7 @@ class MessageServiceSpec
                 Some("lrnie8158976912")
               )
             )
-            val messages         = Seq(IE801MessageV1.createFromXml(ie801))
+            val messages         = Seq(IE801Message.createFromXml(ie801))
             val expectedMovement = Movement(
               newId,
               None,
@@ -739,7 +738,7 @@ class MessageServiceSpec
                 Some("lrnie8158976912")
               )
             )
-            val messages         = Seq(IE801MessageV1.createFromXml(ie801))
+            val messages         = Seq(IE801Message.createFromXml(ie801))
             val expectedMovement = Movement(
               newId,
               None,
@@ -809,14 +808,14 @@ class MessageServiceSpec
                 Some("lrnie8158976912")
               )
             )
-            val ie801MessageV1         = IE801MessageV1.createFromXml(ie801Xml)
+            val ie801Message           = IE801Message.createFromXml(ie801Xml)
             val ie818Xml               = XmlMessageGeneratorFactory.generate(
               consignor,
               MessageParams(IE818, "GB00002", Some(consignee), Some("23XI00000000000000012"))
             )
-            val ie818MessageV1         = IE818MessageV1.createFromXml(ie818Xml)
-            val messages               = Seq(ie818MessageV1)
-            val traderMovementMessages = Seq(ie801MessageV1, ie818MessageV1)
+            val ie818Message           = IE818Message.createFromXml(ie818Xml)
+            val messages               = Seq(ie818Message)
+            val traderMovementMessages = Seq(ie801Message, ie818Message)
             val expectedMovement       = Movement(
               newId,
               None,
@@ -827,7 +826,7 @@ class MessageServiceSpec
               updateOrCreateTimestamp,
               messages = Seq(
                 Message(
-                  utils.encode(ie801MessageV1.toXml.toString()),
+                  utils.encode(ie801Message.toXml.toString()),
                   "IE801",
                   "GB00001",
                   consignor,
@@ -835,7 +834,7 @@ class MessageServiceSpec
                   updateOrCreateTimestamp
                 ),
                 Message(
-                  utils.encode(ie801MessageV1.toXml.toString()),
+                  utils.encode(ie801Message.toXml.toString()),
                   "IE801",
                   "GB00001",
                   consignee,
@@ -843,7 +842,7 @@ class MessageServiceSpec
                   updateOrCreateTimestamp
                 ),
                 Message(
-                  utils.encode(ie818MessageV1.toXml.toString()),
+                  utils.encode(ie818Message.toXml.toString()),
                   "IE818",
                   "GB00002",
                   consignor,
@@ -890,7 +889,7 @@ class MessageServiceSpec
               ern,
               MessageParams(IE818, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"))
             )
-            val messages = Seq(IE818MessageV1.createFromXml(ie818))
+            val messages = Seq(IE818Message.createFromXml(ie818))
 
             when(auditService.auditMessage(any, any)(any)).thenReturn(EitherT.pure(()))
             when(movementRepository.getAllBy(any, any, any)).thenReturn(Future.successful(Seq.empty))
@@ -928,7 +927,7 @@ class MessageServiceSpec
               ern,
               MessageParams(IE704, "XI000001", administrativeReferenceCode = Some("23XI00000000000000012"))
             )
-            val messages                = Seq(IE704MessageV1.createFromXml(ie704))
+            val messages                = Seq(IE704Message.createFromXml(ie704))
 
             when(auditService.auditMessage(any, any)(any)).thenReturn(EitherT.pure(()))
             when(movementRepository.getAllBy(any, any, any)).thenReturn(Future.successful(Seq.empty))
@@ -981,7 +980,7 @@ class MessageServiceSpec
               consignor,
               MessageParams(IE802, "GB0002", administrativeReferenceCode = Some("23XI00000000000000012"))
             )
-            val messages         = Seq(IE801MessageV1.createFromXml(ie801), IE802MessageV1.createFromXml(ie802))
+            val messages         = Seq(IE801Message.createFromXml(ie801), IE802Message.createFromXml(ie802))
             val expectedMovement = Movement(
               newId,
               None,
@@ -1061,7 +1060,7 @@ class MessageServiceSpec
             consignor,
             MessageParams(IE704, "XI000001", localReferenceNumber = Some("lrnie8158976912"))
           )
-          val firstMessage         = IE704MessageV1.createFromXml(ie704)
+          val firstMessage         = IE704Message.createFromXml(ie704)
           val firstExpectedMessage =
             Message(
               utils.encode(firstMessage.toXml.toString()),
@@ -1076,7 +1075,7 @@ class MessageServiceSpec
             consignor,
             MessageParams(IE704, "XI000002", localReferenceNumber = Some("lrnie8158976912"))
           )
-          val secondMessage         = IE704MessageV1.createFromXml(ie7042)
+          val secondMessage         = IE704Message.createFromXml(ie7042)
           val secondExpectedMessage =
             Message(
               utils.encode(secondMessage.toXml.toString()),
@@ -1097,7 +1096,7 @@ class MessageServiceSpec
               Some("lrnie8158976912")
             )
           )
-          val thirdMessage          = IE801MessageV1.createFromXml(ie801)
+          val thirdMessage          = IE801Message.createFromXml(ie801)
           val thirdExpectedMessage  =
             Message(
               utils.encode(thirdMessage.toXml.toString()),
@@ -1190,9 +1189,9 @@ class MessageServiceSpec
             MessageParams(IE801, "message3", Some(consignee), Some("arc3"), Some("lrn3"))
           )
           val messages          = Seq(
-            IE801MessageV1.createFromXml(ie801_1),
-            IE801MessageV1.createFromXml(ie801_2),
-            IE801MessageV1.createFromXml(ie801_3)
+            IE801Message.createFromXml(ie801_1),
+            IE801Message.createFromXml(ie801_2),
+            IE801Message.createFromXml(ie801_3)
           )
           val expectedMovement1 = movement1.copy(
             administrativeReferenceCode = Some("arc1"),
@@ -1369,7 +1368,7 @@ class MessageServiceSpec
                 Some("lrnie8158976912")
               )
             )
-            val messages                = Seq(IE801MessageV1.createFromXml(ie801))
+            val messages                = Seq(IE801Message.createFromXml(ie801))
             val expectedMessages        =
               Seq(
                 Message(
@@ -1438,7 +1437,7 @@ class MessageServiceSpec
           consignor,
           MessageParams(IE801, "GB00001", Some(newConsignee), Some("23XI00000000000000012"), Some("lrnie8158976912"))
         )
-        val messages                = Seq(IE801MessageV1.createFromXml(ie801))
+        val messages                = Seq(IE801Message.createFromXml(ie801))
         val expectedMessages        =
           Seq(
             Message(
@@ -1501,7 +1500,7 @@ class MessageServiceSpec
           ern,
           MessageParams(IE813, "GB00001", Some(newConsignee), Some("23XI00000000000000012"), Some("lrnie8158976912"))
         )
-        val messages                = Seq(IE813MessageV1.createFromXml(ie813))
+        val messages                = Seq(IE813Message.createFromXml(ie813))
         val expectedMessages        =
           Seq(
             Message(
@@ -1544,7 +1543,7 @@ class MessageServiceSpec
           consignor,
           MessageParams(IE801, "GB00001", Some(consignee), Some("23XI00000000000000012"), Some("lrnie8158976912"))
         )
-        val messages         = Seq(IE801MessageV1.createFromXml(ie801))
+        val messages         = Seq(IE801Message.createFromXml(ie801))
         val expectedMessages =
           Seq(
             Message(
@@ -1605,7 +1604,7 @@ class MessageServiceSpec
           ern,
           MessageParams(IE813, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912"))
         )
-        val messages         = Seq(IE813MessageV1.createFromXml(ie813))
+        val messages         = Seq(IE813Message.createFromXml(ie813))
         val expectedMessages =
           Seq(
             Message(
@@ -1657,7 +1656,7 @@ class MessageServiceSpec
           consignor,
           MessageParams(IE801, "GB00001", Some("testConsignee"), Some("23XI00000000000000012"), Some("lrnie8158976912"))
         )
-        val messages         = Seq(IE801MessageV1.createFromXml(ie801))
+        val messages         = Seq(IE801Message.createFromXml(ie801))
         val expectedMessages =
           Seq(
             Message(
@@ -1726,7 +1725,7 @@ class MessageServiceSpec
               Some("lrnie8158976912")
             )
           )
-          val messages         = Seq(IE801MessageV1.createFromXml(ie801), IE801MessageV1.createFromXml(ie801))
+          val messages         = Seq(IE801Message.createFromXml(ie801), IE801Message.createFromXml(ie801))
           val expectedMessages =
             Seq(
               Message(
@@ -1783,7 +1782,7 @@ class MessageServiceSpec
               Some("lrnie8158976912")
             )
           )
-          val messages         = Seq(IE801MessageV1.createFromXml(ie801))
+          val messages         = Seq(IE801Message.createFromXml(ie801))
           val existingMessages =
             Seq(Message(utils.encode(messages.head.toXml.toString()), "IE801", "GB00001", ern, Set.empty, now))
           val movement         = Movement(
@@ -1840,7 +1839,7 @@ class MessageServiceSpec
             )
           )
 
-          val messages = Seq(IE801MessageV1.createFromXml(ie801), IE801MessageV1.createFromXml(ie801Consignee))
+          val messages = Seq(IE801Message.createFromXml(ie801), IE801Message.createFromXml(ie801Consignee))
 
           val existingMessages =
             Seq(
@@ -1910,7 +1909,7 @@ class MessageServiceSpec
         )
 
         val new801WithSubstringLrn = Seq(
-          IE801MessageV1.createFromXml(
+          IE801Message.createFromXml(
             XmlMessageGeneratorFactory.generate(
               ern,
               MessageParams(
@@ -1994,7 +1993,7 @@ class MessageServiceSpec
         val acknowledgementResponse = MessageReceiptSuccessResponse(now, "ern1", 1)
 
         val ern1NewMessages = Seq(
-          IE704MessageV1.createFromXml(
+          IE704Message.createFromXml(
             XmlMessageGeneratorFactory
               .generate("ern1", MessageParams(IE704, "messageId1", localReferenceNumber = Some("lrn1")))
           )
@@ -2009,7 +2008,7 @@ class MessageServiceSpec
           )
         )
         val ern2NewMessages = Seq(
-          IE704MessageV1.createFromXml(
+          IE704Message.createFromXml(
             XmlMessageGeneratorFactory
               .generate("ern2", MessageParams(IE704, "messageId2", localReferenceNumber = Some("lrn2")))
           )
@@ -2052,7 +2051,7 @@ class MessageServiceSpec
         val acknowledgementResponse = MessageReceiptSuccessResponse(now, "ern1", 1)
 
         val ern1NewMessages = Seq(
-          IE704MessageV1.createFromXml(
+          IE704Message.createFromXml(
             XmlMessageGeneratorFactory
               .generate("ern1", MessageParams(IE704, "messageId1", localReferenceNumber = Some("lrn1")))
           )
@@ -2067,7 +2066,7 @@ class MessageServiceSpec
           )
         )
         val ern2NewMessages = Seq(
-          IE704MessageV1.createFromXml(
+          IE704Message.createFromXml(
             XmlMessageGeneratorFactory
               .generate("ern2", MessageParams(IE704, "messageId2", localReferenceNumber = Some("lrn2")))
           )
@@ -2114,18 +2113,18 @@ class MessageServiceSpec
         val message2Timestamp = message1Timestamp.plus(1, ChronoUnit.SECONDS)
         val message3Timestamp = message2Timestamp.plus(1, ChronoUnit.SECONDS)
         val message4Timestamp = message3Timestamp.plus(1, ChronoUnit.SECONDS)
-        val message1          = IE801MessageV1.createFromXml(
+        val message1          = IE801Message.createFromXml(
           XmlMessageGeneratorFactory
             .generate("ern1", MessageParams(IE801, "XI0000021a", Some("AT00000602078"), Some("arc"), Some("lrn1")))
         )
-        val message2          = IE819MessageV1.createFromXml(
+        val message2          = IE819Message.createFromXml(
           XmlMessageGeneratorFactory.generate("ern1", MessageParams(IE819, "X00008a", Some("token"), Some("arc")))
         )
-        val message3          = IE807MessageV1.createFromXml(
+        val message3          = IE807Message.createFromXml(
           XmlMessageGeneratorFactory
             .generate("ern1", MessageParams(IE807, "XI0000021b", Some("AT00000602078"), Some("arc"), Some("lrn1")))
         )
-        val message4          = IE840MessageV1.createFromXml(
+        val message4          = IE840Message.createFromXml(
           XmlMessageGeneratorFactory.generate("ern1", MessageParams(IE840, "X00008b", Some("token"), Some("arc")))
         )
 
@@ -2233,21 +2232,21 @@ class MessageServiceSpec
         val message3Timestamp = message2Timestamp.plus(1, ChronoUnit.SECONDS)
         val message4Timestamp = message3Timestamp.plus(1, ChronoUnit.SECONDS)
         val message5Timestamp = message4Timestamp.plus(1, ChronoUnit.SECONDS)
-        val message1          = IE801MessageV1.createFromXml(
+        val message1          = IE801Message.createFromXml(
           XmlMessageGeneratorFactory
             .generate("ern1", MessageParams(IE801, "XI0000021a", Some("AT00000602078"), Some("arc"), Some("lrn1")))
         )
-        val message2          = IE819MessageV1.createFromXml(
+        val message2          = IE819Message.createFromXml(
           XmlMessageGeneratorFactory.generate("ern1", MessageParams(IE819, "X00008a", Some("token"), Some("arc")))
         )
-        val message3          = IE807MessageV1.createFromXml(
+        val message3          = IE807Message.createFromXml(
           XmlMessageGeneratorFactory
             .generate("ern1", MessageParams(IE807, "XI0000021b", Some("AT00000602078"), Some("arc"), Some("lrn1")))
         )
-        val message4          = IE840MessageV1.createFromXml(
+        val message4          = IE840Message.createFromXml(
           XmlMessageGeneratorFactory.generate("ern1", MessageParams(IE840, "X00008b", Some("token"), Some("arc")))
         )
-        val message5          = IE801MessageV1.createFromXml(
+        val message5          = IE801Message.createFromXml(
           XmlMessageGeneratorFactory
             .generate("ern1", MessageParams(IE801, "XI0000099", Some("AT00000602078"), Some("arc2"), Some("lrn2")))
         )

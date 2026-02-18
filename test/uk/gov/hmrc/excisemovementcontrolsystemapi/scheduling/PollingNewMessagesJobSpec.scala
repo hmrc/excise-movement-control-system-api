@@ -69,8 +69,7 @@ class PollingNewMessagesJobSpec
       "scheduler.pollingNewMessagesJob.fastPollingInterval" -> "5 minutes",
       "scheduler.pollingNewMessagesJob.fastPollingCutoff"   -> "15 minutes",
       "scheduler.pollingNewMessagesJob.slowPollingInterval" -> "30 minutes",
-      "scheduler.pollingNewMessagesJob.numberOfInstances"   -> "1337",
-       "featureFlags.pollingNewMessagesEnabled" -> false
+      "scheduler.pollingNewMessagesJob.numberOfInstances"   -> "1337"
     )
     .build()
 
@@ -89,8 +88,8 @@ class PollingNewMessagesJobSpec
     "have the correct name" in {
       pollingNewMessagesJob.name mustBe "polling-new-messages-job"
     }
-    "use enabled from configuration" in {
-      pollingNewMessagesJob.enabled mustBe false
+    "be enabled" in {
+      pollingNewMessagesJob.enabled mustBe true
     }
     "use initial delay from configuration" in {
       pollingNewMessagesJob.initialDelay mustBe FiniteDuration(2, "minutes")
@@ -98,8 +97,8 @@ class PollingNewMessagesJobSpec
     "use interval from configuration" in {
       pollingNewMessagesJob.interval mustBe FiniteDuration(1, "minute")
     }
-    "ignore numberOfInstance from configuration" in {
-      pollingNewMessagesJob.numberOfInstances mustBe 1
+    "use numberOfInstance from configuration" in {
+      pollingNewMessagesJob.numberOfInstances mustBe 1337
     }
   }
 

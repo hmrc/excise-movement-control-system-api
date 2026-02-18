@@ -16,10 +16,9 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages
 
-import generated.v1.{Number1Value31, Number2Value30}
+import generated.{Number1Value30, Number1Value31, Number2Value29, Number2Value30}
 import org.scalatestplus.play.PlaySpec
 import uk.gov.hmrc.excisemovementcontrolsystemapi.data.TestXml
-import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.v1._
 
 class IEMessageSpec extends PlaySpec with TestXml {
 
@@ -28,13 +27,13 @@ class IEMessageSpec extends PlaySpec with TestXml {
   "convertSubmitterType" should {
     "return Consignor" when {
       "submitter type is consignor" in {
-        testClass.convertSubmitterTypeV1(Number1Value31) mustBe Consignor
+        testClass.convertSubmitterType(Number1Value30) mustBe Consignor
       }
     }
 
     "return Consignee" when {
       "submitter type is consignee" in {
-        testClass.convertSubmitterTypeV1(Number2Value30) mustBe Consignee
+        testClass.convertSubmitterType(Number2Value29) mustBe Consignee
       }
     }
   }
@@ -42,199 +41,199 @@ class IEMessageSpec extends PlaySpec with TestXml {
   "each message" should {
     "have the correct starting tag " when {
       "using createFromXml (704) with namespace prefix" in {
-        val result = IE704MessageV1.createFromXml(IE704)
+        val result = IE704Message.createFromXml(IE704)
         result.key mustBe Some("IE704")
         result.namespace mustBe Some("http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3")
       }
 
       "using createFromXml (704) without namespace prefix" in {
-        val result = IE704MessageV1.createFromXml(IE704NoNamespace)
+        val result = IE704Message.createFromXml(IE704NoNamespace)
         result.key mustBe Some("IE704")
         result.namespace mustBe None
       }
 
       "using createFromXml (801) with namespace prefix" in {
-        val result = IE801MessageV1.createFromXml(IE801)
+        val result = IE801Message.createFromXml(IE801)
         result.key mustBe Some("IE801")
-        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.13")
+        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE801:V3.23")
       }
 
       "using createFromXml (801) without namespace prefix" in {
-        val result = IE801MessageV1.createFromXml(IE801NoNamespace)
+        val result = IE801Message.createFromXml(IE801NoNamespace)
         result.key mustBe Some("IE801")
         result.namespace mustBe None
       }
 
       "using createFromXml (802) with namespace prefix" in {
-        val result = IE802MessageV1.createFromXml(IE802)
+        val result = IE802Message.createFromXml(IE802)
         result.key mustBe Some("IE802")
-        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE802:V3.13")
+        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE802:V3.23")
       }
 
       "using createFromXml (802) without namespace prefix" in {
-        val result = IE802MessageV1.createFromXml(IE802NoNamespace)
+        val result = IE802Message.createFromXml(IE802NoNamespace)
         result.key mustBe Some("IE802")
         result.namespace mustBe None
       }
 
       "using createFromXml (803) with namespace prefix" in {
-        val result = IE803MessageV1.createFromXml(IE803)
+        val result = IE803Message.createFromXml(IE803)
         result.key mustBe Some("IE803")
-        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE803:V3.13")
+        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE803:V3.23")
       }
 
       "using createFromXml (803) without namespace prefix" in {
-        val result = IE803MessageV1.createFromXml(IE803NoNamespace)
+        val result = IE803Message.createFromXml(IE803NoNamespace)
         result.key mustBe Some("IE803")
         result.namespace mustBe None
       }
 
       "using createFromXml (807) with namespace prefix" in {
-        val result = IE807MessageV1.createFromXml(IE807)
+        val result = IE807Message.createFromXml(IE807)
         result.key mustBe Some("IE807")
-        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE807:V3.13")
+        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE807:V3.23")
       }
 
       "using createFromXml (807) without namespace prefix" in {
-        val result = IE807MessageV1.createFromXml(IE807NoNamespace)
+        val result = IE807Message.createFromXml(IE807NoNamespace)
         result.key mustBe Some("IE807")
         result.namespace mustBe None
       }
 
       "using createFromXml (810) with namespace prefix" in {
-        val result = IE810MessageV1.createFromXml(IE810)
+        val result = IE810Message.createFromXml(IE810)
         result.key mustBe Some("IE810")
-        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE810:V3.13")
+        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE810:V3.23")
       }
 
       "using createFromXml (810) without namespace prefix" in {
-        val result = IE810MessageV1.createFromXml(IE810NoNamespace)
+        val result = IE810Message.createFromXml(IE810NoNamespace)
         result.key mustBe Some("IE810")
         result.namespace mustBe Some("http://www.hmrc.gov.uk/ChRIS/Service/Control")
       }
 
       "using createFromXml (813) with namespace prefix" in {
-        val result = IE813MessageV1.createFromXml(IE813)
+        val result = IE813Message.createFromXml(IE813)
         result.key mustBe Some("IE813")
-        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE813:V3.13")
+        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE813:V3.23")
       }
 
       "using createFromXml (813) without namespace prefix" in {
-        val result = IE813MessageV1.createFromXml(IE813NoNamespace)
+        val result = IE813Message.createFromXml(IE813NoNamespace)
         result.key mustBe Some("IE813")
         result.namespace mustBe Some("http://www.hmrc.gov.uk/ChRIS/Service/Control")
       }
 
       //This message behaves differently to the others
       "using createFromXml (815)" in {
-        val result = IE815MessageV1.createFromXml(IE815)
+        val result = IE815Message.createFromXml(IE815)
         result.toXml.head.label mustBe "IE815"
       }
 
       "using createFromXml (818) with namespace prefix" in {
-        val result = IE818MessageV1.createFromXml(IE818)
+        val result = IE818Message.createFromXml(IE818)
         result.key mustBe Some("IE818")
-        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE818:V3.13")
+        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE818:V3.23")
       }
 
       "using createFromXml (818) without namespace prefix" in {
-        val result = IE818MessageV1.createFromXml(IE818NoNamespace)
+        val result = IE818Message.createFromXml(IE818NoNamespace)
         result.key mustBe Some("IE818")
         result.namespace mustBe Some("http://www.hmrc.gov.uk/ChRIS/Service/Control")
       }
 
       "using createFromXml (819) with namespace prefix" in {
-        val result = IE819MessageV1.createFromXml(IE819)
+        val result = IE819Message.createFromXml(IE819)
         result.key mustBe Some("IE819")
-        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE819:V3.13")
+        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE819:V3.23")
       }
 
       "using createFromXml (819) without namespace prefix" in {
-        val result = IE819MessageV1.createFromXml(IE819NoNamespace)
+        val result = IE819Message.createFromXml(IE819NoNamespace)
         result.key mustBe Some("IE819")
         result.namespace mustBe Some("http://www.hmrc.gov.uk/ChRIS/Service/Control")
       }
 
       "using createFromXml (829) with namespace prefix" in {
-        val result = IE829MessageV1.createFromXml(IE829)
+        val result = IE829Message.createFromXml(IE829)
         result.key mustBe Some("IE829")
-        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE829:V3.13")
+        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE829:V3.23")
       }
 
       "using createFromXml (829) without namespace prefix" in {
-        val result = IE829MessageV1.createFromXml(IE829NoNamespace)
+        val result = IE829Message.createFromXml(IE829NoNamespace)
         result.key mustBe Some("IE829")
         result.namespace mustBe None
       }
 
       "using createFromXml (837) with namespace prefix" in {
-        val result = IE837MessageV1.createFromXml(IE837WithConsignor)
+        val result = IE837Message.createFromXml(IE837WithConsignor)
         result.key mustBe Some("IE837")
-        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE837:V3.13")
+        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE837:V3.23")
       }
 
       "using createFromXml (837) without namespace prefix" in {
-        val result = IE837MessageV1.createFromXml(IE837WithConsignorNoNamespace)
+        val result = IE837Message.createFromXml(IE837WithConsignorNoNamespace)
         result.key mustBe Some("IE837")
         result.namespace mustBe Some("http://www.hmrc.gov.uk/ChRIS/Service/Control")
       }
 
       "using createFromXml (839) with namespace prefix" in {
-        val result = IE839MessageV1.createFromXml(IE839)
+        val result = IE839Message.createFromXml(IE839)
         result.key mustBe Some("IE839")
-        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.13")
+        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE839:V3.23")
       }
 
       "using createFromXml (839) without namespace prefix" in {
-        val result = IE839MessageV1.createFromXml(IE839NoNamespace)
+        val result = IE839Message.createFromXml(IE839NoNamespace)
         result.key mustBe Some("IE839")
         result.namespace mustBe None
       }
 
       "using createFromXml (840) with namespace prefix" in {
-        val result = IE840MessageV1.createFromXml(IE840)
+        val result = IE840Message.createFromXml(IE840)
         result.key mustBe Some("IE840")
-        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE840:V3.13")
+        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE840:V3.23")
       }
 
       "using createFromXml (840) without namespace prefix" in {
-        val result = IE840MessageV1.createFromXml(IE840NoNamespace)
+        val result = IE840Message.createFromXml(IE840NoNamespace)
         result.key mustBe Some("IE840")
         result.namespace mustBe None
       }
 
       "using createFromXml (871) with namespace prefix" in {
-        val result = IE871MessageV1.createFromXml(IE871WithConsignor)
+        val result = IE871Message.createFromXml(IE871WithConsignor)
         result.key mustBe Some("IE871")
-        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE871:V3.13")
+        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE871:V3.23")
       }
 
       "using createFromXml (871) without namespace prefix" in {
-        val result = IE871MessageV1.createFromXml(IE871WithConsignorNoNamespace)
+        val result = IE871Message.createFromXml(IE871WithConsignorNoNamespace)
         result.key mustBe Some("IE871")
         result.namespace mustBe Some("http://www.hmrc.gov.uk/ChRIS/Service/Control")
       }
 
       "using createFromXml (881) with namespace prefix" in {
-        val result = IE881MessageV1.createFromXml(IE881)
+        val result = IE881Message.createFromXml(IE881)
         result.key mustBe Some("IE881")
-        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE881:V3.13")
+        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE881:V3.23")
       }
 
       "using createFromXml (881) without namespace prefix" in {
-        val result = IE881MessageV1.createFromXml(IE881NoNamespace)
+        val result = IE881Message.createFromXml(IE881NoNamespace)
         result.key mustBe Some("IE881")
         result.namespace mustBe None
       }
 
       "using createFromXml (905) with namespace prefix" in {
-        val result = IE905MessageV1.createFromXml(IE905)
+        val result = IE905Message.createFromXml(IE905)
         result.key mustBe Some("IE905")
-        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE905:V3.13")
+        result.namespace mustBe Some("urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE905:V3.23")
       }
 
       "using createFromXml (905) without namespace prefix" in {
-        val result = IE905MessageV1.createFromXml(IE905NoNamespace)
+        val result = IE905Message.createFromXml(IE905NoNamespace)
         result.key mustBe Some("IE905")
         result.namespace mustBe None
       }
@@ -243,294 +242,294 @@ class IEMessageSpec extends PlaySpec with TestXml {
   }
   "IE704"        should {
     "return Some(correlationId) when populated" in {
-      val result = IE704MessageV1.createFromXml(IE704)
+      val result = IE704Message.createFromXml(IE704)
       result.correlationId mustBe Some(testCorrelationId)
 
     }
     "return None when correlationId is not populated" in {
-      val result = IE704MessageV1.createFromXml(IE704WithoutCorrelationId)
+      val result = IE704Message.createFromXml(IE704WithoutCorrelationId)
       result.correlationId mustBe None
     }
 
     "return Some(localReferenceNumber) when populated" in {
-      val result = IE704MessageV1.createFromXml(IE704)
+      val result = IE704Message.createFromXml(IE704)
       result.localReferenceNumber mustBe Some("lrnie8158976912")
 
     }
     "return None when it's not populated" in {
-      val result = IE704MessageV1.createFromXml(IE704NoLocalReferenceNumber)
+      val result = IE704Message.createFromXml(IE704NoLocalReferenceNumber)
       result.localReferenceNumber mustBe None
     }
   }
 
   "IE801" should {
     "return Some(correlationId) when populated" in {
-      val result = IE801MessageV1.createFromXml(IE801)
+      val result = IE801Message.createFromXml(IE801)
       result.correlationId mustBe Some(testCorrelationId)
 
     }
     "return None when correlationId is not populated" in {
-      val result = IE801MessageV1.createFromXml(IE801WithoutCorrelationId)
+      val result = IE801Message.createFromXml(IE801WithoutCorrelationId)
       result.correlationId mustBe None
     }
 
     "always return Some(localReferenceNumber)" in {
-      val result = IE801MessageV1.createFromXml(IE801)
+      val result = IE801Message.createFromXml(IE801)
       result.optionalLocalReferenceNumber mustBe Some("token")
     }
   }
 
   "IE802" should {
     "return Some(correlationId) when populated" in {
-      val result = IE802MessageV1.createFromXml(IE802)
+      val result = IE802Message.createFromXml(IE802)
       result.correlationId mustBe Some(testCorrelationId)
 
     }
     "return None when correlationId is not populated " in {
-      val result = IE802MessageV1.createFromXml(IE802WithoutCorrelationId)
+      val result = IE802Message.createFromXml(IE802WithoutCorrelationId)
       result.correlationId mustBe None
     }
 
     "always return None for optionalLocalReferenceNumber" in {
-      val result = IE802MessageV1.createFromXml(IE802)
+      val result = IE802Message.createFromXml(IE802)
       result.optionalLocalReferenceNumber mustBe None
     }
   }
 
   "IE803" should {
     "return Some(correlationId) when populated" in {
-      val result = IE803MessageV1.createFromXml(IE803)
+      val result = IE803Message.createFromXml(IE803)
       result.correlationId mustBe Some(testCorrelationId)
 
     }
     "return None when correlationId is not populated" in {
-      val result = IE803MessageV1.createFromXml(IE803WithoutCorrelationId)
+      val result = IE803Message.createFromXml(IE803WithoutCorrelationId)
       result.correlationId mustBe None
     }
     "always return None for optionalLocalReferenceNumber" in {
-      val result = IE803MessageV1.createFromXml(IE803)
+      val result = IE803Message.createFromXml(IE803)
       result.optionalLocalReferenceNumber mustBe None
     }
   }
 
   "IE807" should {
     "return Some(correlationId) when populated" in {
-      val result = IE807MessageV1.createFromXml(IE807)
+      val result = IE807Message.createFromXml(IE807)
       result.correlationId mustBe Some(testCorrelationId)
 
     }
     "return None when correlationId is not populated" in {
-      val result = IE807MessageV1.createFromXml(IE807WithoutCorrelationId)
+      val result = IE807Message.createFromXml(IE807WithoutCorrelationId)
       result.correlationId mustBe None
     }
 
     "always return None for optionalLocalReferenceNumber" in {
-      val result = IE807MessageV1.createFromXml(IE807)
+      val result = IE807Message.createFromXml(IE807)
       result.optionalLocalReferenceNumber mustBe None
     }
   }
 
   "IE810" should {
     "return Some(correlationId) when populated" in {
-      val result = IE810MessageV1.createFromXml(IE810)
+      val result = IE810Message.createFromXml(IE810)
       result.correlationId mustBe Some(testCorrelationId)
 
     }
     "return None when correlationId is not populated" in {
-      val result = IE810MessageV1.createFromXml(IE810WithoutCorrelationId)
+      val result = IE810Message.createFromXml(IE810WithoutCorrelationId)
       result.correlationId mustBe None
     }
 
     "always return None for optionalLocalReferenceNumber" in {
-      val result = IE810MessageV1.createFromXml(IE810)
+      val result = IE810Message.createFromXml(IE810)
       result.optionalLocalReferenceNumber mustBe None
     }
   }
 
   "IE813" should {
     "return Some(correlationId) when populated" in {
-      val result = IE813MessageV1.createFromXml(IE813)
+      val result = IE813Message.createFromXml(IE813)
       result.correlationId mustBe Some(testCorrelationId)
 
     }
     "return None when correlationId is not populated" in {
-      val result = IE813MessageV1.createFromXml(IE813WithoutCorrelationId)
+      val result = IE813Message.createFromXml(IE813WithoutCorrelationId)
       result.correlationId mustBe None
     }
 
     "always return None for optionalLocalReferenceNumber" in {
-      val result = IE813MessageV1.createFromXml(IE813)
+      val result = IE813Message.createFromXml(IE813)
       result.optionalLocalReferenceNumber mustBe None
     }
   }
 
   "IE815" should {
     "return Some(correlationId) when populated" in {
-      val result = IE815MessageV1.createFromXml(IE815)
+      val result = IE815Message.createFromXml(IE815)
       result.correlationId mustBe Some(testCorrelationId)
 
     }
     "return None when correlationId is not populated" in {
-      val result = IE815MessageV1.createFromXml(IE815WithoutCorrelationId)
+      val result = IE815Message.createFromXml(IE815WithoutCorrelationId)
       result.correlationId mustBe None
     }
     "always return Some(localReferenceNumber)" in {
-      val result = IE815MessageV1.createFromXml(IE815)
+      val result = IE815Message.createFromXml(IE815)
       result.optionalLocalReferenceNumber mustBe Some("LRNQA20230909022221")
     }
   }
 
   "IE818" should {
     "return Some(correlationId) when populated" in {
-      val result = IE818MessageV1.createFromXml(IE818)
+      val result = IE818Message.createFromXml(IE818)
       result.correlationId mustBe Some(testCorrelationId)
 
     }
     "return None when correlationId is not populated" in {
-      val result = IE818MessageV1.createFromXml(IE818WithoutCorrelationId)
+      val result = IE818Message.createFromXml(IE818WithoutCorrelationId)
       result.correlationId mustBe None
     }
 
     "always return None for optionalLocalReferenceNumber" in {
-      val result = IE818MessageV1.createFromXml(IE818)
+      val result = IE818Message.createFromXml(IE818)
       result.optionalLocalReferenceNumber mustBe None
     }
   }
 
   "IE819" should {
     "return Some(correlationId) when populated" in {
-      val result = IE819MessageV1.createFromXml(IE819)
+      val result = IE819Message.createFromXml(IE819)
       result.correlationId mustBe Some(testCorrelationId)
 
     }
     "return None when correlationId is not populated" in {
-      val result = IE819MessageV1.createFromXml(IE819WithoutCorrelationId)
+      val result = IE819Message.createFromXml(IE819WithoutCorrelationId)
       result.correlationId mustBe None
     }
     "always return None for optionalLocalReferenceNumber" in {
-      val result = IE819MessageV1.createFromXml(IE819)
+      val result = IE819Message.createFromXml(IE819)
       result.optionalLocalReferenceNumber mustBe None
     }
   }
 
   "IE829" should {
     "return Some(correlationId) when populated" in {
-      val result = IE829MessageV1.createFromXml(IE829)
+      val result = IE829Message.createFromXml(IE829)
       result.correlationId mustBe Some(testCorrelationId)
 
     }
     "return None when correlationId is not populated" in {
-      val result = IE829MessageV1.createFromXml(IE829WithoutCorrelationId)
+      val result = IE829Message.createFromXml(IE829WithoutCorrelationId)
       result.correlationId mustBe None
     }
 
     "always return None for optionalLocalReferenceNumber" in {
-      val result = IE829MessageV1.createFromXml(IE829)
+      val result = IE829Message.createFromXml(IE829)
       result.optionalLocalReferenceNumber mustBe None
     }
   }
 
   "IE837" should {
     "return Some(correlationId) when populated" in {
-      val result = IE837MessageV1.createFromXml(IE837WithConsignor)
+      val result = IE837Message.createFromXml(IE837WithConsignor)
       result.correlationId mustBe Some(testCorrelationId)
 
     }
     "return None when correlationId is not populated" in {
-      val result = IE837MessageV1.createFromXml(IE837WithoutCorrelationId)
+      val result = IE837Message.createFromXml(IE837WithoutCorrelationId)
       result.correlationId mustBe None
     }
 
     "always return None for optionalLocalReferenceNumber" in {
-      val result = IE837MessageV1.createFromXml(IE837WithConsignor)
+      val result = IE837Message.createFromXml(IE837WithConsignor)
       result.optionalLocalReferenceNumber mustBe None
     }
   }
 
   "IE839" should {
     "return Some(correlationId) when populated" in {
-      val result = IE839MessageV1.createFromXml(IE839)
+      val result = IE839Message.createFromXml(IE839)
       result.correlationId mustBe Some(testCorrelationId)
 
     }
     "return None when correlationId is not populated" in {
-      val result = IE839MessageV1.createFromXml(IE839WithoutCorrelationId)
+      val result = IE839Message.createFromXml(IE839WithoutCorrelationId)
       result.correlationId mustBe None
     }
 
     "return Some(localReferenceNumber) when populated" in {
-      val result = IE839MessageV1.createFromXml(IE839)
+      val result = IE839Message.createFromXml(IE839)
       result.optionalLocalReferenceNumber mustBe Some("lrnie8155755329")
     }
     "return None when it's not populated" in {
-      val result = IE839MessageV1.createFromXml(IE839NoLocalReferenceNumber)
+      val result = IE839Message.createFromXml(IE839NoLocalReferenceNumber)
       result.optionalLocalReferenceNumber mustBe None
     }
   }
 
   "IE840" should {
     "return Some(correlationId) when populated" in {
-      val result = IE840MessageV1.createFromXml(IE840)
+      val result = IE840Message.createFromXml(IE840)
       result.correlationId mustBe Some(testCorrelationId)
 
     }
     "return None when correlationId is not populated" in {
-      val result = IE840MessageV1.createFromXml(IE840WithoutCorrelationId)
+      val result = IE840Message.createFromXml(IE840WithoutCorrelationId)
       result.correlationId mustBe None
     }
 
     "always return None for optionalLocalReferenceNumber" in {
-      val result = IE840MessageV1.createFromXml(IE840)
+      val result = IE840Message.createFromXml(IE840)
       result.optionalLocalReferenceNumber mustBe None
     }
   }
 
   "IE871" should {
     "return Some(correlationId) when populated" in {
-      val result = IE871MessageV1.createFromXml(IE871WithConsignor)
+      val result = IE871Message.createFromXml(IE871WithConsignor)
       result.correlationId mustBe Some(testCorrelationId)
 
     }
     "return None when correlationId is not populated" in {
-      val result = IE871MessageV1.createFromXml(IE871WithoutCorrelationId)
+      val result = IE871Message.createFromXml(IE871WithoutCorrelationId)
       result.correlationId mustBe None
     }
     "always return None for optionalLocalReferenceNumber" in {
-      val result = IE871MessageV1.createFromXml(IE871WithConsignor)
+      val result = IE871Message.createFromXml(IE871WithConsignor)
       result.optionalLocalReferenceNumber mustBe None
     }
   }
 
   "IE881" should {
     "return Some(correlationId) when populated" in {
-      val result = IE881MessageV1.createFromXml(IE881)
+      val result = IE881Message.createFromXml(IE881)
       result.correlationId mustBe Some(testCorrelationId)
 
     }
     "return None when correlationId is not populated" in {
-      val result = IE881MessageV1.createFromXml(IE881WithoutCorrelationId)
+      val result = IE881Message.createFromXml(IE881WithoutCorrelationId)
       result.correlationId mustBe None
     }
 
     "always return None for optionalLocalReferenceNumber" in {
-      val result = IE881MessageV1.createFromXml(IE881)
+      val result = IE881Message.createFromXml(IE881)
       result.optionalLocalReferenceNumber mustBe None
     }
   }
 
   "IE905" should {
     "return Some(correlationId) when populated" in {
-      val result = IE905MessageV1.createFromXml(IE905)
+      val result = IE905Message.createFromXml(IE905)
       result.correlationId mustBe Some(testCorrelationId)
 
     }
     "return None when correlationId is not populated" in {
-      val result = IE905MessageV1.createFromXml(IE905WithoutCorrelationId)
+      val result = IE905Message.createFromXml(IE905WithoutCorrelationId)
       result.correlationId mustBe None
     }
 
     "always return None for optionalLocalReferenceNumber" in {
-      val result = IE905MessageV1.createFromXml(IE905)
+      val result = IE905Message.createFromXml(IE905)
       result.optionalLocalReferenceNumber mustBe None
     }
   }
