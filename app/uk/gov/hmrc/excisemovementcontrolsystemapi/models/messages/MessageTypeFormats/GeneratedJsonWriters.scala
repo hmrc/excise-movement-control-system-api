@@ -103,7 +103,7 @@ trait GeneratedJsonWriters {
   implicit val LSDIndependentSmallProducersDeclarationTypeType
     : OWrites[LSDIndependentSmallProducersDeclarationTypeType]                                                 =
     Json.writes[LSDIndependentSmallProducersDeclarationTypeType]
-  implicit val ImportSadTypeType: OWrites[ImportCustomsDeclarationTypeType]                                                   =
+  implicit val ImportSadTypeType: OWrites[ImportCustomsDeclarationTypeType]                                    =
     Json.writes[ImportCustomsDeclarationTypeType]
   implicit val LSDSealInformationTypeType5: OWrites[LSDSealInformationTypeType5]                               =
     Json.writes[LSDSealInformationTypeType5]
@@ -165,7 +165,7 @@ trait GeneratedJsonWriters {
 
   implicit val LSDReferenceOfDocumentType: OWrites[LSDReferenceOfDocumentType]                                   = Json.writes[LSDReferenceOfDocumentType]
   implicit val LSDDocumentDescriptionType: OWrites[LSDDocumentDescriptionType]                                   = Json.writes[LSDDocumentDescriptionType]
-  implicit val ImportSadType: OWrites[ImportCustomsDeclarationType]                                                             = Json.writes[ImportCustomsDeclarationType]
+  implicit val ImportSadType: OWrites[ImportCustomsDeclarationType]                                              = Json.writes[ImportCustomsDeclarationType]
   implicit val LSDSealInformationTypeType4: OWrites[LSDSealInformationTypeType4]                                 =
     Json.writes[LSDSealInformationTypeType4]
   implicit val WineOperationType: OWrites[WineOperationType]                                                     = Json.writes[WineOperationType]
