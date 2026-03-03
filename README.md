@@ -15,7 +15,7 @@ LRN - Local Reference Number
 
 ## Technical documentation
 
-See the [Service Guide](https://developer.service.hmrc.gov.uk/guides/emcs-api-service-guide/)
+See the [Service Guide](https://developer.service.hmrc.gov.uk/guides/emcs-api-service-guide-4-2/)
 
 ### Before running the app (if applicable)
 

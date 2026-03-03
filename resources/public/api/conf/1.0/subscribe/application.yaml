@@ -4,9 +4,9 @@ info:
   description: |-
     Use the EMCS API to submit excise movement notifications to the Excise Movement and Control System (EMCS). You can also send and receive messages about excise movements and retrieve information about excise traders. 
     
-    The [EMCS API service guide](/guides/emcs-api-service-guide/) contains a detailed overview of v1.0 of the API.
+    The [EMCS API service guide](/guides/emcs-api-service-guide-4-2/) contains a detailed overview of v1.0 of the API.
 
-    Testing instructions can be found in the [EMCS API testing guide](/guides/emcs-api-testing-guide/).
+    Testing instructions can be found in the [EMCS API testing guide](/guides/emcs-api-testing-guide-4-2/).
   contact: { }
   version: "1.0.0"
 servers:
