@@ -17,12 +17,13 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import com.codahale.metrics.MetricRegistry
+import com.fasterxml.jackson.core.JacksonException
 import play.api.Logging
-import play.api.libs.json.Json
+import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, UNAUTHORIZED}
+import play.api.libs.json.{JsResultException, Json}
 import play.api.mvc.Result
-import play.api.mvc.Results.InternalServerError
+import play.api.mvc.Results.{InternalServerError, Status}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
-import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.{PreValidateTraderETDSHttpReader, PreValidateTraderHttpReader}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.EisErrorResponsePresentation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.preValidateTrader.request.{ExciseTraderETDSRequest, PreValidateTraderRequest}
@@ -31,8 +32,10 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService.DateTimeFormat
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, StringContextOps}
+import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps, UpstreamErrorResponse}
 
+import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -56,6 +59,14 @@ class PreValidateTraderConnector @Inject() (
         (hc.withExtraHeaders(HttpHeader.xCorrelationId -> correlationId), correlationId)
     }
 
+  private def internalError(timestamp: Instant, correlationId: String) =
+    EisErrorResponsePresentation(
+      timestamp,
+      "Internal Server Error",
+      "Unexpected error occurred while processing PreValidateTrader request",
+      correlationId
+    )
+
   def submitMessage(request: PreValidateTraderRequest, ern: String)(implicit
     hc: HeaderCarrier
   ): Future[Either[Result, PreValidateTraderEISResponse]] = {
@@ -69,29 +80,44 @@ class PreValidateTraderConnector @Inject() (
     val timestamp       = dateTimeService.timestamp()
     val createdDateTime = timestamp.asStringInMilliseconds
 
-    implicit val reader: HttpReads[Either[Result, PreValidateTraderEISResponse]] = PreValidateTraderHttpReader(
-      correlationId = correlationId,
-      ern = ern,
-      createDateTime = createdDateTime,
-      dateTimeService = dateTimeService
-    )
     httpClient
       .post(url"${appConfig.preValidateTraderUrl}")(hc2)
       .setHeader(build(correlationId, createdDateTime, appConfig.preValidateTraderBearerToken): _*)
       .withBody(Json.toJson(request))
-      .execute[Either[Result, PreValidateTraderEISResponse]]
+      .execute[PreValidateTraderEISResponse]
+      .map(Right.apply[Result, PreValidateTraderEISResponse])
       .andThen { case _ => timer.stop() }
-      .recover { case NonFatal(ex) =>
-        logger.warn(EISErrorMessage(createdDateTime, ex.getMessage, correlationId, "PreValidateTrader"), ex)
+      .recover {
+        case _: JacksonException =>
+          // JSON parsing error
+          logger.error(EISErrorMessage.parseError(createdDateTime, correlationId, "PreValidateTrader"))
+          Left(InternalServerError(Json.toJson(internalError(timestamp, correlationId))))
 
-        val error = EisErrorResponsePresentation(
-          timestamp,
-          "Internal Server Error",
-          "Unexpected error occurred while processing PreValidateTrader request",
-          correlationId
-        )
+        case _: JsResultException =>
+          // JSON deserialization error
+          logger.error(EISErrorMessage.readError(createdDateTime, correlationId, "PreValidateTrader"))
+          Left(InternalServerError(Json.toJson(internalError(timestamp, correlationId))))
 
-        Left(InternalServerError(Json.toJson(error)))
+        case response: UpstreamErrorResponse =>
+          // Upstream error
+          logger.warn(
+            EISErrorMessage(createdDateTime, s"status: ${response.statusCode}", correlationId, "PreValidateTrader")
+          )
+
+          //Not expecting EIS response bodies to have any payload here
+          val ourErrorResponse = EisErrorResponsePresentation(
+            dateTimeService.timestamp(),
+            "PreValidateTrader error",
+            "Error occurred during PreValidateTrader request",
+            correlationId
+          )
+
+          Left(Status(response.statusCode)(Json.toJson(ourErrorResponse)))
+
+        case NonFatal(ex) =>
+          // Something else
+          logger.error(EISErrorMessage(createdDateTime, ex.getMessage, correlationId, "PreValidateTrader"), ex)
+          Left(InternalServerError(Json.toJson(internalError(timestamp, correlationId))))
       }
 
   }
@@ -109,30 +135,53 @@ class PreValidateTraderConnector @Inject() (
     val timestamp       = dateTimeService.timestamp()
     val createdDateTime = timestamp.asStringInMilliseconds
 
-    implicit val reader: HttpReads[Either[Result, ExciseTraderValidationETDSResponse]] =
-      PreValidateTraderETDSHttpReader(
-        correlationId = correlationId,
-        ern = ern,
-        createDateTime = createdDateTime,
-        dateTimeService = dateTimeService
-      )
     httpClient
       .post(url"${appConfig.preValidateTraderETDSUrl}")(hc2)
       .setHeader(buildETDS(correlationId, createdDateTime, appConfig.preValidateTraderETDSBearerToken): _*)
       .withBody(Json.toJson(request))
-      .execute[Either[Result, ExciseTraderValidationETDSResponse]]
+      .execute[ExciseTraderValidationETDSResponse]
+      .map(Right.apply[Result, ExciseTraderValidationETDSResponse])
       .andThen { case _ => timer.stop() }
-      .recover { case NonFatal(ex) =>
-        logger.warn(EISErrorMessage(createdDateTime, ex.getMessage, correlationId, "PreValidateTrader"), ex)
+      .recover {
+        case _: JacksonException =>
+          // JSON parsing error
+          logger.error(EISErrorMessage.parseError(createdDateTime, correlationId, "PreValidateTrader"))
+          Left(InternalServerError(Json.toJson(internalError(timestamp, correlationId))))
 
-        val error = EisErrorResponsePresentation(
-          timestamp,
-          "Internal Server Error",
-          "Unexpected error occurred while processing PreValidateTrader request",
-          correlationId
-        )
+        case _: JsResultException =>
+          // JSON deserialization error
+          logger.error(EISErrorMessage.readError(createdDateTime, correlationId, "PreValidateTrader"))
+          Left(InternalServerError(Json.toJson(internalError(timestamp, correlationId))))
 
-        Left(InternalServerError(Json.toJson(error)))
+        case response: UpstreamErrorResponse =>
+          // Upstream error
+          logger.warn(
+            EISErrorMessage(createdDateTime, s"status: ${response.statusCode}", correlationId, "PreValidateTrader")
+          )
+
+          val ourErrorResponse = response.statusCode match {
+            case BAD_REQUEST | NOT_FOUND | UNAUTHORIZED =>
+              EisErrorResponsePresentation(
+                dateTimeService.timestamp(),
+                "PreValidateTrader error",
+                "Error occurred during PreValidateTrader request",
+                correlationId
+              )
+            case _                                      =>
+              EisErrorResponsePresentation(
+                dateTimeService.timestamp(),
+                "Internal Server Error",
+                "Unexpected error occurred while processing PreValidateTrader request",
+                correlationId
+              )
+          }
+
+          Left(Status(response.statusCode)(Json.toJson(ourErrorResponse)))
+
+        case NonFatal(ex) =>
+          // Something else
+          logger.error(EISErrorMessage(createdDateTime, ex.getMessage, correlationId, "PreValidateTrader"), ex)
+          Left(InternalServerError(Json.toJson(internalError(timestamp, correlationId))))
       }
 
   }

@@ -17,6 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import com.codahale.metrics.{MetricRegistry, Timer}
+import com.fasterxml.jackson.core.JsonParseException
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchersSugar.eqTo
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
@@ -25,7 +26,7 @@ import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.Status._
-import play.api.libs.json.Json
+import play.api.libs.json.{JsResultException, Json}
 import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, ServiceUnavailable}
 import play.api.test.FakeRequest
@@ -38,7 +39,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.TestUtils._
 import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, UpstreamErrorResponse}
 import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
 import java.time.Instant
@@ -82,8 +83,8 @@ class PreValidateTraderConnectorETDSSpec
     when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
     when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
     when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
-    when(mockRequestBuilder.execute[Either[Result, ExciseTraderValidationETDSResponse]](any(), any()))
-      .thenReturn(Future.successful(Right(validResponse)))
+    when(mockRequestBuilder.execute[ExciseTraderValidationETDSResponse](any(), any()))
+      .thenReturn(Future.successful(validResponse))
 
     when(dateTimeService.timestamp()).thenReturn(timestamp)
     when(appConfig.preValidateTraderETDSUrl).thenReturn("http://localhost:8080/eis/path")
@@ -102,8 +103,8 @@ class PreValidateTraderConnectorETDSSpec
       when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
-      when(mockRequestBuilder.execute[Either[Result, ExciseTraderValidationETDSResponse]](any(), any()))
-        .thenReturn(Future.successful(Right(businessError)))
+      when(mockRequestBuilder.execute[ExciseTraderValidationETDSResponse](any(), any()))
+        .thenReturn(Future.successful(businessError))
 
       val result = await(submitPreValidateTrader())
 
@@ -121,11 +122,20 @@ class PreValidateTraderConnectorETDSSpec
       when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.execute[Either[Result, PreValidateTraderMessageResponse]](any(), any()))
-        .thenReturn(Future.successful(Left(BadRequest("any error"))))
+        .thenReturn(Future.failed(UpstreamErrorResponse("any error", BAD_REQUEST)))
 
       val result = await(submitPreValidateTrader())
 
-      result.left.value mustBe BadRequest("any error")
+      result.left.value mustBe BadRequest(
+        Json.toJson(
+          EisErrorResponsePresentation(
+            timestamp,
+            "PreValidateTrader error",
+            "Error occurred during PreValidateTrader request",
+            emcsCorrelationId
+          )
+        )
+      )
     }
 
     "return 500 if post request fail" in {
@@ -149,16 +159,67 @@ class PreValidateTraderConnectorETDSSpec
       )
     }
 
+    "return 500 if the response JSON cannot be parsed" in {
+      when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.execute[Either[Result, ExciseTraderValidationETDSResponse]](any(), any()))
+        .thenReturn(Future.failed(new JsonParseException("Invalid JSON")))
+
+      val result = await(submitPreValidateTrader())
+
+      result.left.value mustBe InternalServerError(
+        Json.toJson(
+          EisErrorResponsePresentation(
+            timestamp,
+            "Internal Server Error",
+            "Unexpected error occurred while processing PreValidateTrader request",
+            emcsCorrelationId
+          )
+        )
+      )
+    }
+
+    "return 500 if the response JSON cannot be deserialized" in {
+      when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.execute[Either[Result, ExciseTraderValidationETDSResponse]](any(), any()))
+        .thenReturn(Future.failed(JsResultException(Seq.empty)))
+
+      val result = await(submitPreValidateTrader())
+
+      result.left.value mustBe InternalServerError(
+        Json.toJson(
+          EisErrorResponsePresentation(
+            timestamp,
+            "Internal Server Error",
+            "Unexpected error occurred while processing PreValidateTrader request",
+            emcsCorrelationId
+          )
+        )
+      )
+    }
+
     "return Not found error" in {
       when(mockHttpClient.post(any)(any)).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.execute[Either[Result, PreValidateTraderMessageResponse]](any(), any()))
-        .thenReturn(Future.successful(Left(NotFound("error"))))
+        .thenReturn(Future.failed(UpstreamErrorResponse("error", 404)))
 
       val result = await(submitPreValidateTrader())
 
-      result.left.value mustBe NotFound("error")
+      result.left.value mustBe NotFound(
+        Json.toJson(
+          EisErrorResponsePresentation(
+            timestamp,
+            "PreValidateTrader error",
+            "Error occurred during PreValidateTrader request",
+            emcsCorrelationId
+          )
+        )
+      )
     }
 
     "return service unavailable error" in {
@@ -166,11 +227,20 @@ class PreValidateTraderConnectorETDSSpec
       when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.execute[Either[Result, PreValidateTraderMessageResponse]](any(), any()))
-        .thenReturn(Future.successful(Left(ServiceUnavailable("any error"))))
+        .thenReturn(Future.failed(UpstreamErrorResponse("any error", SERVICE_UNAVAILABLE)))
 
       val result = await(submitPreValidateTrader())
 
-      result.left.value mustBe ServiceUnavailable("any error")
+      result.left.value mustBe ServiceUnavailable(
+        Json.toJson(
+          EisErrorResponsePresentation(
+            timestamp,
+            "Internal Server Error",
+            "Unexpected error occurred while processing PreValidateTrader request",
+            emcsCorrelationId
+          )
+        )
+      )
     }
 
     "return Internal service error error" in {
@@ -178,11 +248,20 @@ class PreValidateTraderConnectorETDSSpec
       when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.execute[Either[Result, PreValidateTraderMessageResponse]](any(), any()))
-        .thenReturn(Future.successful(Left(InternalServerError("any error"))))
+        .thenReturn(Future.failed(UpstreamErrorResponse("any error", INTERNAL_SERVER_ERROR)))
 
       val result = await(submitPreValidateTrader())
 
-      result.left.value mustBe InternalServerError("any error")
+      result.left.value mustBe InternalServerError(
+        Json.toJson(
+          EisErrorResponsePresentation(
+            timestamp,
+            "Internal Server Error",
+            "Unexpected error occurred while processing PreValidateTrader request",
+            emcsCorrelationId
+          )
+        )
+      )
     }
 
     "start and stop metrics" in {

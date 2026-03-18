@@ -16,21 +16,23 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
+import com.fasterxml.jackson.core.JacksonException
 import play.api.Logging
 import play.api.http.Status.INTERNAL_SERVER_ERROR
 import play.api.http.{HeaderNames, MimeTypes}
-import play.api.libs.json.Json
+import play.api.libs.json.{JsResultException, Json}
 import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.connectors.util.ResponseHandler
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISErrorMessage
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.HttpHeader
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps, UpstreamErrorResponse}
 
 import java.util.UUID
 import javax.inject.Inject
@@ -53,6 +55,12 @@ class PushNotificationConnector @Inject() (
         logger.info(s"generated new correlation id: $correlationId")
         hc.withExtraHeaders(HttpHeader.xCorrelationId -> correlationId)
     }
+
+  private def internalError(boxId: String, notification: Notification) =
+    FailedPushNotification(
+      INTERNAL_SERVER_ERROR,
+      s"An exception occurred when sending a notification with excise number: ${notification.ern}, boxId: $boxId, messageId: ${notification.messageId}"
+    )
 
   def getDefaultBoxId(
     clientId: String
@@ -94,33 +102,42 @@ class PushNotificationConnector @Inject() (
       .post(url"$url")(hc2)
       .withBody(Json.toJson(notification))
       .setHeader(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON)
-      .execute[HttpResponse]
+      .execute[SuccessPushNotificationResponse]
       .map { response =>
-        extractIfSuccessful[SuccessPushNotificationResponse](response)
-          .fold(
-            error => {
-              logger.error(
-                s"[PushNotificationConnector] - error sending notification with boxId: $boxId, status: ${response.status}, message: ${response.body}"
-              )
-              FailedPushNotification(error.status, error.body)
-            },
-            success => {
-              logger.info(
-                s"[PushNotificationConnector] - notification successfully sent to boxId: $boxId, for messageId: ${notification.messageId}"
-              )
-              success
-            }
-          )
+        logger.info(
+          s"[PushNotificationConnector] - notification successfully sent to boxId: $boxId, for messageId: ${notification.messageId}"
+        )
+        response
       }
-      .recover { case NonFatal(ex) =>
-        logger.error(
-          s"[PushNotificationConnector] - error sending notification with boxId: $boxId error, for messageId: ${notification.messageId}",
-          ex
-        )
-        FailedPushNotification(
-          INTERNAL_SERVER_ERROR,
-          s"An exception occurred when sending a notification with excise number: ${notification.ern}, boxId: $boxId, messageId: ${notification.messageId}"
-        )
+      .recover {
+        case _: JacksonException =>
+          // JSON parsing error
+          logger.error(
+            s"[PushNotificationConnector] - error parsing response for notification with boxId: $boxId, for messageId: ${notification.messageId}"
+          )
+          internalError(boxId, notification)
+
+        case _: JsResultException =>
+          // JSON deserialization error
+          logger.error(
+            s"[PushNotificationConnector] - error deserializing response for notification with boxId: $boxId, for messageId: ${notification.messageId}"
+          )
+          internalError(boxId, notification)
+
+        case response: UpstreamErrorResponse =>
+          // Upstream error
+          logger.error(
+            s"[PushNotificationConnector] - error sending notification with boxId: $boxId, status: ${response.statusCode}"
+          )
+          FailedPushNotification(response.statusCode, response.message)
+
+        case NonFatal(ex) =>
+          // Something else
+          logger.error(
+            s"[PushNotificationConnector] - error sending notification with boxId: $boxId error, for messageId: ${notification.messageId}",
+            ex
+          )
+          internalError(boxId, notification)
       }
   }
 

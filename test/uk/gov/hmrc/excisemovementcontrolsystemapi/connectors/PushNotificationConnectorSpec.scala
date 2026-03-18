@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
+import com.fasterxml.jackson.core.JsonParseException
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchersSugar.eqTo
 import org.mockito.MockitoSugar.{reset, times, verify, when}
@@ -23,7 +24,7 @@ import org.scalatest.{BeforeAndAfterEach, EitherValues}
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR}
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsResultException, JsValue, Json}
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
@@ -31,7 +32,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.Notificati
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.notification.NotificationResponse._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps, UpstreamErrorResponse}
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
@@ -168,8 +169,8 @@ class PushNotificationConnectorSpec extends PlaySpec with EitherValues with Befo
       when(httpClient.post(any)(any)).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
-      when(mockRequestBuilder.execute[HttpResponse](any(), any()))
-        .thenReturn(Future.successful(HttpResponse(201, """{"notificationId": "123"}""")))
+      when(mockRequestBuilder.execute[SuccessPushNotificationResponse](any(), any()))
+        .thenReturn(Future.successful(SuccessPushNotificationResponse("123")))
       val result = await(sut.postNotification(boxId, notification))
 
       result mustBe SuccessPushNotificationResponse("123")
@@ -179,8 +180,8 @@ class PushNotificationConnectorSpec extends PlaySpec with EitherValues with Befo
       when(httpClient.post(any)(any)).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
-      when(mockRequestBuilder.execute[HttpResponse](any(), any()))
-        .thenReturn(Future.successful(HttpResponse(201, """{"notificationId": "123"}""")))
+      when(mockRequestBuilder.execute[SuccessPushNotificationResponse](any(), any()))
+        .thenReturn(Future.successful(SuccessPushNotificationResponse("123")))
 
       await(sut.postNotification(boxId, notification))
 
@@ -189,12 +190,12 @@ class PushNotificationConnectorSpec extends PlaySpec with EitherValues with Befo
 
     "return an error" when {
 
-      "the notification API return an error" in {
+      "the notification API returns an error" in {
         when(httpClient.post(any)(any)).thenReturn(mockRequestBuilder)
         when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
         when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
-        when(mockRequestBuilder.execute[HttpResponse](any(), any()))
-          .thenReturn(Future.successful(HttpResponse(BAD_REQUEST, "Box ID is not a UUID")))
+        when(mockRequestBuilder.execute[SuccessPushNotificationResponse](any(), any()))
+          .thenReturn(Future.failed(UpstreamErrorResponse("Box ID is not a UUID", BAD_REQUEST)))
 
         val result = await(sut.postNotification(boxId, notification))
 
@@ -202,12 +203,44 @@ class PushNotificationConnectorSpec extends PlaySpec with EitherValues with Befo
           buildPushNotificationJsonError(BAD_REQUEST, "Box ID is not a UUID")
       }
 
-      "invalid json" in {
+      "unable to parse the response json" in {
         when(httpClient.post(any)(any)).thenReturn(mockRequestBuilder)
         when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
         when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
-        when(mockRequestBuilder.execute[HttpResponse](any(), any()))
-          .thenReturn(Future.successful(HttpResponse(200, "invalid json")))
+        when(mockRequestBuilder.execute[SuccessPushNotificationResponse](any(), any()))
+          .thenReturn(Future.failed(new JsonParseException("Invalid JSON")))
+
+        val result = await(sut.postNotification(boxId, notification))
+
+        Json.toJson(result.asInstanceOf[FailedPushNotification]) mustBe
+          buildPushNotificationJsonError(
+            INTERNAL_SERVER_ERROR,
+            s"An exception occurred when sending a notification with excise number: $ern, boxId: $boxId, messageId: $messageId"
+          )
+      }
+
+      "unable to deserialize the json" in {
+        when(httpClient.post(any)(any)).thenReturn(mockRequestBuilder)
+        when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
+        when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
+        when(mockRequestBuilder.execute[SuccessPushNotificationResponse](any(), any()))
+          .thenReturn(Future.failed(JsResultException(Seq.empty)))
+
+        val result = await(sut.postNotification(boxId, notification))
+
+        Json.toJson(result.asInstanceOf[FailedPushNotification]) mustBe
+          buildPushNotificationJsonError(
+            INTERNAL_SERVER_ERROR,
+            s"An exception occurred when sending a notification with excise number: $ern, boxId: $boxId, messageId: $messageId"
+          )
+      }
+
+      "some other exception occurs" in {
+        when(httpClient.post(any)(any)).thenReturn(mockRequestBuilder)
+        when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
+        when(mockRequestBuilder.withBody(any())(any(), any(), any())).thenReturn(mockRequestBuilder)
+        when(mockRequestBuilder.execute[SuccessPushNotificationResponse](any(), any()))
+          .thenReturn(Future.failed(new RuntimeException("whoops")))
 
         val result = await(sut.postNotification(boxId, notification))
 
