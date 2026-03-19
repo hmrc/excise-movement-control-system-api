@@ -70,7 +70,7 @@ class PollingNewMessagesJobSpec
       "scheduler.pollingNewMessagesJob.fastPollingCutoff"   -> "15 minutes",
       "scheduler.pollingNewMessagesJob.slowPollingInterval" -> "30 minutes",
       "scheduler.pollingNewMessagesJob.numberOfInstances"   -> "1337",
-       "featureFlags.pollingNewMessagesEnabled" -> false
+      "featureFlags.pollingNewMessagesEnabled"              -> false
     )
     .build()
 
