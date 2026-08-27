@@ -750,7 +750,21 @@
 					<xs:documentation>Consignee is missing</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
-
+			<xs:enumeration value="9028">
+				<xs:annotation>
+					<xs:documentation>This message cannot be processed as vaping product destination type can only be a Tax warehouse or an Export</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="9029">
+				<xs:annotation>
+					<xs:documentation>Vaping products from Northern Ireland to an EU Tax warehouse, or from the EU to a Northern Ireland Tax warehouse cannot be mixed with other products</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="9030">
+				<xs:annotation>
+					<xs:documentation>For EU-NI vaping movements, the Consignor ID must be the same as the NI Consignee ID</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
 		</xs:restriction>
 	</xs:simpleType>
 </xs:schema>
