@@ -232,7 +232,7 @@ class AuditServiceSpec extends PlaySpec with TestXml with BeforeAndAfterEach wit
         authExciseNumber = NonEmptySeq(enrolmentRequest.erns.head, enrolmentRequest.erns.tail.toSeq)
       )
 
-      service.getInformationForGetMovements(filter, movements, enrolmentRequest)
+      service.getInformationForGetMovements(filter, movements.size, enrolmentRequest)
 
       verify(auditConnector, times(1))
         .sendExplicitAudit(eqTo("GetInformation"), eqTo(expectedDetails))(any, any, any)

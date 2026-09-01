@@ -163,7 +163,7 @@ class AuditEventFactorySpec extends AnyFreeSpec with Matchers with Auditing with
 
     val result = service.createGetMovementsDetails(
       MovementFilter(None, None, None, None, None),
-      Seq(movement),
+      Seq(movement).size,
       EnrolmentRequest(fakeRequest, ernsSet, userDetails)
     )
 

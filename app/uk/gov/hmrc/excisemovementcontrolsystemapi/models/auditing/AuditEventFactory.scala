@@ -97,7 +97,7 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
 
   def createGetMovementsDetails(
     movementFilter: MovementFilter,
-    movements: Seq[Movement],
+    movements: Int,
     request: EnrolmentRequest[AnyContent]
   ): GetMovementsAuditInfo = {
     val parameters = GetMovementsParametersAuditInfo(
@@ -108,7 +108,7 @@ class AuditEventFactory @Inject() (emcsUtils: EmcsUtils, ieMessageFactory: IEMes
       movementFilter.traderType.map(x => x.traderType)
     )
     val response   = GetMovementsResponseAuditInfo(
-      movements.length
+      movements
     )
     GetMovementsAuditInfo(
       request = parameters,

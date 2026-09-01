@@ -91,7 +91,7 @@ class AuditService @Inject() (auditConnector: AuditConnector, appConfig: AppConf
 
   def getInformationForGetMovements(
     movementFilter: MovementFilter,
-    movements: Seq[Movement],
+    movements: Int,
     request: EnrolmentRequest[AnyContent]
   )(implicit hc: HeaderCarrier): Unit =
     if (appConfig.newAuditingEnabled) {

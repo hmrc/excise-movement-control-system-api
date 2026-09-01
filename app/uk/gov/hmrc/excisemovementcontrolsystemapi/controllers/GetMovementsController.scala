@@ -17,11 +17,18 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import cats.data._
+import cats.implicits.toFlatMapOps
+import org.apache.pekko.NotUsed
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.util.ByteString
 import play.api.Logging
+import play.api.http.HttpEntity.Strict
 import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.{MovementFilter, TraderType}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.models.auth.EnrolmentRequest
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.validation.MovementIdValidation
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.{ErrorResponse, ExciseMovementResponse}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.model.Movement
@@ -35,6 +42,7 @@ import uk.gov.hmrc.play.http.HeaderCarrierConverter
 import java.time.Instant
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.chaining.scalaUtilChainingOps
 import scala.util.control.NonFatal
 
 class GetMovementsController @Inject() (
@@ -49,7 +57,7 @@ class GetMovementsController @Inject() (
   messageService: MessageService,
   movementIdValidator: MovementIdValidation,
   auditService: AuditService
-)(implicit ec: ExecutionContext)
+)(implicit ec: ExecutionContext, materializer: Materializer)
     extends BackendController(cc)
     with Logging {
 
@@ -76,15 +84,19 @@ class GetMovementsController @Inject() (
           traderType.map(trader => TraderType(trader, request.erns.toSeq))
         )
 
-      {
-        for {
-          _         <- messageService.updateAllMessages(ern.fold(request.erns)(Set(_)))
-          movements <- movementService.getMovementByErn(request.erns.toSeq, filter)
-        } yield {
-          auditService.getInformationForGetMovements(filter, movements, request)
-          Ok(Json.toJson(movements.map(createResponseFrom)))
-        }
-      }.recover { case NonFatal(ex) =>
+      val result = for {
+        _       <- messageService.updateAllMessages(ern.fold(request.erns)(Set(_)))
+        payload <- movementService
+                     .streamMovementsByErn(request.erns.toSeq)
+                     .pipe(sizedJsonArrayPayload)
+                     .flatTap { case (count, _) => Future.successful(audit(count, filter)) }
+                     .map(_._2)
+
+      } yield {
+        Result(ResponseHeader(OK), Strict(payload, Some("application/json")))
+      }
+
+      result.recover { case NonFatal(ex) =>
         logger.warn(
           s"Error getting movements for erns ${request.erns} with filters ern: $ern, lrn: $lrn, arc: $arc, updatedSince: $updatedSince, traderType: $traderType",
           ex
@@ -100,6 +112,24 @@ class GetMovementsController @Inject() (
         )
       }
     }
+
+  private def audit(movementCount: Int, filter: MovementFilter)(implicit
+    request: EnrolmentRequest[AnyContent],
+    hc: HeaderCarrier
+  ): Unit =
+    auditService.getInformationForGetMovements(filter, movementCount, request)
+
+  private def sizedJsonArrayPayload(source: Source[Movement, NotUsed]): Future[(Int, ByteString)]    =
+    source
+      .map(createResponseFrom)
+      .map(Json.toJson(_).toString())
+      .grouped(2)
+      .map(group => group.size -> ByteString(group.mkString(",")))
+      .pipe(Source.single(0 -> ByteString("[")) ++ _ ++ Source.single(0 -> ByteString("]")))
+      .runFold(0 -> ByteString.empty)(foldSizedPayload)
+
+  private def foldSizedPayload(left: (Int, ByteString), right: (Int, ByteString)): (Int, ByteString) =
+    left._1 + right._1 -> left._2.concat(right._2)
 
   def getMovement(movementId: String): Action[AnyContent] =
     (authAction andThen correlationIdAction).async(parse.default) { implicit request =>

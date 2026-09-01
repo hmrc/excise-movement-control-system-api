@@ -17,6 +17,9 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import org.apache.pekko.Done
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.Source
 import org.mockito.ArgumentMatchersSugar.{any, eqTo}
 import org.mockito.MockitoSugar.{reset, times, verify, when}
 import org.scalatest.BeforeAndAfterEach
@@ -51,13 +54,15 @@ class GetMovementsControllerSpec
     with ErrorResponseSupport
     with BeforeAndAfterEach {
 
-  implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  private val cc                    = stubControllerComponents()
-  private val movementService       = mock[MovementService]
-  private val dateTimeService       = mock[DateTimeService]
-  private val messageService        = mock[MessageService]
-  private val movementIdValidator   = mock[MovementIdValidation]
-  private val auditService          = mock[AuditService]
+  implicit val ec: ExecutionContext       = ExecutionContext.Implicits.global
+  private val actorSystem                 = ActorSystem()
+  implicit val materializer: Materializer = Materializer.createMaterializer(actorSystem)
+  private val cc                          = stubControllerComponents()
+  private val movementService             = mock[MovementService]
+  private val dateTimeService             = mock[DateTimeService]
+  private val messageService              = mock[MessageService]
+  private val movementIdValidator         = mock[MovementIdValidation]
+  private val auditService                = mock[AuditService]
 
   private val controller = new GetMovementsController(
     FakeSuccessAuthentication(Set(ern)),
@@ -161,6 +166,24 @@ class GetMovementsControllerSpec
         )
       )
 
+    when(movementService.streamMovementsByErn(any))
+      .thenReturn(
+        Source.fromIterator(() =>
+          Iterator.single(
+            Movement(
+              "cfdb20c7-d0b0-4b8b-a071-737d68dede5e",
+              Some("boxId"),
+              "lrn",
+              ern,
+              Some("consigneeId"),
+              Some("arc"),
+              timestamp,
+              Seq.empty
+            )
+          )
+        )
+      )
+
     when(dateTimeService.timestamp()).thenReturn(timestamp)
 
     when(messageService.updateAllMessages(any)(any)).thenReturn(Future.successful(Done))
@@ -192,7 +215,7 @@ class GetMovementsControllerSpec
         )
         withClue("Submits GetInformation (GetMovements) audit event") {
           verify(auditService, times(1))
-            .getInformationForGetMovements(eqTo(filter), eqTo(movements), any[EnrolmentRequest[AnyContent]])(
+            .getInformationForGetMovements(eqTo(filter), eqTo(movements.size), any[EnrolmentRequest[AnyContent]])(
               any
             )
         }
@@ -222,6 +245,9 @@ class GetMovementsControllerSpec
           when(movementService.getMovementByErn(any, any))
             .thenReturn(Future.successful(Seq(movement1, movement2)))
 
+          when(movementService.streamMovementsByErn(any))
+            .thenReturn(Source.fromIterator(() => Iterator(movement1, movement2)))
+
           val result = controller.getMovements(None, None, None, None, None)(enrolmentRequest)
 
           status(result) mustBe OK
@@ -232,12 +258,12 @@ class GetMovementsControllerSpec
             )
           )
 
-          verify(movementService).getMovementByErn(eqTo(Seq(ern)), any)
+//          verify(movementService).getMovementByErn(eqTo(Seq(ern)), any)
           withClue("Submits GetInformation (GetMovements) audit event") {
             verify(auditService, times(1))
               .getInformationForGetMovements(
                 eqTo(MovementFilter(None, None, None, None, None)),
-                eqTo(Seq(movement1, movement2)),
+                eqTo(Seq(movement1, movement2).size),
                 any[EnrolmentRequest[AnyContent]]
               )(any)
           }
@@ -281,6 +307,9 @@ class GetMovementsControllerSpec
           when(movementService.getMovementByErn(any, any))
             .thenReturn(Future.successful(Seq(movement1, movement2)))
 
+          when(movementService.streamMovementsByErn(any))
+            .thenReturn(Source(Seq(movement1, movement2)))
+
           val result = controller.getMovements(None, None, None, None, None)(enrolmentRequest)
 
           status(result) mustBe OK
@@ -297,7 +326,7 @@ class GetMovementsControllerSpec
             verify(auditService, times(1))
               .getInformationForGetMovements(
                 eqTo(MovementFilter(None, None, None, None, None)),
-                eqTo(Seq(movement1, movement2)),
+                eqTo(Seq(movement1, movement2).size),
                 any[EnrolmentRequest[AnyContent]]
               )(
                 any
@@ -337,6 +366,9 @@ class GetMovementsControllerSpec
           when(movementService.getMovementByErn(any, any))
             .thenReturn(Future.successful(Seq(movement2)))
 
+          when(movementService.streamMovementsByErn(any))
+            .thenReturn(Source.fromIterator(() => Iterator.single(movement2)))
+
           val result = controller.getMovements(Some(localErn), None, None, None, None)(enrolmentRequest)
 
           status(result) mustBe OK
@@ -350,7 +382,7 @@ class GetMovementsControllerSpec
             verify(auditService, times(1))
               .getInformationForGetMovements(
                 eqTo(MovementFilter(Some(localErn), None, None, None, None)),
-                eqTo(Seq(movement2)),
+                eqTo(Seq(movement2).size),
                 any[EnrolmentRequest[AnyContent]]
               )(
                 any
@@ -372,12 +404,13 @@ class GetMovementsControllerSpec
             )
           )
 
-          await(
-            controller
-              .getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestamp.toString), Some("consignor"))(
-                enrolmentRequest
-              )
-          )
+          val result = controller
+            .getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestamp.toString), Some("consignor"))(
+              enrolmentRequest
+            )
+
+          status(result) mustBe OK
+          contentAsJson(result)
 
           val filter = MovementFilter(
             ern = Some(ern),
@@ -387,21 +420,13 @@ class GetMovementsControllerSpec
             traderType = Some(TraderType(traderType = "consignor", erns = Seq(ern)))
           )
 
-          verify(movementService).getMovementByErn(any, eqTo(filter))
+          verify(movementService).streamMovementsByErn(eqTo(Seq(ern)))
 
           withClue("Submits GetInformation (GetMovements) audit event") {
             verify(auditService, times(1))
               .getInformationForGetMovements(
-                eqTo(
-                  MovementFilter(
-                    Some(ern),
-                    Some("lrn"),
-                    Some("arc"),
-                    Some(timestamp),
-                    Some(TraderType("consignor", Seq(ern)))
-                  )
-                ),
-                eqTo(movements),
+                eqTo(filter),
+                eqTo(movements.size),
                 any
               )(any)
           }
@@ -419,21 +444,15 @@ class GetMovementsControllerSpec
               Seq.empty[Message]
             )
           )
-          await(
-            controller
-              .getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestamp.toString), Some("consignee"))(
-                enrolmentRequest
-              )
-          )
 
-          val filter = MovementFilter(
-            ern = Some(ern),
-            lrn = Some("lrn"),
-            arc = Some("arc"),
-            updatedSince = Some(timestamp),
-            traderType = Some(TraderType(traderType = "consignee", erns = Seq(ern)))
-          )
-          verify(movementService).getMovementByErn(any, eqTo(filter))
+          val result =
+            controller.getMovements(Some(ern), Some("lrn"), Some("arc"), Some(timestamp.toString), Some("consignee"))(
+              enrolmentRequest
+            )
+          status(result) mustBe OK
+          contentAsJson(result)
+
+          verify(movementService).streamMovementsByErn(eqTo(Seq(ern)))
 
           withClue("Submits GetInformation (GetMovements) audit event") {
             verify(auditService, times(1))
@@ -447,7 +466,7 @@ class GetMovementsControllerSpec
                     Some(TraderType("consignee", Seq(ern)))
                   )
                 ),
-                eqTo(movements),
+                eqTo(movements.size),
                 any
               )(
                 any

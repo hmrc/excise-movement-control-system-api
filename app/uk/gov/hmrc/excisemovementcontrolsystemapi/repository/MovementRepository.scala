@@ -17,7 +17,8 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
 import cats.implicits.toFunctorOps
-import org.apache.pekko.Done
+import org.apache.pekko.{Done, NotUsed}
+import org.apache.pekko.stream.scaladsl.Source
 import org.bson.conversions.Bson
 import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model._
@@ -168,6 +169,16 @@ class MovementRepository @Inject() (
         )
       )
       .toFuture()
+  }
+
+  def streamMovementsByERN(
+    ern: Seq[String]
+  ): Source[Movement, NotUsed] = {
+
+    val ernFilters: Seq[Bson] = getErnFilters(ern)
+    val publisher             = collection.find(and(ernFilters: _*))
+
+    Source.fromPublisher(publisher)
   }
 
   private def getErnFilters(ern: Seq[String]) =

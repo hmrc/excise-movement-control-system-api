@@ -17,7 +17,8 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.services
 
 import com.google.inject.Singleton
-import org.apache.pekko.Done
+import org.apache.pekko.{Done, NotUsed}
+import org.apache.pekko.stream.scaladsl.Source
 import org.mongodb.scala.MongoCommandException
 import play.api.Logging
 import play.api.libs.json.Json
@@ -116,6 +117,9 @@ class MovementService @Inject() (
     movementRepository
       .getMovementByERN(ern, filter)
       .map(movements => filterMovementByTraderType(movements, filter.traderType))
+
+  def streamMovementsByErn(ern: Seq[String]): Source[Movement, NotUsed] =
+    movementRepository.streamMovementsByERN(ern)
 
   private def filterMovementByTraderType(movements: Seq[Movement], traderType: Option[TraderType]) =
     traderType.fold[Seq[Movement]](movements) { trader =>
