@@ -38,7 +38,7 @@ import java.nio.charset.StandardCharsets
 import java.util.{Base64, UUID}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
+import scala.util.{Failure, Try}
 import scala.util.control.NonFatal
 
 @Singleton
@@ -94,10 +94,17 @@ class MessageConnector @Inject() (
           }
         }
         else if (response.status == FORBIDDEN) {
-          val now = dateTimeService.timestamp()
-          ernRetrievalRepository.setLastRetrieved(ern, now)
           logger.warn(s"[MessageConnector]: FORBIDDEN status returned: ${response.status}")
-          Future.failed(new RuntimeException("FORBIDDEN status returned"))
+          val now = dateTimeService.timestamp()
+          ernRetrievalRepository
+            .setLastRetrieved(ern, now)
+            .andThen { case Failure(exception) =>
+              logger.error(s"Failed to write to ERN retrieval repository: ${exception.getMessage}")
+            }
+            .flatMap { _ =>
+              Future.failed(new RuntimeException("FORBIDDEN status returned"))
+            }
+
         } else {
           logger.warn(s"[MessageConnector]: Invalid status returned: ${response.status}")
           Future.failed(new RuntimeException("Invalid status returned"))

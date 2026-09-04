@@ -38,6 +38,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptSuccessResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.GetMessagesResponse
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnRetrievalRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, HttpHeader}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.http.HeaderCarrier
@@ -46,8 +47,9 @@ import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
 import java.nio.charset.StandardCharsets
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDateTime, ZoneOffset}
+import java.time.{Instant, LocalDateTime, ZoneOffset}
 import java.util.{Base64, UUID}
+import scala.concurrent.Future
 
 class MessageConnectorSpec
     extends AnyFreeSpec
@@ -67,6 +69,7 @@ class MessageConnectorSpec
 
   private val mockDateTimeService = mock[DateTimeService]
   private val auditService        = mock[AuditService]
+  private val ernRetrievalRepository = mock[ErnRetrievalRepository]
   private val formatter           = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX")
 
   override lazy val app: Application =
@@ -78,7 +81,8 @@ class MessageConnectorSpec
       )
       .overrides(
         bind[DateTimeService].toInstance(mockDateTimeService),
-        bind[AuditService].toInstance(auditService)
+        bind[AuditService].toInstance(auditService),
+        bind[ErnRetrievalRepository].toInstance(ernRetrievalRepository)
       )
       .build()
 
@@ -276,6 +280,47 @@ class MessageConnectorSpec
       )
 
       val failureReason = "Invalid status returned"
+
+      val batchId = UUID.randomUUID().toString
+      connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
+
+      verify(auditService, times(1))
+        .messageProcessingFailure(eqTo(ern), eqTo(failureReason), eqTo(batchId), eqTo(None))(any)
+    }
+
+    "must emit MessageProcessingFailure when EIS returns 403" in {
+      when(mockDateTimeService.timestamp()).thenReturn(timestamp)
+      when(ernRetrievalRepository.setLastRetrieved(any[String], any[Instant])).thenReturn(Future.successful(None))
+
+      wireMockServer.stubFor(
+        put(urlEqualTo(url))
+          .willReturn(
+            aResponse()
+              .withStatus(403)
+          )
+      )
+
+      val failureReason = "FORBIDDEN status returned"
+
+      val batchId = UUID.randomUUID().toString
+      connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
+
+      verify(auditService, times(1))
+        .messageProcessingFailure(eqTo(ern), eqTo(failureReason), eqTo(batchId), eqTo(None))(any)
+    }
+
+    "must emit MessageProcessingFailure when ERN Retrieval repository fails to set last retrieved" in {
+      when(mockDateTimeService.timestamp()).thenReturn(timestamp)
+      when(ernRetrievalRepository.setLastRetrieved(any[String], any[Instant])).thenReturn(Future.failed(new RuntimeException("db failure")))
+      wireMockServer.stubFor(
+        put(urlEqualTo(url))
+          .willReturn(
+            aResponse()
+              .withStatus(403)
+          )
+      )
+
+      val failureReason = "db failure"
 
       val batchId = UUID.randomUUID().toString
       connector.getNewMessages(ern, batchId, None)(hc).failed.futureValue
