@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.connectors
 
 import generated.NewMessagesDataResponse
-import play.api.http.Status.OK
+import play.api.http.Status.{FORBIDDEN, OK}
 import play.api.libs.json.{Json, Reads}
 import play.api.{Configuration, Logging}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.config.{AppConfig, Service}
@@ -26,6 +26,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.factories.IEMessageFactory
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageReceiptSuccessResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.eis.EISConsumptionResponse
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.messages.{GetMessagesResponse, IEMessage}
+import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.ErnRetrievalRepository
 import uk.gov.hmrc.excisemovementcontrolsystemapi.services.{AuditService, HttpHeader}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService._
@@ -37,7 +38,7 @@ import java.nio.charset.StandardCharsets
 import java.util.{Base64, UUID}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
+import scala.util.{Failure, Try}
 import scala.util.control.NonFatal
 
 @Singleton
@@ -47,7 +48,8 @@ class MessageConnector @Inject() (
   messageFactory: IEMessageFactory,
   dateTimeService: DateTimeService,
   auditService: AuditService,
-  appConfig: AppConfig
+  appConfig: AppConfig,
+  ernRetrievalRepository: ErnRetrievalRepository
 )(implicit ec: ExecutionContext)
     extends Logging {
 
@@ -91,7 +93,19 @@ class MessageConnector @Inject() (
             getMessagesResponse
           }
         }
-        else {
+        else if (response.status == FORBIDDEN) {
+          logger.warn(s"[MessageConnector]: FORBIDDEN status returned: ${response.status}")
+          val now = dateTimeService.timestamp()
+          ernRetrievalRepository
+            .setLastRetrieved(ern, now)
+            .andThen { case Failure(exception) =>
+              logger.error(s"Failed to write to ERN retrieval repository: ${exception.getMessage}")
+            }
+            .flatMap { _ =>
+              Future.failed(new RuntimeException("FORBIDDEN status returned"))
+            }
+
+        } else {
           logger.warn(s"[MessageConnector]: Invalid status returned: ${response.status}")
           Future.failed(new RuntimeException("Invalid status returned"))
         }
