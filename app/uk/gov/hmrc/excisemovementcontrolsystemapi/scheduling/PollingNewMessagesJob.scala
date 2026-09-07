@@ -54,7 +54,6 @@ class PollingNewMessagesJob @Inject() (
     val deadline = dateTimeService.timestamp().plus(interval.toMillis, ChronoUnit.MILLIS)
     val jobId    = UUID.randomUUID().toString
     getLastActivity
-      .map(lastActivityMap => lastActivityMap.filter(lastActivity => ERN_REGEX.matches(lastActivity._1)))
       .flatMap { lastActivityMap =>
         Random.shuffle(lastActivityMap.toSeq).traverse { case (ern, lastActivity) =>
           val now = dateTimeService.timestamp()
