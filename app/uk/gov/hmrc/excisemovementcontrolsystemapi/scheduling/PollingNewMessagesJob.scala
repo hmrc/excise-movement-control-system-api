@@ -51,9 +51,12 @@ class PollingNewMessagesJob @Inject() (
   private val throttledMeter = metrics.defaultRegistry.meter("polling-new-messages-job.throttled-meter")
 
   override def execute(implicit ec: ExecutionContext): Future[ScheduledJob.Result] = {
-    val deadline = dateTimeService.timestamp().plus(interval.toMillis, ChronoUnit.MILLIS)
-    val jobId    = UUID.randomUUID().toString
+    val deadline                   = dateTimeService.timestamp().plus(interval.toMillis, ChronoUnit.MILLIS)
+    val jobId                      = UUID.randomUUID().toString
+    val filteredErns: List[String] = configuration.getOptional[String]("filteredErns").getOrElse("").split(",").toList
+
     getLastActivity
+      .map(lastActivityMap => lastActivityMap.filter(lastActivity => !filteredErns.contains(lastActivity._1)))
       .flatMap { lastActivityMap =>
         Random.shuffle(lastActivityMap.toSeq).traverse { case (ern, lastActivity) =>
           val now = dateTimeService.timestamp()
