@@ -70,7 +70,8 @@ class PollingNewMessagesJobSpec
       "scheduler.pollingNewMessagesJob.fastPollingCutoff"   -> "15 minutes",
       "scheduler.pollingNewMessagesJob.slowPollingInterval" -> "30 minutes",
       "scheduler.pollingNewMessagesJob.numberOfInstances"   -> "1337",
-      "featureFlags.pollingNewMessagesEnabled"              -> false
+      "featureFlags.pollingNewMessagesEnabled"              -> false,
+      "filteredErns"                                        -> "GB12345678999"
     )
     .build()
 
@@ -216,6 +217,24 @@ class PollingNewMessagesJobSpec
         result mustBe ScheduledJob.Result.Cancelled
         verify(messageService, never()).updateMessages(any, any, any)(any)
       }
+      "when the ern is part of the ERN filter list" in {
+
+        val ernsAndLastReceived  = Map("GB12345678999" -> now.minus(6, ChronoUnit.MINUTES))
+        val ernsAndLastSubmitted = Map("GB12345678999" -> now.minus(6, ChronoUnit.MINUTES))
+        when(timeService.timestamp()).thenReturn(
+          now,
+          now.plus(1, ChronoUnit.MINUTES)
+        )
+        when(movementRepository.getErnsAndLastReceived).thenReturn(Future.successful(ernsAndLastReceived))
+        when(ernSubmissionRepository.getErnsAndLastSubmitted).thenReturn(Future.successful(ernsAndLastSubmitted))
+        when(messageService.updateMessages(any, any, any)(any))
+          .thenReturn(Future.successful(MessageService.UpdateOutcome.Updated))
+
+        val result = pollingNewMessagesJob.execute.futureValue
+
+        result mustBe ScheduledJob.Result.Completed
+        verify(messageService, never()).updateMessages(any, any, any)(any)
+      }
 
       "when the last submission for the ern is outside of the fast polling cutoff" - {
 
@@ -300,6 +319,7 @@ class PollingNewMessagesJobSpec
           verify(messageService, never).updateMessages(any, any, any)(any)
         }
       }
+
     }
   }
 }
