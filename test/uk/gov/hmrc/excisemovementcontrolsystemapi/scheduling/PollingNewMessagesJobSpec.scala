@@ -71,7 +71,7 @@ class PollingNewMessagesJobSpec
       "scheduler.pollingNewMessagesJob.slowPollingInterval" -> "30 minutes",
       "scheduler.pollingNewMessagesJob.numberOfInstances"   -> "1337",
       "featureFlags.pollingNewMessagesEnabled"              -> false,
-      "filteredErns"                                        -> "GB12345678999"
+      "scheduler.pollingNewMessagesJob.filteredErns"        -> "GB12345678999"
     )
     .build()
 

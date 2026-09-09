@@ -22,6 +22,7 @@ import org.mockito.MockitoSugar.{reset, times, verify, when}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
+import play.api.Configuration
 import play.api.http.Status._
 import play.api.libs.json.Json
 import play.api.mvc.AnyContent
@@ -58,6 +59,7 @@ class GetMovementsControllerSpec
   private val messageService        = mock[MessageService]
   private val movementIdValidator   = mock[MovementIdValidation]
   private val auditService          = mock[AuditService]
+  private val configuration         = mock[Configuration]
 
   private val controller = new GetMovementsController(
     FakeSuccessAuthentication(Set(ern)),
@@ -70,7 +72,8 @@ class GetMovementsControllerSpec
     dateTimeService,
     messageService,
     movementIdValidator,
-    auditService
+    auditService,
+    configuration
   )
 
   private val timestamp   = Instant.parse("2020-01-01T01:01:01.123456Z")
@@ -88,7 +91,8 @@ class GetMovementsControllerSpec
       dateTimeService,
       messageService,
       movementIdValidator,
-      auditService
+      auditService,
+      configuration
     )
 
   private def createWithAuthActionFailure =
@@ -103,7 +107,8 @@ class GetMovementsControllerSpec
       dateTimeService,
       messageService,
       movementIdValidator,
-      auditService
+      auditService,
+      configuration
     )
 
   private val createWithUpdateSinceActionFailure =
@@ -118,7 +123,8 @@ class GetMovementsControllerSpec
       dateTimeService,
       messageService,
       movementIdValidator,
-      auditService
+      auditService,
+      configuration
     )
 
   private val createWithTraderTypeActionFailure =
@@ -133,7 +139,8 @@ class GetMovementsControllerSpec
       dateTimeService,
       messageService,
       movementIdValidator,
-      auditService
+      auditService,
+      configuration
     )
 
   val enrolmentRequest: EnrolmentRequest[AnyContent] =
@@ -164,7 +171,7 @@ class GetMovementsControllerSpec
     when(dateTimeService.timestamp()).thenReturn(timestamp)
 
     when(messageService.updateAllMessages(any)(any)).thenReturn(Future.successful(Done))
-
+    when(configuration.getOptional[String]("updateAllMessages.filteredErns")).thenReturn(Some("testErn1"))
   }
 
   "getMovements" should {
@@ -255,7 +262,8 @@ class GetMovementsControllerSpec
             dateTimeService,
             messageService,
             movementIdValidator,
-            auditService
+            auditService,
+            configuration
           )
 
           val movement1 = Movement(
@@ -321,7 +329,8 @@ class GetMovementsControllerSpec
             dateTimeService,
             messageService,
             movementIdValidator,
-            auditService
+            auditService,
+            configuration
           )
           val movement2  = Movement(
             "cfdb20c7-d0b0-4b8b-a071-737d68dede5b",
@@ -497,6 +506,26 @@ class GetMovementsControllerSpec
 
         status(result) mustBe FORBIDDEN
       }
+      "get movements ERN is filtered" in {
+        val filterController = new GetMovementsController(
+          FakeSuccessAuthentication(Set("testErn1")),
+          new CorrelationIdAction,
+          FakeValidateErnParameterSuccessAction,
+          FakeValidateUpdatedSinceSuccessAction,
+          FakeValidateTraderTypeSuccessAction,
+          cc,
+          movementService,
+          dateTimeService,
+          messageService,
+          movementIdValidator,
+          auditService,
+          configuration
+        )
+
+        val result = filterController.getMovements(None, None, None, None, None)(fakeRequest)
+
+        status(result) mustBe FORBIDDEN
+      }
     }
     "respond with 500 INTERNAL_SERVER_ERROR" when {
       "anything in the updateMovements call fails" in {
@@ -559,7 +588,8 @@ class GetMovementsControllerSpec
           dateTimeService,
           messageService,
           movementIdValidator,
-          auditService
+          auditService,
+          configuration
         )
 
         when(movementIdValidator.validateMovementId(eqTo(uuid))).thenReturn(Right(uuid))
@@ -628,6 +658,26 @@ class GetMovementsControllerSpec
     "respond with 403 FORBIDDEN" when {
       "authentication fails" in {
         val result = createWithAuthActionFailure.getMovement(uuid)(fakeRequest)
+
+        status(result) mustBe FORBIDDEN
+      }
+      "get movement ERN is filtered" in {
+        val filterController = new GetMovementsController(
+          FakeSuccessAuthentication(Set("testErn1")),
+          new CorrelationIdAction,
+          FakeValidateErnParameterSuccessAction,
+          FakeValidateUpdatedSinceSuccessAction,
+          FakeValidateTraderTypeSuccessAction,
+          cc,
+          movementService,
+          dateTimeService,
+          messageService,
+          movementIdValidator,
+          auditService,
+          configuration
+        )
+
+        val result = filterController.getMovement(uuid)(fakeRequest)
 
         status(result) mustBe FORBIDDEN
       }

@@ -23,6 +23,7 @@ import org.mockito.MockitoSugar.{reset, times, verify, when}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
+import play.api.Configuration
 import play.api.http.HeaderNames
 import play.api.http.Status._
 import play.api.libs.json.{JsArray, JsValue, Json}
@@ -66,6 +67,7 @@ class GetMessagesControllerSpec
   private val messageCreatedOn      = Instant.now()
   private val auditService          = mock[AuditService]
   private val messageFactory        = mock[IEMessageFactory]
+  private val configuration         = mock[Configuration]
   private val emcsUtils: EmcsUtils  = new EmcsUtils
   private val MovementIdFormatError = Json.parse("""
       |{
@@ -77,10 +79,10 @@ class GetMessagesControllerSpec
   override def beforeEach(): Unit = {
     super.beforeEach()
     reset(movementService, dateTimeService, messageService)
-
     when(dateTimeService.timestamp()).thenReturn(timeStamp)
     when(messageService.updateAllMessages(any)(any)).thenReturn(Future.successful(Done))
     when(messageFactory.createFromXml(any, any)).thenReturn(IE801Message.createFromXml(IE801))
+    when(configuration.getOptional[String]("updateAllMessages.filteredErns")).thenReturn(Some("testErn11"))
 
   }
 
@@ -444,6 +446,25 @@ class GetMessagesControllerSpec
         "Invalid MovementID supplied for ERN"
       )
     }
+    "respond with 403 FORBIDDEN when the ERN is in the filter list " in {
+      val message  = Message("message", "IE801", "messageId", "testErn11", Set.empty, Instant.now)
+      val movement = Movement(
+        validUUID,
+        Some("boxId"),
+        "lrn",
+        "testErn11",
+        Some("consigneeErn"),
+        Some("arc"),
+        Instant.now,
+        Seq(message)
+      )
+      when(movementService.getMovementById(any)).thenReturn(Future.successful(Some(movement)))
+
+      val result =
+        createWithSuccessfulAuth(Set("testErn11")).getMessagesForMovement(validUUID, None, None)(createRequest())
+
+      status(result) mustBe FORBIDDEN
+    }
   }
 
   "getMessageForMovement" should {
@@ -600,7 +621,8 @@ class GetMessagesControllerSpec
       cc,
       dateTimeService,
       auditService,
-      emcsUtils
+      emcsUtils,
+      configuration
     )
 
   private def createWithFailedAuth =
@@ -614,7 +636,8 @@ class GetMessagesControllerSpec
       cc,
       dateTimeService,
       auditService,
-      emcsUtils
+      emcsUtils,
+      configuration
     )
 
   private def createRequest(
