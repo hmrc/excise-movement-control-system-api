@@ -17,7 +17,7 @@
 package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import cats.data._
-import play.api.Logging
+import play.api.{Configuration, Logging}
 import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions._
@@ -48,7 +48,8 @@ class GetMovementsController @Inject() (
   dateTimeService: DateTimeService,
   messageService: MessageService,
   movementIdValidator: MovementIdValidation,
-  auditService: AuditService
+  auditService: AuditService,
+  configuration: Configuration
 )(implicit ec: ExecutionContext)
     extends BackendController(cc)
     with Logging {
@@ -66,38 +67,47 @@ class GetMovementsController @Inject() (
       andThen validateUpdatedSinceAction(updatedSince)
       andThen validateTraderTypeAction(traderType)).async(parse.default) { implicit request =>
       implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
+      val filteredErns               =
+        configuration.getOptional[String]("updateAllMessages.filteredErns").getOrElse("").split(",").toList
 
-      val filter =
-        MovementFilter(
-          ern,
-          lrn,
-          arc,
-          updatedSince.map(Instant.parse(_)),
-          traderType.map(trader => TraderType(trader, request.erns.toSeq))
-        )
+      val acceptedErns = request.erns.toList.filter(ern => !filteredErns.contains(ern))
 
-      {
-        for {
-          _         <- messageService.updateAllMessages(ern.fold(request.erns)(Set(_)))
-          movements <- movementService.getMovementByErn(request.erns.toSeq, filter)
-        } yield {
-          auditService.getInformationForGetMovements(filter, movements, request)
-          Ok(Json.toJson(movements.map(createResponseFrom)))
-        }
-      }.recover { case NonFatal(ex) =>
-        logger.warn(
-          s"Error getting movements for erns ${request.erns} with filters ern: $ern, lrn: $lrn, arc: $arc, updatedSince: $updatedSince, traderType: $traderType",
-          ex
-        )
-        InternalServerError(
-          Json.toJson(
-            ErrorResponse(
-              dateTimeService.timestamp(),
-              "Error getting movements",
-              "Unknown error while getting movements"
+      if (acceptedErns.nonEmpty) {
+
+        val filter =
+          MovementFilter(
+            ern,
+            lrn,
+            arc,
+            updatedSince.map(Instant.parse(_)),
+            traderType.map(trader => TraderType(trader, acceptedErns))
+          )
+
+        {
+          for {
+            _         <- messageService.updateAllMessages(ern.fold(acceptedErns.toSet)(Set(_)))
+            movements <- movementService.getMovementByErn(acceptedErns, filter)
+          } yield {
+            auditService.getInformationForGetMovements(filter, movements, request)
+            Ok(Json.toJson(movements.map(createResponseFrom)))
+          }
+        }.recover { case NonFatal(ex) =>
+          logger.warn(
+            s"Error getting movements for erns $acceptedErns with filters ern: $ern, lrn: $lrn, arc: $arc, updatedSince: $updatedSince, traderType: $traderType",
+            ex
+          )
+          InternalServerError(
+            Json.toJson(
+              ErrorResponse(
+                dateTimeService.timestamp(),
+                "Error getting movements",
+                "Unknown error while getting movements"
+              )
             )
           )
-        )
+        }
+      } else {
+        Future.successful(Forbidden("Forbidden"))
       }
     }
 
@@ -105,35 +115,44 @@ class GetMovementsController @Inject() (
     (authAction andThen correlationIdAction).async(parse.default) { implicit request =>
       implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
 
-      val result = for {
-        validatedMovementId <- validateMovementId(movementId)
-        _                   <- EitherT.right(messageService.updateAllMessages(request.erns))
-        movement            <- getMovementFromDb(validatedMovementId)
-      } yield {
-        val authorisedErns = request.erns
-        val movementErns   = getErnsForMovement(movement)
+      val filteredErns =
+        configuration.getOptional[String]("updateAllMessages.filteredErns").getOrElse("").split(",").toList
 
-        if (authorisedErns.intersect(movementErns).isEmpty) {
-          logger.warn(
-            s"[GetMovementsController] - Movement $movementId is not found within the data for authorisedERNs"
-          )
-          NotFound(
-            Json.toJson(
-              ErrorResponse(
-                dateTimeService.timestamp(),
-                "Movement not found",
-                s"Movement $movementId is not found within the data for ERNs ${authorisedErns.mkString("/")}"
+      val acceptedErns = request.erns.toList.filter(ern => !filteredErns.contains(ern))
+
+      if (acceptedErns.nonEmpty) {
+        val result = for {
+          validatedMovementId <- validateMovementId(movementId)
+          _                   <- EitherT.right(messageService.updateAllMessages(acceptedErns.toSet))
+          movement            <- getMovementFromDb(validatedMovementId)
+        } yield {
+          val authorisedErns = acceptedErns.toSet
+          val movementErns   = getErnsForMovement(movement)
+
+          if (authorisedErns.intersect(movementErns).isEmpty) {
+            logger.warn(
+              s"[GetMovementsController] - Movement $movementId is not found within the data for authorisedERNs"
+            )
+            NotFound(
+              Json.toJson(
+                ErrorResponse(
+                  dateTimeService.timestamp(),
+                  "Movement not found",
+                  s"Movement $movementId is not found within the data for ERNs ${authorisedErns.mkString("/")}"
+                )
               )
             )
-          )
-        } else {
-          auditService.getInformationForGetSpecificMovement(movementId, request)
-          Ok(Json.toJson(createResponseFrom(movement)))
+          } else {
+            auditService.getInformationForGetSpecificMovement(movementId, request)
+            Ok(Json.toJson(createResponseFrom(movement)))
+          }
+
         }
 
+        result.merge
+      } else {
+        Future.successful(Forbidden("Forbidden"))
       }
-
-      result.merge
     }
 
   private def validateMovementId(movementId: String): EitherT[Future, Result, String] =

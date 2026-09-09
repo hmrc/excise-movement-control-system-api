@@ -53,7 +53,8 @@ class PollingNewMessagesJob @Inject() (
   override def execute(implicit ec: ExecutionContext): Future[ScheduledJob.Result] = {
     val deadline                   = dateTimeService.timestamp().plus(interval.toMillis, ChronoUnit.MILLIS)
     val jobId                      = UUID.randomUUID().toString
-    val filteredErns: List[String] = configuration.getOptional[String]("filteredErns").getOrElse("").split(",").toList
+    val filteredErns: List[String] =
+      configuration.getOptional[String]("scheduler.pollingNewMessagesJob.filteredErns").getOrElse("").split(",").toList
 
     getLastActivity
       .map(lastActivityMap => lastActivityMap.filter(lastActivity => !filteredErns.contains(lastActivity._1)))

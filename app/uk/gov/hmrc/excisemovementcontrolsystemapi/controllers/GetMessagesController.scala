@@ -18,7 +18,7 @@ package uk.gov.hmrc.excisemovementcontrolsystemapi.controllers
 
 import cats.data.{EitherT, OptionT}
 import cats.implicits._
-import play.api.Logging
+import play.api.{Configuration, Logging}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.excisemovementcontrolsystemapi.controllers.actions.{AuthAction, CorrelationIdAction, ValidateAcceptHeaderAction}
@@ -48,7 +48,8 @@ class GetMessagesController @Inject() (
   cc: ControllerComponents,
   dateTimeService: DateTimeService,
   auditService: AuditService,
-  emcsUtils: EmcsUtils
+  emcsUtils: EmcsUtils,
+  configuration: Configuration
 )(implicit ec: ExecutionContext)
     extends BackendController(cc)
     with Logging {
@@ -88,36 +89,44 @@ class GetMessagesController @Inject() (
     (authAction andThen
       correlationIdAction).async(parse.default) { implicit request: EnrolmentRequest[AnyContent] =>
       implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
+      val filteredErns               =
+        configuration.getOptional[String]("updateAllMessages.filteredErns").getOrElse("").split(",").toList
 
-      val result = for {
-        validatedMovementId   <- validateMovementId(movementId)
-        validatedUpdatedSince <- validateUpdatedSince(updatedSince)
-        validatedTraderType   <- validateTraderType(traderType)
-        _                     <- EitherT.right(messageService.updateAllMessages(request.erns))
-        movement              <- getMovement(validatedMovementId)
-        _                     <- movementErnCheck(request.erns, movement)
-      } yield {
-        val filteredMessages =
-          filterMessages(request.erns.toSeq, movement, validatedUpdatedSince, validatedTraderType)
-        auditService.getInformationForGetMessages(filteredMessages, movement, updatedSince, traderType, request)
+      val acceptedErns = request.erns.toList.filter(ern => !filteredErns.contains(ern))
 
-        Ok(
-          Json.toJson(
-            filteredMessages.map { filteredMessage =>
-              MessageResponse(
-                encodedMessage = filteredMessage.encodedMessage,
-                messageType = filteredMessage.messageType,
-                recipient = filteredMessage.recipient,
-                messageId = filteredMessage.messageId,
-                createdOn = filteredMessage.createdOn
-              )
-            }
+      if (acceptedErns.nonEmpty) {
+
+        val result = for {
+          validatedMovementId   <- validateMovementId(movementId)
+          validatedUpdatedSince <- validateUpdatedSince(updatedSince)
+          validatedTraderType   <- validateTraderType(traderType)
+          _                     <- EitherT.right(messageService.updateAllMessages(acceptedErns.toSet))
+          movement              <- getMovement(validatedMovementId)
+          _                     <- movementErnCheck(acceptedErns.toSet, movement)
+        } yield {
+          val filteredMessages =
+            filterMessages(acceptedErns, movement, validatedUpdatedSince, validatedTraderType)
+          auditService.getInformationForGetMessages(filteredMessages, movement, updatedSince, traderType, request)
+
+          Ok(
+            Json.toJson(
+              filteredMessages.map { filteredMessage =>
+                MessageResponse(
+                  encodedMessage = filteredMessage.encodedMessage,
+                  messageType = filteredMessage.messageType,
+                  recipient = filteredMessage.recipient,
+                  messageId = filteredMessage.messageId,
+                  createdOn = filteredMessage.createdOn
+                )
+              }
+            )
           )
-        )
+        }
+
+        result.merge
+      } else {
+        Future.successful(Forbidden("Forbidden error"))
       }
-
-      result.merge
-
     }
 
   private def filterMessages(
