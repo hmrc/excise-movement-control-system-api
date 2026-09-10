@@ -120,18 +120,24 @@ class MovementRepository @Inject() (
     localReferenceNumbers: Seq[String],
     administrativeReferenceCodes: Seq[String]
   ): Future[Seq[Movement]] = Mdc.preservingMdc {
-
-    val ernFilters = or(getErnFilters(Seq(ern)): _*)
+    println("test")
+    val filteredMovIds = configuration.getOptional[String]("filteredMovementIds").getOrElse("").split(",")
+    val ernFilters     = or(getErnFilters(Seq(ern)): _*)
 
     val idFilter: Bson = Filters.or(
       Filters.in("localReferenceNumber", localReferenceNumbers: _*),
       Filters.in("administrativeReferenceCode", administrativeReferenceCodes: _*)
     )
 
+    val movementFilter: Bson = Filters.and(
+      Filters.nin("_id", filteredMovIds: _*),
+      idFilter
+    )
+
     collection
       .find(
         and(
-          idFilter,
+          movementFilter,
           ernFilters
         )
       )
@@ -142,8 +148,8 @@ class MovementRepository @Inject() (
     ern: Seq[String],
     movementFilter: MovementFilter = MovementFilter.emptyFilter
   ): Future[Seq[Movement]] = Mdc.preservingMdc {
-
-    val ernFilters = getErnFilters(ern)
+    val filteredMovIds = configuration.getOptional[String]("filteredMovementIds").getOrElse("").split(",")
+    val ernFilters     = getErnFilters(ern)
 
     val filters =
       Seq(
@@ -156,12 +162,16 @@ class MovementRepository @Inject() (
         )
       ).flatten
 
-    val filter = if (filters.nonEmpty) Filters.and(filters: _*) else Filters.empty()
+    val filter                      = if (filters.nonEmpty) Filters.and(filters: _*) else Filters.empty()
+    val movementFilterWithIds: Bson = Filters.and(
+      Filters.nin("_id", filteredMovIds: _*),
+      filter
+    )
 
     collection
       .find(
         and(
-          filter,
+          movementFilterWithIds,
           or(
             ernFilters: _*
           )
