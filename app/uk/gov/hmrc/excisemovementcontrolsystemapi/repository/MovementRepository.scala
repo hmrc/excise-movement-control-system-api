@@ -108,7 +108,13 @@ class MovementRepository @Inject() (
   }
 
   def getMovementById(id: String): Future[Option[Movement]] = Mdc.preservingMdc {
-    collection.find(byId(id)).headOption()
+    val filteredMovIds = configuration.getOptional[String]("filteredMovementIds").getOrElse("").split(",")
+    if(filteredMovIds.contains(id)){
+      Future.successful(None)
+    }else{
+      collection.find(byId(id)).headOption()
+    }
+
   }
 
   def getMovementByLRNAndERNIn(lrn: String, erns: List[String]): Future[Seq[Movement]] = Mdc.preservingMdc {
@@ -120,7 +126,7 @@ class MovementRepository @Inject() (
     localReferenceNumbers: Seq[String],
     administrativeReferenceCodes: Seq[String]
   ): Future[Seq[Movement]] = Mdc.preservingMdc {
-    println("test")
+
     val filteredMovIds = configuration.getOptional[String]("filteredMovementIds").getOrElse("").split(",")
     val ernFilters     = or(getErnFilters(Seq(ern)): _*)
 
