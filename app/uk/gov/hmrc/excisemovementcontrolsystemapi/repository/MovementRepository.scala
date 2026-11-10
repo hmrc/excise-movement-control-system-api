@@ -109,9 +109,9 @@ class MovementRepository @Inject() (
 
   def getMovementById(id: String): Future[Option[Movement]] = Mdc.preservingMdc {
     val filteredMovIds = configuration.getOptional[String]("filteredMovementIds").getOrElse("").split(",")
-    if(filteredMovIds.contains(id)){
+    if (filteredMovIds.contains(id)) {
       Future.successful(None)
-    }else{
+    } else {
       collection.find(byId(id)).headOption()
     }
 
@@ -127,7 +127,7 @@ class MovementRepository @Inject() (
     administrativeReferenceCodes: Seq[String]
   ): Future[Seq[Movement]] = Mdc.preservingMdc {
 
-    val filteredMovIds = configuration.getOptional[String]("filteredMovementIds").getOrElse("").split(",")
+    val filteredMovIds = configuration.getOptional[String]("filteredMovementIds").getOrElse("").split(",").toSeq
     val ernFilters     = or(getErnFilters(Seq(ern)): _*)
 
     val idFilter: Bson = Filters.or(
@@ -154,7 +154,7 @@ class MovementRepository @Inject() (
     ern: Seq[String],
     movementFilter: MovementFilter = MovementFilter.emptyFilter
   ): Future[Seq[Movement]] = Mdc.preservingMdc {
-    val filteredMovIds = configuration.getOptional[String]("filteredMovementIds").getOrElse("").split(",")
+    val filteredMovIds = configuration.getOptional[String]("filteredMovementIds").getOrElse("").split(",").toSeq
     val ernFilters     = getErnFilters(ern)
 
     val filters =
