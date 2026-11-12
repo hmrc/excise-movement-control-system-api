@@ -73,7 +73,6 @@ class GetMovementsController @Inject() (
       val acceptedErns = request.erns.toList.filter(ern => !filteredErns.contains(ern))
 
       if (acceptedErns.nonEmpty) {
-
         val filter =
           MovementFilter(
             ern,

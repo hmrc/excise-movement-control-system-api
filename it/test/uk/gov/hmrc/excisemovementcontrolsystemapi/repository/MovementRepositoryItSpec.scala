@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.excisemovementcontrolsystemapi.repository
 
+import com.typesafe.config.ConfigFactory
 import org.apache.pekko.Done
 import org.mockito.MockitoSugar.when
 import org.mongodb.scala.model.Filters
@@ -27,9 +28,10 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import org.slf4j.MDC
-import play.api.Application
+import play.api.{Application, Configuration}
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
+import uk.gov.hmrc.excisemovementcontrolsystemapi.config.AppConfig
 import uk.gov.hmrc.excisemovementcontrolsystemapi.filters.MovementFilter
 import uk.gov.hmrc.excisemovementcontrolsystemapi.models.MessageTypes
 import uk.gov.hmrc.excisemovementcontrolsystemapi.repository.MovementRepository.MessageNotification
@@ -39,6 +41,7 @@ import uk.gov.hmrc.excisemovementcontrolsystemapi.utils.DateTimeService
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import java.time._
 import java.time.temporal.ChronoUnit
@@ -58,11 +61,14 @@ class MovementRepositoryItSpec
   private lazy val dateTimeService = mock[DateTimeService]
   private lazy val timestamp       = Instant.now.truncatedTo(ChronoUnit.MILLIS)
 
+  val config = app
+
   override def fakeApplication(): Application = GuiceApplicationBuilder()
     .overrides(
       bind[MongoComponent].toInstance(mongoComponent),
-      bind[DateTimeService].toInstance(dateTimeService)
+      bind[DateTimeService].toInstance(dateTimeService),
     )
+    .configure("filteredMovementIds"  -> "test1,test4,49491927-aaa1-4835-b405-dd6e7fa3aaf0")
     .build()
 
   override protected lazy val repository: MovementRepository = app.injector.instanceOf[MovementRepository]
@@ -73,7 +79,6 @@ class MovementRepositoryItSpec
   }
 
   "upsertMovement" should {
-
     val uuid     = UUID.randomUUID()
     val movement = Movement(uuid.toString, Some("boxId"), "123", "345", Some("789"), None, timestamp, Seq.empty)
 
@@ -152,7 +157,7 @@ class MovementRepositoryItSpec
 
   "getMovementById" should {
     "return the matching movement when it is there" in {
-      val movementId1 = "49491927-aaa1-4835-b405-dd6e7fa3aaf0"
+      val movementId1 = "49491927-aaa1-4835-b405-dd6e7fa3aaf9"
       val movementId2 = "8b43eb3b-3856-4f0c-b1ab-80355f70f6aa"
       val movement1   = Movement(movementId1, Some("boxId"), "lrn", "ern1", None, Some("arc1"), timestamp, Seq.empty)
       val movement2   = Movement(movementId2, Some("boxId"), "lrn", "ern2", None, Some("arc2"), timestamp, Seq.empty)
@@ -173,6 +178,20 @@ class MovementRepositoryItSpec
       result mustBe None
     }
 
+    "don't return the matching movement from the filtered list" in {
+      val movementId1 = "49491927-aaa1-4835-b405-dd6e7fa3aaf0"
+      val movementId2 = "8b43eb3b-3856-4f0c-b1ab-80355f70f6aa"
+      val movement1   = Movement(movementId1, Some("boxId"), "lrn", "ern1", None, Some("arc1"), timestamp, Seq.empty)
+      val movement2   = Movement(movementId2, Some("boxId"), "lrn", "ern2", None, Some("arc2"), timestamp, Seq.empty)
+      insertMovement(movement1)
+      insertMovement(movement2)
+
+      val result = repository.getMovementById(movementId1).futureValue
+      result mustBe None
+
+      val result2 = repository.getMovementById(movementId2).futureValue
+      result2 mustBe Some(movement2)
+    }
     mustPreserveMdc(repository.getMovementById("someId"))
   }
 
@@ -299,7 +318,7 @@ class MovementRepositoryItSpec
 
         val result = repository.getMovementByERN(Seq("ern1", "ern2")).futureValue
 
-        result.sortBy(_.localReferenceNumber) mustBe Seq(expectedMovement1, expectedMovement2, expectedMovement3)
+        result.sortBy(mv => (mv.localReferenceNumber, mv.consignorId)) mustBe Seq(expectedMovement1, expectedMovement2, expectedMovement3)
       }
 
       "ern match consignorId and consigneeId" in {
@@ -580,7 +599,43 @@ class MovementRepositoryItSpec
       result mustBe Seq.empty
     }
 
+    "filteredMovementIds should not be returned" in {
+      val expectedMovement1 =
+        Movement(Some("boxId"), "lrn", "consignorId1", Some("ern1"), Some("arc1"), lastUpdated = timestamp).copy(_id = "test1")
+      val expectedMovement2 =
+        Movement(Some("boxId"), "lrn", "consignorId2", Some("ern2"), Some("arc2"), lastUpdated = timestamp).copy(_id = "test2")
+      val expectedMovement3 =
+        Movement(Some("boxId"), "lrn1", "consignorId1", Some("ern1"), Some("arc3"), lastUpdated = timestamp).copy(_id = "test3")
+      insertMovement(expectedMovement1)
+      insertMovement(expectedMovement2)
+      insertMovement(expectedMovement3)
+
+      val result = repository.getMovementByERN(Seq("ern1")).futureValue
+
+      result.sortBy(_.localReferenceNumber) mustBe Seq(expectedMovement3)
+    }
+    "multiple filteredMovementIds should not be returned" in {
+      val expectedMovement1 =
+        Movement(Some("boxId"), "lrn", "consignorId1", Some("ern1"), Some("arc1"), lastUpdated = timestamp).copy(_id = "test1")
+      val expectedMovement2 =
+        Movement(Some("boxId"), "lrn", "consignorId2", Some("ern2"), Some("arc2"), lastUpdated = timestamp).copy(_id = "test2")
+      val expectedMovement3 =
+        Movement(Some("boxId"), "lrn1", "consignorId1", Some("ern1"), Some("arc3"), lastUpdated = timestamp).copy(_id = "test3")
+      val expectedMovement4 =
+        Movement(Some("boxId"), "lrn2", "consignorId1", Some("ern1"), Some("arc3"), lastUpdated = timestamp).copy(_id = "test4")
+      insertMovement(expectedMovement1)
+      insertMovement(expectedMovement2)
+      insertMovement(expectedMovement3)
+      insertMovement(expectedMovement4)
+
+      val result = repository.getMovementByERN(Seq("ern1")).futureValue
+
+      result.sortBy(_.localReferenceNumber) mustBe Seq(expectedMovement3)
+    }
+
+
     mustPreserveMdc(repository.getMovementByERN(Seq("some ern")))
+
   }
 
   "getAllBy" should {
@@ -596,7 +651,7 @@ class MovementRepositoryItSpec
 
       val result = repository.getAllBy("345", Seq.empty, Seq.empty).futureValue
 
-      result mustBe Seq(movementLrn1, movementLrn6)
+      result.sortBy(mv => mv.localReferenceNumber) mustBe Seq(movementLrn1, movementLrn6)
     }
 
     "get all records for a consignee" in {
@@ -611,7 +666,7 @@ class MovementRepositoryItSpec
 
       val result = repository.getAllBy("456", Seq.empty, Seq.empty).futureValue
 
-      result mustBe Seq(movementLrn2, movementLrn1Consignor564)
+      result.sortBy(mv => (mv.localReferenceNumber, mv.consignorId)) mustBe Seq(movementLrn1Consignor564,movementLrn2)
     }
 
     "get all records for recipient" in {
@@ -726,6 +781,26 @@ class MovementRepositoryItSpec
       }
     }
 
+    "use getFilteredMovementByErn with movement ID filtering" when {
+      "the user has movements with LRNs and ARCs in the range of the filtered threshold which also contains a filtered movement ID" in {
+        val testArc = "12345"
+        val movements = 1 to 19
+        movements.map{
+          index  =>
+            val consignorId = "888"
+            val consigneeId = s"345{${index.toString}}"
+
+            insertMovement(Movement(Some("boxId"), index.toString, consignorId, Some(consigneeId), None))
+        }
+        insertMovement(Movement(Some("boxId"), "21", "888", Some("789"), None))
+        insertMovement(Movement(Some("boxId"), "22", "888", Some("523"), None))
+        insertMovement(Movement(Some("boxId"), "23", "888", Some("523"), Some(testArc)).copy(_id = "test1"))
+
+        val result = repository.getAllBy("888", Seq("2","3"), Seq(testArc)).futureValue
+
+        result.length mustBe 2
+      }
+    }
     mustPreserveMdc(repository.getAllBy("ern", Seq.empty, Seq.empty))
   }
 
